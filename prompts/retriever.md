@@ -53,7 +53,7 @@ The code must be valid Python. You can assign variables and return a dictionary.
   "result_variable_T001": [],
   "call_self": false,
   "code_variants": {
-    "CODE_2A": "results = []\nfor url in found_urls_T001:\n    text = web_extract_text(url)\n    results.append({'url': url, 'content': text})\nreturn {'result_variable_T001': results}"
+    "CODE_2A": "results = []\nif isinstance(found_urls_T001, list):\n    for url in found_urls_T001:\n        if isinstance(url, str) and url.startswith('http'):\n            text = web_extract_text(url)\n            results.append({'url': url, 'content': text})\nreturn {'result_variable_T001': results}"
   }
 }
 ```
@@ -64,7 +64,7 @@ The code must be valid Python. You can assign variables and return a dictionary.
   "result_variable_T001": [],
   "call_self": false,
   "code_variants": {
-    "CODE_1A": "urls = web_search('query', 10)\nreturn {'result_variable_T001': urls}"
+    "CODE_1A": "urls = web_search('query', 10)\nif not isinstance(urls, list): urls = []\nreturn {'result_variable_T001': urls}"
   }
 }
 ```
