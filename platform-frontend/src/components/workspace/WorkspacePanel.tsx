@@ -182,24 +182,52 @@ export const WorkspacePanel: React.FC = () => {
                 {activeTab === 'code' && (
                     <Editor
                         height="100%"
-                        defaultLanguage="json"
+                        defaultLanguage="python"
                         theme="vs-dark"
                         value={(() => {
                             try {
                                 // Smart Code Extraction:
-                                // If the node output has 'code_variants', show that.
-                                // Else if it has 'execution_result', show that.
-                                // Else show raw output.
+                                // The node output may be a Python dict string (single quotes) not JSON
+                                // We need to extract the actual Python code from code_variants
                                 const raw = codeContent; // This is node.data.output (stringified)
-                                if (!raw) return "// No output";
+                                if (!raw) return "# No output";
 
-                                const parsed = JSON.parse(raw);
+                                // Try to parse as JSON first
+                                let parsed;
+                                try {
+                                    parsed = JSON.parse(raw);
+                                } catch {
+                                    // If JSON parse fails, try to convert Python dict format to JSON
+                                    // Python uses single quotes, True/False/None vs true/false/null
+                                    const jsonified = raw
+                                        .replace(/'/g, '"')
+                                        .replace(/\bTrue\b/g, 'true')
+                                        .replace(/\bFalse\b/g, 'false')
+                                        .replace(/\bNone\b/g, 'null');
+                                    try {
+                                        parsed = JSON.parse(jsonified);
+                                    } catch {
+                                        // If still fails, try regex extraction for code_variants
+                                        const codeMatch = raw.match(/['"]CODE_\w+['"]\s*:\s*['"]([^]*?)['"]\s*[,}]/);
+                                        if (codeMatch) {
+                                            // Unescape the code string
+                                            return codeMatch[1]
+                                                .replace(/\\n/g, '\n')
+                                                .replace(/\\t/g, '\t')
+                                                .replace(/\\'/g, "'")
+                                                .replace(/\\"/g, '"');
+                                        }
+                                        return raw; // Return raw if all parsing fails
+                                    }
+                                }
 
                                 // 1. Check for Code Variants (Common in Agents)
-                                if (parsed.code_variants) {
-                                    // Return the first variant found
+                                if (parsed.code_variants && typeof parsed.code_variants === 'object') {
                                     const firstKey = Object.keys(parsed.code_variants)[0];
-                                    return parsed.code_variants[firstKey] || JSON.stringify(parsed, null, 2);
+                                    const code = parsed.code_variants[firstKey];
+                                    if (typeof code === 'string' && code.trim()) {
+                                        return code;
+                                    }
                                 }
 
                                 // 2. Check for Execution Result
@@ -207,9 +235,10 @@ export const WorkspacePanel: React.FC = () => {
                                     return JSON.stringify(parsed.execution_result, null, 2);
                                 }
 
+                                // 3. Return formatted JSON if no code found
                                 return JSON.stringify(parsed, null, 2);
                             } catch {
-                                return codeContent || '// Text content';
+                                return codeContent || '# No code available';
                             }
                         })()}
                         options={{
