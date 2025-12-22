@@ -17,7 +17,7 @@ class AgentLoop4:
         self.strategy = strategy
         self.agent_runner = AgentRunner(multi_mcp)
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None):
         # Phase 1: File Profiling (if files exist)
         file_profiles = {}
         if uploaded_files:
@@ -58,7 +58,7 @@ class AgentLoop4:
             # Phase 3: 100% NetworkX Graph-First Execution
             context = ExecutionContextManager(
                 plan_graph,
-                session_id=None,
+                session_id=session_id,
                 original_query=query,
                 file_manifest=file_manifest
             )

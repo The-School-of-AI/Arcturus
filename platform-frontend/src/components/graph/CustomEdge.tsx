@@ -1,7 +1,6 @@
 import React from 'react';
-import { BaseEdge, EdgeLabelRenderer, type EdgeProps, getBezierPath } from 'reactflow';
+import { BaseEdge, EdgeLabelRenderer, type EdgeProps, getSmoothStepPath } from 'reactflow';
 import { Plus } from 'lucide-react';
-// import { useAppStore } from '@/store'; // Unused for now
 
 const CustomEdge = ({
     id,
@@ -15,16 +14,16 @@ const CustomEdge = ({
     markerEnd,
     selected,
 }: EdgeProps) => {
-    const [edgePath, labelX, labelY] = getBezierPath({
+    // Use SmoothStep for orthogonal (90° turn) edges
+    const [edgePath, labelX, labelY] = getSmoothStepPath({
         sourceX,
         sourceY,
         sourcePosition,
         targetX,
         targetY,
         targetPosition,
+        borderRadius: 8, // Slightly rounded corners at turns
     });
-
-    // const { toggleReplayMode } = useAppStore();
 
     const onEdgeClick = (evt: React.MouseEvent) => {
         evt.stopPropagation();
@@ -33,7 +32,15 @@ const CustomEdge = ({
 
     return (
         <>
-            <BaseEdge path={edgePath} markerEnd={markerEnd} style={{ ...style, strokeWidth: selected ? 3 : 2 }} />
+            <BaseEdge
+                path={edgePath}
+                markerEnd={markerEnd}
+                style={{
+                    ...style,
+                    strokeWidth: selected ? 2.5 : 1.5,
+                    stroke: selected ? '#F6FF4D' : '#666',
+                }}
+            />
             <EdgeLabelRenderer>
                 <div
                     style={{
@@ -56,3 +63,4 @@ const CustomEdge = ({
 };
 
 export default CustomEdge;
+

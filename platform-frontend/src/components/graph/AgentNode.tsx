@@ -45,11 +45,11 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             )}
             onClick={() => selectNode(id)}
         >
-            {/* Input Handle */}
+            {/* Input Handle - Top Center */}
             <Handle
                 type="target"
-                position={Position.Left}
-                className="!bg-muted-foreground !w-3 !h-3 !-left-1.5 transition-colors group-hover:!bg-primary"
+                position={Position.Top}
+                className="!bg-muted-foreground !w-3 !h-3 !-top-1.5 transition-colors group-hover:!bg-primary"
             />
 
             <div className="p-4 flex items-start gap-3">
@@ -80,11 +80,11 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                 </div>
             </div>
 
-            {/* Output Handle */}
+            {/* Output Handle - Bottom Center */}
             <Handle
                 type="source"
-                position={Position.Right}
-                className="!bg-muted-foreground !w-3 !h-3 !-right-1.5 transition-colors group-hover:!bg-primary"
+                position={Position.Bottom}
+                className="!bg-muted-foreground !w-3 !h-3 !-bottom-1.5 transition-colors group-hover:!bg-primary"
             />
 
             {/* Active Glow Gradient (Optional) */}

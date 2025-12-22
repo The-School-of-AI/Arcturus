@@ -1,0 +1,158 @@
+import sys
+import os
+import asyncio
+import json
+from pathlib import Path
+from datetime import datetime
+from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+
+# Add project root to path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from core.loop import AgentLoop4
+from mcp_servers.multi_mcp import MultiMCP
+from core.graph_adapter import nx_to_reactflow
+from memory.context import ExecutionContextManager
+
+app = FastAPI()
+
+# Enable CORS for Frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global State (Simplified for now)
+# In production, use database or persistent store
+active_loops = {}
+multi_mcp = MultiMCP()
+
+@app.on_event("startup")
+async def startup_event():
+    await multi_mcp.start()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await multi_mcp.stop()
+
+class RunRequest(BaseModel):
+    query: str
+    model: str = "gemini-2.0-pro"
+
+class RunResponse(BaseModel):
+    id: str
+    status: str
+    created_at: str
+    query: str
+
+async def process_run(run_id: str, query: str):
+    """Background task to execute the agent loop"""
+    try:
+        loop = AgentLoop4(multi_mcp=multi_mcp)
+        # Inject run_id if loop supports it or handle via context
+        # AgentLoop4 currently generates its own session_id usually
+        # We might need to patch/adapt AgentLoop to accept an ID or extract it
+        
+        # For S16, AgentLoop4.run creates a NEW session. 
+        # We need to capture that context immediately.
+        
+        # Hack: wrapper to get context
+        context = await loop.run(query, [], {}, [], session_id=run_id)
+        
+        # Save reference (though context saves itself to disk)
+        active_loops[run_id] = context
+        
+    except Exception as e:
+        print(f"Run {run_id} failed: {e}")
+
+@app.post("/runs")
+async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
+    run_id = str(int(datetime.now().timestamp()))
+    
+    # Start background execution
+    background_tasks.add_task(process_run, run_id, request.query)
+    
+    return {
+        "id": run_id,
+        "status": "starting",
+        "created_at": datetime.now().isoformat(),
+        "query": request.query
+    }
+
+@app.get("/runs")
+async def list_runs():
+    """List runs from disk"""
+    summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+    runs = []
+    
+    if summaries_dir.exists():
+        # Walk through date folders
+        for date_folder in summaries_dir.glob("*/*/*"):
+            for session_file in date_folder.glob("session_*.json"):
+                try:
+                    data = json.loads(session_file.read_text())
+                    graph_data = data
+                    # Extract meta
+                    graph_details = graph_data.get("graph", {})
+                    
+                    # Robust Query Extraction
+                    query = graph_details.get("original_query")
+                    if not query:
+                        query = graph_details.get("globals", {}).get("original_query", "Unknown Query")
+
+                    # Timestamp Extraction
+                    created_at = graph_details.get("created_at")
+                    if not created_at:
+                        # Fallback to file creation time
+                        created_at = datetime.fromtimestamp(session_file.stat().st_ctime).isoformat()
+                    
+                    runs.append({
+                        "id": session_file.stem.replace("session_", ""),
+                        "query": query, 
+                        "created_at": created_at, 
+                        "status": graph_details.get("status", "completed")
+                    })
+                except:
+                    continue
+    
+    # Sort by recent
+    return sorted(runs, key=lambda x: x['id'], reverse=True)
+
+@app.get("/runs/{run_id}")
+async def get_run(run_id: str):
+    """Get graph state for a run"""
+    # Check memory first (if running)
+    # Then check disk
+    
+    # Search disk
+    summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+    found_file = None
+    
+    # Brute force search (should optimize path structure later)
+    for path in summaries_dir.rglob(f"session_{run_id}.json"):
+        found_file = path
+        break
+        
+    if found_file:
+        data = json.loads(found_file.read_text())
+        # Reconstruct Graph to use adapter
+        import networkx as nx
+        G = nx.node_link_graph(data)
+        react_flow = nx_to_reactflow(G)
+        return {
+            "id": run_id,
+            "status": "completed", # simplistic
+            "graph": react_flow
+        }
+        
+    raise HTTPException(status_code=404, detail="Run not found")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

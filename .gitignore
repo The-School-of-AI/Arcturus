@@ -30,10 +30,10 @@ pip-delete-this-directory.txt
 .DS_Store
 
 # Logs and Memory (S16 NetworkX)
-memory/
+# memory/  <-- Removed to allow python code
 memory/session_logs/
 memory/debug_logs/
-memory/session_summaries_index/
+# memory/session_summaries_index/
 *.log
 
 # RAG & Documents (Large files)
