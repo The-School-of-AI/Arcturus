@@ -18,6 +18,11 @@ export interface AgentNodeData {
     type: AgentType | 'Generic';
     status: 'pending' | 'running' | 'completed' | 'failed';
     description?: string;
+    prompt?: string;
+    reads?: string[];
+    writes?: string[];
+    cost?: number;
+    execution_time?: number | string;
     output?: string;
     error?: string;
     result?: string;

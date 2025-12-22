@@ -13,9 +13,19 @@ import { useAppStore } from '@/store';
 
 export const GraphCanvas: React.FC = () => {
     // Connect to Store
-    const { nodes, edges, onNodesChange, onEdgesChange } = useAppStore();
+    const { nodes, edges, onNodesChange, onEdgesChange, selectNode, selectedNodeId } = useAppStore();
 
-    const nodeTypes = useMemo(() => ({
+    // Auto-follow running nodes
+    React.useEffect(() => {
+        const runningNode = nodes.find(n => n.data.status === 'running');
+        // Only switch if we aren't already looking at it, and maybe ONLY if the current selection is completed or null?
+        // User asked: "agent nodes should be automatically be selected"
+        if (runningNode && runningNode.id !== selectedNodeId) {
+            selectNode(runningNode.id);
+        }
+    }, [nodes, selectedNodeId, selectNode]);
+
+    const nodeTypes = React.useMemo(() => ({
         agentNode: AgentNode,
     }), []);
 

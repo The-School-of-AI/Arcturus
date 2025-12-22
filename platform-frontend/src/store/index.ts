@@ -110,6 +110,10 @@ export const useAppStore = create<AppState>()(
                         ragEnabled: true
                     };
                     get().addRun(newRun);
+
+                    // Reset Graph State Immediately
+                    set({ nodes: [], edges: [], selectedNodeId: null, codeContent: '', logs: [] });
+
                     get().setCurrentRun(newRun.id);
 
                     // Start polling
