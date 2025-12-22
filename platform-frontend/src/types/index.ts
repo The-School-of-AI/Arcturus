@@ -15,8 +15,11 @@ export interface Run {
 
 export interface AgentNodeData {
     label: string;
-    type: AgentType;
-    status: 'idle' | 'running' | 'completed' | 'failed';
+    type: AgentType | 'Generic';
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    description?: string;
+    output?: string;
+    error?: string;
     result?: string;
     logs?: string[];
     isDark?: boolean; // For styling

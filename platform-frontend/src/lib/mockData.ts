@@ -6,7 +6,7 @@ export const mockRuns: Run[] = [
         name: 'Research Competitors',
         createdAt: Date.now() - 10000000,
         status: 'completed',
-        model: 'gemini-1.5-pro',
+        model: 'gemini-2.0-pro',
         ragEnabled: true,
     },
     {
@@ -22,7 +22,7 @@ export const mockRuns: Run[] = [
         name: 'Generate Unit Tests',
         createdAt: Date.now(),
         status: 'running',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-pro',
         ragEnabled: true,
     }
 ];

@@ -40,30 +40,46 @@ export const WorkspacePanel: React.FC = () => {
                 {activeTab === 'code' && (
                     <Editor
                         height="100%"
-                        defaultLanguage="python"
+                        defaultLanguage="json"
                         theme="vs-dark" // We'll customize this later to match charcoal
-                        value={codeContent}
+                        value={(() => {
+                            try {
+                                if (typeof codeContent === 'string' && (codeContent.startsWith('{') || codeContent.startsWith('['))) {
+                                    return JSON.stringify(JSON.parse(codeContent), null, 2);
+                                }
+                                return codeContent;
+                            } catch {
+                                return codeContent;
+                            }
+                        })()}
                         options={{
                             minimap: { enabled: false },
                             fontSize: 13,
                             fontFamily: 'JetBrains Mono, Menlo, monospace',
                             scrollBeyondLastLine: false,
                             padding: { top: 16 },
+                            wordWrap: 'on'
                         }}
                     />
                 )}
 
                 {activeTab === 'output' && (
-                    <div className="p-4 font-mono text-xs space-y-2 overflow-y-auto h-full">
-                        <div className="text-green-400"># System initialized</div>
+                    <div className="p-4 font-mono text-xs space-y-4 overflow-y-auto h-full">
+                        <div className="text-green-400 font-bold border-b border-white/10 pb-2 mb-2">
+                            # Node Execution Details
+                        </div>
                         {logs.map((log, i) => (
-                            <div key={i} className="border-l-2 border-border pl-2 py-1">
-                                <span className="opacity-50 text-[10px] mr-2">{new Date().toLocaleTimeString()}</span>
-                                {log}
+                            <div key={i} className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3 py-1 bg-white/5 rounded-r hover:bg-white/10 transition-colors">
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-70">
+                                    {log.split(':')[0]}
+                                </div>
+                                <div className="text-foreground whitespace-pre-wrap break-words">
+                                    {log.split(':').slice(1).join(':').trim()}
+                                </div>
                             </div>
                         ))}
                         {logs.length === 0 && (
-                            <div className="text-muted-foreground italic">No logs yet...</div>
+                            <div className="text-muted-foreground italic opacity-50 text-center py-10">Select a node to view details...</div>
                         )}
                     </div>
                 )}

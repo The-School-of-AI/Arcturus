@@ -1,29 +1,66 @@
 import React from 'react';
 import { Plus, Clock, Search, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { mockRuns } from '@/lib/mockData';
 
 export const Sidebar: React.FC = () => {
     // In a real app, runs would come from store, initialized with mockRuns
     // For now we just use mockRuns directly or store if initialized
-    const { runs, currentRun, setCurrentRun, addRun } = useAppStore();
+    const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun } = useAppStore();
 
-    // Initialize if empty (development only hack)
+    // Fetch runs on mount
     React.useEffect(() => {
-        if (runs.length === 0) {
-            mockRuns.forEach(r => addRun(r));
-        }
+        fetchRuns();
     }, []);
+
+    const [isNewRunOpen, setIsNewRunOpen] = React.useState(false);
+    const [newQuery, setNewQuery] = React.useState("");
+
+    const handleStartRun = async () => {
+        if (!newQuery.trim()) return;
+        setIsNewRunOpen(false);
+        await createNewRun(newQuery, "gemini-2.0-pro");
+        setNewQuery("");
+    };
 
     return (
         <div className="h-full flex flex-col">
             <div className="p-4 border-b border-border space-y-3">
-                <Button className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold">
-                    <Plus className="w-4 h-4" />
-                    New Run
-                </Button>
+                <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
+                    <DialogTrigger asChild>
+                        <Button
+                            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
+                        >
+                            <Plus className="w-4 h-4" />
+                            New Run
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-charcoal-900 border-border sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="text-foreground">Start New Agent Run</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">What should the agent do?</label>
+                                <Input
+                                    placeholder="e.g., Research latest AI trends..."
+                                    value={newQuery}
+                                    onChange={(e) => setNewQuery(e.target.value)}
+                                    className="bg-background/50 border-input"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleStartRun()}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-muted-foreground hover:bg-accent hover:text-foreground">Cancel</Button>
+                            <Button onClick={handleStartRun} className="bg-primary text-primary-foreground hover:bg-primary/90">Start Run</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -48,7 +85,7 @@ export const Sidebar: React.FC = () => {
                     >
                         <div className="flex justify-between items-start mb-1">
                             <h3 className={cn(
-                                "font-medium text-sm truncate pr-2",
+                                "font-medium text-sm truncate pr-2 max-w-[150px]",
                                 currentRun?.id === run.id ? "text-primary" : "text-foreground"
                             )}>
                                 {run.name}

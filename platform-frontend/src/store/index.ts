@@ -7,6 +7,7 @@ import type {
     Snapshot,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
+import { api } from '../lib/api';
 
 // --- Slices Types ---
 
@@ -16,6 +17,12 @@ interface RunSlice {
     addRun: (run: Run) => void;
     setCurrentRun: (runId: string) => void;
     updateRunStatus: (input: { id: string, status: Run['status'] }) => void;
+    fetchRuns: () => Promise<void>;
+    createNewRun: (query: string, model: string) => Promise<void>;
+    refreshCurrentRun: () => Promise<void>;
+    pollingInterval: ReturnType<typeof setInterval> | null;
+    startPolling: (runId: string) => void;
+    stopPolling: () => void;
 }
 
 interface GraphSlice {
@@ -68,13 +75,80 @@ export const useAppStore = create<AppState>()(
             runs: [],
             currentRun: null,
             addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
-            setCurrentRun: (runId) => set((state) => ({
-                currentRun: state.runs.find((r) => r.id === runId) || null
-            })),
+            setCurrentRun: (runId) => {
+                const run = get().runs.find((r) => r.id === runId) || null;
+                set({ currentRun: run });
+                // If run exists, fetch its latest graph immediately
+                if (run) {
+                    get().refreshCurrentRun();
+                }
+            },
             updateRunStatus: ({ id, status }) => set((state) => ({
                 runs: state.runs.map((r) => r.id === id ? { ...r, status } : r),
                 currentRun: state.currentRun?.id === id ? { ...state.currentRun, status } : state.currentRun
             })),
+
+            // API Actions
+            fetchRuns: async () => {
+                try {
+                    const fetched = await api.getRuns();
+                    set({ runs: fetched });
+                } catch (e) {
+                    console.error("Failed to fetch runs", e);
+                }
+            },
+
+            createNewRun: async (query, model) => {
+                try {
+                    const res = await api.createRun(query, model);
+                    const newRun: Run = {
+                        id: res.id,
+                        name: res.query,
+                        createdAt: Date.now(),
+                        status: 'running',
+                        model: model,
+                        ragEnabled: true
+                    };
+                    get().addRun(newRun);
+                    get().setCurrentRun(newRun.id);
+
+                    // Start polling
+                    get().startPolling(newRun.id);
+                } catch (e) {
+                    console.error("Failed to create run", e);
+                }
+            },
+
+            refreshCurrentRun: async () => {
+                const runId = get().currentRun?.id;
+                if (!runId) return;
+                try {
+                    const graphData = await api.getRunGraph(runId);
+                    set({
+                        nodes: graphData.nodes,
+                        edges: graphData.edges,
+                        isReplayMode: false, // Ensure we are in live mode
+                        currentSnapshotIndex: -1
+                    });
+                } catch (e) {
+                    console.error("Failed to refresh graph", e);
+                }
+            },
+
+            // Polling Logic
+            pollingInterval: null,
+            startPolling: (runId) => {
+                const interval = setInterval(async () => {
+                    await get().refreshCurrentRun();
+                    // Check if completed? (Optimization later)
+                }, 2000);
+                set({ pollingInterval: interval });
+            },
+            stopPolling: () => {
+                const interval = get().pollingInterval;
+                if (interval) clearInterval(interval);
+                set({ pollingInterval: null });
+            },
 
             // Graph
             nodes: [],
@@ -88,7 +162,22 @@ export const useAppStore = create<AppState>()(
             onEdgesChange: (changes) => set({
                 edges: applyEdgeChanges(changes, get().edges)
             }),
-            selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
+            selectNode: (nodeId) => {
+                const node = get().nodes.find(n => n.id === nodeId);
+                set({ selectedNodeId: nodeId });
+
+                if (node && node.data) {
+                    // Populate panels
+                    set({
+                        codeContent: node.data.output || '// No output available',
+                        logs: [
+                            `Status: ${node.data.status}`,
+                            `Type: ${node.data.type}`,
+                            node.data.error ? `Error: ${node.data.error}` : ''
+                        ].filter(Boolean)
+                    });
+                }
+            },
 
             // Workspace
             activeTab: 'code',

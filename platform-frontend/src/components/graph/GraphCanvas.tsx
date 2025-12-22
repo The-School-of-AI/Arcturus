@@ -7,16 +7,13 @@ import ReactFlow, {
     useEdgesState
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { mockNodes, mockEdges } from '@/lib/mockData';
 import AgentNode from './AgentNode';
 import CustomEdge from './CustomEdge';
+import { useAppStore } from '@/store';
 
 export const GraphCanvas: React.FC = () => {
-    // In real app, sync with store
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [nodes, setNodes, onNodesChange] = useNodesState(mockNodes);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [edges, setEdges, onEdgesChange] = useEdgesState(mockEdges.map(e => ({ ...e, type: 'custom' })));
+    // Connect to Store
+    const { nodes, edges, onNodesChange, onEdgesChange } = useAppStore();
 
     const nodeTypes = useMemo(() => ({
         agentNode: AgentNode,
@@ -32,6 +29,7 @@ export const GraphCanvas: React.FC = () => {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeClick={(_, node) => useAppStore.getState().selectNode(node.id)}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView

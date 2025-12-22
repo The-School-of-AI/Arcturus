@@ -41,7 +41,7 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-foreground">
                         <Database className="w-4 h-4" />
-                        <span className="text-xs">Gemini-1.5-Pro</span>
+                        <span className="text-xs">Gemini-2.0-Pro</span>
                     </Button>
 
                     <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary text-primary hover:bg-primary/10 transition-all">
