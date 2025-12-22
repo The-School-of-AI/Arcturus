@@ -37,25 +37,25 @@ export const mockNodes: PlatformNode[] = [
     {
         id: '2',
         type: 'agentNode',
-        position: { x: 250, y: 0 },
+        position: { x: 0, y: 150 },
         data: { label: 'Retriever', type: 'Retriever', status: 'completed', result: 'Found 5 docs.' }
     },
     {
         id: '3',
         type: 'agentNode',
-        position: { x: 500, y: 0 },
+        position: { x: 0, y: 300 },
         data: { label: 'Thinker', type: 'Thinker', status: 'running', logs: ['Analyzing...', 'Reasoning...'] }
     },
     {
         id: '4',
         type: 'agentNode',
-        position: { x: 750, y: 0 },
-        data: { label: 'Coder', type: 'Coder', status: 'idle' }
+        position: { x: 0, y: 450 },
+        data: { label: 'Coder', type: 'Coder', status: 'pending' }
     }
 ];
 
 export const mockEdges: PlatformEdge[] = [
-    { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#F6FF4D' } },
-    { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: '#F6FF4D' } },
-    { id: 'e3-4', source: '3', target: '4', animated: false, style: { stroke: '#333' } },
+    { id: 'e1-2', source: '1', target: '2', type: 'custom', animated: false, style: { stroke: '#888888' } },
+    { id: 'e2-3', source: '2', target: '3', type: 'custom', animated: false, style: { stroke: '#888888' } },
+    { id: 'e3-4', source: '3', target: '4', type: 'custom', animated: false, style: { stroke: '#888888' } },
 ];

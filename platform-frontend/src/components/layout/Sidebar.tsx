@@ -40,16 +40,16 @@ export const Sidebar: React.FC = () => {
                     </DialogTrigger>
                     <DialogContent className="bg-charcoal-900 border-border sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle className="text-foreground">Start New Agent Run</DialogTitle>
+                            <DialogTitle className="text-white text-lg">Start New Agent Run</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">What should the agent do?</label>
+                                <label className="text-sm font-medium text-gray-300">What should the agent do?</label>
                                 <Input
                                     placeholder="e.g., Research latest AI trends..."
                                     value={newQuery}
                                     onChange={(e) => setNewQuery(e.target.value)}
-                                    className="bg-background/50 border-input"
+                                    className="bg-charcoal-800 border-gray-600 text-white placeholder:text-gray-500"
                                     onKeyDown={(e) => e.key === 'Enter' && handleStartRun()}
                                     autoFocus
                                 />
@@ -57,7 +57,7 @@ export const Sidebar: React.FC = () => {
                         </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-muted-foreground hover:bg-accent hover:text-foreground">Cancel</Button>
-                            <Button onClick={handleStartRun} className="bg-primary text-primary-foreground hover:bg-primary/90">Start Run</Button>
+                            <Button onClick={handleStartRun} className="bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

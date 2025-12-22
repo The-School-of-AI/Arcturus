@@ -37,8 +37,9 @@ const CustomEdge = ({
                 markerEnd={markerEnd}
                 style={{
                     ...style,
-                    strokeWidth: selected ? 2.5 : 1.5,
-                    stroke: selected ? '#F6FF4D' : '#666',
+                    strokeWidth: selected ? 2 : 1.5,
+                    stroke: '#888888',  // Consistent gray color
+                    strokeDasharray: 'none',  // Ensure solid line
                 }}
             />
             <EdgeLabelRenderer>
