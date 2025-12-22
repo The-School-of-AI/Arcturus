@@ -95,15 +95,12 @@ async def main():
                 description="Ask complex questions. The agent will plan, browse, code, and summarize.",
             )
             print("[bold green]Starting UI on http://localhost:7860[/bold green]")
-            # Launch without blocking async loop, but we need to keep main alive?
-            # actually demo.launch() interacts with asyncio?
-            # For simplicity, we can let it block if it supports async fn.
-            # But standard gradio blocks main thread. 
-            # We must set prevent_thread_lock=False (default) to block, but that stops event loop from spinning?
-            # No, if fn is async, Gradio schedules it on loop.
-            # But if launch blocks, does loop run?
-            # Newer Gradio handles this. Let's try regular launch.
-            demo.launch() 
+            # Launch without blocking async loop, so MultiMCP pipes continue to work
+            demo.launch(prevent_thread_lock=True) 
+            
+            # Keep the main thread alive and let asyncio loop process background tasks
+            while True:
+                await asyncio.sleep(1) 
         else:
             # 3. Interactive Loop (CLI)
             while True:
