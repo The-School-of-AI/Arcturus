@@ -20,17 +20,17 @@ memory/session_summaries_index/
 *.log
 
 # RAG & Documents (Large files)
-mcp_servers/faiss_index/
-mcp_servers/documents/*.pdf
-mcp_servers/documents/*.docx
-mcp_servers/documents/*.doc
-mcp_servers/documents/*.pptx
-mcp_servers/documents/*.ppt
-mcp_servers/documents/*.xlsx
-mcp_servers/documents/*.xls
-mcp_servers/documents/*.zip
-mcp_servers/documents/*.tar
-mcp_servers/documents/*.gz
+/mcp_servers/faiss_index/
+/mcp_servers/documents/*.pdf
+/mcp_servers/documents/*.docx
+/mcp_servers/documents/*.doc
+/mcp_servers/documents/*.pptx
+/mcp_servers/documents/*.ppt
+/mcp_servers/documents/*.xlsx
+/mcp_servers/documents/*.xls
+/mcp_servers/documents/*.zip
+/mcp_servers/documents/*.tar
+/mcp_servers/documents/*.gz
 
 # Retain keep files if necessary (optional strategy)
 # !mcp_servers/documents/.gitkeep
