@@ -1,0 +1,23 @@
+mcp_servers:
+  # - id: math
+  #   script: mcp_server_1.py
+  #   cwd: I:/TSAI/2025/EAG/Session 16/S16A/mcp_servers
+  #   transport: stdio
+  #   description: "Most used Math tools, including special string-int conversions, fibonacci, python sandbox, shell and sql related tools"
+  - id: documents
+    script: mcp_server_2.py
+    cwd: I:/TSAI/2025/EAG/Session 16/S16A/mcp_servers
+    description: "Load, search and extract within webpages, local PDFs or other documents. Web and document specialist"
+  - id: websearch
+    script: mcp_server_3.py
+    cwd: I:/TSAI/2025/EAG/Session 16/S16A/mcp_servers
+    transport: stdio
+    description: "Webtools to search internet for queries and fetch content for a specific web page"
+  # - id: webbrowsing
+  #   script: http://localhost:8100/sse  # SSE URL
+  #   transport: sse
+  #   description: "Full Browser Access (persistent)"
+  # - id: mixed
+  #   script: mcp_server_4.py
+  #   cwd: I:/TSAI/2025/EAG/Session 16/S16A/mcp_servers
+  #   description: "Most used Math tools"

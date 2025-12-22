@@ -1,0 +1,49 @@
+agent:
+  name: Cortex-R
+  id: cortex_r_002
+  description: >
+    A reasoning-driven AI agent capable of using external tools
+    and memory to solve complex tasks step-by-step.
+
+strategy:
+  planning_mode: conservative   # [conservative, exploratory]
+  exploration_mode: parallel    # [parallel, sequential] (only relevant if planning_mode = exploratory)
+  memory_fallback_enabled: true # after tool exploration failure
+  max_steps: 3                  # max sequential agent steps
+  max_lifelines_per_step: 3      # retries for each step (after primary failure)
+
+memory:
+  memory_service: true
+  summarize_tool_results: true  # Always store summarized results
+  tag_interactions: true        # Get tags from LLM for each interaction
+  storage:
+    base_dir: "memory"
+    structure: "date"  # Indicates we're using date-based directory structure
+
+llm:
+  text_generation: gemini #phi4-reasoning:14b #qwen2.5:32b-instruct-q4_0  #gemini or phi4 or gemma3:12b or qwen2.5:32b-instruct-q4_0 
+  embedding: nomic
+
+persona:
+  tone: concise
+  verbosity: low
+  behavior_tags: [rational, focused, tool-using]
+
+# mcp_servers:
+#   - id: math
+#     script: mcp_server_1.py
+#     cwd: I:/TSAI/2025/EAG/Session 16/S16A
+#     description: "Most used Math tools, including special string-int conversions, fibonacci, python sandbox, shell and sql related tools"
+#   - id: documents
+#     script: mcp_server_2.py
+#     cwd: I:/TSAI/2025/EAG/Session 16/S16A
+#     description: "Load, search and extract within webpages, local PDFs or other documents. Web and document specialist"
+#   - id: websearch
+#     script: mcp_server_3.py
+#     cwd: I:/TSAI/2025/EAG/Session 16/S16A
+#     description: "Webtools to search internet for queries and fetch content for a specific web page"
+  # - id: memory
+  #   script: modules/mcp_server_memory.py
+  #   cwd: I:/TSAI/2025/EAG/Session 16/S16A
+  #   description: "Tools to get Agent-User Conversation History (current session or all historical)"
+

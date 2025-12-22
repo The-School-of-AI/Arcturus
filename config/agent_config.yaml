@@ -1,0 +1,31 @@
+
+agents:
+  PlannerAgent:
+    prompt_file: "16_NetworkX/prompts/planner.md"
+    model: "gemini"
+    mcp_servers: []
+    description: "Generates the execution plan graph."
+
+  BrowserAgent:
+    prompt_file: "16_NetworkX/prompts/decision.md"
+    model: "gemini"
+    mcp_servers: ["browser"]
+    description: "Browses the web using text search or vision."
+
+  CoderAgent:
+    prompt_file: "16_NetworkX/prompts/decision.md"
+    model: "gemini"
+    mcp_servers: ["browser", "rag"]
+    description: "Writes Python code to analyze data or solve problems."
+
+  RetrieverAgent:
+    prompt_file: "16_NetworkX/prompts/decision.md"
+    model: "gemini"
+    mcp_servers: ["rag"]
+    description: "Searches local documents."
+
+  SummarizerAgent:
+    prompt_file: "16_NetworkX/prompts/summarizer.md"
+    model: "gemini"
+    mcp_servers: ["browser", "rag"]
+    description: "Synthesizes the final answer and updates user memory."

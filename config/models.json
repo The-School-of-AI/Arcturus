@@ -1,0 +1,71 @@
+{
+  "defaults": {
+    "text_generation": "gemini",
+    "embedding": "nomic"
+  },
+  "models": {
+    "gemini": {
+      "type": "gemini",
+      "model": "gemini-2.0-flash",
+      "embedding_model": "models/embedding-001",
+      "api_key_env": "GEMINI_API_KEY"
+    },
+    "phi4": {
+      "type": "ollama",
+      "model": "phi4",
+      "embedding_model": "phi4",
+      "url": {
+        "generate": "http://localhost:11434/api/generate",
+        "embed": "http://localhost:11434/api/embeddings"
+      }
+    },
+    "gemma3:12b": {
+      "type": "ollama",
+      "model": "gemma3:12b",
+      "embedding_model": "gemma3:12b",
+      "url": {
+        "generate": "http://localhost:11434/api/generate",
+        "embed": "http://localhost:11434/api/embeddings"
+      }
+    },
+    "qwen2.5:32b-instruct-q4_0": {
+      "type": "ollama",
+      "model": "qwen2.5:32b-instruct-q4_0",
+      "embedding_model": "qwen2.5:32b-instruct-q4_0 ",
+      "url": {
+        "generate": "http://localhost:11434/api/generate",
+        "embed": "http://localhost:11434/api/embeddings"
+      }
+    },
+    "qwen2.5vl:32b": {
+      "type": "ollama",
+      "model": "qwen2.5vl:32b",
+      "embedding_model": "qwen2.5:32b-instruct-q4_0 ",
+      "url": {
+        "generate": "http://localhost:11434/api/generate",
+        "embed": "http://localhost:11434/api/embeddings"
+      }
+    },
+    "qwen2.5vl:latest": {
+      "type": "ollama",
+      "model": "qwen2.5vl:latest",
+      "url": {
+        "generate": "http://localhost:11434/api/generate",
+        "embed": "http://localhost:11434/api/embeddings"
+      }
+    },
+    "phi4-reasoning:14b": {
+      "type": "ollama",
+      "model": "phi4-reasoning:14b",
+      "url": {
+        "generate": "http://localhost:11434/api/generate",
+        "embed": "http://localhost:11434/api/embeddings"
+      }
+    },
+    "nomic": {
+      "type": "huggingface",
+      "model": "nomic-ai/nomic-embed-text-v1",
+      "embedding_dimension": 768
+    }
+  }
+}
