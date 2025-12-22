@@ -13,9 +13,9 @@ agents:
     description: "Browses the web using text search or vision."
 
   CoderAgent:
-    prompt_file: "16_NetworkX/prompts/decision.md"
+    prompt_file: "16_NetworkX/prompts/coder.md"
     model: "gemini"
-    mcp_servers: ["browser", "rag"]
+    mcp_servers: ["sandbox", "browser", "rag"]
     description: "Writes Python code to analyze data or solve problems."
 
   RetrieverAgent:
@@ -28,4 +28,10 @@ agents:
     prompt_file: "16_NetworkX/prompts/summarizer.md"
     model: "gemini"
     mcp_servers: ["browser", "rag"]
-    description: "Synthesizes the final answer and updates user memory."
+    description: "Synthesizes final answers."
+
+  DistillerAgent:
+    prompt_file: "16_NetworkX/prompts/decision.md"
+    model: "gemini"
+    mcp_servers: []
+    description: "Profiles and distills file content."

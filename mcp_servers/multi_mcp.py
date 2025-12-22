@@ -22,6 +22,10 @@ class MultiMCP:
             "rag": {
                 "command": "uv",
                 "args": ["run", "16_NetworkX/mcp_servers/server_rag.py"],
+            },
+            "sandbox": {
+                "command": "uv",
+                "args": ["run", "16_NetworkX/mcp_servers/server_sandbox.py"],
             }
         }
 
