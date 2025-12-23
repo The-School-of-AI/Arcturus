@@ -191,6 +191,35 @@ async def stop_run(run_id: str):
     
     raise HTTPException(status_code=404, detail="Active run not found")
 
+@app.delete("/runs/{run_id}")
+async def delete_run(run_id: str):
+    """Delete a run from disk and memory"""
+    # 1. Stop if running
+    if run_id in active_loops:
+        loop = active_loops[run_id]
+        loop.stop()
+        del active_loops[run_id]
+        
+    # 2. Delete file
+    summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+    deleted = False
+    
+    # Brute force search
+    for path in summaries_dir.rglob(f"session_{run_id}.json"):
+        try:
+            path.unlink()
+            deleted = True
+            break
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+            
+    if not deleted and run_id not in active_loops: # If wasn't running and file not found
+        # Might be okay if it was just in memory? But we are memory-less persistence mostly
+        # Let's return success if we stopped it at least, or warn
+        pass
+
+    return {"id": run_id, "status": "deleted"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

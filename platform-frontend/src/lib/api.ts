@@ -51,5 +51,10 @@ export const api = {
     // Stop execution
     stopRun: async (runId: string): Promise<void> => {
         await axios.post(`${API_BASE}/runs/${runId}/stop`);
+    },
+
+    // Delete run
+    deleteRun: async (runId: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/runs/${runId}`);
     }
 };

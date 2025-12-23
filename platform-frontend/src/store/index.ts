@@ -23,6 +23,7 @@ interface RunSlice {
     pollingInterval: ReturnType<typeof setInterval> | null;
     startPolling: (runId: string) => void;
     stopPolling: () => void;
+    deleteRun: (runId: string) => Promise<void>;
 }
 
 interface GraphSlice {
@@ -95,6 +96,18 @@ export const useAppStore = create<AppState>()(
                 runs: state.runs.map((r) => r.id === id ? { ...r, status } : r),
                 currentRun: state.currentRun?.id === id ? { ...state.currentRun, status } : state.currentRun
             })),
+
+            deleteRun: async (runId) => {
+                try {
+                    await api.deleteRun(runId);
+                    set((state) => ({
+                        runs: state.runs.filter((r) => r.id !== runId),
+                        currentRun: state.currentRun?.id === runId ? null : state.currentRun
+                    }));
+                } catch (e) {
+                    console.error("Failed to delete run", e);
+                }
+            },
 
             // API Actions
             fetchRuns: async () => {

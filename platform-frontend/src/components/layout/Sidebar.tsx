@@ -98,16 +98,24 @@ export const Sidebar: React.FC = () => {
                                 <span>{new Date(run.createdAt).toLocaleDateString()}</span>
                             </div>
                             <div className="flex items-center gap-2">
+                                <span
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Are you sure you want to delete this run?')) {
+                                            useAppStore.getState().deleteRun(run.id);
+                                        }
+                                    }}
+                                >
+                                    <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                                </span>
                                 <span className={cn(
-                                    "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full",
+                                    "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5",
                                     run.status === 'completed' && "text-green-500 bg-green-500/10",
                                     run.status === 'failed' && "text-red-500 bg-red-500/10",
                                     run.status === 'running' && "text-yellow-500 bg-yellow-500/10",
                                 )}>
                                     {run.status}
-                                </span>
-                                <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Trash2 className="w-3 h-3 hover:text-destructive cursor-pointer" />
                                 </span>
                             </div>
                         </div>
