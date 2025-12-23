@@ -319,89 +319,135 @@ export const WorkspacePanel: React.FC = () => {
                                 }
 
                                 let urls: UrlInfo[] = [];
+                                let parsed: any = null;
 
                                 try {
-                                    const parsed = JSON.parse(codeContent);
+                                    parsed = JSON.parse(codeContent);
 
-                                    // Look for arrays with url/content pairs
-                                    for (const [key, value] of Object.entries(parsed)) {
-                                        if (Array.isArray(value)) {
-                                            for (const item of value) {
-                                                if (item && typeof item === 'object' && 'url' in item) {
-                                                    const urlObj = item as { url: string; content?: string };
-                                                    if (urlObj.url && urlObj.url.startsWith('http')) {
-                                                        try {
-                                                            const domain = new URL(urlObj.url).hostname;
-                                                            urls.push({
-                                                                url: urlObj.url,
-                                                                content: urlObj.content || 'No content extracted',
-                                                                domain
-                                                            });
-                                                        } catch { }
+                                    // Recursive function to find URLs in any object/array
+                                    const findUrlsRecursive = (obj: any) => {
+                                        if (!obj || typeof obj !== 'object') return;
+
+                                        // If it's an array, check each item
+                                        if (Array.isArray(obj)) {
+                                            for (const item of obj) {
+                                                if (typeof item === 'string' && item.startsWith('http')) {
+                                                    addUrl(item);
+                                                } else if (item && typeof item === 'object') {
+                                                    // Check if it's a {url, content} pair
+                                                    if ('url' in item && typeof item.url === 'string' && item.url.startsWith('http')) {
+                                                        addUrl(item.url, item.content);
                                                     }
+                                                    findUrlsRecursive(item);
+                                                }
+                                            }
+                                        } else {
+                                            // If it's an object, check each property
+                                            for (const [key, value] of Object.entries(obj)) {
+                                                // Handle arrays of URLs in any property (e.g. found_urls: ["http..."])
+                                                if (Array.isArray(value)) {
+                                                    value.forEach(item => {
+                                                        if (typeof item === 'string' && item.startsWith('http')) {
+                                                            addUrl(item);
+                                                        } else if (item && typeof item === 'object' && (item as any).url && typeof (item as any).url === 'string' && (item as any).url.startsWith('http')) {
+                                                            addUrl((item as any).url, (item as any).content);
+                                                        }
+                                                    });
+                                                }
+
+                                                if (typeof value === 'string' && value.startsWith('http')) {
+                                                    addUrl(value);
+                                                } else {
+                                                    findUrlsRecursive(value);
                                                 }
                                             }
                                         }
-                                    }
+                                    };
 
-                                    // Also check execution_result
-                                    if (parsed.execution_result) {
-                                        for (const [key, value] of Object.entries(parsed.execution_result)) {
-                                            if (Array.isArray(value)) {
-                                                for (const item of value) {
-                                                    if (item && typeof item === 'object' && 'url' in item) {
-                                                        const urlObj = item as { url: string; content?: string };
-                                                        if (urlObj.url && urlObj.url.startsWith('http')) {
-                                                            try {
-                                                                const domain = new URL(urlObj.url).hostname;
-                                                                if (!urls.find(u => u.url === urlObj.url)) {
-                                                                    urls.push({
-                                                                        url: urlObj.url,
-                                                                        content: urlObj.content || 'No content extracted',
-                                                                        domain
-                                                                    });
-                                                                }
-                                                            } catch { }
+                                    const addUrl = (url: string, content?: any) => {
+                                        try {
+                                            const domain = new URL(url).hostname;
+                                            if (!urls.find(u => u.url === url)) {
+                                                urls.push({
+                                                    url,
+                                                    content: typeof content === 'string' ? content : (content ? JSON.stringify(content) : 'No content extracted'),
+                                                    domain
+                                                });
+                                            }
+                                        } catch { }
+                                    };
+
+                                    findUrlsRecursive(parsed);
+
+                                    // 2. Scan iterations/ReAct logs (where MCP tool results live)
+                                    if (selectedNode?.data?.iterations && Array.isArray(selectedNode.data.iterations)) {
+                                        selectedNode.data.iterations.forEach((iter: any) => {
+                                            if (iter.output) {
+                                                findUrlsRecursive(iter.output);
+
+                                                // Check for tool_result strings in iteration_context
+                                                if (iter.output.iteration_context && iter.output.iteration_context.tool_result) {
+                                                    const toolResult = iter.output.iteration_context.tool_result;
+                                                    if (typeof toolResult === 'string') {
+                                                        const urlRegex = /https?:\/\/[^\s'"]+/g;
+                                                        const matches = toolResult.match(urlRegex);
+                                                        if (matches) {
+                                                            matches.forEach(url => addUrl(url, toolResult));
                                                         }
                                                     }
                                                 }
                                             }
+                                        });
+                                    }
+
+                                    // 3. Scan execution logs (stdout/stderr captured from Sandbox)
+                                    if (selectedNode?.data?.execution_logs) {
+                                        const logs = selectedNode.data.execution_logs;
+                                        // Look for "Link: https://..." or just straight URLs in the log
+                                        const urlRegex = /https?:\/\/[^\s'"]+/g;
+                                        const matches = logs.match(urlRegex);
+                                        if (matches) {
+                                            matches.forEach(url => addUrl(url, "Log output"));
                                         }
                                     }
 
-                                    // Extract URLs from code_variants using regex
-                                    if (parsed.code_variants) {
-                                        for (const code of Object.values(parsed.code_variants)) {
-                                            if (typeof code === 'string') {
-                                                const urlMatches = code.match(/https?:\/\/[^\s'"]+/g);
-                                                if (urlMatches) {
-                                                    for (const url of urlMatches) {
-                                                        if (!urls.find(u => u.url === url)) {
-                                                            try {
-                                                                const domain = new URL(url).hostname;
-                                                                urls.push({ url, content: 'URL found in code', domain });
-                                                            } catch { }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                    // 4. Final fallback: Scan all text content in all iterations/code_variants
+                                    const allContentStr = JSON.stringify({
+                                        parsed,
+                                        iterations: selectedNode?.data?.iterations
+                                    });
+                                    const globalUrlMatches = allContentStr.match(/https?:\/\/[^\s'"]+/g);
+                                    if (globalUrlMatches) {
+                                        globalUrlMatches.forEach(url => addUrl(url));
                                     }
                                 } catch { }
 
                                 // The state hooks are at the component level now
 
                                 if (urls.length === 0) {
+                                    console.log("Web Tab Debug: No URLs found in", parsed);
                                     return (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4 p-8">
+                                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4 p-8 overflow-auto">
                                             <Globe className="w-16 h-16 opacity-20" />
-                                            <div className="text-center">
+                                            <div className="text-center mb-4">
                                                 <p className="text-sm font-medium mb-1">No URLs Found</p>
                                                 <p className="text-xs opacity-70">This agent didn't visit any web pages</p>
+                                            </div>
+
+                                            {/* DEBUG: Dump node data to see what we actually have */}
+                                            <div className="w-full text-left bg-black/50 p-4 rounded text-[10px] font-mono whitespace-pre overflow-auto max-h-96 border border-white/10">
+                                                <div className="font-bold text-red-400 mb-2">DEBUG: RAW DATA DUMP</div>
+                                                {JSON.stringify({
+                                                    iterations: selectedNode?.data?.iterations,
+                                                    parsed_keys: parsed ? Object.keys(parsed) : [],
+                                                    output_preview: typeof selectedNode?.data?.output === 'string' ? selectedNode.data.output.slice(0, 500) : selectedNode?.data?.output
+                                                }, null, 2)}
                                             </div>
                                         </div>
                                     );
                                 }
+
+                                console.log("Web Tab Debug: Found URLs", urls);
 
                                 return (
                                     <>

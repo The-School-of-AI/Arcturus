@@ -46,5 +46,10 @@ export const api = {
             nodes: res.data.graph.nodes,
             edges: res.data.graph.edges
         };
+    },
+
+    // Stop execution
+    stopRun: async (runId: string): Promise<void> => {
+        await axios.post(`${API_BASE}/runs/${runId}/stop`);
     }
 };

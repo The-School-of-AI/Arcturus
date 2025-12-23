@@ -108,6 +108,10 @@ class AgentLoop4:
         while not context.all_done() and iteration < max_iterations:
             iteration += 1
             
+            if context.stop_requested:
+                console.print("[yellow]🛑 Execution stopped by user[/yellow]")
+                break
+            
             # Show current state
             console.print(visualizer.get_layout())
             

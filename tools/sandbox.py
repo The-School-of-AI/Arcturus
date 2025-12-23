@@ -10,6 +10,9 @@ from datetime import datetime
 from pathlib import Path
 import traceback
 from core.utils import log_json_block, log_step, log_error, log_json_block
+import io
+import contextlib
+import sys
 # from agent.agentSession import ExecutionSnapshot
 
 ALLOWED_MODULES = {
@@ -240,7 +243,12 @@ async def run_user_code(code: str, multi_mcp, session_id: str = "default_session
 
         # ─── Execute and collect result ──────────────────────────────
         timeout = max(3, func_count * TIMEOUT_PER_FUNCTION)
-        returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
+        
+        # Capture stdout/stderr
+        log_capture = io.StringIO()
+        
+        with contextlib.redirect_stdout(log_capture), contextlib.redirect_stderr(log_capture):
+            returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
 
         result_value = {}
         
@@ -304,6 +312,7 @@ async def run_user_code(code: str, multi_mcp, session_id: str = "default_session
             "status": "success",
             "result": result_value,
             "raw": result_value,
+            "logs": log_capture.getvalue(),
             "execution_time": start_timestamp,
             "total_time": str(round(time.perf_counter() - start_time, 3))
         }

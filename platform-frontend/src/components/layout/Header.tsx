@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
-import { Play, Settings, Box, Database } from 'lucide-react';
+import { Play, Settings, Box, Database, Square } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { SettingsModal } from '@/features/settings/SettingsModal';
+import { api } from '@/lib/api';
 
 export const Header: React.FC = () => {
     const { currentRun } = useAppStore(); // Removed unused 'theme'
     const [settingsOpen, setSettingsOpen] = useState(false);
+
+    const handleStop = async () => {
+        if (!currentRun) return;
+        try {
+            await api.stopRun(currentRun.id);
+        } catch (e) {
+            console.error("Failed to stop run:", e);
+        }
+    };
 
     return (
         <>
@@ -16,7 +26,7 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight">
                         <Box className="w-6 h-6 animate-pulse" />
-                        <span>TSAItic<span className="text-foreground">Platform</span></span>
+                        <span>ERAV2<span className="text-foreground">Platform</span></span>
                     </div>
 
                     <div className="h-6 w-px bg-border mx-2" />
@@ -44,10 +54,22 @@ export const Header: React.FC = () => {
                         <span className="text-xs">Gemini-2.0-Pro</span>
                     </Button>
 
-                    <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary text-primary hover:bg-primary/10 transition-all">
-                        <Play className="w-3 h-3 mr-1.5 fill-current" />
-                        Run
-                    </Button>
+                    {currentRun?.status === 'running' ? (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 gap-2 transition-all"
+                            onClick={handleStop}
+                        >
+                            <Square className="w-3 h-3 fill-current" />
+                            Stop
+                        </Button>
+                    ) : (
+                        <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary text-primary hover:bg-primary/10 transition-all">
+                            <Play className="w-3 h-3 mr-1.5 fill-current" />
+                            Run
+                        </Button>
+                    )}
 
                     <Button
                         variant="ghost"

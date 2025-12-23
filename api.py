@@ -168,6 +168,16 @@ async def get_run(run_id: str):
         
     raise HTTPException(status_code=404, detail="Run not found")
 
+@app.post("/runs/{run_id}/stop")
+async def stop_run(run_id: str):
+    """Stop a running agent execution"""
+    if run_id in active_loops:
+        context = active_loops[run_id]
+        context.stop()
+        return {"id": run_id, "status": "stopping"}
+    
+    raise HTTPException(status_code=404, detail="Active run not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

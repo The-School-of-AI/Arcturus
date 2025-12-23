@@ -21,6 +21,8 @@ class ExecutionContextManager:
         self.plan_graph.graph['session_id'] = session_id or str(int(time.time()))[-8:]
         self.plan_graph.graph['original_query'] = original_query
         self.plan_graph.graph['file_manifest'] = file_manifest or []
+        self.stop_requested = False
+
         self.plan_graph.graph['created_at'] = datetime.utcnow().isoformat()
         self.plan_graph.graph['status'] = 'running'
         self.plan_graph.graph['globals_schema'] = {}
@@ -56,6 +58,10 @@ class ExecutionContextManager:
 
         self.debug_mode = debug_mode
         self._live_display = None
+
+    def stop(self):
+        """Signal the execution loop to stop"""
+        self.stop_requested = True
 
     def get_ready_steps(self):
         """Return all steps whose dependencies are complete and not yet run."""
@@ -125,6 +131,7 @@ class ExecutionContextManager:
         # Get globals_schema for injection
         globals_schema = self.plan_graph.graph['globals_schema']
         
+        last_failure = None
         for code_key, code in code_to_execute.items():
             try:
                 # INJECT ALL AVAILABLE VARIABLES
@@ -158,11 +165,25 @@ class ExecutionContextManager:
                 if result.get("status") == "success":
                     result["executed_variant"] = code_key
                     return result
+                else:
+                    # Keep track of the failure to return if nothing succeeds
+                    result["executed_variant"] = code_key
+                    last_failure = result
                 
             except Exception as e:
+                # Capture exception as a structured failure result
+                last_failure = {
+                    "status": "error", 
+                    "error": str(e),
+                    "executed_variant": code_key,
+                    "logs": f"System Error: {str(e)}"
+                }
                 continue
         
-        return {"status": "error", "error": "All code variants failed"}
+        if last_failure:
+            return last_failure
+            
+        return {"status": "error", "error": "All code variants failed (no result generated)"}
     
     def _merge_execution_results(self, original_output, execution_result):
         """Merge execution results into agent output"""
@@ -175,6 +196,7 @@ class ExecutionContextManager:
         enhanced_output["execution_error"] = execution_result.get("error") 
         enhanced_output["execution_time"] = execution_result.get("execution_time")
         enhanced_output["executed_variant"] = execution_result.get("executed_variant")
+        enhanced_output["execution_logs"] = execution_result.get("logs")
         
         # Merge execution results directly
         if execution_result.get("status") == "success":
