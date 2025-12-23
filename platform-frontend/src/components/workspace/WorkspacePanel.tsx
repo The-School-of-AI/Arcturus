@@ -551,7 +551,7 @@ export const WorkspacePanel: React.FC = () => {
 
                                             {/* DEBUG: Dump node data to see what we actually have */}
                                             <div className="w-full text-left bg-black/50 p-4 rounded text-[10px] font-mono whitespace-pre overflow-auto max-h-96 border border-white/10">
-                                                <div className="font-bold text-red-400 mb-2">DEBUG: RAW DATA DUMP</div>
+                                                <div className="font-bold text-red-400 mb-2">RAW DATA DUMP</div>
                                                 {JSON.stringify({
                                                     iterations: selectedNode?.data?.iterations,
                                                     execution_result: selectedNode?.data?.execution_result,

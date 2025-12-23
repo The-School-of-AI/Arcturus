@@ -71,7 +71,7 @@ export const Sidebar: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto p-2 space-y-4">
                 {runs.map((run) => (
                     <div
                         key={run.id}
@@ -90,35 +90,26 @@ export const Sidebar: React.FC = () => {
                             )}>
                                 {run.name}
                             </h3>
-                            <span className={cn(
-                                "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full",
-                                run.status === 'completed' && "text-green-500 bg-green-500/10",
-                                run.status === 'failed' && "text-red-500 bg-red-500/10",
-                                run.status === 'running' && "text-yellow-500 bg-yellow-500/10",
-                            )}>
-                                {run.status}
-                            </span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                                 <Clock className="w-3 h-3" />
                                 <span>{new Date(run.createdAt).toLocaleDateString()}</span>
                             </div>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Trash2 className="w-3 h-3 hover:text-destructive cursor-pointer" />
-                            </span>
-                        </div>
-
-                        <div className="mt-2 flex gap-1 flex-wrap">
-                            <span className="text-[10px] bg-background/80 border border-border px-1.5 py-0.5 rounded text-muted-foreground">
-                                {run.model.split(':')[0]}
-                            </span>
-                            {run.ragEnabled && (
-                                <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">
-                                    RAG
+                            <div className="flex items-center gap-2">
+                                <span className={cn(
+                                    "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full",
+                                    run.status === 'completed' && "text-green-500 bg-green-500/10",
+                                    run.status === 'failed' && "text-red-500 bg-red-500/10",
+                                    run.status === 'running' && "text-yellow-500 bg-yellow-500/10",
+                                )}>
+                                    {run.status}
                                 </span>
-                            )}
+                                <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Trash2 className="w-3 h-3 hover:text-destructive cursor-pointer" />
+                                </span>
+                            </div>
                         </div>
                     </div>
                 ))}
