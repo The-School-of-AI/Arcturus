@@ -1,15 +1,16 @@
 import React from 'react';
-import { Plus, Clock, Search, Trash2 } from 'lucide-react';
+import { Plus, Clock, Search, Trash2, Database, Box, PlayCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { RagPanel } from '@/components/sidebar/RagPanel';
+import { McpPanel } from '@/components/sidebar/McpPanel';
 
 export const Sidebar: React.FC = () => {
-    // In a real app, runs would come from store, initialized with mockRuns
-    // For now we just use mockRuns directly or store if initialized
     const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun } = useAppStore();
+    const [sidebarTab, setSidebarTab] = React.useState<'runs' | 'rag' | 'mcp'>('runs');
 
     // Fetch runs on mount
     React.useEffect(() => {
@@ -19,6 +20,8 @@ export const Sidebar: React.FC = () => {
     const [isNewRunOpen, setIsNewRunOpen] = React.useState(false);
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
+
+    // Filter runs
     const filteredRuns = React.useMemo(() => {
         if (!searchQuery.trim()) return runs;
         return runs.filter(run =>
@@ -36,101 +39,144 @@ export const Sidebar: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-border space-y-3">
-                <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
-                    <DialogTrigger asChild>
-                        <Button
-                            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
-                        >
-                            <Plus className="w-4 h-4" />
-                            New Run
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-charcoal-900 border-border sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="text-white text-lg">Start New Agent Run</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-300">What should the agent do?</label>
-                                <Input
-                                    placeholder="e.g., Research latest AI trends..."
-                                    value={newQuery}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
-                                    className="bg-charcoal-800 border-gray-600 text-white placeholder:text-gray-500"
-                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
-                                    autoFocus
+            {/* Content Area */}
+            <div className="flex-1 overflow-hidden relative flex flex-col">
+                {sidebarTab === 'runs' && (
+                    <>
+                        <div className="p-4 border-b border-border space-y-3">
+                            <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        New Run
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="bg-charcoal-900 border-border sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle className="text-white text-lg">Start New Agent Run</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-gray-300">What should the agent do?</label>
+                                            <Input
+                                                placeholder="e.g., Research latest AI trends..."
+                                                value={newQuery}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
+                                                className="bg-charcoal-800 border-gray-600 text-white placeholder:text-gray-500"
+                                                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-muted-foreground hover:bg-accent hover:text-foreground">Cancel</Button>
+                                        <Button onClick={handleStartRun} className="bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                                <input
+                                    className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                                    placeholder="Search runs..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-muted-foreground hover:bg-accent hover:text-foreground">Cancel</Button>
-                            <Button onClick={handleStartRun} className="bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
 
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-                    <input
-                        className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
-                        placeholder="Search runs..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-4">
+                            {filteredRuns.map((run) => (
+                                <div
+                                    key={run.id}
+                                    onClick={() => setCurrentRun(run.id)}
+                                    className={cn(
+                                        "group p-3 rounded-lg cursor-pointer transition-all border border-transparent",
+                                        currentRun?.id === run.id
+                                            ? "bg-accent/50 border-primary/20 shadow-sm"
+                                            : "hover:bg-accent/30 hover:border-border"
+                                    )}
+                                >
+                                    <div className="flex justify-between items-start mb-1 gap-2">
+                                        <h3 className={cn(
+                                            "font-medium text-sm line-clamp-2 leading-tight flex-1 break-words",
+                                            currentRun?.id === run.id ? "text-primary" : "text-foreground"
+                                        )}>
+                                            {run.name}
+                                        </h3>
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            <Clock className="w-3 h-3" />
+                                            <span>{new Date(run.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded cursor-pointer"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('Are you sure you want to delete this run?')) {
+                                                        useAppStore.getState().deleteRun(run.id);
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                                            </span>
+                                            <span className={cn(
+                                                "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5",
+                                                run.status === 'completed' && "text-green-500 bg-green-500/10",
+                                                run.status === 'failed' && "text-red-500 bg-red-500/10",
+                                                run.status === 'running' && "text-yellow-500 bg-yellow-500/10",
+                                            )}>
+                                                {run.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+                {sidebarTab === 'rag' && <RagPanel />}
+                {sidebarTab === 'mcp' && <McpPanel />}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-4">
-                {filteredRuns.map((run) => (
-                    <div
-                        key={run.id}
-                        onClick={() => setCurrentRun(run.id)}
-                        className={cn(
-                            "group p-3 rounded-lg cursor-pointer transition-all border border-transparent",
-                            currentRun?.id === run.id
-                                ? "bg-accent/50 border-primary/20 shadow-sm"
-                                : "hover:bg-accent/30 hover:border-border"
-                        )}
-                    >
-                        <div className="flex justify-between items-start mb-1 gap-2">
-                            <h3 className={cn(
-                                "font-medium text-sm line-clamp-2 leading-tight flex-1 break-words",
-                                currentRun?.id === run.id ? "text-primary" : "text-foreground"
-                            )}>
-                                {run.name}
-                            </h3>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1 flex-wrap">
-                                <Clock className="w-3 h-3" />
-                                <span>{new Date(run.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded cursor-pointer"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm('Are you sure you want to delete this run?')) {
-                                            useAppStore.getState().deleteRun(run.id);
-                                        }
-                                    }}
-                                >
-                                    <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                                </span>
-                                <span className={cn(
-                                    "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5",
-                                    run.status === 'completed' && "text-green-500 bg-green-500/10",
-                                    run.status === 'failed' && "text-red-500 bg-red-500/10",
-                                    run.status === 'running' && "text-yellow-500 bg-yellow-500/10",
-                                )}>
-                                    {run.status}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                ))}
+            {/* Bottom Tab Bar */}
+            <div className="h-12 border-t border-border bg-charcoal-900 flex items-center justify-around px-2">
+                <button
+                    onClick={() => setSidebarTab('runs')}
+                    className={cn(
+                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
+                        sidebarTab === 'runs' ? "text-primary" : "text-muted-foreground"
+                    )}
+                >
+                    <PlayCircle className="w-4 h-4" />
+                    <span className="text-[10px] font-medium">Runs</span>
+                </button>
+                <button
+                    onClick={() => setSidebarTab('rag')}
+                    className={cn(
+                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
+                        sidebarTab === 'rag' ? "text-primary" : "text-muted-foreground"
+                    )}
+                >
+                    <Database className="w-4 h-4" />
+                    <span className="text-[10px] font-medium">RAG</span>
+                </button>
+                <button
+                    onClick={() => setSidebarTab('mcp')}
+                    className={cn(
+                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
+                        sidebarTab === 'mcp' ? "text-primary" : "text-muted-foreground"
+                    )}
+                >
+                    <Box className="w-4 h-4" />
+                    <span className="text-[10px] font-medium">MCP</span>
+                </button>
             </div>
         </div>
     );
