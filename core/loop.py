@@ -16,8 +16,49 @@ class AgentLoop4:
         self.multi_mcp = multi_mcp
         self.strategy = strategy
         self.agent_runner = AgentRunner(multi_mcp)
+        self.context = None  # Reference for external stopping
+
+    def stop(self):
+        """Request execution stop"""
+        if self.context:
+            self.context.stop()
 
     async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None):
+        # 🟢 PHASE 0: BOOTSTRAP CONTEXT (Immediate VS Code feedback)
+        # We create a temporary graph with just a "Query" node (running Planner) so the UI sees meaningful start
+        bootstrap_graph = {
+            "nodes": [
+                {
+                    "id": "Query", 
+                    "description": "Formulate execution plan", 
+                    "agent": "PlannerAgent", 
+                    "status": "running",
+                    "reads": ["original_query"],
+                    "writes": ["plan_graph"]
+                }
+            ],
+            "edges": [
+                {"source": "ROOT", "target": "Query"}
+            ]
+        }
+        
+        try:
+            # Create Context & Save Immediately
+            self.context = ExecutionContextManager(
+                bootstrap_graph,
+                session_id=session_id,
+                original_query=query,
+                file_manifest=file_manifest
+            )
+            # Inject multi_mcp immediately
+            self.context.multi_mcp = self.multi_mcp
+            self.context.plan_graph.graph['globals_schema'].update(globals_schema)
+            self.context._save_session()
+            log_step("✅ Session initialized with Query processing", symbol="🌱")
+        except Exception as e:
+            print(f"❌ ERROR initializing context: {e}")
+            raise
+
         # Phase 1: File Profiling (if files exist)
         file_profiles = {}
         if uploaded_files:
@@ -32,8 +73,10 @@ class AgentLoop4:
             )
             if file_result["success"]:
                 file_profiles = file_result["output"]
+                self.context.set_file_profiles(file_profiles)
 
         # Phase 2: Planning with AgentRunner
+        # Note: The "Query" node is already 'running' in our bootstrap context
         plan_result = await self.agent_runner.run_agent(
             "PlannerAgent",
             {
@@ -46,41 +89,71 @@ class AgentLoop4:
         )
 
         if not plan_result["success"]:
+            self.context.mark_failed("Query", plan_result['error'])
             raise RuntimeError(f"Planning failed: {plan_result['error']}")
 
-        # Check if plan_graph exists
         if 'plan_graph' not in plan_result['output']:
-            raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key. Got: {list(plan_result['output'].keys())}")
+            self.context.mark_failed("Query", "Output missing plan_graph")
+            raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key.")
         
-        plan_graph = plan_result["output"]["plan_graph"]
+        # ✅ Mark Query/Planner as Done
+        self.context.plan_graph.nodes["Query"]["output"] = plan_result["output"]
+        self.context.plan_graph.nodes["Query"]["status"] = "completed"
+        self.context.plan_graph.nodes["Query"]["end_time"] = datetime.utcnow().isoformat()
+        
+        # 🟢 PHASE 3: EXPAND GRAPH
+        # Merge the new plan into our existing context
+        new_plan_graph = plan_result["output"]["plan_graph"]
+        self._merge_plan_into_context(new_plan_graph)
 
         try:
-            # Phase 3: 100% NetworkX Graph-First Execution
-            context = ExecutionContextManager(
-                plan_graph,
-                session_id=session_id,
-                original_query=query,
-                file_manifest=file_manifest
-            )
-            
-            # Add multi_mcp reference
-            context.multi_mcp = self.multi_mcp
-            
-            # Initialize graph with file profiles and globals
-            context.set_file_profiles(file_profiles)
-            context.plan_graph.graph['globals_schema'].update(globals_schema)
-
             # Phase 4: Execute DAG with visualization
-            await self._execute_dag(context)
+            await self._execute_dag(self.context)
 
-            # Phase 5: Return the CONTEXT OBJECT, not summary
-            return context
+            # Phase 5: Return the CONTEXT OBJECT
+            return self.context
 
         except Exception as e:
-            print(f"❌ ERROR creating ExecutionContextManager: {e}")
+            print(f"❌ ERROR during execution: {e}")
             import traceback
             traceback.print_exc()
             raise
+
+    def _merge_plan_into_context(self, new_plan_graph):
+        """Merge the planned nodes into the existing bootstrap context"""
+        # Add new nodes
+        for node in new_plan_graph.get("nodes", []):
+            # Prepare node data with defaults
+            node_data = node.copy()
+            # Set defaults if not present in the plan
+            defaults = {
+                'status': 'pending',
+                'output': None,
+                'error': None,
+                'cost': 0.0,
+                'start_time': None,
+                'end_time': None,
+                'execution_time': 0.0
+            }
+            for k, v in defaults.items():
+                node_data.setdefault(k, v)
+                
+            self.context.plan_graph.add_node(node["id"], **node_data)
+            
+        # Add new edges, redirecting ROOT -> First Step to Query -> First Step
+        for edge in new_plan_graph.get("edges", []):
+            source = edge["source"]
+            target = edge["target"]
+            
+            # 🔄 Redirect dependencies: If a node depends on ROOT, make it depend on Query
+            # This ensures visualization flows: ROOT -> Query -> [Plan]
+            if source == "ROOT":
+                source = "Query"
+                
+            self.context.plan_graph.add_edge(source, target)
+        
+        self.context._save_session()
+        log_step("✅ Plan merged into execution context", symbol="🌳")
 
     async def _execute_dag(self, context):
         """Execute DAG with visualization - DEBUGGING MODE"""

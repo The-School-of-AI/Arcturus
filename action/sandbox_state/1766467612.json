@@ -1,0 +1,3 @@
+{
+  "aqi_data_sources_T001": "['https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis', 'https://aqicn.org/historical', 'https://ews.tropmet.res.in/kolkata/index.php', 'https://air-quality.com/place/a4ae4dbe?lang=en&standard=naqi_in', 'https://www.iqair.com/af/india/west-bengal/kolkata']"
+}

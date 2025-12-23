@@ -55,21 +55,18 @@ async def process_run(run_id: str, query: str):
     """Background task to execute the agent loop"""
     try:
         loop = AgentLoop4(multi_mcp=multi_mcp)
-        # Inject run_id if loop supports it or handle via context
-        # AgentLoop4 currently generates its own session_id usually
-        # We might need to patch/adapt AgentLoop to accept an ID or extract it
+        # Register the LOOP instance immediately so we can stop it
+        active_loops[run_id] = loop
         
-        # For S16, AgentLoop4.run creates a NEW session. 
-        # We need to capture that context immediately.
-        
-        # Hack: wrapper to get context
+        # Execute the loop
+        # The loop will maintain its own internal context
         context = await loop.run(query, [], {}, [], session_id=run_id)
-        
-        # Save reference (though context saves itself to disk)
-        active_loops[run_id] = context
         
     except Exception as e:
         print(f"Run {run_id} failed: {e}")
+        # Clean up on failure
+        if run_id in active_loops:
+            del active_loops[run_id]
 
 @app.post("/runs")
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
@@ -168,12 +165,28 @@ async def get_run(run_id: str):
         
     raise HTTPException(status_code=404, detail="Run not found")
 
+class UserInputRequest(BaseModel):
+    input: str
+
+@app.post("/runs/{run_id}/input")
+async def provide_input(run_id: str, request: UserInputRequest):
+    """Provide specific input to a running agent"""
+    if run_id in active_loops:
+        loop = active_loops[run_id]
+        if loop.context:
+            loop.context.provide_user_input(request.input)
+            return {"id": run_id, "status": "input_received"}
+        else:
+            raise HTTPException(status_code=400, detail="Context not initialized")
+    
+    raise HTTPException(status_code=404, detail="Active run not found or not waiting for input")
+
 @app.post("/runs/{run_id}/stop")
 async def stop_run(run_id: str):
     """Stop a running agent execution"""
     if run_id in active_loops:
-        context = active_loops[run_id]
-        context.stop()
+        loop = active_loops[run_id]
+        loop.stop()
         return {"id": run_id, "status": "stopping"}
     
     raise HTTPException(status_code=404, detail="Active run not found")

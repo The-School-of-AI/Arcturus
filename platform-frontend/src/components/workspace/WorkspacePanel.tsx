@@ -22,6 +22,71 @@ const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; 
     </button>
 );
 
+// Sub-component for User Input to avoid Hook errors in conditional rendering
+const ClarificationInput: React.FC<{ selectedNode: any; codeContent: string }> = ({ selectedNode, codeContent }) => {
+    let message = "This agent requires your input to proceed.";
+    try {
+        const parsed = JSON.parse(codeContent);
+        if (parsed.clarificationMessage) {
+            message = parsed.clarificationMessage;
+        }
+    } catch { }
+
+    const [inputValue, setInputValue] = React.useState('');
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    const handleSubmit = async () => {
+        if (!inputValue.trim()) return;
+        setIsSubmitting(true);
+        try {
+            const runId = useAppStore.getState().currentRun?.id;
+            if (runId) {
+                await fetch(`http://localhost:8000/runs/${runId}/input`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input: inputValue })
+                });
+                setInputValue('');
+            }
+        } catch (e) {
+            console.error("Failed to submit input:", e);
+            alert("Failed to submit input: " + e);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg space-y-3 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2 text-yellow-400 font-bold text-xs uppercase tracking-wider">
+                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                User Input Required
+            </div>
+            <div className="text-sm text-foreground/90 leading-relaxed font-medium">
+                {message}
+            </div>
+            <div className="flex gap-2">
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !isSubmitting && handleSubmit()}
+                    placeholder="Type your response here..."
+                    className="flex-1 bg-black/30 border border-white/10 rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-yellow-500/50 transition-colors"
+                    disabled={isSubmitting}
+                />
+                <button
+                    onClick={handleSubmit}
+                    disabled={!inputValue.trim() || isSubmitting}
+                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
+                >
+                    {isSubmitting ? 'Sending...' : 'Send'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export const WorkspacePanel: React.FC = () => {
     const { codeContent, webUrl, logs, selectedNodeId, nodes } = useAppStore();
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
@@ -75,7 +140,8 @@ export const WorkspacePanel: React.FC = () => {
                         "w-2 h-2 rounded-full",
                         selectedNode?.data.status === 'completed' ? "bg-green-500" :
                             selectedNode?.data.status === 'running' ? "bg-yellow-500 animate-pulse" :
-                                selectedNode?.data.status === 'failed' ? "bg-red-500" : "bg-white/20"
+                                selectedNode?.data.status === 'waiting_input' ? "bg-yellow-400 animate-pulse" :
+                                    selectedNode?.data.status === 'failed' ? "bg-red-500" : "bg-white/20"
                     )} />
                     <span className="font-mono font-bold text-sm tracking-wide uppercase text-foreground">
                         {selectedNode?.data.label || "Unknown Agent"}
@@ -103,6 +169,11 @@ export const WorkspacePanel: React.FC = () => {
             <div className="flex-1 overflow-hidden relative">
                 {activeTab === 'overview' && (
                     <div className="p-4 space-y-6 overflow-y-auto h-full font-mono text-sm">
+
+                        {/* Section: User Input (Clarification) */}
+                        {selectedNode?.data.status === 'waiting_input' && (
+                            <ClarificationInput selectedNode={selectedNode} codeContent={codeContent} />
+                        )}
 
                         {/* Section: Prompt */}
                         <div className="space-y-2">

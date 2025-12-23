@@ -16,7 +16,7 @@ export interface Run {
 export interface AgentNodeData {
     label: string;
     type: AgentType | 'Generic';
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'waiting_input';
     description?: string;
     prompt?: string;
     reads?: string[];

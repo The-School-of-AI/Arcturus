@@ -1,61 +1,60 @@
-
 agents:
   PlannerAgent:
-    prompt_file: "16_NetworkX/prompts/planner.md"
+    prompt_file: "prompts/planner.md"
     model: "gemini"
     mcp_servers: []
     description: "Generates the execution plan graph."
 
   BrowserAgent:
-    prompt_file: "16_NetworkX/prompts/browser.md"
+    prompt_file: "prompts/browser.md"
     model: "gemini"
     mcp_servers: ["browser"]
     description: "Browses the web using text search or vision."
 
   CoderAgent:
-    prompt_file: "16_NetworkX/prompts/coder.md"
+    prompt_file: "prompts/coder.md"
     model: "gemini"
     mcp_servers: ["sandbox", "browser", "rag"]
     description: "Writes Python code to analyze data or solve problems."
 
   RetrieverAgent:
-    prompt_file: "16_NetworkX/prompts/retriever.md"
+    prompt_file: "prompts/retriever.md"
     model: "gemini"
     mcp_servers: ["rag", "browser"]
     description: "Searches local documents and web."
 
   SummarizerAgent:
-    prompt_file: "16_NetworkX/prompts/summarizer.md"
+    prompt_file: "prompts/summarizer.md"
     model: "gemini"
     mcp_servers: ["browser", "rag"]
     description: "Synthesizes final answers."
 
   DistillerAgent:
-    prompt_file: "16_NetworkX/prompts/distiller.md"
+    prompt_file: "prompts/distiller.md"
     model: "gemini"
     mcp_servers: []
     description: "Distills complex content into structured summaries."
 
   ThinkerAgent:
-    prompt_file: "16_NetworkX/prompts/thinker.md"
+    prompt_file: "prompts/thinker.md"
     model: "gemini"
     mcp_servers: []
     description: "Reasoning and logical inference engine."
 
   FormatterAgent:
-    prompt_file: "16_NetworkX/prompts/formatter.md"
+    prompt_file: "prompts/formatter.md"
     model: "gemini"
     mcp_servers: []
     description: "Formats final reports to high standards."
 
   ClarificationAgent:
-    prompt_file: "16_NetworkX/prompts/clarification.md"
+    prompt_file: "prompts/clarification.md"
     model: "gemini"
     mcp_servers: []
     description: "Interacts with user for clarifications."
 
   QAAgent:
-    prompt_file: "16_NetworkX/prompts/qa.md"
+    prompt_file: "prompts/qa.md"
     model: "gemini"
     mcp_servers: []
     description: "Quality assurance and validation."

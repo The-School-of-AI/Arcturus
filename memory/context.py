@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 class ExecutionContextManager:
-    def __init__(self, plan_graph: dict, session_id: str = None, original_query: str = None, file_manifest: list = None, debug_mode: bool = False):
+    def __init__(self, plan_graph: dict, session_id: str = None, original_query: str = None, file_manifest: list = None, debug_mode: bool = False, api_mode: bool = True):
         # 🎯 Build NetworkX graph with ALL data
         self.plan_graph = nx.DiGraph()
         
@@ -22,6 +22,11 @@ class ExecutionContextManager:
         self.plan_graph.graph['original_query'] = original_query
         self.plan_graph.graph['file_manifest'] = file_manifest or []
         self.stop_requested = False
+
+        # Async User Input Support
+        self.api_mode = api_mode
+        self.user_input_event = asyncio.Event()
+        self.user_input_value = None
 
         self.plan_graph.graph['created_at'] = datetime.utcnow().isoformat()
         self.plan_graph.graph['status'] = 'running'
@@ -42,16 +47,22 @@ class ExecutionContextManager:
 
         # Build plan DAG
         for node in plan_graph.get("nodes", []):
-            self.plan_graph.add_node(node["id"], 
-                **node,
-                status='pending',
-                output=None,
-                error=None,
-                cost=0.0,
-                start_time=None,
-                end_time=None,
-                execution_time=0.0
-            )
+            # Prepare node data with defaults
+            node_data = node.copy()
+            # Set defaults if not present
+            defaults = {
+                'status': 'pending',
+                'output': None,
+                'error': None,
+                'cost': 0.0,
+                'start_time': None,
+                'end_time': None,
+                'execution_time': 0.0
+            }
+            for k, v in defaults.items():
+                node_data.setdefault(k, v)
+                
+            self.plan_graph.add_node(node["id"], **node_data)
             
         for edge in plan_graph.get("edges", []):
             self.plan_graph.add_edge(edge["source"], edge["target"])
@@ -62,6 +73,13 @@ class ExecutionContextManager:
     def stop(self):
         """Signal the execution loop to stop"""
         self.stop_requested = True
+        # Unblock any waiting input
+        self.user_input_event.set()
+
+    def provide_user_input(self, value):
+        """Provide input from external source (API)"""
+        self.user_input_value = value
+        self.user_input_event.set()
 
     def get_ready_steps(self):
         """Return all steps whose dependencies are complete and not yet run."""
@@ -220,11 +238,38 @@ class ExecutionContextManager:
         """Set reference to Live display for pausing during user interaction"""
         self._live_display = live_display
     
-    def _handle_user_interaction_rich(self, clarification_output):
-        """Handle user interaction with Rich prompts"""
+    async def _handle_user_interaction(self, clarification_output):
+        """Handle user interaction via API or Rich prompt"""
         message = clarification_output.get("clarificationMessage", "")
         options = clarification_output.get("options", [])
         
+        # API Mode (Async Wait)
+        if self.api_mode:
+            print(f"⏳ Waiting for user input: {message}")
+            
+            # Reset event and value
+            self.user_input_event.clear()
+            self.user_input_value = None
+            
+            # Update graph status to indicate waiting
+            # We assume the caller (mark_done) will handle the node status, 
+            # but we can set a global flag or rely on the frontend seeing the "interaction_required" in output
+            
+            # We explicitly save here to ensure frontend sees the request
+            self._save_session()
+            
+            # Wait for input or stop
+            while not self.stop_requested:
+                try:
+                    # Wait with timeout to allow checking stop_requested periodically
+                    await asyncio.wait_for(self.user_input_event.wait(), timeout=1.0)
+                    return self.user_input_value
+                except asyncio.TimeoutError:
+                    continue
+            
+            return "Execution stopped by user."
+
+        # CLI Mode (Rich Prompt)
         # Pause Live display during user interaction
         live_was_running = False
         if self._live_display and self._live_display._live_render.is_started:
@@ -281,7 +326,19 @@ class ExecutionContextManager:
         # USER INTERACTION CHECK
         if self._is_clarification_request(agent_type, output):
             try:
-                user_response = self._handle_user_interaction_rich(output)
+                # Set status to waiting (visible to UI)
+                node_data['status'] = 'waiting_input'
+                self._save_session()
+                
+                user_response = await self._handle_user_interaction(output)
+                
+                # If stopped during wait, we might get a partial response or stop signal
+                if self.stop_requested:
+                    node_data['status'] = 'failed'
+                    node_data['error'] = 'Execution stopped by user during input.'
+                    self._save_session()
+                    return
+
                 writes_to = output.get("writes_to", "user_response")
                 self.plan_graph.graph['globals_schema'][writes_to] = user_response
                 
@@ -290,8 +347,12 @@ class ExecutionContextManager:
                 output["interaction_completed"] = True
                 print(f"✅ User input captured: {writes_to} = '{user_response}'")
                 
+                # Restore status to running before completing
+                node_data['status'] = 'running'
+                
             except Exception as e:
                 print(f"❌ User interaction failed: {e}")
+                node_data['error'] = str(e)
         
         # CODE EXECUTION CHECK
         execution_result = None
