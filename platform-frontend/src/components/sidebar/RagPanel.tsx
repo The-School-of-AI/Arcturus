@@ -38,17 +38,17 @@ const FileTree: React.FC<{
     };
 
     const getIcon = () => {
-        if (isFolder) return isOpen ? <ChevronDown className="w-3 h-3 text-yellow-500" /> : <ChevronRight className="w-3 h-3 text-yellow-500" />;
+        if (isFolder) return isOpen ? <ChevronDown className="w-4 h-4 text-yellow-500" /> : <ChevronRight className="w-4 h-4 text-yellow-500" />;
         switch (item.type) {
-            case 'pdf': return <FileText className="w-3 h-3 text-red-400" />;
+            case 'pdf': return <FileText className="w-4 h-4 text-red-400" />;
             case 'doc':
-            case 'docx': return <FileText className="w-3 h-3 text-blue-400" />;
+            case 'docx': return <FileText className="w-4 h-4 text-blue-400" />;
             case 'txt':
-            case 'md': return <FileText className="w-3 h-3 text-gray-400" />;
+            case 'md': return <FileText className="w-4 h-4 text-gray-400" />;
             case 'png':
             case 'jpg':
-            case 'jpeg': return <File className="w-3 h-3 text-purple-400" />;
-            default: return <File className="w-3 h-3 text-muted-foreground" />;
+            case 'jpeg': return <File className="w-4 h-4 text-purple-400" />;
+            default: return <File className="w-4 h-4 text-muted-foreground" />;
         }
     };
 
@@ -56,7 +56,7 @@ const FileTree: React.FC<{
         <div>
             <div
                 className={cn(
-                    "flex items-center gap-1.5 py-1 px-2 rounded cursor-pointer select-none transition-colors",
+                    "flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer select-none transition-colors",
                     selectedPath === item.path ? "bg-primary/20 text-white" : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
@@ -64,12 +64,12 @@ const FileTree: React.FC<{
                 onClick={handleClick}
             >
                 {getIcon()}
-                <span className="truncate text-xs">{item.name}</span>
+                <span className="truncate text-sm">{item.name}</span>
                 {!isFolder && (
                     item.indexed ? (
-                        <CheckCircle className="w-2.5 h-2.5 text-green-500 ml-auto" />
+                        <CheckCircle className="w-3 h-3 text-green-500 ml-auto" />
                     ) : (
-                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/50 ml-auto" />
+                        <div className="w-2 h-2 rounded-full bg-yellow-500/50 ml-auto" />
                     )
                 )}
             </div>
