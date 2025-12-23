@@ -25,6 +25,8 @@ const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; 
 export const WorkspacePanel: React.FC = () => {
     const { codeContent, webUrl, logs, selectedNodeId, nodes } = useAppStore();
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
+    const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
+    const [activeIframeUrl, setActiveIframeUrl] = React.useState<string | null>(null);
 
     const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
@@ -35,8 +37,14 @@ export const WorkspacePanel: React.FC = () => {
         const nodeType = selectedNode.data.type;
         const nodeLabel = selectedNode.data.label?.toLowerCase() || '';
 
-        // Switch to Preview for agents that produce formatted output
-        if (nodeType === 'Summarizer' || nodeType === 'Evaluator' ||
+        // Reset web tab state when switching nodes
+        setExpandedUrl(null);
+        setActiveIframeUrl(null);
+
+        // Switch to appropriate tab based on agent type
+        if (nodeLabel.includes('retriever')) {
+            setActiveTab('web');
+        } else if (nodeType === 'Summarizer' || nodeType === 'Evaluator' ||
             nodeLabel.includes('formatter') || nodeLabel.includes('summarizer')) {
             setActiveTab('preview');
         } else if (nodeType === 'Coder') {
@@ -301,20 +309,186 @@ export const WorkspacePanel: React.FC = () => {
 
                 {
                     activeTab === 'web' && (
-                        <div className="h-full flex flex-col">
-                            <div className="p-2 border-b border-border bg-background flex gap-2">
-                                <div className="flex-1 bg-accent/50 rounded-md px-3 py-1.5 text-xs text-muted-foreground truncate font-mono">
-                                    {webUrl || "https://example.com"}
-                                </div>
-                            </div>
-                            {webUrl ? (
-                                <iframe src={webUrl} className="w-full h-full bg-white" title="Web Preview" />
-                            ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
-                                    <Globe className="w-12 h-12 opacity-20" />
-                                    <span className="text-sm">No agent browser session active</span>
-                                </div>
-                            )}
+                        <div className="h-full flex flex-col overflow-hidden">
+                            {(() => {
+                                // Extract URLs from RetrieverAgent output
+                                interface UrlInfo {
+                                    url: string;
+                                    content: string;
+                                    domain: string;
+                                }
+
+                                let urls: UrlInfo[] = [];
+
+                                try {
+                                    const parsed = JSON.parse(codeContent);
+
+                                    // Look for arrays with url/content pairs
+                                    for (const [key, value] of Object.entries(parsed)) {
+                                        if (Array.isArray(value)) {
+                                            for (const item of value) {
+                                                if (item && typeof item === 'object' && 'url' in item) {
+                                                    const urlObj = item as { url: string; content?: string };
+                                                    if (urlObj.url && urlObj.url.startsWith('http')) {
+                                                        try {
+                                                            const domain = new URL(urlObj.url).hostname;
+                                                            urls.push({
+                                                                url: urlObj.url,
+                                                                content: urlObj.content || 'No content extracted',
+                                                                domain
+                                                            });
+                                                        } catch { }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Also check execution_result
+                                    if (parsed.execution_result) {
+                                        for (const [key, value] of Object.entries(parsed.execution_result)) {
+                                            if (Array.isArray(value)) {
+                                                for (const item of value) {
+                                                    if (item && typeof item === 'object' && 'url' in item) {
+                                                        const urlObj = item as { url: string; content?: string };
+                                                        if (urlObj.url && urlObj.url.startsWith('http')) {
+                                                            try {
+                                                                const domain = new URL(urlObj.url).hostname;
+                                                                if (!urls.find(u => u.url === urlObj.url)) {
+                                                                    urls.push({
+                                                                        url: urlObj.url,
+                                                                        content: urlObj.content || 'No content extracted',
+                                                                        domain
+                                                                    });
+                                                                }
+                                                            } catch { }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Extract URLs from code_variants using regex
+                                    if (parsed.code_variants) {
+                                        for (const code of Object.values(parsed.code_variants)) {
+                                            if (typeof code === 'string') {
+                                                const urlMatches = code.match(/https?:\/\/[^\s'"]+/g);
+                                                if (urlMatches) {
+                                                    for (const url of urlMatches) {
+                                                        if (!urls.find(u => u.url === url)) {
+                                                            try {
+                                                                const domain = new URL(url).hostname;
+                                                                urls.push({ url, content: 'URL found in code', domain });
+                                                            } catch { }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch { }
+
+                                // The state hooks are at the component level now
+
+                                if (urls.length === 0) {
+                                    return (
+                                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4 p-8">
+                                            <Globe className="w-16 h-16 opacity-20" />
+                                            <div className="text-center">
+                                                <p className="text-sm font-medium mb-1">No URLs Found</p>
+                                                <p className="text-xs opacity-70">This agent didn't visit any web pages</p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <>
+                                        {/* URL List */}
+                                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                                            <div className="text-xs uppercase text-muted-foreground font-bold mb-3 flex items-center gap-2">
+                                                <Globe className="w-3 h-3" />
+                                                Web Sources ({urls.length})
+                                            </div>
+
+                                            {urls.map((urlInfo, idx) => (
+                                                <div key={idx} className="border border-white/10 rounded-lg overflow-hidden bg-charcoal-800">
+                                                    {/* Accordion Header */}
+                                                    <button
+                                                        onClick={() => setExpandedUrl(expandedUrl === urlInfo.url ? null : urlInfo.url)}
+                                                        className="w-full p-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                                                    >
+                                                        <div className={cn(
+                                                            "w-5 h-5 flex items-center justify-center transition-transform",
+                                                            expandedUrl === urlInfo.url && "rotate-90"
+                                                        )}>
+                                                            <svg className="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-xs font-medium text-primary truncate">{urlInfo.domain}</div>
+                                                            <div className="text-[10px] text-muted-foreground truncate">{urlInfo.url}</div>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setActiveIframeUrl(urlInfo.url);
+                                                            }}
+                                                            className="px-2 py-1 text-[10px] bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+                                                        >
+                                                            Open
+                                                        </button>
+                                                    </button>
+
+                                                    {/* Accordion Content */}
+                                                    {expandedUrl === urlInfo.url && (
+                                                        <div className="px-4 pb-4 pt-2 border-t border-white/5">
+                                                            <div className="text-xs text-muted-foreground mb-2 font-medium">Content Preview:</div>
+                                                            <div className="text-xs text-foreground/80 bg-black/20 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+                                                                {urlInfo.content.slice(0, 500)}
+                                                                {urlInfo.content.length > 500 && '...'}
+                                                            </div>
+                                                            <a
+                                                                href={urlInfo.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="mt-2 inline-flex items-center gap-1 text-[10px] text-blue-400 hover:underline"
+                                                            >
+                                                                Open in new tab →
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Iframe Preview */}
+                                        {activeIframeUrl && (
+                                            <div className="h-1/2 border-t border-white/10 flex flex-col">
+                                                <div className="p-2 bg-charcoal-800 flex items-center gap-2">
+                                                    <div className="flex-1 bg-background rounded px-3 py-1.5 text-xs text-muted-foreground truncate font-mono">
+                                                        {activeIframeUrl}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setActiveIframeUrl(null)}
+                                                        className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                                <iframe
+                                                    src={activeIframeUrl}
+                                                    className="flex-1 bg-white"
+                                                    title="Web Preview"
+                                                    sandbox="allow-scripts allow-same-origin"
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
                     )
                 }

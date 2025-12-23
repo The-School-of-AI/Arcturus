@@ -101,8 +101,16 @@ export const useAppStore = create<AppState>()(
                 try {
                     const fetched = await api.getRuns();
                     set({ runs: fetched });
-                } catch (e) {
-                    console.error("Failed to fetch runs", e);
+                } catch (e: any) {
+                    console.error("Failed to fetch runs. Check if backend is running at http://localhost:8000 and if CORS is allowed.");
+                    if (e.response) {
+                        console.error("Response data:", e.response.data);
+                        console.error("Response status:", e.response.status);
+                    } else if (e.request) {
+                        console.error("Request was made but no response received. This often indicates a CORS block or backend offline.");
+                    } else {
+                        console.error("Error setting up request:", e.message);
+                    }
                 }
             },
 
