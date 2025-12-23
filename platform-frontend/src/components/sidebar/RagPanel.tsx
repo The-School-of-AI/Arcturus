@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown } from 'lucide-react';
+import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface RagItem {
     name: string;
@@ -28,13 +31,14 @@ const FileTree: React.FC<{
         e.stopPropagation();
         if (isFolder) {
             setIsOpen(!isOpen);
+            onSelect(item); // Allow selecting folders too
         } else {
             onSelect(item);
         }
     };
 
     const getIcon = () => {
-        if (isFolder) return isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />;
+        if (isFolder) return isOpen ? <ChevronDown className="w-3 h-3 text-yellow-500" /> : <ChevronRight className="w-3 h-3 text-yellow-500" />;
         switch (item.type) {
             case 'pdf': return <FileText className="w-3 h-3 text-red-400" />;
             case 'doc':
@@ -90,7 +94,14 @@ export const RagPanel: React.FC = () => {
     const [files, setFiles] = useState<RagItem[]>([]);
     const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [loading, setLoading] = useState(false);
-    const [splitRatio, setSplitRatio] = useState(60); // Percentage height of top panel
+    const [splitRatio, setSplitRatio] = useState(60);
+
+    // New Folder State
+    const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+    const [newFolderName, setNewFolderName] = useState("");
+
+    // Upload State
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const fetchFiles = async () => {
         setLoading(true);
@@ -108,6 +119,51 @@ export const RagPanel: React.FC = () => {
         fetchFiles();
     }, []);
 
+    const handleCreateFolder = async () => {
+        if (!newFolderName.trim()) return;
+
+        let path = newFolderName;
+        if (selectedFile?.type === 'folder') {
+            path = `${selectedFile.path}/${newFolderName}`;
+        }
+
+        try {
+            await axios.post(`${API_BASE}/rag/create_folder`, null, {
+                params: { folder_path: path }
+            });
+            setIsNewFolderOpen(false);
+            setNewFolderName("");
+            fetchFiles();
+        } catch (e) {
+            alert("Failed to create folder");
+        }
+    };
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            if (selectedFile?.type === 'folder') {
+                formData.append("path", selectedFile.path);
+            }
+
+            try {
+                await axios.post(`${API_BASE}/rag/upload`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+                fetchFiles();
+            } catch (error) {
+                alert("Failed to upload file");
+            }
+        }
+    };
+
     // Drag Logic
     const startResizing = (mouseDownEvent: React.MouseEvent) => {
         const startY = mouseDownEvent.clientY;
@@ -117,7 +173,7 @@ export const RagPanel: React.FC = () => {
             const containerHeight = document.getElementById('rag-panel-container')?.offsetHeight || 500;
             const deltaY = mouseMoveEvent.clientY - startY;
             const deltaPercent = (deltaY / containerHeight) * 100;
-            const newHeight = Math.min(Math.max(startHeight + deltaPercent, 20), 80); // Clamp between 20% and 80%
+            const newHeight = Math.min(Math.max(startHeight + deltaPercent, 20), 80);
             setSplitRatio(newHeight);
         };
 
@@ -141,9 +197,48 @@ export const RagPanel: React.FC = () => {
                         <Folder className="w-3 h-3" />
                         Documents
                     </h3>
-                    <button onClick={fetchFiles} className="text-muted-foreground hover:text-primary transition-colors">
-                        <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
+                            <DialogTrigger asChild>
+                                <button className="p-1 text-muted-foreground hover:text-primary transition-colors" title="New Folder">
+                                    <FolderPlus className="w-3.5 h-3.5" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-charcoal-900 border-border sm:max-w-xs">
+                                <DialogHeader>
+                                    <DialogTitle className="text-white text-sm">New Folder</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-2">
+                                    <Input
+                                        placeholder="Folder Name"
+                                        value={newFolderName}
+                                        onChange={(e) => setNewFolderName(e.target.value)}
+                                        className="bg-charcoal-800 border-gray-600 text-white h-8 text-xs"
+                                    />
+                                    {selectedFile?.type === 'folder' && (
+                                        <p className="text-[10px] text-muted-foreground mt-1">Inside: {selectedFile.name}</p>
+                                    )}
+                                </div>
+                                <DialogFooter>
+                                    <Button size="sm" onClick={handleCreateFolder} className="h-7 text-xs bg-primary text-primary-foreground">Create</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        <button onClick={handleUploadClick} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Upload File">
+                            <UploadCloud className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={handleFileChange}
+                        />
+
+                        <button onClick={fetchFiles} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Refresh">
+                            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+                        </button>
+                    </div>
                 </div>
                 <div className="flex-1 overflow-y-auto py-2">
                     {files.map((file) => (

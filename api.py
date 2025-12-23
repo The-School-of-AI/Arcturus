@@ -264,6 +264,52 @@ async def get_rag_documents():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/rag/create_folder")
+async def create_rag_folder(folder_path: str):
+    """Create a new folder in RAG documents"""
+    try:
+        root = Path(__file__).parent / "mcp_servers" / "documents"
+        # Sanitize path to prevent breaking out of documents dir
+        safe_path = Path(folder_path).name
+        target_path = root / safe_path
+        
+        if target_path.exists():
+             raise HTTPException(status_code=400, detail="Folder already exists")
+        
+        target_path.mkdir(parents=True, exist_ok=True)
+        return {"status": "success", "path": str(safe_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+from fastapi import UploadFile, File, Form
+
+@app.post("/rag/upload")
+async def upload_rag_file(
+    file: UploadFile = File(...), 
+    path: str = Form("")
+):
+    """Upload a file to RAG documents"""
+    try:
+        root = Path(__file__).parent / "mcp_servers" / "documents"
+        # Sanitize target directory
+        target_dir = root
+        if path:
+            # Prevent directory traversal
+            clean_path = path.strip("/").replace("..", "")
+            target_dir = root / clean_path
+            
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = target_dir / file.filename
+        
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+            
+        return {"status": "success", "file": file.filename}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/mcp/tools")
 async def get_mcp_tools():
     """List available MCP tools by scanning files using regex for robustness"""
@@ -271,42 +317,39 @@ async def get_mcp_tools():
     tools = []
     try:
         server_path = Path(__file__).parent / "mcp_servers"
-        # Regex to find @mcp.tool() or @tool() decorated functions
-        # This captures the decorator, function definition, and docstring
-        tool_pattern = re.compile(r'@(?:mcp\.)?tool\s*\(\s*\).*?async\s+def\s+(\w+)\s*\(.*?\).*?:(?:\s*"""(.*?)""")?', re.DOTALL)
+        # Robust regex: 
+        # 1. Matches @mcp.tool or @tool
+        # 2. Handles optional parentheses/args: (?:\(.*?\))?
+        # 3. Handles newlines/whitespace before def
+        # 4. Matches optional async
+        # 5. Captures function name
+        # 6. Matches arguments
+        # 7. Optionally captures docstring
+        
+        tool_pattern = re.compile(
+            r'@(?:mcp\.)?tool\s*(?:\(.*?\))?\s*'  # Decorator
+            r'(?:async\s+)?def\s+(\w+)\s*\(.*?\).*?:' # Function sig
+            r'(?:\s*"""(.*?)""")?', # Docstring
+            re.DOTALL | re.VERBOSE
+        )
         
         for py_file in server_path.glob("*.py"):
             try:
                 content = py_file.read_text()
-                # We need to parse manually or use ast. 
-                # Let's stick to AST but inspect it better if regex is too brittle for full code
-                # Actually, AST is better but we missed the "mcp" instance name variation if using decorators
-                # Let's try AST again but look for ANY decorator named 'tool'
+                matches = tool_pattern.finditer(content)
                 
-                import ast
-                tree = ast.parse(content)
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.FunctionDef):
-                        is_tool = False
-                        for decorator in node.decorator_list:
-                            # Case 1: @mcp.tool()
-                            if isinstance(decorator, ast.Call):
-                                if isinstance(decorator.func, ast.Attribute) and decorator.func.attr == 'tool':
-                                    is_tool = True
-                                elif isinstance(decorator.func, ast.Name) and decorator.func.id == 'tool':
-                                    is_tool = True
-                            # Case 2: @mcp.tool (no parens - rare but possible)
-                            elif isinstance(decorator, ast.Attribute) and decorator.attr == 'tool':
-                                is_tool = True
-                        
-                        if is_tool:
-                            tools.append({
-                                "name": node.name,
-                                "description": ast.get_docstring(node) or "No description",
-                                "file": py_file.name
-                            })
+                for match in matches:
+                    name = match.group(1)
+                    docstring = match.group(2)
+                    
+                    tools.append({
+                        "name": name,
+                        "description": (docstring or "No description").strip(),
+                        "file": py_file.name
+                    })
+
             except Exception as ex:
-                print(f"Failed to parse {py_file}: {ex}")
+                print(f"Failed to scan {py_file}: {ex}")
                 continue
                 
         return {"tools": tools}
