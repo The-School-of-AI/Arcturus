@@ -59,6 +59,101 @@ async def web_extract_text(string: str) -> str:
     except Exception as e:
         return f"[Error] Extraction failed: {str(e)}"
 
+# --- Tool 3: Advanced Bulk Search (Restored from Legacy) ---
+
+from mcp.types import TextContent
+
+@mcp.tool()
+async def search_web_with_text_content(string: str) -> dict:
+    """Search web and return URLs with extracted text content. Gets both URLs and readable text from top search results. Ideal for exhaustive research."""
+    
+    try:
+        # Step 1: Get URLs
+        urls = await smart_search(string, 5) # Default to 5
+        
+        if not urls:
+            return {
+                "content": [
+                    TextContent(
+                        type="text",
+                        text="[error] No search results found"
+                    )
+                ]
+            }
+        
+        # Step 2: Extract text content from each URL
+        results = []
+        max_extracts = min(len(urls), 5)
+        
+        for i, url in enumerate(urls[:max_extracts]):
+            try:
+                web_result = await asyncio.wait_for(smart_web_extract(url), timeout=20)
+                text_content = web_result.get("best_text", "")[:4000]
+                text_content = text_content.replace('\n', ' ').replace('  ', ' ').strip()
+                
+                results.append({
+                    "url": url,
+                    "content": text_content if text_content.strip() else "[error] No readable content found",
+                    "images": web_result.get("images", []),
+                    "rank": i + 1
+                })
+            except Exception as e:
+                results.append({
+                    "url": url,
+                    "content": f"[error] {str(e)}",
+                    "rank": i + 1
+                })
+        
+        return {
+            "content": [
+                TextContent(
+                    type="text",
+                    text=str(results)
+                )
+            ]
+        }
+    except Exception as e:
+        return {
+            "content": [
+                TextContent(
+                    type="text",
+                    text=f"[error] {str(e)}"
+                )
+            ]
+        }
+
+@mcp.tool()
+async def fetch_search_urls(string: str, integer: int = 5) -> str:
+    """Get top website URLs for your search query. Just gets the URLs not the contents."""
+    try:
+        urls = await smart_search(string, integer)
+        return str(urls)
+    except Exception as e:
+        return f"[Error] Search failed: {str(e)}"
+
+@mcp.tool()
+async def webpage_url_to_raw_text(string: str) -> dict:
+    """Extract readable text from a webpage."""
+    try:
+        result = await asyncio.wait_for(smart_web_extract(string), timeout=30)
+        return {
+            "content": [
+                TextContent(
+                    type="text",
+                    text=f"[{result.get('best_text_source', '')}] " + result.get("best_text", "")[:8000]
+                )
+            ]
+        }
+    except Exception as e:
+        return {
+            "content": [
+                TextContent(
+                    type="text",
+                    text=f"[error] Failed to extract: {str(e)}"
+                )
+            ]
+        }
+
 # --- Tool 2: Deep Vision Browsing (Browser Use) ---
 
 @mcp.tool()

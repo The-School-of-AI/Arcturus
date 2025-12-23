@@ -263,7 +263,16 @@ async def run_user_code(code: str, multi_mcp, session_id: str = "default_session
                     return f"Error executing tool: {v.error}"
                 return v.content if v.content else "Success"
             elif hasattr(v, "content") and isinstance(v.content, list):
-                return "\n".join(x.text for x in v.content if hasattr(x, "text"))
+                text_content = "\n".join(x.text for x in v.content if hasattr(x, "text"))
+                # Try to parse JSON if it looks like a structure (list/dict) to return actual objects
+                try:
+                    stripped = text_content.strip()
+                    if (stripped.startswith('[') and stripped.endswith(']')) or \
+                       (stripped.startswith('{') and stripped.endswith('}')):
+                        return json.loads(text_content)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+                return text_content
             else:
                 return str(v)
 

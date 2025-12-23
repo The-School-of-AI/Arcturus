@@ -34,7 +34,7 @@ export const GraphCanvas: React.FC = () => {
 
     return (
         <ReactFlow
-            nodes={nodes}
+            nodes={nodes.filter(n => n.id !== 'ROOT')}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}

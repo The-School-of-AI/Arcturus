@@ -170,11 +170,6 @@ export const WorkspacePanel: React.FC = () => {
                 {activeTab === 'overview' && (
                     <div className="p-4 space-y-6 overflow-y-auto h-full font-mono text-sm">
 
-                        {/* Section: User Input (Clarification) */}
-                        {selectedNode?.data.status === 'waiting_input' && (
-                            <ClarificationInput selectedNode={selectedNode} codeContent={codeContent} />
-                        )}
-
                         {/* Section: Prompt */}
                         <div className="space-y-2">
                             <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2">
@@ -184,6 +179,11 @@ export const WorkspacePanel: React.FC = () => {
                                 {selectedNode?.data.prompt || "N/A"}
                             </div>
                         </div>
+
+                        {/* Section: User Input (Clarification) */}
+                        {selectedNode?.data.status === 'waiting_input' && (
+                            <ClarificationInput selectedNode={selectedNode} codeContent={codeContent} />
+                        )}
 
                         {/* Section: I/O Context */}
                         <div className="grid grid-cols-2 gap-2">

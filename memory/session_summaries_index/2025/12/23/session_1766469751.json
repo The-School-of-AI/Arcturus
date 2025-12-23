@@ -1,0 +1,713 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1766469751",
+    "original_query": "What was the AQI of Kolkata on 22nd December 2025?",
+    "file_manifest": [],
+    "created_at": "2025-12-23T06:02:31.973219",
+    "status": "completed",
+    "globals_schema": {
+      "raw_aqi_data_T001": "{\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"[{'url': 'https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis', 'content': '[error] ', 'rank': 1}, {'url': 'https://airquality.cpcb.gov.in/AQI_India/', 'content': 'National Air Quality Index Toggle navigation National Air Quality Index Central Pollution Control\\\\r        Board, Ministry of Environment, Forests and Climate Change Color Codes City Rankings Compare Cities Credits State City Station Click here for\\\\r         AQI Data Repository AQI Remark Color Code Possible Health Impacts List of AQI Stations with Data of above selected Date & Time Compare Cities City City City City NOTE: ... (1974-2024)- -   || Celebrating Golden Jubilee Year of CPCB (1974-2024)- 5 decades in pursuit of clean environment. Supervised by Prof. Arnab Bhattacharya & Prof. Mukesh Sharma IIT Kanpur Developed by Sagar Parihar & Swapnil Mahajan Insufficient data for computing AQI Prominent Pollutant is On Pollutant Timeline Avg Min Max No Data Available Network Error No response from server. Name Graph Avg Min Max Rank City State Remark AQI Element Timeline Avg Min Max Captcha Verification Yes Verify', 'images': [], 'rank': 2}, {'url': 'https://ews.tropmet.res.in/kolkata/index.php', 'content': 'Kolkata - Air Quality Early Warning System, Project by Indian Institute of Tropical Meteorology, Pune - 441008, INDIA AIR QUALITY EARLY WARNING AND DECISION SUPPORT SYSTEM FOR KOLKATA Indian Institute of Tropical Meteorology Ministry Of Earth Sciences, Govt. Of India Menu Pune Mumbai Ahmedabad Kolkata Bengaluru Hyderabad Delhi AQEWS Previous Next Current AQI For Various Stations Ballygunge 2025-12-23 10:00:00 - 181 Bidhannagar 2025-12-23 10:00:00 - 243 Fort William 2025-12-23 10:00:00 - 144 Jadavpur 2025-12-23 10:00:00 - 264 Rabindra Bharati University 2025-12-23 10:00:00 - 173 Rabindra Sarobar 2025-12-23 10:00:00 - 125 Victoria 2025-12-23 10:00:00 - 313 Kolkata Weather 17.2 C 84 % 1.9 km/h Observed : 2025-12-23 08:30 IST Current AQI at Kolkata Forecast AQI PM 2.5 PM 10 Hourly Forecast Verification PM 2.5 Select All Observation Forecast Start : End : Reset Hourly Forecast Verification PM 10 Select All Observation Forecast Start : End : Reset Copyright All rights reserved | Designed and Developed by Team IITM', 'images': [], 'rank': 3}, {'url': 'https://breathe.climate.uchicago.edu/kolkata-india/', 'content': 'Kolkata, India - Pollution Monitors Skip to content English About Team Pollution Monitoring Chiang Mai, Thailand Guatemala City, Guatemala Kanpur, India Kigali, Rwanda Kolkata, India Kolkata, India Daily Pollution Levels on PM2.5 Concentration Meets National Standard (60 g/m) Meets WHO Guideline (15 g/m) Download Data Annual Average Pollution Levels in Kolkata Source: Air Quality Life Index Download Data Kolkata Weekly Cigarettes Note: These are estimations based on Berkeley Earths Air Pollution and Cigarette Equivalence, https://berkeleyearth.wpengine.com/air-pollution-and-cigarette-equivalence/ Download Data Top 10 Threats to Life Expectancy in India Threat to Life Expectancy Life Years Lost 0-0.1 0.1-0.5 0.5-1.0 1.0-2.0 2.0-3.0 3.0-4.0 Source: Global Burden of Disease (https://vizhub.healthdata.org/gbd-results/) , level-2 causes and risks data and WHO Life Tables (https://apps.who.int/gho/data/node.main.LIFECOUNTRY?lang=en) , were combined with the Life table method to arrive at these results. PM2.5 relative to WHO Guideline bar displays the reduction in life expectancy relative to the WHO guideline as calculated by latest AQLI (2023 PM2.5 concentrations) data. Download Data Share x-twitter Share this page on X (opens new window) facebook Share this page on Facebook (opens new window) email Email this page (opens new window) In the News In the News Aug 25, 2025 Kolkata beats other metros, reports more than 50% of good air days in 4 years: CSE study via Times of India Kolkata has emerged as the metro with the best air quality among six major Indian cities. Learn More caret-right In the News Aug 25, 2025 How India moves: Surge in lung ailments in Kolkata as vehicle emissions choke city via Down to Earth Annual four-wheeler registration rose five times since 2016; public transport at the brink of breaking down. Learn More caret-right In the News Aug 25, 2025 PM 2.5 in 2024-25 winter Kolkatas best since 2019 via Times of India This winter brought a breath of relatively cleaner air to Kolkata, with the city recording its best particulate pollution levels since 2019. Learn More caret-right In the News Aug 26, 2025 Kolkata study finds air toxicity surges when PM2.5 breaches 70 g/m, threshold exceeds on 75% of winter days NCAP fails to curb PM2.5 from waste burning a major air pollutant in the West Bengal megacity despite spending over Rs 636 crore. Learn More caret-right In the News Aug 27, 2025 Kolkata has second worst air among Indias metros. What it needs to do to breathe better via Telegraph India Bengal capitals air quality improved marginally last year, but the city is still second most polluted among Indian metros despite fewer industries, vehicles. Experts explain the reasons, and what needs to be done. Learn More caret-right In the News Aug 27, 2025 How Kolkata improved its air quality within 6 years via The Indian Express In 2019, Kolkata was listed among the Top 10 most polluted cities by the National Clean Air Programme. Learn More caret-right About Team Pollution Monitoring About Team Pollution Monitoring Chiang Mai, Thailand Guatemala City, Guatemala Kanpur, India Kigali, Rwanda Kolkata, India English Search Search arrow-left arrow-right caret-down-wide caret-down caret-left caret-right checkmark close document dropdown-topics email external facebook filter Instagram linkedin mag-glass-large mag-glass-small multimedia pause play x-twitter youtube', 'images': [], 'rank': 4}, {'url': 'https://www.iqair.com/af/india/west-bengal/kolkata', 'content': 'Kolkata Air Quality Index (AQI) and India Air Pollution | IQAir Cart 0 Choose another country or region to see content specific to your location and shop online. Other country or region Continue Dismiss Close IQAir Logo Air Quality Caret Air Monitors Caret Air Purifiers Caret Filters Caret Face Masks For Business Caret News Caret Impact Caret Recent searches No recent searches Account Sign in Click to open cart Open menu Menu World Kolkata Add Click the \\\"Add\\\" button (+) to follow this location in your \\\"Places\\\" list for quick access. This feature requires you to sign in. World / India / West Bengal / Kolkata Recent searches No recent searches Add Click the \\\"Add\\\" button (+) to follow this location in your \\\"Places\\\" list for quick access. This feature requires you to sign in. World Kolkata Add Click the \\\"Add\\\" button (+) to follow this location in your \\\"Places\\\" list for quick access. This feature requires you to sign in. World / India / West Bengal / Kolkata Air quality in Kolkata Air quality index (AQI) and PM2.5 air pollution in Kolkata 1.5M Followers 10:30, Dec 23 Local time Data attribution 20 stations from 2 contributors Kolkata, West Bengal, India Air Quality Alert nearby View alert 219 US AQI Very unhealthy Main pollutant: PM2.5 144 g/m 21 13 km/h 60 % Data attribution 20 stations from 2 contributors Hourly forecast Kolkata air quality index (AQI) forecast Now 219 21 13 km/h 60% 12:30 209 22 7.2 km/h 54% 13:30 205 23 7.2 km/h 47% 14:30 197 25 7.2 km/h 40% 15:30 192 26 7.2 km/h 33% 16:30 187 25 7.2 km/h 25% 17:30 186 23 7.2 km/h 26% 18:30 181 22 7.2 km/h 26% 19:30 176 21 7.2 km/h 27% 20:30 187 21 7.2 km/h 28% 21:30 183 20 7.2 km/h 29% 22:30 180 19 3.6 km/h 30% 23:30 192 19 3.6 km/h 31% Wed 00:30 192 18 3.6 km/h 31% 01:30 192 18 7.2 km/h 32% 02:30 195 17 7.2 km/h 32% 03:30 195 16 7.2 km/h 33% 04:30 195 16 7.2 km/h 35% 05:30 195 15 7.2 km/h 39% 06:30 195 15 7.2 km/h 41% 07:30 195 17 7.2 km/h 39% 08:30 194 20 7.2 km/h 35% 09:30 194 22 7.2 km/h 31% 10:30 194 24 7.2 km/h 27% 11:30 180 25 7.2 km/h 24% 12:30 180 26 7.2 km/h 22% 13:30 180 27 10.8 km/h 21% 14:30 169 27 10.8 km/h 21% 15:30 169 27 10.8 km/h 21% 16:30 169 25 7.2 km/h 25% 17:30 176 23 7.2 km/h 27% 18:30 176 22 7.2 km/h 29% 19:30 176 22 7.2 km/h 30% 20:30 192 21 7.2 km/h 32% 21:30 192 20 3.6 km/h 34% 22:30 192 20 3.6 km/h 35% 23:30 204 19 7.2 km/h 36% Thu 00:30 204 18 7.2 km/h 38% 01:30 204 17 10.8 km/h 39% 02:30 202 17 10.8 km/h 41% 03:30 202 17 10.8 km/h 44% 04:30 202 16 7.2 km/h 46% 05:30 196 16 7.2 km/h 47% 06:30 196 16 7.2 km/h 48% 07:30 196 18 7.2 km/h 44% 08:30 195 20 7.2 km/h 37% 09:30 195 23 7.2 km/h 32% 10:30 195 24 10.8 km/h 29% 11:30 175 26 10.8 km/h 25% 12:30 175 27 14.4 km/h 23% 13:30 175 27 10.8 km/h 22% 14:30 160 27 10.8 km/h 21% 15:30 160 27 10.8 km/h 21% 16:30 160 25 10.8 km/h 24% 17:30 163 23 10.8 km/h 26% 18:30 163 22 7.2 km/h 28% 19:30 163 21 7.2 km/h 29% 20:30 174 20 3.6 km/h 30% 21:30 174 20 7.2 km/h 31% 22:30 174 19 7.2 km/h 32% 23:30 179 18 7.2 km/h 33% Fri 00:30 179 18 7.2 km/h 35% 01:30 179 17 7.2 km/h 39% 02:30 179 17 7.2 km/h 42% 03:30 179 16 7.2 km/h 45% 04:30 179 16 7.2 km/h 47% 05:30 178 16 7.2 km/h 47% 06:30 178 15 7.2 km/h 47% 07:30 178 17 3.6 km/h 42% 08:30 172 20 7.2 km/h 36% 09:30 172 22 7.2 km/h 32% 10:30 172 24 10.8 km/h 28% 11:30 163 25 10.8 km/h 24% Daily forecast 3d | 7d Kolkata air quality index (AQI) forecast Today 185 26 16 7.2 km/h 55% Wed 189 27 15 10.8 km/h 27% Thu 178 27 16 14.4 km/h 29% Air pollutants What is the current air quality in Kolkata? PM2.5 Fine particles ( 2.5 m) 144 g/m PM10 Coarse particles ( 10 m) 35.5 g/m SO Sulphur Dioxide 91.2 g/m PM2.5 concentration is currently 28.8 times the World Health Organization annual PM2.5 guideline value. Real-time Kolkata air pollution map Health recommendations Avoid outdoor exercise Close your windows to avoid dirty outdoor air Get a monitor Wear a mask outdoors Get a mask Run an air purifier Get an air purifier Clean air facilities. Superior indoor air quality. Clean Air', 'images': [], 'rank': 5}]\",\n      \"annotations\": null\n    }\n  ]\n}",
+      "kolkata_aqi_20251222_T002": {
+        "summary_unavailable": true
+      },
+      "qa_verdict_T003": "needs_revision",
+      "formatted_aqi_report_T004": "<div class='report'>\n  <h1>Kolkata Air Quality Analysis - 2025-12-22</h1>\n\n  <h2>1. Executive Summary</h2>\n  <p>Unfortunately, the Air Quality Index (AQI) data for Kolkata on December 22nd, 2025 is currently unavailable. This report is based on limited information and requires further revision upon data availability.</p>\n\n  <h2>2. Data Acquisition Issues</h2>\n  <p>Initial attempts to retrieve the AQI data from primary sources were unsuccessful. This may be due to server errors, network issues, or data reporting inconsistencies.</p>\n\n  <h2>3. Sources Consulted</h2>\n  <ul>\n    <li><a href='https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis'>https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis</a> - Error encountered during data retrieval.</li>\n    <li><a href='https://airquality.cpcb.gov.in/AQI_India/'>https://airquality.cpcb.gov.in/AQI_India/</a> - National Air Quality Index - Data retrieval successful, but specific AQI data for the specified date was not readily available.</li>\n    <li><a href='https://ews.tropmet.res.in/kolkata/index.php'>https://ews.tropmet.res.in/kolkata/index.php</a> - Kolkata - Air Quality Early Warning System - Data available, but only for 2025-12-23.</li>\n    <li><a href='https://breathe.climate.uchicago.edu/kolkata-india/'>https://breathe.climate.uchicago.edu/kolkata-india/</a> - Chicago University Breathe Project - General information and news articles available, but no specific daily AQI for 2025-12-22.</li>\n    <li><a href='https://www.iqair.com/af/india/west-bengal/kolkata'>https://www.iqair.com/af/india/west-bengal/kolkata</a> - IQAir - Data available for 2025-12-23.</li>\n  </ul>\n\n  <h2>4. Preliminary Findings (2025-12-23 Data)</h2>\n  <p>While the specific data for December 22nd is unavailable, data from December 23rd, 2025 (obtained from <a href='https://www.iqair.com/af/india/west-bengal/kolkata'>IQAir</a>) indicates:</p>\n  <ul>\n    <li><b>US AQI:</b> 219 (Very Unhealthy)</li>\n    <li><b>Main Pollutant:</b> PM2.5 (144 g/m³)</li>\n  </ul>\n\n  <h2>5. Air Quality Forecast (IQAir - 2025-12-23)</h2>\n    <p>IQAir provides the following forecast for Kolkata:</p>\n    <table>\n      <thead>\n        <tr>\n          <th>Time</th>\n          <th>AQI</th>\n          <th>PM2.5 (µg/m³)</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td>Now</td>\n          <td>219</td>\n          <td>144</td>\n        </tr>\n        <tr>\n          <td>12:30</td>\n          <td>209</td>\n          <td>21</td>\n        </tr>\n         <tr>\n          <td>13:30</td>\n          <td>205</td>\n          <td>23</td>\n        </tr>\n         <tr>\n          <td>14:30</td>\n          <td>197</td>\n          <td>25</td>\n        </tr>\n      </tbody>\n    </table>\n\n  <h2>6. Recent News on Kolkata Air Quality</h2>\n    <p>According to the <a href='https://breathe.climate.uchicago.edu/kolkata-india/'>University of Chicago Breathe project</a>, recent news articles indicate:</p>\n    <ul>\n      <li><b>Aug 25, 2025:</b> Kolkata beats other metros, reports more than 50% of good air days in 4 years (Source: Times of India)</li>\n      <li><b>Aug 25, 2025:</b> Surge in lung ailments in Kolkata as vehicle emissions choke city (Source: Down to Earth)</li>\n      <li><b>Aug 25, 2025:</b> PM 2.5 in 2024-25 winter Kolkatas best since 2019 (Source: Times of India)</li>\n      <li><b>Aug 26, 2025:</b> Kolkata study finds air toxicity surges when PM2.5 breaches 70 g/m (Source: Unknown)</li>\n      <li><b>Aug 27, 2025:</b> Kolkata has second worst air among Indias metros (Source: Telegraph India)</li>\n      <li><b>Aug 27, 2025:</b> How Kolkata improved its air quality within 6 years (Source: The Indian Express)</li>\n    </ul>\n\n  <h2>7. Health Recommendations (Based on Current AQI)</h2>\n    <p>Given the \"Very Unhealthy\" AQI level (based on 2025-12-23 data):</p>\n    <ul>\n      <li>Avoid outdoor exercise.</li>\n      <li>Close windows to avoid dirty outdoor air.</li>\n      <li>Consider wearing a mask outdoors.</li>\n      <li>Use an air purifier.</li>\n    </ul>\n\n  <h2>8. QA Verdict</h2>\n    <p>This report requires revision as the data for 2025-12-22 is unavailable. (Verdict: needs_revision)</p>\n\n  <h2>9. Conclusion</h2>\n  <p>The AQI data for Kolkata on December 22nd, 2025 is currently unavailable. Further investigation and data retrieval are required to provide an accurate and complete assessment.</p>\n</div>",
+      "human_approved_aqi_source_T005F1": [],
+      "raw_aqi_data_retry_T006F1": [],
+      "kolkata_aqi_20251222_retry_T007F1": [],
+      "qa_verdict_retry_T008F1": [],
+      "formatted_aqi_report_retry_T009F1": "<div class='report'>\n  <h1>Kolkata Air Quality Report - December 22, 2025</h1>\n\n  <h2>1. Introduction</h2>\n  <p>This report provides an analysis of the Air Quality Index (AQI) for Kolkata on December 22, 2025. Due to initial data retrieval issues, a re-attempt was made to obtain the necessary information. This report includes the re-extracted AQI value and the associated QA verdict.</p>\n\n  <h2>2. Data Sources</h2>\n  <p>The primary data source for AQI information is the Central Pollution Control Board (CPCB) and other reputable air quality monitoring websites. Specific sources consulted include:</p>\n  <ul>\n    <li><a href='https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis'>https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis</a></li>\n    <li><a href='https://airquality.cpcb.gov.in/AQI_India/'>https://airquality.cpcb.gov.in/AQI_India/</a></li>\n    <li><a href='https://ews.tropmet.res.in/kolkata/index.php'>https://ews.tropmet.res.in/kolkata/index.php</a></li>\n    <li><a href='https://breathe.climate.uchicago.edu/kolkata-india/'>https://breathe.climate.uchicago.edu/kolkata-india/</a></li>\n    <li><a href='https://www.iqair.com/af/india/west-bengal/kolkata'>https://www.iqair.com/af/india/west-bengal/kolkata</a></li>\n  </ul>\n\n  <h2>3. AQI Value for December 22, 2025</h2>\n  <p>Unfortunately, after multiple attempts, a specific AQI value for Kolkata on December 22, 2025, could not be reliably extracted. This is indicated by the missing `kolkata_aqi_20251222_retry_T007F1` value. The initial data retrieval also faced similar issues (refer to `kolkata_aqi_20251222_T002`).</p>\n\n  <h2>4. QA Verdict</h2>\n  <p>The QA verdict for the initial attempt was `needs_revision` (as indicated by `qa_verdict_T003`).  Since a reliable AQI value was still unavailable after the retry, the QA verdict for the retry is also likely to be negative, although the specific `qa_verdict_retry_T008F1` value is also missing, further confirming the data retrieval failure.</p>\n\n  <h2>5. Possible Reasons for Data Unavailability</h2>\n  <p>Several factors may contribute to the unavailability of the AQI data:</p>\n  <ul>\n    <li><b>Data Reporting Delays:</b> AQI data might not be immediately available on the specified date due to reporting delays from monitoring stations.</li>\n    <li><b>Website or API Issues:</b> The data source websites or APIs could be experiencing technical difficulties or maintenance.</li>\n    <li><b>Data Inconsistencies:</b> Variations in data collection and reporting methodologies across different sources can lead to inconsistencies.</li>\n    <li><b>Network Errors:</b> Transient network errors during data retrieval could have prevented successful data extraction.</li>\n  </ul>\n\n  <h2>6. Related Air Quality Information (If Available)</h2>\n  <p>Due to the unavailability of specific AQI data for the target date, related information from nearby dates or general trends could be relevant. However, without the actual value, providing specifics is impossible. Refer to the linked sources for potential alternative data points.</p>\n\n  <h2>7. Health Implications (General Guidance)</h2>\n  <p>While the specific AQI value is unavailable, it's important to be aware of the general health implications of air pollution. High AQI levels can cause respiratory problems, cardiovascular issues, and other adverse health effects. Individuals with pre-existing conditions, children, and the elderly are particularly vulnerable.</p>\n\n  <h2>8. Recommendations</h2>\n  <p>Based on the data retrieval failures, the following recommendations are made:</p>\n  <ul>\n    <li><b>Re-attempt Data Retrieval:</b> Try to retrieve the AQI data again after a few hours or days to account for potential reporting delays.</li>\n    <li><b>Consult Multiple Sources:</b> Verify the data from different sources to ensure consistency and accuracy.</li>\n    <li><b>Consider Historical Data:</b> Analyze historical AQI data for Kolkata to understand typical air quality patterns during December.</li>\n    <li><b>Implement Data Validation:</b> Implement robust data validation procedures to identify and handle missing or invalid data.</li>\n  </ul>\n\n  <h2>9. Conclusion</h2>\n  <p>Despite multiple attempts, a reliable AQI value for Kolkata on December 22, 2025, could not be obtained. This highlights the challenges associated with real-time data retrieval and the importance of robust data validation processes. Further investigation and monitoring are required to provide a comprehensive assessment of air quality in Kolkata on the specified date.</p>\n</div>"
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Retrieve historical AQI data for Kolkata on 2025-12-22.",
+              "agent": "RetrieverAgent",
+              "agent_prompt": "Fetch the historical Air Quality Index (AQI) data for Kolkata on 2025-12-22 from a reliable source such as government websites, environmental agencies, or public APIs. Prioritize data from official sources.",
+              "reads": [],
+              "writes": [
+                "raw_aqi_data_T001"
+              ]
+            },
+            {
+              "id": "T002",
+              "description": "Extract AQI value for Kolkata on 2025-12-22 from retrieved data.",
+              "agent": "DistillerAgent",
+              "agent_prompt": "From the `raw_aqi_data_T001`, extract the AQI value specifically for Kolkata on 2025-12-22. Handle potential variations in data format (e.g., different units, multiple readings per day).",
+              "reads": [
+                "raw_aqi_data_T001"
+              ],
+              "writes": [
+                "kolkata_aqi_20251222_T002"
+              ]
+            },
+            {
+              "id": "T003",
+              "description": "QA check of extracted AQI data.",
+              "agent": "QAAgent",
+              "agent_prompt": "Review the extracted AQI value `kolkata_aqi_20251222_T002` for Kolkata on 2025-12-22. Verify the source of the data and check for any anomalies or inconsistencies. Determine if the data requires further investigation. If the data is not available return needs_revision.",
+              "reads": [
+                "kolkata_aqi_20251222_T002"
+              ],
+              "writes": [
+                "qa_verdict_T003"
+              ]
+            },
+            {
+              "id": "T004",
+              "description": "Present the AQI of Kolkata on 2025-12-22 in a human-readable format.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Format the extracted AQI value `kolkata_aqi_20251222_T002` for Kolkata on 2025-12-22 into a concise and human-readable statement, including units and source information. Also, include the QA verdict `qa_verdict_T003`.",
+              "reads": [
+                "kolkata_aqi_20251222_T002",
+                "qa_verdict_T003"
+              ],
+              "writes": [
+                "formatted_aqi_report_T004"
+              ]
+            },
+            {
+              "id": "T005F1",
+              "description": "Clarify source of AQI data with human.",
+              "agent": "ClarificationAgent",
+              "agent_prompt": "Based on the initial data retrieval in T001, the source of AQI data for Kolkata on 2025-12-22 is unclear. Can you please specify a preferred and reliable data source for historical AQI information in Kolkata for this date?",
+              "reads": [
+                "raw_aqi_data_T001"
+              ],
+              "writes": [
+                "human_approved_aqi_source_T005F1"
+              ]
+            },
+            {
+              "id": "T006F1",
+              "description": "Retry retrieval with human-approved data source.",
+              "agent": "RetrieverAgent",
+              "agent_prompt": "Using the human-approved data source `human_approved_aqi_source_T005F1`, fetch the historical Air Quality Index (AQI) data for Kolkata on 2025-12-22. Prioritize data from this specified official source.",
+              "reads": [
+                "human_approved_aqi_source_T005F1"
+              ],
+              "writes": [
+                "raw_aqi_data_retry_T006F1"
+              ]
+            },
+            {
+              "id": "T007F1",
+              "description": "Extract AQI value from retry data.",
+              "agent": "DistillerAgent",
+              "agent_prompt": "From the re-retrieved `raw_aqi_data_retry_T006F1`, extract the AQI value specifically for Kolkata on 2025-12-22 based on the specified source. Handle potential variations in data format.",
+              "reads": [
+                "raw_aqi_data_retry_T006F1"
+              ],
+              "writes": [
+                "kolkata_aqi_20251222_retry_T007F1"
+              ]
+            },
+            {
+              "id": "T008F1",
+              "description": "QA check of re-extracted AQI data.",
+              "agent": "QAAgent",
+              "agent_prompt": "Review the re-extracted AQI value `kolkata_aqi_20251222_retry_T007F1` for Kolkata on 2025-12-22. Verify the source and check for anomalies or inconsistencies from data retrieved from the specified source. Determine if the data requires further investigation.",
+              "reads": [
+                "kolkata_aqi_20251222_retry_T007F1"
+              ],
+              "writes": [
+                "qa_verdict_retry_T008F1"
+              ]
+            },
+            {
+              "id": "T009F1",
+              "description": "Re-present the AQI of Kolkata on 2025-12-22 in a human-readable format.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Format the re-extracted AQI value `kolkata_aqi_20251222_retry_T007F1` for Kolkata on 2025-12-22 into a concise and human-readable statement, including units and source information. Also, include the QA verdict `qa_verdict_retry_T008F1`.",
+              "reads": [
+                "kolkata_aqi_20251222_retry_T007F1",
+                "qa_verdict_retry_T008F1"
+              ],
+              "writes": [
+                "formatted_aqi_report_retry_T009F1"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            },
+            {
+              "source": "T001",
+              "target": "T002"
+            },
+            {
+              "source": "T002",
+              "target": "T003"
+            },
+            {
+              "source": "T003",
+              "target": "T004"
+            },
+            {
+              "source": "T003",
+              "target": "T005F1",
+              "condition": "needs_revision in qa_verdict_T003"
+            },
+            {
+              "source": "T005F1",
+              "target": "T006F1"
+            },
+            {
+              "source": "T006F1",
+              "target": "T007F1"
+            },
+            {
+              "source": "T007F1",
+              "target": "T008F1"
+            },
+            {
+              "source": "T008F1",
+              "target": "T009F1"
+            }
+          ]
+        },
+        "next_step_id": "T002",
+        "cost": 0.0002876,
+        "input_tokens": 28,
+        "output_tokens": 712,
+        "total_tokens": 740
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2025-12-23T06:02:44.923071",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Retrieve historical AQI data for Kolkata on 2025-12-22.",
+      "agent": "RetrieverAgent",
+      "agent_prompt": "Fetch the historical Air Quality Index (AQI) data for Kolkata on 2025-12-22 from a reliable source such as government websites, environmental agencies, or public APIs. Prioritize data from official sources.",
+      "reads": [],
+      "writes": [
+        "raw_aqi_data_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "raw_aqi_data_T001": [],
+        "call_self": false,
+        "code_variants": {
+          "CODE_1A": "results = search_web_with_text_content('historical AQI data Kolkata 2025-12-22 government', 5)\nreturn {'raw_aqi_data_T001': results}",
+          "CODE_1B": "urls = fetch_search_urls('Kolkata AQI data 2025-12-22 pollution levels', 8)\nreturn {'raw_aqi_data_T001': urls}"
+        },
+        "cost": 2.3000000000000003e-05,
+        "input_tokens": 58,
+        "output_tokens": 43,
+        "total_tokens": 101,
+        "execution_result": {
+          "raw_aqi_data_T001": "{\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"[{'url': 'https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis', 'content': '[error] ', 'rank': 1}, {'url': 'https://airquality.cpcb.gov.in/AQI_India/', 'content': 'National Air Quality Index Toggle navigation National Air Quality Index Central Pollution Control\\\\r        Board, Ministry of Environment, Forests and Climate Change Color Codes City Rankings Compare Cities Credits State City Station Click here for\\\\r         AQI Data Repository AQI Remark Color Code Possible Health Impacts List of AQI Stations with Data of above selected Date & Time Compare Cities City City City City NOTE: ... (1974-2024)- -   || Celebrating Golden Jubilee Year of CPCB (1974-2024)- 5 decades in pursuit of clean environment. Supervised by Prof. Arnab Bhattacharya & Prof. Mukesh Sharma IIT Kanpur Developed by Sagar Parihar & Swapnil Mahajan Insufficient data for computing AQI Prominent Pollutant is On Pollutant Timeline Avg Min Max No Data Available Network Error No response from server. Name Graph Avg Min Max Rank City State Remark AQI Element Timeline Avg Min Max Captcha Verification Yes Verify', 'images': [], 'rank': 2}, {'url': 'https://ews.tropmet.res.in/kolkata/index.php', 'content': 'Kolkata - Air Quality Early Warning System, Project by Indian Institute of Tropical Meteorology, Pune - 441008, INDIA AIR QUALITY EARLY WARNING AND DECISION SUPPORT SYSTEM FOR KOLKATA Indian Institute of Tropical Meteorology Ministry Of Earth Sciences, Govt. Of India Menu Pune Mumbai Ahmedabad Kolkata Bengaluru Hyderabad Delhi AQEWS Previous Next Current AQI For Various Stations Ballygunge 2025-12-23 10:00:00 - 181 Bidhannagar 2025-12-23 10:00:00 - 243 Fort William 2025-12-23 10:00:00 - 144 Jadavpur 2025-12-23 10:00:00 - 264 Rabindra Bharati University 2025-12-23 10:00:00 - 173 Rabindra Sarobar 2025-12-23 10:00:00 - 125 Victoria 2025-12-23 10:00:00 - 313 Kolkata Weather 17.2 C 84 % 1.9 km/h Observed : 2025-12-23 08:30 IST Current AQI at Kolkata Forecast AQI PM 2.5 PM 10 Hourly Forecast Verification PM 2.5 Select All Observation Forecast Start : End : Reset Hourly Forecast Verification PM 10 Select All Observation Forecast Start : End : Reset Copyright All rights reserved | Designed and Developed by Team IITM', 'images': [], 'rank': 3}, {'url': 'https://breathe.climate.uchicago.edu/kolkata-india/', 'content': 'Kolkata, India - Pollution Monitors Skip to content English About Team Pollution Monitoring Chiang Mai, Thailand Guatemala City, Guatemala Kanpur, India Kigali, Rwanda Kolkata, India Kolkata, India Daily Pollution Levels on PM2.5 Concentration Meets National Standard (60 g/m) Meets WHO Guideline (15 g/m) Download Data Annual Average Pollution Levels in Kolkata Source: Air Quality Life Index Download Data Kolkata Weekly Cigarettes Note: These are estimations based on Berkeley Earths Air Pollution and Cigarette Equivalence, https://berkeleyearth.wpengine.com/air-pollution-and-cigarette-equivalence/ Download Data Top 10 Threats to Life Expectancy in India Threat to Life Expectancy Life Years Lost 0-0.1 0.1-0.5 0.5-1.0 1.0-2.0 2.0-3.0 3.0-4.0 Source: Global Burden of Disease (https://vizhub.healthdata.org/gbd-results/) , level-2 causes and risks data and WHO Life Tables (https://apps.who.int/gho/data/node.main.LIFECOUNTRY?lang=en) , were combined with the Life table method to arrive at these results. PM2.5 relative to WHO Guideline bar displays the reduction in life expectancy relative to the WHO guideline as calculated by latest AQLI (2023 PM2.5 concentrations) data. Download Data Share x-twitter Share this page on X (opens new window) facebook Share this page on Facebook (opens new window) email Email this page (opens new window) In the News In the News Aug 25, 2025 Kolkata beats other metros, reports more than 50% of good air days in 4 years: CSE study via Times of India Kolkata has emerged as the metro with the best air quality among six major Indian cities. Learn More caret-right In the News Aug 25, 2025 How India moves: Surge in lung ailments in Kolkata as vehicle emissions choke city via Down to Earth Annual four-wheeler registration rose five times since 2016; public transport at the brink of breaking down. Learn More caret-right In the News Aug 25, 2025 PM 2.5 in 2024-25 winter Kolkatas best since 2019 via Times of India This winter brought a breath of relatively cleaner air to Kolkata, with the city recording its best particulate pollution levels since 2019. Learn More caret-right In the News Aug 26, 2025 Kolkata study finds air toxicity surges when PM2.5 breaches 70 g/m, threshold exceeds on 75% of winter days NCAP fails to curb PM2.5 from waste burning a major air pollutant in the West Bengal megacity despite spending over Rs 636 crore. Learn More caret-right In the News Aug 27, 2025 Kolkata has second worst air among Indias metros. What it needs to do to breathe better via Telegraph India Bengal capitals air quality improved marginally last year, but the city is still second most polluted among Indian metros despite fewer industries, vehicles. Experts explain the reasons, and what needs to be done. Learn More caret-right In the News Aug 27, 2025 How Kolkata improved its air quality within 6 years via The Indian Express In 2019, Kolkata was listed among the Top 10 most polluted cities by the National Clean Air Programme. Learn More caret-right About Team Pollution Monitoring About Team Pollution Monitoring Chiang Mai, Thailand Guatemala City, Guatemala Kanpur, India Kigali, Rwanda Kolkata, India English Search Search arrow-left arrow-right caret-down-wide caret-down caret-left caret-right checkmark close document dropdown-topics email external facebook filter Instagram linkedin mag-glass-large mag-glass-small multimedia pause play x-twitter youtube', 'images': [], 'rank': 4}, {'url': 'https://www.iqair.com/af/india/west-bengal/kolkata', 'content': 'Kolkata Air Quality Index (AQI) and India Air Pollution | IQAir Cart 0 Choose another country or region to see content specific to your location and shop online. Other country or region Continue Dismiss Close IQAir Logo Air Quality Caret Air Monitors Caret Air Purifiers Caret Filters Caret Face Masks For Business Caret News Caret Impact Caret Recent searches No recent searches Account Sign in Click to open cart Open menu Menu World Kolkata Add Click the \\\"Add\\\" button (+) to follow this location in your \\\"Places\\\" list for quick access. This feature requires you to sign in. World / India / West Bengal / Kolkata Recent searches No recent searches Add Click the \\\"Add\\\" button (+) to follow this location in your \\\"Places\\\" list for quick access. This feature requires you to sign in. World Kolkata Add Click the \\\"Add\\\" button (+) to follow this location in your \\\"Places\\\" list for quick access. This feature requires you to sign in. World / India / West Bengal / Kolkata Air quality in Kolkata Air quality index (AQI) and PM2.5 air pollution in Kolkata 1.5M Followers 10:30, Dec 23 Local time Data attribution 20 stations from 2 contributors Kolkata, West Bengal, India Air Quality Alert nearby View alert 219 US AQI Very unhealthy Main pollutant: PM2.5 144 g/m 21 13 km/h 60 % Data attribution 20 stations from 2 contributors Hourly forecast Kolkata air quality index (AQI) forecast Now 219 21 13 km/h 60% 12:30 209 22 7.2 km/h 54% 13:30 205 23 7.2 km/h 47% 14:30 197 25 7.2 km/h 40% 15:30 192 26 7.2 km/h 33% 16:30 187 25 7.2 km/h 25% 17:30 186 23 7.2 km/h 26% 18:30 181 22 7.2 km/h 26% 19:30 176 21 7.2 km/h 27% 20:30 187 21 7.2 km/h 28% 21:30 183 20 7.2 km/h 29% 22:30 180 19 3.6 km/h 30% 23:30 192 19 3.6 km/h 31% Wed 00:30 192 18 3.6 km/h 31% 01:30 192 18 7.2 km/h 32% 02:30 195 17 7.2 km/h 32% 03:30 195 16 7.2 km/h 33% 04:30 195 16 7.2 km/h 35% 05:30 195 15 7.2 km/h 39% 06:30 195 15 7.2 km/h 41% 07:30 195 17 7.2 km/h 39% 08:30 194 20 7.2 km/h 35% 09:30 194 22 7.2 km/h 31% 10:30 194 24 7.2 km/h 27% 11:30 180 25 7.2 km/h 24% 12:30 180 26 7.2 km/h 22% 13:30 180 27 10.8 km/h 21% 14:30 169 27 10.8 km/h 21% 15:30 169 27 10.8 km/h 21% 16:30 169 25 7.2 km/h 25% 17:30 176 23 7.2 km/h 27% 18:30 176 22 7.2 km/h 29% 19:30 176 22 7.2 km/h 30% 20:30 192 21 7.2 km/h 32% 21:30 192 20 3.6 km/h 34% 22:30 192 20 3.6 km/h 35% 23:30 204 19 7.2 km/h 36% Thu 00:30 204 18 7.2 km/h 38% 01:30 204 17 10.8 km/h 39% 02:30 202 17 10.8 km/h 41% 03:30 202 17 10.8 km/h 44% 04:30 202 16 7.2 km/h 46% 05:30 196 16 7.2 km/h 47% 06:30 196 16 7.2 km/h 48% 07:30 196 18 7.2 km/h 44% 08:30 195 20 7.2 km/h 37% 09:30 195 23 7.2 km/h 32% 10:30 195 24 10.8 km/h 29% 11:30 175 26 10.8 km/h 25% 12:30 175 27 14.4 km/h 23% 13:30 175 27 10.8 km/h 22% 14:30 160 27 10.8 km/h 21% 15:30 160 27 10.8 km/h 21% 16:30 160 25 10.8 km/h 24% 17:30 163 23 10.8 km/h 26% 18:30 163 22 7.2 km/h 28% 19:30 163 21 7.2 km/h 29% 20:30 174 20 3.6 km/h 30% 21:30 174 20 7.2 km/h 31% 22:30 174 19 7.2 km/h 32% 23:30 179 18 7.2 km/h 33% Fri 00:30 179 18 7.2 km/h 35% 01:30 179 17 7.2 km/h 39% 02:30 179 17 7.2 km/h 42% 03:30 179 16 7.2 km/h 45% 04:30 179 16 7.2 km/h 47% 05:30 178 16 7.2 km/h 47% 06:30 178 15 7.2 km/h 47% 07:30 178 17 3.6 km/h 42% 08:30 172 20 7.2 km/h 36% 09:30 172 22 7.2 km/h 32% 10:30 172 24 10.8 km/h 28% 11:30 163 25 10.8 km/h 24% Daily forecast 3d | 7d Kolkata air quality index (AQI) forecast Today 185 26 16 7.2 km/h 55% Wed 189 27 15 10.8 km/h 27% Thu 178 27 16 14.4 km/h 29% Air pollutants What is the current air quality in Kolkata? PM2.5 Fine particles ( 2.5 m) 144 g/m PM10 Coarse particles ( 10 m) 35.5 g/m SO Sulphur Dioxide 91.2 g/m PM2.5 concentration is currently 28.8 times the World Health Organization annual PM2.5 guideline value. Real-time Kolkata air pollution map Health recommendations Avoid outdoor exercise Close your windows to avoid dirty outdoor air Get a monitor Wear a mask outdoors Get a mask Run an air purifier Get an air purifier Clean air facilities. Superior indoor air quality. Clean Air', 'images': [], 'rank': 5}]\",\n      \"annotations\": null\n    }\n  ]\n}"
+        },
+        "execution_status": "success",
+        "execution_error": null,
+        "execution_time": "2025-12-23 11:32:46",
+        "executed_variant": "CODE_1A",
+        "execution_logs": ""
+      },
+      "error": null,
+      "cost": 2.3000000000000003e-05,
+      "start_time": "2025-12-23T06:02:44.933176",
+      "end_time": "2025-12-23T06:03:14.611695",
+      "execution_time": 29.678519,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "raw_aqi_data_T001": [],
+            "call_self": false,
+            "code_variants": {
+              "CODE_1A": "results = search_web_with_text_content('historical AQI data Kolkata 2025-12-22 government', 5)\nreturn {'raw_aqi_data_T001': results}",
+              "CODE_1B": "urls = fetch_search_urls('Kolkata AQI data 2025-12-22 pollution levels', 8)\nreturn {'raw_aqi_data_T001': urls}"
+            },
+            "cost": 2.3000000000000003e-05,
+            "input_tokens": 58,
+            "output_tokens": 43,
+            "total_tokens": 101
+          }
+        }
+      ],
+      "input_tokens": 58,
+      "output_tokens": 43,
+      "total_tokens": 101
+    },
+    {
+      "id": "T002",
+      "description": "Extract AQI value for Kolkata on 2025-12-22 from retrieved data.",
+      "agent": "DistillerAgent",
+      "agent_prompt": "From the `raw_aqi_data_T001`, extract the AQI value specifically for Kolkata on 2025-12-22. Handle potential variations in data format (e.g., different units, multiple readings per day).",
+      "reads": [
+        "raw_aqi_data_T001"
+      ],
+      "writes": [
+        "kolkata_aqi_20251222_T002"
+      ],
+      "status": "completed",
+      "output": {
+        "kolkata_aqi_20251222_T002": {
+          "summary_unavailable": true
+        },
+        "cost": 0.0002555,
+        "input_tokens": 2539,
+        "output_tokens": 4,
+        "total_tokens": 2543
+      },
+      "error": null,
+      "cost": 0.0002555,
+      "start_time": "2025-12-23T06:03:14.616418",
+      "end_time": "2025-12-23T06:03:15.806033",
+      "execution_time": 1.189615,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "kolkata_aqi_20251222_T002": {
+              "summary_unavailable": true
+            },
+            "cost": 0.0002555,
+            "input_tokens": 2539,
+            "output_tokens": 4,
+            "total_tokens": 2543
+          }
+        }
+      ],
+      "input_tokens": 2539,
+      "output_tokens": 4,
+      "total_tokens": 2543
+    },
+    {
+      "id": "T003",
+      "description": "QA check of extracted AQI data.",
+      "agent": "QAAgent",
+      "agent_prompt": "Review the extracted AQI value `kolkata_aqi_20251222_T002` for Kolkata on 2025-12-22. Verify the source of the data and check for any anomalies or inconsistencies. Determine if the data requires further investigation. If the data is not available return needs_revision.",
+      "reads": [
+        "kolkata_aqi_20251222_T002"
+      ],
+      "writes": [
+        "qa_verdict_T003"
+      ],
+      "status": "completed",
+      "output": {
+        "issues": [
+          {
+            "step_id": "T003",
+            "problem": "AQI data for Kolkata on 2025-12-22 is unavailable.",
+            "severity": "critical",
+            "recommendation": "Ensure data availability or use a different source."
+          }
+        ],
+        "verdict": "needs_revision",
+        "qa_verdict_T003": "needs_revision",
+        "cost": 2.3300000000000004e-05,
+        "input_tokens": 73,
+        "output_tokens": 40,
+        "total_tokens": 113
+      },
+      "error": null,
+      "cost": 2.3300000000000004e-05,
+      "start_time": "2025-12-23T06:03:15.810515",
+      "end_time": "2025-12-23T06:03:20.599288",
+      "execution_time": 4.788773,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "issues": [
+              {
+                "step_id": "T003",
+                "problem": "AQI data for Kolkata on 2025-12-22 is unavailable.",
+                "severity": "critical",
+                "recommendation": "Ensure data availability or use a different source."
+              }
+            ],
+            "verdict": "needs_revision",
+            "qa_verdict_T003": "needs_revision",
+            "cost": 2.3300000000000004e-05,
+            "input_tokens": 73,
+            "output_tokens": 40,
+            "total_tokens": 113
+          }
+        }
+      ],
+      "input_tokens": 73,
+      "output_tokens": 40,
+      "total_tokens": 113
+    },
+    {
+      "id": "T004",
+      "description": "Present the AQI of Kolkata on 2025-12-22 in a human-readable format.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Format the extracted AQI value `kolkata_aqi_20251222_T002` for Kolkata on 2025-12-22 into a concise and human-readable statement, including units and source information. Also, include the QA verdict `qa_verdict_T003`.",
+      "reads": [
+        "kolkata_aqi_20251222_T002",
+        "qa_verdict_T003"
+      ],
+      "writes": [
+        "formatted_aqi_report_T004"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "AQI data for Kolkata on 2025-12-22 is currently unavailable and requires revision.",
+        "formatted_aqi_report_T004": "<div class='report'>\n  <h1>Kolkata Air Quality Analysis - 2025-12-22</h1>\n\n  <h2>1. Executive Summary</h2>\n  <p>Unfortunately, the Air Quality Index (AQI) data for Kolkata on December 22nd, 2025 is currently unavailable. This report is based on limited information and requires further revision upon data availability.</p>\n\n  <h2>2. Data Acquisition Issues</h2>\n  <p>Initial attempts to retrieve the AQI data from primary sources were unsuccessful. This may be due to server errors, network issues, or data reporting inconsistencies.</p>\n\n  <h2>3. Sources Consulted</h2>\n  <ul>\n    <li><a href='https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis'>https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis</a> - Error encountered during data retrieval.</li>\n    <li><a href='https://airquality.cpcb.gov.in/AQI_India/'>https://airquality.cpcb.gov.in/AQI_India/</a> - National Air Quality Index - Data retrieval successful, but specific AQI data for the specified date was not readily available.</li>\n    <li><a href='https://ews.tropmet.res.in/kolkata/index.php'>https://ews.tropmet.res.in/kolkata/index.php</a> - Kolkata - Air Quality Early Warning System - Data available, but only for 2025-12-23.</li>\n    <li><a href='https://breathe.climate.uchicago.edu/kolkata-india/'>https://breathe.climate.uchicago.edu/kolkata-india/</a> - Chicago University Breathe Project - General information and news articles available, but no specific daily AQI for 2025-12-22.</li>\n    <li><a href='https://www.iqair.com/af/india/west-bengal/kolkata'>https://www.iqair.com/af/india/west-bengal/kolkata</a> - IQAir - Data available for 2025-12-23.</li>\n  </ul>\n\n  <h2>4. Preliminary Findings (2025-12-23 Data)</h2>\n  <p>While the specific data for December 22nd is unavailable, data from December 23rd, 2025 (obtained from <a href='https://www.iqair.com/af/india/west-bengal/kolkata'>IQAir</a>) indicates:</p>\n  <ul>\n    <li><b>US AQI:</b> 219 (Very Unhealthy)</li>\n    <li><b>Main Pollutant:</b> PM2.5 (144 g/m³)</li>\n  </ul>\n\n  <h2>5. Air Quality Forecast (IQAir - 2025-12-23)</h2>\n    <p>IQAir provides the following forecast for Kolkata:</p>\n    <table>\n      <thead>\n        <tr>\n          <th>Time</th>\n          <th>AQI</th>\n          <th>PM2.5 (µg/m³)</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td>Now</td>\n          <td>219</td>\n          <td>144</td>\n        </tr>\n        <tr>\n          <td>12:30</td>\n          <td>209</td>\n          <td>21</td>\n        </tr>\n         <tr>\n          <td>13:30</td>\n          <td>205</td>\n          <td>23</td>\n        </tr>\n         <tr>\n          <td>14:30</td>\n          <td>197</td>\n          <td>25</td>\n        </tr>\n      </tbody>\n    </table>\n\n  <h2>6. Recent News on Kolkata Air Quality</h2>\n    <p>According to the <a href='https://breathe.climate.uchicago.edu/kolkata-india/'>University of Chicago Breathe project</a>, recent news articles indicate:</p>\n    <ul>\n      <li><b>Aug 25, 2025:</b> Kolkata beats other metros, reports more than 50% of good air days in 4 years (Source: Times of India)</li>\n      <li><b>Aug 25, 2025:</b> Surge in lung ailments in Kolkata as vehicle emissions choke city (Source: Down to Earth)</li>\n      <li><b>Aug 25, 2025:</b> PM 2.5 in 2024-25 winter Kolkatas best since 2019 (Source: Times of India)</li>\n      <li><b>Aug 26, 2025:</b> Kolkata study finds air toxicity surges when PM2.5 breaches 70 g/m (Source: Unknown)</li>\n      <li><b>Aug 27, 2025:</b> Kolkata has second worst air among Indias metros (Source: Telegraph India)</li>\n      <li><b>Aug 27, 2025:</b> How Kolkata improved its air quality within 6 years (Source: The Indian Express)</li>\n    </ul>\n\n  <h2>7. Health Recommendations (Based on Current AQI)</h2>\n    <p>Given the \"Very Unhealthy\" AQI level (based on 2025-12-23 data):</p>\n    <ul>\n      <li>Avoid outdoor exercise.</li>\n      <li>Close windows to avoid dirty outdoor air.</li>\n      <li>Consider wearing a mask outdoors.</li>\n      <li>Use an air purifier.</li>\n    </ul>\n\n  <h2>8. QA Verdict</h2>\n    <p>This report requires revision as the data for 2025-12-22 is unavailable. (Verdict: needs_revision)</p>\n\n  <h2>9. Conclusion</h2>\n  <p>The AQI data for Kolkata on December 22nd, 2025 is currently unavailable. Further investigation and data retrieval are required to provide an accurate and complete assessment.</p>\n</div>",
+        "call_self": false,
+        "cost": 0.0005339,
+        "input_tokens": 2587,
+        "output_tokens": 688,
+        "total_tokens": 3275
+      },
+      "error": null,
+      "cost": 0.0005339,
+      "start_time": "2025-12-23T06:03:20.609852",
+      "end_time": "2025-12-23T06:03:32.039362",
+      "execution_time": 11.42951,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "AQI data for Kolkata on 2025-12-22 is currently unavailable and requires revision.",
+            "formatted_aqi_report_T004": "<div class='report'>\n  <h1>Kolkata Air Quality Analysis - 2025-12-22</h1>\n\n  <h2>1. Executive Summary</h2>\n  <p>Unfortunately, the Air Quality Index (AQI) data for Kolkata on December 22nd, 2025 is currently unavailable. This report is based on limited information and requires further revision upon data availability.</p>\n\n  <h2>2. Data Acquisition Issues</h2>\n  <p>Initial attempts to retrieve the AQI data from primary sources were unsuccessful. This may be due to server errors, network issues, or data reporting inconsistencies.</p>\n\n  <h2>3. Sources Consulted</h2>\n  <ul>\n    <li><a href='https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis'>https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis</a> - Error encountered during data retrieval.</li>\n    <li><a href='https://airquality.cpcb.gov.in/AQI_India/'>https://airquality.cpcb.gov.in/AQI_India/</a> - National Air Quality Index - Data retrieval successful, but specific AQI data for the specified date was not readily available.</li>\n    <li><a href='https://ews.tropmet.res.in/kolkata/index.php'>https://ews.tropmet.res.in/kolkata/index.php</a> - Kolkata - Air Quality Early Warning System - Data available, but only for 2025-12-23.</li>\n    <li><a href='https://breathe.climate.uchicago.edu/kolkata-india/'>https://breathe.climate.uchicago.edu/kolkata-india/</a> - Chicago University Breathe Project - General information and news articles available, but no specific daily AQI for 2025-12-22.</li>\n    <li><a href='https://www.iqair.com/af/india/west-bengal/kolkata'>https://www.iqair.com/af/india/west-bengal/kolkata</a> - IQAir - Data available for 2025-12-23.</li>\n  </ul>\n\n  <h2>4. Preliminary Findings (2025-12-23 Data)</h2>\n  <p>While the specific data for December 22nd is unavailable, data from December 23rd, 2025 (obtained from <a href='https://www.iqair.com/af/india/west-bengal/kolkata'>IQAir</a>) indicates:</p>\n  <ul>\n    <li><b>US AQI:</b> 219 (Very Unhealthy)</li>\n    <li><b>Main Pollutant:</b> PM2.5 (144 g/m³)</li>\n  </ul>\n\n  <h2>5. Air Quality Forecast (IQAir - 2025-12-23)</h2>\n    <p>IQAir provides the following forecast for Kolkata:</p>\n    <table>\n      <thead>\n        <tr>\n          <th>Time</th>\n          <th>AQI</th>\n          <th>PM2.5 (µg/m³)</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td>Now</td>\n          <td>219</td>\n          <td>144</td>\n        </tr>\n        <tr>\n          <td>12:30</td>\n          <td>209</td>\n          <td>21</td>\n        </tr>\n         <tr>\n          <td>13:30</td>\n          <td>205</td>\n          <td>23</td>\n        </tr>\n         <tr>\n          <td>14:30</td>\n          <td>197</td>\n          <td>25</td>\n        </tr>\n      </tbody>\n    </table>\n\n  <h2>6. Recent News on Kolkata Air Quality</h2>\n    <p>According to the <a href='https://breathe.climate.uchicago.edu/kolkata-india/'>University of Chicago Breathe project</a>, recent news articles indicate:</p>\n    <ul>\n      <li><b>Aug 25, 2025:</b> Kolkata beats other metros, reports more than 50% of good air days in 4 years (Source: Times of India)</li>\n      <li><b>Aug 25, 2025:</b> Surge in lung ailments in Kolkata as vehicle emissions choke city (Source: Down to Earth)</li>\n      <li><b>Aug 25, 2025:</b> PM 2.5 in 2024-25 winter Kolkatas best since 2019 (Source: Times of India)</li>\n      <li><b>Aug 26, 2025:</b> Kolkata study finds air toxicity surges when PM2.5 breaches 70 g/m (Source: Unknown)</li>\n      <li><b>Aug 27, 2025:</b> Kolkata has second worst air among Indias metros (Source: Telegraph India)</li>\n      <li><b>Aug 27, 2025:</b> How Kolkata improved its air quality within 6 years (Source: The Indian Express)</li>\n    </ul>\n\n  <h2>7. Health Recommendations (Based on Current AQI)</h2>\n    <p>Given the \"Very Unhealthy\" AQI level (based on 2025-12-23 data):</p>\n    <ul>\n      <li>Avoid outdoor exercise.</li>\n      <li>Close windows to avoid dirty outdoor air.</li>\n      <li>Consider wearing a mask outdoors.</li>\n      <li>Use an air purifier.</li>\n    </ul>\n\n  <h2>8. QA Verdict</h2>\n    <p>This report requires revision as the data for 2025-12-22 is unavailable. (Verdict: needs_revision)</p>\n\n  <h2>9. Conclusion</h2>\n  <p>The AQI data for Kolkata on December 22nd, 2025 is currently unavailable. Further investigation and data retrieval are required to provide an accurate and complete assessment.</p>\n</div>",
+            "call_self": false,
+            "cost": 0.0005339,
+            "input_tokens": 2587,
+            "output_tokens": 688,
+            "total_tokens": 3275
+          }
+        }
+      ],
+      "input_tokens": 2587,
+      "output_tokens": 688,
+      "total_tokens": 3275
+    },
+    {
+      "id": "T005F1",
+      "description": "Clarify source of AQI data with human.",
+      "agent": "ClarificationAgent",
+      "agent_prompt": "Based on the initial data retrieval in T001, the source of AQI data for Kolkata on 2025-12-22 is unclear. Can you please specify a preferred and reliable data source for historical AQI information in Kolkata for this date?",
+      "reads": [
+        "raw_aqi_data_T001"
+      ],
+      "writes": [
+        "human_approved_aqi_source_T005F1"
+      ],
+      "status": "completed",
+      "output": {
+        "clarificationMessage": "Multiple sources for AQI data in Kolkata are available. Which source would you prefer for AQI data on 2025-12-22?",
+        "options": [
+          "https://www.iqair.com",
+          "https://ews.tropmet.res.in/kolkata/index.php",
+          "https://airquality.cpcb.gov.in/AQI_India/"
+        ],
+        "writes_to": "human_approved_aqi_source_T005F1",
+        "cost": 0.00027150000000000004,
+        "input_tokens": 2559,
+        "output_tokens": 39,
+        "total_tokens": 2598,
+        "user_response": "https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis",
+        "interaction_completed": true
+      },
+      "error": null,
+      "cost": 0.00027150000000000004,
+      "start_time": "2025-12-23T06:03:20.611225",
+      "end_time": "2025-12-23T06:05:25.831572",
+      "execution_time": 125.220347,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "clarificationMessage": "Multiple sources for AQI data in Kolkata are available. Which source would you prefer for AQI data on 2025-12-22?",
+            "options": [
+              "https://www.iqair.com",
+              "https://ews.tropmet.res.in/kolkata/index.php",
+              "https://airquality.cpcb.gov.in/AQI_India/"
+            ],
+            "writes_to": "human_approved_aqi_source_T005F1",
+            "cost": 0.00027150000000000004,
+            "input_tokens": 2559,
+            "output_tokens": 39,
+            "total_tokens": 2598
+          }
+        }
+      ],
+      "input_tokens": 2559,
+      "output_tokens": 39,
+      "total_tokens": 2598
+    },
+    {
+      "id": "T006F1",
+      "description": "Retry retrieval with human-approved data source.",
+      "agent": "RetrieverAgent",
+      "agent_prompt": "Using the human-approved data source `human_approved_aqi_source_T005F1`, fetch the historical Air Quality Index (AQI) data for Kolkata on 2025-12-22. Prioritize data from this specified official source.",
+      "reads": [
+        "human_approved_aqi_source_T005F1"
+      ],
+      "writes": [
+        "raw_aqi_data_retry_T006F1"
+      ],
+      "status": "completed",
+      "output": {
+        "raw_aqi_data_retry_T006F1": [],
+        "call_self": false,
+        "code_variants": {
+          "CODE_1A": "content = webpage_url_to_raw_text(human_approved_aqi_source_T005F1[0])\nreturn {'raw_aqi_data_retry_T006F1': content}",
+          "CODE_1B": "results = search_web_with_text_content(f'AQI Kolkata 2025-12-22 from {human_approved_aqi_source_T005F1[0]}', 3)\nreturn {'raw_aqi_data_retry_T006F1': results}"
+        },
+        "cost": 1.8400000000000003e-05,
+        "input_tokens": 52,
+        "output_tokens": 33,
+        "total_tokens": 85,
+        "execution_result": null,
+        "execution_status": "error",
+        "execution_error": "IndexError: list index out of range",
+        "execution_time": "2025-12-23 11:35:27",
+        "executed_variant": "CODE_1B",
+        "execution_logs": null
+      },
+      "error": null,
+      "cost": 1.8400000000000003e-05,
+      "start_time": "2025-12-23T06:05:25.839069",
+      "end_time": "2025-12-23T06:05:27.839366",
+      "execution_time": 2.000297,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "raw_aqi_data_retry_T006F1": [],
+            "call_self": false,
+            "code_variants": {
+              "CODE_1A": "content = webpage_url_to_raw_text(human_approved_aqi_source_T005F1[0])\nreturn {'raw_aqi_data_retry_T006F1': content}",
+              "CODE_1B": "results = search_web_with_text_content(f'AQI Kolkata 2025-12-22 from {human_approved_aqi_source_T005F1[0]}', 3)\nreturn {'raw_aqi_data_retry_T006F1': results}"
+            },
+            "cost": 1.8400000000000003e-05,
+            "input_tokens": 52,
+            "output_tokens": 33,
+            "total_tokens": 85
+          }
+        }
+      ],
+      "input_tokens": 52,
+      "output_tokens": 33,
+      "total_tokens": 85
+    },
+    {
+      "id": "T007F1",
+      "description": "Extract AQI value from retry data.",
+      "agent": "DistillerAgent",
+      "agent_prompt": "From the re-retrieved `raw_aqi_data_retry_T006F1`, extract the AQI value specifically for Kolkata on 2025-12-22 based on the specified source. Handle potential variations in data format.",
+      "reads": [
+        "raw_aqi_data_retry_T006F1"
+      ],
+      "writes": [
+        "kolkata_aqi_20251222_retry_T007F1"
+      ],
+      "status": "completed",
+      "output": {
+        "summary_unavailable": true,
+        "cost": 6.300000000000001e-06,
+        "input_tokens": 51,
+        "output_tokens": 3,
+        "total_tokens": 54
+      },
+      "error": null,
+      "cost": 6.300000000000001e-06,
+      "start_time": "2025-12-23T06:05:27.847214",
+      "end_time": "2025-12-23T06:05:31.470220",
+      "execution_time": 3.623006,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "summary_unavailable": true,
+            "cost": 6.300000000000001e-06,
+            "input_tokens": 51,
+            "output_tokens": 3,
+            "total_tokens": 54
+          }
+        }
+      ],
+      "input_tokens": 51,
+      "output_tokens": 3,
+      "total_tokens": 54
+    },
+    {
+      "id": "T008F1",
+      "description": "QA check of re-extracted AQI data.",
+      "agent": "QAAgent",
+      "agent_prompt": "Review the re-extracted AQI value `kolkata_aqi_20251222_retry_T007F1` for Kolkata on 2025-12-22. Verify the source and check for anomalies or inconsistencies from data retrieved from the specified source. Determine if the data requires further investigation.",
+      "reads": [
+        "kolkata_aqi_20251222_retry_T007F1"
+      ],
+      "writes": [
+        "qa_verdict_retry_T008F1"
+      ],
+      "status": "completed",
+      "output": {
+        "issues": [
+          {
+            "step_id": "T008F1",
+            "problem": "The input data `kolkata_aqi_20251222_retry_T007F1` is empty.  Expected a non-empty value for the AQI.",
+            "severity": "critical",
+            "recommendation": "Investigate why the AQI data retrieval failed.  Check the data source and retrieval logic. Implement error handling and retry mechanisms if necessary."
+          }
+        ],
+        "verdict": "needs_revision",
+        "cost": 3.2800000000000004e-05,
+        "input_tokens": 64,
+        "output_tokens": 66,
+        "total_tokens": 130
+      },
+      "error": null,
+      "cost": 3.2800000000000004e-05,
+      "start_time": "2025-12-23T06:05:31.477270",
+      "end_time": "2025-12-23T06:05:36.460616",
+      "execution_time": 4.983346,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "issues": [
+              {
+                "step_id": "T008F1",
+                "problem": "The input data `kolkata_aqi_20251222_retry_T007F1` is empty.  Expected a non-empty value for the AQI.",
+                "severity": "critical",
+                "recommendation": "Investigate why the AQI data retrieval failed.  Check the data source and retrieval logic. Implement error handling and retry mechanisms if necessary."
+              }
+            ],
+            "verdict": "needs_revision",
+            "cost": 3.2800000000000004e-05,
+            "input_tokens": 64,
+            "output_tokens": 66,
+            "total_tokens": 130
+          }
+        }
+      ],
+      "input_tokens": 64,
+      "output_tokens": 66,
+      "total_tokens": 130
+    },
+    {
+      "id": "T009F1",
+      "description": "Re-present the AQI of Kolkata on 2025-12-22 in a human-readable format.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Format the re-extracted AQI value `kolkata_aqi_20251222_retry_T007F1` for Kolkata on 2025-12-22 into a concise and human-readable statement, including units and source information. Also, include the QA verdict `qa_verdict_retry_T008F1`.",
+      "reads": [
+        "kolkata_aqi_20251222_retry_T007F1",
+        "qa_verdict_retry_T008F1"
+      ],
+      "writes": [
+        "formatted_aqi_report_retry_T009F1"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "Formatted AQI report for Kolkata on 2025-12-22: [See HTML report]",
+        "formatted_aqi_report_retry_T009F1": "<div class='report'>\n  <h1>Kolkata Air Quality Report - December 22, 2025</h1>\n\n  <h2>1. Introduction</h2>\n  <p>This report provides an analysis of the Air Quality Index (AQI) for Kolkata on December 22, 2025. Due to initial data retrieval issues, a re-attempt was made to obtain the necessary information. This report includes the re-extracted AQI value and the associated QA verdict.</p>\n\n  <h2>2. Data Sources</h2>\n  <p>The primary data source for AQI information is the Central Pollution Control Board (CPCB) and other reputable air quality monitoring websites. Specific sources consulted include:</p>\n  <ul>\n    <li><a href='https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis'>https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis</a></li>\n    <li><a href='https://airquality.cpcb.gov.in/AQI_India/'>https://airquality.cpcb.gov.in/AQI_India/</a></li>\n    <li><a href='https://ews.tropmet.res.in/kolkata/index.php'>https://ews.tropmet.res.in/kolkata/index.php</a></li>\n    <li><a href='https://breathe.climate.uchicago.edu/kolkata-india/'>https://breathe.climate.uchicago.edu/kolkata-india/</a></li>\n    <li><a href='https://www.iqair.com/af/india/west-bengal/kolkata'>https://www.iqair.com/af/india/west-bengal/kolkata</a></li>\n  </ul>\n\n  <h2>3. AQI Value for December 22, 2025</h2>\n  <p>Unfortunately, after multiple attempts, a specific AQI value for Kolkata on December 22, 2025, could not be reliably extracted. This is indicated by the missing `kolkata_aqi_20251222_retry_T007F1` value. The initial data retrieval also faced similar issues (refer to `kolkata_aqi_20251222_T002`).</p>\n\n  <h2>4. QA Verdict</h2>\n  <p>The QA verdict for the initial attempt was `needs_revision` (as indicated by `qa_verdict_T003`).  Since a reliable AQI value was still unavailable after the retry, the QA verdict for the retry is also likely to be negative, although the specific `qa_verdict_retry_T008F1` value is also missing, further confirming the data retrieval failure.</p>\n\n  <h2>5. Possible Reasons for Data Unavailability</h2>\n  <p>Several factors may contribute to the unavailability of the AQI data:</p>\n  <ul>\n    <li><b>Data Reporting Delays:</b> AQI data might not be immediately available on the specified date due to reporting delays from monitoring stations.</li>\n    <li><b>Website or API Issues:</b> The data source websites or APIs could be experiencing technical difficulties or maintenance.</li>\n    <li><b>Data Inconsistencies:</b> Variations in data collection and reporting methodologies across different sources can lead to inconsistencies.</li>\n    <li><b>Network Errors:</b> Transient network errors during data retrieval could have prevented successful data extraction.</li>\n  </ul>\n\n  <h2>6. Related Air Quality Information (If Available)</h2>\n  <p>Due to the unavailability of specific AQI data for the target date, related information from nearby dates or general trends could be relevant. However, without the actual value, providing specifics is impossible. Refer to the linked sources for potential alternative data points.</p>\n\n  <h2>7. Health Implications (General Guidance)</h2>\n  <p>While the specific AQI value is unavailable, it's important to be aware of the general health implications of air pollution. High AQI levels can cause respiratory problems, cardiovascular issues, and other adverse health effects. Individuals with pre-existing conditions, children, and the elderly are particularly vulnerable.</p>\n\n  <h2>8. Recommendations</h2>\n  <p>Based on the data retrieval failures, the following recommendations are made:</p>\n  <ul>\n    <li><b>Re-attempt Data Retrieval:</b> Try to retrieve the AQI data again after a few hours or days to account for potential reporting delays.</li>\n    <li><b>Consult Multiple Sources:</b> Verify the data from different sources to ensure consistency and accuracy.</li>\n    <li><b>Consider Historical Data:</b> Analyze historical AQI data for Kolkata to understand typical air quality patterns during December.</li>\n    <li><b>Implement Data Validation:</b> Implement robust data validation procedures to identify and handle missing or invalid data.</li>\n  </ul>\n\n  <h2>9. Conclusion</h2>\n  <p>Despite multiple attempts, a reliable AQI value for Kolkata on December 22, 2025, could not be obtained. This highlights the challenges associated with real-time data retrieval and the importance of robust data validation processes. Further investigation and monitoring are required to provide a comprehensive assessment of air quality in Kolkata on the specified date.</p>\n</div>",
+        "call_self": false,
+        "cost": 0.0006477,
+        "input_tokens": 3261,
+        "output_tokens": 804,
+        "total_tokens": 4065
+      },
+      "error": null,
+      "cost": 0.0006477,
+      "start_time": "2025-12-23T06:05:36.468439",
+      "end_time": "2025-12-23T06:05:47.261974",
+      "execution_time": 10.793535,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "Formatted AQI report for Kolkata on 2025-12-22: [See HTML report]",
+            "formatted_aqi_report_retry_T009F1": "<div class='report'>\n  <h1>Kolkata Air Quality Report - December 22, 2025</h1>\n\n  <h2>1. Introduction</h2>\n  <p>This report provides an analysis of the Air Quality Index (AQI) for Kolkata on December 22, 2025. Due to initial data retrieval issues, a re-attempt was made to obtain the necessary information. This report includes the re-extracted AQI value and the associated QA verdict.</p>\n\n  <h2>2. Data Sources</h2>\n  <p>The primary data source for AQI information is the Central Pollution Control Board (CPCB) and other reputable air quality monitoring websites. Specific sources consulted include:</p>\n  <ul>\n    <li><a href='https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis'>https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis</a></li>\n    <li><a href='https://airquality.cpcb.gov.in/AQI_India/'>https://airquality.cpcb.gov.in/AQI_India/</a></li>\n    <li><a href='https://ews.tropmet.res.in/kolkata/index.php'>https://ews.tropmet.res.in/kolkata/index.php</a></li>\n    <li><a href='https://breathe.climate.uchicago.edu/kolkata-india/'>https://breathe.climate.uchicago.edu/kolkata-india/</a></li>\n    <li><a href='https://www.iqair.com/af/india/west-bengal/kolkata'>https://www.iqair.com/af/india/west-bengal/kolkata</a></li>\n  </ul>\n\n  <h2>3. AQI Value for December 22, 2025</h2>\n  <p>Unfortunately, after multiple attempts, a specific AQI value for Kolkata on December 22, 2025, could not be reliably extracted. This is indicated by the missing `kolkata_aqi_20251222_retry_T007F1` value. The initial data retrieval also faced similar issues (refer to `kolkata_aqi_20251222_T002`).</p>\n\n  <h2>4. QA Verdict</h2>\n  <p>The QA verdict for the initial attempt was `needs_revision` (as indicated by `qa_verdict_T003`).  Since a reliable AQI value was still unavailable after the retry, the QA verdict for the retry is also likely to be negative, although the specific `qa_verdict_retry_T008F1` value is also missing, further confirming the data retrieval failure.</p>\n\n  <h2>5. Possible Reasons for Data Unavailability</h2>\n  <p>Several factors may contribute to the unavailability of the AQI data:</p>\n  <ul>\n    <li><b>Data Reporting Delays:</b> AQI data might not be immediately available on the specified date due to reporting delays from monitoring stations.</li>\n    <li><b>Website or API Issues:</b> The data source websites or APIs could be experiencing technical difficulties or maintenance.</li>\n    <li><b>Data Inconsistencies:</b> Variations in data collection and reporting methodologies across different sources can lead to inconsistencies.</li>\n    <li><b>Network Errors:</b> Transient network errors during data retrieval could have prevented successful data extraction.</li>\n  </ul>\n\n  <h2>6. Related Air Quality Information (If Available)</h2>\n  <p>Due to the unavailability of specific AQI data for the target date, related information from nearby dates or general trends could be relevant. However, without the actual value, providing specifics is impossible. Refer to the linked sources for potential alternative data points.</p>\n\n  <h2>7. Health Implications (General Guidance)</h2>\n  <p>While the specific AQI value is unavailable, it's important to be aware of the general health implications of air pollution. High AQI levels can cause respiratory problems, cardiovascular issues, and other adverse health effects. Individuals with pre-existing conditions, children, and the elderly are particularly vulnerable.</p>\n\n  <h2>8. Recommendations</h2>\n  <p>Based on the data retrieval failures, the following recommendations are made:</p>\n  <ul>\n    <li><b>Re-attempt Data Retrieval:</b> Try to retrieve the AQI data again after a few hours or days to account for potential reporting delays.</li>\n    <li><b>Consult Multiple Sources:</b> Verify the data from different sources to ensure consistency and accuracy.</li>\n    <li><b>Consider Historical Data:</b> Analyze historical AQI data for Kolkata to understand typical air quality patterns during December.</li>\n    <li><b>Implement Data Validation:</b> Implement robust data validation procedures to identify and handle missing or invalid data.</li>\n  </ul>\n\n  <h2>9. Conclusion</h2>\n  <p>Despite multiple attempts, a reliable AQI value for Kolkata on December 22, 2025, could not be obtained. This highlights the challenges associated with real-time data retrieval and the importance of robust data validation processes. Further investigation and monitoring are required to provide a comprehensive assessment of air quality in Kolkata on the specified date.</p>\n</div>",
+            "call_self": false,
+            "cost": 0.0006477,
+            "input_tokens": 3261,
+            "output_tokens": 804,
+            "total_tokens": 4065
+          }
+        }
+      ],
+      "input_tokens": 3261,
+      "output_tokens": 804,
+      "total_tokens": 4065
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    },
+    {
+      "source": "T001",
+      "target": "T002"
+    },
+    {
+      "source": "T002",
+      "target": "T003"
+    },
+    {
+      "source": "T003",
+      "target": "T004"
+    },
+    {
+      "source": "T003",
+      "target": "T005F1"
+    },
+    {
+      "source": "T005F1",
+      "target": "T006F1"
+    },
+    {
+      "source": "T006F1",
+      "target": "T007F1"
+    },
+    {
+      "source": "T007F1",
+      "target": "T008F1"
+    },
+    {
+      "source": "T008F1",
+      "target": "T009F1"
+    }
+  ]
+}
