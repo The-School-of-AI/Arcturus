@@ -30,9 +30,9 @@ export const WorkspacePanel: React.FC = () => {
     React.useEffect(() => {
         if (!selectedNode) return;
 
-        if (selectedNode.data.type === 'FormatterAgent' || selectedNode.data.type === 'VisualizerAgent') {
+        if (selectedNode.data.type === 'Summarizer' || selectedNode.data.type === 'Evaluator') {
             setActiveTab('preview');
-        } else if (selectedNode.data.type === 'CoderAgent') {
+        } else if (selectedNode.data.type === 'Coder') {
             setActiveTab('code');
         } else if (selectedNodeId) {
             setActiveTab('overview');

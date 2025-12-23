@@ -36,9 +36,10 @@ export const DialogTrigger: React.FC<{ asChild?: boolean; children: React.ReactN
 
     // Clone element to attach onClick if asChild
     if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<any>, {
-            onClick: (e: any) => {
-                children.props.onClick?.(e);
+        const childElement = children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>;
+        return React.cloneElement(childElement, {
+            onClick: (e: React.MouseEvent) => {
+                childElement.props.onClick?.(e);
                 onOpenChange(true);
             }
         });

@@ -71,8 +71,8 @@ def nx_to_reactflow(graph: nx.DiGraph):
             "source": str(u),
             "target": str(v),
             "type": "custom", # Matches CustomEdge.tsx
-            "animated": True,
-            "style": { "stroke": "#F6FF4D" }
+            "animated": False,  # Solid line, not dashed
+            "style": { "stroke": "#888888", "strokeDasharray": "none" }  # Gray solid line
         })
 
     return {"nodes": nodes, "edges": edges}

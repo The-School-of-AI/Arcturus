@@ -48,9 +48,9 @@ export const Sidebar: React.FC = () => {
                                 <Input
                                     placeholder="e.g., Research latest AI trends..."
                                     value={newQuery}
-                                    onChange={(e) => setNewQuery(e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
                                     className="bg-charcoal-800 border-gray-600 text-white placeholder:text-gray-500"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleStartRun()}
+                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
                                     autoFocus
                                 />
                             </div>
