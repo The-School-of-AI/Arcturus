@@ -81,41 +81,53 @@
   background-image: radial-gradient(circle, #333 1px, transparent 1px);
 }
 
-/* ReactFlow Controls Dark Theme */
+/* ReactFlow Controls Dark Theme (RunTimeline Style) */
 .react-flow__controls {
   display: flex !important;
   flex-direction: column !important;
-  background: hsl(220 20% 18%) !important;
-  border: 1px solid hsl(220 16% 25%) !important;
-  border-radius: 2px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-  overflow: hidden !important;
+  /* Match RunTimeline: bg-charcoal-800/90 backdrop-blur */
+  background: hsl(220 16% 12% / 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid hsl(220 16% 14%) !important;
+  /* border-border */
+  border-radius: 0.5rem !important;
+  /* rounded-xl */
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  /* shadow-2xl */
+  padding: 2px !important;
+  gap: 2px !important;
+  margin: 4 !important;
 }
 
 .react-flow__controls-button {
   background: transparent !important;
   border: none !important;
-  border-right: 1px solid hsl(220 16% 25%) !important;
-  color: hsl(200 20% 70%) !important;
-  width: 18px !important;
-  height: 18px !important;
-  padding: 2px !important;
+  border-bottom: none !important;
+  /* Reset default */
+  color: hsl(240 5% 64.9%) !important;
+  /* muted-foreground */
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 0.5rem !important;
+  /* rounded-lg */
+  padding: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-}
-
-.react-flow__controls-button:last-child {
-  border-right: none !important;
+  transition: all 0.2s ease !important;
 }
 
 .react-flow__controls-button:hover {
-  background: hsl(220 16% 25%) !important;
-  color: hsl(200 30% 85%) !important;
+  background: hsl(63 100% 65% / 0.1) !important;
+  /* hover:bg-neon-yellow/10 */
+  color: hsl(63 100% 65%) !important;
+  /* hover:text-neon-yellow */
+  border: 1px solid hsl(63 100% 65% / 0.3) !important;
+  /* Optional: border-neon-yellow/30 */
 }
 
 .react-flow__controls-button svg {
   fill: currentColor !important;
-  width: 18px !important;
-  height: 18px !important;
+  width: 16px !important;
+  height: 16px !important;
 }
