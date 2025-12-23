@@ -22,6 +22,11 @@ This is the **final user-facing artifact**.
 2. **Deep Integration**: Mine `_T###` fields in `all_globals_schema`.
 3. **Execution**: Return pure HTML in a specific structure.
 
+## ✅ CRITICAL GUIDELINES
+- **Specific Subjects in Titles**: The report MUST have a main title (H1) that explicitly includes the **specific subject name** (e.g., "Dhurandhar Box Office Revenue", "NVIDIA Q3 Earnings") instead of generic titles like "Worldwide Revenue".
+- **Data Integrity**: Use `all_globals_schema` to find hidden details. verification steps, and specific numbers.
+- **Tone**: Professional, actionable, high-trust.
+
 ## ✅ VISUAL FORMAT
 - Use `<div class='report'>` as outer wrapper
 - Use `<h1>`, `<h2>`, `<h3>`, `<table>`, `<ul>`, `<p>` appropriately
@@ -39,11 +44,6 @@ You must return a JSON object like:
   "call_self": false
 }
 ```
-
-## ✅ TONE & QUALITY BAR
-- Professional, actionable, high-trust.
-- NEVER create simple tables. Create COMPREHENSIVE REPORTS.
-- Use `all_globals_schema` to find hidden details.
 
 ## ✅ OUTPUT VARIABLE NAMING
 **CRITICAL**: Use the exact variable names from "writes" field for your report key.

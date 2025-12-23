@@ -168,14 +168,14 @@ export const WorkspacePanel: React.FC = () => {
             {/* Content Area */}
             <div className="flex-1 overflow-hidden relative">
                 {activeTab === 'overview' && (
-                    <div className="p-4 space-y-6 overflow-y-auto h-full font-mono text-sm">
+                    <div className="p-4 space-y-6 overflow-y-auto h-full font-mono text-sm select-text">
 
                         {/* Section: Prompt */}
                         <div className="space-y-2">
-                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2">
+                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2 select-none">
                                 <Terminal className="w-3 h-3" /> Original Prompt
                             </div>
-                            <div className="p-3 bg-white/5 rounded-md text-foreground/90 leading-relaxed text-xs border border-white/5">
+                            <div className="p-3 bg-white/5 rounded-md text-foreground/90 leading-relaxed text-xs border border-white/5 select-text">
                                 {selectedNode?.data.prompt || "N/A"}
                             </div>
                         </div>
@@ -186,12 +186,12 @@ export const WorkspacePanel: React.FC = () => {
                         )}
 
                         {/* Section: I/O Context */}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 select-none">
                             <div className="space-y-1">
                                 <div className="text-[10px] uppercase text-muted-foreground font-semibold">Inputs (Reads)</div>
                                 <div className="flex flex-wrap gap-1">
                                     {selectedNode?.data.reads?.length ? selectedNode?.data.reads.map(r => (
-                                        <span key={r} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded">
+                                        <span key={r} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded select-text">
                                             {r}
                                         </span>
                                     )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
@@ -201,7 +201,7 @@ export const WorkspacePanel: React.FC = () => {
                                 <div className="text-[10px] uppercase text-muted-foreground font-semibold">Outputs (Writes)</div>
                                 <div className="flex flex-wrap gap-1">
                                     {selectedNode?.data.writes?.length ? selectedNode?.data.writes.map(w => (
-                                        <span key={w} className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded">
+                                        <span key={w} className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded select-text">
                                             {w}
                                         </span>
                                     )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
@@ -210,7 +210,7 @@ export const WorkspacePanel: React.FC = () => {
                         </div>
 
                         {/* Section: Performance */}
-                        <div className="p-3 bg-black/20 rounded-lg flex items-center justify-between border border-white/5">
+                        <div className="p-3 bg-black/20 rounded-lg flex items-center justify-between border border-white/5 select-none">
                             <div className="flex items-center gap-2">
                                 <Clock className="w-3 h-3 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground">Duration:</span>
@@ -230,12 +230,12 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* Section: Logs/Output Snippet */}
                         <div className="space-y-2">
-                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold border-b border-white/10 pb-1">
+                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold border-b border-white/10 pb-1 select-none">
                                 Execution Output
                             </div>
                             {logs.map((log, i) => (
-                                <div key={i} className="flex flex-col gap-1 pl-2 border-l border-white/10">
-                                    <div className="text-[10px] text-muted-foreground uppercase opacity-70">
+                                <div key={i} className="flex flex-col gap-1 pl-2 border-l border-white/10 select-text">
+                                    <div className="text-[10px] text-muted-foreground uppercase opacity-70 select-none">
                                         {log.split(':')[0]}
                                     </div>
                                     <div className="text-foreground/80 whitespace-pre-wrap break-words text-xs">
@@ -248,12 +248,12 @@ export const WorkspacePanel: React.FC = () => {
                                 try {
                                     const parsed = JSON.parse(codeContent);
                                     return (
-                                        <div className="mt-2 space-y-1">
+                                        <div className="mt-2 space-y-1 select-text">
                                             {Object.entries(parsed).slice(0, 5).map(([k, v]) => {
                                                 if (typeof v === 'object' || String(v).length > 200 || k === 'code_variants') return null;
                                                 return (
                                                     <div key={k} className="flex justify-between text-xs py-0.5 border-b border-white/5">
-                                                        <span className="text-muted-foreground">{k}</span>
+                                                        <span className="text-muted-foreground select-none">{k}</span>
                                                         <span className="text-foreground truncate max-w-[150px]">{String(v)}</span>
                                                     </div>
                                                 );
@@ -340,13 +340,13 @@ export const WorkspacePanel: React.FC = () => {
 
                 {
                     activeTab === 'output' && (
-                        <div className="p-4 font-mono text-xs space-y-4 overflow-y-auto h-full">
-                            <div className="text-green-400 font-bold border-b border-white/10 pb-2 mb-2">
+                        <div className="p-4 font-mono text-xs space-y-4 overflow-y-auto h-full select-text">
+                            <div className="text-green-400 font-bold border-b border-white/10 pb-2 mb-2 select-none">
                                 # Node Execution Details
                             </div>
                             {logs.map((log, i) => (
                                 <div key={i} className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3 py-1 bg-white/5 rounded-r hover:bg-white/10 transition-colors">
-                                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-70">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-70 select-none">
                                         {log.split(':')[0]}
                                     </div>
                                     <div className="text-foreground whitespace-pre-wrap break-words">
@@ -360,12 +360,12 @@ export const WorkspacePanel: React.FC = () => {
                                     const parsed = JSON.parse(codeContent);
                                     return (
                                         <div className="mt-4 pt-4 border-t border-white/10">
-                                            <div className="text-yellow-400 font-bold mb-2"># Results</div>
+                                            <div className="text-yellow-400 font-bold mb-2 select-none"># Results</div>
                                             {Object.entries(parsed).map(([k, v]) => {
                                                 if (typeof v === 'object' || String(v).length > 200) return null; // Skip non-primitive or huge
                                                 return (
                                                     <div key={k} className="flex justify-between border-b border-white/5 py-1">
-                                                        <span className="text-muted-foreground">{k}</span>
+                                                        <span className="text-muted-foreground select-none">{k}</span>
                                                         <span className="text-foreground">{String(v)}</span>
                                                     </div>
                                                 );
@@ -380,7 +380,7 @@ export const WorkspacePanel: React.FC = () => {
 
                 {
                     activeTab === 'web' && (
-                        <div className="h-full flex flex-col overflow-hidden">
+                        <div className="h-full flex flex-col overflow-hidden select-text">
                             {(() => {
                                 // Extract URLs from RetrieverAgent output
                                 interface UrlInfo {
@@ -751,7 +751,7 @@ export const WorkspacePanel: React.FC = () => {
                                         : formatContent;
 
                                     return (
-                                        <div className="preview-content bg-charcoal-800 p-6 rounded-lg border border-white/10">
+                                        <div className="preview-content bg-charcoal-800 p-6 rounded-lg border border-white/10 select-text">
                                             <style>{`
                                                 .preview-content h1 { font-size: 1.75rem; font-weight: bold; color: #F6FF4D; margin-bottom: 1rem; }
                                                 .preview-content h2 { font-size: 1.5rem; font-weight: bold; color: #F6FF4D; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }

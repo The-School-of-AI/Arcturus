@@ -340,12 +340,17 @@ class ExecutionContextManager:
                     return
 
                 writes_to = output.get("writes_to", "user_response")
-                self.plan_graph.graph['globals_schema'][writes_to] = user_response
+                
+                # CRITICAL FIX: Save rich context (Question + Answer) instead of just the answer
+                # This ensures downstream agents (Retriever) understand what "Yes" refers to.
+                rich_context = f"Agent Question: {output.get('clarificationMessage', '')}\nUser Answer: {user_response}"
+                self.plan_graph.graph['globals_schema'][writes_to] = rich_context
                 
                 output = output.copy()
                 output["user_response"] = user_response
+                output["rich_context_saved"] = rich_context
                 output["interaction_completed"] = True
-                print(f"✅ User input captured: {writes_to} = '{user_response}'")
+                print(f"✅ User input captured: {writes_to} = '{rich_context}'")
                 
                 # Restore status to running before completing
                 node_data['status'] = 'running'

@@ -144,7 +144,7 @@ export const RunTimeline: React.FC = () => {
     const displayTotal = totalSteps;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-16 bg-charcoal-800/90 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-charcoal-800/90 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
             <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"
@@ -180,7 +180,7 @@ export const RunTimeline: React.FC = () => {
                 </Button>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center gap-1.5 pt-1">
+            <div className="flex-1 flex flex-col justify-center gap-1.5 pt-3">
                 <div className="flex justify-between items-center text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
                     <span
                         className={cn(
