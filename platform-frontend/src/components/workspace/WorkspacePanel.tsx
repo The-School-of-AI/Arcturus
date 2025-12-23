@@ -162,7 +162,7 @@ export const WorkspacePanel: React.FC = () => {
                 <PanelTab label="Code" active={activeTab === 'code'} onClick={() => setActiveTab('code')} icon={<Code2 className="w-3 h-3" />} />
                 <PanelTab label="Web" active={activeTab === 'web'} onClick={() => setActiveTab('web')} icon={<Globe className="w-3 h-3" />} />
                 <PanelTab label="Preview" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Eye className="w-3 h-3" />} />
-                <PanelTab label="Output" active={activeTab === 'output'} onClick={() => setActiveTab('output')} icon={<Terminal className="w-3 h-3" />} />
+                <PanelTab label="Stats" active={activeTab === 'output'} onClick={() => setActiveTab('output')} icon={<Terminal className="w-3 h-3" />} />
             </div>
 
             {/* Content Area */}
@@ -490,8 +490,8 @@ export const WorkspacePanel: React.FC = () => {
                                             // Check for Saved Tool Results (MCP)
                                             if (iter.tool_result && typeof iter.tool_result === 'string') {
                                                 const urlRegex = /https?:\/\/[^\s'"]+/g;
-                                                const matches = iter.tool_result.match(urlRegex);
-                                                if (matches) matches.forEach(url => addUrl(url, "Tool Result"));
+                                                const matches = (iter.tool_result as string).match(urlRegex);
+                                                if (matches) matches.forEach((url: string) => addUrl(url, "Tool Result"));
                                             }
                                         });
                                     }
@@ -545,8 +545,8 @@ export const WorkspacePanel: React.FC = () => {
                                         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4 p-8 overflow-auto">
                                             <Globe className="w-16 h-16 opacity-20" />
                                             <div className="text-center mb-4">
-                                                <p className="text-sm font-medium mb-1">No URLs Found</p>
-                                                <p className="text-xs opacity-70">This agent didn't visit any web pages</p>
+                                                <p className="text-sm font-medium mb-1">List of URLs Found will be populated here</p>
+                                                <p className="text-xs opacity-70">Waiting to visit web pages</p>
                                             </div>
 
                                             {/* DEBUG: Dump node data to see what we actually have */}
@@ -689,56 +689,98 @@ export const WorkspacePanel: React.FC = () => {
                                 };
 
                                 try {
-                                    // Parse the JSON
-                                    let parsed: Record<string, unknown>;
-                                    try {
-                                        parsed = JSON.parse(codeContent);
-                                    } catch {
-                                        const jsonified = codeContent
-                                            .replace(/'/g, '"')
-                                            .replace(/\bTrue\b/g, 'true')
-                                            .replace(/\bFalse\b/g, 'false')
-                                            .replace(/\bNone\b/g, 'null');
-                                        parsed = JSON.parse(jsonified);
-                                    }
+                                    // PRIORITY: Use live node data directly to ensure auto-refresh
+                                    let parsed: any = selectedNode?.data?.output;
 
-                                    // PASS 1: Look for any key containing HTML content (prioritize actual formatted reports)
-                                    for (const [key, value] of Object.entries(parsed)) {
-                                        if (typeof value === 'string' && value.length > 100 && isHtml(value)) {
-                                            formatContent = cleanContent(value);
-                                            contentType = 'html';
-                                            break;
+                                    // If no direct output, try codeContent (fallback)
+                                    if (!parsed && codeContent) {
+                                        try {
+                                            parsed = JSON.parse(codeContent);
+                                        } catch {
+                                            // Handle python-style dict strings
+                                            const jsonified = codeContent
+                                                .replace(/'/g, '"')
+                                                .replace(/\bTrue\b/g, 'true')
+                                                .replace(/\bFalse\b/g, 'false')
+                                                .replace(/\bNone\b/g, 'null');
+                                            parsed = JSON.parse(jsonified);
                                         }
                                     }
 
-                                    // PASS 2: If no HTML found, look for keys starting with 'formatted_'
-                                    if (!formatContent) {
-                                        const formattedKeys = Object.keys(parsed).filter(k => k.startsWith('formatted_'));
-                                        for (const key of formattedKeys) {
-                                            const value = parsed[key];
-                                            if (typeof value === 'string' && value.length > 50) {
-                                                const cleaned = cleanContent(value);
-                                                formatContent = cleaned;
-                                                contentType = isHtml(cleaned) ? 'html' : 'markdown';
-                                                break;
+                                    // Ensure parsed is an object
+                                    if (typeof parsed !== 'object' || parsed === null) {
+                                        // If output is a raw string (sometimes happens), treat it as content
+                                        if (typeof parsed === 'string' && parsed.trim().length > 0) {
+                                            // CRITICAL FIX: Try to parse as JSON *before* checking for HTML
+                                            // A JSON string might contain HTML tags in its values, but we want the object, not the raw string.
+                                            let isJsonString = false;
+                                            if (parsed.trim().startsWith('{') || parsed.trim().startsWith('[')) {
+                                                try {
+                                                    const p = JSON.parse(parsed);
+                                                    parsed = p; // It was a stringified JSON, continue to object logic
+                                                    isJsonString = true;
+                                                } catch {
+                                                    // Parse failed, treat as string
+                                                }
+                                            }
+
+                                            // Only if it wasn't a valid JSON string do we check for direct HTML content
+                                            if (!isJsonString) {
+                                                if (isHtml(parsed)) {
+                                                    formatContent = parsed;
+                                                    contentType = 'html';
+                                                } else {
+                                                    formatContent = parsed;
+                                                }
                                             }
                                         }
                                     }
 
-                                    // PASS 3: Fallback to markdown/content keys
-                                    if (!formatContent) {
-                                        const fallbackKeys = ['fallback_markdown', 'markdown', 'report', 'content', 'result'];
-                                        for (const key of fallbackKeys) {
-                                            const value = parsed[key];
-                                            if (typeof value === 'string' && value.trim()) {
+                                    // Generate Content from Object (if we have one)
+                                    if (!formatContent && parsed && typeof parsed === 'object') {
+                                        // PASS 1: Look for any key containing HTML content (prioritize actual formatted reports)
+                                        for (const [key, value] of Object.entries(parsed)) {
+                                            if (typeof value === 'string' && value.length > 100 && isHtml(value)) {
                                                 formatContent = cleanContent(value);
-                                                contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                contentType = 'html';
                                                 break;
                                             }
                                         }
+
+                                        // PASS 2: If no HTML found, look for keys starting with 'formatted_'
+                                        if (!formatContent) {
+                                            const formattedKeys = Object.keys(parsed).filter(k => k.startsWith('formatted_'));
+                                            for (const key of formattedKeys) {
+                                                const value = parsed[key as keyof typeof parsed];
+                                                if (typeof value === 'string' && value.length > 50) {
+                                                    const cleaned = cleanContent(value);
+                                                    formatContent = cleaned;
+                                                    contentType = isHtml(cleaned) ? 'html' : 'markdown';
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // PASS 3: Fallback to markdown/content keys
+                                        if (!formatContent) {
+                                            const fallbackKeys = ['fallback_markdown', 'markdown', 'report', 'content', 'result'];
+                                            for (const key of fallbackKeys) {
+                                                const value = parsed[key as keyof typeof parsed];
+                                                if (typeof value === 'string' && value.trim()) {
+                                                    formatContent = cleanContent(value);
+                                                    contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }
-                                } catch {
-                                    // If all parsing fails, try raw content
+
+                                    // Debug log to help verify updates
+                                    // console.log("Preview Render:", { id: selectedNode?.id, hasOutput: !!selectedNode?.data?.output, formatContent: !!formatContent });
+
+                                } catch (e) {
+                                    console.error("Preview parsing error:", e);
+                                    // If all parsing fails, try raw content from codeContent as last resort
                                     if (codeContent && !codeContent.startsWith('{')) {
                                         formatContent = codeContent.replace(/\\n/g, '\n');
                                     }

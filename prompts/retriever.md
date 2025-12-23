@@ -24,6 +24,13 @@ You retrieve **as-is**, from sources including:
 
 ## 🎯 EXECUTION LOGIC
 
+### **IMPORTANT: Tool Output Parsing**
+All browser tools return **JSON strings**. You **MUST** parse them using `json.loads()` before usage.
+Example: 
+```python
+urls = json.loads(fetch_search_urls(...))
+```
+
 ### **Step 1: Assess call_self Need**
 
 **Set `call_self: true` when:**
@@ -67,8 +74,8 @@ You retrieve **as-is**, from sources including:
     "data_to_process": ["item1", "item2"]
   },
   "code_variants": {
-    "CODE_1A": "urls = fetch_search_urls('query here', 10)\nreturn {'search_results_1A': urls}",
-    "CODE_1B": "urls = fetch_search_urls('alternative query', 8)\nreturn {'search_results_1B': urls}"
+    "CODE_1A": "urls = json.loads(fetch_search_urls('query here', 10))\nreturn {'search_results_1A': urls}",
+    "CODE_1B": "urls = json.loads(fetch_search_urls('alternative query', 8))\nreturn {'search_results_1B': urls}"
   }
 }
 ```
@@ -120,8 +127,8 @@ You retrieve **as-is**, from sources including:
   "nyc_hotel_options_T004": [],
   "call_self": false,
   "code_variants": {
-    "CODE_1A": "results = search_web_with_text_content('NYC hotels Manhattan booking prices amenities', 8)\nreturn {'nyc_hotel_options_T004': results}",
-    "CODE_1B": "data = search_web_with_text_content('New York City hotels under $200 ratings reviews', 6)\nreturn {'nyc_hotel_options_T004': data}"
+    "CODE_1A": "data = json.loads(search_web_with_text_content('NYC hotels Manhattan booking prices amenities', 8))\nreturn {'nyc_hotel_options_T004': data}",
+    "CODE_1B": "data = json.loads(search_web_with_text_content('New York City hotels under $200 ratings reviews', 6))\nreturn {'nyc_hotel_options_T004': data}"
   }
 }
 ```
@@ -149,8 +156,8 @@ You retrieve **as-is**, from sources including:
     "filter_criteria": "major_airlines_only"
   },
   "code_variants": {
-    "CODE_1A": "urls = fetch_search_urls('Bangalore to NYC flights Emirates Air India British Airways', 10)\nreturn {'flight_urls_1A': urls}",
-    "CODE_1B": "urls = fetch_search_urls('BLR to JFK flights major airlines booking', 8)\nreturn {'flight_urls_1B': urls}"
+    "CODE_1A": "urls = json.loads(fetch_search_urls('Bangalore to NYC flights Emirates Air India British Airways', 10))\nreturn {'flight_urls_1A': urls}",
+    "CODE_1B": "urls = json.loads(fetch_search_urls('BLR to JFK flights major airlines booking', 8))\nreturn {'flight_urls_1B': urls}"
   }
 }
 ```
@@ -194,8 +201,8 @@ You retrieve **as-is**, from sources including:
   "fusion_startups_T010": [],
   "call_self": false,
   "code_variants": {
-    "CODE_1A": "results = search_web_with_text_content('nuclear fusion reactor startups companies funding', 8)\nreturn {'fusion_startups_T010': results}",
-    "CODE_1B": "data = search_web_with_text_content('nuclear fusion energy startups 2024 investment', 6)\nreturn {'fusion_startups_T010': data}"
+    "CODE_1A": "results = json.loads(search_web_with_text_content('nuclear fusion reactor startups companies funding', 8))\nreturn {'fusion_startups_T010': results}",
+    "CODE_1B": "data = json.loads(search_web_with_text_content('nuclear fusion energy startups 2024 investment', 6))\nreturn {'fusion_startups_T010': data}"
   }
 }
 ```
@@ -230,10 +237,13 @@ Example:
 ### **Good Examples:**
 ```python
 # Web search
-urls = fetch_search_urls('bangalore to NYC flights', 10)
+urls = json.loads(fetch_search_urls('bangalore to NYC flights', 10))
 return {'flight_urls_1A': urls}
 
-# Content extraction
+# Content extraction (Note: webpage_url_to_raw_text returns a dict, no json.loads needed IF it's not stringified, but checking is good. 
+# However, usually fetch_search_urls is the list provider. 
+# `search_web_with_text_content` also returns a dict with json inside.
+# If `webpage_url_to_raw_text` returns a dict natively, we use it directly.)
 content = webpage_url_to_raw_text('https://emirates.com/flights')
 return {'flight_details_1A': content}
 
@@ -299,8 +309,8 @@ If tools fail or no relevant tools available:
   "flight_options_T001": [],
   "call_self": false,
   "code_variants": {
-    "CODE_1A": "results = search_web_with_text_content('Bangalore to NYC flights booking prices', 8)\nreturn {'flight_options_T001': results}",
-    "CODE_1B": "urls = fetch_search_urls('BLR to JFK flights Emirates Air India', 10)\nreturn {'flight_options_T001': urls}"
+    "CODE_1A": "results = json.loads(search_web_with_text_content('Bangalore to NYC flights booking prices', 8))\nreturn {'flight_options_T001': results}",
+    "CODE_1B": "urls = json.loads(fetch_search_urls('BLR to JFK flights Emirates Air India', 10))\nreturn {'flight_options_T001': urls}"
   }
 }
 ```
@@ -403,8 +413,8 @@ Use only the following tools (in positional form):
   "flight_options_T001": [],
   "call_self": false,
   "code_variants": {
-    "CODE_1A": "urls = fetch_search_urls('Bangalore to NYC flights booking', 10)\nreturn {'flight_options_T001': urls}",
-    "CODE_1B": "urls = fetch_search_urls('BLR to JFK flights Emirates Air India', 8)\nreturn {'flight_options_T001': urls}"
+    "CODE_1A": "urls = json.loads(fetch_search_urls('Bangalore to NYC flights booking', 10))\nreturn {'flight_options_T001': urls}",
+    "CODE_1B": "urls = json.loads(fetch_search_urls('BLR to JFK flights Emirates Air India', 8))\nreturn {'flight_options_T001': urls}"
   }
 }
 ```
@@ -439,8 +449,8 @@ Use only the following tools (in positional form):
     "target_count": 5
   },
   "code_variants": {
-    "CODE_1A": "urls = fetch_search_urls('top hotels NYC Manhattan booking prices', 12)\nreturn {'hotel_urls_1A': urls}",
-    "CODE_1B": "results = search_web_with_text_content('best rated hotels New York City amenities', 8)\nreturn {'hotel_research_T005': results}"
+    "CODE_1A": "urls = json.loads(fetch_search_urls('top hotels NYC Manhattan booking prices', 12))\nreturn {'hotel_urls_1A': urls}",
+    "CODE_1B": "results = json.loads(search_web_with_text_content('best rated hotels New York City amenities', 8))\nreturn {'hotel_research_T005': results}"
   }
 }
 ```
@@ -492,8 +502,8 @@ Use only the following tools (in positional form):
   "quantum_startups_T011": [],
   "call_self": false,
   "code_variants": {
-    "CODE_1A": "fusion_urls = fetch_search_urls('nuclear fusion reactor startups companies', 8)\nquantum_urls = fetch_search_urls('quantum computing startups companies', 8)\nreturn {'fusion_startups_T010': fusion_urls, 'quantum_startups_T011': quantum_urls}",
-    "CODE_1B": "fusion_companies = fetch_search_urls('nuclear fusion energy startups 2024', 6)\nquantum_companies = fetch_search_urls('quantum computing AI startups', 6)\nreturn {'fusion_startups_T010': fusion_companies, 'quantum_startups_T011': quantum_companies}"
+    "CODE_1A": "fusion_urls = json.loads(fetch_search_urls('nuclear fusion reactor startups companies', 8))\nquantum_urls = json.loads(fetch_search_urls('quantum computing startups companies', 8))\nreturn {'fusion_startups_T010': fusion_urls, 'quantum_startups_T011': quantum_urls}",
+    "CODE_1B": "fusion_companies = json.loads(fetch_search_urls('nuclear fusion energy startups 2024', 6))\nquantum_companies = json.loads(fetch_search_urls('quantum computing AI startups', 6))\nreturn {'fusion_startups_T010': fusion_companies, 'quantum_startups_T011': quantum_companies}"
   }
 }
 ```
@@ -516,7 +526,7 @@ Use only the following tools (in positional form):
 Input writes: `["flight_options_T001"]`
 ```python
 # ❌ Wrong variable name in return
-urls = fetch_search_urls('flights', 10)
+urls = json.loads(fetch_search_urls('flights', 10))
 return {'flight_urls_1A': urls}  # Should be 'flight_options_T001'
 ```
 

@@ -1,4 +1,4 @@
-
+import json
 from mcp.server.fastmcp import FastMCP, Context
 import httpx
 from bs4 import BeautifulSoup
@@ -44,7 +44,7 @@ async def web_search(string: str, integer: int = 5) -> str:
     """Search the web using multiple engines (DuckDuckGo, Bing, Ecosia, etc.) and return a list of relevant result URLs"""
     try:
         urls = await smart_search(string, integer)
-        return str(urls)
+        return json.dumps(urls)
     except Exception as e:
         return f"[Error] Search failed: {str(e)}"
 
@@ -108,7 +108,7 @@ async def search_web_with_text_content(string: str) -> dict:
             "content": [
                 TextContent(
                     type="text",
-                    text=str(results)
+                    text=json.dumps(results)
                 )
             ]
         }
@@ -127,7 +127,7 @@ async def fetch_search_urls(string: str, integer: int = 5) -> str:
     """Get top website URLs for your search query. Just gets the URLs not the contents."""
     try:
         urls = await smart_search(string, integer)
-        return str(urls)
+        return json.dumps(urls)
     except Exception as e:
         return f"[Error] Search failed: {str(e)}"
 

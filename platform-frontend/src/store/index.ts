@@ -191,7 +191,7 @@ export const useAppStore = create<AppState>()(
                 if (node && node.data) {
                     // Populate panels
                     set({
-                        codeContent: node.data.output || '// No output available',
+                        codeContent: node.data.output || '// Waiting for output',
                         logs: [
                             `Status: ${node.data.status}`,
                             `Type: ${node.data.type}`,
