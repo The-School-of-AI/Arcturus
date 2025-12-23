@@ -100,6 +100,8 @@ export const useAppStore = create<AppState>()(
             fetchRuns: async () => {
                 try {
                     const fetched = await api.getRuns();
+                    // Enforce sorting
+                    fetched.sort((a, b) => b.createdAt - a.createdAt);
                     set({ runs: fetched });
                 } catch (e: any) {
                     console.error("Failed to fetch runs. Check if backend is running at http://localhost:8000 and if CORS is allowed.");

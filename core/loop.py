@@ -248,6 +248,9 @@ class AgentLoop4:
                     else:
                         result_str = str(tool_result.content)
 
+                    # ✅ SAVE RESULT TO HISTORY
+                    iterations_data[-1]["tool_result"] = result_str
+
                     # Log result (truncated)
                     log_step(f"✅ Tool Result", payload={"result_preview": result_str[:200] + "..."}, symbol="🔌")
                     
@@ -278,6 +281,10 @@ class AgentLoop4:
                 # Handle code execution if needed
                 if context._has_executable_code(output):
                     execution_result = await context._auto_execute_code(step_id, output)
+                    
+                    # ✅ SAVE RESULT TO HISTORY
+                    iterations_data[-1]["execution_result"] = execution_result
+
                     if execution_result.get("status") == "success":
                         execution_data = execution_result.get("result", {})
                         inputs = {**inputs, **execution_data}  # Update inputs for iteration 2

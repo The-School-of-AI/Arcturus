@@ -402,8 +402,27 @@ export const WorkspacePanel: React.FC = () => {
 
                                     // 3. Scan execution logs (stdout/stderr captured from Sandbox)
                                     if (selectedNode?.data?.execution_logs) {
-                                        const logs = selectedNode.data.execution_logs;
-                                        // Look for "Link: https://..." or just straight URLs in the log
+                                        let logs = selectedNode.data.execution_logs;
+                                        // Try to unescape if it looks like a JSON string or has escaped chars
+                                        try {
+                                            if (logs.startsWith('"') && logs.endsWith('"')) {
+                                                logs = JSON.parse(logs);
+                                            } else {
+                                                logs = logs.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'");
+                                            }
+                                        } catch { }
+
+                                        console.log("Web Tab Scanned Logs:", logs.slice(0, 200) + "...");
+
+                                        // Look for "Link: https://..." or "Navigating to https://..."
+                                        // We want to capture the URL specifically
+                                        const navigationRegex = /(?:Navigating to|Visiting|Link:) (https?:\/\/[^\s'"]+)/gi;
+                                        let navMatch;
+                                        while ((navMatch = navigationRegex.exec(logs)) !== null) {
+                                            if (navMatch[1]) addUrl(navMatch[1], "Navigation Log");
+                                        }
+
+                                        // Also generic URL scan
                                         const urlRegex = /https?:\/\/[^\s'"]+/g;
                                         const matches = logs.match(urlRegex);
                                         if (matches) {
