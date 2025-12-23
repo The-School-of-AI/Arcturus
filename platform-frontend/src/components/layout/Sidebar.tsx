@@ -18,6 +18,14 @@ export const Sidebar: React.FC = () => {
 
     const [isNewRunOpen, setIsNewRunOpen] = React.useState(false);
     const [newQuery, setNewQuery] = React.useState("");
+    const [searchQuery, setSearchQuery] = React.useState("");
+    const filteredRuns = React.useMemo(() => {
+        if (!searchQuery.trim()) return runs;
+        return runs.filter(run =>
+            run.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            run.id.includes(searchQuery)
+        );
+    }, [runs, searchQuery]);
 
     const handleStartRun = async () => {
         if (!newQuery.trim()) return;
@@ -67,12 +75,14 @@ export const Sidebar: React.FC = () => {
                     <input
                         className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
                         placeholder="Search runs..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 space-y-4">
-                {runs.map((run) => (
+                {filteredRuns.map((run) => (
                     <div
                         key={run.id}
                         onClick={() => setCurrentRun(run.id)}

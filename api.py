@@ -220,6 +220,74 @@ async def delete_run(run_id: str):
 
     return {"id": run_id, "status": "deleted"}
 
+@app.get("/rag/documents")
+async def get_rag_documents():
+    """List documents and their RAG status"""
+    try:
+        root = Path(__file__).parent / "mcp_servers"
+        doc_path = root / "documents"
+        cache_file = root / "faiss_index" / "doc_index_cache.json"
+        
+        # Load cache for status
+        cache_meta = {}
+        if cache_file.exists():
+            try:
+                cache_meta = json.loads(cache_file.read_text())
+            except:
+                pass
+
+        files = []
+        if doc_path.exists():
+            for path in doc_path.rglob("*"):
+                if path.is_file() and not path.name.startswith('.'):
+                    rel_path = path.relative_to(doc_path)
+                    files.append({
+                        "name": path.name,
+                        "path": str(rel_path),
+                        "type": path.suffix.lower().replace('.', ''),
+                        "size": path.stat().st_size,
+                        "indexed": path.name in cache_meta,
+                        "hash": cache_meta.get(path.name, "Not Indexed")
+                    })
+        return {"files": files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/mcp/tools")
+async def get_mcp_tools():
+    """List available MCP tools from local files"""
+    import ast
+    tools = []
+    try:
+        server_path = Path(__file__).parent / "mcp_servers"
+        for py_file in server_path.glob("*.py"):
+            try:
+                tree = ast.parse(py_file.read_text())
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.FunctionDef):
+                        # Check for @mcp.tool decorator
+                        is_tool = False
+                        for decorator in node.decorator_list:
+                            if (isinstance(decorator, ast.Call) and 
+                                isinstance(decorator.func, ast.Attribute) and 
+                                decorator.func.attr == 'tool') or \
+                               (isinstance(decorator, ast.Attribute) and 
+                                decorator.attr == 'tool'):
+                                is_tool = True
+                                break
+                        
+                        if is_tool:
+                            tools.append({
+                                "name": node.name,
+                                "description": ast.get_docstring(node) or "No description",
+                                "file": py_file.name
+                            })
+            except:
+                continue
+        return {"tools": tools}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
