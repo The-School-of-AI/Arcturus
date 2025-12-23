@@ -222,7 +222,7 @@ async def delete_run(run_id: str):
 
 @app.get("/rag/documents")
 async def get_rag_documents():
-    """List documents and their RAG status"""
+    """List documents in a recursive tree structure with RAG status"""
     try:
         root = Path(__file__).parent / "mcp_servers"
         doc_path = root / "documents"
@@ -236,45 +236,68 @@ async def get_rag_documents():
             except:
                 pass
 
-        files = []
-        if doc_path.exists():
-            for path in doc_path.rglob("*"):
-                if path.is_file() and not path.name.startswith('.'):
-                    rel_path = path.relative_to(doc_path)
-                    files.append({
-                        "name": path.name,
-                        "path": str(rel_path),
-                        "type": path.suffix.lower().replace('.', ''),
-                        "size": path.stat().st_size,
-                        "indexed": path.name in cache_meta,
-                        "hash": cache_meta.get(path.name, "Not Indexed")
-                    })
+        def build_tree(path: Path):
+            items = []
+            # Sort: directories first, then files
+            for p in sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+                if p.name.startswith('.') or p.name == "__pycache__":
+                    continue
+                
+                item = {
+                    "name": p.name,
+                    "path": str(p.relative_to(doc_path)),
+                    "type": "folder" if p.is_dir() else p.suffix.lower().replace('.', ''),
+                }
+                
+                if p.is_dir():
+                    item["children"] = build_tree(p)
+                else:
+                    item["size"] = p.stat().st_size
+                    item["indexed"] = p.name in cache_meta
+                    item["hash"] = cache_meta.get(p.name, "Not Indexed")
+                
+                items.append(item)
+            return items
+
+        files = build_tree(doc_path) if doc_path.exists() else []
         return {"files": files}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/mcp/tools")
 async def get_mcp_tools():
-    """List available MCP tools from local files"""
-    import ast
+    """List available MCP tools by scanning files using regex for robustness"""
+    import re
     tools = []
     try:
         server_path = Path(__file__).parent / "mcp_servers"
+        # Regex to find @mcp.tool() or @tool() decorated functions
+        # This captures the decorator, function definition, and docstring
+        tool_pattern = re.compile(r'@(?:mcp\.)?tool\s*\(\s*\).*?async\s+def\s+(\w+)\s*\(.*?\).*?:(?:\s*"""(.*?)""")?', re.DOTALL)
+        
         for py_file in server_path.glob("*.py"):
             try:
-                tree = ast.parse(py_file.read_text())
+                content = py_file.read_text()
+                # We need to parse manually or use ast. 
+                # Let's stick to AST but inspect it better if regex is too brittle for full code
+                # Actually, AST is better but we missed the "mcp" instance name variation if using decorators
+                # Let's try AST again but look for ANY decorator named 'tool'
+                
+                import ast
+                tree = ast.parse(content)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.FunctionDef):
-                        # Check for @mcp.tool decorator
                         is_tool = False
                         for decorator in node.decorator_list:
-                            if (isinstance(decorator, ast.Call) and 
-                                isinstance(decorator.func, ast.Attribute) and 
-                                decorator.func.attr == 'tool') or \
-                               (isinstance(decorator, ast.Attribute) and 
-                                decorator.attr == 'tool'):
+                            # Case 1: @mcp.tool()
+                            if isinstance(decorator, ast.Call):
+                                if isinstance(decorator.func, ast.Attribute) and decorator.func.attr == 'tool':
+                                    is_tool = True
+                                elif isinstance(decorator.func, ast.Name) and decorator.func.id == 'tool':
+                                    is_tool = True
+                            # Case 2: @mcp.tool (no parens - rare but possible)
+                            elif isinstance(decorator, ast.Attribute) and decorator.attr == 'tool':
                                 is_tool = True
-                                break
                         
                         if is_tool:
                             tools.append({
@@ -282,8 +305,10 @@ async def get_mcp_tools():
                                 "description": ast.get_docstring(node) or "No description",
                                 "file": py_file.name
                             })
-            except:
+            except Exception as ex:
+                print(f"Failed to parse {py_file}: {ex}")
                 continue
+                
         return {"tools": tools}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
