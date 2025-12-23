@@ -1,4 +1,26 @@
 import networkx as nx
+import json
+
+def _extract_output(output):
+    """
+    Extract and properly serialize output from agent nodes.
+    Handles nested dicts, lists, and strings properly.
+    """
+    if output is None:
+        return ""
+    
+    if isinstance(output, str):
+        return output
+    
+    if isinstance(output, dict):
+        # Convert dict to JSON string for proper parsing on frontend
+        return json.dumps(output)
+    
+    if isinstance(output, (list, tuple)):
+        return json.dumps(output)
+    
+    # Fallback to string representation
+    return str(output)
 
 def nx_to_reactflow(graph: nx.DiGraph):
     """
@@ -55,12 +77,12 @@ def nx_to_reactflow(graph: nx.DiGraph):
                 "type": agent_type,
                 "status": status,
                 "description": data.get("description", ""),
-                "prompt": data.get("agent_prompt", ""),
+                "prompt": data.get("agent_prompt") or data.get("prompt") or data.get("description") or "",
                 "reads": data.get("reads", []),
                 "writes": data.get("writes", []),
                 "cost": data.get("cost", 0.0),
                 "execution_time": data.get("execution_time", 0.0),
-                "output": str(data.get("output", "")) if data.get("output") else "",
+                "output": _extract_output(data.get("output")),
                 "error": str(data.get("error", "")) if data.get("error") else ""
             }
         })

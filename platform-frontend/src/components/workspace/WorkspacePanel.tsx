@@ -3,6 +3,7 @@ import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock } from 'luci
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
+import ReactMarkdown from 'react-markdown';
 
 // Helper component for tabs (assuming it's a simple button for now)
 const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; icon: React.ReactNode }> = ({ label, active, onClick, icon }) => (
@@ -30,14 +31,19 @@ export const WorkspacePanel: React.FC = () => {
     React.useEffect(() => {
         if (!selectedNode) return;
 
-        if (selectedNode.data.type === 'Summarizer' || selectedNode.data.type === 'Evaluator') {
+        const nodeType = selectedNode.data.type;
+        const nodeLabel = selectedNode.data.label?.toLowerCase() || '';
+
+        // Switch to Preview for agents that produce formatted output
+        if (nodeType === 'Summarizer' || nodeType === 'Evaluator' ||
+            nodeLabel.includes('formatter') || nodeLabel.includes('summarizer')) {
             setActiveTab('preview');
-        } else if (selectedNode.data.type === 'Coder') {
+        } else if (nodeType === 'Coder') {
             setActiveTab('code');
         } else if (selectedNodeId) {
             setActiveTab('overview');
         }
-    }, [selectedNodeId, selectedNode?.data.type]);
+    }, [selectedNodeId, selectedNode?.data.type, selectedNode?.data.label]);
 
     if (!selectedNodeId) {
         return (
@@ -314,26 +320,84 @@ export const WorkspacePanel: React.FC = () => {
 
                 {
                     activeTab === 'preview' && (
-                        <div className="h-full p-8 flex flex-col items-center justify-center text-muted-foreground bg-white/5 overflow-auto">
+                        <div className="h-full p-6 overflow-auto bg-charcoal-900">
                             {(() => {
-                                let formatContent = null;
+                                let formatContent: string | null = null;
+                                let contentType: 'html' | 'markdown' = 'markdown';
+
                                 try {
-                                    const parsed = JSON.parse(codeContent);
-                                    // Look for keys starting with 'formatted_' or containing 'report'
-                                    const htmlKey = Object.keys(parsed).find(k => k.startsWith('formatted_') || (typeof parsed[k] === 'string' && parsed[k].includes('<div')));
-                                    if (htmlKey) formatContent = parsed[htmlKey];
-                                } catch { }
+                                    // First try to parse as JSON
+                                    let parsed: Record<string, unknown>;
+                                    try {
+                                        parsed = JSON.parse(codeContent);
+                                    } catch {
+                                        // Try converting Python dict format
+                                        const jsonified = codeContent
+                                            .replace(/'/g, '"')
+                                            .replace(/\bTrue\b/g, 'true')
+                                            .replace(/\bFalse\b/g, 'false')
+                                            .replace(/\bNone\b/g, 'null');
+                                        parsed = JSON.parse(jsonified);
+                                    }
+
+                                    // Look for formatted content in various keys
+                                    const candidates = [
+                                        // Keys that typically have formatted output
+                                        ...Object.keys(parsed).filter(k => k.startsWith('formatted_')),
+                                        'formatted_report', 'report', 'html_output', 'output',
+                                        'fallback_markdown', 'markdown', 'content', 'result'
+                                    ];
+
+                                    for (const key of candidates) {
+                                        const value = parsed[key];
+                                        if (typeof value === 'string' && value.trim()) {
+                                            // Clean up escaped newlines and other escapes
+                                            let cleaned = value
+                                                .replace(/\\n/g, '\n')
+                                                .replace(/\\t/g, '\t')
+                                                .replace(/\\'/g, "'")
+                                                .replace(/\\"/g, '"');
+
+                                            // Detect if it's HTML
+                                            if (cleaned.includes('<div') || cleaned.includes('<h1') ||
+                                                cleaned.includes('<p>') || cleaned.includes('<html')) {
+                                                contentType = 'html';
+                                            }
+
+                                            formatContent = cleaned;
+                                            break;
+                                        }
+                                    }
+                                } catch {
+                                    // If all parsing fails, try to use raw content
+                                    if (codeContent && !codeContent.startsWith('{')) {
+                                        formatContent = codeContent.replace(/\\n/g, '\n');
+                                    }
+                                }
 
                                 if (formatContent) {
                                     return (
-                                        <div className="prose pro-invert w-full max-w-full p-4 bg-charcoal-800 rounded-md shadow-lg" dangerouslySetInnerHTML={{ __html: formatContent }} />
+                                        <div className="prose prose-invert prose-sm max-w-none 
+                                            prose-headings:text-primary prose-headings:font-bold 
+                                            prose-p:text-foreground/90 prose-p:leading-relaxed
+                                            prose-strong:text-primary prose-li:text-foreground/80
+                                            prose-a:text-blue-400 prose-code:text-green-400
+                                            prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                                            bg-charcoal-800 p-6 rounded-lg border border-white/10">
+                                            {contentType === 'html' ? (
+                                                <div dangerouslySetInnerHTML={{ __html: formatContent }} />
+                                            ) : (
+                                                <ReactMarkdown>{formatContent}</ReactMarkdown>
+                                            )}
+                                        </div>
                                     );
                                 }
 
                                 return (
-                                    <div className="text-center">
-                                        <FileCode className="w-10 h-10 mx-auto mb-4 opacity-50" />
-                                        <p>No HTML output found in this node.</p>
+                                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                        <FileCode className="w-12 h-12 mb-4 opacity-30" />
+                                        <p className="text-sm">No formatted output available for this node.</p>
+                                        <p className="text-xs mt-2 opacity-70">Select a FormatterAgent or SummarizerAgent to see rendered output.</p>
                                     </div>
                                 );
                             })()}

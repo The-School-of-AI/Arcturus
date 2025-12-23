@@ -112,11 +112,26 @@ async def list_runs():
                         # Fallback to file creation time
                         created_at = datetime.fromtimestamp(session_file.stat().st_ctime).isoformat()
                     
+                    # Compute status from node statuses
+                    # Check nodes for their statuses
+                    nodes = data.get("nodes", [])
+                    node_statuses = [n.get("status", "pending") for n in nodes if n.get("id") != "ROOT"]
+                    
+                    if any(s == "running" for s in node_statuses):
+                        computed_status = "running"
+                    elif any(s == "failed" for s in node_statuses):
+                        computed_status = "failed" 
+                    elif all(s == "completed" for s in node_statuses) and node_statuses:
+                        computed_status = "completed"
+                    else:
+                        # Fallback to graph-level status or completed
+                        computed_status = graph_details.get("status", "completed")
+                    
                     runs.append({
                         "id": session_file.stem.replace("session_", ""),
                         "query": query, 
                         "created_at": created_at, 
-                        "status": graph_details.get("status", "completed")
+                        "status": computed_status
                     })
                 except:
                     continue
