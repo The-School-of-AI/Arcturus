@@ -385,7 +385,7 @@ export const WorkspacePanel: React.FC = () => {
                                             if (iter.output) {
                                                 findUrlsRecursive(iter.output);
 
-                                                // Check for tool_result strings in iteration_context
+                                                // Check for tool_result
                                                 if (iter.output.iteration_context && iter.output.iteration_context.tool_result) {
                                                     const toolResult = iter.output.iteration_context.tool_result;
                                                     if (typeof toolResult === 'string') {
@@ -396,6 +396,31 @@ export const WorkspacePanel: React.FC = () => {
                                                         }
                                                     }
                                                 }
+                                            }
+
+                                            // Check for Saved Execution Results (Code Execution)
+                                            if (iter.execution_result) {
+                                                findUrlsRecursive(iter.execution_result);
+
+                                                // Handle stringified Python lists in result block
+                                                // e.g. "found_urls": "['http://...']"
+                                                const resStr = JSON.stringify(iter.execution_result);
+                                                const urlRegex = /https?:\/\/[^\s'"]+/g;
+                                                const matches = resStr.match(urlRegex);
+                                                if (matches) {
+                                                    matches.forEach(url => {
+                                                        // Clean up trailing chars often caught in stringified python lists like combined quote+bracket
+                                                        const cleanUrl = url.replace(/['"\]]+$/, '');
+                                                        addUrl(cleanUrl, "Execution Result");
+                                                    });
+                                                }
+                                            }
+
+                                            // Check for Saved Tool Results (MCP)
+                                            if (iter.tool_result && typeof iter.tool_result === 'string') {
+                                                const urlRegex = /https?:\/\/[^\s'"]+/g;
+                                                const matches = iter.tool_result.match(urlRegex);
+                                                if (matches) matches.forEach(url => addUrl(url, "Tool Result"));
                                             }
                                         });
                                     }
@@ -458,8 +483,8 @@ export const WorkspacePanel: React.FC = () => {
                                                 <div className="font-bold text-red-400 mb-2">DEBUG: RAW DATA DUMP</div>
                                                 {JSON.stringify({
                                                     iterations: selectedNode?.data?.iterations,
-                                                    parsed_keys: parsed ? Object.keys(parsed) : [],
-                                                    output_preview: typeof selectedNode?.data?.output === 'string' ? selectedNode.data.output.slice(0, 500) : selectedNode?.data?.output
+                                                    execution_result: selectedNode?.data?.execution_result,
+                                                    tool_result_scan: parsed
                                                 }, null, 2)}
                                             </div>
                                         </div>

@@ -104,3 +104,9 @@ You will receive a "writes" field in your input JSON containing the exact variab
 Example:
 - Input: `"writes": ["comparison_analysis_T003", "insights_T003"]`
 - Your output MUST be: `{"comparison_analysis_T003": {...}, "insights_T003": {...}}`
+
+# NEGATIVE CONSTRAINTS (CRITICAL)
+- Do NOT say "Okay", "Here is the JSON", "I understand", or any other conversational filler.
+- Do NOT output markdown code blocks (e.g. ```json). Just the raw JSON object.
+- Do NOT wrap the output in any text.
+- START your response with `{` and END with `}`.

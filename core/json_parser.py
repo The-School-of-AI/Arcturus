@@ -61,7 +61,12 @@ def parse_llm_json(text: str, required_keys: list[str] = None, debug: bool = Fal
     if raw_json:
         try:
             if debug: print(f"[DEBUG] Attempting auto-repair...")
+            if debug: print(f"[DEBUG] Attempting auto-repair...")
             repaired = repair_json(raw_json)
+            if isinstance(repaired, (dict, list)):
+                if required_keys and isinstance(repaired, dict):
+                    validate_required_keys(repaired, required_keys)
+                return repaired
             return _parse_and_validate(repaired, required_keys)
         except Exception:
             if debug: print(f"[DEBUG] Repair attempt failed.")

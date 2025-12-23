@@ -30,6 +30,8 @@ export interface AgentNodeData {
     execution_logs?: string;
     iterations?: any[];
     calls?: any[];
+    execution_logs?: string;
+    execution_result?: any;
     isDark?: boolean; // For styling
 }
 
