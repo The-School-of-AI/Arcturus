@@ -81,6 +81,12 @@
   background-image: radial-gradient(circle, #333 1px, transparent 1px);
 }
 
+/* Hide attribution, but enable when release in public TODO */
+.react-flow__attribution {
+  display: none !important;
+}
+
+
 /* ReactFlow Controls Dark Theme (RunTimeline Style) */
 .react-flow__controls {
   display: flex !important;
@@ -90,13 +96,16 @@
   backdrop-filter: blur(8px) !important;
   border: 1px solid hsl(220 16% 14%) !important;
   /* border-border */
-  border-radius: 0.5rem !important;
+  border-radius: 0.35rem !important;
   /* rounded-xl */
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
   /* shadow-2xl */
-  padding: 2px !important;
-  gap: 2px !important;
-  margin: 4 !important;
+  padding: 1px !important;
+  gap: 1px !important;
+  margin: 0 !important;
+  top: 12px !important;
+  left: 12px !important;
+  bottom: auto !important;
 }
 
 .react-flow__controls-button {
