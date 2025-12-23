@@ -85,7 +85,7 @@ export const Sidebar: React.FC = () => {
                     >
                         <div className="flex justify-between items-start mb-1 gap-2">
                             <h3 className={cn(
-                                "font-medium text-sm truncate flex-1",
+                                "font-medium text-sm line-clamp-2 leading-tight flex-1 break-words",
                                 currentRun?.id === run.id ? "text-primary" : "text-foreground"
                             )}>
                                 {run.name}
