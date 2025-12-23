@@ -83,7 +83,13 @@ def nx_to_reactflow(graph: nx.DiGraph):
                 "cost": data.get("cost", 0.0),
                 "execution_time": data.get("execution_time", 0.0),
                 "output": _extract_output(data.get("output")),
-                "error": str(data.get("error", "")) if data.get("error") else ""
+                "error": str(data.get("error", "")) if data.get("error") else "",
+                # Add missing fields required for Web Tab and Debugging
+                "execution_result": data.get("execution_result"),
+                "iterations": data.get("iterations", []),
+                "logs": data.get("logs", []),
+                "execution_logs": data.get("execution_logs", ""),
+                "calls": data.get("calls", [])
             }
         })
 
