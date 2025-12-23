@@ -225,10 +225,9 @@ export const useAppStore = create<AppState>()(
         {
             name: 'agent-platform-storage',
             partialize: (state) => ({
-                runs: state.runs,
+                // Only persist user settings, not runs (which should come fresh from API)
                 apiKey: state.apiKey,
                 localModel: state.localModel
-                // Don't persist ephemeral graph state or huge snapshots for now unless needed
             }),
         }
     )
