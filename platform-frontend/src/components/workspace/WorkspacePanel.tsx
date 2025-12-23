@@ -525,6 +525,7 @@ export const WorkspacePanel: React.FC = () => {
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setActiveIframeUrl(urlInfo.url);
+                                                                setExpandedUrl(urlInfo.url);
                                                             }}
                                                             className="px-2 py-1 text-[10px] bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
                                                         >
@@ -535,47 +536,57 @@ export const WorkspacePanel: React.FC = () => {
                                                     {/* Accordion Content */}
                                                     {expandedUrl === urlInfo.url && (
                                                         <div className="px-4 pb-4 pt-2 border-t border-white/5">
-                                                            <div className="text-xs text-muted-foreground mb-2 font-medium">Content Preview:</div>
-                                                            <div className="text-xs text-foreground/80 bg-black/20 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
-                                                                {urlInfo.content.slice(0, 500)}
-                                                                {urlInfo.content.length > 500 && '...'}
-                                                            </div>
-                                                            <a
-                                                                href={urlInfo.url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="mt-2 inline-flex items-center gap-1 text-[10px] text-blue-400 hover:underline"
-                                                            >
-                                                                Open in new tab →
-                                                            </a>
+
+                                                            {/* Iframe View */}
+                                                            {activeIframeUrl === urlInfo.url ? (
+                                                                <div className="flex flex-col gap-2">
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <span className="text-xs text-muted-foreground font-medium">Web Preview (50% Zoom)</span>
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setActiveIframeUrl(null);
+                                                                            }}
+                                                                            className="text-[10px] text-blue-400 hover:text-blue-300"
+                                                                        >
+                                                                            Switch to Text Limit
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="w-full h-96 bg-white overflow-hidden rounded relative border border-white/10">
+                                                                        <div className="absolute inset-0 w-[200%] h-[200%] origin-top-left scale-50">
+                                                                            <iframe
+                                                                                src={urlInfo.url}
+                                                                                className="w-full h-full border-none"
+                                                                                title="Web Preview"
+                                                                                sandbox="allow-scripts allow-same-origin"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                /* Text Content Preview */
+                                                                <>
+                                                                    <div className="text-xs text-muted-foreground mb-2 font-medium">Content Preview:</div>
+                                                                    <div className="text-xs text-foreground/80 bg-black/20 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+                                                                        {urlInfo.content.slice(0, 500)}
+                                                                        {urlInfo.content.length > 500 && '...'}
+                                                                    </div>
+                                                                    <a
+                                                                        href={urlInfo.url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="mt-2 inline-flex items-center gap-1 text-[10px] text-blue-400 hover:underline"
+                                                                    >
+                                                                        Open in new tab →
+                                                                    </a>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
 
-                                        {/* Iframe Preview */}
-                                        {activeIframeUrl && (
-                                            <div className="h-1/2 border-t border-white/10 flex flex-col">
-                                                <div className="p-2 bg-charcoal-800 flex items-center gap-2">
-                                                    <div className="flex-1 bg-background rounded px-3 py-1.5 text-xs text-muted-foreground truncate font-mono">
-                                                        {activeIframeUrl}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => setActiveIframeUrl(null)}
-                                                        className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                                <iframe
-                                                    src={activeIframeUrl}
-                                                    className="flex-1 bg-white"
-                                                    title="Web Preview"
-                                                    sandbox="allow-scripts allow-same-origin"
-                                                />
-                                            </div>
-                                        )}
                                     </>
                                 );
                             })()}
