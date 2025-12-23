@@ -167,6 +167,19 @@ class AgentLoop4:
         # Final state
         console.print(visualizer.get_layout())
         
+        # Determine and save final status
+        if context.stop_requested:
+             context.plan_graph.graph['status'] = 'stopped'
+        elif any(context.plan_graph.nodes[n]['status'] == 'failed' for n in context.plan_graph.nodes):
+             context.plan_graph.graph['status'] = 'failed'
+        elif context.all_done():
+             context.plan_graph.graph['status'] = 'completed'
+        else:
+             # Max iterations or stalled
+             context.plan_graph.graph['status'] = 'failed'
+        
+        context._auto_save()
+        
         if context.all_done():
             console.print("🎉 All tasks completed!")
 

@@ -44,7 +44,8 @@ SAFE_BUILTINS = [
     "__import__",
 
     # Output and utility
-    "print", "locals", "globals", "repr"
+    "print", "locals", "globals", "repr",
+    "Exception", "True", "False", "None"
 ]
 
 MAX_FUNCTIONS = 20

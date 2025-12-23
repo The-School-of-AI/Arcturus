@@ -14,18 +14,22 @@ class MultiMCP:
         self.exit_stack = AsyncExitStack()
         self.sessions = {}  # server_name -> session
         self.tools = {}     # server_name -> [Tool]
+        
+        # Robust path resolution
+        base_dir = Path(__file__).parent
+        
         self.server_configs = {
             "browser": {
                 "command": "uv",
-                "args": ["run", "16_NetworkX/mcp_servers/server_browser.py"],
+                "args": ["run", str(base_dir / "server_browser.py")],
             },
             "rag": {
                 "command": "uv",
-                "args": ["run", "16_NetworkX/mcp_servers/server_rag.py"],
+                "args": ["run", str(base_dir / "server_rag.py")],
             },
             "sandbox": {
                 "command": "uv",
-                "args": ["run", "16_NetworkX/mcp_servers/server_sandbox.py"],
+                "args": ["run", str(base_dir / "server_sandbox.py")],
             }
         }
 
