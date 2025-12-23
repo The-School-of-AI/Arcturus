@@ -16,7 +16,7 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight">
                         <Box className="w-6 h-6 animate-pulse" />
-                        <span>Agentic<span className="text-foreground">Platform</span></span>
+                        <span>TSAItic<span className="text-foreground">Platform</span></span>
                     </div>
 
                     <div className="h-6 w-px bg-border mx-2" />

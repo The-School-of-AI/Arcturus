@@ -83,9 +83,9 @@ export const Sidebar: React.FC = () => {
                                 : "hover:bg-accent/30 hover:border-border"
                         )}
                     >
-                        <div className="flex justify-between items-start mb-1">
+                        <div className="flex justify-between items-start mb-1 gap-2">
                             <h3 className={cn(
-                                "font-medium text-sm truncate pr-2 max-w-[150px]",
+                                "font-medium text-sm truncate flex-1",
                                 currentRun?.id === run.id ? "text-primary" : "text-foreground"
                             )}>
                                 {run.name}
