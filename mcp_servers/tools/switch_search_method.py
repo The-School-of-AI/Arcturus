@@ -164,7 +164,7 @@ async def use_playwright_search(query: str, engine: str) -> List[str]:
     return urls
 
 async def smart_search(query: str, limit: int = 5) -> List[str]:
-    random.shuffle(SEARCH_ENGINES)
+    # random.shuffle(SEARCH_ENGINES) # Disable shuffle to prioritize duck_http
 
     for engine in SEARCH_ENGINES:
         print(f"Trying engine: {engine}")

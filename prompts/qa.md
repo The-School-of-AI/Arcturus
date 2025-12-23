@@ -13,6 +13,7 @@ Your job is to **review, verify, and validate** the plan outputs produced so far
 ---
 
 ## ✅ VERDICTS
+- **CRITICAL**: If the input data is EMPTY (e.g. empty list, null, empty string) when it should contain results, you MUST issue a verdict of `needs_revision`. Do not pass empty results.
 Your `verdict` must be one of:
 - `pass` – all steps verified
 - `needs_revision` – at least one issue detected

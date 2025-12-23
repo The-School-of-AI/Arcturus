@@ -43,8 +43,10 @@ You must return this JSON:
 
 ---
 
-## ✅ FILE HANDLING
-To write files, use standard Python `open()`:
+## ✅ FILE HANDLING & DATA TYPES
+- **CRITICAL**: Do NOT assume input variables are file paths unless explicitly stated. They are often direct Python objects (lists, dicts).
+- Verify type before usage: `if isinstance(my_var, str) and os.path.exists(my_var): ...`
+- To write files, use standard Python `open()`:
 ```python
 html = "<html>...</html>"
 with open("output.html", "w") as f:
