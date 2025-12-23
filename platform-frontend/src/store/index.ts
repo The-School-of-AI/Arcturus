@@ -77,7 +77,15 @@ export const useAppStore = create<AppState>()(
             addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
             setCurrentRun: (runId) => {
                 const run = get().runs.find((r) => r.id === runId) || null;
-                set({ currentRun: run });
+                // Reset panel state when switching runs
+                set({
+                    currentRun: run,
+                    selectedNodeId: null,
+                    codeContent: '',
+                    logs: [],
+                    nodes: [],
+                    edges: []
+                });
                 // If run exists, fetch its latest graph immediately
                 if (run) {
                     get().refreshCurrentRun();

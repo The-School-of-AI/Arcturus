@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from 'react-markdown';
+import DOMPurify from 'dompurify';
 
 // Helper component for tabs (assuming it's a simple button for now)
 const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; icon: React.ReactNode }> = ({ label, active, onClick, icon }) => (
@@ -325,13 +326,28 @@ export const WorkspacePanel: React.FC = () => {
                                 let formatContent: string | null = null;
                                 let contentType: 'html' | 'markdown' = 'markdown';
 
+                                // Helper to clean escaped content
+                                const cleanContent = (value: string) => {
+                                    return value
+                                        .replace(/\\n/g, '\n')
+                                        .replace(/\\t/g, '\t')
+                                        .replace(/\\'/g, "'")
+                                        .replace(/\\"/g, '"');
+                                };
+
+                                // Helper to check if content is HTML
+                                const isHtml = (value: string) => {
+                                    return value.includes('<div') || value.includes('<h1') ||
+                                        value.includes('<p>') || value.includes('<html') ||
+                                        value.includes('<table') || value.includes('<ul');
+                                };
+
                                 try {
-                                    // First try to parse as JSON
+                                    // Parse the JSON
                                     let parsed: Record<string, unknown>;
                                     try {
                                         parsed = JSON.parse(codeContent);
                                     } catch {
-                                        // Try converting Python dict format
                                         const jsonified = codeContent
                                             .replace(/'/g, '"')
                                             .replace(/\bTrue\b/g, 'true')
@@ -340,52 +356,78 @@ export const WorkspacePanel: React.FC = () => {
                                         parsed = JSON.parse(jsonified);
                                     }
 
-                                    // Look for formatted content in various keys
-                                    const candidates = [
-                                        // Keys that typically have formatted output
-                                        ...Object.keys(parsed).filter(k => k.startsWith('formatted_')),
-                                        'formatted_report', 'report', 'html_output', 'output',
-                                        'fallback_markdown', 'markdown', 'content', 'result'
-                                    ];
-
-                                    for (const key of candidates) {
-                                        const value = parsed[key];
-                                        if (typeof value === 'string' && value.trim()) {
-                                            // Clean up escaped newlines and other escapes
-                                            let cleaned = value
-                                                .replace(/\\n/g, '\n')
-                                                .replace(/\\t/g, '\t')
-                                                .replace(/\\'/g, "'")
-                                                .replace(/\\"/g, '"');
-
-                                            // Detect if it's HTML
-                                            if (cleaned.includes('<div') || cleaned.includes('<h1') ||
-                                                cleaned.includes('<p>') || cleaned.includes('<html')) {
-                                                contentType = 'html';
-                                            }
-
-                                            formatContent = cleaned;
+                                    // PASS 1: Look for any key containing HTML content (prioritize actual formatted reports)
+                                    for (const [key, value] of Object.entries(parsed)) {
+                                        if (typeof value === 'string' && value.length > 100 && isHtml(value)) {
+                                            formatContent = cleanContent(value);
+                                            contentType = 'html';
                                             break;
                                         }
                                     }
+
+                                    // PASS 2: If no HTML found, look for keys starting with 'formatted_'
+                                    if (!formatContent) {
+                                        const formattedKeys = Object.keys(parsed).filter(k => k.startsWith('formatted_'));
+                                        for (const key of formattedKeys) {
+                                            const value = parsed[key];
+                                            if (typeof value === 'string' && value.length > 50) {
+                                                const cleaned = cleanContent(value);
+                                                formatContent = cleaned;
+                                                contentType = isHtml(cleaned) ? 'html' : 'markdown';
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    // PASS 3: Fallback to markdown/content keys
+                                    if (!formatContent) {
+                                        const fallbackKeys = ['fallback_markdown', 'markdown', 'report', 'content', 'result'];
+                                        for (const key of fallbackKeys) {
+                                            const value = parsed[key];
+                                            if (typeof value === 'string' && value.trim()) {
+                                                formatContent = cleanContent(value);
+                                                contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                break;
+                                            }
+                                        }
+                                    }
                                 } catch {
-                                    // If all parsing fails, try to use raw content
+                                    // If all parsing fails, try raw content
                                     if (codeContent && !codeContent.startsWith('{')) {
                                         formatContent = codeContent.replace(/\\n/g, '\n');
                                     }
                                 }
 
                                 if (formatContent) {
+                                    // Sanitize HTML for security
+                                    const sanitizedHtml = contentType === 'html'
+                                        ? DOMPurify.sanitize(formatContent)
+                                        : formatContent;
+
                                     return (
-                                        <div className="prose prose-invert prose-sm max-w-none 
-                                            prose-headings:text-primary prose-headings:font-bold 
-                                            prose-p:text-foreground/90 prose-p:leading-relaxed
-                                            prose-strong:text-primary prose-li:text-foreground/80
-                                            prose-a:text-blue-400 prose-code:text-green-400
-                                            prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
-                                            bg-charcoal-800 p-6 rounded-lg border border-white/10">
+                                        <div className="preview-content bg-charcoal-800 p-6 rounded-lg border border-white/10">
+                                            <style>{`
+                                                .preview-content h1 { font-size: 1.75rem; font-weight: bold; color: #F6FF4D; margin-bottom: 1rem; }
+                                                .preview-content h2 { font-size: 1.5rem; font-weight: bold; color: #F6FF4D; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+                                                .preview-content h3 { font-size: 1.25rem; font-weight: bold; color: #e0e0e0; margin-top: 1rem; margin-bottom: 0.5rem; }
+                                                .preview-content h4 { font-size: 1.1rem; font-weight: 600; color: #d0d0d0; margin-top: 0.75rem; margin-bottom: 0.5rem; }
+                                                .preview-content p { color: #c0c0c0; line-height: 1.6; margin-bottom: 0.75rem; }
+                                                .preview-content ul, .preview-content ol { color: #b0b0b0; padding-left: 1.5rem; margin-bottom: 1rem; }
+                                                .preview-content li { margin-bottom: 0.25rem; }
+                                                .preview-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+                                                .preview-content th { background: rgba(255,255,255,0.1); color: #F6FF4D; padding: 0.75rem; text-align: left; border: 1px solid rgba(255,255,255,0.2); font-weight: 600; }
+                                                .preview-content td { padding: 0.75rem; border: 1px solid rgba(255,255,255,0.1); color: #c0c0c0; }
+                                                .preview-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+                                                .preview-content strong, .preview-content b { color: #F6FF4D; font-weight: 600; }
+                                                .preview-content i, .preview-content em { color: #a0a0a0; font-style: italic; }
+                                                .preview-content a { color: #60a5fa; text-decoration: underline; }
+                                                .preview-content code { background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px; color: #4ade80; }
+                                                .preview-content pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+                                                .preview-content blockquote { border-left: 3px solid #F6FF4D; padding-left: 1rem; color: #a0a0a0; font-style: italic; }
+                                                .preview-content .report { color: #e0e0e0; }
+                                            `}</style>
                                             {contentType === 'html' ? (
-                                                <div dangerouslySetInnerHTML={{ __html: formatContent }} />
+                                                <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
                                             ) : (
                                                 <ReactMarkdown>{formatContent}</ReactMarkdown>
                                             )}
