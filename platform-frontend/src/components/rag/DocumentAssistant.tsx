@@ -1,0 +1,208 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X } from 'lucide-react';
+import { useAppStore } from '@/store';
+import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+export const DocumentAssistant: React.FC = () => {
+    const activeDocumentId = useAppStore(state => state.activeDocumentId);
+    const openDocuments = useAppStore(state => state.openDocuments);
+    const addMessageToDocChat = useAppStore(state => state.addMessageToDocChat);
+    const selectedContexts = useAppStore(state => state.selectedContexts);
+    const removeSelectedContext = useAppStore(state => state.removeSelectedContext);
+    const clearSelectedContexts = useAppStore(state => state.clearSelectedContexts);
+    const [inputValue, setInputValue] = useState('');
+    const [isThinking, setIsThinking] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    const history = activeDoc?.chatHistory || [];
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [history, isThinking]);
+
+    const handleSend = async () => {
+        if (!inputValue.trim() || !activeDoc) return;
+
+        // Combine all selected contexts
+        const contextString = selectedContexts.length > 0
+            ? `Context extracts from document:\n${selectedContexts.map(c => `> ${c}`).join('\n\n')}\n\n`
+            : '';
+
+        const userMsg = {
+            id: Date.now().toString(),
+            role: 'user' as const,
+            content: inputValue,
+            timestamp: Date.now()
+        };
+
+        const fullMessage = contextString + `User Question: ${inputValue}`;
+
+        addMessageToDocChat(activeDoc.id, userMsg);
+        setInputValue('');
+        clearSelectedContexts(); // Clear all context after sending
+        setIsThinking(true);
+
+        try {
+            const response = await fetch('http://localhost:8000/rag/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    docId: activeDoc.id,
+                    query: fullMessage,
+                    history: history
+                })
+            });
+
+            const data = await response.json();
+
+            const botMsg = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant' as const,
+                content: data.answer || "I couldn't process that request.",
+                timestamp: Date.now()
+            };
+            addMessageToDocChat(activeDoc.id, botMsg);
+        } catch (e) {
+            console.error("Failed to ask document:", e);
+        } finally {
+            setIsThinking(false);
+        }
+    };
+
+    if (!activeDoc) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-charcoal-900">
+                <ScrollText className="w-12 h-12 mb-4 opacity-20" />
+                <h3 className="font-semibold text-foreground mb-2">Document Assistant</h3>
+                <p className="text-sm">Select a document from the library to start an interactive deep-dive.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-full flex flex-col bg-charcoal-900">
+            {/* Header */}
+            <div className="p-4 border-b border-border bg-charcoal-900/95 sticky top-0 z-10 flex items-center justify-between">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <MessageSquare className="w-4 h-4 text-primary" />
+                        <h3 className="font-bold text-xs uppercase tracking-widest text-foreground">Talk to Document</h3>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{activeDoc.title}</p>
+                </div>
+            </div>
+
+            {/* Chat History */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                {history.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-full text-center opacity-50 space-y-2">
+                        <Bot className="w-8 h-8" />
+                        <p className="text-xs">Ask anything about this document.<br />Selected text from the viewer will be added as context automatically.</p>
+                    </div>
+                )}
+
+                {history.map((msg) => (
+                    <div key={msg.id} className={cn(
+                        "flex gap-3",
+                        msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                    )}>
+                        <div className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+                            msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-white/10 text-foreground"
+                        )}>
+                            {msg.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
+                        </div>
+                        <div className={cn(
+                            "max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
+                            msg.role === 'user'
+                                ? "bg-primary/20 text-foreground border border-primary/20 rounded-tr-none"
+                                : "bg-white/5 text-foreground/90 border border-white/5 rounded-tl-none"
+                        )}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {msg.content}
+                            </ReactMarkdown>
+                        </div>
+                    </div>
+                ))}
+
+                {isThinking && (
+                    <div className="flex gap-3 animate-pulse">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-1">
+                            <Bot className="w-3 h-3" />
+                        </div>
+                        <div className="bg-white/5 border border-white/5 rounded-2xl rounded-tl-none px-4 py-2">
+                            <div className="flex gap-1">
+                                <span className="w-1 h-1 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <span className="w-1 h-1 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <span className="w-1 h-1 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Selection Context Indicator - Pills View */}
+            {selectedContexts.length > 0 && (
+                <div className="px-4 py-2 bg-black/40 border-t border-border space-y-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-primary/60">
+                            <Quote className="w-2.5 h-2.5" />
+                            Active Context ({selectedContexts.length})
+                        </div>
+                        <button
+                            onClick={clearSelectedContexts}
+                            className="text-[9px] font-bold text-muted-foreground hover:text-white transition-colors"
+                        >
+                            Clear All
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto no-scrollbar pb-1">
+                        {selectedContexts.map((ctx, idx) => (
+                            <div
+                                key={idx}
+                                className="group flex items-center gap-2 bg-charcoal-800 border border-white/5 rounded-full pl-3 pr-1 py-1 max-w-full animate-in zoom-in-95 duration-200"
+                            >
+                                <span className="text-[10px] text-foreground/90 truncate flex-1 min-w-0 font-medium">
+                                    {ctx.length > 50 ? `${ctx.substring(0, 50)}...` : ctx}
+                                </span>
+                                <button
+                                    onClick={() => removeSelectedContext(idx)}
+                                    className="p-1 rounded-full hover:bg-white/10 text-muted-foreground hover:text-red-400 transition-all opacity-60 group-hover:opacity-100"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Input Area */}
+            <div className="p-4 border-t border-border bg-charcoal-900">
+                <div className="relative group">
+                    <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !isThinking && handleSend()}
+                        placeholder="Type a message..."
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+                        disabled={isThinking}
+                    />
+                    <button
+                        onClick={handleSend}
+                        disabled={!inputValue.trim() || isThinking}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-all disabled:opacity-30 disabled:grayscale"
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};

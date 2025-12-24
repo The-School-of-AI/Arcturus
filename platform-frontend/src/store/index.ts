@@ -6,6 +6,7 @@ import type {
     PlatformEdge,
     Snapshot,
     RAGDocument,
+    ChatMessage,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
 import { api } from '../lib/api';
@@ -81,6 +82,11 @@ interface RagViewerSlice {
     setRagSearchQuery: (query: string) => void;
     ragSearchResults: any[];
     setRagSearchResults: (results: any[]) => void;
+    addMessageToDocChat: (docId: string, message: ChatMessage) => void;
+    selectedContexts: string[];
+    addSelectedContext: (text: string) => void;
+    removeSelectedContext: (index: number) => void;
+    clearSelectedContexts: () => void;
 }
 
 // --- Store Creation ---
@@ -313,6 +319,21 @@ export const useAppStore = create<AppState>()(
             setRagSearchQuery: (query) => set({ ragSearchQuery: query }),
             ragSearchResults: [],
             setRagSearchResults: (results) => set({ ragSearchResults: results }),
+            addMessageToDocChat: (docId, message) => set((state) => ({
+                openDocuments: state.openDocuments.map((doc) =>
+                    doc.id === docId
+                        ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                        : doc
+                )
+            })),
+            selectedContexts: [],
+            addSelectedContext: (text) => set((state) => ({
+                selectedContexts: [...state.selectedContexts, text]
+            })),
+            removeSelectedContext: (index) => set((state) => ({
+                selectedContexts: state.selectedContexts.filter((_, i) => i !== index)
+            })),
+            clearSelectedContexts: () => set({ selectedContexts: [] }),
         }),
         {
             name: 'agent-platform-storage',
@@ -323,7 +344,8 @@ export const useAppStore = create<AppState>()(
                 viewMode: state.viewMode,
                 sidebarTab: state.sidebarTab,
                 activeDocumentId: state.activeDocumentId,
-                openDocuments: state.openDocuments
+                openDocuments: state.openDocuments,
+                selectedContexts: state.selectedContexts
             }),
         }
     )

@@ -64,4 +64,5 @@ export interface RAGDocument {
     title: string;
     type: string;
     content?: string;
+    chatHistory?: ChatMessage[];
 }

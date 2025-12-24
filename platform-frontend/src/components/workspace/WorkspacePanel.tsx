@@ -87,13 +87,19 @@ const ClarificationInput: React.FC<{ selectedNode: any; codeContent: string }> =
     );
 };
 
+import { DocumentAssistant } from '../rag/DocumentAssistant';
+
 export const WorkspacePanel: React.FC = () => {
-    const { codeContent, webUrl, logs, selectedNodeId, nodes } = useAppStore();
+    const { codeContent, webUrl, logs, selectedNodeId, nodes, sidebarTab } = useAppStore();
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
     const [activeIframeUrl, setActiveIframeUrl] = React.useState<string | null>(null);
 
     const selectedNode = nodes.find(n => n.id === selectedNodeId);
+
+    if (sidebarTab === 'rag') {
+        return <DocumentAssistant />;
+    }
 
     // Auto-switch tabs based on node type/content when selection changes
     React.useEffect(() => {

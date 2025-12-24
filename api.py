@@ -4,7 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 from datetime import datetime
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -409,6 +409,31 @@ async def get_document_preview(path: str):
             return {"status": "success", "markdown": result.markdown}
         
         return {"status": "success", "markdown": str(result)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/rag/ask")
+async def ask_rag_document(request: Request):
+    """Interactive chat with a document via RAG"""
+    try:
+        body = await request.json()
+        doc_id = body.get("docId")
+        query = body.get("query")
+        history = body.get("history", [])
+        
+        if not doc_id or not query:
+            raise HTTPException(status_code=400, detail="Missing docId or query")
+            
+        args = {
+            "query": query,
+            "doc_id": doc_id,
+            "history": history
+        }
+        
+        # Call the new ask_document tool
+        answer = await multi_mcp.call_tool("rag", "ask_document", args)
+        
+        return {"status": "success", "answer": str(answer)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

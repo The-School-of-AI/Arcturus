@@ -230,3 +230,16 @@
 .syntax-highlighter pre {
   margin: 0 !important;
 }
+
+/* Text Selection Utilities */
+.select-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+::selection {
+  background: rgba(246, 255, 77, 0.2) !important;
+  /* primary color with opacity */
+  color: inherit;
+}

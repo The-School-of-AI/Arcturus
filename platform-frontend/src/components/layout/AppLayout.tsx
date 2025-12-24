@@ -72,10 +72,9 @@ export const AppLayout: React.FC = () => {
         };
     }, []);
 
-    const showRightPanel = sidebarTab === 'runs';
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans select-none">
+        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans">
             <Header />
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
@@ -101,7 +100,7 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {showRightPanel && (
+                {(sidebarTab === 'runs' || sidebarTab === 'rag') && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 

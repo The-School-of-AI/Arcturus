@@ -130,21 +130,68 @@ def preview_document(path: str) -> MarkdownOutput:
         mcp_log("ERROR", f"Preview failed: {str(e)}")
         return MarkdownOutput(markdown=f"### ❌ Critical Error\nExtraction failed: {str(e)}")
 @mcp.tool()
-def search_stored_documents_rag(query: str) -> list[str]:
-    """Search old stored documents like PDF, DOCX, TXT, etc. to get relevant extracts. """
+def ask_document(query: str, doc_id: str, history: list[dict] = []) -> str:
+    """Ask a question about a specific document.
+    Incorporates chat history and relevant document extracts.
+    """
+    mcp_log("ASK", f"Query: {query} for Doc: {doc_id}")
+    
+    # 1. Get relevant context
+    context_results = search_stored_documents_rag(query, doc_path=doc_id)
+    context_text = "\n\n".join(context_results) if context_results else "No relevant context found in document."
+    
+    # 2. Build Prompt
+    system_prompt = f"""You are a helpful document assistant. Answer the user's question based strictly on the provided context from the document.
+If the context doesn't contain the answer, say so, but try to be helpful based on what is available.
+
+CONTEXT FROM DOCUMENT:
+---
+{context_text}
+---
+"""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    # Add truncated history (last 5 messages)
+    for msg in history[-5:]:
+        messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+        
+    # Add current query
+    messages.append({"role": "user", "content": query})
+    
+    try:
+        response = requests.post(OLLAMA_CHAT_URL, json={
+            "model": QWEN_MODEL,
+            "messages": messages,
+            "stream": False
+        }, timeout=OLLAMA_TIMEOUT)
+        response.raise_for_status()
+        return response.json().get("message", {}).get("content", "Error processing response.")
+    except Exception as e:
+        mcp_log("ERROR", f"Ollama ask failed: {e}")
+        return f"Error: Could not reach the AI model for this document query. ({str(e)})"
+
+@mcp.tool()
+def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
+    """Search old stored documents like PDF, DOCX, TXT, etc. to get relevant extracts. 
+    Optionally provide doc_path to search within a specific document only.
+    """
     ensure_faiss_ready()
-    # input = SearchDocumentsInput(query=query) # No longer needed
-    # query = input.query # Already have query
-    mcp_log("SEARCH", f"Query: {query}")
+    mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path})")
     try:
         index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
         metadata = json.loads((ROOT / "faiss_index" / "metadata.json").read_text())
-        query_vec = get_embedding(query ).reshape(1, -1)
-        D, I = index.search(query_vec, k=5)
+        query_vec = get_embedding(query).reshape(1, -1)
+        # Increase k if we are searching only one document to ensure we find something
+        D, I = index.search(query_vec, k=10 if doc_path else 5)
         results = []
         for idx in I[0]:
-            if idx < 0 or idx >= len(metadata): continue # Bounds check
+            if idx < 0 or idx >= len(metadata): continue
             data = metadata[idx]
+            
+            # Filtering
+            if doc_path and data.get('doc') != doc_path:
+                continue
             
             # Runtime Filtering: Check if file still exists
             doc_rel_path = data.get('doc') # This is now relative path

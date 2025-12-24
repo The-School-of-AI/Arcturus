@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, FileText, Loader2, Library, Code2 } from 'lucide-react';
+import { X, FileText, Loader2, Library, Code2, Quote, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import { renderAsync } from 'docx-preview';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { api } from '@/lib/api';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
@@ -16,14 +18,113 @@ import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
 const API_BASE = 'http://localhost:8000';
 
+interface TabButtonProps {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ label, active, onClick }) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
+            active ? (label === 'Insights' ? "bg-primary text-charcoal-950" : "bg-white/10 text-white") : "text-muted-foreground hover:text-white"
+        )}
+    >
+        {label}
+    </button>
+);
+
+interface SelectionMenuProps {
+    onAdd: (text: string) => void;
+}
+
+const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [currentText, setCurrentText] = useState("");
+    const [isAdded, setIsAdded] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            const selection = window.getSelection();
+            const text = selection?.toString().trim();
+
+            if (text && text.length > 0) {
+                try {
+                    const range = selection!.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    setPosition({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top - 40,
+                    });
+                    setCurrentText(text);
+                    setIsVisible(true);
+                } catch (e) {
+                    setIsVisible(false);
+                }
+            } else if (!isAdded) {
+                setIsVisible(false);
+            }
+        };
+
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => {
+            document.removeEventListener('selectionchange', handleSelectionChange);
+        };
+    }, [isAdded]);
+
+    const handleAddClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (currentText) {
+            onAdd(currentText);
+            setIsAdded(true);
+            setTimeout(() => {
+                setIsVisible(false);
+                setIsAdded(false);
+            }, 600);
+        }
+    };
+
+    if (!isVisible) return null;
+
+    return (
+        <div
+            ref={menuRef}
+            className="fixed z-[9999] flex items-center gap-2 p-1 bg-charcoal-800 border border-border rounded-lg shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
+            style={{ left: position.x, top: position.y, transform: 'translateX(-50%)' }}
+        >
+            <button
+                onMouseDown={handleAddClick}
+                className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all active:scale-95",
+                    isAdded
+                        ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
+                        : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
+                )}
+            >
+                {isAdded ? (
+                    <><PlusCircle className="w-3.5 h-3.5" /> Added!</>
+                ) : (
+                    <><PlusCircle className="w-3.5 h-3.5" /> Add to Context</>
+                )}
+            </button>
+        </div>
+    );
+};
+
 export const DocumentViewer: React.FC = () => {
     const {
-        openDocuments,
         activeDocumentId,
-        closeDocument,
-        closeAllDocuments,
+        openDocuments,
+        viewMode,
+        addSelectedContext,
         setActiveDocument,
-        viewMode
+        closeDocument,
+        closeAllDocuments
     } = useAppStore();
 
     const [content, setContent] = useState<string | null>(null);
@@ -154,7 +255,7 @@ export const DocumentViewer: React.FC = () => {
     if (useAppStore.getState().sidebarTab !== 'rag') return null;
 
     return (
-        <div className="flex flex-col h-full bg-charcoal-950 z-[20] relative w-full overflow-hidden">
+        <div className="h-full flex flex-col relative">
             {/* Tab Bar - Browser Style */}
             <div className="flex items-center justify-between border-b border-border bg-charcoal-900 pr-4 shrink-0 h-12 shadow-md">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
@@ -197,31 +298,23 @@ export const DocumentViewer: React.FC = () => {
 
                     {activeDoc && canPreview(activeDoc.type) && (
                         <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5">
-                            <button
+                            <TabButton
+                                label="Source"
+                                active={viewType === 'source'}
                                 onClick={() => setViewType('source')}
-                                className={cn(
-                                    "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
-                                    viewType === 'source' ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"
-                                )}
-                            >
-                                Source
-                            </button>
-                            <button
+                            />
+                            <TabButton
+                                label="Insights"
+                                active={viewType === 'ai'}
                                 onClick={() => setViewType('ai')}
-                                className={cn(
-                                    "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
-                                    viewType === 'ai' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
-                                )}
-                            >
-                                AI View
-                            </button>
+                            />
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden relative bg-charcoal-950 selection:bg-primary/20">
+            <div className="flex-1 overflow-hidden relative bg-charcoal-950 selection:bg-primary/20 select-text">
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-charcoal-950 z-[100] space-y-4">
                         <div className="p-4 rounded-2xl bg-charcoal-900 border border-white/5 shadow-2xl">
@@ -264,24 +357,57 @@ export const DocumentViewer: React.FC = () => {
 
                 {/* Markdown / Code Viewer */}
                 {content !== null && !isDocx && (
-                    <div className="h-full overflow-y-auto p-12 md:p-20 max-w-5xl mx-auto">
-                        {isCode && viewType === 'source' ? (
-                            <div className="rounded-xl overflow-hidden border border-white/5 bg-black/40 shadow-2xl">
-                                <SyntaxHighlighter
-                                    language={codeLang}
-                                    style={vscDarkPlus}
-                                    customStyle={{ margin: 0, padding: '2rem', fontSize: '13px', background: 'transparent' }}
-                                    showLineNumbers
-                                >
-                                    {content}
-                                </SyntaxHighlighter>
+                    <>
+                        {/* Insights View (Markdown Extraction) */}
+                        {viewType === 'ai' && activeDoc && canPreview(activeDoc.type) ? (
+                            <div className="flex-1 overflow-y-auto p-12 bg-charcoal-900 select-text relative group">
+                                <div className="max-w-[800px] mx-auto prose prose-invert">
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            img: ({ node, ...props }) => (
+                                                <img {...props} className="rounded-lg border border-white/10 shadow-xl max-w-full my-8" />
+                                            ),
+                                            table: ({ node, ...props }) => (
+                                                <div className="overflow-x-auto my-6 border border-white/10 rounded-lg">
+                                                    <table {...props} className="min-w-full border-collapse" />
+                                                </div>
+                                            ),
+                                            th: ({ node, ...props }) => <th {...props} className="bg-white/5 p-3 text-left font-bold border-b border-white/10" />,
+                                            td: ({ node, ...props }) => <td {...props} className="p-3 border-b border-white/5" />
+                                        }}
+                                    >
+                                        {content || "Extracting insights..."}
+                                    </ReactMarkdown>
+                                </div>
                             </div>
                         ) : (
-                            <div className="prose prose-invert prose-lg max-w-none prose-headings:text-primary prose-strong:text-white prose-a:text-primary">
-                                <ReactMarkdown>{content}</ReactMarkdown>
+                            <div className="h-full overflow-y-auto p-12 md:p-20 max-w-5xl mx-auto">
+                                {isCode && viewType === 'source' ? (
+                                    <div className="rounded-xl overflow-hidden border border-white/5 bg-black/40 shadow-2xl">
+                                        <SyntaxHighlighter
+                                            language={codeLang}
+                                            style={vscDarkPlus}
+                                            customStyle={{ margin: 0, padding: '2rem', fontSize: '13px', background: 'transparent' }}
+                                            showLineNumbers
+                                        >
+                                            {content}
+                                        </SyntaxHighlighter>
+                                    </div>
+                                ) : (
+                                    <div className="prose prose-invert prose-lg max-w-none prose-headings:text-primary prose-strong:text-white prose-a:text-primary">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
+
+                    </>
+                )}
+
+                {/* Floating Selection Tool - Visible for all document types when active */}
+                {activeDoc && (
+                    <SelectionMenu onAdd={(text) => addSelectedContext(text)} />
                 )}
 
                 {/* Empty State */}
