@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, GripHorizontal, Zap } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, Zap, Search, Library, FileSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useAppStore } from '@/store';
 
 interface RagItem {
     name: string;
@@ -25,19 +26,36 @@ const FileTree: React.FC<{
     selectedPath: string | undefined;
     onIndexFile: (path: string) => void;
     indexingPath: string | null;
-}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath }) => {
+    searchFilter: string;
+}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath, searchFilter }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isFolder = item.type === 'folder';
     const isIndexingNow = indexingPath === item.path;
+
+    // Simple recursive visibility check for search
+    const isVisible = useMemo(() => {
+        if (!searchFilter.trim()) return true;
+        const matchesName = item.name.toLowerCase().includes(searchFilter.toLowerCase());
+        if (matchesName) return true;
+        if (item.children) {
+            return item.children.some(child => {
+                const matchesChild = child.name.toLowerCase().includes(searchFilter.toLowerCase());
+                if (matchesChild) return true;
+                // Deeper check could be added if needed
+                return false;
+            });
+        }
+        return false;
+    }, [item, searchFilter]);
+
+    if (!isVisible) return null;
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isFolder) {
             setIsOpen(!isOpen);
-            onSelect(item); // Allow selecting folders too
-        } else {
-            onSelect(item);
         }
+        onSelect(item);
     };
 
     const handleIndexClick = (e: React.MouseEvent) => {
@@ -53,9 +71,6 @@ const FileTree: React.FC<{
             case 'docx': return <FileText className="w-4 h-4 text-blue-400" />;
             case 'txt':
             case 'md': return <FileText className="w-4 h-4 text-gray-400" />;
-            case 'png':
-            case 'jpg':
-            case 'jpeg': return <File className="w-4 h-4 text-purple-400" />;
             default: return <File className="w-4 h-4 text-muted-foreground" />;
         }
     };
@@ -102,6 +117,7 @@ const FileTree: React.FC<{
                             selectedPath={selectedPath}
                             onIndexFile={onIndexFile}
                             indexingPath={indexingPath}
+                            searchFilter={searchFilter}
                         />
                     ))}
                 </div>
@@ -111,10 +127,14 @@ const FileTree: React.FC<{
 };
 
 export const RagPanel: React.FC = () => {
+    const { openDocument, setRagSearchResults, ragSearchResults } = useAppStore();
     const [files, setFiles] = useState<RagItem[]>([]);
     const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [loading, setLoading] = useState(false);
     const [splitRatio, setSplitRatio] = useState(60);
+    const [panelMode, setPanelMode] = useState<'browse' | 'seek'>('browse');
+    const [innerSearch, setInnerSearch] = useState("");
+    const [seeking, setSeeking] = useState(false);
 
     // New Folder State
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
@@ -133,22 +153,6 @@ export const RagPanel: React.FC = () => {
         try {
             const res = await axios.get(`${API_BASE}/rag/documents`);
             setFiles(res.data.files);
-
-            // If the selected file was just indexed, update its local state too if we find it in the refreshed list
-            if (selectedFile) {
-                const findFile = (items: RagItem[]): RagItem | null => {
-                    for (const f of items) {
-                        if (f.path === selectedFile.path) return f;
-                        if (f.children) {
-                            const found = findFile(f.children);
-                            if (found) return found;
-                        }
-                    }
-                    return null;
-                };
-                const updated = findFile(res.data.files);
-                if (updated) setSelectedFile(updated);
-            }
         } catch (e) {
             console.error("Failed to fetch RAG docs", e);
         } finally {
@@ -156,11 +160,28 @@ export const RagPanel: React.FC = () => {
         }
     };
 
+    const handleSearchSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!innerSearch.trim()) return;
+
+        if (panelMode === 'seek') {
+            setSeeking(true);
+            try {
+                const res = await axios.get(`${API_BASE}/rag/search`, { params: { query: innerSearch } });
+                setRagSearchResults(res.data.results || []);
+            } catch (e) {
+                console.error("RAG search failed", e);
+            } finally {
+                setSeeking(false);
+            }
+        }
+    };
+
     const handleReindex = async (path: string | null = null) => {
         if (path) setIndexingPath(path);
         else setIndexing(true);
 
-        setIndexStatus(path ? `Indexing ${path.split('/').pop()}...` : "Re-scanning all files...");
+        setIndexStatus(path ? `Indexing...` : "Re-scanning all...");
 
         try {
             const res = await axios.post(`${API_BASE}/rag/reindex`, null, {
@@ -168,16 +189,13 @@ export const RagPanel: React.FC = () => {
             });
 
             if (res.data.status === 'success') {
-                setIndexStatus(path ? "Indexed!" : "Full Index Updated!");
+                setIndexStatus("Done!");
                 fetchFiles();
-                setTimeout(() => setIndexStatus(null), 3000);
-            } else {
-                setIndexStatus("Process failed");
-                setTimeout(() => setIndexStatus(null), 3000);
+                setTimeout(() => setIndexStatus(null), 2000);
             }
         } catch (e) {
-            setIndexStatus("Indexing failed");
-            setTimeout(() => setIndexStatus(null), 3000);
+            setIndexStatus("Failed");
+            setTimeout(() => setIndexStatus(null), 2000);
         } finally {
             setIndexing(false);
             setIndexingPath(null);
@@ -190,236 +208,197 @@ export const RagPanel: React.FC = () => {
 
     const handleCreateFolder = async () => {
         if (!newFolderName.trim()) return;
-
-        let path = newFolderName;
-        if (selectedFile?.type === 'folder') {
-            path = `${selectedFile.path}/${newFolderName}`;
-        }
-
+        const path = selectedFile?.type === 'folder' ? `${selectedFile.path}/${newFolderName}` : newFolderName;
         try {
-            await axios.post(`${API_BASE}/rag/create_folder`, null, {
-                params: { folder_path: path }
-            });
+            await axios.post(`${API_BASE}/rag/create_folder`, null, { params: { folder_path: path } });
             setIsNewFolderOpen(false);
             setNewFolderName("");
             fetchFiles();
-        } catch (e) {
-            alert("Failed to create folder");
-        }
-    };
-
-    const handleUploadClick = () => {
-        fileInputRef.current?.click();
+        } catch (e) { alert("Failed to create folder"); }
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
             const formData = new FormData();
-            formData.append("file", file);
-
-            if (selectedFile?.type === 'folder') {
-                formData.append("path", selectedFile.path);
-            }
-
+            formData.append("file", e.target.files[0]);
+            if (selectedFile?.type === 'folder') formData.append("path", selectedFile.path);
             try {
-                await axios.post(`${API_BASE}/rag/upload`, formData, {
-                    headers: { "Content-Type": "multipart/form-data" }
-                });
+                await axios.post(`${API_BASE}/rag/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
                 fetchFiles();
-            } catch (error) {
-                alert("Failed to upload file");
-            }
+            } catch (error) { alert("Failed to upload file"); }
         }
     };
 
-    // Drag Logic
-    const startResizing = (mouseDownEvent: React.MouseEvent) => {
-        const startY = mouseDownEvent.clientY;
-        const startHeight = splitRatio;
+    const handleOpenDoc = (item: RagItem) => {
+        if (item.type === 'folder') return;
+        openDocument({
+            id: item.path,
+            title: item.name,
+            type: item.type
+        });
+    };
 
-        const onMouseMove = (mouseMoveEvent: MouseEvent) => {
-            const containerHeight = document.getElementById('rag-panel-container')?.offsetHeight || 500;
-            const deltaY = mouseMoveEvent.clientY - startY;
-            const deltaPercent = (deltaY / containerHeight) * 100;
-            const newHeight = Math.min(Math.max(startHeight + deltaPercent, 20), 80);
-            setSplitRatio(newHeight);
-        };
-
-        const onMouseUp = () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            document.body.style.cursor = 'default';
-        };
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        document.body.style.cursor = 'row-resize';
+    // Semantic result parser: "[Source: pdfs/file.pdf]"
+    const parseResult = (text: string) => {
+        const match = text.match(/\[Source:\s*(.+?)\]$/);
+        if (match) {
+            const path = match[1];
+            const content = text.replace(match[0], "").trim();
+            const name = path.split('/').pop() || path;
+            return { path, content, name };
+        }
+        return { path: null, content: text, name: 'Unknown' };
     };
 
     return (
         <div id="rag-panel-container" className="flex flex-col h-full bg-charcoal-900 border-r border-border">
-            {/* Top Panel: File Tree */}
-            <div style={{ height: `${splitRatio}%` }} className="flex flex-col min-h-0">
-                <div className="p-3 border-b border-border flex justify-between items-center bg-charcoal-900/50 shrink-0">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Folder className="w-3 h-3" />
-                        Documents
-                    </h3>
-                    <div className="flex items-center gap-1">
-                        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
-                            <DialogTrigger asChild>
-                                <button className="p-1 text-muted-foreground hover:text-primary transition-colors" title="New Folder">
-                                    <FolderPlus className="w-3.5 h-3.5" />
-                                </button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-charcoal-900 border-border sm:max-w-xs">
-                                <DialogHeader>
-                                    <DialogTitle className="text-white text-sm">New Folder</DialogTitle>
-                                </DialogHeader>
-                                <div className="py-2">
-                                    <Input
-                                        placeholder="Folder Name"
-                                        value={newFolderName}
-                                        onChange={(e) => setNewFolderName(e.target.value)}
-                                        className="bg-charcoal-800 border-gray-600 text-white h-8 text-xs"
-                                    />
-                                    {selectedFile?.type === 'folder' && (
-                                        <p className="text-[10px] text-muted-foreground mt-1">Inside: {selectedFile.name}</p>
-                                    )}
-                                </div>
-                                <DialogFooter>
-                                    <Button size="sm" onClick={handleCreateFolder} className="h-7 text-xs bg-primary text-primary-foreground">Create</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        <button onClick={handleUploadClick} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Upload File">
-                            <UploadCloud className="w-3.5 h-3.5" />
-                        </button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
-
-                        <button
-                            onClick={() => handleReindex()}
-                            disabled={indexing}
-                            className={cn("p-1 text-muted-foreground hover:text-yellow-400 transition-colors", indexing && "animate-pulse text-yellow-500")}
-                            title="Index All Documents"
-                        >
-                            <Zap className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button onClick={fetchFiles} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Refresh">
-                            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-                        </button>
-                    </div>
+            {/* Header: Search & Toggle */}
+            <div className="p-3 border-b border-border space-y-3 bg-charcoal-900/80 backdrop-blur-md shrink-0">
+                <div className="flex items-center gap-2 bg-charcoal-800/50 p-1 rounded-lg border border-white/5">
+                    <button
+                        onClick={() => setPanelMode('browse')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                            panelMode === 'browse' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <Library className="w-3 h-3" />
+                        Browse
+                    </button>
+                    <button
+                        onClick={() => setPanelMode('seek')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                            panelMode === 'seek' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <FileSearch className="w-3 h-3" />
+                        Seek
+                    </button>
                 </div>
-                {indexStatus && (
-                    <div className="bg-yellow-500/10 text-yellow-400 text-[10px] px-3 py-1 text-center font-medium border-b border-yellow-500/20">
-                        {indexStatus}
+
+                <form onSubmit={handleSearchSubmit} className="relative">
+                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Input
+                        className="bg-background/50 border-input pl-9 h-9 text-xs"
+                        placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
+                        value={innerSearch}
+                        onChange={(e) => setInnerSearch(e.target.value)}
+                    />
+                </form>
+            </div>
+
+            {/* Main Content Area */}
+            <div style={{ height: `${splitRatio}%` }} className="flex flex-col min-h-0 overflow-hidden">
+                {panelMode === 'browse' ? (
+                    <div className="flex-1 overflow-y-auto py-2">
+                        {files.map((file) => (
+                            <FileTree
+                                key={file.path}
+                                item={file}
+                                level={0}
+                                onSelect={(f) => { setSelectedFile(f); handleOpenDoc(f); }}
+                                selectedPath={selectedFile?.path}
+                                onIndexFile={handleReindex}
+                                indexingPath={indexingPath}
+                                searchFilter={innerSearch}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                        {seeking && (
+                            <div className="flex items-center justify-center py-8 opacity-50">
+                                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                            </div>
+                        )}
+                        {!seeking && ragSearchResults.map((res, i) => {
+                            const { path, content, name } = parseResult(res);
+                            return (
+                                <div
+                                    key={i}
+                                    className="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-pointer group"
+                                    onClick={() => path && openDocument({ id: path, title: name, type: path.split('.').pop() || 'txt' })}
+                                >
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <FileText className="w-3 h-3 text-red-400" />
+                                        <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[150px]">{name}</span>
+                                    </div>
+                                    <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4 italic">"{content}"</p>
+                                    <div className="mt-2 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-[10px] text-primary flex items-center gap-1 font-semibold">View Source <ChevronRight className="w-2.5 h-2.5" /></span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {!seeking && innerSearch && ragSearchResults.length === 0 && (
+                            <div className="text-center py-8 text-xs text-muted-foreground opacity-50">No semantic matches found</div>
+                        )}
                     </div>
                 )}
-                <div className="flex-1 overflow-y-auto py-2">
-                    {files.map((file) => (
-                        <FileTree
-                            key={file.path}
-                            item={file}
-                            level={0}
-                            onSelect={setSelectedFile}
-                            selectedPath={selectedFile?.path}
-                            onIndexFile={(path) => handleReindex(path)}
-                            indexingPath={indexingPath}
-                        />
-                    ))}
-                    {files.length === 0 && !loading && (
-                        <div className="text-center p-4 text-xs text-muted-foreground opacity-50">
-                            No documents found
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Draggable Handle */}
             <div
-                className="h-1.5 bg-charcoal-800 hover:bg-primary/50 cursor-row-resize flex items-center justify-center shrink-0 transition-colors"
-                onMouseDown={startResizing}
+                className="h-1 bg-charcoal-800 hover:bg-primary/50 cursor-row-resize flex items-center justify-center shrink-0 transition-colors"
+                onMouseDown={(e) => {
+                    const startY = e.clientY;
+                    const startHeight = splitRatio;
+                    const onMove = (me: MouseEvent) => {
+                        const delta = ((me.clientY - startY) / (document.getElementById('rag-panel-container')?.offsetHeight || 1)) * 100;
+                        setSplitRatio(Math.min(Math.max(startHeight + delta, 20), 85));
+                    };
+                    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                }}
             >
-                <div className="w-8 h-0.5 bg-white/10 rounded-full" />
+                <div className="w-6 h-0.5 bg-white/10 rounded-full" />
             </div>
 
-            {/* Bottom Panel: Details */}
-            <div style={{ height: `${100 - splitRatio}%` }} className="bg-charcoal-900/30 p-4 space-y-4 overflow-y-auto min-h-0">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                    {selectedFile?.type === 'folder' ? 'Folder Details' : 'Index Status'}
-                </h3>
+            {/* Footer Area: Info & Actions */}
+            <div className="flex-1 bg-charcoal-900/50 p-3 overflow-y-auto space-y-4 min-h-0">
+                <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Context Details</h4>
+                    <div className="flex gap-1">
+                        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
+                            <DialogTrigger asChild><button className="p-1 hover:text-primary transition-colors text-muted-foreground"><FolderPlus className="w-3.5 h-3.5" /></button></DialogTrigger>
+                            <DialogContent className="bg-charcoal-900 border-border sm:max-w-xs">
+                                <DialogHeader><DialogTitle className="text-white text-sm">New Folder</DialogTitle></DialogHeader>
+                                <Input placeholder="Folder Name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="bg-charcoal-800 border-gray-600 text-white h-8 text-xs my-2" />
+                                <DialogFooter><Button size="sm" onClick={handleCreateFolder}>Create</Button></DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                        <button onClick={() => fileInputRef.current?.click()} className="p-1 hover:text-primary transition-colors text-muted-foreground"><UploadCloud className="w-3.5 h-3.5" /></button>
+                        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+                        <button onClick={() => handleReindex()} className={cn("p-1 transition-colors text-muted-foreground hover:text-yellow-400", indexing && "animate-pulse")}>
+                            <Zap className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={fetchFiles} className="p-1 hover:text-primary transition-colors text-muted-foreground"><RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} /></button>
+                    </div>
+                </div>
 
                 {selectedFile ? (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="space-y-3">
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase text-muted-foreground font-semibold">Name</label>
-                            <div className="text-sm font-mono text-white break-all">{selectedFile.name}</div>
+                            <label className="text-[9px] uppercase text-muted-foreground font-bold">Location</label>
+                            <div className="text-xs font-mono text-primary truncate" title={selectedFile.path}>{selectedFile.path}</div>
                         </div>
-
                         {selectedFile.type !== 'folder' && (
-                            <>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase text-muted-foreground font-semibold">Status</label>
-                                    <div className="flex items-center gap-2">
-                                        {selectedFile.indexed ? (
-                                            <>
-                                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                                <span className="text-green-400 text-xs font-medium">Indexed & Ready</span>
-                                            </>
-                                        ) : (
-                                            <div className="flex flex-col gap-2 w-full">
-                                                <div className="flex items-center gap-2">
-                                                    <AlertCircle className="w-4 h-4 text-yellow-500" />
-                                                    <span className="text-yellow-400 text-xs font-medium">Pending Indexing</span>
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    className="h-7 text-[10px] w-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/20"
-                                                    onClick={() => handleReindex(selectedFile.path)}
-                                                    disabled={indexingPath === selectedFile.path}
-                                                >
-                                                    {indexingPath === selectedFile.path ? 'Indexing...' : 'Index Now'}
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase text-muted-foreground font-semibold">Content Hash</label>
-                                    <div className="text-[10px] font-mono text-muted-foreground bg-black/20 p-2 rounded border border-white/5 break-all">
-                                        {selectedFile.hash || 'N/A'}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase text-muted-foreground font-semibold">File Size</label>
-                                    <div className="text-xs text-muted-foreground">
-                                        {selectedFile.size ? (selectedFile.size / 1024).toFixed(2) : 0} KB
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {selectedFile.type === 'folder' && (
-                            <div className="text-[10px] text-muted-foreground italic">
-                                This is a container. Files within this folder are indexed individually.
+                            <div className="flex items-center justify-between bg-black/20 p-2 rounded border border-white/5">
+                                <span className="text-[10px] font-bold uppercase text-muted-foreground">Status</span>
+                                {selectedFile.indexed ? (
+                                    <div className="flex items-center gap-1.5 text-green-500 font-bold text-[10px]"><CheckCircle className="w-3 h-3" /> INDEXED</div>
+                                ) : (
+                                    <button onClick={() => handleReindex(selectedFile.path)} className="text-[9px] font-bold text-yellow-500 flex items-center gap-1 hover:underline"><AlertCircle className="w-3 h-3" /> INDEX NOW</button>
+                                )}
                             </div>
                         )}
+                        {indexStatus && <div className="text-[9px] p-1.5 bg-yellow-500/10 text-yellow-400 rounded border border-yellow-500/20 animate-pulse">{indexStatus}</div>}
                     </div>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2">
-                        <FileText className="w-8 h-8" />
-                        <span className="text-xs">Select a file to view details</span>
+                    <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-white/5 rounded-lg">
+                        Select a resource to manage context
                     </div>
                 )}
             </div>

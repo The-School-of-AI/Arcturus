@@ -9,8 +9,7 @@ import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
 
 export const Sidebar: React.FC = () => {
-    const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun } = useAppStore();
-    const [sidebarTab, setSidebarTab] = React.useState<'runs' | 'rag' | 'mcp'>('runs');
+    const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
 
     // Fetch runs on mount
     React.useEffect(() => {

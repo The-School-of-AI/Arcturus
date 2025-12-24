@@ -5,6 +5,7 @@ import type {
     PlatformNode,
     PlatformEdge,
     Snapshot,
+    RAGDocument,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
 import { api } from '../lib/api';
@@ -65,9 +66,25 @@ interface SettingsSlice {
     setLocalModel: (model: string) => void;
 }
 
+interface RagViewerSlice {
+    viewMode: 'graph' | 'rag';
+    setViewMode: (mode: 'graph' | 'rag') => void;
+    sidebarTab: 'runs' | 'rag' | 'mcp';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp') => void;
+    openDocuments: RAGDocument[];
+    activeDocumentId: string | null;
+    openDocument: (doc: RAGDocument) => void;
+    closeDocument: (docId: string) => void;
+    setActiveDocument: (docId: string) => void;
+    ragSearchQuery: string;
+    setRagSearchQuery: (query: string) => void;
+    ragSearchResults: any[];
+    setRagSearchResults: (results: any[]) => void;
+}
+
 // --- Store Creation ---
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -253,13 +270,54 @@ export const useAppStore = create<AppState>()(
             theme: 'dark',
             localModel: 'mistral:latest',
             setLocalModel: (model) => set({ localModel: model }),
+
+            // RAG Viewer
+            viewMode: 'graph',
+            setViewMode: (mode) => set({ viewMode: mode }),
+            openDocuments: [],
+            activeDocumentId: null,
+            openDocument: (doc) => {
+                const alreadyOpen = get().openDocuments.find(d => d.id === doc.id);
+                if (!alreadyOpen) {
+                    set(state => ({
+                        openDocuments: [...state.openDocuments, doc],
+                        viewMode: 'rag',
+                        activeDocumentId: doc.id
+                    }));
+                } else {
+                    set({ activeDocumentId: doc.id, viewMode: 'rag' });
+                }
+            },
+            closeDocument: (docId) => {
+                const newDocs = get().openDocuments.filter(d => d.id !== docId);
+                let newActiveId = get().activeDocumentId;
+                if (newActiveId === docId) {
+                    newActiveId = newDocs.length > 0 ? newDocs[newDocs.length - 1].id : null;
+                }
+                set({
+                    openDocuments: newDocs,
+                    activeDocumentId: newActiveId,
+                    viewMode: newDocs.length === 0 ? 'graph' : 'rag'
+                });
+            },
+            setActiveDocument: (docId) => set({ activeDocumentId: docId, viewMode: 'rag' }),
+            sidebarTab: 'runs',
+            setSidebarTab: (tab) => set({ sidebarTab: tab }),
+            ragSearchQuery: '',
+            setRagSearchQuery: (query) => set({ ragSearchQuery: query }),
+            ragSearchResults: [],
+            setRagSearchResults: (results) => set({ ragSearchResults: results }),
         }),
         {
             name: 'agent-platform-storage',
             partialize: (state) => ({
                 // Only persist user settings, not runs (which should come fresh from API)
                 apiKey: state.apiKey,
-                localModel: state.localModel
+                localModel: state.localModel,
+                viewMode: state.viewMode,
+                sidebarTab: state.sidebarTab,
+                activeDocumentId: state.activeDocumentId,
+                openDocuments: state.openDocuments
             }),
         }
     )

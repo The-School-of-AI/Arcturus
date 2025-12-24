@@ -38,7 +38,7 @@ CHUNK_SIZE = 256
 CHUNK_OVERLAP = 40
 MAX_CHUNK_LENGTH = 512  # characters
 TOP_K = 3  # FAISS top-K matches
-OLLAMA_TIMEOUT = 60 # Seconds
+OLLAMA_TIMEOUT = 300 # Seconds
 ROOT = Path(__file__).parent.resolve()
 
 
@@ -97,6 +97,38 @@ Just respond in one word (Yes or No), and do not provide any further explanation
 
 
 
+@mcp.tool()
+def preview_document(path: str) -> MarkdownOutput:
+    """Preview a document using the AI-enhanced extraction logic used for indexing."""
+    file = Path(path)
+    if not file.exists():
+        return MarkdownOutput(markdown=f"### ❌ Error\nFile not found: `{path}`")
+    
+    ext = file.suffix.lower()
+    mcp_log("INFO", f"Previewing {file.name} (ext: {ext})")
+    
+    try:
+        if ext == ".pdf":
+            return convert_pdf_to_markdown(str(file))
+        elif ext in [".html", ".htm", ".url"]:
+            return extract_webpage(UrlInput(url=file.read_text().strip()))
+        elif ext == ".py":
+            return MarkdownOutput(markdown=f"```python\n{file.read_text()}\n```")
+        elif ext in [".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls"]:
+            # markitdown is quite robust for these
+            try:
+                converter = MarkItDown()
+                result = converter.convert(str(file))
+                return MarkdownOutput(markdown=result.text_content)
+            except Exception as e:
+                return MarkdownOutput(markdown=f"### ⚠️ Extraction Failed\nCould not convert office document: {str(e)}\n\n**Tip:** Try checking if the file is password protected.")
+        else:
+            # Fallback to raw text for everything else
+            text = file.read_text(errors='replace')
+            return MarkdownOutput(markdown=f"### 📖 Raw View (Fallback)\n\n{text}")
+    except Exception as e:
+        mcp_log("ERROR", f"Preview failed: {str(e)}")
+        return MarkdownOutput(markdown=f"### ❌ Critical Error\nExtraction failed: {str(e)}")
 @mcp.tool()
 def search_stored_documents_rag(query: str) -> list[str]:
     """Search old stored documents like PDF, DOCX, TXT, etc. to get relevant extracts. """

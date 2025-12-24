@@ -140,3 +140,20 @@
   width: 16px !important;
   height: 16px !important;
 }
+
+/* Simple Prose Styles for Document Viewer */
+.prose {
+  line-height: 1.6;
+}
+.prose h1 { @apply text-2xl font-bold mb-4 text-primary; }
+.prose h2 { @apply text-xl font-bold mb-3 mt-6 text-primary; }
+.prose h3 { @apply text-lg font-bold mb-2 mt-4 text-primary; }
+.prose p { @apply mb-4; }
+.prose ul { @apply list-disc ml-6 mb-4; }
+.prose ol { @apply list-decimal ml-6 mb-4; }
+.prose li { @apply mb-1; }
+.prose strong { @apply text-white font-bold; }
+.prose blockquote { @apply border-l-4 border-primary/30 pl-4 italic my-4; }
+.prose code { @apply bg-white/10 px-1.5 py-0.5 rounded font-mono text-xs text-primary; }
+.prose pre { @apply bg-charcoal-900/50 p-4 rounded-xl border border-white/10 my-4 overflow-x-auto; }
+.prose pre code { @apply p-0 bg-transparent text-foreground; }

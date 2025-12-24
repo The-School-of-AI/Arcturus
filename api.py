@@ -322,6 +322,77 @@ async def reindex_rag_documents(path: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to trigger reindex: {str(e)}")
 
+@app.get("/rag/search")
+async def rag_search(query: str):
+    """Semantic search against indexed RAG documents"""
+    try:
+        args = {"query": query}
+        result = await multi_mcp.call_tool("rag", "search_stored_documents_rag", args)
+        # Result is already a list of strings from the tool
+        return {"status": "success", "results": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/rag/document_content")
+async def get_document_content(path: str):
+    """Get the content of a document (binary or text)"""
+    try:
+        root = Path(__file__).parent / "data"
+        doc_path = root / path
+        if not doc_path.exists():
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        from fastapi.responses import FileResponse
+        ext = doc_path.suffix.lower()
+        
+        # Binary Media
+        if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp']:
+            media_types = {
+                '.pdf': 'application/pdf',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp'
+            }
+            return FileResponse(doc_path, media_type=media_types.get(ext, 'application/octet-stream'))
+        
+        # Simple text extraction for fallback
+        content = doc_path.read_text(errors='replace')
+        return {"status": "success", "content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/rag/document_preview")
+async def get_document_preview(path: str):
+    """Get the AI-enhanced markdown version of a document (PDF, DOCX, etc.)"""
+    try:
+        args = {"path": str(Path(__file__).parent / "data" / path)}
+        # Call the generic preview_document tool
+        result = await multi_mcp.call_tool("rag", "preview_document", args)
+        
+        # FastMCP returns objects or lists of content
+        if hasattr(result, 'markdown'):
+            return {"status": "success", "markdown": result.markdown}
+        elif isinstance(result, list) and len(result) > 0:
+            return {"status": "success", "markdown": result[0].text}
+        
+        return {"status": "success", "markdown": str(result)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/rag/images/{filename}")
+async def get_rag_image(filename: str):
+    """Serve images extracted by MuPDF/indexing process"""
+    try:
+        image_path = Path(__file__).parent / "mcp_servers" / "documents" / "images" / filename
+        if not image_path.exists():
+            raise HTTPException(status_code=404, detail="Image not found")
+        from fastapi.responses import FileResponse
+        return FileResponse(image_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/mcp/tools")
 async def get_mcp_tools():
     """List available MCP tools by scanning files using regex for robustness"""

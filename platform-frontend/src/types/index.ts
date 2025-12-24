@@ -30,7 +30,6 @@ export interface AgentNodeData {
     execution_logs?: string;
     iterations?: any[];
     calls?: any[];
-    execution_logs?: string;
     execution_result?: any;
     isDark?: boolean; // For styling
 }
@@ -58,4 +57,11 @@ export interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
     timestamp: number;
+}
+
+export interface RAGDocument {
+    id: string;
+    title: string;
+    type: string;
+    content?: string;
 }
