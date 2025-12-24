@@ -250,9 +250,7 @@ export const DocumentViewer: React.FC = () => {
         }
     }, [docxBlob, isDocx, viewType, !!docxContainerRef.current]);
 
-    // In the RAG tab, it should NEVER return null even if viewMode is 'graph'
-    // (Discovery is the workspace).
-    if (useAppStore.getState().sidebarTab !== 'rag') return null;
+    // Visibility is managed by parent (AppLayout)
 
     return (
         <div className="h-full flex flex-col relative">

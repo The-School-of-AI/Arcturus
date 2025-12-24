@@ -26,6 +26,14 @@ const AutoFitter = ({ nodeCount }: { nodeCount: number }) => {
     return null;
 };
 
+const NODE_TYPES = {
+    agentNode: AgentNode,
+};
+
+const EDGE_TYPES = {
+    custom: CustomEdge,
+};
+
 export const GraphCanvas: React.FC = () => {
     // Connect to Store
     const { nodes, edges, onNodesChange, onEdgesChange, selectNode, selectedNodeId } = useAppStore();
@@ -38,14 +46,6 @@ export const GraphCanvas: React.FC = () => {
         }
     }, [nodes, selectedNodeId, selectNode]);
 
-    const nodeTypes = React.useMemo(() => ({
-        agentNode: AgentNode,
-    }), []);
-
-    const edgeTypes = useMemo(() => ({
-        custom: CustomEdge,
-    }), []);
-
     const visibleNodes = nodes.filter(n => n.id !== 'ROOT');
 
     return (
@@ -56,8 +56,8 @@ export const GraphCanvas: React.FC = () => {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={(_: React.MouseEvent, node: Node) => useAppStore.getState().selectNode(node.id)}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
+                nodeTypes={NODE_TYPES}
+                edgeTypes={EDGE_TYPES}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
                 className="bg-charcoal-900"

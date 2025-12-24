@@ -97,10 +97,6 @@ export const WorkspacePanel: React.FC = () => {
 
     const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
-    if (sidebarTab === 'rag') {
-        return <DocumentAssistant />;
-    }
-
     // Auto-switch tabs based on node type/content when selection changes
     React.useEffect(() => {
         if (!selectedNode) return;
@@ -124,6 +120,10 @@ export const WorkspacePanel: React.FC = () => {
             setActiveTab('overview');
         }
     }, [selectedNodeId, selectedNode?.data.type, selectedNode?.data.label]);
+
+    if (sidebarTab === 'rag') {
+        return <DocumentAssistant />;
+    }
 
     if (!selectedNodeId) {
         return (

@@ -1,9 +1,59 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | 'system' }> = ({ content, role }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    if (role === 'user') {
+        return (
+            <div className="text-sm leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            </div>
+        );
+    }
+
+    if (typeof content !== 'string') {
+        return <div className="text-xs text-muted-foreground italic">Invalid message content</div>;
+    }
+
+    const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/);
+    const thinking = thinkMatch ? thinkMatch[1].trim() : null;
+    const mainAnswer = content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+
+    return (
+        <div className="space-y-3">
+            {thinking && (
+                <div className="bg-black/20 border border-white/5 rounded-xl overflow-hidden mb-2">
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:bg-white/5 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-40"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary/60"></span>
+                            </span>
+                            Thinking Process
+                        </div>
+                        {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                    {isExpanded && (
+                        <div className="px-4 py-3 text-[11px] text-foreground/50 border-t border-white/5 leading-relaxed bg-black/40 italic">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{thinking}</ReactMarkdown>
+                        </div>
+                    )}
+                </div>
+            )}
+            <div className="text-sm leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{mainAnswer || (thinking ? "" : content)}</ReactMarkdown>
+            </div>
+        </div>
+    );
+};
 
 export const DocumentAssistant: React.FC = () => {
     const activeDocumentId = useAppStore(state => state.activeDocumentId);
@@ -14,6 +64,7 @@ export const DocumentAssistant: React.FC = () => {
     const clearSelectedContexts = useAppStore(state => state.clearSelectedContexts);
     const [inputValue, setInputValue] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+    const [pastedImage, setPastedImage] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
@@ -25,27 +76,55 @@ export const DocumentAssistant: React.FC = () => {
         }
     }, [history, isThinking]);
 
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        setPastedImage(event.target?.result as string);
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }
+        }
+    };
+
     const handleSend = async () => {
-        if (!inputValue.trim() || !activeDoc) return;
+        if ((!inputValue.trim() && !pastedImage) || !activeDoc) return;
 
         // Combine all selected contexts
         const contextString = selectedContexts.length > 0
             ? `Context extracts from document:\n${selectedContexts.map(c => `> ${c}`).join('\n\n')}\n\n`
             : '';
 
+        const userMsgId = Date.now().toString();
         const userMsg = {
-            id: Date.now().toString(),
+            id: userMsgId,
             role: 'user' as const,
-            content: inputValue,
+            content: inputValue + (pastedImage ? "\n\n[Pasted Image]" : ""),
             timestamp: Date.now()
         };
 
         const fullMessage = contextString + `User Question: ${inputValue}`;
+        const currentPastedImage = pastedImage;
 
         addMessageToDocChat(activeDoc.id, userMsg);
         setInputValue('');
-        clearSelectedContexts(); // Clear all context after sending
+        setPastedImage(null);
+        clearSelectedContexts();
         setIsThinking(true);
+
+        const botMsgId = (Date.now() + 1).toString();
+        const botMsg = {
+            id: botMsgId,
+            role: 'assistant' as const,
+            content: '',
+            timestamp: Date.now()
+        };
+        addMessageToDocChat(activeDoc.id, botMsg);
 
         try {
             const response = await fetch('http://localhost:8000/rag/ask', {
@@ -54,19 +133,42 @@ export const DocumentAssistant: React.FC = () => {
                 body: JSON.stringify({
                     docId: activeDoc.id,
                     query: fullMessage,
-                    history: history
+                    history: history,
+                    image: currentPastedImage
                 })
             });
 
-            const data = await response.json();
+            if (!response.body) throw new Error("No response body");
 
-            const botMsg = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant' as const,
-                content: data.answer || "I couldn't process that request.",
-                timestamp: Date.now()
-            };
-            addMessageToDocChat(activeDoc.id, botMsg);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.content) {
+                                accumulatedContent += data.content;
+                                // Update the bot message in real-time
+                                const updatedBotMsg = { ...botMsg, content: accumulatedContent };
+                                addMessageToDocChat(activeDoc.id, updatedBotMsg);
+                            } else if (data.error) {
+                                console.error("Streaming error:", data.error);
+                            }
+                        } catch (e) {
+                            // Part of a JSON chunk, wait for next
+                        }
+                    }
+                }
+            }
         } catch (e) {
             console.error("Failed to ask document:", e);
         } finally {
@@ -121,11 +223,11 @@ export const DocumentAssistant: React.FC = () => {
                             "max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
                             msg.role === 'user'
                                 ? "bg-primary/20 text-foreground border border-primary/20 rounded-tr-none"
-                                : "bg-white/5 text-foreground/90 border border-white/5 rounded-tl-none"
+                                : "bg-white/5 text-foreground/90 border border-white/5 rounded-tl-none px-0 py-0 overflow-hidden" // Special padding for assistant to allow full-width thought blocks
                         )}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {msg.content}
-                            </ReactMarkdown>
+                            <div className={cn(msg.role === 'assistant' ? "p-4" : "")}>
+                                <MessageContent content={msg.content} role={msg.role} />
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -183,20 +285,38 @@ export const DocumentAssistant: React.FC = () => {
             )}
 
             {/* Input Area */}
-            <div className="p-4 border-t border-border bg-charcoal-900">
+            <div className="p-4 border-t border-border bg-charcoal-900 space-y-3">
+                {/* Image Preview */}
+                {pastedImage && (
+                    <div className="relative w-24 h-24 group animate-in zoom-in-95 duration-200">
+                        <img
+                            src={pastedImage}
+                            alt="Pasted content"
+                            className="w-full h-full object-cover rounded-lg border border-primary/30 shadow-lg shadow-primary/10"
+                        />
+                        <button
+                            onClick={() => setPastedImage(null)}
+                            className="absolute -top-2 -right-2 p-1 bg-charcoal-800 border border-border rounded-full hover:bg-red-500 hover:text-white transition-all shadow-xl"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                )}
+
                 <div className="relative group">
                     <input
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && !isThinking && handleSend()}
-                        placeholder="Type a message..."
+                        onPaste={handlePaste}
+                        placeholder="Type or paste image..."
                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
                         disabled={isThinking}
                     />
                     <button
                         onClick={handleSend}
-                        disabled={!inputValue.trim() || isThinking}
+                        disabled={(!inputValue.trim() && !pastedImage) || isThinking}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-all disabled:opacity-30 disabled:grayscale"
                     >
                         <Send className="w-4 h-4" />

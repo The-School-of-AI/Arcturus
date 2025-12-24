@@ -130,19 +130,23 @@ def preview_document(path: str) -> MarkdownOutput:
         mcp_log("ERROR", f"Preview failed: {str(e)}")
         return MarkdownOutput(markdown=f"### ❌ Critical Error\nExtraction failed: {str(e)}")
 @mcp.tool()
-def ask_document(query: str, doc_id: str, history: list[dict] = []) -> str:
+async def ask_document(query: str, doc_id: str, history: list[dict] = [], image: str = None) -> str:
     """Ask a question about a specific document.
-    Incorporates chat history and relevant document extracts.
+    Incorporates chat history, relevant document extracts, and optional image input.
     """
-    mcp_log("ASK", f"Query: {query} for Doc: {doc_id}")
+    mcp_log("ASK", f"Query: {query} for Doc: {doc_id} (Has Image: {bool(image)})")
     
     # 1. Get relevant context
     context_results = search_stored_documents_rag(query, doc_path=doc_id)
     context_text = "\n\n".join(context_results) if context_results else "No relevant context found in document."
     
     # 2. Build Prompt
-    system_prompt = f"""You are a helpful document assistant. Answer the user's question based strictly on the provided context from the document.
+    system_prompt = f"""You are a helpful document assistant. 
+Answer the user's question based strictly on the provided context from the document.
 If the context doesn't contain the answer, say so, but try to be helpful based on what is available.
+
+CRITICAL: Always start your response with a thinking process enclosed in <think> tags. 
+Analyze the context, identify key sections, and plan your answer before providing the final response.
 
 CONTEXT FROM DOCUMENT:
 ---
@@ -156,17 +160,45 @@ CONTEXT FROM DOCUMENT:
     for msg in history[-5:]:
         messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
         
-    # Add current query
-    messages.append({"role": "user", "content": query})
+    # Add current query with image if present
+    user_content = query
+    user_msg = {"role": "user", "content": user_content}
+    if image:
+        # Ollama expects images in the message object for multimodal models
+        user_msg["images"] = [image]
+    
+    messages.append(user_msg)
     
     try:
+        # Using a direct requests post with stream=True for SSE-like delivery
+        # Note: MCP tool return will be captured as a string initially, 
+        # but we'll optimize the API layer to handle the generator if possible.
+        # For now, let's make it yield chunks.
+        
         response = requests.post(OLLAMA_CHAT_URL, json={
             "model": QWEN_MODEL,
             "messages": messages,
-            "stream": False
-        }, timeout=OLLAMA_TIMEOUT)
+            "stream": True # Enable streaming
+        }, timeout=OLLAMA_TIMEOUT, stream=True)
         response.raise_for_status()
-        return response.json().get("message", {}).get("content", "Error processing response.")
+        
+        full_response = ""
+        for line in response.iter_lines():
+            if not line: continue
+            try:
+                data = json.loads(line)
+                chunk = data.get("message", {}).get("content", "")
+                if chunk:
+                    full_response += chunk
+                    # In a real MCP streaming setup, we might need a different pattern,
+                    # but for this tight integration, we'll return the full text for now
+                    # while building the SSE bridge in api.py.
+                if data.get("done"): break
+            except json.JSONDecodeError:
+                continue
+        
+        return full_response
+        
     except Exception as e:
         mcp_log("ERROR", f"Ollama ask failed: {e}")
         return f"Error: Could not reach the AI model for this document query. ({str(e)})"

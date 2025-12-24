@@ -414,26 +414,89 @@ async def get_document_preview(path: str):
 
 @app.post("/rag/ask")
 async def ask_rag_document(request: Request):
-    """Interactive chat with a document via RAG"""
+    """Interactive chat with a document via RAG with real-time streaming (SSE)"""
     try:
         body = await request.json()
         doc_id = body.get("docId")
         query = body.get("query")
         history = body.get("history", [])
+        image = body.get("image") # Base64 image
         
         if not doc_id or not query:
             raise HTTPException(status_code=400, detail="Missing docId or query")
             
-        args = {
-            "query": query,
-            "doc_id": doc_id,
-            "history": history
-        }
+        # 1. Get relevant context using MCP tool
+        context_results = await multi_mcp.call_tool("rag", "search_stored_documents_rag", {"query": query, "doc_path": doc_id})
+        # Extract text from CallToolResult if needed (search_stored_documents_rag returns list)
+        context_list = []
+        if hasattr(context_results, 'content'):
+            for c in context_results.content:
+                if hasattr(c, 'text'):
+                    try:
+                        # The tool returns a list of strings as JSON or raw text
+                        import ast
+                        parsed = ast.literal_eval(c.text)
+                        if isinstance(parsed, list):
+                            context_list.extend(parsed)
+                        else:
+                            context_list.append(c.text)
+                    except:
+                        context_list.append(c.text)
         
-        # Call the new ask_document tool
-        answer = await multi_mcp.call_tool("rag", "ask_document", args)
-        
-        return {"status": "success", "answer": str(answer)}
+        context_text = "\n\n".join(context_list) if context_list else "No relevant context found in document."
+
+        # 2. Build Ollama Prompt
+        system_prompt = f"""You are a helpful document assistant. 
+Answer the user's question based strictly on the provided context from the document.
+If the context doesn't contain the answer, say so, but try to be helpful based on what is available.
+
+CRITICAL: Always start your response with a thinking process enclosed in <think> tags. 
+Analyze the context, identify key sections, and plan your answer before providing the final response.
+
+CONTEXT FROM DOCUMENT:
+---
+{context_text}
+---
+"""
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in history[-5:]:
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+            
+        user_msg = {"role": "user", "content": query}
+        if image:
+            # Strip data:image/png;base64, if present
+            if "," in image: image = image.split(",")[1]
+            user_msg["images"] = [image]
+        messages.append(user_msg)
+
+        async def token_generator():
+            try:
+                # Use a separate session or direct httpx for streaming
+                import httpx
+                async with httpx.AsyncClient(timeout=300) as client:
+                    async with client.stream("POST", "http://127.0.0.1:11434/api/chat", json={
+                        "model": "qwen3-vl:8b", # Consistent with server_rag.py
+                        "messages": messages,
+                        "stream": True
+                    }) as response:
+                        async for line in response.aiter_lines():
+                            if not line: continue
+                            try:
+                                data = json.loads(line)
+                                chunk = data.get("message", {}).get("content", "")
+                                if chunk:
+                                    # SSE format: data: <payload>\n\n
+                                    yield f"data: {json.dumps({'content': chunk})}\n\n"
+                                if data.get("done"):
+                                    break
+                            except:
+                                continue
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(token_generator(), media_type="text/event-stream")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
