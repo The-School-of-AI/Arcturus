@@ -18,6 +18,7 @@ export const DocumentViewer: React.FC = () => {
         openDocuments,
         activeDocumentId,
         closeDocument,
+        closeAllDocuments,
         setActiveDocument,
         viewMode
     } = useAppStore();
@@ -36,7 +37,12 @@ export const DocumentViewer: React.FC = () => {
     const canPreview = (type: string) => ['pdf', 'docx', 'doc'].includes(type.toLowerCase());
 
     useEffect(() => {
-        if (!activeDoc) return;
+        if (!activeDoc) {
+            setContent(null);
+            setPdfUrl(null);
+            setImageUrl(null);
+            return;
+        }
 
         const loadContent = async () => {
             setLoading(true);
@@ -103,16 +109,16 @@ export const DocumentViewer: React.FC = () => {
     if (viewMode !== 'rag') return null;
 
     return (
-        <div className="flex flex-col h-full bg-charcoal-950">
+        <div className="flex flex-col h-full bg-charcoal-950 z-10 relative">
             {/* Tab Bar and Toggles */}
-            <div className="flex items-center justify-between border-b border-border bg-charcoal-900/50 pr-4 shrink-0">
-                <div className="flex items-center gap-1 px-4 pt-3 overflow-x-auto no-scrollbar">
+            <div className="flex items-center justify-between border-b border-border bg-charcoal-900/50 pr-4 shrink-0 h-14">
+                <div className="flex items-center gap-1 px-4 pt-4 overflow-x-auto no-scrollbar flex-1 h-full">
                     {openDocuments.map(doc => (
                         <div
                             key={doc.id}
                             onClick={() => setActiveDocument(doc.id)}
                             className={cn(
-                                "group flex items-center gap-2 px-4 py-2 rounded-t-lg border-x border-t transition-all cursor-pointer min-w-[140px] max-w-[240px]",
+                                "group flex items-center gap-2 px-4 py-2 rounded-t-lg border-x border-t transition-all cursor-pointer min-w-[140px] max-w-[240px] h-10",
                                 activeDocumentId === doc.id
                                     ? "bg-charcoal-950 border-border text-white shadow-[0_-2px_15px_rgba(0,0,0,0.5)]"
                                     : "bg-charcoal-900/30 border-transparent text-muted-foreground hover:bg-white/5"
@@ -129,32 +135,44 @@ export const DocumentViewer: React.FC = () => {
                         </div>
                     ))}
                     {openDocuments.length === 0 && (
-                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">Viewer Ready</div>
+                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">Discovery Workspace</div>
                     )}
                 </div>
 
-                {activeDoc && canPreview(activeDoc.type) && (
-                    <div className="flex items-center bg-black/40 rounded-full p-0.5 border border-white/5 mt-2">
+                <div className="flex items-center gap-3">
+                    {openDocuments.length > 0 && (
                         <button
-                            onClick={() => setViewType('source')}
-                            className={cn(
-                                "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-tighter transition-all",
-                                viewType === 'source' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
-                            )}
+                            onClick={closeAllDocuments}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-red-500/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-red-400 border border-white/5 transition-all group"
                         >
-                            Original
+                            <X className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                            Clear Workspace
                         </button>
-                        <button
-                            onClick={() => setViewType('ai')}
-                            className={cn(
-                                "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-tighter transition-all",
-                                viewType === 'ai' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
-                            )}
-                        >
-                            AI View
-                        </button>
-                    </div>
-                )}
+                    )}
+
+                    {activeDoc && canPreview(activeDoc.type) && (
+                        <div className="flex items-center bg-black/40 rounded-full p-0.5 border border-white/5">
+                            <button
+                                onClick={() => setViewType('source')}
+                                className={cn(
+                                    "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-tighter transition-all",
+                                    viewType === 'source' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
+                                )}
+                            >
+                                Original
+                            </button>
+                            <button
+                                onClick={() => setViewType('ai')}
+                                className={cn(
+                                    "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-tighter transition-all",
+                                    viewType === 'ai' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
+                                )}
+                            >
+                                AI View
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Content Area */}

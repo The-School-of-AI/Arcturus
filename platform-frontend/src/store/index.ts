@@ -75,6 +75,7 @@ interface RagViewerSlice {
     activeDocumentId: string | null;
     openDocument: (doc: RAGDocument) => void;
     closeDocument: (docId: string) => void;
+    closeAllDocuments: () => void;
     setActiveDocument: (docId: string) => void;
     ragSearchQuery: string;
     setRagSearchQuery: (query: string) => void;
@@ -300,6 +301,11 @@ export const useAppStore = create<AppState>()(
                     viewMode: newDocs.length === 0 ? 'graph' : 'rag'
                 });
             },
+            closeAllDocuments: () => set({
+                openDocuments: [],
+                activeDocumentId: null,
+                viewMode: 'graph'
+            }),
             setActiveDocument: (docId) => set({ activeDocumentId: docId, viewMode: 'rag' }),
             sidebarTab: 'runs',
             setSidebarTab: (tab) => set({ sidebarTab: tab }),

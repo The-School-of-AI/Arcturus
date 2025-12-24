@@ -371,11 +371,19 @@ async def get_document_preview(path: str):
         # Call the generic preview_document tool
         result = await multi_mcp.call_tool("rag", "preview_document", args)
         
-        # FastMCP returns objects or lists of content
+        # Proper handling of MCP CallToolResult
+        # result is likely a CallToolResult object from the mcp-python-sdk
+        if hasattr(result, 'content') and isinstance(result.content, list):
+            # Extract text from the first content item
+            for item in result.content:
+                if hasattr(item, 'text'):
+                    return {"status": "success", "markdown": item.text}
+                if isinstance(item, dict) and 'text' in item:
+                    return {"status": "success", "markdown": item['text']}
+        
+        # Fallback for direct MarkdownOutput preservation if already converted
         if hasattr(result, 'markdown'):
             return {"status": "success", "markdown": result.markdown}
-        elif isinstance(result, list) and len(result) > 0:
-            return {"status": "success", "markdown": result[0].text}
         
         return {"status": "success", "markdown": str(result)}
     except Exception as e:
