@@ -27,7 +27,8 @@ const FileTree: React.FC<{
     onIndexFile: (path: string) => void;
     indexingPath: string | null;
     searchFilter: string;
-}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath, searchFilter }) => {
+    ragKeywordMatches: string[];
+}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath, searchFilter, ragKeywordMatches }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isFolder = item.type === 'folder';
     const isIndexingNow = indexingPath === item.path;
@@ -35,18 +36,30 @@ const FileTree: React.FC<{
     // Simple recursive visibility check for search
     const isVisible = useMemo(() => {
         if (!searchFilter.trim()) return true;
+
+        // 1. Check if name matches
         const matchesName = item.name.toLowerCase().includes(searchFilter.toLowerCase());
         if (matchesName) return true;
+
+        // 2. Check if content matches (keyword search results)
+        if (ragKeywordMatches.includes(item.path)) return true;
+
+        // 3. Check if any children are visible
         if (item.children) {
             return item.children.some(child => {
-                const matchesChild = child.name.toLowerCase().includes(searchFilter.toLowerCase());
-                if (matchesChild) return true;
-                // Deeper check could be added if needed
+                // If it's a child file, check name or content
+                const childMatchesName = child.name.toLowerCase().includes(searchFilter.toLowerCase());
+                if (childMatchesName) return true;
+                if (ragKeywordMatches.includes(child.path)) return true;
+
+                // If it's a child folder, we need deeper check? 
+                // For simplicity, let's keep it one level for now or adjust logic.
+                // Actually, the recursion in parent handles this if we return true here.
                 return false;
             });
         }
         return false;
-    }, [item, searchFilter]);
+    }, [item, searchFilter, ragKeywordMatches]);
 
     if (!isVisible) return null;
 
@@ -118,6 +131,7 @@ const FileTree: React.FC<{
                             onIndexFile={onIndexFile}
                             indexingPath={indexingPath}
                             searchFilter={searchFilter}
+                            ragKeywordMatches={ragKeywordMatches}
                         />
                     ))}
                 </div>
@@ -127,7 +141,13 @@ const FileTree: React.FC<{
 };
 
 export const RagPanel: React.FC = () => {
-    const { openDocument, setRagSearchResults, ragSearchResults } = useAppStore();
+    const {
+        openDocument,
+        setRagSearchResults,
+        ragSearchResults,
+        ragKeywordMatches,
+        setRagKeywordMatches
+    } = useAppStore();
     const [files, setFiles] = useState<RagItem[]>([]);
     const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [loading, setLoading] = useState(false);
@@ -147,6 +167,25 @@ export const RagPanel: React.FC = () => {
 
     // Upload State
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Debounced Keyword Search for Browse mode
+    useEffect(() => {
+        if (panelMode !== 'browse' || !innerSearch.trim()) {
+            setRagKeywordMatches([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/rag/keyword_search`, { params: { query: innerSearch } });
+                setRagKeywordMatches(res.data.matches || []);
+            } catch (e) {
+                console.error("Keyword search failed", e);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [innerSearch, panelMode, setRagKeywordMatches]);
 
     const fetchFiles = async () => {
         setLoading(true);
@@ -332,6 +371,7 @@ export const RagPanel: React.FC = () => {
                                 onIndexFile={handleReindex}
                                 indexingPath={indexingPath}
                                 searchFilter={innerSearch}
+                                ragKeywordMatches={ragKeywordMatches}
                             />
                         ))}
                     </div>

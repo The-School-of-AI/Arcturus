@@ -82,6 +82,8 @@ interface RagViewerSlice {
     setRagSearchQuery: (query: string) => void;
     ragSearchResults: any[];
     setRagSearchResults: (results: any[]) => void;
+    ragKeywordMatches: string[];
+    setRagKeywordMatches: (matches: string[]) => void;
     addMessageToDocChat: (docId: string, message: ChatMessage) => void;
     selectedContexts: string[];
     addSelectedContext: (text: string) => void;
@@ -319,6 +321,8 @@ export const useAppStore = create<AppState>()(
             setRagSearchQuery: (query) => set({ ragSearchQuery: query }),
             ragSearchResults: [],
             setRagSearchResults: (results) => set({ ragSearchResults: results }),
+            ragKeywordMatches: [],
+            setRagKeywordMatches: (matches) => set({ ragKeywordMatches: matches }),
             addMessageToDocChat: (docId, message) => set((state) => ({
                 openDocuments: state.openDocuments.map((doc) =>
                     doc.id === docId

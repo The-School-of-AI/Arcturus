@@ -240,6 +240,33 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
     except Exception as e:
         return [f"ERROR: Failed to search: {str(e)}"]
 
+@mcp.tool()
+def keyword_search(query: str) -> list[str]:
+    """Search for exact keyword matches across all indexed document chunks.
+    Returns a list of document paths that contain the matching text.
+    """
+    mcp_log("KEYWORD_SEARCH", f"Query: {query}")
+    try:
+        meta_path = ROOT / "faiss_index" / "metadata.json"
+        if not meta_path.exists():
+            return []
+            
+        metadata = json.loads(meta_path.read_text())
+        query_lower = query.lower()
+        matching_docs = set()
+        
+        for entry in metadata:
+            if query_lower in entry.get('chunk', '').lower():
+                doc_path = entry.get('doc')
+                if doc_path:
+                    matching_docs.add(doc_path)
+                    
+        mcp_log("KEYWORD_SEARCH", f"Found matches in {len(matching_docs)} documents")
+        return list(matching_docs)
+    except Exception as e:
+        mcp_log("ERROR", f"Keyword search failed: {e}")
+        return []
+
 
 def caption_image(img_url_or_path: str) -> str:
     mcp_log("CAPTION", f"Attempting to caption image: {img_url_or_path}")

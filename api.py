@@ -333,6 +333,29 @@ async def rag_search(query: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/rag/keyword_search")
+async def rag_keyword_search(query: str):
+    """Keyword search across document chunks (exact match)"""
+    try:
+        args = {"query": query}
+        result = await multi_mcp.call_tool("rag", "keyword_search", args)
+        
+        # Extract matches from CallToolResult
+        matches = []
+        if hasattr(result, 'content') and isinstance(result.content, list):
+            for item in result.content:
+                if hasattr(item, 'text'):
+                    try:
+                        import ast
+                        parsed = ast.literal_eval(item.text)
+                        if isinstance(parsed, list):
+                            matches.extend(parsed)
+                    except:
+                        matches.append(item.text)
+        
+        return {"status": "success", "matches": matches}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Keyword search failed: {str(e)}")
 @app.get("/rag/document_content")
 async def get_document_content(path: str):
     """Get the content of a document (binary or text)"""
