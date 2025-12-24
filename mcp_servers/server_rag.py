@@ -99,11 +99,11 @@ Just respond in one word (Yes or No), and do not provide any further explanation
 
 
 @mcp.tool()
-def search_stored_documents_rag(input: SearchDocumentsInput) -> list[str]:
+def search_stored_documents_rag(query: str) -> list[str]:
     """Search old stored documents like PDF, DOCX, TXT, etc. to get relevant extracts. """
-
     ensure_faiss_ready()
-    query = input.query
+    # input = SearchDocumentsInput(query=query) # No longer needed
+    # query = input.query # Already have query
     mcp_log("SEARCH", f"Query: {query}")
     try:
         index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
