@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { X, FileText, Loader2, Library } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { X, FileText, Loader2, Library, Code2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import { renderAsync } from 'docx-preview';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
@@ -27,20 +30,28 @@ export const DocumentViewer: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [docxBlob, setDocxBlob] = useState<Blob | null>(null);
     const [viewType, setViewType] = useState<'source' | 'ai'>('source');
+    const [isDocx, setIsDocx] = useState(false);
+    const [isCode, setIsCode] = useState(false);
+    const [codeLang, setCodeLang] = useState('javascript');
 
+    const docxContainerRef = useRef<HTMLDivElement>(null);
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
     const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
-    const isMedia = (type: string) => ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => ['pdf', 'docx', 'doc'].includes(type.toLowerCase());
+    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh'].includes(type.toLowerCase());
 
     useEffect(() => {
         if (!activeDoc) {
             setContent(null);
             setPdfUrl(null);
             setImageUrl(null);
+            setDocxBlob(null);
+            setIsDocx(false);
+            setIsCode(false);
             return;
         }
 
@@ -48,39 +59,58 @@ export const DocumentViewer: React.FC = () => {
             setLoading(true);
             try {
                 const docType = activeDoc.type.toLowerCase();
+                const codeNode = isCodeFile(docType);
 
-                // For DOCX/DOC/Binary, we almost always want 'ai' view because source is binary
-                if ((viewType === 'ai' && canPreview(docType)) || docType === 'docx' || docType === 'doc') {
+                if (docType === 'py') setCodeLang('python');
+                else if (docType === 'js') setCodeLang('javascript');
+                else if (docType === 'ts' || docType === 'tsx') setCodeLang('typescript');
+                else setCodeLang(docType);
+
+                // For AI View or forced DOCX AI
+                if (viewType === 'ai' && canPreview(docType)) {
                     const res = await axios.get(`${API_BASE}/rag/document_preview`, {
                         params: { path: activeDoc.id }
                     });
-
-                    // Fix MuPDF image paths: ![](images/foo.png) -> ![](http://localhost:8000/rag/images/foo.png)
                     let markdown = res.data.markdown || "No preview available.";
                     markdown = markdown.replace(/!\[\]\(images\//g, `![](${API_BASE}/rag/images/`);
-
                     setContent(markdown);
                     setPdfUrl(null);
                     setImageUrl(null);
+                    setDocxBlob(null);
+                    setIsDocx(false);
+                    setIsCode(false); // AI View is always Markdown
                 } else if (docType === 'pdf') {
-                    // Use native fetch to be 100% sure about binary integrity (no axios interceptors)
                     const response = await fetch(`${API_BASE}/rag/document_content?path=${encodeURIComponent(activeDoc.id)}`);
-                    if (!response.ok) throw new Error("Failed to fetch PDF");
+                    if (!response.ok) throw new Error("Fetch failed");
                     const blob = await response.blob();
                     const url = URL.createObjectURL(blob);
-
                     setPdfUrl(url);
                     setContent(null);
                     setImageUrl(null);
+                    setDocxBlob(null);
+                    setIsDocx(false);
+                    setIsCode(false);
                 } else if (isImage(docType)) {
                     const response = await fetch(`${API_BASE}/rag/document_content?path=${encodeURIComponent(activeDoc.id)}`);
-                    if (!response.ok) throw new Error("Failed to fetch image");
+                    if (!response.ok) throw new Error("Fetch failed");
                     const blob = await response.blob();
                     const url = URL.createObjectURL(blob);
-
                     setImageUrl(url);
                     setPdfUrl(null);
                     setContent(null);
+                    setDocxBlob(null);
+                    setIsDocx(false);
+                    setIsCode(false);
+                } else if (docType === 'docx' || docType === 'doc') {
+                    const response = await fetch(`${API_BASE}/rag/document_content?path=${encodeURIComponent(activeDoc.id)}`);
+                    if (!response.ok) throw new Error("Fetch failed");
+                    const blob = await response.blob();
+                    setDocxBlob(blob);
+                    setIsDocx(true);
+                    setIsCode(false);
+                    setContent(null);
+                    setPdfUrl(null);
+                    setImageUrl(null);
                 } else {
                     const res = await axios.get(`${API_BASE}/rag/document_content`, {
                         params: { path: activeDoc.id }
@@ -89,10 +119,13 @@ export const DocumentViewer: React.FC = () => {
                     setContent(typeof data.content === 'string' ? data.content : JSON.stringify(data.content, null, 2));
                     setPdfUrl(null);
                     setImageUrl(null);
+                    setDocxBlob(null);
+                    setIsDocx(false);
+                    setIsCode(codeNode);
                 }
             } catch (e) {
                 console.error("Failed to load document content", e);
-                setContent("### ❌ Error Loading Content\nThis document might be binary or corrupted. Use **AI View** for complex documents like PDFs or Word files.");
+                setContent("### ❌ Error Loading Content\nThis document might be binary or corrupted. Use **AI View** for complex documents.");
             } finally {
                 setLoading(false);
             }
@@ -106,26 +139,38 @@ export const DocumentViewer: React.FC = () => {
         };
     }, [activeDoc?.id, viewType]);
 
-    if (viewMode !== 'rag') return null;
+    // Secondary effect for DOCX rendering - triggered by blob or ref readiness
+    useEffect(() => {
+        if (docxBlob && isDocx && viewType === 'source' && docxContainerRef.current) {
+            docxContainerRef.current.innerHTML = "";
+            renderAsync(docxBlob, docxContainerRef.current).catch(err => {
+                console.error("docx-preview error:", err);
+            });
+        }
+    }, [docxBlob, isDocx, viewType, !!docxContainerRef.current]);
+
+    // In the RAG tab, it should NEVER return null even if viewMode is 'graph'
+    // (Discovery is the workspace).
+    if (useAppStore.getState().sidebarTab !== 'rag') return null;
 
     return (
-        <div className="flex flex-col h-full bg-charcoal-950 z-10 relative">
-            {/* Tab Bar and Toggles */}
-            <div className="flex items-center justify-between border-b border-border bg-charcoal-900/50 pr-4 shrink-0 h-14">
-                <div className="flex items-center gap-1 px-4 pt-4 overflow-x-auto no-scrollbar flex-1 h-full">
+        <div className="flex flex-col h-full bg-charcoal-950 z-[20] relative w-full overflow-hidden">
+            {/* Tab Bar - Browser Style */}
+            <div className="flex items-center justify-between border-b border-border bg-charcoal-900 pr-4 shrink-0 h-12 shadow-md">
+                <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
                     {openDocuments.map(doc => (
                         <div
                             key={doc.id}
                             onClick={() => setActiveDocument(doc.id)}
                             className={cn(
-                                "group flex items-center gap-2 px-4 py-2 rounded-t-lg border-x border-t transition-all cursor-pointer min-w-[140px] max-w-[240px] h-10",
+                                "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[140px] max-w-[200px] border-x border-t border-transparent relative",
                                 activeDocumentId === doc.id
-                                    ? "bg-charcoal-950 border-border text-white shadow-[0_-2px_15px_rgba(0,0,0,0.5)]"
-                                    : "bg-charcoal-900/30 border-transparent text-muted-foreground hover:bg-white/5"
+                                    ? "bg-charcoal-950 border-border text-white z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-charcoal-950"
+                                    : "bg-charcoal-900/30 text-muted-foreground hover:bg-white/5"
                             )}
                         >
-                            <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />
-                            <span className="text-[11px] font-bold uppercase tracking-tight truncate flex-1">{doc.title}</span>
+                            {isCodeFile(doc.type) ? <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
+                            <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
                             <button
                                 onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
                                 className="p-1 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -135,7 +180,7 @@ export const DocumentViewer: React.FC = () => {
                         </div>
                     ))}
                     {openDocuments.length === 0 && (
-                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">Discovery Workspace</div>
+                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">Discovery Workspace</div>
                     )}
                 </div>
 
@@ -143,28 +188,28 @@ export const DocumentViewer: React.FC = () => {
                     {openDocuments.length > 0 && (
                         <button
                             onClick={closeAllDocuments}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-red-500/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-red-400 border border-white/5 transition-all group"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-white transition-all bg-black/20 border border-white/5"
                         >
-                            <X className="w-3 h-3 group-hover:scale-110 transition-transform" />
-                            Clear Workspace
+                            <X className="w-2.5 h-2.5" />
+                            Clear
                         </button>
                     )}
 
                     {activeDoc && canPreview(activeDoc.type) && (
-                        <div className="flex items-center bg-black/40 rounded-full p-0.5 border border-white/5">
+                        <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5">
                             <button
                                 onClick={() => setViewType('source')}
                                 className={cn(
-                                    "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-tighter transition-all",
-                                    viewType === 'source' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
+                                    "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
+                                    viewType === 'source' ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"
                                 )}
                             >
-                                Original
+                                Source
                             </button>
                             <button
                                 onClick={() => setViewType('ai')}
                                 className={cn(
-                                    "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-tighter transition-all",
+                                    "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
                                     viewType === 'ai' ? "bg-primary text-charcoal-950" : "text-muted-foreground hover:text-white"
                                 )}
                             >
@@ -176,16 +221,17 @@ export const DocumentViewer: React.FC = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden relative selection:bg-primary/20">
+            <div className="flex-1 overflow-hidden relative bg-charcoal-950 selection:bg-primary/20">
                 {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-charcoal-950/80 backdrop-blur-sm z-50 space-y-4">
-                        <div className="p-4 rounded-xl bg-charcoal-900 border border-white/5 shadow-2xl">
-                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-charcoal-950 z-[100] space-y-4">
+                        <div className="p-4 rounded-2xl bg-charcoal-900 border border-white/5 shadow-2xl">
+                            <Loader2 className="w-10 h-10 text-primary animate-spin" />
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-primary/80">Indexing Context...</div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 animate-pulse">Initializing Extraction...</div>
                     </div>
                 )}
 
+                {/* PDF Viewer */}
                 {activeDoc?.type.toLowerCase() === 'pdf' && pdfUrl && viewType === 'source' && (
                     <div className="h-full overflow-hidden bg-[#2a2a2e]">
                         <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
@@ -198,32 +244,58 @@ export const DocumentViewer: React.FC = () => {
                     </div>
                 )}
 
+                {/* Image Viewer */}
                 {isImage(activeDoc?.type || '') && imageUrl && (
                     <div className="h-full flex items-center justify-center p-8 bg-charcoal-950 overflow-auto">
                         <img
                             src={imageUrl}
                             alt={activeDoc?.title}
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/5"
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10 shadow-black/80"
                         />
                     </div>
                 )}
 
-                {(content !== null) && (
-                    <div className="h-full overflow-y-auto p-12 max-w-4xl mx-auto">
-                        <div className="prose prose-invert prose-sm max-w-none">
-                            <ReactMarkdown>{content}</ReactMarkdown>
-                        </div>
+                {/* DOCX Viewer (Source Mode) */}
+                {isDocx && viewType === 'source' && (
+                    <div className="h-full overflow-y-auto bg-charcoal-900 p-8 docx-viewer">
+                        <div ref={docxContainerRef} className="max-w-[900px] mx-auto min-h-full" />
                     </div>
                 )}
 
+                {/* Markdown / Code Viewer */}
+                {content !== null && !isDocx && (
+                    <div className="h-full overflow-y-auto p-12 md:p-20 max-w-5xl mx-auto">
+                        {isCode && viewType === 'source' ? (
+                            <div className="rounded-xl overflow-hidden border border-white/5 bg-black/40 shadow-2xl">
+                                <SyntaxHighlighter
+                                    language={codeLang}
+                                    style={vscDarkPlus}
+                                    customStyle={{ margin: 0, padding: '2rem', fontSize: '13px', background: 'transparent' }}
+                                    showLineNumbers
+                                >
+                                    {content}
+                                </SyntaxHighlighter>
+                            </div>
+                        ) : (
+                            <div className="prose prose-invert prose-lg max-w-none prose-headings:text-primary prose-strong:text-white prose-a:text-primary">
+                                <ReactMarkdown>{content}</ReactMarkdown>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Empty State */}
                 {!activeDoc && (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 space-y-6">
-                        <div className="p-6 rounded-3xl bg-white/5 border border-white/5 shadow-inner">
-                            <Library className="w-20 h-20 opacity-10" />
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 space-y-8 bg-charcoal-950">
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-full" />
+                            <div className="relative p-10 rounded-[3rem] bg-charcoal-900 border border-white/5 shadow-inner">
+                                <Library className="w-24 h-24 opacity-20" />
+                            </div>
                         </div>
-                        <div className="text-center space-y-2">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Empty Workspace</p>
-                            <p className="text-xs italic opacity-50">Select a document to begin deep analysis</p>
+                        <div className="text-center space-y-3 z-10">
+                            <h3 className="text-sm font-bold uppercase tracking-[0.5em] text-primary/40">Discovery Workspace</h3>
+                            <p className="text-[11px] italic opacity-40 max-w-xs leading-relaxed">Select a document from the left panel to begin your deep research flow.</p>
                         </div>
                     </div>
                 )}

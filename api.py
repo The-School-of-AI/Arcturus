@@ -346,14 +346,16 @@ async def get_document_content(path: str):
         ext = doc_path.suffix.lower()
         
         # Binary Media
-        if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp']:
+        if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.docx', '.doc']:
             media_types = {
                 '.pdf': 'application/pdf',
                 '.png': 'image/png',
                 '.jpg': 'image/jpeg',
                 '.jpeg': 'image/jpeg',
                 '.gif': 'image/gif',
-                '.webp': 'image/webp'
+                '.webp': 'image/webp',
+                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                '.doc': 'application/msword'
             }
             return FileResponse(doc_path, media_type=media_types.get(ext, 'application/octet-stream'))
         
@@ -371,17 +373,38 @@ async def get_document_preview(path: str):
         # Call the generic preview_document tool
         result = await multi_mcp.call_tool("rag", "preview_document", args)
         
-        # Proper handling of MCP CallToolResult
-        # result is likely a CallToolResult object from the mcp-python-sdk
+        # 1. Handle stringified JSON results (common in some MCP tool patterns)
+        if isinstance(result, str):
+            try:
+                import json
+                data = json.loads(result)
+                if isinstance(data, dict) and 'markdown' in data:
+                    return {"status": "success", "markdown": data['markdown']}
+            except:
+                pass
+            return {"status": "success", "markdown": result}
+
+        # 2. Proper handling of MCP CallToolResult object
         if hasattr(result, 'content') and isinstance(result.content, list):
-            # Extract text from the first content item
             for item in result.content:
+                text = ""
                 if hasattr(item, 'text'):
-                    return {"status": "success", "markdown": item.text}
-                if isinstance(item, dict) and 'text' in item:
-                    return {"status": "success", "markdown": item['text']}
+                    text = item.text
+                elif isinstance(item, dict) and 'text' in item:
+                    text = item['text']
+                
+                if text:
+                    # Check if the text itself is encoded JSON
+                    try:
+                        import json
+                        data = json.loads(text)
+                        if isinstance(data, dict) and 'markdown' in data:
+                            return {"status": "success", "markdown": data['markdown']}
+                    except:
+                        pass
+                    return {"status": "success", "markdown": text}
         
-        # Fallback for direct MarkdownOutput preservation if already converted
+        # 3. Fallback for direct storage objects
         if hasattr(result, 'markdown'):
             return {"status": "success", "markdown": result.markdown}
         
