@@ -54,9 +54,8 @@ def chunk_text(text, size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
         yield " ".join(words[i:i+size])
 
 def mcp_log(level: str, message: str) -> None:
-    if level in ["ERROR", "WARN"]:
-        sys.stderr.write(f"{level}: {message}\n")
-        sys.stderr.flush()
+    sys.stderr.write(f"{level}: {message}\n")
+    sys.stderr.flush()
 
 # === CHUNKING ===
 
@@ -321,7 +320,8 @@ def process_documents():
     """Process documents and create FAISS index using unified multimodal strategy."""
     mcp_log("INFO", "Indexing documents with unified RAG pipeline...")
     ROOT = Path(__file__).parent.resolve()
-    DOC_PATH = ROOT / "documents"
+    # Data is now 2 levels up in 'data' folder
+    DOC_PATH = ROOT.parent / "data"
     INDEX_CACHE = ROOT / "faiss_index"
     INDEX_CACHE.mkdir(exist_ok=True)
     INDEX_FILE = INDEX_CACHE / "index.bin"
@@ -335,7 +335,11 @@ def process_documents():
     metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
     index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
 
-    for file in DOC_PATH.glob("*.*"):
+    for file in DOC_PATH.rglob("*.*"):
+        # Skip all image files (can't extract text without vision model)
+        if file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg']:
+            continue
+            
         fhash = file_hash(file)
         if file.name in CACHE_META and CACHE_META[file.name] == fhash:
             mcp_log("SKIP", f"Skipping unchanged file: {file.name}")
@@ -348,7 +352,7 @@ def process_documents():
 
             if ext == ".pdf":
                 mcp_log("INFO", f"Using MuPDF4LLM to extract {file.name}")
-                markdown = convert_pdf_to_markdown(FilePathInput(file_path=str(file))).markdown
+                markdown = convert_pdf_to_markdown(str(file)).markdown
 
             elif ext in [".html", ".htm", ".url"]:
                 mcp_log("INFO", f"Using Trafilatura to extract {file.name}")
@@ -430,7 +434,7 @@ async def main():
         await asyncio.sleep(2)
         
         # Process documents after server is running
-        # process_documents()
+        process_documents()
         
         # Keep the main thread alive
         try:

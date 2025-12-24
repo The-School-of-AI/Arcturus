@@ -224,9 +224,9 @@ async def delete_run(run_id: str):
 async def get_rag_documents():
     """List documents in a recursive tree structure with RAG status"""
     try:
-        root = Path(__file__).parent / "mcp_servers"
-        doc_path = root / "documents"
-        cache_file = root / "faiss_index" / "doc_index_cache.json"
+        root = Path(__file__).parent
+        doc_path = root / "data"
+        cache_file = root / "mcp_servers" / "faiss_index" / "doc_index_cache.json"
         
         # Load cache for status
         cache_meta = {}
@@ -268,7 +268,7 @@ async def get_rag_documents():
 async def create_rag_folder(folder_path: str):
     """Create a new folder in RAG documents"""
     try:
-        root = Path(__file__).parent / "mcp_servers" / "documents"
+        root = Path(__file__).parent / "data"
         # Sanitize path to prevent breaking out of documents dir
         safe_path = Path(folder_path).name
         target_path = root / safe_path
@@ -290,7 +290,7 @@ async def upload_rag_file(
 ):
     """Upload a file to RAG documents"""
     try:
-        root = Path(__file__).parent / "mcp_servers" / "documents"
+        root = Path(__file__).parent / "data"
         # Sanitize target directory
         target_dir = root
         if path:

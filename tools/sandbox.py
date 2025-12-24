@@ -45,7 +45,7 @@ SAFE_BUILTINS = [
 
     # Output and utility
     "print", "locals", "globals", "repr",
-    "Exception", "True", "False", "None"
+    "Exception", "True", "False", "None", "open"
 ]
 
 MAX_FUNCTIONS = 20
@@ -102,6 +102,9 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None, session_id: str = None) 
 
     if session_id:
         safe_globals.update(load_session_vars(session_id))
+        
+    # Inject DATA_DIR so agents know where to look
+    safe_globals["DATA_DIR"] = str(Path(__file__).parent.parent / "data")
 
     if multi_mcp:
         async def parallel(*tool_calls):
