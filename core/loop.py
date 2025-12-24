@@ -23,7 +23,7 @@ class AgentLoop4:
         if self.context:
             self.context.stop()
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None):
         # 🟢 PHASE 0: BOOTSTRAP CONTEXT (Immediate VS Code feedback)
         # We create a temporary graph with just a "Query" node (running Planner) so the UI sees meaningful start
         bootstrap_graph = {
@@ -50,6 +50,7 @@ class AgentLoop4:
                 original_query=query,
                 file_manifest=file_manifest
             )
+            self.context.memory_context = memory_context # Store for retrieval
             # Inject multi_mcp immediately
             self.context.multi_mcp = self.multi_mcp
             self.context.plan_graph.graph['globals_schema'].update(globals_schema)
@@ -279,7 +280,8 @@ class AgentLoop4:
                     "session_context": {
                         "session_id": context.plan_graph.graph['session_id'],
                         "created_at": context.plan_graph.graph['created_at'],
-                        "file_manifest": context.plan_graph.graph['file_manifest']
+                        "file_manifest": context.plan_graph.graph['file_manifest'],
+                        "memory_context": getattr(context, 'memory_context', None) # Inject Memory
                     },
                     **({"previous_output": previous_output} if previous_output else {}),
                     **({"iteration_context": iteration_context} if iteration_context else {})

@@ -17,7 +17,7 @@ class MemoryStore:
                 config["db_path"] = local_path
             
             self.m = Memory(config=config) if config else Memory()
-            print(f"[green]🧠 Mem0 initialized for user: {user_id}[/green]")
+            print(f"[green] Mem0 initialized for user: {user_id}[/green]")
         else:
             self.m = None
 

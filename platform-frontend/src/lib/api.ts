@@ -56,5 +56,10 @@ export const api = {
     // Delete run
     deleteRun: async (runId: string): Promise<void> => {
         await axios.delete(`${API_BASE}/runs/${runId}`);
-    }
+    },
+
+    // Generic access for Extensions
+    get: axios.get,
+    post: axios.post,
+    delete: axios.delete
 };

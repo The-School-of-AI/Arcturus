@@ -1,0 +1,20 @@
+[
+  {
+    "id": "57d9904c-c537-4458-a41a-fb787846b86f",
+    "text": "I live in Bangalore, India",
+    "category": "general",
+    "created_at": "2025-12-24T16:43:20.744598",
+    "updated_at": "2025-12-24T16:43:20.744618",
+    "source": "manual",
+    "faiss_id": 0
+  },
+  {
+    "id": "3f94b098-072b-4e01-b474-9b03110378ef",
+    "text": "I teach AI, LLM, AgenticAI at my own school called \"The School of AI\"",
+    "category": "general",
+    "created_at": "2025-12-24T16:43:52.352070",
+    "updated_at": "2025-12-24T16:43:52.352089",
+    "source": "manual",
+    "faiss_id": 1
+  }
+]

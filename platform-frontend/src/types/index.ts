@@ -55,10 +55,19 @@ export interface Snapshot {
 export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant' | 'system';
-    content: string;
+    content: string | any; // Supports mixed content (thinking)
     timestamp: number;
 }
 
+export interface Memory {
+    id: string;
+    text: string;
+    category: string;
+    created_at: string;
+    updated_at: string;
+    source: string;
+    faiss_id?: number;
+}
 export interface RAGDocument {
     id: string;
     title: string;

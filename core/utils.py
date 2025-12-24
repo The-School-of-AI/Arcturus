@@ -69,7 +69,7 @@ def render_graph(graph, depth=1):
         text = str(text)
         return text if len(text) <= limit else text[:limit] + "..."
 
-    print("\n[bold yellow]🧠 Agent Step Graph (Depth {})[/bold yellow]".format(depth))
+    print("\n[bold yellow] Agent Step Graph (Depth {})[/bold yellow]".format(depth))
 
     table = Table(show_header=True, header_style="bold magenta", box=None)
     table.add_column("Step ID", style="cyan", no_wrap=True)
@@ -116,7 +116,7 @@ def render_graph(graph, depth=1):
                 summary += f" ⚠️ {truncate(error)}"
             if perception:
                 p = perception
-                status_txt = f"🧠 goal={p.get('original_goal_achieved', False)} | summary={truncate(p.get('solution_summary', ''))}"
+                status_txt = f" goal={p.get('original_goal_achieved', False)} | summary={truncate(p.get('solution_summary', ''))}"
                 summary += f" ({status_txt})"
             table.add_row(str(node_id), str(tipo), str(status), truncate(summary))
 

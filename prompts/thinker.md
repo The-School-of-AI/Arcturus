@@ -30,7 +30,7 @@ You may receive:
 
 ---
 
-## 🧠 YOUR TASK
+##  YOUR TASK
 
 Given your input(s), produce one or more of the following:
 

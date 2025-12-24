@@ -7,6 +7,7 @@ import type {
     Snapshot,
     RAGDocument,
     ChatMessage,
+    Memory,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
 import { api } from '../lib/api';
@@ -70,8 +71,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag';
     setViewMode: (mode: 'graph' | 'rag') => void;
-    sidebarTab: 'runs' | 'rag' | 'mcp';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp') => void;
+    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme') => void;
     openDocuments: RAGDocument[];
     activeDocumentId: string | null;
     openDocument: (doc: RAGDocument) => void;
@@ -91,9 +92,16 @@ interface RagViewerSlice {
     clearSelectedContexts: () => void;
 }
 
+interface RemmeSlice {
+    memories: Memory[];
+    setMemories: (memories: Memory[]) => void;
+    fetchMemories: () => Promise<void>;
+    addMemory: (text: string, category?: string) => Promise<void>;
+    deleteMemory: (id: string) => Promise<void>;
+}
 // --- Store Creation ---
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -338,6 +346,34 @@ export const useAppStore = create<AppState>()(
                 selectedContexts: state.selectedContexts.filter((_, i) => i !== index)
             })),
             clearSelectedContexts: () => set({ selectedContexts: [] }),
+
+            // --- Remme Slice ---
+            memories: [],
+            setMemories: (memories) => set({ memories }),
+            fetchMemories: async () => {
+                try {
+                    const res = await api.get('http://localhost:8000/remme/memories');
+                    set({ memories: res.data.memories });
+                } catch (e) {
+                    console.error("Failed to fetch memories", e);
+                }
+            },
+            addMemory: async (text, category = "general") => {
+                try {
+                    await api.post('http://localhost:8000/remme/add', { text, category });
+                    get().fetchMemories();
+                } catch (e) {
+                    console.error("Failed to add memory", e);
+                }
+            },
+            deleteMemory: async (id) => {
+                try {
+                    await api.delete(`http://localhost:8000/remme/memories/${id}`);
+                    get().fetchMemories();
+                } catch (e) {
+                    console.error("Failed to delete memory", e);
+                }
+            },
         }),
         {
             name: 'agent-platform-storage',

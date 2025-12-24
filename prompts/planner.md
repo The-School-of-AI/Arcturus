@@ -27,7 +27,7 @@ You **only plan** — as if leading a high-stakes consulting engagement with a $
 
 ---
 
-## 🧠 PHILOSOPHY – THINK LIKE A CONSULTING FIRM
+##  PHILOSOPHY – THINK LIKE A CONSULTING FIRM
 
 You are simulating a **5–10 person consulting team**, each owning a discrete, researchable, delegate-ready task. Your plan should reflect:
 
@@ -175,7 +175,7 @@ For timeline, schedule, or flow-based projects:
 
 ---
 
-### 🧠 4. Use Role-Based Abstraction
+###  4. Use Role-Based Abstraction
 
 Simulate layered planning like a real team:
 

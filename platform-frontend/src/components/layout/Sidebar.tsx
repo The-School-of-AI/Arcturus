@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Clock, Search, Trash2, Database, Box, PlayCircle } from 'lucide-react';
+import { Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
+
+import { RemmePanel } from '@/components/sidebar/RemmePanel';
 
 export const Sidebar: React.FC = () => {
     const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
@@ -142,6 +144,7 @@ export const Sidebar: React.FC = () => {
                 )}
                 {sidebarTab === 'rag' && <RagPanel />}
                 {sidebarTab === 'mcp' && <McpPanel />}
+                {sidebarTab === 'remme' && <RemmePanel />}
             </div>
 
             {/* Bottom Tab Bar */}
@@ -175,6 +178,16 @@ export const Sidebar: React.FC = () => {
                 >
                     <Box className="w-4 h-4" />
                     <span className="text-[10px] font-medium">MCP</span>
+                </button>
+                <button
+                    onClick={() => setSidebarTab('remme')}
+                    className={cn(
+                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
+                        sidebarTab === 'remme' ? "text-primary" : "text-muted-foreground"
+                    )}
+                >
+                    <Brain className="w-4 h-4" />
+                    <span className="text-[10px] font-medium">Memory</span>
                 </button>
             </div>
         </div>
