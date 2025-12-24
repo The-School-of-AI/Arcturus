@@ -61,6 +61,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                             Global prompts editing coming soon...
                         </div>
                     </div>
+
+
                 </div>
 
                 <div className="p-4 bg-charcoal-900/50 border-t border-white/5 flex justify-end">

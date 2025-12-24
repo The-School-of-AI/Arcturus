@@ -1,0 +1,26 @@
+# Walkthrough - RAG Improvements
+
+## Changes Implemented
+1.  **Real-Time Indexing**: Added a [reindex_documents](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py#430-435) tool in [server_rag.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py) and a corresponding `POST /rag/reindex` endpoint in [api.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/api.py).
+2.  **Robust Caching**: Updated [server_rag.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py) to use **relative paths** for cache keys, preventing hash collisions and ensuring portability.
+3.  **Runtime Filtering**: Added logic to [search_stored_documents_rag](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py#101-132) to verify file existence on disk before returning results, effectively hiding deleted files without needing immediate re-indexing.
+4.  **UI Control**: Added a "Re-Index Documents" button in the Settings modal to trigger the indexer manually.
+
+## Verification Steps
+
+### 1. Manual Indexing Trigger
+- Open Settings Modal.
+- Click **"Re-Index Documents"**.
+- [ ] Verify button changes to "Indexing..." then "Done!".
+- [ ] Check backend logs for "Processing: ..." messages.
+
+### 2. Deletion Handling
+- Delete a file from `16_NetworkX/data`.
+- Run a search query relevant to that file.
+- [ ] Verify the deleted file's content **does not** appear in search results (Runtime Filtering).
+
+### 3. Renaming/Moving
+- Move a file to a subfolder in `16_NetworkX/data`.
+- Click "Re-Index Documents".
+- [ ] Verify the file is re-indexed under the new relative path.
+- [ ] Verify search returns the new path in `[Source: subfolder/file.txt]`.

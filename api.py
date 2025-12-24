@@ -243,9 +243,10 @@ async def get_rag_documents():
                 if p.name.startswith('.') or p.name == "__pycache__":
                     continue
                 
+                rel_p = p.relative_to(doc_path).as_posix()
                 item = {
                     "name": p.name,
-                    "path": str(p.relative_to(doc_path)),
+                    "path": rel_p,
                     "type": "folder" if p.is_dir() else p.suffix.lower().replace('.', ''),
                 }
                 
@@ -253,8 +254,8 @@ async def get_rag_documents():
                     item["children"] = build_tree(p)
                 else:
                     item["size"] = p.stat().st_size
-                    item["indexed"] = p.name in cache_meta
-                    item["hash"] = cache_meta.get(p.name, "Not Indexed")
+                    item["indexed"] = rel_p in cache_meta
+                    item["hash"] = cache_meta.get(rel_p, "Not Indexed")
                 
                 items.append(item)
             return items
@@ -300,15 +301,26 @@ async def upload_rag_file(
             
         target_dir.mkdir(parents=True, exist_ok=True)
         
-        file_path = target_dir / file.filename
+        file_location = target_dir / file.filename
+        content = await file.read()
         
-        with open(file_path, "wb") as f:
-            content = await file.read()
+        with open(file_location, "wb") as f:
             f.write(content)
             
-        return {"status": "success", "file": file.filename}
+        return {"status": "success", "filename": file.filename, "path": str(file_location.relative_to(root))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/rag/reindex")
+async def reindex_rag_documents(path: str = None):
+    """Trigger re-indexing of documents via RAG MCP tool"""
+    try:
+        # Pass the path to the tool if provided
+        args = {"target_path": path} if path else {}
+        result = await multi_mcp.call_tool("rag", "reindex_documents", args)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to trigger reindex: {str(e)}")
 
 @app.get("/mcp/tools")
 async def get_mcp_tools():

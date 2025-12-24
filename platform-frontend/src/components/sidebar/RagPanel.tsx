@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, GripHorizontal } from 'lucide-react';
+import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, GripHorizontal, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,12 @@ const FileTree: React.FC<{
     level: number;
     onSelect: (item: RagItem) => void;
     selectedPath: string | undefined;
-}> = ({ item, level, onSelect, selectedPath }) => {
+    onIndexFile: (path: string) => void;
+    indexingPath: string | null;
+}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isFolder = item.type === 'folder';
+    const isIndexingNow = indexingPath === item.path;
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -35,6 +38,11 @@ const FileTree: React.FC<{
         } else {
             onSelect(item);
         }
+    };
+
+    const handleIndexClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onIndexFile(item.path);
     };
 
     const getIcon = () => {
@@ -56,7 +64,7 @@ const FileTree: React.FC<{
         <div>
             <div
                 className={cn(
-                    "flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer select-none transition-colors",
+                    "group flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer select-none transition-colors",
                     selectedPath === item.path ? "bg-primary/20 text-white" : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
@@ -64,13 +72,23 @@ const FileTree: React.FC<{
                 onClick={handleClick}
             >
                 {getIcon()}
-                <span className="truncate text-sm">{item.name}</span>
+                <span className="truncate text-sm flex-1">{item.name}</span>
                 {!isFolder && (
-                    item.indexed ? (
-                        <CheckCircle className="w-3 h-3 text-green-500 ml-auto" />
-                    ) : (
-                        <div className="w-2 h-2 rounded-full bg-yellow-500/50 ml-auto" />
-                    )
+                    <div className="flex items-center gap-2">
+                        {isIndexingNow ? (
+                            <RefreshCw className="w-3 h-3 text-yellow-500 animate-spin" />
+                        ) : item.indexed ? (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                        ) : (
+                            <button
+                                onClick={handleIndexClick}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-yellow-500/20 rounded transition-all text-yellow-500"
+                                title="Index Now"
+                            >
+                                <Zap className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
             {isOpen && item.children && (
@@ -82,6 +100,8 @@ const FileTree: React.FC<{
                             level={level + 1}
                             onSelect={onSelect}
                             selectedPath={selectedPath}
+                            onIndexFile={onIndexFile}
+                            indexingPath={indexingPath}
                         />
                     ))}
                 </div>
@@ -100,6 +120,11 @@ export const RagPanel: React.FC = () => {
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
 
+    // Indexing State
+    const [indexing, setIndexing] = useState(false);
+    const [indexingPath, setIndexingPath] = useState<string | null>(null);
+    const [indexStatus, setIndexStatus] = useState<string | null>(null);
+
     // Upload State
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -108,10 +133,54 @@ export const RagPanel: React.FC = () => {
         try {
             const res = await axios.get(`${API_BASE}/rag/documents`);
             setFiles(res.data.files);
+
+            // If the selected file was just indexed, update its local state too if we find it in the refreshed list
+            if (selectedFile) {
+                const findFile = (items: RagItem[]): RagItem | null => {
+                    for (const f of items) {
+                        if (f.path === selectedFile.path) return f;
+                        if (f.children) {
+                            const found = findFile(f.children);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const updated = findFile(res.data.files);
+                if (updated) setSelectedFile(updated);
+            }
         } catch (e) {
             console.error("Failed to fetch RAG docs", e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleReindex = async (path: string | null = null) => {
+        if (path) setIndexingPath(path);
+        else setIndexing(true);
+
+        setIndexStatus(path ? `Indexing ${path.split('/').pop()}...` : "Re-scanning all files...");
+
+        try {
+            const res = await axios.post(`${API_BASE}/rag/reindex`, null, {
+                params: path ? { path } : {}
+            });
+
+            if (res.data.status === 'success') {
+                setIndexStatus(path ? "Indexed!" : "Full Index Updated!");
+                fetchFiles();
+                setTimeout(() => setIndexStatus(null), 3000);
+            } else {
+                setIndexStatus("Process failed");
+                setTimeout(() => setIndexStatus(null), 3000);
+            }
+        } catch (e) {
+            setIndexStatus("Indexing failed");
+            setTimeout(() => setIndexStatus(null), 3000);
+        } finally {
+            setIndexing(false);
+            setIndexingPath(null);
         }
     };
 
@@ -235,11 +304,25 @@ export const RagPanel: React.FC = () => {
                             onChange={handleFileChange}
                         />
 
+                        <button
+                            onClick={() => handleReindex()}
+                            disabled={indexing}
+                            className={cn("p-1 text-muted-foreground hover:text-yellow-400 transition-colors", indexing && "animate-pulse text-yellow-500")}
+                            title="Index All Documents"
+                        >
+                            <Zap className="w-3.5 h-3.5" />
+                        </button>
+
                         <button onClick={fetchFiles} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Refresh">
                             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
                         </button>
                     </div>
                 </div>
+                {indexStatus && (
+                    <div className="bg-yellow-500/10 text-yellow-400 text-[10px] px-3 py-1 text-center font-medium border-b border-yellow-500/20">
+                        {indexStatus}
+                    </div>
+                )}
                 <div className="flex-1 overflow-y-auto py-2">
                     {files.map((file) => (
                         <FileTree
@@ -248,6 +331,8 @@ export const RagPanel: React.FC = () => {
                             level={0}
                             onSelect={setSelectedFile}
                             selectedPath={selectedFile?.path}
+                            onIndexFile={(path) => handleReindex(path)}
+                            indexingPath={indexingPath}
                         />
                     ))}
                     {files.length === 0 && !loading && (
@@ -268,45 +353,68 @@ export const RagPanel: React.FC = () => {
 
             {/* Bottom Panel: Details */}
             <div style={{ height: `${100 - splitRatio}%` }} className="bg-charcoal-900/30 p-4 space-y-4 overflow-y-auto min-h-0">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Index Status</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                    {selectedFile?.type === 'folder' ? 'Folder Details' : 'Index Status'}
+                </h3>
 
                 {selectedFile ? (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase text-muted-foreground font-semibold">Filename</label>
+                            <label className="text-[10px] uppercase text-muted-foreground font-semibold">Name</label>
                             <div className="text-sm font-mono text-white break-all">{selectedFile.name}</div>
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-[10px] uppercase text-muted-foreground font-semibold">Status</label>
-                            <div className="flex items-center gap-2">
-                                {selectedFile.indexed ? (
-                                    <>
-                                        <CheckCircle className="w-4 h-4 text-green-500" />
-                                        <span className="text-green-400 text-xs font-medium">Indexed & Ready</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <AlertCircle className="w-4 h-4 text-yellow-500" />
-                                        <span className="text-yellow-400 text-xs font-medium">Pending Indexing</span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+                        {selectedFile.type !== 'folder' && (
+                            <>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] uppercase text-muted-foreground font-semibold">Status</label>
+                                    <div className="flex items-center gap-2">
+                                        {selectedFile.indexed ? (
+                                            <>
+                                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                                <span className="text-green-400 text-xs font-medium">Indexed & Ready</span>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col gap-2 w-full">
+                                                <div className="flex items-center gap-2">
+                                                    <AlertCircle className="w-4 h-4 text-yellow-500" />
+                                                    <span className="text-yellow-400 text-xs font-medium">Pending Indexing</span>
+                                                </div>
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    className="h-7 text-[10px] w-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/20"
+                                                    onClick={() => handleReindex(selectedFile.path)}
+                                                    disabled={indexingPath === selectedFile.path}
+                                                >
+                                                    {indexingPath === selectedFile.path ? 'Indexing...' : 'Index Now'}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
-                        <div className="space-y-1">
-                            <label className="text-[10px] uppercase text-muted-foreground font-semibold">Content Hash</label>
-                            <div className="text-[10px] font-mono text-muted-foreground bg-black/20 p-2 rounded border border-white/5 break-all">
-                                {selectedFile.hash}
-                            </div>
-                        </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] uppercase text-muted-foreground font-semibold">Content Hash</label>
+                                    <div className="text-[10px] font-mono text-muted-foreground bg-black/20 p-2 rounded border border-white/5 break-all">
+                                        {selectedFile.hash || 'N/A'}
+                                    </div>
+                                </div>
 
-                        <div className="space-y-1">
-                            <label className="text-[10px] uppercase text-muted-foreground font-semibold">File Size</label>
-                            <div className="text-xs text-muted-foreground">
-                                {selectedFile.size ? (selectedFile.size / 1024).toFixed(2) : 0} KB
+                                <div className="space-y-1">
+                                    <label className="text-[10px] uppercase text-muted-foreground font-semibold">File Size</label>
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedFile.size ? (selectedFile.size / 1024).toFixed(2) : 0} KB
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {selectedFile.type === 'folder' && (
+                            <div className="text-[10px] text-muted-foreground italic">
+                                This is a container. Files within this folder are indexed individually.
                             </div>
-                        </div>
+                        )}
                     </div>
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2">
