@@ -175,7 +175,8 @@ export const useAppStore = create<AppState>()(
             startPolling: (runId) => {
                 const interval = setInterval(async () => {
                     await get().refreshCurrentRun();
-                    // Check if completed? (Optimization later)
+                    // Also refresh the sidebar list to update statuses
+                    await get().fetchRuns();
                 }, 2000);
                 set({ pollingInterval: interval });
             },
