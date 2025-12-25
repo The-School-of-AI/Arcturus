@@ -83,7 +83,7 @@ const FlowWorkspaceInner: React.FC = () => {
     const [visibleNodeIds, setVisibleNodeIds] = useState<Set<string>>(new Set());
     const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
-    const { fitView } = useReactFlow();
+    const { fitView, setCenter } = useReactFlow();
 
     // Sync state when flowData changes
     useEffect(() => {
@@ -123,7 +123,7 @@ const FlowWorkspaceInner: React.FC = () => {
     const advanceSequence = useCallback(() => {
         const nextNodeIds = new Set<string>(Array.from(visibleNodeIds));
         let added = false;
-        let lastTargetId = null;
+        let lastTargetId: string | null = null;
 
         edges.forEach((edge) => {
             if (visibleNodeIds.has(edge.source) && !nextNodeIds.has(edge.target)) {
@@ -135,9 +135,19 @@ const FlowWorkspaceInner: React.FC = () => {
 
         if (added) {
             setVisibleNodeIds(nextNodeIds);
-            if (lastTargetId) setActiveNodeId(lastTargetId);
+            if (lastTargetId) {
+                setActiveNodeId(lastTargetId);
+                const targetNode = nodes.find(n => n.id === lastTargetId);
+                if (targetNode) {
+                    setCenter(
+                        targetNode.position.x + nodeWidth / 2,
+                        targetNode.position.y + nodeHeight / 2,
+                        { duration: 800, zoom: 1.0 }
+                    );
+                }
+            }
         }
-    }, [visibleNodeIds, edges]);
+    }, [visibleNodeIds, edges, nodes, setCenter]);
 
     const displayNodes = useMemo(() => {
         return nodes.map((node) => {
