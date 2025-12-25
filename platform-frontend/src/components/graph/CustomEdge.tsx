@@ -12,6 +12,7 @@ const CustomEdge = ({
     targetPosition,
     style = {},
     markerEnd,
+    label,
     selected,
 }: EdgeProps) => {
     // Use SmoothStep for orthogonal (90° turn) edges
@@ -38,24 +39,30 @@ const CustomEdge = ({
                 style={{
                     ...style,
                     strokeWidth: selected ? 2 : 1.5,
-                    stroke: '#888888',  // Consistent gray color
-                    strokeDasharray: 'none',  // Ensure solid line
                 }}
             />
             <EdgeLabelRenderer>
                 <div
                     style={{
                         position: 'absolute',
-                        transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+                        transform: `translate(-50%, -30%) translate(${labelX}px,${labelY}px)`,
                         pointerEvents: 'all',
                     }}
-                    className="nodrag nopan opacity-0 hover:opacity-100 transition-opacity"
+                    className="flex flex-col items-center gap-1"
                 >
+                    {/* Render Edge Label if present */}
+                    {label && (
+                        <div className="bg-charcoal-900 text-white text-[10px] font-medium px-2 py-1 rounded border border-white/10 shadow-lg hover:border-neon-yellow/50 transition-colors">
+                            {label}
+                        </div>
+                    )}
+
+                    {/* Tiny Plus Button for inserts (hidden unless hovered) */}
                     <button
-                        className="w-5 h-5 bg-charcoal-900 border border-neon-yellow text-neon-yellow rounded-full flex items-center justify-center hover:bg-neon-yellow hover:text-charcoal-900 transition-colors shadow-lg shadow-neon-yellow/20"
+                        className="w-4 h-4 bg-charcoal-800 border border-white/20 text-white/50 rounded-full flex items-center justify-center hover:bg-neon-yellow hover:text-charcoal-900 hover:scale-110 transition-all opacity-0 hover:opacity-100"
                         onClick={onEdgeClick}
                     >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-2.5 h-2.5" />
                     </button>
                 </div>
             </EdgeLabelRenderer>

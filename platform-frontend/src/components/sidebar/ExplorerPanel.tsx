@@ -368,6 +368,13 @@ export const ExplorerPanel: React.FC = () => {
                     </Button>
                 </div>
             )}
+            {/* Credits Footer */}
+            <div className="p-3 text-center border-t border-white/5 bg-charcoal-950">
+                <p className="text-[10px] text-gray-600">
+                    Inspired by <a href="https://github.com/KalaINC/flowstep" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-neon-yellow transition-colors underline decoration-dotted">flowstep</a>
+                </p>
+            </div>
+
 
             <FileSelectionModal
                 isOpen={showSelectionModal}

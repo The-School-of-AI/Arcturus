@@ -11,6 +11,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useAppStore } from '@/store';
 import FlowStepNode from '../graph/FlowStepNode';
+import CustomEdge from '../graph/CustomEdge'; // Import Custom Edge
 import { Button } from '@/components/ui/button';
 import { Play, RotateCcw, ChevronRight, Layout, ListOrdered, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,8 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
     });
 
     edges.forEach((edge) => {
+        // Force type to custom to ensure labels render
+        edge.type = 'custom';
         dagreGraph.setEdge(edge.source, edge.target);
     });
 
@@ -62,6 +65,11 @@ const FlowWorkspaceInner: React.FC = () => {
     const nodeTypes = useMemo(() => ({
         custom: FlowStepNode,
         agent: FlowStepNode
+    }), []);
+
+    const edgeTypes = useMemo(() => ({
+        custom: CustomEdge,
+        smoothstep: CustomEdge // fallback
     }), []);
 
     // Initial State from flowData
@@ -285,6 +293,7 @@ const FlowWorkspaceInner: React.FC = () => {
                 onEdgesChange={onEdgesChange}
                 onNodeClick={onNodeClick}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 fitView
                 snapToGrid
                 snapGrid={[15, 15]}

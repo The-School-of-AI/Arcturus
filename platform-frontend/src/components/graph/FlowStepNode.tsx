@@ -60,11 +60,9 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
                 selected && !isHighlighted && "border-neon-yellow/50 ring-2 ring-neon-yellow/10"
             )}
         >
-            {/* Handles for all 4 directions */}
-            <DualHandle pos={Position.Top} type="both" />
-            <DualHandle pos={Position.Left} type="both" />
-            <DualHandle pos={Position.Right} type="both" />
-            <DualHandle pos={Position.Bottom} type="both" />
+            {/* Handles - Top (Target/Input) and Bottom (Source/Output) only */}
+            <DualHandle pos={Position.Top} type="target" />
+            <DualHandle pos={Position.Bottom} type="source" />
 
             {/* Glowing Accent for Highlighted nodes */}
             {isHighlighted && (
