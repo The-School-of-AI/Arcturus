@@ -4,6 +4,7 @@ import { useAppStore } from '@/store';
 import { FileCode, Folder, ChevronRight, ChevronDown, Play, Code2, Globe, Trash2, X, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { FileSelectionModal } from './FileSelectionModal';
 
 interface FileNode {
     name: string;
@@ -21,6 +22,9 @@ export const ExplorerPanel: React.FC = () => {
     } = useAppStore();
     const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
     const [connectInput, setConnectInput] = useState('');
+    const [scannedFiles, setScannedFiles] = useState<any[]>([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [showSelectionModal, setShowSelectionModal] = useState(false);
 
     const toggleFolder = (path: string) => {
         setIsExpanded(prev => ({ ...prev, [path]: !prev[path] }));
@@ -78,12 +82,12 @@ export const ExplorerPanel: React.FC = () => {
             } else {
                 const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(path)}`);
                 const { files, root_path, error } = res.data;
-                
+
                 if (error) {
                     alert(`Path not found: ${root_path}`);
                     return;
                 }
-                
+
                 setExplorerFiles(files);
                 setExplorerRootPath(root_path);
                 addToHistory({ name: root_path.split('/').pop() || root_path, path: root_path, type: 'local' });
@@ -105,7 +109,7 @@ export const ExplorerPanel: React.FC = () => {
             setExplorerFiles([]);
             return;
         }
-        
+
         setExplorerRootPath(item.path);
         if (item.flowData) {
             setFlowData(item.flowData);
@@ -115,7 +119,7 @@ export const ExplorerPanel: React.FC = () => {
             try {
                 const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(item.path)}`);
                 const { files, root_path, error } = res.data;
-                
+
                 if (error) {
                     const shouldRemove = window.confirm(
                         `Path no longer exists: ${item.path}\n\nDo you want to remove it from history?`
@@ -127,7 +131,7 @@ export const ExplorerPanel: React.FC = () => {
                     setExplorerFiles([]);
                     return;
                 }
-                
+
                 setExplorerFiles(files || []);
                 if (root_path && root_path !== item.path) {
                     useAppStore.getState().updateHistoryItem(item.path, { path: root_path, name: root_path.split('/').pop() || item.name });
@@ -141,19 +145,19 @@ export const ExplorerPanel: React.FC = () => {
         }
     };
 
-    const handleAnalyze = async () => {
-        if (!explorerRootPath) return;
-        
+    const performAnalysis = async (selectedFiles: string[] | null) => {
         setIsAnalyzing(true);
         try {
-            const isGithub = explorerRootPath.startsWith('http');
+            const isGithub = explorerRootPath!.startsWith('http');
             const res = await axios.post('http://localhost:8000/explorer/analyze', {
                 path: explorerRootPath,
-                type: isGithub ? 'github' : 'local'
+                type: isGithub ? 'github' : 'local',
+                files: selectedFiles
             });
+
             if (res.data.success) {
                 const flow_data = res.data.flow_data;
-                const root_path = res.data.root_path;
+                const root_path = res.data.root_path; // Get the absolute path
                 setFlowData(flow_data);
                 setExplorerRootPath(root_path);
                 useAppStore.getState().updateHistoryItem(explorerRootPath || '', { flowData: flow_data, path: root_path });
@@ -177,6 +181,45 @@ export const ExplorerPanel: React.FC = () => {
             alert("Analysis failed: " + detail);
         } finally {
             setIsAnalyzing(false);
+        }
+    };
+
+    const handleAnalyze = async () => {
+        if (!explorerRootPath) return;
+
+        // Check if this is a browser-picked folder (no absolute path)
+        const isAbsolutePath = explorerRootPath.startsWith('/') || explorerRootPath.includes(':\\') || explorerRootPath.startsWith('http');
+        if (!isAbsolutePath) {
+            alert(
+                `Cannot analyze "${explorerRootPath}".\n\n` +
+                `Browser-selected folders don't provide the full path needed for analysis.\n\n` +
+                `To analyze this folder, please use "Connect Repository" and enter the absolute path ` +
+                `(e.g., /Users/yourname/path/to/${explorerRootPath})`
+            );
+            return;
+        }
+
+        // 1. SCAN PROJECT
+        setIsScanning(true);
+        try {
+            const isGithub = explorerRootPath.startsWith('http');
+            if (isGithub) {
+                // For GitHub, we still do the old immediate analysis for now (or implement remote scan later)
+                // Fallback to legacy behavior for GitHub to keep it working
+                await performAnalysis(null);
+            } else {
+                // Local: Scan first
+                const res = await axios.get(`http://localhost:8000/explorer/scan?path=${encodeURIComponent(explorerRootPath)}`);
+                if (res.data.success) {
+                    setScannedFiles(res.data.scan.files);
+                    setShowSelectionModal(true);
+                }
+            }
+        } catch (err: any) {
+            console.error("Scan failed:", err);
+            alert("Scan failed: " + (err.response?.data?.detail || err.message));
+        } finally {
+            setIsScanning(false);
         }
     };
 
@@ -262,7 +305,7 @@ export const ExplorerPanel: React.FC = () => {
                         </div>
                     </div>
                 )}
-                
+
                 {/* CONNECT INPUT - Show when no project is selected */}
                 <div className="flex-1 min-h-0">
                     {explorerRootPath ? null : (
@@ -300,12 +343,12 @@ export const ExplorerPanel: React.FC = () => {
             {explorerRootPath && (
                 <div className="p-4 border-t border-white/10 bg-charcoal-900 z-20">
                     <Button
-                        disabled={isAnalyzing}
+                        disabled={isAnalyzing || isScanning}
                         onClick={handleAnalyze}
                         className={cn(
                             "w-full gap-2 font-black uppercase tracking-[0.15em] text-xs py-6 rounded-xl transition-all",
-                            isAnalyzing 
-                                ? "bg-gray-800 text-gray-500" 
+                            isAnalyzing || isScanning
+                                ? "bg-gray-800 text-gray-500"
                                 : "bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 shadow-[0_0_20px_rgba(234,255,0,0.1)] active:scale-95"
                         )}
                     >
@@ -317,12 +360,24 @@ export const ExplorerPanel: React.FC = () => {
                         ) : (
                             <>
                                 <Play className="w-3.5 h-3.5 fill-current" />
-                                Start Analysis
+                                {isScanning ? "Scanning..." : "Analyze Context"}
                             </>
                         )}
                     </Button>
                 </div>
             )}
+
+            <FileSelectionModal
+                isOpen={showSelectionModal}
+                onClose={() => setShowSelectionModal(false)}
+                onConfirm={(files) => {
+                    setShowSelectionModal(false);
+                    performAnalysis(files);
+                }}
+                files={scannedFiles}
+                rootPath={explorerRootPath || ''}
+            />
         </div>
     );
 };
+
