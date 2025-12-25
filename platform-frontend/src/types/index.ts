@@ -66,6 +66,7 @@ export interface Memory {
     created_at: string;
     updated_at: string;
     source: string;
+    source_exists?: boolean;
     faiss_id?: number;
 }
 export interface RAGDocument {

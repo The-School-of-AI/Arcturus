@@ -98,6 +98,7 @@ interface RemmeSlice {
     fetchMemories: () => Promise<void>;
     addMemory: (text: string, category?: string) => Promise<void>;
     deleteMemory: (id: string) => Promise<void>;
+    cleanupDanglingMemories: () => Promise<void>;
 }
 // --- Store Creation ---
 
@@ -372,6 +373,14 @@ export const useAppStore = create<AppState>()(
                     get().fetchMemories();
                 } catch (e) {
                     console.error("Failed to delete memory", e);
+                }
+            },
+            cleanupDanglingMemories: async () => {
+                try {
+                    await api.post('http://localhost:8000/remme/cleanup_dangling');
+                    get().fetchMemories();
+                } catch (e) {
+                    console.error("Failed to cleanup dangling memories", e);
                 }
             },
         }),
