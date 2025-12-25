@@ -57,6 +57,21 @@ def mcp_log(level: str, message: str) -> None:
     sys.stderr.write(f"{level}: {message}\n")
     sys.stderr.flush()
 
+def get_safe_chunks(text: str, max_words=512, overlap=50) -> list[str]:
+    """Sub-splits a large semantic chunk technically to fit embedding context limits."""
+    words = text.split()
+    if len(words) <= max_words:
+        return [text]
+    
+    sub_chunks = []
+    for i in range(0, len(words), max_words - overlap):
+        chunk = " ".join(words[i : i + max_words])
+        if chunk.strip():
+            sub_chunks.append(chunk)
+        if i + max_words >= len(words):
+            break
+    return sub_chunks
+
 # === CHUNKING ===
 
 
@@ -580,18 +595,24 @@ def process_documents(target_path: str = None):
             embeddings_for_file = []
             new_metadata = []
             desc = f"Embedding {file.name}"
+            
+            # Sub-split technically if LLM chunks are too massive for the embedder
+            final_safe_chunks = []
+            for c in chunks:
+                final_safe_chunks.extend(get_safe_chunks(c))
+
             try:
-                for i, chunk in enumerate(tqdm(chunks, desc=desc)):
+                for i, chunk in enumerate(tqdm(final_safe_chunks, desc=desc)):
                     embedding = get_embedding(chunk)
                     embeddings_for_file.append(embedding)
                     new_metadata.append({
-                        "doc": rel_path, # Store relative path
+                        "doc": rel_path,
                         "chunk": chunk,
                         "chunk_id": f"{rel_path}_{i}"
                     })
             except Exception as e:
                 mcp_log("ERROR", f"Failed to generate embeddings for {file.name}: {e}")
-                continue # Skip this file but proceed with others
+                continue
 
             if embeddings_for_file:
                 if index is None:
