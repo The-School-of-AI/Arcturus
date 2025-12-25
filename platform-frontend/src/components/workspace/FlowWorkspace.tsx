@@ -308,7 +308,7 @@ const FlowWorkspaceInner: React.FC = () => {
             {/* Sequence Tooltip */}
             {mode === 'SEQUENCE' && (
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                    <div className="bg-charcoal-900/90 backdrop-blur px-8 py-4 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-neon-yellow/20 flex items-center gap-4 animate-bounce shrink-0">
+                    <div className="bg-charcoal-900/90 backdrop-blur px-8 py-4 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-neon-yellow/20 flex items-center gap-4 animate-pulse shrink-0">
                         <span className="font-black text-xs uppercase tracking-widest text-neon-yellow">
                             {canGoNext ? "Click 'Next' or a node to follow the logic" : 'End of mapped sequence'}
                         </span>
