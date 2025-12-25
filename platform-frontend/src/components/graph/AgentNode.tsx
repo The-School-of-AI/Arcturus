@@ -45,11 +45,21 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             )}
             onClick={() => selectNode(id)}
         >
-            {/* Input Handle - Top Center */}
+            {/* Handles - All 4 sides for flexible routing */}
             <Handle
                 type="target"
                 position={Position.Top}
-                className="!bg-muted-foreground !w-3 !h-3 !-top-1.5 transition-colors group-hover:!bg-primary"
+                className="!bg-muted-foreground !w-2.5 !h-2.5 !-top-1.5 transition-colors group-hover:!bg-primary"
+            />
+            <Handle
+                type="target"
+                position={Position.Left}
+                className="!bg-muted-foreground !w-2.5 !h-2.5 !-left-1.5 transition-colors group-hover:!bg-primary"
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                className="!bg-muted-foreground !w-2.5 !h-2.5 !-right-1.5 transition-colors group-hover:!bg-primary"
             />
 
             <div className="p-4 flex items-start gap-3">

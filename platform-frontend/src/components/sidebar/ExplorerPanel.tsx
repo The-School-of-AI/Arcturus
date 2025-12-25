@@ -360,7 +360,9 @@ export const ExplorerPanel: React.FC = () => {
                         ) : (
                             <>
                                 <Play className="w-3.5 h-3.5 fill-current" />
-                                {isScanning ? "Scanning..." : "Analyze Context"}
+                                {isScanning ? "Scanning..." : (
+                                    analysisHistory.some(h => h.path === explorerRootPath) ? "Analyze Again" : "Analyze Context"
+                                )}
                             </>
                         )}
                     </Button>

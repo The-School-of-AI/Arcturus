@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
     Background,
     Controls,
-    MiniMap,
     useNodesState,
     useEdgesState,
     MarkerType,
@@ -15,13 +14,55 @@ import FlowStepNode from '../graph/FlowStepNode';
 import { Button } from '@/components/ui/button';
 import { Play, RotateCcw, ChevronRight, Layout, ListOrdered, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import dagre from 'dagre';
 
-const nodeTypes = {
-    custom: FlowStepNode,
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const nodeWidth = 280;
+const nodeHeight = 150;
+
+const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
+    const isHorizontal = direction === 'LR';
+    dagreGraph.setGraph({ rankdir: direction });
+
+    nodes.forEach((node) => {
+        dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    });
+
+    edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    const layoutedNodes = nodes.map((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        return {
+            ...node,
+            type: 'custom', // FORCE to 'custom' to ensure FlowStepNode (Rich UI) is used
+            targetPosition: isHorizontal ? 'left' : 'top',
+            sourcePosition: isHorizontal ? 'right' : 'bottom',
+            // Shift slightly so handles align
+            position: {
+                x: nodeWithPosition.x - nodeWidth / 2,
+                y: nodeWithPosition.y - nodeHeight / 2,
+            },
+        };
+    });
+
+    return { nodes: layoutedNodes, edges };
 };
+
+// NodeTypes moved inside component with useMemo
 
 const FlowWorkspaceInner: React.FC = () => {
     const { flowData } = useAppStore();
+
+    const nodeTypes = useMemo(() => ({
+        custom: FlowStepNode,
+        agent: FlowStepNode
+    }), []);
 
     // Initial State from flowData
     const initialNodes = flowData?.nodes || [];
@@ -39,8 +80,13 @@ const FlowWorkspaceInner: React.FC = () => {
     // Sync state when flowData changes
     useEffect(() => {
         if (flowData) {
-            setNodes(flowData.nodes.map((n: any) => ({ ...n, draggable: true })));
-            setEdges(flowData.edges.map((e: any) => ({ ...e, animated: false })));
+            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+                flowData.nodes.map((n: any) => ({ ...n, draggable: true })),
+                flowData.edges.map((e: any) => ({ ...e, animated: false }))
+            );
+
+            setNodes(layoutedNodes);
+            setEdges(layoutedEdges);
             // Small delay to ensure nodes are rendered before fitting
             setTimeout(() => {
                 fitView({ padding: 0.2, duration: 800 });
@@ -170,9 +216,9 @@ const FlowWorkspaceInner: React.FC = () => {
 
     return (
         <div className="w-full h-full bg-[#050505] relative overflow-hidden">
-            {/* Header Controls */}
-            <div className="absolute top-6 left-6 right-6 z-50 flex justify-between items-start pointer-events-none">
-                <div className="flex flex-col gap-4 pointer-events-auto">
+            {/* Header Controls - Centered at Top to avoid Zoom controls (usually corners) */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex gap-4 items-start pointer-events-none">
+                <div className="flex flex-col gap-4 items-center pointer-events-auto">
                     {/* Mode Toggle */}
                     <div className="bg-charcoal-900/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1">
                         <button
@@ -203,7 +249,7 @@ const FlowWorkspaceInner: React.FC = () => {
 
                     {/* Sequence Controls */}
                     {mode === 'SEQUENCE' && (
-                        <div className="bg-charcoal-900/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1 animate-in slide-in-from-left-4">
+                        <div className="bg-charcoal-900/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1 animate-in slide-in-from-top-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -229,13 +275,6 @@ const FlowWorkspaceInner: React.FC = () => {
                         </div>
                     )}
                 </div>
-
-                <div className="flex gap-2 pointer-events-auto">
-                    <Button variant="outline" className="bg-charcoal-900/50 border-white/5 text-gray-400 hover:text-white hover:border-white/20 gap-2 font-bold text-xs">
-                        <Share2 className="w-3.5 h-3.5" />
-                        Export
-                    </Button>
-                </div>
             </div>
 
             <ReactFlow
@@ -255,11 +294,6 @@ const FlowWorkspaceInner: React.FC = () => {
             >
                 <Background color="#1a1a1a" gap={20} />
                 <Controls className="bg-charcoal-900 border-white/10 fill-white" />
-                <MiniMap
-                    style={{ backgroundColor: '#0a0a0a' }}
-                    nodeColor={(n) => n.data?.isHighlighted ? '#eaff00' : '#262626'}
-                    maskColor="rgba(0, 0, 0, 0.7)"
-                />
             </ReactFlow>
 
             {/* Sequence Tooltip */}
