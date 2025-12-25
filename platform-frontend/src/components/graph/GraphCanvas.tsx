@@ -51,6 +51,7 @@ export const GraphCanvas: React.FC = () => {
     return (
         <div className="w-full h-full">
             <ReactFlow
+                id="main-graph-flow"
                 nodes={visibleNodes}
                 edges={edges}
                 onNodesChange={onNodesChange}

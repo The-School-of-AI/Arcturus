@@ -4,7 +4,10 @@ import { cn } from '@/lib/utils';
 
 export interface FlowStepNodeData {
     label: string;
+    description?: string;
     details?: string[];
+    attributes?: string[];
+    type?: string;
     isHighlighted?: boolean;
     isVisible?: boolean;
 }
@@ -85,6 +88,30 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
                         </div>
                     )}
                 </div>
+
+                {data.description && (
+                    <div className="text-[11px] text-gray-400 font-medium leading-relaxed italic border-l-2 border-white/10 pl-2">
+                        {data.description}
+                    </div>
+                )}
+
+                {data.attributes && data.attributes.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                        {data.attributes.map((attr, idx) => (
+                            <span
+                                key={idx}
+                                className={cn(
+                                    "px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border transition-colors",
+                                    isHighlighted
+                                        ? "bg-neon-yellow/10 border-neon-yellow/30 text-neon-yellow"
+                                        : "bg-white/5 border-white/10 text-gray-500"
+                                )}
+                            >
+                                {attr}
+                            </span>
+                        ))}
+                    </div>
+                )}
 
                 {data.details && data.details.length > 0 && (
                     <div className={cn(

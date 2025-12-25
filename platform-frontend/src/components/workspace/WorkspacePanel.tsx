@@ -131,7 +131,9 @@ export const WorkspacePanel: React.FC = () => {
         return <DocumentAssistant />;
     }
 
-    if (!selectedNodeId) {
+    const effectiveSelectedNodeId = isExplorer ? selectedExplorerNodeId : selectedNodeId;
+
+    if (!effectiveSelectedNodeId) {
         return (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
@@ -198,21 +200,55 @@ export const WorkspacePanel: React.FC = () => {
                         )}
 
                         {/* Logic Steps (for Explorer) */}
-                        {isExplorer && selectedNode?.data.details && (
-                            <div className="space-y-2">
-                                <div className="text-[10px] uppercase text-neon-yellow font-bold tracking-widest pb-1 border-b border-neon-yellow/20">
-                                    Logic Implementation Details
-                                </div>
-                                <ul className="space-y-2 pl-1 select-text">
-                                    {selectedNode.data.details.map((detail: string, idx: number) => (
-                                        <li key={idx} className="flex gap-2 items-start group">
-                                            <div className="mt-1.5 h-1 w-1 rounded-full bg-neon-yellow opacity-40 group-hover:opacity-100 transition-opacity" />
-                                            <span className="text-[11px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
-                                                {detail}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
+                        {isExplorer && selectedNode?.data && (
+                            <div className="space-y-6">
+                                {/* Description */}
+                                {selectedNode.data.description && (
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] uppercase text-neon-yellow/60 font-bold tracking-widest">
+                                            Component Mission
+                                        </div>
+                                        <div className="text-sm text-gray-200 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/5">
+                                            {selectedNode.data.description}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Attributes */}
+                                {selectedNode.data.attributes && selectedNode.data.attributes.length > 0 && (
+                                    <div className="space-y-2">
+                                        <div className="text-[10px] uppercase text-neon-yellow/60 font-bold tracking-widest">
+                                            Technical Attributes
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedNode.data.attributes.map((attr: string, idx: number) => (
+                                                <span key={idx} className="px-2 py-0.5 bg-neon-yellow/10 border border-neon-yellow/20 text-neon-yellow text-[10px] rounded font-bold uppercase tracking-tighter">
+                                                    {attr}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Details */}
+                                {selectedNode.data.details && (
+                                    <div className="space-y-2">
+                                        <div className="text-[10px] uppercase text-neon-yellow font-bold tracking-widest pb-1 border-b border-neon-yellow/20 flex items-center justify-between">
+                                            Implementation Details
+                                            <span className="text-[9px] text-gray-500 font-normal">Internal Logic</span>
+                                        </div>
+                                        <ul className="space-y-2 pl-1 select-text">
+                                            {selectedNode.data.details.map((detail: string, idx: number) => (
+                                                <li key={idx} className="flex gap-2 items-start group">
+                                                    <div className="mt-1.5 h-1 w-1 rounded-full bg-neon-yellow opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                    <span className="text-[11px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
+                                                        {detail}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
 

@@ -108,6 +108,7 @@ interface AnalysisHistoryItem {
     timestamp: number;
     type: 'local' | 'github';
     flowData?: any;
+    cachedFiles?: any[]; // For browser-picked folders (can't reload from API)
 }
 
 interface ExplorerSlice {
@@ -124,6 +125,7 @@ interface ExplorerSlice {
     analysisHistory: AnalysisHistoryItem[];
     addToHistory: (item: Omit<AnalysisHistoryItem, 'id' | 'timestamp'>) => void;
     removeFromHistory: (id: string) => void;
+    updateHistoryItem: (path: string, data: Partial<AnalysisHistoryItem>) => void;
 }
 
 // --- Store Creation ---
@@ -428,10 +430,17 @@ export const useAppStore = create<AppState>()(
                     id: Math.random().toString(36).substr(2, 9),
                     timestamp: Date.now()
                 };
-                return { analysisHistory: [newItem, ...state.analysisHistory].slice(0, 10) }; // Keep last 10
+                // Pre-filter duplicates
+                const filtered = state.analysisHistory.filter(h => h.path !== item.path);
+                return { analysisHistory: [newItem, ...filtered].slice(0, 10) };
             }),
             removeFromHistory: (id) => set((state) => ({
                 analysisHistory: state.analysisHistory.filter(h => h.id !== id)
+            })),
+            updateHistoryItem: (path, data) => set((state) => ({
+                analysisHistory: state.analysisHistory.map(h =>
+                    h.path === path ? { ...h, ...data } : h
+                )
             })),
         }),
         {

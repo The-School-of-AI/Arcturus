@@ -7,6 +7,7 @@ import ReactFlow, {
     useEdgesState,
     MarkerType,
     ReactFlowProvider,
+    useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useAppStore } from '@/store';
@@ -33,13 +34,19 @@ const FlowWorkspaceInner: React.FC = () => {
     const [visibleNodeIds, setVisibleNodeIds] = useState<Set<string>>(new Set());
     const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
+    const { fitView } = useReactFlow();
+
     // Sync state when flowData changes
     useEffect(() => {
         if (flowData) {
             setNodes(flowData.nodes.map((n: any) => ({ ...n, draggable: true })));
             setEdges(flowData.edges.map((e: any) => ({ ...e, animated: false })));
+            // Small delay to ensure nodes are rendered before fitting
+            setTimeout(() => {
+                fitView({ padding: 0.2, duration: 800 });
+            }, 50);
         }
-    }, [flowData, setNodes, setEdges]);
+    }, [flowData, setNodes, setEdges, fitView]);
 
     const initializeSequence = useCallback(() => {
         const firstNode = nodes.find((n) => !edges.some((e) => e.target === n.id)) || nodes[0];
@@ -232,6 +239,7 @@ const FlowWorkspaceInner: React.FC = () => {
             </div>
 
             <ReactFlow
+                id="explorer-flow"
                 nodes={displayNodes}
                 edges={displayEdges}
                 onNodesChange={onNodesChange}
