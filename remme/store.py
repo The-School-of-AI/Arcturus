@@ -87,32 +87,69 @@ class RemmeStore:
         self.save()
         return memory_item
 
-    def search(self, query_vector: np.ndarray, k: int = 5, score_threshold: float = 1.5):
-        """Search memories by vector similarity."""
+    def search(self, query_vector: np.ndarray, query_text: str = None, k: int = 10, score_threshold: float = 1.5):
+        """Search memories by vector similarity with optional keyword boosting."""
         if not self.index or self.index.ntotal == 0:
             return []
             
-        distances, indices = self.index.search(query_vector.reshape(1, -1), k)
+        distances, indices = self.index.search(query_vector.reshape(1, -1), k * 2) # Get more candidates for merging
         
-        results = []
+        # 1. Gather Vector Results
+        vector_results = {}
         for i, idx in enumerate(indices[0]):
             if idx == -1: continue
-            
-            # Find the memory with this FAISS ID
-            # (In a simple append-only structure, index corresponds to list position if no deletions)
-            # However, deletions complicate this. We use the stored faiss_id or just index match if we rebuild on delete.
-            # safe matching:
             memory = next((m for m in self.memories if m.get("faiss_id") == int(idx)), None)
-            
             if memory:
-                # Distance in L2. Lower is better.
-                # Threshold check (heuristic)
-                if distances[0][i] < score_threshold: 
-                    result = memory.copy()
-                    result["score"] = float(distances[0][i])
-                    results.append(result)
+                score = float(distances[0][i])
+                if score < score_threshold:
+                    res = memory.copy()
+                    res["score"] = score
+                    vector_results[memory["id"]] = res
+
+        # 2. Keyword Search & Boosting
+        final_results = []
+        if query_text:
+            import re
+            query_words = set(re.findall(r'\b\w+\b', query_text.lower()))
+            # Expanded stop words for better precision
+            stop_words = {
+                "the", "a", "an", "is", "are", "was", "were", "do", "does", "did", "you", "your", 
+                "have", "has", "had", "any", "about", "of", "our", "to", "what", "we", "in", 
+                "with", "from", "for", "and", "or", "but", "so", "how", "when", "where", "why",
+                "this", "that", "these", "those", "it", "its", "they", "them", "their",
+                "be", "been", "being", "can", "could", "should", "would", "may", "might", "must",
+                "shall", "will", "on", "at", "by", "at", "as", "if"
+            }
+            keywords = query_words - stop_words
+            
+            if keywords:
+                for memory in self.memories:
+                    text_lower = memory["text"].lower()
+                    m_id = memory["id"]
                     
-        return results
+                    # Count whole-word matches only
+                    match_count = 0
+                    for kw in keywords:
+                        if re.search(rf'\b{re.escape(kw)}\b', text_lower):
+                            match_count += 1
+                    
+                    if match_count > 0:
+                        # Success! This memory has a keyword match.
+                        if m_id in vector_results:
+                            # 🚀 BOOST: If found in both, slash the score (lower is better)
+                            boost = 1.0 + (match_count * 0.7) # Slightly stronger boost
+                            vector_results[m_id]["score"] /= (boost * 2.0)
+                            vector_results[m_id]["source"] = f"{vector_results[m_id].get('source', '')} (hybrid_boost)"
+                        else:
+                            # 💡 INJECT: If only found via keyword, add with competitive score
+                            res = memory.copy()
+                            res["score"] = 0.6 / (1.0 + match_count) # Competitive synthetic score
+                            res["source"] = f"{res.get('source', '')} (keyword_only)"
+                            vector_results[m_id] = res
+
+        # 3. Final Sort and Trim
+        final_results = sorted(vector_results.values(), key=lambda x: x["score"])
+        return final_results[:k]
 
     def get_all(self):
         """Return all memories."""

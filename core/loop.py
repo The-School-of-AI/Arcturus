@@ -85,7 +85,8 @@ class AgentLoop4:
                 "planning_strategy": self.strategy,
                 "globals_schema": globals_schema,
                 "file_manifest": file_manifest,
-                "file_profiles": file_profiles
+                "file_profiles": file_profiles,
+                "memory_context": memory_context
             }
         )
 
@@ -267,35 +268,29 @@ class AgentLoop4:
         
         # 🔧 HELPER FUNCTION: Build agent input (consistent for both iterations)
         def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
+            # Base payload for all agents
+            payload = {
+                "step_id": step_id,
+                "agent_prompt": instruction or step_data.get("agent_prompt", step_data["description"]),
+                "reads": step_data.get("reads", []),
+                "writes": step_data.get("writes", []),
+                "inputs": inputs,
+                "original_query": context.plan_graph.graph['original_query'],
+                "session_context": {
+                    "session_id": context.plan_graph.graph['session_id'],
+                    "created_at": context.plan_graph.graph['created_at'],
+                    "file_manifest": context.plan_graph.graph['file_manifest'],
+                    "memory_context": getattr(context, 'memory_context', None) # 🧠 Universal Injection
+                },
+                **({"previous_output": previous_output} if previous_output else {}),
+                **({"iteration_context": iteration_context} if iteration_context else {})
+            }
+            
+            # Formatter-specific additions
             if agent_type == "FormatterAgent":
-                all_globals = context.plan_graph.graph['globals_schema'].copy()
-                return {
-                    "step_id": step_id,
-                    "agent_prompt": instruction or step_data.get("agent_prompt", step_data["description"]),
-                    "reads": step_data.get("reads", []),
-                    "writes": step_data.get("writes", []),
-                    "inputs": inputs,
-                    "all_globals_schema": all_globals,  # ✅ ALWAYS included for FormatterAgent
-                    "original_query": context.plan_graph.graph['original_query'],
-                    "session_context": {
-                        "session_id": context.plan_graph.graph['session_id'],
-                        "created_at": context.plan_graph.graph['created_at'],
-                        "file_manifest": context.plan_graph.graph['file_manifest'],
-                        "memory_context": getattr(context, 'memory_context', None) # Inject Memory
-                    },
-                    **({"previous_output": previous_output} if previous_output else {}),
-                    **({"iteration_context": iteration_context} if iteration_context else {})
-                }
-            else:
-                return {
-                    "step_id": step_id,
-                    "agent_prompt": instruction or step_data.get("agent_prompt", step_data["description"]),
-                    "reads": step_data.get("reads", []),
-                    "writes": step_data.get("writes", []),
-                    "inputs": inputs,
-                    **({"previous_output": previous_output} if previous_output else {}),
-                    **({"iteration_context": iteration_context} if iteration_context else {})
-                }
+                payload["all_globals_schema"] = context.plan_graph.graph['globals_schema'].copy()
+                
+            return payload
 
         # Execute with ReAct Loop (Max 15 turns)
         max_turns = 15

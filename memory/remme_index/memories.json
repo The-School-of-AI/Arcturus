@@ -386,16 +386,26 @@
     "created_at": "2025-12-25T07:33:04.173417",
     "updated_at": "2025-12-25T07:33:04.173431",
     "source": "run_1766628070",
-    "faiss_id": 40,
+    "faiss_id": 38,
     "source_exists": false
   },
   {
-    "id": "d9f707de-54ac-4cde-8d22-ea5ec59d04a5",
-    "text": "User stays in Bangalore",
+    "id": "d542f8f3-cf17-496b-8db9-bbf770562eb7",
+    "text": "The user is located in Bangalore",
     "category": "general",
-    "created_at": "2025-12-25T07:35:29.930839",
-    "updated_at": "2025-12-25T07:35:29.930857",
+    "created_at": "2025-12-25T07:44:41.551609",
+    "updated_at": "2025-12-25T07:44:41.551623",
     "source": "manual",
-    "faiss_id": 41
+    "faiss_id": 39,
+    "source_exists": true
+  },
+  {
+    "id": "1bf4f106-a9c1-42bb-9c21-df6c55007fac",
+    "text": "User Location Determination: Uses RetrieverAgent for identification (IP, GPS, user input), ThinkerAgent for refinement (prioritizing GPS, validating address, resolving conflicts), and FormatterAgent for presentation (HTML report) with confidence score 65 due to discrepancy between user-provided address and IP address. Determined location: [City, State, Country] (placeholder).",
+    "category": "derived",
+    "created_at": "2025-12-25T07:48:59.857073",
+    "updated_at": "2025-12-25T07:48:59.857099",
+    "source": "run_1766628890",
+    "faiss_id": 40
   }
 ]

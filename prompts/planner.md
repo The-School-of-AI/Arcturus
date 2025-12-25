@@ -48,9 +48,14 @@ You receive:
 * `planning_strategy`: "conservative" or "exploratory"
 * `globals_schema`: Known variables and types
 * `file_manifest`: Metadata list of any uploaded files (e.g., filename, type, length, token count)
+* `memory_context`: (Optional) Text containing relevant facts, user preferences, or location info from previous sessions.
 
 You must:
 
+* **First, check `memory_context`**:
+  * If it contains the answer or critical context (e.g., "User is in Bangalore"), **USE IT**.
+  * Do **NOT** create tasks to rediscover known facts.
+  * If the memory answers the query, your plan should just be a FormatterAgent task to present it.
 * Output a full `plan_graph` with:
 
   * `nodes`: Discrete, agent-assigned task objects (ID, description, prompt, IO)

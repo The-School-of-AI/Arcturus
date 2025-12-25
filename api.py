@@ -64,8 +64,8 @@ async def process_run(run_id: str, query: str):
         memory_context = ""
         context = None # Initialize for safe access in finally block
         try:
-            emb = get_embedding(query)
-            results = remme_store.search(emb, k=5)
+            emb = get_embedding(query, task_type="search_query")
+            results = remme_store.search(emb, query_text=query, k=10)
             if results:
                 memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
                 memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
@@ -123,7 +123,13 @@ async def process_run(run_id: str, query: str):
             
             print(f" Remme: Extracting facts from run {run_id}...")
             # Pass existing memories from earlier search to context-aware extractor
-            commands = remme_extractor.extract(query, history, existing_memories=results)
+            # ⚡ RUN IN THREAD TO AVOID BLOCKING EVENT LOOP
+            commands = await asyncio.to_thread(
+                remme_extractor.extract, 
+                query, 
+                history, 
+                existing_memories=results
+            )
             
             if commands:
                 for cmd in commands:
@@ -133,25 +139,27 @@ async def process_run(run_id: str, query: str):
                     
                     try:
                         if action == "add" and text:
-                            emb = get_embedding(text)
+                            emb = get_embedding(text, task_type="search_document")
                             remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
-                            print(f" Remme: Added new fact.")
+                            print(f"✅ Remme: Added new fact: {text}")
                         elif action == "update" and target_id and text:
-                            emb = get_embedding(text)
+                            emb = get_embedding(text, task_type="search_document")
                             remme_store.update_text(target_id, text, emb)
-                            print(f" Remme: Updated memory {target_id}.")
+                            print(f"🔄 Remme: Updated fact {target_id}: {text}")
                         elif action == "delete" and target_id:
                             remme_store.delete(target_id)
-                            print(f" Remme: Deleted stale memory {target_id}.")
+                            print(f"🗑️ Remme: Deleted fact {target_id}")
                     except Exception as e:
-                        print(f"⚠️ Action {action} failed: {e}")
+                        print(f"❌ Remme Action Failed: {e}")
                 
-                print(f" Remme: Processed {len(commands)} memory updates.")
+                print(f"✅ Remme: Processed {len(commands)} memory updates.")
             else:
-                print(" Remme: No new facts or updates found.")
-                
+                 print(f"ℹ️ Remme: No new facts extracted from run {run_id}.")
+
         except Exception as e:
             print(f"⚠️ Remme Extraction Failed: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 @app.post("/runs")
@@ -243,9 +251,13 @@ async def get_run(run_id: str):
         import networkx as nx
         G = nx.node_link_graph(data)
         react_flow = nx_to_reactflow(G)
+        
+        # Determine status: Running if in memory, else use file status
+        status = "running" if run_id in active_loops else data.get("graph", {}).get("status", "completed")
+
         return {
             "id": run_id,
-            "status": "completed", # simplistic
+            "status": status,
             "graph": react_flow
         }
         
@@ -686,7 +698,7 @@ class AddMemoryRequest(BaseModel):
 async def add_memory(request: AddMemoryRequest):
     """Manually add a memory"""
     try:
-        emb = get_embedding(request.text)
+        emb = get_embedding(request.text, task_type="search_query")
         memory = remme_store.add(request.text, emb, category=request.category, source="manual")
         return {"status": "success", "memory": memory}
     except Exception as e:
