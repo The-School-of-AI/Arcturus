@@ -225,14 +225,14 @@ const FlowWorkspaceInner: React.FC = () => {
     return (
         <div className="w-full h-full bg-[#050505] relative overflow-hidden">
             {/* Header Controls - Centered at Top to avoid Zoom controls (usually corners) */}
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex gap-4 items-start pointer-events-none">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex gap-4 items-start pointer-events-none">
                 <div className="flex flex-col gap-4 items-center pointer-events-auto">
                     {/* Mode Toggle */}
-                    <div className="bg-charcoal-900/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1">
+                    <div className="bg-charcoal-900/80 backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1">
                         <button
                             onClick={() => handleModeChange('READER')}
                             className={cn(
-                                "flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all duration-300 text-xs font-black uppercase tracking-widest",
+                                "flex items-center gap-2 px-6 py-2.5 rounded-sm transition-all duration-300 text-xs font-black uppercase tracking-widest",
                                 mode === 'READER'
                                     ? "bg-neon-yellow text-charcoal-950 shadow-[0_0_20px_rgba(234,255,0,0.2)]"
                                     : "text-gray-500 hover:text-white hover:bg-white/5"
@@ -244,7 +244,7 @@ const FlowWorkspaceInner: React.FC = () => {
                         <button
                             onClick={() => handleModeChange('SEQUENCE')}
                             className={cn(
-                                "flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all duration-300 text-xs font-black uppercase tracking-widest",
+                                "flex items-center gap-2 px-6 py-2.5 rounded-sm transition-all duration-300 text-xs font-black uppercase tracking-widest",
                                 mode === 'SEQUENCE'
                                     ? "bg-neon-yellow text-charcoal-950 shadow-[0_0_20px_rgba(234,255,0,0.2)]"
                                     : "text-gray-500 hover:text-white hover:bg-white/5"
@@ -262,7 +262,7 @@ const FlowWorkspaceInner: React.FC = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={initializeSequence}
-                                className="h-10 w-10 p-0 text-gray-500 hover:text-neon-yellow hover:bg-neon-yellow/5 rounded-xl"
+                                className="h-10 w-10 p-0 text-gray-500 hover:text-neon-yellow hover:bg-neon-yellow/5 rounded-sm"
                                 title="Reset Flow"
                             >
                                 <RotateCcw className="w-4 h-4" />
@@ -271,7 +271,7 @@ const FlowWorkspaceInner: React.FC = () => {
                                 onClick={advanceSequence}
                                 disabled={!canGoNext}
                                 className={cn(
-                                    "h-10 px-6 rounded-xl transition-all font-black text-xs uppercase tracking-widest flex items-center gap-2",
+                                    "h-10 px-6 rounded-sm transition-all font-black text-xs uppercase tracking-widest flex items-center gap-2",
                                     canGoNext
                                         ? "bg-neon-yellow text-charcoal-950 shadow-lg active:scale-95"
                                         : "bg-gray-800 text-gray-600 cursor-not-allowed"
