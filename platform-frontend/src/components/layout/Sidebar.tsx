@@ -1,5 +1,8 @@
 import React from 'react';
-import { Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain } from 'lucide-react';
+import {
+    Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
+    LayoutGrid, Newspaper, GraduationCap, Settings
+} from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,11 +10,12 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
-
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
+import { SettingsModal } from '@/features/settings/SettingsModal';
 
 export const Sidebar: React.FC = () => {
     const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
+    const [settingsOpen, setSettingsOpen] = React.useState(false);
 
     // Fetch runs on mount
     React.useEffect(() => {
@@ -38,10 +42,56 @@ export const Sidebar: React.FC = () => {
         setNewQuery("");
     };
 
+    const NavIcon = ({ icon: Icon, label, tab, onClick }: {
+        icon: any,
+        label: string,
+        tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'apps' | 'news' | 'learn',
+        onClick?: () => void
+    }) => {
+        const active = sidebarTab === tab;
+        return (
+            <button
+                onClick={onClick || (() => tab && setSidebarTab(tab))}
+                className={cn(
+                    "w-full aspect-square flex flex-col items-center justify-center gap-1 transition-all rounded-lg group relative",
+                    active
+                        ? "text-neon-yellow bg-neon-yellow/10"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                )}
+                title={label}
+            >
+                <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", active && "drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]")} />
+                <span className="text-[10px] font-medium opacity-60 group-hover:opacity-100">{label}</span>
+                {active && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r-full shadow-[0_0_8px_rgba(255,255,0,0.6)]" />}
+            </button>
+        );
+    };
+
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex overflow-hidden">
+            <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+            {/* NavRail - Left Vertical Bar */}
+            <div className="w-16 border-r border-border bg-charcoal-950 flex flex-col items-center py-4 gap-2 shrink-0 z-20">
+                {/* Top Tools */}
+                <div className="flex-1 w-full px-2 space-y-2">
+                    <NavIcon icon={PlayCircle} label="Runs" tab="runs" />
+                    <NavIcon icon={Database} label="RAG" tab="rag" />
+                    <NavIcon icon={Box} label="MCP" tab="mcp" />
+                    <NavIcon icon={Brain} label="Memory" tab="remme" />
+                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" onClick={() => { }} />
+                    <NavIcon icon={Newspaper} label="News" tab="news" onClick={() => { }} />
+                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" onClick={() => { }} />
+                </div>
+
+                {/* Bottom Tools */}
+                <div className="w-full px-2">
+                    <NavIcon icon={Settings} label="Settings" onClick={() => setSettingsOpen(true)} />
+                </div>
+            </div>
+
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden relative flex flex-col">
+            <div className="flex-1 min-w-0 bg-charcoal-900/40 backdrop-blur-sm flex flex-col overflow-hidden relative">
                 {sidebarTab === 'runs' && (
                     <>
                         <div className="p-4 border-b border-border space-y-3">
@@ -54,7 +104,7 @@ export const Sidebar: React.FC = () => {
                                         New Run
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="bg-charcoal-900 border-border sm:max-w-md">
+                                <DialogContent className="bg-charcoal-900 border-border sm:max-w-md text-white">
                                     <DialogHeader>
                                         <DialogTitle className="text-white text-lg">Start New Agent Run</DialogTitle>
                                     </DialogHeader>
@@ -72,7 +122,7 @@ export const Sidebar: React.FC = () => {
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-muted-foreground hover:bg-accent hover:text-foreground">Cancel</Button>
+                                        <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-white hover:bg-white/10">Cancel</Button>
                                         <Button onClick={handleStartRun} className="bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -81,7 +131,7 @@ export const Sidebar: React.FC = () => {
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
                                 <input
-                                    className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                                    className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-muted-foreground"
                                     placeholder="Search runs..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -89,7 +139,7 @@ export const Sidebar: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-2 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                             {filteredRuns.map((run) => (
                                 <div
                                     key={run.id}
@@ -97,21 +147,21 @@ export const Sidebar: React.FC = () => {
                                     className={cn(
                                         "group p-3 rounded-lg cursor-pointer transition-all border border-transparent",
                                         currentRun?.id === run.id
-                                            ? "bg-accent/50 border-primary/20 shadow-sm"
-                                            : "hover:bg-accent/30 hover:border-border"
+                                            ? "bg-accent/40 border-primary/20 shadow-sm"
+                                            : "hover:bg-white/5"
                                     )}
                                 >
                                     <div className="flex justify-between items-start mb-1 gap-2">
                                         <h3 className={cn(
                                             "font-medium text-sm line-clamp-2 leading-tight flex-1 break-words",
-                                            currentRun?.id === run.id ? "text-primary" : "text-foreground"
+                                            currentRun?.id === run.id ? "text-primary font-bold" : "text-foreground"
                                         )}>
                                             {run.name}
                                         </h3>
                                     </div>
 
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <div className="flex items-center gap-1 flex-wrap">
+                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                                        <div className="flex items-center gap-1">
                                             <Clock className="w-3 h-3" />
                                             <span>{new Date(run.createdAt).toLocaleDateString()}</span>
                                         </div>
@@ -128,10 +178,10 @@ export const Sidebar: React.FC = () => {
                                                 <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
                                             </span>
                                             <span className={cn(
-                                                "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5",
+                                                "px-1.5 py-0.5 rounded-sm",
                                                 run.status === 'completed' && "text-green-500 bg-green-500/10",
                                                 run.status === 'failed' && "text-red-500 bg-red-500/10",
-                                                run.status === 'running' && "text-yellow-500 bg-yellow-500/10",
+                                                run.status === 'running' && "text-yellow-500 bg-yellow-500/10 animate-pulse",
                                             )}>
                                                 {run.status}
                                             </span>
@@ -145,50 +195,19 @@ export const Sidebar: React.FC = () => {
                 {sidebarTab === 'rag' && <RagPanel />}
                 {sidebarTab === 'mcp' && <McpPanel />}
                 {sidebarTab === 'remme' && <RemmePanel />}
-            </div>
-
-            {/* Bottom Tab Bar */}
-            <div className="h-12 border-t border-border bg-charcoal-900 flex items-center justify-around px-2">
-                <button
-                    onClick={() => setSidebarTab('runs')}
-                    className={cn(
-                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
-                        sidebarTab === 'runs' ? "text-primary" : "text-muted-foreground"
-                    )}
-                >
-                    <PlayCircle className="w-4 h-4" />
-                    <span className="text-[10px] font-medium">Runs</span>
-                </button>
-                <button
-                    onClick={() => setSidebarTab('rag')}
-                    className={cn(
-                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
-                        sidebarTab === 'rag' ? "text-primary" : "text-muted-foreground"
-                    )}
-                >
-                    <Database className="w-4 h-4" />
-                    <span className="text-[10px] font-medium">RAG</span>
-                </button>
-                <button
-                    onClick={() => setSidebarTab('mcp')}
-                    className={cn(
-                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
-                        sidebarTab === 'mcp' ? "text-primary" : "text-muted-foreground"
-                    )}
-                >
-                    <Box className="w-4 h-4" />
-                    <span className="text-[10px] font-medium">MCP</span>
-                </button>
-                <button
-                    onClick={() => setSidebarTab('remme')}
-                    className={cn(
-                        "flex flex-col items-center justify-center p-1 w-16 gap-0.5 hover:text-primary transition-colors",
-                        sidebarTab === 'remme' ? "text-primary" : "text-muted-foreground"
-                    )}
-                >
-                    <Brain className="w-4 h-4" />
-                    <span className="text-[10px] font-medium">Memory</span>
-                </button>
+                {['apps', 'news', 'learn'].includes(sidebarTab) && (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
+                        <div className="p-6 bg-white/5 rounded-full ring-1 ring-white/10">
+                            {sidebarTab === 'apps' && <LayoutGrid className="w-12 h-12" />}
+                            {sidebarTab === 'news' && <Newspaper className="w-12 h-12" />}
+                            {sidebarTab === 'learn' && <GraduationCap className="w-12 h-12" />}
+                        </div>
+                        <div className="space-y-1">
+                            <h2 className="text-xl font-bold text-white uppercase tracking-tighter">Under Construction</h2>
+                            <p className="text-xs text-muted-foreground">This feature is currently in development and will be available in a future update.</p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

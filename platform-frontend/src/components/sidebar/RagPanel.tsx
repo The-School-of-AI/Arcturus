@@ -289,6 +289,23 @@ export const RagPanel: React.FC = () => {
         return { path: null, content: text, name: 'Unknown' };
     };
 
+    // Recursive check for unindexed files (ignore images/media)
+    const allFilesIndexed = useMemo(() => {
+        if (files.length === 0) return true;
+        const unindexable = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'mp4', 'mov', 'wav', 'mp3'];
+        const check = (items: RagItem[]): boolean => {
+            for (const item of items) {
+                if (item.type !== 'folder') {
+                    if (unindexable.includes(item.type.toLowerCase())) continue;
+                    if (!item.indexed) return false;
+                }
+                if (item.children && !check(item.children)) return false;
+            }
+            return true;
+        };
+        return check(files);
+    }, [files]);
+
     return (
         <div id="rag-panel-container" className="flex flex-col h-full bg-charcoal-900 border-r border-border">
             {/* Header: Search & Toggle */}
@@ -320,7 +337,7 @@ export const RagPanel: React.FC = () => {
                     <form onSubmit={handleSearchSubmit} className="relative flex-1">
                         <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
                         <Input
-                            className="bg-background/50 border-input pl-9 h-9 text-xs"
+                            className="bg-background/50 border-input pl-9 h-9 text-xs text-white"
                             placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
                             value={innerSearch}
                             onChange={(e) => setInnerSearch(e.target.value)}
@@ -334,7 +351,7 @@ export const RagPanel: React.FC = () => {
                                     <FolderPlus className="w-3.5 h-3.5" />
                                 </button>
                             </DialogTrigger>
-                            <DialogContent className="bg-charcoal-900 border-border sm:max-w-xs">
+                            <DialogContent className="bg-charcoal-900 border-border sm:max-w-xs text-white">
                                 <DialogHeader><DialogTitle className="text-white text-sm">New Folder</DialogTitle></DialogHeader>
                                 <Input placeholder="Folder Name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="bg-charcoal-800 border-gray-600 text-white h-8 text-xs my-2" />
                                 <DialogFooter><Button size="sm" onClick={handleCreateFolder}>Create</Button></DialogFooter>
@@ -360,7 +377,7 @@ export const RagPanel: React.FC = () => {
             {/* Main Content Area */}
             <div style={{ height: `${splitRatio}%` }} className="flex flex-col min-h-0 overflow-hidden">
                 {panelMode === 'browse' ? (
-                    <div className="flex-1 overflow-y-auto py-2">
+                    <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
                         {files.map((file) => (
                             <FileTree
                                 key={file.path}
@@ -374,9 +391,15 @@ export const RagPanel: React.FC = () => {
                                 ragKeywordMatches={ragKeywordMatches}
                             />
                         ))}
+                        {files.length === 0 && !loading && (
+                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-3 opacity-30">
+                                <Library className="w-10 h-10" />
+                                <p className="text-xs font-medium">Library is empty.<br />Upload files to get started.</p>
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar">
                         {seeking && (
                             <div className="flex items-center justify-center py-8 opacity-50">
                                 <RefreshCw className="w-6 h-6 animate-spin text-primary" />
@@ -427,7 +450,7 @@ export const RagPanel: React.FC = () => {
             </div>
 
             {/* Footer Area: Info & Actions */}
-            <div className="flex-1 bg-charcoal-900/50 p-3 overflow-y-auto space-y-4 min-h-0">
+            <div className="flex-1 bg-charcoal-900/50 p-3 overflow-y-auto space-y-4 min-h-0 custom-scrollbar">
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Context Details</h4>
                 </div>
@@ -453,39 +476,62 @@ export const RagPanel: React.FC = () => {
                         <Button
                             variant="outline"
                             size="sm"
-                            className="w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 h-7 text-[10px] mt-2 gap-2"
+                            className="w-full border-primary/30 text-primary hover:bg-primary/10 h-7 text-[10px] mt-2 gap-2"
                             onClick={() => handleReindex()}
                             disabled={indexing}
                         >
-                            <Zap className={cn("w-3 h-3", indexing && "animate-pulse")} />
-                            {indexing ? "SCANNING..." : "FULL RE-INDEX"}
+                            <RefreshCw className={cn("w-3 h-3", indexing && "animate-spin")} />
+                            {indexing ? "SCANNING..." : "REFRESH INDEX"}
                         </Button>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-white/5 rounded-lg">
-                            Select a resource to manage context
+                        <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-white/5 rounded-lg text-center px-4">
+                            Select a document to manage its indexing state
                         </div>
 
-                        <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/10 flex flex-col items-center gap-3 text-center">
-                            <div className="p-3 bg-yellow-500/10 rounded-full text-yellow-500">
-                                <Zap className={cn("w-6 h-6", indexing && "animate-pulse")} />
+                        {!allFilesIndexed ? (
+                            <div className="p-4 rounded-xl bg-neon-yellow/5 border border-neon-yellow/10 flex flex-col items-center gap-3 text-center">
+                                <div className="p-3 bg-neon-yellow/10 rounded-full text-neon-yellow">
+                                    <Zap className={cn("w-6 h-6", indexing && "animate-pulse")} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h5 className="text-xs font-bold text-neon-yellow/80 uppercase">Unindexed Content Found</h5>
+                                    <p className="text-[10px] text-muted-foreground leading-tight">
+                                        New documents were detected that haven't been processed yet.
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={() => handleReindex()}
+                                    disabled={indexing}
+                                    className="w-full bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-bold h-9 gap-2 shadow-lg shadow-neon-yellow/20"
+                                >
+                                    {indexing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                                    {indexing ? "SCANNING DOCUMENTS..." : "START BACKGROUND SCAN"}
+                                </Button>
                             </div>
-                            <div className="space-y-1">
-                                <h5 className="text-xs font-bold text-yellow-500/80">Manual Scan Required</h5>
-                                <p className="text-[10px] text-muted-foreground leading-tight">
-                                    Automatic scanning is disabled. Use the button below to index the `data` folder into the RAG system.
-                                </p>
+                        ) : (
+                            <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/10 flex flex-col items-center gap-3 text-center opacity-80 transition-all hover:opacity-100">
+                                <div className="p-3 bg-green-500/10 rounded-full text-green-500">
+                                    <CheckCircle className="w-6 h-6" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h5 className="text-xs font-bold text-green-500/80 uppercase tracking-widest">System Synced</h5>
+                                    <p className="text-[10px] text-muted-foreground leading-tight px-2">
+                                        All your documents are currently indexed and ready for retrieval.
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={() => handleReindex()}
+                                    disabled={indexing}
+                                    variant="outline"
+                                    className="w-full border-green-500/20 text-green-500/80 hover:bg-green-500/10 hover:text-green-500 h-8 text-[10px] gap-2"
+                                >
+                                    <RefreshCw className={cn("w-3 h-3", indexing && "animate-spin")} />
+                                    {indexing ? "RE-SCANNING..." : "FORCE RE-SCAN"}
+                                </Button>
                             </div>
-                            <Button
-                                onClick={() => handleReindex()}
-                                disabled={indexing}
-                                className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold h-9 gap-2 shadow-lg shadow-yellow-900/20"
-                            >
-                                {indexing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                                {indexing ? "SCANNING DOCUMENTS..." : "START BACKGROUND SCAN"}
-                            </Button>
-                        </div>
+                        )}
                     </div>
                 )}
             </div>

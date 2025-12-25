@@ -71,8 +71,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag';
     setViewMode: (mode: 'graph' | 'rag') => void;
-    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme') => void;
+    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme' | 'apps' | 'news' | 'learn';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme' | 'apps' | 'news' | 'learn') => void;
     openDocuments: RAGDocument[];
     activeDocumentId: string | null;
     openDocument: (doc: RAGDocument) => void;

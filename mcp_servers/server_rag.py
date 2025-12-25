@@ -634,17 +634,17 @@ def process_documents(target_path: str = None):
     mcp_log("INFO", "READY")
 
 @mcp.tool()
-def reindex_documents(target_path: str = None) -> str:
+async def reindex_documents(target_path: str = None) -> str:
     """Trigger a manual re-index of the RAG documents. 
     Optionally provide a target_path (relative to data/ folder) to index a specific file.
     """
-    process_documents(target_path)
-    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} triggered successfully."
-
+    mcp_log("INFO", f"Re-indexing request received (target: {target_path})")
+    # Run the blocking process_documents in a separate thread
+    await asyncio.to_thread(process_documents, target_path)
+    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed successfully."
 
 
 def ensure_faiss_ready():
-    from pathlib import Path
     index_path = ROOT / "faiss_index" / "index.bin"
     meta_path = ROOT / "faiss_index" / "metadata.json"
     if not (index_path.exists() and meta_path.exists()):
@@ -654,31 +654,6 @@ def ensure_faiss_ready():
         mcp_log("INFO", "Index already exists. Skipping regeneration.")
 
 
-async def main():
-    mcp_log("INFO", "STARTING THE SERVER AT AMAZING LOCATION")
-
-    if len(sys.argv) > 1 and sys.argv[1] == "dev":
-        mcp.run()  # Run without transport for dev server
-    else:
-        # Start the server in a separate thread
-        import threading
-        server_thread = threading.Thread(target=lambda: mcp.run(transport="stdio"))
-        server_thread.daemon = True
-        server_thread.start()
-        
-        # Wait a moment for the server to start
-        await asyncio.sleep(2)
-        
-        # Automatic background scan on startup (respects cache)
-        mcp_log("INFO", "Starting background document scan... (DISABLED auto-scan, use manual trigger)")
-        # process_documents()
-        
-        # Keep the main thread alive
-        try:
-            while True:
-                await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            mcp_log("INFO", "\nShutting down...")
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    mcp_log("INFO", "🚀 Starting RAG MCP Server...")
+    mcp.run()

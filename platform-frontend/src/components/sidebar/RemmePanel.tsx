@@ -17,11 +17,15 @@ export const RemmePanel: React.FC = () => {
     }, []);
 
     const filteredMemories = useMemo(() => {
-        if (!searchQuery.trim()) return memories;
-        return memories.filter(m =>
-            m.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            m.category.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        let items = [...memories];
+        if (searchQuery.trim()) {
+            items = items.filter(m =>
+                m.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                m.category.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        // Sort newest first
+        return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }, [memories, searchQuery]);
 
     const danglingCount = useMemo(() => memories.filter(m => m.source_exists === false).length, [memories]);

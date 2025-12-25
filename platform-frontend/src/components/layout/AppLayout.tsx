@@ -25,7 +25,7 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
 
 export const AppLayout: React.FC = () => {
     const { viewMode, sidebarTab } = useAppStore();
-    const [leftWidth, setLeftWidth] = useState(350); // w-64 = 256px
+    const [leftWidth, setLeftWidth] = useState(400); // w-64 = 256px
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef<'left' | 'right' | null>(null);
