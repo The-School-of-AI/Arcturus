@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAppStore } from '@/store';
-import { FolderOpen, FileCode, Folder, ChevronRight, ChevronDown, Play, Search, Code2, Plus, Globe, Trash2, X, Github } from 'lucide-react';
+import { FileCode, Folder, ChevronRight, ChevronDown, Play, Code2, Globe, Trash2, X, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -21,51 +21,6 @@ export const ExplorerPanel: React.FC = () => {
     } = useAppStore();
     const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
     const [connectInput, setConnectInput] = useState('');
-
-    const handleOpenFolder = async () => {
-        try {
-            // @ts-ignore - window.showDirectoryPicker is experimental
-            const directoryHandle = await window.showDirectoryPicker();
-            
-            // Note: Browser file picker doesn't expose absolute path (security limitation)
-            // Files can be browsed in this session, but won't persist after refresh
-            // For persistent history, user should use "Connect Repository" with absolute path
-            setExplorerRootPath(directoryHandle.name);
-
-            async function scan(handle: any, currentPath: string): Promise<FileNode[]> {
-                const results: FileNode[] = [];
-                for await (const entry of handle.values()) {
-                    const fullPath = `${currentPath}/${entry.name}`;
-                    if (entry.kind === 'file') {
-                        results.push({ name: entry.name, path: fullPath, type: 'file' });
-                    } else if (entry.kind === 'directory') {
-                        results.push({
-                            name: entry.name,
-                            path: fullPath,
-                            type: 'folder',
-                            children: await scan(entry, fullPath)
-                        });
-                    }
-                }
-                return results.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'folder' ? -1 : 1));
-            }
-
-            const scannedFiles = await scan(directoryHandle, directoryHandle.name);
-            setExplorerFiles(scannedFiles);
-
-            // Add to history with cached files for current session
-            // Note: After page refresh, cachedFiles won't persist (not in localStorage)
-            // User will get a helpful message explaining they should use absolute paths
-            addToHistory({ 
-                name: directoryHandle.name, 
-                path: directoryHandle.name, 
-                type: 'local',
-                cachedFiles: scannedFiles // Store for re-expansion during session
-            });
-        } catch (err) {
-            console.error(err);
-        }
-    };
 
     const toggleFolder = (path: string) => {
         setIsExpanded(prev => ({ ...prev, [path]: !prev[path] }));
@@ -120,19 +75,19 @@ export const ExplorerPanel: React.FC = () => {
                     });
                     setExplorerFiles([]);
                 }
-        } else {
-            const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(path)}`);
-            const { files, root_path, error } = res.data;
-            
-            if (error) {
-                alert(`Path not found: ${root_path}`);
-                return;
+            } else {
+                const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(path)}`);
+                const { files, root_path, error } = res.data;
+                
+                if (error) {
+                    alert(`Path not found: ${root_path}`);
+                    return;
+                }
+                
+                setExplorerFiles(files);
+                setExplorerRootPath(root_path);
+                addToHistory({ name: root_path.split('/').pop() || root_path, path: root_path, type: 'local' });
             }
-            
-            setExplorerFiles(files);
-            setExplorerRootPath(root_path);
-            addToHistory({ name: root_path.split('/').pop() || root_path, path: root_path, type: 'local' });
-        }
             setConnectInput(''); // Clear after success
         } catch (err: any) {
             console.error("Connection failed:", err);
@@ -156,25 +111,15 @@ export const ExplorerPanel: React.FC = () => {
             setFlowData(item.flowData);
         }
 
-        // Check for cached files first (from browser picker during this session)
-        if (item.cachedFiles && item.cachedFiles.length > 0) {
-            setExplorerFiles(item.cachedFiles);
-            return;
-        }
-
         if (item.type === 'local') {
             try {
                 const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(item.path)}`);
                 const { files, root_path, error } = res.data;
                 
                 if (error) {
-                    // Path doesn't exist or can't be resolved
-                    const isAbsolutePath = item.path.startsWith('/') || item.path.includes(':\\');
-                    const message = isAbsolutePath 
-                        ? `Path no longer exists: ${item.path}\n\nDo you want to remove it from history?`
-                        : `Cannot resolve path "${item.path}".\n\nBrowser-selected folders cannot be reloaded after refresh.\nPlease use "Connect Repository" with an absolute path instead.\n\nRemove from history?`;
-                    
-                    const shouldRemove = window.confirm(message);
+                    const shouldRemove = window.confirm(
+                        `Path no longer exists: ${item.path}\n\nDo you want to remove it from history?`
+                    );
                     if (shouldRemove) {
                         removeFromHistory(item.id);
                         setExplorerRootPath(null);
@@ -184,7 +129,6 @@ export const ExplorerPanel: React.FC = () => {
                 }
                 
                 setExplorerFiles(files || []);
-                // Update the path in history if backend resolved it to absolute
                 if (root_path && root_path !== item.path) {
                     useAppStore.getState().updateHistoryItem(item.path, { path: root_path, name: root_path.split('/').pop() || item.name });
                 }
@@ -199,6 +143,7 @@ export const ExplorerPanel: React.FC = () => {
 
     const handleAnalyze = async () => {
         if (!explorerRootPath) return;
+        
         setIsAnalyzing(true);
         try {
             const isGithub = explorerRootPath.startsWith('http');
@@ -208,7 +153,7 @@ export const ExplorerPanel: React.FC = () => {
             });
             if (res.data.success) {
                 const flow_data = res.data.flow_data;
-                const root_path = res.data.root_path; // Get the absolute path
+                const root_path = res.data.root_path;
                 setFlowData(flow_data);
                 setExplorerRootPath(root_path);
                 useAppStore.getState().updateHistoryItem(explorerRootPath || '', { flowData: flow_data, path: root_path });
@@ -257,7 +202,7 @@ export const ExplorerPanel: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-                {/* 1. HISTORY SECTION (Always visible at top if exists) */}
+                {/* HISTORY SECTION */}
                 {analysisHistory.length > 0 && (
                     <div className="flex flex-col flex-1 min-h-0">
                         {!explorerRootPath && (
@@ -296,7 +241,7 @@ export const ExplorerPanel: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    {/* NESTED FILE TREE - Only show for selected item */}
+                                    {/* NESTED FILE TREE */}
                                     {explorerRootPath === item.path && (
                                         <div className="ml-9 mt-1 mb-4 border-l border-white/5 pl-2">
                                             {explorerFiles.length > 0 ? (
@@ -307,7 +252,7 @@ export const ExplorerPanel: React.FC = () => {
                                                 <div className="py-4 text-[10px] text-gray-500 italic">
                                                     {item.type === 'github' || item.path.startsWith('http')
                                                         ? "GitHub architecture map loaded (Start Analysis to see details)"
-                                                        : isAnalyzing ? "Loading files..." : "File tree unavailable for this local path."}
+                                                        : isAnalyzing ? "Loading files..." : "No files found."}
                                                 </div>
                                             )}
                                         </div>
@@ -317,48 +262,34 @@ export const ExplorerPanel: React.FC = () => {
                         </div>
                     </div>
                 )}
+                
+                {/* CONNECT INPUT - Show when no project is selected */}
                 <div className="flex-1 min-h-0">
                     {explorerRootPath ? null : (
-                        <div className="flex flex-col p-6 space-y-6">
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            placeholder="GitHub URL or Local Absolute Path..."
-                                            value={connectInput}
-                                            onChange={(e) => setConnectInput(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                                            className="w-full bg-charcoal-950 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-neon-yellow/50 transition-all placeholder:text-gray-600"
-                                        />
-                                        <Globe className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-600" />
-                                    </div>
-                                    <Button
-                                        onClick={handleConnect}
-                                        disabled={isAnalyzing}
-                                        className="w-full bg-white/5 hover:bg-white/10 text-white font-bold text-xs py-5 rounded-xl border border-white/5 transition-all"
-                                    >
-                                        Connect Repository
-                                    </Button>
+                        <div className="flex flex-col p-6 space-y-4">
+                            <div className="space-y-2">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="GitHub URL or Local Absolute Path..."
+                                        value={connectInput}
+                                        onChange={(e) => setConnectInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                                        className="w-full bg-charcoal-950 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-neon-yellow/50 transition-all placeholder:text-gray-600"
+                                    />
+                                    <Globe className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-600" />
                                 </div>
+                                <Button
+                                    onClick={handleConnect}
+                                    disabled={isAnalyzing || !connectInput.trim()}
+                                    className="w-full bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-black text-xs py-5 rounded-xl shadow-xl shadow-neon-yellow/5 disabled:bg-gray-800 disabled:text-gray-500"
+                                >
+                                    Connect Repository
+                                </Button>
                             </div>
 
-                            <div className="relative flex items-center">
-                                <div className="flex-grow border-t border-white/5"></div>
-                                <span className="flex-shrink mx-4 text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Local Access</span>
-                                <div className="flex-grow border-t border-white/5"></div>
-                            </div>
-
-                            <Button
-                                onClick={handleOpenFolder}
-                                className="w-full bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-black text-xs py-6 rounded-xl shadow-xl shadow-neon-yellow/5"
-                            >
-                                <FolderOpen className="w-4 h-4 mr-2" />
-                                Select Folder
-                            </Button>
-
-                            <p className="text-[10px] text-gray-500 text-center leading-relaxed italic">
-                                Note: Absolute paths are required for backend analysis of local folders.
+                            <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+                                💡 <span className="text-gray-400">Mac tip:</span> Right-click folder in Finder → Get Info → copy path from "Where:"
                             </p>
                         </div>
                     )}
@@ -366,32 +297,32 @@ export const ExplorerPanel: React.FC = () => {
             </div>
 
             {/* Bottom Analysis Action */}
-            {
-                explorerRootPath && (
-                    <div className="p-4 border-t border-white/10 bg-charcoal-900 z-20">
-                        <Button
-                            disabled={isAnalyzing}
-                            onClick={handleAnalyze}
-                            className={cn(
-                                "w-full gap-2 font-black uppercase tracking-[0.15em] text-xs py-6 rounded-xl transition-all",
-                                isAnalyzing ? "bg-gray-800 text-gray-500" : "bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 shadow-[0_0_20px_rgba(234,255,0,0.1)] active:scale-95"
-                            )}
-                        >
-                            {isAnalyzing ? (
-                                <>
-                                    <div className="w-3.5 h-3.5 border-2 border-charcoal-900/10 border-t-charcoal-900 rounded-full animate-spin" />
-                                    Processing...
-                                </>
-                            ) : (
-                                <>
-                                    <Play className="w-3.5 h-3.5 fill-current" />
-                                    Start Analysis
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                )
-            }
+            {explorerRootPath && (
+                <div className="p-4 border-t border-white/10 bg-charcoal-900 z-20">
+                    <Button
+                        disabled={isAnalyzing}
+                        onClick={handleAnalyze}
+                        className={cn(
+                            "w-full gap-2 font-black uppercase tracking-[0.15em] text-xs py-6 rounded-xl transition-all",
+                            isAnalyzing 
+                                ? "bg-gray-800 text-gray-500" 
+                                : "bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 shadow-[0_0_20px_rgba(234,255,0,0.1)] active:scale-95"
+                        )}
+                    >
+                        {isAnalyzing ? (
+                            <>
+                                <div className="w-3.5 h-3.5 border-2 border-charcoal-900/10 border-t-charcoal-900 rounded-full animate-spin" />
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                                Start Analysis
+                            </>
+                        )}
+                    </Button>
+                </div>
+            )}
         </div>
     );
 };

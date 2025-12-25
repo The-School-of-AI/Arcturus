@@ -20,12 +20,26 @@ class CodeSkeletonExtractor:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#'):
-                        self.ignore_patterns.append(line)
+                        # Normalize: remove trailing slash and leading slash
+                        pattern = line.rstrip('/').lstrip('/')
+                        if pattern:
+                            self.ignore_patterns.append(pattern)
 
     def is_ignored(self, path: str) -> bool:
-        for pattern in self.ignore_patterns:
-            if pattern in path:
+        """Smarter ignore logic: check components of the path against patterns."""
+        # Use relative path from root to check components
+        rel_path = os.path.relpath(path, self.root_path)
+        if rel_path == ".":
+            return False
+            
+        parts = rel_path.split(os.sep)
+        for part in parts:
+            if part in self.ignore_patterns:
                 return True
+            # Also handle wildcard patterns like *.pyc
+            for pattern in self.ignore_patterns:
+                if pattern.startswith('*') and part.endswith(pattern[1:]):
+                    return True
         return False
 
     def extract_file_skeleton(self, file_path: str) -> str:
@@ -107,6 +121,55 @@ class CodeSkeletonExtractor:
                         rel_path = os.path.relpath(full_path, self.root_path)
                         results[rel_path] = self.extract_file_skeleton(full_path)
         return results
+
+    def scan_project(self) -> Dict[str, Any]:
+        """Scan project for file stats."""
+        file_stats = []
+        summary = {"total_files": 0, "total_size": 0, "total_lines": 0}
+        
+        for root, dirs, files in os.walk(self.root_path):
+            dirs[:] = [d for d in dirs if not self.is_ignored(os.path.join(root, d))]
+            
+            for file in files:
+                full_path = os.path.join(root, file)
+                if self.is_ignored(full_path):
+                    continue
+                    
+                rel_path = os.path.relpath(full_path, self.root_path)
+                try:
+                    size = os.path.getsize(full_path)
+                    lines = 0
+                    is_binary = False
+                    extension = os.path.splitext(file)[1].lower()
+                    
+                    # Basic binary check based on extension or content
+                    if extension in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.zip', '.tar', '.gz', '.pyc', '.pkl', '.bin', '.exe', '.dll', '.so', '.dylib']:
+                        is_binary = True
+                    else:
+                        try:
+                            with open(full_path, 'r', encoding='utf-8') as f:
+                                lines = sum(1 for _ in f)
+                        except UnicodeDecodeError:
+                            is_binary = True
+
+                    stat = {
+                        "path": rel_path,
+                        "size": size,
+                        "lines": lines,
+                        "type": "binary" if is_binary else "code",
+                        "extension": extension
+                    }
+                    file_stats.append(stat)
+                    
+                    summary["total_files"] += 1
+                    summary["total_size"] += size
+                    if not is_binary:
+                        summary["total_lines"] += lines
+                        
+                except Exception as e:
+                    print(f"Error scanning {rel_path}: {e}")
+                    
+        return {"files": file_stats, "summary": summary}
 
 if __name__ == "__main__":
     # Test on current dir

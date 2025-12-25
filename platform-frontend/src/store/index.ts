@@ -108,7 +108,6 @@ interface AnalysisHistoryItem {
     timestamp: number;
     type: 'local' | 'github';
     flowData?: any;
-    cachedFiles?: any[]; // For browser-picked folders (can't reload from API)
 }
 
 interface ExplorerSlice {
