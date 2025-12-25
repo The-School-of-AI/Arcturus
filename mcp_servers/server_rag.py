@@ -33,7 +33,8 @@ EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
 OLLAMA_CHAT_URL = "http://127.0.0.1:11434/api/chat"
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 EMBED_MODEL = "nomic-embed-text"
-QWEN_MODEL = "qwen3-vl:8b" # Unified for Vision and Text
+RAG_LLM_MODEL = "llama3.2:latest" # Faster than Qwen for text splitting
+QWEN_MODEL = "qwen3-vl:8b" # Keep for vision and continuity
 CHUNK_SIZE = 256
 CHUNK_OVERLAP = 40
 MAX_CHUNK_LENGTH = 512  # characters
@@ -397,7 +398,7 @@ def caption_images(img_url_or_path: str) -> str:
 
 def semantic_merge(text: str) -> list[str]:
     """Splits text semantically using LLM: detects second topic and reuses leftover intelligently."""
-    WORD_LIMIT = 512
+    WORD_LIMIT = 1024
     words = text.split()
     i = 0
     final_chunks = []
@@ -425,9 +426,10 @@ Keep markdown formatting intact.
 
         try:
             result = requests.post(OLLAMA_CHAT_URL, json={
-                "model": QWEN_MODEL,
+                "model": RAG_LLM_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "stream": False
+                "stream": False,
+                "options": {"temperature": 0.0} # Absolute determinism
             }, timeout=OLLAMA_TIMEOUT)
             result.raise_for_status()
             reply = result.json().get("message", {}).get("content", "").strip()

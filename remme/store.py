@@ -55,8 +55,8 @@ class RemmeStore:
             
         # DEDUPLICATION CHECK
         # Search for exact or very similar matches
-        # threshold 0.1 is very tight (almost identical)
-        matches = self.search(embedding, k=1, score_threshold=0.1)
+        # threshold 0.15 is more aggressive than 0.1
+        matches = self.search(embedding, k=1, score_threshold=0.15)
         if matches:
             # Update existing memory's timestamp
             memory_id = matches[0]["id"]

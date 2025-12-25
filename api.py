@@ -613,9 +613,68 @@ CONTEXT FROM DOCUMENT:
 
 @app.get("/remme/memories")
 async def get_memories():
-    """Get all stored memories"""
+    """Get all stored memories with source existence check"""
     try:
-        return {"status": "success", "memories": remme_store.get_all()}
+        memories = remme_store.get_all()
+        summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+        
+        # Add source_exists flag
+        for m in memories:
+            source = m.get("source", "")
+            # Handle multiple sources in Hubs
+            sources = [s.strip() for s in source.split(",")]
+            exists = False
+            for s in sources:
+                run_id = s.replace("backfill_", "")
+                if not run_id: continue
+                
+                # Brute force search for session file
+                found = False
+                for _ in summaries_dir.rglob(f"session_{run_id}.json"):
+                    found = True
+                    break
+                if found:
+                    exists = True
+                    break
+            
+            # Special case: manual entries or no source
+            if not source or source == "manual":
+                exists = True 
+            
+            m["source_exists"] = exists
+            
+        return {"status": "success", "memories": memories}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/remme/cleanup_dangling")
+async def cleanup_dangling_memories():
+    """Delete all memories where the source session no longer exists"""
+    try:
+        memories = remme_store.get_all()
+        summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+        ids_to_delete = []
+        
+        for m in memories:
+            source = m.get("source", "")
+            if not source or source == "manual": continue
+            
+            sources = [s.strip() for s in source.split(",")]
+            exists = False
+            for s in sources:
+                run_id = s.replace("backfill_", "")
+                if not run_id: continue
+                for _ in summaries_dir.rglob(f"session_{run_id}.json"):
+                    exists = True; break
+                if exists: break
+            
+            if not exists:
+                ids_to_delete.append(m["id"])
+        
+        for mid in ids_to_delete:
+            remme_store.delete(mid)
+            
+        return {"status": "success", "deleted_count": len(ids_to_delete)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

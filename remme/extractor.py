@@ -41,7 +41,10 @@ RULES:
 1. ANTI-FRAGMENTATION: NEVER split related items into separate facts. If you find a list (e.g. benefits of X, features of Y, steps for Z), merge them into ONE rich, coherent memory entry.
 2. NO REDUNDANCY: If the info is already captured in EXISTING RELEVANT MEMORIES, do nothing unless you have NEW details to add (in which case, use "update").
 3. CONTEXTUAL HUBS: Prefer a single "Hub" memory (e.g. "Project X Overview: Uses React, Python, and uses a Postgres DB") over three separate atomic facts.
-4. ACTIONS:
+4. NO NEGATIVE FACTS: NEVER store that information was "not found", "unavailable", or "missing". Memory is for what we KNOW, not what we don't.
+5. NO META-LOGS: Do not store internal reasoning, code errors (e.g. "NameError"), or agent execution traces (e.g. "ThinkerAgent was invoked").
+6. HIGH SALIENCE ONLY: Focus on project decisions, user preferences, complex results, and architectural details. Ignore transient status updates.
+7. ACTIONS:
    - "add": For truly new, unrelated facts.
    - "update": To expand or correct an existing memory ID.
    - "delete": If a memory is now proven false or totally irrelevant.
