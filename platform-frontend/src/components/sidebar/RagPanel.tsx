@@ -449,10 +449,43 @@ export const RagPanel: React.FC = () => {
                             </div>
                         )}
                         {indexStatus && <div className="text-[9px] p-1.5 bg-yellow-500/10 text-yellow-400 rounded border border-yellow-500/20 animate-pulse">{indexStatus}</div>}
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 h-7 text-[10px] mt-2 gap-2"
+                            onClick={() => handleReindex()}
+                            disabled={indexing}
+                        >
+                            <Zap className={cn("w-3 h-3", indexing && "animate-pulse")} />
+                            {indexing ? "SCANNING..." : "FULL RE-INDEX"}
+                        </Button>
                     </div>
                 ) : (
-                    <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-white/5 rounded-lg">
-                        Select a resource to manage context
+                    <div className="space-y-4">
+                        <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-white/5 rounded-lg">
+                            Select a resource to manage context
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/10 flex flex-col items-center gap-3 text-center">
+                            <div className="p-3 bg-yellow-500/10 rounded-full text-yellow-500">
+                                <Zap className={cn("w-6 h-6", indexing && "animate-pulse")} />
+                            </div>
+                            <div className="space-y-1">
+                                <h5 className="text-xs font-bold text-yellow-500/80">Manual Scan Required</h5>
+                                <p className="text-[10px] text-muted-foreground leading-tight">
+                                    Automatic scanning is disabled. Use the button below to index the `data` folder into the RAG system.
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => handleReindex()}
+                                disabled={indexing}
+                                className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold h-9 gap-2 shadow-lg shadow-yellow-900/20"
+                            >
+                                {indexing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                                {indexing ? "SCANNING DOCUMENTS..." : "START BACKGROUND SCAN"}
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

@@ -1,20 +1,83 @@
 [
   {
-    "id": "57d9904c-c537-4458-a41a-fb787846b86f",
-    "text": "I live in Bangalore, India",
-    "category": "general",
-    "created_at": "2025-12-24T16:43:20.744598",
-    "updated_at": "2025-12-24T16:43:20.744618",
-    "source": "manual",
+    "id": "f3bb7933-cf16-4aa9-b746-e3684518bf22",
+    "text": "The 10th Fibonacci number is calculated using a Python function that takes an integer n as input and returns the nth Fibonacci number. The code uses a iterative approach with a time complexity of O(n).",
+    "category": "historical",
+    "created_at": "2025-12-25T06:53:20.960422",
+    "updated_at": "2025-12-25T06:53:20.960537",
+    "source": "backfill_66401990",
     "faiss_id": 0
   },
   {
-    "id": "3f94b098-072b-4e01-b474-9b03110378ef",
-    "text": "I teach AI, LLM, AgenticAI at my own school called \"The School of AI\"",
-    "category": "general",
-    "created_at": "2025-12-24T16:43:52.352070",
-    "updated_at": "2025-12-24T16:43:52.352089",
-    "source": "manual",
+    "id": "e8880ad8-23a3-4a0d-897a-d9f67fabcfde",
+    "text": "NetworkX Benefits:\n1. Provides a Python library for creating complex networks.\n2. Offers tools for analyzing and manipulating network structures.\n3. Facilitates the discovery of clusters, communities, and other network properties.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:53:31.665994",
+    "updated_at": "2025-12-25T06:53:31.666010",
+    "source": "backfill_66402002",
     "faiss_id": 1
+  },
+  {
+    "id": "77e6d970-699c-473a-96b1-56d77a11ece7",
+    "text": "NetworkX offers a multitude of benefits, making it a valuable tool for network analysis:\n\n* Ease of Use: Pythonic interface allows for rapid prototyping and development.\n* Flexibility: Supports various graph types (directed, undirected, multigraphs) and data formats.\n* Rich Functionality: Provides a vast library of graph algorithms, measures, and network analysis tools.\n* Visualization: Offers basic visualization capabilities and integrates well with other visualization libraries like Matplotlib and Graphviz.\n* Community Support: Large and active community contributing to its continuous development and providing ample resources.\n* Open Source: Free to use and modify, reducing software costs.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:54:00.197551",
+    "updated_at": "2025-12-25T06:54:00.197571",
+    "source": "backfill_66401968",
+    "faiss_id": 2
+  },
+  {
+    "id": "622f89ea-f59c-4456-94f7-12acd62602cf",
+    "text": "Mem0 is a comprehensive tool providing a detailed overview of its functionalities, potential applications, and key considerations for effective utilization.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:54:07.434406",
+    "updated_at": "2025-12-25T06:54:07.434426",
+    "source": "backfill_66401994",
+    "faiss_id": 3
+  },
+  {
+    "id": "c47bfbb1-24aa-47a2-9b99-a6d9db9e43d8",
+    "text": "NetworkX is a Python library for creating, manipulating, and studying complex networks. It provides a versatile and efficient platform for graph analysis, suitable for a wide range of applications.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:54:24.575926",
+    "updated_at": "2025-12-25T06:54:24.575942",
+    "source": "backfill_66402074",
+    "faiss_id": 4
+  },
+  {
+    "id": "f36cc824-dfa3-4b1a-8b05-3baa6aae6777",
+    "text": "NetworkX is a powerful Python library for the creation, manipulation, and study of complex networks. It offers a wide range of advantages for network analysis, including flexibility, ease of use, comprehensive algorithms, visualization, and open-source availability.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:54:40.029683",
+    "updated_at": "2025-12-25T06:54:40.029701",
+    "source": "backfill_66402070",
+    "faiss_id": 5
+  },
+  {
+    "id": "7c8fd813-7355-48c1-a573-7c4ea062db71",
+    "text": "The Fibonacci sequence is a series of numbers where each number is the sum of the two preceding ones, usually starting with 0 and 1. The Fibonacci function can be implemented iteratively or recursively.\n\nIn this context,\n\n- CODE_1A: An iterative implementation of the Fibonacci function in Python, which uses a loop to calculate the nth Fibonacci number.\n\n- CODE_2B: A recursive implementation of the Fibonacci function in Python (not shown), which uses function calls to calculate the nth Fibonacci number.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:55:00.992240",
+    "updated_at": "2025-12-25T06:55:00.992255",
+    "source": "backfill_1766402162",
+    "faiss_id": 6
+  },
+  {
+    "id": "c3459149-79b3-4d63-863a-546893b26979",
+    "text": "NetworkX Benefits Analysis\nBased on the available data, no specific benefits of NetworkX were identified. A more detailed analysis or further information is required to populate this report.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:55:13.128810",
+    "updated_at": "2025-12-25T06:55:13.128818",
+    "source": "backfill_1766402163",
+    "faiss_id": 7
+  },
+  {
+    "id": "66878d1c-b282-4398-bae6-a3b4319d7a87",
+    "text": "The Fibonacci function takes an integer n as input and returns the nth Fibonacci number. The function uses a loop to calculate the Fibonacci numbers iteratively.\n\nFor example, given the input n = 10, the function will return the 10th Fibonacci number.",
+    "category": "historical",
+    "created_at": "2025-12-25T06:55:24.688893",
+    "updated_at": "2025-12-25T06:55:24.688907",
+    "source": "backfill_1766402229",
+    "faiss_id": 8
   }
 ]

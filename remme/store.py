@@ -48,11 +48,27 @@ class RemmeStore:
         self.metadata_path.write_text(json.dumps(self.memories, indent=2))
 
     def add(self, text: str, embedding: np.ndarray, category: str = "general", source: str = "manual"):
-        """Add a new memory."""
+        """Add a new memory with deduplication."""
         if self.index is None:
             self.dimension = len(embedding)
             self.index = faiss.IndexFlatL2(self.dimension)
             
+        # DEDUPLICATION CHECK
+        # Search for exact or very similar matches
+        # threshold 0.1 is very tight (almost identical)
+        matches = self.search(embedding, k=1, score_threshold=0.1)
+        if matches:
+            # Update existing memory's timestamp
+            memory_id = matches[0]["id"]
+            for m in self.memories:
+                if m["id"] == memory_id:
+                    m["updated_at"] = datetime.now().isoformat()
+                    # Optionally append source if it's different?
+                    if source not in m.get("source", ""):
+                        m["source"] = f"{m['source']}, {source}"
+                    self.save()
+                    return m
+
         # Add to FAISS
         self.index.add(embedding.reshape(1, -1))
         

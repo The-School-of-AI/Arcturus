@@ -62,6 +62,7 @@ async def process_run(run_id: str, query: str):
         # 1. RETRIEVE MEMORIES (Remme)
         # Search for past relevant facts to injecting into this run
         memory_context = ""
+        context = None # Initialize for safe access in finally block
         try:
             emb = get_embedding(query)
             results = remme_store.search(emb, k=5)
@@ -78,9 +79,28 @@ async def process_run(run_id: str, query: str):
         
         # Execute the loop
         # The loop will maintain its own internal context
-        context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context)
+        print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
+        try:
+             context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context)
+        except asyncio.CancelledError:
+             print(f"[{run_id}] Run cancelled.")
+             context = loop.context # Recovery context from loop if possible
         
         # 2. EXTRACT NEW MEMORIES (Remme)
+        # We put this in a finally block? No, because we want it only on success/completion of meaningful work.
+        # But if user stops it, we might want to extract partials.
+        # For now, let's leave it after run() but handle the stop case explicitly if context is returned.
+        
+    except Exception as e:
+        print(f"Run {run_id} failed: {e}")
+    finally:
+        # Clean up
+        if run_id in active_loops:
+            del active_loops[run_id]
+            
+        # Attempt extraction if we have context (even if stopped)
+        # Note: 'context' variable needs to be accessible here.
+        pass 
         # After run completes, extract new facts
         try:
             # Get the history from context (Plan Graph or Session Summary)
@@ -102,24 +122,37 @@ async def process_run(run_id: str, query: str):
             history = [{"role": "assistant", "content": final_output}]
             
             print(f" Remme: Extracting facts from run {run_id}...")
-            new_facts = remme_extractor.extract(query, history)
+            # Pass existing memories from earlier search to context-aware extractor
+            commands = remme_extractor.extract(query, history, existing_memories=results)
             
-            if new_facts:
-                for fact in new_facts:
-                    emb = get_embedding(fact)
-                    remme_store.add(fact, emb, category="derived", source=f"run_{run_id}")
-                print(f" Remme: Saved {len(new_facts)} new facts!")
+            if commands:
+                for cmd in commands:
+                    action = cmd.get("action")
+                    text = cmd.get("text")
+                    target_id = cmd.get("id")
+                    
+                    try:
+                        if action == "add" and text:
+                            emb = get_embedding(text)
+                            remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                            print(f" Remme: Added new fact.")
+                        elif action == "update" and target_id and text:
+                            emb = get_embedding(text)
+                            remme_store.update_text(target_id, text, emb)
+                            print(f" Remme: Updated memory {target_id}.")
+                        elif action == "delete" and target_id:
+                            remme_store.delete(target_id)
+                            print(f" Remme: Deleted stale memory {target_id}.")
+                    except Exception as e:
+                        print(f"⚠️ Action {action} failed: {e}")
+                
+                print(f" Remme: Processed {len(commands)} memory updates.")
             else:
-                print(" Remme: No new facts found.")
+                print(" Remme: No new facts or updates found.")
                 
         except Exception as e:
             print(f"⚠️ Remme Extraction Failed: {e}")
 
-    except Exception as e:
-        print(f"Run {run_id} failed: {e}")
-        # Clean up on failure
-        if run_id in active_loops:
-            del active_loops[run_id]
 
 @app.post("/runs")
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):

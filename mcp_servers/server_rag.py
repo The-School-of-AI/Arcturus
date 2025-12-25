@@ -647,8 +647,8 @@ async def main():
         await asyncio.sleep(2)
         
         # Automatic background scan on startup (respects cache)
-        mcp_log("INFO", "Starting background document scan...")
-        process_documents()
+        mcp_log("INFO", "Starting background document scan... (DISABLED auto-scan, use manual trigger)")
+        # process_documents()
         
         # Keep the main thread alive
         try:

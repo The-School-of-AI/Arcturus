@@ -1,0 +1,233 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1766576790",
+    "original_query": "Where do i live? ",
+    "file_manifest": [],
+    "created_at": "2025-12-24T11:46:31.076690",
+    "status": "stopped",
+    "globals_schema": {}
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Clarify user's intent regarding location context.",
+              "agent": "ClarificationAgent",
+              "agent_prompt": "The user asks 'Where do i live?'. To provide a helpful answer, I need clarification about what they mean. Are they asking for their current physical location, their permanent address, or something else?",
+              "reads": [],
+              "writes": [
+                "user_intent_clarification_T001"
+              ]
+            },
+            {
+              "id": "T002",
+              "description": "Determine current location using available tools.",
+              "agent": "CoderAgent",
+              "agent_prompt": "Determine the user's current location using available APIs or system tools. Output latitude and longitude coordinates.",
+              "reads": [
+                "user_intent_clarification_T001"
+              ],
+              "writes": [
+                "location_coordinates_T002"
+              ]
+            },
+            {
+              "id": "T003",
+              "description": "Reverse geocode coordinates to determine address.",
+              "agent": "CoderAgent",
+              "agent_prompt": "Given the latitude and longitude coordinates in `location_coordinates_T002`, use a reverse geocoding API to determine the full street address, city, state, and zip code.",
+              "reads": [
+                "location_coordinates_T002"
+              ],
+              "writes": [
+                "full_address_T003"
+              ]
+            },
+            {
+              "id": "T004",
+              "description": "Format the address into a human-readable string.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Format the full address from `full_address_T003` into a clear and readable string, including street address, city, state, and zip code.",
+              "reads": [
+                "full_address_T003"
+              ],
+              "writes": [
+                "formatted_address_T004"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            },
+            {
+              "source": "T001",
+              "target": "T002"
+            },
+            {
+              "source": "T002",
+              "target": "T003"
+            },
+            {
+              "source": "T003",
+              "target": "T004"
+            }
+          ]
+        },
+        "next_step_id": "T005",
+        "cost": 0.0001093,
+        "input_tokens": 21,
+        "output_tokens": 268,
+        "total_tokens": 289
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2025-12-24T11:46:35.310925",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Clarify user's intent regarding location context.",
+      "agent": "ClarificationAgent",
+      "agent_prompt": "The user asks 'Where do i live?'. To provide a helpful answer, I need clarification about what they mean. Are they asking for their current physical location, their permanent address, or something else?",
+      "reads": [],
+      "writes": [
+        "user_intent_clarification_T001"
+      ],
+      "status": "failed",
+      "output": null,
+      "error": "Execution stopped by user during input.",
+      "cost": 0.0,
+      "start_time": "2025-12-24T11:46:35.315858",
+      "end_time": null,
+      "execution_time": 0.0,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "clarificationMessage": "To proceed, I need more information about your request. Could you please specify what kind of analysis or operation you'd like to perform? This will help me understand your goals and execute the task effectively.",
+            "options": [
+              "Data Cleaning",
+              "Exploratory Analysis",
+              "Model Building",
+              "Other"
+            ],
+            "writes_to": "user_intent_clarification",
+            "cost": 3.39e-05,
+            "input_tokens": 63,
+            "output_tokens": 69,
+            "total_tokens": 132
+          }
+        }
+      ]
+    },
+    {
+      "id": "T002",
+      "description": "Determine current location using available tools.",
+      "agent": "CoderAgent",
+      "agent_prompt": "Determine the user's current location using available APIs or system tools. Output latitude and longitude coordinates.",
+      "reads": [
+        "user_intent_clarification_T001"
+      ],
+      "writes": [
+        "location_coordinates_T002"
+      ],
+      "status": "pending",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0
+    },
+    {
+      "id": "T003",
+      "description": "Reverse geocode coordinates to determine address.",
+      "agent": "CoderAgent",
+      "agent_prompt": "Given the latitude and longitude coordinates in `location_coordinates_T002`, use a reverse geocoding API to determine the full street address, city, state, and zip code.",
+      "reads": [
+        "location_coordinates_T002"
+      ],
+      "writes": [
+        "full_address_T003"
+      ],
+      "status": "pending",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0
+    },
+    {
+      "id": "T004",
+      "description": "Format the address into a human-readable string.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Format the full address from `full_address_T003` into a clear and readable string, including street address, city, state, and zip code.",
+      "reads": [
+        "full_address_T003"
+      ],
+      "writes": [
+        "formatted_address_T004"
+      ],
+      "status": "pending",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    },
+    {
+      "source": "T001",
+      "target": "T002"
+    },
+    {
+      "source": "T002",
+      "target": "T003"
+    },
+    {
+      "source": "T003",
+      "target": "T004"
+    }
+  ]
+}
