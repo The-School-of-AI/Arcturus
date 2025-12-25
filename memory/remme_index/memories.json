@@ -6,7 +6,8 @@
     "created_at": "2025-12-25T07:06:56.593312",
     "updated_at": "2025-12-25T07:06:56.593320",
     "source": "backfill_66401990",
-    "faiss_id": 0
+    "faiss_id": 0,
+    "source_exists": true
   },
   {
     "id": "5f86ca0d-9853-4e60-85dc-7d59b3ee300b",
@@ -15,7 +16,8 @@
     "created_at": "2025-12-25T07:07:05.628206",
     "updated_at": "2025-12-25T07:07:05.628220",
     "source": "backfill_66402002",
-    "faiss_id": 1
+    "faiss_id": 1,
+    "source_exists": true
   },
   {
     "id": "e60e04eb-ae64-43a8-bd65-0bcf802f41a4",
@@ -24,7 +26,8 @@
     "created_at": "2025-12-25T07:07:30.745889",
     "updated_at": "2025-12-25T07:07:30.745903",
     "source": "backfill_66401968",
-    "faiss_id": 2
+    "faiss_id": 2,
+    "source_exists": true
   },
   {
     "id": "4eabd311-0e87-404d-b484-9bfd4bb754ee",
@@ -33,7 +36,8 @@
     "created_at": "2025-12-25T07:07:37.348883",
     "updated_at": "2025-12-25T07:07:37.348898",
     "source": "backfill_66401994",
-    "faiss_id": 3
+    "faiss_id": 3,
+    "source_exists": true
   },
   {
     "id": "723c6fbd-dbba-479d-ab90-2017d7f18c08",
@@ -42,7 +46,8 @@
     "created_at": "2025-12-25T07:07:49.724807",
     "updated_at": "2025-12-25T07:07:49.724819",
     "source": "backfill_66402074",
-    "faiss_id": 4
+    "faiss_id": 4,
+    "source_exists": true
   },
   {
     "id": "170e6541-0877-4a04-b6ab-992d40990cff",
@@ -51,7 +56,8 @@
     "created_at": "2025-12-25T07:08:01.684446",
     "updated_at": "2025-12-25T07:08:01.684471",
     "source": "backfill_66402070",
-    "faiss_id": 5
+    "faiss_id": 5,
+    "source_exists": true
   },
   {
     "id": "ae7e20fa-0e9a-4a36-abe3-43c3eedc09b0",
@@ -60,7 +66,8 @@
     "created_at": "2025-12-25T07:08:31.655354",
     "updated_at": "2025-12-25T07:08:31.655378",
     "source": "backfill_1766402162",
-    "faiss_id": 6
+    "faiss_id": 6,
+    "source_exists": true
   },
   {
     "id": "7c244fce-29b9-4f62-989e-d4788a31b28c",
@@ -69,7 +76,8 @@
     "created_at": "2025-12-25T07:08:40.751002",
     "updated_at": "2025-12-25T07:08:40.751018",
     "source": "backfill_1766402163",
-    "faiss_id": 7
+    "faiss_id": 7,
+    "source_exists": true
   },
   {
     "id": "f52cf03b-3a1f-40b9-8d13-32d8ae4769f3",
@@ -78,7 +86,8 @@
     "created_at": "2025-12-25T07:08:50.388189",
     "updated_at": "2025-12-25T07:08:50.388203",
     "source": "backfill_1766402229",
-    "faiss_id": 8
+    "faiss_id": 8,
+    "source_exists": true
   },
   {
     "id": "cefc5e4d-b589-4de6-a5d2-64ef63175f26",
@@ -87,7 +96,8 @@
     "created_at": "2025-12-25T07:09:01.383318",
     "updated_at": "2025-12-25T07:09:01.383333",
     "source": "backfill_1766402230",
-    "faiss_id": 9
+    "faiss_id": 9,
+    "source_exists": true
   },
   {
     "id": "38610c9b-d503-4040-bc85-435f8dbab1eb",
@@ -96,7 +106,8 @@
     "created_at": "2025-12-25T07:09:12.370841",
     "updated_at": "2025-12-25T07:09:12.370853",
     "source": "backfill_1766402289",
-    "faiss_id": 10
+    "faiss_id": 10,
+    "source_exists": true
   },
   {
     "id": "cb51dda6-b9f0-4378-84b8-e2632866883a",
@@ -105,7 +116,8 @@
     "created_at": "2025-12-25T07:09:25.374829",
     "updated_at": "2025-12-25T07:09:25.374842",
     "source": "backfill_1766402327",
-    "faiss_id": 11
+    "faiss_id": 11,
+    "source_exists": true
   },
   {
     "id": "9042e38d-d184-424d-b08b-0bfb7f7f0ccf",
@@ -114,7 +126,8 @@
     "created_at": "2025-12-25T07:09:39.521336",
     "updated_at": "2025-12-25T07:09:39.523571",
     "source": "backfill_1766402582",
-    "faiss_id": 12
+    "faiss_id": 12,
+    "source_exists": true
   },
   {
     "id": "1f7365dd-8cd2-45ad-9bd1-16b81c77ea8c",
@@ -123,7 +136,8 @@
     "created_at": "2025-12-25T07:09:50.686804",
     "updated_at": "2025-12-25T07:09:50.686822",
     "source": "backfill_1766402605",
-    "faiss_id": 13
+    "faiss_id": 13,
+    "source_exists": true
   },
   {
     "id": "fcbe44c9-a464-441c-ad38-f4ab68474409",
@@ -132,7 +146,8 @@
     "created_at": "2025-12-25T07:10:00.464609",
     "updated_at": "2025-12-25T07:10:00.464640",
     "source": "backfill_1766402778",
-    "faiss_id": 14
+    "faiss_id": 14,
+    "source_exists": true
   },
   {
     "id": "f003e815-37b6-4c59-8167-c115be81e2f6",
@@ -141,7 +156,8 @@
     "created_at": "2025-12-25T07:10:11.359229",
     "updated_at": "2025-12-25T07:10:11.359249",
     "source": "backfill_1766402948",
-    "faiss_id": 15
+    "faiss_id": 15,
+    "source_exists": true
   },
   {
     "id": "7bf264d0-d94c-48f8-b3cd-ebccdd66b332",
@@ -150,7 +166,8 @@
     "created_at": "2025-12-25T07:10:25.085793",
     "updated_at": "2025-12-25T07:10:25.085818",
     "source": "backfill_1766403332",
-    "faiss_id": 16
+    "faiss_id": 16,
+    "source_exists": true
   },
   {
     "id": "96b61450-72ed-4e63-a6dd-55c11bba9253",
@@ -159,7 +176,8 @@
     "created_at": "2025-12-25T07:10:34.873387",
     "updated_at": "2025-12-25T07:10:34.873395",
     "source": "backfill_1766403536",
-    "faiss_id": 17
+    "faiss_id": 17,
+    "source_exists": true
   },
   {
     "id": "8a731c84-6db2-4ea1-b8a1-7eb9505785a8",
@@ -168,7 +186,8 @@
     "created_at": "2025-12-25T07:10:47.659888",
     "updated_at": "2025-12-25T07:10:47.659904",
     "source": "backfill_1766408629",
-    "faiss_id": 18
+    "faiss_id": 18,
+    "source_exists": true
   },
   {
     "id": "74e1614c-2671-4f53-90d0-2c144f80b444",
@@ -177,7 +196,8 @@
     "created_at": "2025-12-25T07:10:51.777712",
     "updated_at": "2025-12-25T07:10:51.777728",
     "source": "backfill_1766458236",
-    "faiss_id": 19
+    "faiss_id": 19,
+    "source_exists": true
   },
   {
     "id": "09e8f644-587b-45a3-9a3a-67d6df7a00d9",
@@ -186,7 +206,8 @@
     "created_at": "2025-12-25T07:10:57.570270",
     "updated_at": "2025-12-25T07:10:57.570283",
     "source": "backfill_1766459244",
-    "faiss_id": 20
+    "faiss_id": 20,
+    "source_exists": true
   },
   {
     "id": "16c79489-15ec-4924-9ae4-910cdee71180",
@@ -195,7 +216,8 @@
     "created_at": "2025-12-25T07:11:06.576333",
     "updated_at": "2025-12-25T07:11:06.576340",
     "source": "backfill_1766460143",
-    "faiss_id": 21
+    "faiss_id": 21,
+    "source_exists": true
   },
   {
     "id": "3c5c09ad-341b-4a17-83f7-9ecaf9059054",
@@ -204,7 +226,8 @@
     "created_at": "2025-12-25T07:11:52.465869",
     "updated_at": "2025-12-25T07:11:52.465902",
     "source": "backfill_1766460673",
-    "faiss_id": 22
+    "faiss_id": 22,
+    "source_exists": true
   },
   {
     "id": "22b3d662-6c02-4ad1-8ade-ebb29cca6bc4",
@@ -213,7 +236,8 @@
     "created_at": "2025-12-25T07:11:57.408415",
     "updated_at": "2025-12-25T07:11:57.408422",
     "source": "backfill_1766461645",
-    "faiss_id": 23
+    "faiss_id": 23,
+    "source_exists": true
   },
   {
     "id": "b6d897bf-b674-4eae-a060-a44fec16f529",
@@ -222,7 +246,8 @@
     "created_at": "2025-12-25T07:12:02.538976",
     "updated_at": "2025-12-25T07:12:02.538981",
     "source": "backfill_1766463060",
-    "faiss_id": 24
+    "faiss_id": 24,
+    "source_exists": true
   },
   {
     "id": "83a123e2-d50a-485b-9aba-4bbb6a33e4c9",
@@ -231,7 +256,8 @@
     "created_at": "2025-12-25T07:12:25.392083",
     "updated_at": "2025-12-25T07:12:25.392102",
     "source": "backfill_1766463423",
-    "faiss_id": 25
+    "faiss_id": 25,
+    "source_exists": true
   },
   {
     "id": "44011129-0fb7-4ea5-baea-b4aa415e4643",
@@ -240,7 +266,8 @@
     "created_at": "2025-12-25T07:12:31.591521",
     "updated_at": "2025-12-25T07:12:31.591536",
     "source": "backfill_1766464384",
-    "faiss_id": 26
+    "faiss_id": 26,
+    "source_exists": true
   },
   {
     "id": "af1829a4-9239-4f79-b580-51aa4c4b0e4b",
@@ -249,7 +276,8 @@
     "created_at": "2025-12-25T07:12:40.693136",
     "updated_at": "2025-12-25T07:12:40.693150",
     "source": "backfill_1766467612",
-    "faiss_id": 27
+    "faiss_id": 27,
+    "source_exists": true
   },
   {
     "id": "da7b8580-ec04-4486-b4f6-38f1d1cc5840",
@@ -258,7 +286,8 @@
     "created_at": "2025-12-25T07:12:53.353272",
     "updated_at": "2025-12-25T07:12:53.353287",
     "source": "backfill_1766468206",
-    "faiss_id": 28
+    "faiss_id": 28,
+    "source_exists": true
   },
   {
     "id": "317cde43-e831-4899-bc24-9a4c8ef80794",
@@ -267,7 +296,8 @@
     "created_at": "2025-12-25T07:13:04.194774",
     "updated_at": "2025-12-25T07:13:04.194798",
     "source": "backfill_1766468612",
-    "faiss_id": 29
+    "faiss_id": 29,
+    "source_exists": true
   },
   {
     "id": "343ee132-42c0-4a04-896e-9cded1284732",
@@ -276,7 +306,8 @@
     "created_at": "2025-12-25T07:13:15.427472",
     "updated_at": "2025-12-25T07:13:15.427493",
     "source": "backfill_1766469017",
-    "faiss_id": 30
+    "faiss_id": 30,
+    "source_exists": true
   },
   {
     "id": "15a45bc7-6746-4571-a2a6-c25c0100c0ec",
@@ -285,7 +316,8 @@
     "created_at": "2025-12-25T07:13:23.424584",
     "updated_at": "2025-12-25T07:13:23.424598",
     "source": "backfill_1766469446",
-    "faiss_id": 31
+    "faiss_id": 31,
+    "source_exists": true
   },
   {
     "id": "423fc585-2d3b-4e66-a4b6-5c29a8c557e1",
@@ -294,7 +326,8 @@
     "created_at": "2025-12-25T07:14:02.459996",
     "updated_at": "2025-12-25T07:14:02.460028",
     "source": "backfill_1766470384",
-    "faiss_id": 32
+    "faiss_id": 32,
+    "source_exists": true
   },
   {
     "id": "260b0f63-c264-4dde-aaa9-2a81d23cbeed",
@@ -303,7 +336,8 @@
     "created_at": "2025-12-25T07:14:18.982149",
     "updated_at": "2025-12-25T07:14:18.982165",
     "source": "backfill_1766471314",
-    "faiss_id": 33
+    "faiss_id": 33,
+    "source_exists": true
   },
   {
     "id": "51728e86-0a41-4b3b-86d8-a15dd027df78",
@@ -312,7 +346,8 @@
     "created_at": "2025-12-25T07:14:32.054903",
     "updated_at": "2025-12-25T07:14:32.054909",
     "source": "backfill_1766471412",
-    "faiss_id": 34
+    "faiss_id": 34,
+    "source_exists": true
   },
   {
     "id": "322323ba-3213-44b9-9f9b-f8194bd32b22",
@@ -321,7 +356,8 @@
     "created_at": "2025-12-25T07:14:42.099831",
     "updated_at": "2025-12-25T07:14:42.099838",
     "source": "backfill_1766472146",
-    "faiss_id": 35
+    "faiss_id": 35,
+    "source_exists": true
   },
   {
     "id": "13ef3ac5-1a24-4f24-ab01-4af3fd6d237a",
@@ -330,7 +366,8 @@
     "created_at": "2025-12-25T07:15:00.420266",
     "updated_at": "2025-12-25T07:15:00.420274",
     "source": "backfill_1766472880",
-    "faiss_id": 36
+    "faiss_id": 36,
+    "source_exists": true
   },
   {
     "id": "2a6f02f1-dfae-42be-81ec-2b951e3664fb",
@@ -339,24 +376,26 @@
     "created_at": "2025-12-25T07:15:51.364533",
     "updated_at": "2025-12-25T07:15:51.364547",
     "source": "backfill_1766550691",
-    "faiss_id": 37
+    "faiss_id": 37,
+    "source_exists": true
   },
   {
-    "id": "696a79dc-b44b-4732-9527-560eff353451",
-    "text": "User prefers to stay in a location with a budget of accommodation. User loves Python and black colors.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:15:59.063028",
-    "updated_at": "2025-12-25T07:15:59.063041",
-    "source": "backfill_1766575100",
-    "faiss_id": 38
+    "id": "d0254024-2974-468e-b25f-a88950ab8819",
+    "text": "Project X Overview: Uses React for frontend, Python for backend, and Postgres DB. Features include real-time data sync, user authentication, and admin dashboard. Benefits include scalability, security, and ease of maintenance.",
+    "category": "derived",
+    "created_at": "2025-12-25T07:33:04.173417",
+    "updated_at": "2025-12-25T07:33:04.173431",
+    "source": "run_1766628070",
+    "faiss_id": 40,
+    "source_exists": false
   },
   {
-    "id": "86fdb068-ee45-4885-9c07-0f9cb151ea4b",
-    "text": "Clarification needed about user's intent regarding location context. The user asks 'Where do i live?' and needs clarification on what they mean (current physical location, permanent address, or something else?).",
-    "category": "historical",
-    "created_at": "2025-12-25T07:16:07.596585",
-    "updated_at": "2025-12-25T07:16:07.596605",
-    "source": "backfill_1766576790",
-    "faiss_id": 39
+    "id": "d9f707de-54ac-4cde-8d22-ea5ec59d04a5",
+    "text": "User stays in Bangalore",
+    "category": "general",
+    "created_at": "2025-12-25T07:35:29.930839",
+    "updated_at": "2025-12-25T07:35:29.930857",
+    "source": "manual",
+    "faiss_id": 41
   }
 ]

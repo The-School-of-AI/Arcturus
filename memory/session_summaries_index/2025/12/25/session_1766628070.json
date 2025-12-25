@@ -1,0 +1,600 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1766628070",
+    "original_query": "Where do I stay and what do you know about NetworkX?",
+    "file_manifest": [],
+    "created_at": "2025-12-25T02:01:10.218828",
+    "status": "completed",
+    "globals_schema": {
+      "accommodation_options_T001": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[{\"url\": \"https://duckduckgo.com/y.js?ad_domain=kayak.co.in&ad_provider=bingv7aa&ad_type=txad&click_metadata=JSlCJaG%2DjM9o43tudoJ%2D6Ni02jZYfacvYMq_av18RJ%2DyCvyIrPWIeFY%2DwhWsv%2DqRE_LQs6sEq%2DDsrytxUK_ORK1xCaKgspv9m1suuwiUaaQs4gHKxEu7piIaqAGTLub1%2DQQmguTuXow73uWNAy1fiqFE_96bY0mqBc1bYF%2DWTXA.n8ziKbZx%2DpUWvptp9y5XGQ&rut=bc03281d49151b1ec6dc604bad36f36ae698d05847dfce3fef05b3b7fc2ed5d9&u3=https%3A%2F%2Fwww.bing.com%2Faclick%3Fld%3De8R3sH5Kzkq3GySdZcnheK7DVUCUyEFzshsgJz18bJWSFkhgQsHWh9QU%2DWcQOXHt%2DZ6x%2DHM%2D%2DD0Fc5nxeysc%2D3y3Q7FYVkrUxT0RIdn4pZNBiFcjkZdYO3xOrSvMtyfUa980RLXWItsxfPXRGcz0v8mtlLShKTaJ5wqnf_VW5o4bD7rZsGAIJpf4SMi9VWaSG8nvVjrEAx4N1H_fRGdpLfsqyk_So%26u%3DaHR0cHMlM2ElMmYlMmZ3d3cua2F5YWsuY28uaW4lMmZzZW1pJTJmYmluZ2Fkc3NlYXJjaCUyZmhvdGVsX2dlbmVyYWwlMmZhbnklMmZlbi5odG1sJTNmbXQlM2RwJTI2Ym10JTNkYmIlMjZvaWlkJTNkNzc5OTcwNzgxNTYwNzklMjZhaWQlM2QxMjQ3OTQ3MDU0NzQ2NzA5JTI2YWRpZCUzZDc3OTk2ODI1NDc0NDk5JTI2cGlkJTNkJTI2dGlkJTNka3dkLTc3OTk3MDc4MTU2MDc5JTNhbG9jLTkwJTI2ZCUzZGMlMjZuJTNkcyUyNmNtcGlkJTNkNTcwMjEzMjM4JTI2bXNjbGtpZCUzZDYyY2NiZmM5ZWIzYzE5ZWVmZDQ1ZDY4NTcxY2ZkZGZjJTI2dXRtX3NvdXJjZSUzZGJpbmclMjZ1dG1fbWVkaXVtJTNkY3BjJTI2dXRtX2NhbXBhaWduJTNkQ29tcGV0aXRvcl9HZW5lcmljJTI1MjAtJTI1MjBHcm91cCUyNnV0bV90ZXJtJTNkYWlyYm5iJTI2dXRtX2NvbnRlbnQlM2RUJTI1M0Rub25lJTI1MjAtJTI1MjBQJTI1M0Rub25lJTI1MjAtJTI1MjBPJTI1M0ROb25lJTI1MjAtJTI1MjBEJTI1M0ROb25lJTI1MjAtJTI1MjBTJTI1M0RhaXJibmI%26rlid%3D62ccbfc9eb3c19eefd45d68571cfddfc&vqd=4-279812679156539630278704603221042213251&iurl=%7B1%7DIG%3D024D859C8B094454A283795F97AE41AB%26CID%3D35138845E3AF6A520B879E88E2576B40%26ID%3DDevEx%2C5045.1\", \"content\": \"Places to Stay: Find Accommodation Deals & Discounts - KAYAK Skip to main content Sign in Flights Stays Car Rental Flight+Hotel AI Mode Explore Direct Best Time to Travel KAYAK for Business NEW Trips English Search for a country or language Argentina (Espaol) Australia (English) Belgique (Franais) Belgi (Nederlands) Bolivia (Espaol) Brasil (Portugus) Canada (English) Canada (Franais) Chile (Espaol) Colombia (Espaol) Costa Rica (Espaol) Danmark (Dansk) Deutschland (Deutsch) Germany (English) Ecuador (Espaol) El Salvador (Espaol) Espaa (Espaol) Espanya (Catal) France (Franais) () Guatemala (Espaol) Honduras (Espaol) Hong Kong (English) () India (English) Indonesia (Bahasa Indonesia) Indonesia (English) Ireland (English) Israel (English) () Italia (Italiano) () Malaysia (English) Malaysia (Melayu) Mxico (Espaol) Nederland (Nederlands) New Zealand (English) Nicaragua (Espaol) Norge (Norsk) Panam (Espaol) Paraguay (Espaol) Per (Espaol) Philippines (English) Polska (Polski) Portugal (Portugus) Puerto Rico (Espaol) Repblica Dominicana (Espaol) Romnia (Romn) Suisse (Franais) Schweiz (Deutsch) Singapore (English) South Africa (English) () Suomi (Suomi) Sverige (Svenska) () Trkiye (Trke) United Arab Emirates (English) United Kingdom (English) United States (English) Estados Unidos (Espaol) Uruguay (Espaol) Venezuela (Espaol) Vietnam (English) Vit Nam (Vit) sterreich (Deutsch) esk republika (etina) ()  () Saudi Arabia (English) () Thailand (English) Compare hotel deals from 100s of sites . Flights Stays Car Rental Flight+Hotel AI Mode Enter a city, hotel, airport, address or landmark Thu 25/12 Fri 26/12 1 room, 2 guests Search Save when you compare More deals. More sites. One search. 41,000,000+ 0 searches this week Travellers love us 1M+ ratings on our app Search for places to stay by destination Find Accommodation Can I really save on places to stay near me and lodging in other popular destinations by using KAYAK? Yes! KAYAK searches for accommodation deals on hundreds of accommodation comparison sites to help you find deals on hotels , holiday rentals and more. Singapore hotels Furama Riverfront 8,080+ Hotel Gin Bugis Singapore managed by The Ascott Ltd 8,253+ Hotel Boss 8,525+ V Hotel Lavender 8,652+ V Hotel Bencoolen 8,794+ Hotel Mi Bencoolen 9,109+ Vibe Hotel Singapore Orchard 9,785+ Travelodge Harbourfront 9,981+ ibis Singapore on Bencoolen 9,984+ YOTEL Singapore 10,304+ Ooty hotels Hotel Maneck 808+ Hotel Blue Bird 987+ Hotelsarkarpalace 1,346+ Aakash Rooms and Cottages, 1,346+ Tulips Elkhill Resorts 1,436+ Hotel Maneck Residency 1,436+ Tulips Valley View Resorts 1,441+ Mount Hira 1,526+ Hotel Preethi Palace 1,615+ Tulips Resorts - Village 1,615+ Dubai hotels Arabian Park Dubai, an Edge by Rotana Hotel 5,737+ Asiana Hotel Dubai 7,231+ Queen Elizabeth 2 7,788+ Atana Hotel 8,274+ Swisstel Al Ghurair 8,301+ Grand Mercure Dubai City 8,321+ Dusit Thani Dubai 8,626+ Hyatt Regency Dubai 8,820+ Al Seef Heritage Hotel Dubai, Curio Collection by Hilton 8,884+ La Suite Dubai Hotel & Apartments 8,974+ Mumbai hotels New Shahana - Hostel 538+ Ginger Mumbai Airport 4,986+ Ramee Guestline Hotel Juhu 5,025+ ibis Mumbai Airport 5,294+ Hotel Suba International 5,864+ Dragonfly Hotel - The Art Hotel 5,955+ Hotel Surya Prakash Chembur 6,102+ Abode Bombay 6,266+ The Orchid Hotel Mumbai Vile Parle 6,742+ Residency Hotel Fort 6,869+ Paris hotels Hotelf1 Paris Saint Ouen March Aux Puces 3,881+ hotelF1 Paris Porte de Chtillon 4,135+ Auberge Internationale Des Jeunes 5,007+ Bastille Hostel 5,402+ ibis budget Paris Porte de Montmartre 5,679+ B&B HOTEL Paris Porte des Lilas 5,833+ St Christopher's Inn Paris - Canal 6,975+ Ibis Budget Paris La Villette 19me 7,594+ ibis Paris 17 Clichy-Batignolles 8,074+ Novotel Suites Paris Montreuil Vincennes 8,401+ London hotels Nx London Hostel 2,333+ Palmers Lodge Swiss Cottage 3,766+ Ramada London North M1 4,936+ Ibis Budget London Whitechapel 6,255+ King Solomon Hotel- Golders Green 6,372+ Safestay London Ken\", \"images\": [], \"rank\": 1}, {\"url\": \"https://duckduckgo.com/y.js?ad_domain=tripadvisor.in&ad_provider=bingv7aa&ad_type=txad&click_metadata=m2iNxOuGPvm4AjSoO2gIzMoGOMkP8YVgzWrLhDBkgQU6TjHEv5vjvWx2Bo_iDmM6sJV1LX2Cv5nR4ktysCaHPM1H45Zbfb3KOVkd6WzN3zWwW4YxBwb8NPexHYu1rh%2DkEsJO_xOPLv41fwZ3mBi8216dH0IUoadh5aanN9TSjD8.%2DtMSIjHz1wperM3bA7vF2g&rut=3f462669d4955328941f233d5e8b90637930673ff78bba645f69e6639935982e&u3=https%3A%2F%2Fwww.bing.com%2Faclick%3Fld%3De8QuORCRh1pktwJP%2DgcjvNajVUCUxsBqnosEB5dgdlp2kLtyv2un9Q3uaKkUB0htzicFAueX3V3qoO3byPX_PSMM8mpSeBfq8zeeFynwIXRMWZpLZbVxXCPpg_Xn%2DwKx_r5eKZUyM3l07UQQ5RWXXd25ecCCzYk1mR3oo3Oh9jf9ScGl9A6zJSxSVv6lSuB3yKKi_dwUgu75hTW3ws%2DZ4NVEBERyo%26u%3DaHR0cHMlM2ElMmYlMmZ3d3cudHJpcGFkdmlzb3IuaW4lMmZIb3RlbHNOZWFyLWcxNTUwMTktZDEwNDEzNzI0LW9hODE2MC1TZWNyZXRfQ2l0eV9BZHZlbnR1cmVzX0xvc3RfYW5kX0ZvdW5kX2luX0NoaW5hdG93bi1Ub3JvbnRvX09udGFyaW8uaHRtbCUzZm0lM2QxNDc0OCUyNnN1cGJrJTNkMCUyNnN1cGtsJTNka2wlMjZzdXBjbSUzZDc1ODAwMDUxMyUyNnN1cGFnJTNkMTMyNDkxMzg4OTczNjg0MyUyNnN1cHRpJTNkZGF0LTIzMzQ2MDY3ODM3NTMyNjElM2Fsb2MtOTAlMjZzdXBhaSUzZDgyODA3MzQ2MzA3NjI3JTI2c3VwZHYlM2RjJTI2c3VwbnQlM2RzJTI2c3Vwa3clM2Rob3RlbHMlMjUyMEFpcmJuYiUyNTIwcmVudGFscyUyNTIwYWNjb21tb2RhdGlvbiUyNTIwcHJpY2UlMjUyMGxvY2F0aW9uJTI1MjBhbWVuaXRpZXMlMjUyMHJldmlld3MlMjZtc2Nsa2lkJTNkM2I2ZmFjZmMwZmYyMTg0Yzk4MjRjNWIwOTUwMTNjNDc%26rlid%3D3b6facfc0ff2184c9824c5b095013c47&vqd=4-330663471393435062522913550893241979781&iurl=%7B1%7DIG%3D024D859C8B094454A283795F97AE41AB%26CID%3D35138845E3AF6A520B879E88E2576B40%26ID%3DDevEx%2C5051.1\", \"content\": \"[error] \", \"rank\": 2}, {\"url\": \"https://www.airbnb.co.in/bengaluru-india/stays/hotels\", \"content\": \"Bengaluru Hotels - Karnataka, India | Airbnb Skip to content Were sorry, some parts of the Airbnb website dont work properly without JavaScript enabled. Some info has been automatically translated. Show original language Airbnb your place Airbnb your place Hotels in Bengaluru Find and book unique hotels on Airbnb Location When results are available, navigate with the up and down arrow keys or explore by touch or swipe gestures. Check in Check out Search Top-rated hotels in Bengaluru Guests agree: these hotels are highly rated for location, cleanliness and more. %{current} / %{total} 1 / 1 Guest favourite Guest favourite Hotel room in Koramangala 5 out of 5 average rating, 8 reviews 5 (8) Koramanagla Suite - Shivani Pty 1 bedroom (queen bed) + private attached bath. Private living room, dedicated work space and kitchenette.  Experience Lean luxury at its finest in this chic queen suite, nestled in the vibrant 4th Block of Koramangala. Perfectly designed for solo remote workers or couples seeking an urban getaway. This space combines comfort, convenience, and a prime location. Just steps away from trendy cafes, restaurants, pubs, and all the action Koramangala has to offer, you're at the center of everything. Guest favourite Guest favourite Hotel room in JP Nagar 4.83 out of 5 average rating, 35 reviews 4.83 (35) Sudhanva- Room 1 | IIMB Visitors' Favourite Choice Whether you're visiting for work, studies, or leisure, our premium accommodation offers meticulously maintained rooms with a strong focus on hygiene, comfort & safety. Perfect for short stays and extended visits. Just a 5-minute walk from the prestigious IIMB and right on the Bannerghatta Main Rd. A bus stop is located right in front of the property & excellent availability of public transport options ensures ease of commute.  Stay at Sudhanva for a truly unforgettable stay experience! Superhost Superhost Hotel room in Koramangala 4.58 out of 5 average rating, 19 reviews 4.58 (19) The Roy Grand Inns Located in Bangalore, 2.6 km from Forum Mall and 1.5 km from the pub hub of Bangalore, JNC road, Koramangala, TRGI provides accommodations with a shared lounge, free private parking, a terrace and a restaurant. The property has room service and a 24-hour front desk for guests. At the hotel, every room includes a closet, a flat-screen TV, a private bathroom, bed linen and towels. TRGI offers a la carte or vegetarian breakfast. The nearest airport is KIA, 37 km from The Roy Grand Inns. Guest favourite Guest favourite Hotel room in Bengaluru 4.97 out of 5 average rating, 29 reviews 4.97 (29) Sudhanva- Room 2 | IIMB Visitors' Preferred Stay Whether you're visiting for work, studies, or leisure, our premium accommodation offers meticulously maintained rooms with a strong focus on hygiene, comfort & safety. Just a 5-minute walk from the prestigious IIMB and right on the Bannerghatta Main Rd. Perfect for short stays and extended visits. A bus stop is located right in front of the property & excellent availability of public transport options ensures ease of commute. Stay at Sudhanva for a truly unforgettable stay experience! Hotel room in Jaya Nagar 4.78 out of 5 average rating, 60 reviews 4.78 (60) Hotel Paramos Inn Jayanagar Bangalore Standard S1 Whether you are travelling for leisure or on business, make the most of your experience in Bangalore with a stay at our first class Hotel Paramos Inn located in Jayanagar Bangalore. We love this city and wanted a Boutique hotel that is warm and inviting with classic design, quirky antiques, delicious locally sourced food menu and most importantly is centrally located. Always stylish but not costing the earth to stay in, Boutique Hotel in Jayanagar Bangalore on a budget! Standard room Hotel room in White Field 4.64 out of 5 average rating, 28 reviews 4.64 (28) Acasa Suites king suite with balcony Located in Whitefield , a few-minute walk away from happening pubs cafes, wide choice of cuisines , very close to sigma tech-park, Ma\", \"images\": [], \"rank\": 3}, {\"url\": \"https://theabroadlog.com/hotel-vs-airbnb-the-brutally-honest-guide-to-choosing-without-regret/\", \"content\": \"Hotel vs. Airbnb: The Brutally Honest Guide to Choosing Without Regret | The Abroad Log Sign in Home Travel Food Adventure Advice Lifestyle Featured Sign in Welcome! Log into your account your username your password Forgot your password? Password recovery Recover your password your email Search NP Newspaper Publication Home Travel Food Adventure Advice Lifestyle Featured Search here... Search Home Travel Food Adventure Advice Lifestyle Featured Search here... Search Travel Hotel vs. Airbnb: The Brutally Honest Guide to Choosing Without Regret Share post: Facebook Twitter Pinterest WhatsApp Introduction As travel continues to evolve, so too do the options available for accommodations. Two of the most popular choices that travelers face are traditional hotels and the more modern Airbnb rentals. Each option offers a distinct experience that caters to diverse needs and preferences. This guide aims to provide an unbiased analysis of these two accommodation types, allowing travelers to make informed decisions that align with their personal requirements and expectations. The rise of Airbnb has significantly transformed the hospitality landscape. What began as a platform for individuals to rent out their extra space has rapidly grown into a global phenomenon. Travelers are increasingly drawn to Airbnb for its unique offerings, which often include entire homes or apartments, providing a more intimate and personal experience compared to conventional hotels. The appeal of Airbnb lies not only in the variety of properties available but also in the potential cost savings for those seeking to maximize their travel budgets. On the other hand, hotels have withstood the test of time, offering a sense of familiarity and reliability. Many travelers appreciate the amenities that hotels provide, such as room service, on-site dining, and concierge assistance, which are difficult to match in alternative lodging options. For some, the prestige and brand recognition of established hotels can enhance the overall travel experience, ensuring a level of service that is well-regarded within the industry. This guide will delve into the pros and cons of both hotels and Airbnb rentals, examining factors such as cost, convenience, and the overall travel experience. By analyzing these elements, readers gain valuable insights that will facilitate better decision-making when choosing accommodations. As travel preferences differ greatly among individuals, understanding the unique offerings of each option is essential to ensuring a satisfying and memorable trip. Understanding Hotels The traditional hotel experience has long been the cornerstone of travel accommodation, offering a range of services and amenities tailored to meet guests diverse needs. Hotels come in various forms, from luxury resorts providing opulent stays and exceptional service to budget motels that prioritize affordability and convenience. Each type of hotel offers unique advantages, catering to different demographics and preferences. Luxury hotels typically encompass high-end services, including personalized room service, 24-hour concierge assistance, and extensive facilities such as spas and fitness centers. This level of service contributes to a seamless and indulgent experience, appealing to travelers seeking comfort and convenience. On the other end of the spectrum, budget motels focus on providing essential lodging options at a fraction of the cost, often sacrificing some amenities while providing necessary services such as Wi-Fi, parking, and clean rooms. One significant benefit of traditional hotels is the consistent level of service they offer. Guests can expect well-maintained rooms, daily housekeeping, and readily available staff to assist with any inquiries or concerns. However, these advantages can come with drawbacks, such as higher pricing and strict booking policies that may include cancellation fees or non-refundable rates. Travelers must weigh these factors when making their acc\", \"images\": [], \"rank\": 4}, {\"url\": \"https://www.airbnb.com.au/bengaluru-india/stays\", \"content\": \"Bengaluru Holiday Rentals & Homes - Karnataka, India | Airbnb Skip to content Were sorry, some parts of the Airbnb website dont work properly without JavaScript enabled. Airbnb your place Airbnb your place Holiday houses in Bengaluru Find and book unique accommodation on Airbnb Location When results are available, navigate with up and down arrow keys or explore by touch or swipe gestures. Check in Check out Search Top-rated holiday rentals in Bengaluru Guests agree: these stays are highly rated for location, cleanliness and more. %{current} / %{total} 1 / 1 Superhost Superhost Condo in White Field 4.91 out of 5 average rating, 53 reviews 4.91 (53) Modern chic studio - near to metro, malls, ITparks You will find yourself in an oasis of greenery, away from the hustle & bustle while being close to the metro, IT parks and the malls. The spaces in the house is optimised with clever design to include all conveniences you would need, without clutter...making for a luxurious stay, be it for a vacation, workcation or a long term stay. You can also enjoy what the community clubhouse has to offer, with a rooftop infinity pool, gym, tennis, TT, badminton, cobblestoned walkways among trees and more. Guest favourite Guest favourite Apartment in Mahadevapura 5 out of 5 average rating, 59 reviews 5 (59) Garden house The best thoughts and encounters occur at places where you feel you are lost to nature. This unique place has blooming flower garden in front and back, see through glasses to view full moon on full moon day, art filled walls, sky Gazing glass roof, king size bed to roll over, traditional kitchen stocked with groceries and spices to cook, work station with wifi and bathing. 15 to 30 minutes drive to Indiranagar, MGRoad, Whitefield, Outer Ring Road IT hubs & Phenix mall & to KR Puram metro rail. Guest favourite Guest favourite Home in New Tippasandra 4.96 out of 5 average rating, 185 reviews 4.96 (185) Jo's Plumeria Penthouse, Indiranagar Manipal hosp It's a brand new penthouse in the heart of the city.. Indiranagar. It is walking distance from all requirements like restaurants, fresh fruits,vegetables, groceries, chemist and hospital. The property is 5 min walk from the 12 th main where all the pubs, restaurants etc are located. I request the guests to please stay close to check in and check out timings. If there is an early check-in or late check out please reconfirm with me .Thank you. Really appreciate it. looking forward to host you... Guest favourite Guest favourite Condo in Cooke Town 5 out of 5 average rating, 11 reviews 5 (11) The Malabar 1BHK Suite @ Casa Albela, Cooke Town Spacious 600 square feet Designer 1BHK Suite with Private Balcony | High-Speed fibre optic Wi-Fi & Smart TV with streaming platforms, Work/Dining Desk, 24/7 power backup for uninterrupted work and comfort |Luxe King Bed & Orthopaedic Mattress ,wooden wardrobes for storage | fully equipped Kitchenette | Couch Bed in living room , Max.Occupancy 4 | Elevator access, professional housekeeping and access to paid laundry on site for long stays| Located in Central Bangalore | LGBTQIA++ Affirmative Guest favourite Guest favourite Condo in Narayanpur 4.97 out of 5 average rating, 108 reviews 4.97 (108) Cozy Penthouse-Style 1 BHK Experience exquisite luxury at our penthouse in North Bangalore, ideally located near Manyata Tech Park, Bhartiya City, Sobha City and various SEZs. With Hebbal Ring Road just 5-6 Km away, and the BLR airport accessible within a 30-minute drive, our penthouse offers convenience and elegance. Enjoy breathtaking views, all modern amenities and the vibrant city culture at your doorstep. Your perfect Bangalore stay begins here For your entertainment Netflix and Amazon subscription is included. Guest favourite Guest favourite Apartment in White Field 4.96 out of 5 average rating, 171 reviews 4.96 (171) Luxury 1 BHK with Jacuzzi & AC @ Brookfield This is Ultra Luxury 1 BHK with fully loaded amenities and we propose it to be best in\", \"images\": [], \"rank\": 5}]",
+            "annotations": null
+          }
+        ]
+      },
+      "networkx_info_T002": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[{\"url\": \"https://coderivers.org/blog/networkx-in-python/\", \"content\": \"NetworkX in Python: A Comprehensive Guide - CodeRivers Skip to content CodeRivers NetworkX in Python: A Comprehensive Guide Trending Linux C C# Perl Scala AI Blog CodeRivers Trending Linux Linux Linux Basics Linux Basics Linux Introduction Linux Boot Process Linux Change Password Linux Close Firewall Linux Compression and Decompression Linux Create Folder Linux Create User Linux Decompress Tar.gz Linux Delete File Linux Delete Folder Linux Environment Variable Linux File and Directory Management Linux File Permissions Linux File System Linux Find File Linux Install Nginx Linux Kill Process Linux Mount Hard Disk Linux Move Folder Linux Network Management Linux Opt Directory Linux Package Management Linux Process Management Linux Rename File Linux Run Command in Background Linux Shutdown Linux Soft Link Linux Switch User Linux Timing Task Linux User and Group Management Linux View File Content Linux View File Size Linux View Memory Linux View Port Occupancy Linux View Port Linux View System Version C C C Basics C Basics C case C const C continue C default C do C double C else C enum C char C float C extern C for C goto C if C inline C int C long C register C restrict C return C short C signed C sizeof C static C struct C auto C break C typedef C switch C union C unsigned C void C volatile C while C _Alignas C _Alignof C _Atomic C _Bool C _Complex C _Generic C _Imaginary C _Noreturn C _Static_assert C _Thread_local C# C# C# Basics C# Basics C# abstract C# bool C# as C# base C# foreach C# for C# delegate C# do C# break C# double C# byte C# else C# case C# goto C# enum C# catch C# event C# continue C# const C# decimal C# explicit C# char C# extern C# checked C# false C# finally C# class C# fixed C# float C# default C# if C# implicit C# in C# int C# interface C# internal C# is C# lock C# long C# namespace C# new C# null C# object C# operator C# out C# override C# params C# private C# protected C# public C# readonly C# ref C# return C# sbyte C# sealed C# short C# sizeof C# stackalloc C# static C# string C# struct C# switch C# this C# throw C# true C# try C# typeof C# uint C# ulong C# unchecked C# unsafe C# ushort C# using C# virtual C# void C# volatile C# while Perl Perl Perl Basics Perl Basics Perl BEGIN Perl chroot Perl check Perl __DATA__ Perl core Perl DESTROY Perl close Perl END Perl eq Perl INIT Perl ne Perl __END__ Perl abs Perl closedir Perl accept Perl AUTOLOAD Perl caller Perl break Perl chdir Perl atan2 Perl bind Perl chmod Perl alarm Perl binmode Perl chomp Perl and Perl chop Perl bless Perl chown Perl chr Perl connect Perl continue Perl cos Perl crypt Perl dbmclose Perl dbmopen Perl default Perl defined Perl delete Perl die Perl do Perl dump Scala Scala Scala Basics Scala Basics Scala super Scala finally Scala def Scala new Scala for Scala forSome Scala if Scala implicit Scala import Scala lazy Scala match Scala this Scala extends Scala false Scala else Scala final Scala package Scala object Scala null Scala override Scala case Scala protected Scala do Scala abstract Scala private Scala catch Scala return Scala class Scala sealed Scala throw Scala trait Scala true Scala try Scala type Scala val Scala var Scala while Scala with Scala yield AI AI Matplotlib Tutorials Matplotlib Tutorials Matplotlib Basics Tutorial Matplotlib Chart Types Matplotlib Chart Styles Matplotlib Chart Layouts Matplotlib Chart Annotations Matplotlib Chart Animations Matplotlib Chart Interactions Matplotlib Chart Save Matplotlib Pyplot API Matplotlib Figure API Matplotlib Axes API Matplotlib Axis API Matplotlib Plot Markers Matplotlib Color Maps Matplotlib Color Settings Matplotlib Font Settings Matplotlib Line Styles Matplotlib Fill Styles Matplotlib Legend Matplotlib Grid Matplotlib Axis Matplotlib Grid Layout Matplotlib Scatter Plot Matplotlib Line Plot Matplotlib Bar Plot Matplotlib Histogram Matplotlib Pie Chart Matplotlib Box Plot Matplotlib Heat Map Matplotlib 3D Plot Matplotlib 3D Scatter Plot Matplotlib 3D Surface Plot Matplotlib 3D Histogr\", \"images\": [], \"rank\": 1}, {\"url\": \"https://www.geeksforgeeks.org/python/networkx-python-software-package-study-complex-networks/\", \"content\": \"NetworkX : Python software package for study of complex networks - GeeksforGeeks Skip to content Courses DSA / Placements GATE Prep ML & Data Science Development Cloud / DevOps Programming Languages All Courses Tutorials Python Java DSA ML & Data Science Interview Corner Programming Languages Web Development GATE CS Subjects DevOps School Learning Software and Tools Practice Practice Coding Problems Nation Skillup- Ending Soon! Problem of the Day Study Abroad Championship Jobs Apply Now! Post Jobs Jobs Updates Apply for Campus Mantri Notifications Mark all as read All View All Notifications Mark all as read All Unread Read You're all caught up!! Python Tutorial Data Types Interview Questions Examples Quizzes DSA Python Data Science NumPy Pandas Practice Django Flask Projects Sign In Open In App Technical Scripter Explore Python Fundamentals Python Introduction Input and Output in Python Python Variables Python Operators Python Keywords Python Data Types Conditional Statements in Python Loops in Python - For, While and Nested Loops Python Functions Recursion in Python Python Lambda Functions Python Data Structures Python String Python Lists Python Tuples Python Dictionary Python Sets Python Arrays List Comprehension in Python Advanced Python Python OOP Concepts Python Exception Handling File Handling in Python Python Database Tutorial Python MongoDB Tutorial Python MySQL Python Packages Python Modules Python DSA Libraries List of Python GUI Library and Packages Data Science with Python NumPy Tutorial - Python Library Pandas Tutorial Matplotlib Tutorial Python Seaborn Tutorial StatsModel Library - Tutorial Learning Model Building in Scikit-learn TensorFlow Tutorial PyTorch Tutorial Web Development with Python Flask Tutorial Django Tutorial | Learn Django Framework Django ORM - Inserting, Updating & Deleting Data Templating With Jinja2 in Flask Django Templates Build a REST API using Flask - Python Building a Simple API with Django REST Framework Python Practice Python Quiz Python Coding Practice Python Interview Questions and Answers 21 Days 21 Projects 40% Off NetworkX : Python software package for study of complex networks Last Updated : 11 Aug, 2025 Comments Improve Suggest changes 12 Likes Like Report NetworkX is a Python library for creating, analyzing and visualizing complex networks. It models real-world systems as graphs, where nodes represent entities and edges represent relationships. The library supports loading, storing and generating various types of graphs, analyzing network structures, designing algorithms and drawing networks with ease and flexibility. Installation To install the latest version of NetworkX, simply run: pip install networkx Creating Graphs NetworkX supports several types of graphs: Graph(): undirected graph DiGraph(): directed graph MultiGraph(): undirected graph with parallel edges MultiDiGraph(): directed graph with parallel edges Lets begin with a basic undirected graph: Python import networkx as nx # Create an empty graph G = nx . Graph () Adding Nodes You can add nodes one at a time or in batches: Python # Add individual nodes G . add_node ( 1 ) G . add_nodes_from ([ 2 , 3 , 4 , 7 , 9 ]) Output: After this step, your graph G has 6 nodes. Adding Edges Edges connect the nodes in your graph: Python # Add individual edges G . add_edge ( 1 , 2 ) G . add_edge ( 3 , 1 ) G . add_edge ( 2 , 4 ) G . add_edge ( 4 , 1 ) G . add_edge ( 9 , 1 ) # Add multiple edges at once G . add_edges_from ([( 1 , 7 ), ( 2 , 9 )]) Output: Note: Since it's an undirected graph, the edge (1, 2) is the same as (2, 1). Removing Nodes and Edges You can remove nodes and edges just as easily: Python G . remove_node ( 3 ) # Removes node 3 G . remove_edge ( 1 , 2 ) # Removes edge between node 1 and 2 Output: Network Analysis with NetworkX NetworkX allows you to perform deep analysis of your graph: Python # All nodes print ( G . nodes ()) # All edges print ( G . edges ()) # Number of nodes and edges print ( G . number_of_nodes ())\", \"images\": [], \"rank\": 2}, {\"url\": \"https://networkx.org/en/\", \"content\": \"NetworkX NetworkX documentation NetworkX is a Python package for the creation, manipulation, and       study of the structure, dynamics, and functions of complex networks. Software for complex networks Data structures for graphs, digraphs, and multigraphs Many standard graph algorithms Network structure and analysis measures Generators for classic graphs, random graphs, and synthetic networks Nodes can be \\\"anything\\\" (e.g., text, images, XML records) Edges can hold arbitrary data (e.g., weights, time-series) Open source 3-clause BSD license Well tested with over 90% code coverage Additional benefits from Python include fast prototyping, easy to teach, and multi-platform Contact Mailing list Issue tracker Source Releases Stable ( notes ) 3.6.1 Dec 2025 Documentation Latest ( notes ) 3.7 development Documentation Archive Language 2014- , NetworkX developers.\", \"images\": [], \"rank\": 3}, {\"url\": \"https://generalistprogrammer.com/tutorials/networkx-python-package-guide\", \"content\": \"networkx Python Guide [2025] | PyPI Tutorial Generalist Programmer Tutorials Learning Hubs Unity Hub Godot Hub Unreal Engine Hub Programming Hub Development Hub Business Hub View All Hubs Categories Game Dev Logs Game Business Game Development Game Art Programming Game Programming View All Categories About Contact Home / Tutorials / Python Packages / Networkx: Python Package Guide 2025 Published November 16, 2025 13 Python Packages Networkx: Python Package Guide 2025 Master networkx: Python package for creating and manipulating graphs and networks. Installation guide, examples & best practices. Python 3.11+. Comprehensive guide w # python # pypi # pip # networkx # Networks # Graph Theory # Mathematics # network # graph What is networkx? networkx is Python package for creating and manipulating graphs and networks. It's one of the most widely used packages in the Python ecosystem for developers building modern Python applications. Quick Stats: Package: networkx Latest Version: 3.5 Python Version: >=3.11 License: Not specified Repository: https://networkx.org/ Installation Install networkx using pip: Standard Installation: pip install networkx Using pip3 (if you have both Python 2 and 3): pip3 install networkx Install specific version: pip install networkx==3.5 Upgrade to latest version: pip install --upgrade networkx Virtual Environment Setup It's best practice to use a virtual environment: Using venv: # Create virtual environment python -m venv myenv # Activate (Linux/Mac) source myenv/bin/activate # Activate (Windows) myenv\\\\Scripts\\\\activate # Install package pip install networkx Using conda: conda create -n myenv python=3.11 conda activate myenv pip install networkx Basic Usage After installation, import networkx in your Python scripts: # Import the package import networkx # Basic usage example # Example usage result = networkx() print(result) Quick Example import networkx # Initialize and configure networkx_instance = networkx.create() # Use the package result = networkx_instance.process() print(f\\\"Result: {result}\\\") Key Features Python package for creating and manipulating graphs and networks Easy to use Pythonic API Well documented with examples Active community support Regular updates and maintenance Open source license Compatible with Python >=3.11 When to Use networkx Perfect for: Python projects requiring python package for creating and manipulating graphs and networks Web applications, APIs, and microservices Data processing and analysis pipelines Automation and scripting tasks Development teams using modern Python practices Not ideal for: Projects with Python version constraints incompatible with >=3.11 Use cases where standard library alternatives exist Extremely resource-constrained environments Dependencies Optional dependencies (extras): numpy>=1.25 - Install with: pip install networkx[default] scipy>=1.11.2 - Install with: pip install networkx[default] matplotlib>=3.8 - Install with: pip install networkx[default] pandas>=2.0 - Install with: pip install networkx[default] pre-commit>=4.1 - Install with: pip install networkx[developer] Python Version Compatibility networkx requires Python >=3.11. Recommended Python versions: Python 3.8+ (recommended) Python 3.11 (latest stable) Python 3.12 (cutting edge) Check your Python version: python --version python3 --version Common Use Cases Use Case 1: Basic networkx Implementation import networkx # Basic setup config = {   'option1': 'value1',   'option2': 'value2' } # Use the package result = networkx.initialize(config) print(result) Use Case 2: Advanced networkx Usage import networkx from typing import Dict, Any def process_with_networkx(data: Dict[str, Any]) -> Any:   \\\"\\\"\\\"Advanced usage with error handling\\\"\\\"\\\"   try:     result = networkx.process(       data,       advanced_mode=True,       timeout=30     )     return result   except networkx.Error as e:     print(f\\\"Error: {e}\\\")     return None # U\", \"images\": [], \"rank\": 4}, {\"url\": \"https://medium.com/@bonepallisai1/exploring-networkx-a-python-library-for-network-analysis-49d1d9c2e108\", \"content\": \"[error] \", \"rank\": 5}]",
+            "annotations": null
+          }
+        ]
+      },
+      "accommodation_summary_T003": [
+        {
+          "source": "KAYAK",
+          "summary": "Compares hotel deals from hundreds of sites for hotels, holiday rentals, and more.",
+          "locations": [
+            "Singapore",
+            "Ooty",
+            "Dubai",
+            "Mumbai",
+            "Paris",
+            "London"
+          ]
+        },
+        {
+          "source": "Airbnb",
+          "location": "Bengaluru",
+          "options": [
+            "Hotel rooms",
+            "Apartments",
+            "Condos",
+            "Homes"
+          ],
+          "highlights": [
+            "Top-rated for location and cleanliness",
+            "Options near IIMB, Koramangala, Whitefield, and Indiranagar"
+          ]
+        },
+        {
+          "source": "The Abroad Log",
+          "type": "Guide",
+          "comparison": "Hotels vs. Airbnb",
+          "factors": [
+            "Cost",
+            "Convenience",
+            "Overall travel experience",
+            "Amenities (room service, concierge)",
+            "Personalization",
+            "Potential cost savings"
+          ],
+          "hotel_types": [
+            "Luxury resorts",
+            "Budget motels"
+          ]
+        }
+      ],
+      "networkx_summary_T004": [
+        "NetworkX is a Python package for creating, analyzing, and visualizing complex networks.",
+        "It models systems as graphs with nodes representing entities and edges representing relationships.",
+        "Supports various graph types: undirected (Graph), directed (DiGraph), and multigraphs (MultiGraph, MultiDiGraph).",
+        "Key functionalities include: Loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks.",
+        "Nodes and edges can hold arbitrary data.",
+        "Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas.",
+        "Potential applications: Web applications, APIs, microservices, data processing, automation scripts."
+      ],
+      "final_report_T005": []
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Research potential accommodations in the user's specified location.",
+              "agent": "RetrieverAgent",
+              "agent_prompt": "Research available hotels, Airbnb rentals, and other accommodation options. Consider price, location, amenities, and user reviews.",
+              "reads": [],
+              "writes": [
+                "accommodation_options_T001"
+              ]
+            },
+            {
+              "id": "T002",
+              "description": "Research NetworkX library and its capabilities.",
+              "agent": "RetrieverAgent",
+              "agent_prompt": "Gather information about the NetworkX Python library. Focus on its purpose, functionalities, and use cases. Include examples of how NetworkX can be used for network analysis.",
+              "reads": [],
+              "writes": [
+                "networkx_info_T002"
+              ]
+            },
+            {
+              "id": "T003",
+              "description": "Synthesize accommodation research results.",
+              "agent": "DistillerAgent",
+              "agent_prompt": "Summarize the accommodation options found. Highlight key features, pros and cons, and price ranges for each option from `accommodation_options_T001`. Focus on providing a concise overview for the user.",
+              "reads": [
+                "accommodation_options_T001"
+              ],
+              "writes": [
+                "accommodation_summary_T003"
+              ]
+            },
+            {
+              "id": "T004",
+              "description": "Synthesize NetworkX information.",
+              "agent": "DistillerAgent",
+              "agent_prompt": "Summarize the information about the NetworkX library from `networkx_info_T002`. Explain its core functionalities and potential applications in a clear and concise manner.",
+              "reads": [
+                "networkx_info_T002"
+              ],
+              "writes": [
+                "networkx_summary_T004"
+              ]
+            },
+            {
+              "id": "T005",
+              "description": "Format the accommodation options and NetworkX summary for user presentation.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Create a well-structured Markdown output combining the accommodation summary from `accommodation_summary_T003` and the NetworkX summary from `networkx_summary_T004`. Present the accommodation options in a table format with price, location, and key features. Present the NetworkX summary with a clear explanation of its functionalities and potential use cases.",
+              "reads": [
+                "accommodation_summary_T003",
+                "networkx_summary_T004"
+              ],
+              "writes": [
+                "final_report_T005"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            },
+            {
+              "source": "ROOT",
+              "target": "T002"
+            },
+            {
+              "source": "T001",
+              "target": "T003"
+            },
+            {
+              "source": "T002",
+              "target": "T004"
+            },
+            {
+              "source": "T003",
+              "target": "T005"
+            },
+            {
+              "source": "T004",
+              "target": "T005"
+            }
+          ]
+        },
+        "next_step_id": "T006",
+        "cost": 0.0001522,
+        "input_tokens": 30,
+        "output_tokens": 373,
+        "total_tokens": 403
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2025-12-25T02:01:16.321501",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Research potential accommodations in the user's specified location.",
+      "agent": "RetrieverAgent",
+      "agent_prompt": "Research available hotels, Airbnb rentals, and other accommodation options. Consider price, location, amenities, and user reviews.",
+      "reads": [],
+      "writes": [
+        "accommodation_options_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "accommodation_options_T001": [],
+        "call_self": false,
+        "code_variants": {
+          "CODE_1A": "data = json.loads(search_web_with_text_content('hotels Airbnb rentals accommodation price location amenities reviews', 8))\nreturn {'accommodation_options_T001': data}",
+          "CODE_1B": "data = json.loads(search_web_with_text_content('cheap hotels unique rentals vacation homes reviews', 6))\nreturn {'accommodation_options_T001': data}"
+        },
+        "cost": 2.29e-05,
+        "input_tokens": 37,
+        "output_tokens": 48,
+        "total_tokens": 85,
+        "execution_result": {
+          "accommodation_options_T001": {
+            "content": [
+              {
+                "type": "text",
+                "text": "[{\"url\": \"https://duckduckgo.com/y.js?ad_domain=kayak.co.in&ad_provider=bingv7aa&ad_type=txad&click_metadata=JSlCJaG%2DjM9o43tudoJ%2D6Ni02jZYfacvYMq_av18RJ%2DyCvyIrPWIeFY%2DwhWsv%2DqRE_LQs6sEq%2DDsrytxUK_ORK1xCaKgspv9m1suuwiUaaQs4gHKxEu7piIaqAGTLub1%2DQQmguTuXow73uWNAy1fiqFE_96bY0mqBc1bYF%2DWTXA.n8ziKbZx%2DpUWvptp9y5XGQ&rut=bc03281d49151b1ec6dc604bad36f36ae698d05847dfce3fef05b3b7fc2ed5d9&u3=https%3A%2F%2Fwww.bing.com%2Faclick%3Fld%3De8R3sH5Kzkq3GySdZcnheK7DVUCUyEFzshsgJz18bJWSFkhgQsHWh9QU%2DWcQOXHt%2DZ6x%2DHM%2D%2DD0Fc5nxeysc%2D3y3Q7FYVkrUxT0RIdn4pZNBiFcjkZdYO3xOrSvMtyfUa980RLXWItsxfPXRGcz0v8mtlLShKTaJ5wqnf_VW5o4bD7rZsGAIJpf4SMi9VWaSG8nvVjrEAx4N1H_fRGdpLfsqyk_So%26u%3DaHR0cHMlM2ElMmYlMmZ3d3cua2F5YWsuY28uaW4lMmZzZW1pJTJmYmluZ2Fkc3NlYXJjaCUyZmhvdGVsX2dlbmVyYWwlMmZhbnklMmZlbi5odG1sJTNmbXQlM2RwJTI2Ym10JTNkYmIlMjZvaWlkJTNkNzc5OTcwNzgxNTYwNzklMjZhaWQlM2QxMjQ3OTQ3MDU0NzQ2NzA5JTI2YWRpZCUzZDc3OTk2ODI1NDc0NDk5JTI2cGlkJTNkJTI2dGlkJTNka3dkLTc3OTk3MDc4MTU2MDc5JTNhbG9jLTkwJTI2ZCUzZGMlMjZuJTNkcyUyNmNtcGlkJTNkNTcwMjEzMjM4JTI2bXNjbGtpZCUzZDYyY2NiZmM5ZWIzYzE5ZWVmZDQ1ZDY4NTcxY2ZkZGZjJTI2dXRtX3NvdXJjZSUzZGJpbmclMjZ1dG1fbWVkaXVtJTNkY3BjJTI2dXRtX2NhbXBhaWduJTNkQ29tcGV0aXRvcl9HZW5lcmljJTI1MjAtJTI1MjBHcm91cCUyNnV0bV90ZXJtJTNkYWlyYm5iJTI2dXRtX2NvbnRlbnQlM2RUJTI1M0Rub25lJTI1MjAtJTI1MjBQJTI1M0Rub25lJTI1MjAtJTI1MjBPJTI1M0ROb25lJTI1MjAtJTI1MjBEJTI1M0ROb25lJTI1MjAtJTI1MjBTJTI1M0RhaXJibmI%26rlid%3D62ccbfc9eb3c19eefd45d68571cfddfc&vqd=4-279812679156539630278704603221042213251&iurl=%7B1%7DIG%3D024D859C8B094454A283795F97AE41AB%26CID%3D35138845E3AF6A520B879E88E2576B40%26ID%3DDevEx%2C5045.1\", \"content\": \"Places to Stay: Find Accommodation Deals & Discounts - KAYAK Skip to main content Sign in Flights Stays Car Rental Flight+Hotel AI Mode Explore Direct Best Time to Travel KAYAK for Business NEW Trips English Search for a country or language Argentina (Espaol) Australia (English) Belgique (Franais) Belgi (Nederlands) Bolivia (Espaol) Brasil (Portugus) Canada (English) Canada (Franais) Chile (Espaol) Colombia (Espaol) Costa Rica (Espaol) Danmark (Dansk) Deutschland (Deutsch) Germany (English) Ecuador (Espaol) El Salvador (Espaol) Espaa (Espaol) Espanya (Catal) France (Franais) () Guatemala (Espaol) Honduras (Espaol) Hong Kong (English) () India (English) Indonesia (Bahasa Indonesia) Indonesia (English) Ireland (English) Israel (English) () Italia (Italiano) () Malaysia (English) Malaysia (Melayu) Mxico (Espaol) Nederland (Nederlands) New Zealand (English) Nicaragua (Espaol) Norge (Norsk) Panam (Espaol) Paraguay (Espaol) Per (Espaol) Philippines (English) Polska (Polski) Portugal (Portugus) Puerto Rico (Espaol) Repblica Dominicana (Espaol) Romnia (Romn) Suisse (Franais) Schweiz (Deutsch) Singapore (English) South Africa (English) () Suomi (Suomi) Sverige (Svenska) () Trkiye (Trke) United Arab Emirates (English) United Kingdom (English) United States (English) Estados Unidos (Espaol) Uruguay (Espaol) Venezuela (Espaol) Vietnam (English) Vit Nam (Vit) sterreich (Deutsch) esk republika (etina) ()  () Saudi Arabia (English) () Thailand (English) Compare hotel deals from 100s of sites . Flights Stays Car Rental Flight+Hotel AI Mode Enter a city, hotel, airport, address or landmark Thu 25/12 Fri 26/12 1 room, 2 guests Search Save when you compare More deals. More sites. One search. 41,000,000+ 0 searches this week Travellers love us 1M+ ratings on our app Search for places to stay by destination Find Accommodation Can I really save on places to stay near me and lodging in other popular destinations by using KAYAK? Yes! KAYAK searches for accommodation deals on hundreds of accommodation comparison sites to help you find deals on hotels , holiday rentals and more. Singapore hotels Furama Riverfront 8,080+ Hotel Gin Bugis Singapore managed by The Ascott Ltd 8,253+ Hotel Boss 8,525+ V Hotel Lavender 8,652+ V Hotel Bencoolen 8,794+ Hotel Mi Bencoolen 9,109+ Vibe Hotel Singapore Orchard 9,785+ Travelodge Harbourfront 9,981+ ibis Singapore on Bencoolen 9,984+ YOTEL Singapore 10,304+ Ooty hotels Hotel Maneck 808+ Hotel Blue Bird 987+ Hotelsarkarpalace 1,346+ Aakash Rooms and Cottages, 1,346+ Tulips Elkhill Resorts 1,436+ Hotel Maneck Residency 1,436+ Tulips Valley View Resorts 1,441+ Mount Hira 1,526+ Hotel Preethi Palace 1,615+ Tulips Resorts - Village 1,615+ Dubai hotels Arabian Park Dubai, an Edge by Rotana Hotel 5,737+ Asiana Hotel Dubai 7,231+ Queen Elizabeth 2 7,788+ Atana Hotel 8,274+ Swisstel Al Ghurair 8,301+ Grand Mercure Dubai City 8,321+ Dusit Thani Dubai 8,626+ Hyatt Regency Dubai 8,820+ Al Seef Heritage Hotel Dubai, Curio Collection by Hilton 8,884+ La Suite Dubai Hotel & Apartments 8,974+ Mumbai hotels New Shahana - Hostel 538+ Ginger Mumbai Airport 4,986+ Ramee Guestline Hotel Juhu 5,025+ ibis Mumbai Airport 5,294+ Hotel Suba International 5,864+ Dragonfly Hotel - The Art Hotel 5,955+ Hotel Surya Prakash Chembur 6,102+ Abode Bombay 6,266+ The Orchid Hotel Mumbai Vile Parle 6,742+ Residency Hotel Fort 6,869+ Paris hotels Hotelf1 Paris Saint Ouen March Aux Puces 3,881+ hotelF1 Paris Porte de Chtillon 4,135+ Auberge Internationale Des Jeunes 5,007+ Bastille Hostel 5,402+ ibis budget Paris Porte de Montmartre 5,679+ B&B HOTEL Paris Porte des Lilas 5,833+ St Christopher's Inn Paris - Canal 6,975+ Ibis Budget Paris La Villette 19me 7,594+ ibis Paris 17 Clichy-Batignolles 8,074+ Novotel Suites Paris Montreuil Vincennes 8,401+ London hotels Nx London Hostel 2,333+ Palmers Lodge Swiss Cottage 3,766+ Ramada London North M1 4,936+ Ibis Budget London Whitechapel 6,255+ King Solomon Hotel- Golders Green 6,372+ Safestay London Ken\", \"images\": [], \"rank\": 1}, {\"url\": \"https://duckduckgo.com/y.js?ad_domain=tripadvisor.in&ad_provider=bingv7aa&ad_type=txad&click_metadata=m2iNxOuGPvm4AjSoO2gIzMoGOMkP8YVgzWrLhDBkgQU6TjHEv5vjvWx2Bo_iDmM6sJV1LX2Cv5nR4ktysCaHPM1H45Zbfb3KOVkd6WzN3zWwW4YxBwb8NPexHYu1rh%2DkEsJO_xOPLv41fwZ3mBi8216dH0IUoadh5aanN9TSjD8.%2DtMSIjHz1wperM3bA7vF2g&rut=3f462669d4955328941f233d5e8b90637930673ff78bba645f69e6639935982e&u3=https%3A%2F%2Fwww.bing.com%2Faclick%3Fld%3De8QuORCRh1pktwJP%2DgcjvNajVUCUxsBqnosEB5dgdlp2kLtyv2un9Q3uaKkUB0htzicFAueX3V3qoO3byPX_PSMM8mpSeBfq8zeeFynwIXRMWZpLZbVxXCPpg_Xn%2DwKx_r5eKZUyM3l07UQQ5RWXXd25ecCCzYk1mR3oo3Oh9jf9ScGl9A6zJSxSVv6lSuB3yKKi_dwUgu75hTW3ws%2DZ4NVEBERyo%26u%3DaHR0cHMlM2ElMmYlMmZ3d3cudHJpcGFkdmlzb3IuaW4lMmZIb3RlbHNOZWFyLWcxNTUwMTktZDEwNDEzNzI0LW9hODE2MC1TZWNyZXRfQ2l0eV9BZHZlbnR1cmVzX0xvc3RfYW5kX0ZvdW5kX2luX0NoaW5hdG93bi1Ub3JvbnRvX09udGFyaW8uaHRtbCUzZm0lM2QxNDc0OCUyNnN1cGJrJTNkMCUyNnN1cGtsJTNka2wlMjZzdXBjbSUzZDc1ODAwMDUxMyUyNnN1cGFnJTNkMTMyNDkxMzg4OTczNjg0MyUyNnN1cHRpJTNkZGF0LTIzMzQ2MDY3ODM3NTMyNjElM2Fsb2MtOTAlMjZzdXBhaSUzZDgyODA3MzQ2MzA3NjI3JTI2c3VwZHYlM2RjJTI2c3VwbnQlM2RzJTI2c3Vwa3clM2Rob3RlbHMlMjUyMEFpcmJuYiUyNTIwcmVudGFscyUyNTIwYWNjb21tb2RhdGlvbiUyNTIwcHJpY2UlMjUyMGxvY2F0aW9uJTI1MjBhbWVuaXRpZXMlMjUyMHJldmlld3MlMjZtc2Nsa2lkJTNkM2I2ZmFjZmMwZmYyMTg0Yzk4MjRjNWIwOTUwMTNjNDc%26rlid%3D3b6facfc0ff2184c9824c5b095013c47&vqd=4-330663471393435062522913550893241979781&iurl=%7B1%7DIG%3D024D859C8B094454A283795F97AE41AB%26CID%3D35138845E3AF6A520B879E88E2576B40%26ID%3DDevEx%2C5051.1\", \"content\": \"[error] \", \"rank\": 2}, {\"url\": \"https://www.airbnb.co.in/bengaluru-india/stays/hotels\", \"content\": \"Bengaluru Hotels - Karnataka, India | Airbnb Skip to content Were sorry, some parts of the Airbnb website dont work properly without JavaScript enabled. Some info has been automatically translated. Show original language Airbnb your place Airbnb your place Hotels in Bengaluru Find and book unique hotels on Airbnb Location When results are available, navigate with the up and down arrow keys or explore by touch or swipe gestures. Check in Check out Search Top-rated hotels in Bengaluru Guests agree: these hotels are highly rated for location, cleanliness and more. %{current} / %{total} 1 / 1 Guest favourite Guest favourite Hotel room in Koramangala 5 out of 5 average rating, 8 reviews 5 (8) Koramanagla Suite - Shivani Pty 1 bedroom (queen bed) + private attached bath. Private living room, dedicated work space and kitchenette.  Experience Lean luxury at its finest in this chic queen suite, nestled in the vibrant 4th Block of Koramangala. Perfectly designed for solo remote workers or couples seeking an urban getaway. This space combines comfort, convenience, and a prime location. Just steps away from trendy cafes, restaurants, pubs, and all the action Koramangala has to offer, you're at the center of everything. Guest favourite Guest favourite Hotel room in JP Nagar 4.83 out of 5 average rating, 35 reviews 4.83 (35) Sudhanva- Room 1 | IIMB Visitors' Favourite Choice Whether you're visiting for work, studies, or leisure, our premium accommodation offers meticulously maintained rooms with a strong focus on hygiene, comfort & safety. Perfect for short stays and extended visits. Just a 5-minute walk from the prestigious IIMB and right on the Bannerghatta Main Rd. A bus stop is located right in front of the property & excellent availability of public transport options ensures ease of commute.  Stay at Sudhanva for a truly unforgettable stay experience! Superhost Superhost Hotel room in Koramangala 4.58 out of 5 average rating, 19 reviews 4.58 (19) The Roy Grand Inns Located in Bangalore, 2.6 km from Forum Mall and 1.5 km from the pub hub of Bangalore, JNC road, Koramangala, TRGI provides accommodations with a shared lounge, free private parking, a terrace and a restaurant. The property has room service and a 24-hour front desk for guests. At the hotel, every room includes a closet, a flat-screen TV, a private bathroom, bed linen and towels. TRGI offers a la carte or vegetarian breakfast. The nearest airport is KIA, 37 km from The Roy Grand Inns. Guest favourite Guest favourite Hotel room in Bengaluru 4.97 out of 5 average rating, 29 reviews 4.97 (29) Sudhanva- Room 2 | IIMB Visitors' Preferred Stay Whether you're visiting for work, studies, or leisure, our premium accommodation offers meticulously maintained rooms with a strong focus on hygiene, comfort & safety. Just a 5-minute walk from the prestigious IIMB and right on the Bannerghatta Main Rd. Perfect for short stays and extended visits. A bus stop is located right in front of the property & excellent availability of public transport options ensures ease of commute. Stay at Sudhanva for a truly unforgettable stay experience! Hotel room in Jaya Nagar 4.78 out of 5 average rating, 60 reviews 4.78 (60) Hotel Paramos Inn Jayanagar Bangalore Standard S1 Whether you are travelling for leisure or on business, make the most of your experience in Bangalore with a stay at our first class Hotel Paramos Inn located in Jayanagar Bangalore. We love this city and wanted a Boutique hotel that is warm and inviting with classic design, quirky antiques, delicious locally sourced food menu and most importantly is centrally located. Always stylish but not costing the earth to stay in, Boutique Hotel in Jayanagar Bangalore on a budget! Standard room Hotel room in White Field 4.64 out of 5 average rating, 28 reviews 4.64 (28) Acasa Suites king suite with balcony Located in Whitefield , a few-minute walk away from happening pubs cafes, wide choice of cuisines , very close to sigma tech-park, Ma\", \"images\": [], \"rank\": 3}, {\"url\": \"https://theabroadlog.com/hotel-vs-airbnb-the-brutally-honest-guide-to-choosing-without-regret/\", \"content\": \"Hotel vs. Airbnb: The Brutally Honest Guide to Choosing Without Regret | The Abroad Log Sign in Home Travel Food Adventure Advice Lifestyle Featured Sign in Welcome! Log into your account your username your password Forgot your password? Password recovery Recover your password your email Search NP Newspaper Publication Home Travel Food Adventure Advice Lifestyle Featured Search here... Search Home Travel Food Adventure Advice Lifestyle Featured Search here... Search Travel Hotel vs. Airbnb: The Brutally Honest Guide to Choosing Without Regret Share post: Facebook Twitter Pinterest WhatsApp Introduction As travel continues to evolve, so too do the options available for accommodations. Two of the most popular choices that travelers face are traditional hotels and the more modern Airbnb rentals. Each option offers a distinct experience that caters to diverse needs and preferences. This guide aims to provide an unbiased analysis of these two accommodation types, allowing travelers to make informed decisions that align with their personal requirements and expectations. The rise of Airbnb has significantly transformed the hospitality landscape. What began as a platform for individuals to rent out their extra space has rapidly grown into a global phenomenon. Travelers are increasingly drawn to Airbnb for its unique offerings, which often include entire homes or apartments, providing a more intimate and personal experience compared to conventional hotels. The appeal of Airbnb lies not only in the variety of properties available but also in the potential cost savings for those seeking to maximize their travel budgets. On the other hand, hotels have withstood the test of time, offering a sense of familiarity and reliability. Many travelers appreciate the amenities that hotels provide, such as room service, on-site dining, and concierge assistance, which are difficult to match in alternative lodging options. For some, the prestige and brand recognition of established hotels can enhance the overall travel experience, ensuring a level of service that is well-regarded within the industry. This guide will delve into the pros and cons of both hotels and Airbnb rentals, examining factors such as cost, convenience, and the overall travel experience. By analyzing these elements, readers gain valuable insights that will facilitate better decision-making when choosing accommodations. As travel preferences differ greatly among individuals, understanding the unique offerings of each option is essential to ensuring a satisfying and memorable trip. Understanding Hotels The traditional hotel experience has long been the cornerstone of travel accommodation, offering a range of services and amenities tailored to meet guests diverse needs. Hotels come in various forms, from luxury resorts providing opulent stays and exceptional service to budget motels that prioritize affordability and convenience. Each type of hotel offers unique advantages, catering to different demographics and preferences. Luxury hotels typically encompass high-end services, including personalized room service, 24-hour concierge assistance, and extensive facilities such as spas and fitness centers. This level of service contributes to a seamless and indulgent experience, appealing to travelers seeking comfort and convenience. On the other end of the spectrum, budget motels focus on providing essential lodging options at a fraction of the cost, often sacrificing some amenities while providing necessary services such as Wi-Fi, parking, and clean rooms. One significant benefit of traditional hotels is the consistent level of service they offer. Guests can expect well-maintained rooms, daily housekeeping, and readily available staff to assist with any inquiries or concerns. However, these advantages can come with drawbacks, such as higher pricing and strict booking policies that may include cancellation fees or non-refundable rates. Travelers must weigh these factors when making their acc\", \"images\": [], \"rank\": 4}, {\"url\": \"https://www.airbnb.com.au/bengaluru-india/stays\", \"content\": \"Bengaluru Holiday Rentals & Homes - Karnataka, India | Airbnb Skip to content Were sorry, some parts of the Airbnb website dont work properly without JavaScript enabled. Airbnb your place Airbnb your place Holiday houses in Bengaluru Find and book unique accommodation on Airbnb Location When results are available, navigate with up and down arrow keys or explore by touch or swipe gestures. Check in Check out Search Top-rated holiday rentals in Bengaluru Guests agree: these stays are highly rated for location, cleanliness and more. %{current} / %{total} 1 / 1 Superhost Superhost Condo in White Field 4.91 out of 5 average rating, 53 reviews 4.91 (53) Modern chic studio - near to metro, malls, ITparks You will find yourself in an oasis of greenery, away from the hustle & bustle while being close to the metro, IT parks and the malls. The spaces in the house is optimised with clever design to include all conveniences you would need, without clutter...making for a luxurious stay, be it for a vacation, workcation or a long term stay. You can also enjoy what the community clubhouse has to offer, with a rooftop infinity pool, gym, tennis, TT, badminton, cobblestoned walkways among trees and more. Guest favourite Guest favourite Apartment in Mahadevapura 5 out of 5 average rating, 59 reviews 5 (59) Garden house The best thoughts and encounters occur at places where you feel you are lost to nature. This unique place has blooming flower garden in front and back, see through glasses to view full moon on full moon day, art filled walls, sky Gazing glass roof, king size bed to roll over, traditional kitchen stocked with groceries and spices to cook, work station with wifi and bathing. 15 to 30 minutes drive to Indiranagar, MGRoad, Whitefield, Outer Ring Road IT hubs & Phenix mall & to KR Puram metro rail. Guest favourite Guest favourite Home in New Tippasandra 4.96 out of 5 average rating, 185 reviews 4.96 (185) Jo's Plumeria Penthouse, Indiranagar Manipal hosp It's a brand new penthouse in the heart of the city.. Indiranagar. It is walking distance from all requirements like restaurants, fresh fruits,vegetables, groceries, chemist and hospital. The property is 5 min walk from the 12 th main where all the pubs, restaurants etc are located. I request the guests to please stay close to check in and check out timings. If there is an early check-in or late check out please reconfirm with me .Thank you. Really appreciate it. looking forward to host you... Guest favourite Guest favourite Condo in Cooke Town 5 out of 5 average rating, 11 reviews 5 (11) The Malabar 1BHK Suite @ Casa Albela, Cooke Town Spacious 600 square feet Designer 1BHK Suite with Private Balcony | High-Speed fibre optic Wi-Fi & Smart TV with streaming platforms, Work/Dining Desk, 24/7 power backup for uninterrupted work and comfort |Luxe King Bed & Orthopaedic Mattress ,wooden wardrobes for storage | fully equipped Kitchenette | Couch Bed in living room , Max.Occupancy 4 | Elevator access, professional housekeeping and access to paid laundry on site for long stays| Located in Central Bangalore | LGBTQIA++ Affirmative Guest favourite Guest favourite Condo in Narayanpur 4.97 out of 5 average rating, 108 reviews 4.97 (108) Cozy Penthouse-Style 1 BHK Experience exquisite luxury at our penthouse in North Bangalore, ideally located near Manyata Tech Park, Bhartiya City, Sobha City and various SEZs. With Hebbal Ring Road just 5-6 Km away, and the BLR airport accessible within a 30-minute drive, our penthouse offers convenience and elegance. Enjoy breathtaking views, all modern amenities and the vibrant city culture at your doorstep. Your perfect Bangalore stay begins here For your entertainment Netflix and Amazon subscription is included. Guest favourite Guest favourite Apartment in White Field 4.96 out of 5 average rating, 171 reviews 4.96 (171) Luxury 1 BHK with Jacuzzi & AC @ Brookfield This is Ultra Luxury 1 BHK with fully loaded amenities and we propose it to be best in\", \"images\": [], \"rank\": 5}]",
+                "annotations": null
+              }
+            ]
+          }
+        },
+        "execution_status": "success",
+        "execution_error": null,
+        "execution_time": "2025-12-25 07:31:22",
+        "executed_variant": "CODE_1A",
+        "execution_logs": ""
+      },
+      "error": null,
+      "cost": 2.29e-05,
+      "start_time": "2025-12-25T02:01:16.325748",
+      "end_time": "2025-12-25T02:01:49.826358",
+      "execution_time": 33.50061,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "accommodation_options_T001": [],
+            "call_self": false,
+            "code_variants": {
+              "CODE_1A": "data = json.loads(search_web_with_text_content('hotels Airbnb rentals accommodation price location amenities reviews', 8))\nreturn {'accommodation_options_T001': data}",
+              "CODE_1B": "data = json.loads(search_web_with_text_content('cheap hotels unique rentals vacation homes reviews', 6))\nreturn {'accommodation_options_T001': data}"
+            },
+            "cost": 2.29e-05,
+            "input_tokens": 37,
+            "output_tokens": 48,
+            "total_tokens": 85
+          }
+        }
+      ],
+      "input_tokens": 37,
+      "output_tokens": 48,
+      "total_tokens": 85
+    },
+    {
+      "id": "T002",
+      "description": "Research NetworkX library and its capabilities.",
+      "agent": "RetrieverAgent",
+      "agent_prompt": "Gather information about the NetworkX Python library. Focus on its purpose, functionalities, and use cases. Include examples of how NetworkX can be used for network analysis.",
+      "reads": [],
+      "writes": [
+        "networkx_info_T002"
+      ],
+      "status": "completed",
+      "output": {
+        "networkx_info_T002": [],
+        "call_self": false,
+        "code_variants": {
+          "CODE_1A": "results = json.loads(search_web_with_text_content('NetworkX Python library purpose functionalities use cases examples', 8))\nreturn {'networkx_info_T002': results}",
+          "CODE_1B": "results = json.loads(search_web_with_text_content('NetworkX Python graph library network analysis', 6))\nreturn {'networkx_info_T002': results}"
+        },
+        "cost": 2.36e-05,
+        "input_tokens": 52,
+        "output_tokens": 46,
+        "total_tokens": 98,
+        "execution_result": {
+          "networkx_info_T002": {
+            "content": [
+              {
+                "type": "text",
+                "text": "[{\"url\": \"https://coderivers.org/blog/networkx-in-python/\", \"content\": \"NetworkX in Python: A Comprehensive Guide - CodeRivers Skip to content CodeRivers NetworkX in Python: A Comprehensive Guide Trending Linux C C# Perl Scala AI Blog CodeRivers Trending Linux Linux Linux Basics Linux Basics Linux Introduction Linux Boot Process Linux Change Password Linux Close Firewall Linux Compression and Decompression Linux Create Folder Linux Create User Linux Decompress Tar.gz Linux Delete File Linux Delete Folder Linux Environment Variable Linux File and Directory Management Linux File Permissions Linux File System Linux Find File Linux Install Nginx Linux Kill Process Linux Mount Hard Disk Linux Move Folder Linux Network Management Linux Opt Directory Linux Package Management Linux Process Management Linux Rename File Linux Run Command in Background Linux Shutdown Linux Soft Link Linux Switch User Linux Timing Task Linux User and Group Management Linux View File Content Linux View File Size Linux View Memory Linux View Port Occupancy Linux View Port Linux View System Version C C C Basics C Basics C case C const C continue C default C do C double C else C enum C char C float C extern C for C goto C if C inline C int C long C register C restrict C return C short C signed C sizeof C static C struct C auto C break C typedef C switch C union C unsigned C void C volatile C while C _Alignas C _Alignof C _Atomic C _Bool C _Complex C _Generic C _Imaginary C _Noreturn C _Static_assert C _Thread_local C# C# C# Basics C# Basics C# abstract C# bool C# as C# base C# foreach C# for C# delegate C# do C# break C# double C# byte C# else C# case C# goto C# enum C# catch C# event C# continue C# const C# decimal C# explicit C# char C# extern C# checked C# false C# finally C# class C# fixed C# float C# default C# if C# implicit C# in C# int C# interface C# internal C# is C# lock C# long C# namespace C# new C# null C# object C# operator C# out C# override C# params C# private C# protected C# public C# readonly C# ref C# return C# sbyte C# sealed C# short C# sizeof C# stackalloc C# static C# string C# struct C# switch C# this C# throw C# true C# try C# typeof C# uint C# ulong C# unchecked C# unsafe C# ushort C# using C# virtual C# void C# volatile C# while Perl Perl Perl Basics Perl Basics Perl BEGIN Perl chroot Perl check Perl __DATA__ Perl core Perl DESTROY Perl close Perl END Perl eq Perl INIT Perl ne Perl __END__ Perl abs Perl closedir Perl accept Perl AUTOLOAD Perl caller Perl break Perl chdir Perl atan2 Perl bind Perl chmod Perl alarm Perl binmode Perl chomp Perl and Perl chop Perl bless Perl chown Perl chr Perl connect Perl continue Perl cos Perl crypt Perl dbmclose Perl dbmopen Perl default Perl defined Perl delete Perl die Perl do Perl dump Scala Scala Scala Basics Scala Basics Scala super Scala finally Scala def Scala new Scala for Scala forSome Scala if Scala implicit Scala import Scala lazy Scala match Scala this Scala extends Scala false Scala else Scala final Scala package Scala object Scala null Scala override Scala case Scala protected Scala do Scala abstract Scala private Scala catch Scala return Scala class Scala sealed Scala throw Scala trait Scala true Scala try Scala type Scala val Scala var Scala while Scala with Scala yield AI AI Matplotlib Tutorials Matplotlib Tutorials Matplotlib Basics Tutorial Matplotlib Chart Types Matplotlib Chart Styles Matplotlib Chart Layouts Matplotlib Chart Annotations Matplotlib Chart Animations Matplotlib Chart Interactions Matplotlib Chart Save Matplotlib Pyplot API Matplotlib Figure API Matplotlib Axes API Matplotlib Axis API Matplotlib Plot Markers Matplotlib Color Maps Matplotlib Color Settings Matplotlib Font Settings Matplotlib Line Styles Matplotlib Fill Styles Matplotlib Legend Matplotlib Grid Matplotlib Axis Matplotlib Grid Layout Matplotlib Scatter Plot Matplotlib Line Plot Matplotlib Bar Plot Matplotlib Histogram Matplotlib Pie Chart Matplotlib Box Plot Matplotlib Heat Map Matplotlib 3D Plot Matplotlib 3D Scatter Plot Matplotlib 3D Surface Plot Matplotlib 3D Histogr\", \"images\": [], \"rank\": 1}, {\"url\": \"https://www.geeksforgeeks.org/python/networkx-python-software-package-study-complex-networks/\", \"content\": \"NetworkX : Python software package for study of complex networks - GeeksforGeeks Skip to content Courses DSA / Placements GATE Prep ML & Data Science Development Cloud / DevOps Programming Languages All Courses Tutorials Python Java DSA ML & Data Science Interview Corner Programming Languages Web Development GATE CS Subjects DevOps School Learning Software and Tools Practice Practice Coding Problems Nation Skillup- Ending Soon! Problem of the Day Study Abroad Championship Jobs Apply Now! Post Jobs Jobs Updates Apply for Campus Mantri Notifications Mark all as read All View All Notifications Mark all as read All Unread Read You're all caught up!! Python Tutorial Data Types Interview Questions Examples Quizzes DSA Python Data Science NumPy Pandas Practice Django Flask Projects Sign In Open In App Technical Scripter Explore Python Fundamentals Python Introduction Input and Output in Python Python Variables Python Operators Python Keywords Python Data Types Conditional Statements in Python Loops in Python - For, While and Nested Loops Python Functions Recursion in Python Python Lambda Functions Python Data Structures Python String Python Lists Python Tuples Python Dictionary Python Sets Python Arrays List Comprehension in Python Advanced Python Python OOP Concepts Python Exception Handling File Handling in Python Python Database Tutorial Python MongoDB Tutorial Python MySQL Python Packages Python Modules Python DSA Libraries List of Python GUI Library and Packages Data Science with Python NumPy Tutorial - Python Library Pandas Tutorial Matplotlib Tutorial Python Seaborn Tutorial StatsModel Library - Tutorial Learning Model Building in Scikit-learn TensorFlow Tutorial PyTorch Tutorial Web Development with Python Flask Tutorial Django Tutorial | Learn Django Framework Django ORM - Inserting, Updating & Deleting Data Templating With Jinja2 in Flask Django Templates Build a REST API using Flask - Python Building a Simple API with Django REST Framework Python Practice Python Quiz Python Coding Practice Python Interview Questions and Answers 21 Days 21 Projects 40% Off NetworkX : Python software package for study of complex networks Last Updated : 11 Aug, 2025 Comments Improve Suggest changes 12 Likes Like Report NetworkX is a Python library for creating, analyzing and visualizing complex networks. It models real-world systems as graphs, where nodes represent entities and edges represent relationships. The library supports loading, storing and generating various types of graphs, analyzing network structures, designing algorithms and drawing networks with ease and flexibility. Installation To install the latest version of NetworkX, simply run: pip install networkx Creating Graphs NetworkX supports several types of graphs: Graph(): undirected graph DiGraph(): directed graph MultiGraph(): undirected graph with parallel edges MultiDiGraph(): directed graph with parallel edges Lets begin with a basic undirected graph: Python import networkx as nx # Create an empty graph G = nx . Graph () Adding Nodes You can add nodes one at a time or in batches: Python # Add individual nodes G . add_node ( 1 ) G . add_nodes_from ([ 2 , 3 , 4 , 7 , 9 ]) Output: After this step, your graph G has 6 nodes. Adding Edges Edges connect the nodes in your graph: Python # Add individual edges G . add_edge ( 1 , 2 ) G . add_edge ( 3 , 1 ) G . add_edge ( 2 , 4 ) G . add_edge ( 4 , 1 ) G . add_edge ( 9 , 1 ) # Add multiple edges at once G . add_edges_from ([( 1 , 7 ), ( 2 , 9 )]) Output: Note: Since it's an undirected graph, the edge (1, 2) is the same as (2, 1). Removing Nodes and Edges You can remove nodes and edges just as easily: Python G . remove_node ( 3 ) # Removes node 3 G . remove_edge ( 1 , 2 ) # Removes edge between node 1 and 2 Output: Network Analysis with NetworkX NetworkX allows you to perform deep analysis of your graph: Python # All nodes print ( G . nodes ()) # All edges print ( G . edges ()) # Number of nodes and edges print ( G . number_of_nodes ())\", \"images\": [], \"rank\": 2}, {\"url\": \"https://networkx.org/en/\", \"content\": \"NetworkX NetworkX documentation NetworkX is a Python package for the creation, manipulation, and       study of the structure, dynamics, and functions of complex networks. Software for complex networks Data structures for graphs, digraphs, and multigraphs Many standard graph algorithms Network structure and analysis measures Generators for classic graphs, random graphs, and synthetic networks Nodes can be \\\"anything\\\" (e.g., text, images, XML records) Edges can hold arbitrary data (e.g., weights, time-series) Open source 3-clause BSD license Well tested with over 90% code coverage Additional benefits from Python include fast prototyping, easy to teach, and multi-platform Contact Mailing list Issue tracker Source Releases Stable ( notes ) 3.6.1 Dec 2025 Documentation Latest ( notes ) 3.7 development Documentation Archive Language 2014- , NetworkX developers.\", \"images\": [], \"rank\": 3}, {\"url\": \"https://generalistprogrammer.com/tutorials/networkx-python-package-guide\", \"content\": \"networkx Python Guide [2025] | PyPI Tutorial Generalist Programmer Tutorials Learning Hubs Unity Hub Godot Hub Unreal Engine Hub Programming Hub Development Hub Business Hub View All Hubs Categories Game Dev Logs Game Business Game Development Game Art Programming Game Programming View All Categories About Contact Home / Tutorials / Python Packages / Networkx: Python Package Guide 2025 Published November 16, 2025 13 Python Packages Networkx: Python Package Guide 2025 Master networkx: Python package for creating and manipulating graphs and networks. Installation guide, examples & best practices. Python 3.11+. Comprehensive guide w # python # pypi # pip # networkx # Networks # Graph Theory # Mathematics # network # graph What is networkx? networkx is Python package for creating and manipulating graphs and networks. It's one of the most widely used packages in the Python ecosystem for developers building modern Python applications. Quick Stats: Package: networkx Latest Version: 3.5 Python Version: >=3.11 License: Not specified Repository: https://networkx.org/ Installation Install networkx using pip: Standard Installation: pip install networkx Using pip3 (if you have both Python 2 and 3): pip3 install networkx Install specific version: pip install networkx==3.5 Upgrade to latest version: pip install --upgrade networkx Virtual Environment Setup It's best practice to use a virtual environment: Using venv: # Create virtual environment python -m venv myenv # Activate (Linux/Mac) source myenv/bin/activate # Activate (Windows) myenv\\\\Scripts\\\\activate # Install package pip install networkx Using conda: conda create -n myenv python=3.11 conda activate myenv pip install networkx Basic Usage After installation, import networkx in your Python scripts: # Import the package import networkx # Basic usage example # Example usage result = networkx() print(result) Quick Example import networkx # Initialize and configure networkx_instance = networkx.create() # Use the package result = networkx_instance.process() print(f\\\"Result: {result}\\\") Key Features Python package for creating and manipulating graphs and networks Easy to use Pythonic API Well documented with examples Active community support Regular updates and maintenance Open source license Compatible with Python >=3.11 When to Use networkx Perfect for: Python projects requiring python package for creating and manipulating graphs and networks Web applications, APIs, and microservices Data processing and analysis pipelines Automation and scripting tasks Development teams using modern Python practices Not ideal for: Projects with Python version constraints incompatible with >=3.11 Use cases where standard library alternatives exist Extremely resource-constrained environments Dependencies Optional dependencies (extras): numpy>=1.25 - Install with: pip install networkx[default] scipy>=1.11.2 - Install with: pip install networkx[default] matplotlib>=3.8 - Install with: pip install networkx[default] pandas>=2.0 - Install with: pip install networkx[default] pre-commit>=4.1 - Install with: pip install networkx[developer] Python Version Compatibility networkx requires Python >=3.11. Recommended Python versions: Python 3.8+ (recommended) Python 3.11 (latest stable) Python 3.12 (cutting edge) Check your Python version: python --version python3 --version Common Use Cases Use Case 1: Basic networkx Implementation import networkx # Basic setup config = {   'option1': 'value1',   'option2': 'value2' } # Use the package result = networkx.initialize(config) print(result) Use Case 2: Advanced networkx Usage import networkx from typing import Dict, Any def process_with_networkx(data: Dict[str, Any]) -> Any:   \\\"\\\"\\\"Advanced usage with error handling\\\"\\\"\\\"   try:     result = networkx.process(       data,       advanced_mode=True,       timeout=30     )     return result   except networkx.Error as e:     print(f\\\"Error: {e}\\\")     return None # U\", \"images\": [], \"rank\": 4}, {\"url\": \"https://medium.com/@bonepallisai1/exploring-networkx-a-python-library-for-network-analysis-49d1d9c2e108\", \"content\": \"[error] \", \"rank\": 5}]",
+                "annotations": null
+              }
+            ]
+          }
+        },
+        "execution_status": "success",
+        "execution_error": null,
+        "execution_time": "2025-12-25 07:31:49",
+        "executed_variant": "CODE_1A",
+        "execution_logs": ""
+      },
+      "error": null,
+      "cost": 2.36e-05,
+      "start_time": "2025-12-25T02:01:16.326663",
+      "end_time": "2025-12-25T02:02:12.542751",
+      "execution_time": 56.216088,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "networkx_info_T002": [],
+            "call_self": false,
+            "code_variants": {
+              "CODE_1A": "results = json.loads(search_web_with_text_content('NetworkX Python library purpose functionalities use cases examples', 8))\nreturn {'networkx_info_T002': results}",
+              "CODE_1B": "results = json.loads(search_web_with_text_content('NetworkX Python graph library network analysis', 6))\nreturn {'networkx_info_T002': results}"
+            },
+            "cost": 2.36e-05,
+            "input_tokens": 52,
+            "output_tokens": 46,
+            "total_tokens": 98
+          }
+        }
+      ],
+      "input_tokens": 52,
+      "output_tokens": 46,
+      "total_tokens": 98
+    },
+    {
+      "id": "T003",
+      "description": "Synthesize accommodation research results.",
+      "agent": "DistillerAgent",
+      "agent_prompt": "Summarize the accommodation options found. Highlight key features, pros and cons, and price ranges for each option from `accommodation_options_T001`. Focus on providing a concise overview for the user.",
+      "reads": [
+        "accommodation_options_T001"
+      ],
+      "writes": [
+        "accommodation_summary_T003"
+      ],
+      "status": "completed",
+      "output": {
+        "accommodation_summary_T003": [
+          {
+            "source": "KAYAK",
+            "summary": "Compares hotel deals from hundreds of sites for hotels, holiday rentals, and more.",
+            "locations": [
+              "Singapore",
+              "Ooty",
+              "Dubai",
+              "Mumbai",
+              "Paris",
+              "London"
+            ]
+          },
+          {
+            "source": "Airbnb",
+            "location": "Bengaluru",
+            "options": [
+              "Hotel rooms",
+              "Apartments",
+              "Condos",
+              "Homes"
+            ],
+            "highlights": [
+              "Top-rated for location and cleanliness",
+              "Options near IIMB, Koramangala, Whitefield, and Indiranagar"
+            ]
+          },
+          {
+            "source": "The Abroad Log",
+            "type": "Guide",
+            "comparison": "Hotels vs. Airbnb",
+            "factors": [
+              "Cost",
+              "Convenience",
+              "Overall travel experience",
+              "Amenities (room service, concierge)",
+              "Personalization",
+              "Potential cost savings"
+            ],
+            "hotel_types": [
+              "Luxury resorts",
+              "Budget motels"
+            ]
+          }
+        ],
+        "cost": 0.00043020000000000005,
+        "input_tokens": 3846,
+        "output_tokens": 114,
+        "total_tokens": 3960
+      },
+      "error": null,
+      "cost": 0.00043020000000000005,
+      "start_time": "2025-12-25T02:02:12.549623",
+      "end_time": "2025-12-25T02:02:19.235268",
+      "execution_time": 6.685645,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "accommodation_summary_T003": [
+              {
+                "source": "KAYAK",
+                "summary": "Compares hotel deals from hundreds of sites for hotels, holiday rentals, and more.",
+                "locations": [
+                  "Singapore",
+                  "Ooty",
+                  "Dubai",
+                  "Mumbai",
+                  "Paris",
+                  "London"
+                ]
+              },
+              {
+                "source": "Airbnb",
+                "location": "Bengaluru",
+                "options": [
+                  "Hotel rooms",
+                  "Apartments",
+                  "Condos",
+                  "Homes"
+                ],
+                "highlights": [
+                  "Top-rated for location and cleanliness",
+                  "Options near IIMB, Koramangala, Whitefield, and Indiranagar"
+                ]
+              },
+              {
+                "source": "The Abroad Log",
+                "type": "Guide",
+                "comparison": "Hotels vs. Airbnb",
+                "factors": [
+                  "Cost",
+                  "Convenience",
+                  "Overall travel experience",
+                  "Amenities (room service, concierge)",
+                  "Personalization",
+                  "Potential cost savings"
+                ],
+                "hotel_types": [
+                  "Luxury resorts",
+                  "Budget motels"
+                ]
+              }
+            ],
+            "cost": 0.00043020000000000005,
+            "input_tokens": 3846,
+            "output_tokens": 114,
+            "total_tokens": 3960
+          }
+        }
+      ],
+      "input_tokens": 3846,
+      "output_tokens": 114,
+      "total_tokens": 3960
+    },
+    {
+      "id": "T004",
+      "description": "Synthesize NetworkX information.",
+      "agent": "DistillerAgent",
+      "agent_prompt": "Summarize the information about the NetworkX library from `networkx_info_T002`. Explain its core functionalities and potential applications in a clear and concise manner.",
+      "reads": [
+        "networkx_info_T002"
+      ],
+      "writes": [
+        "networkx_summary_T004"
+      ],
+      "status": "completed",
+      "output": {
+        "networkx_summary_T004": [
+          "NetworkX is a Python package for creating, analyzing, and visualizing complex networks.",
+          "It models systems as graphs with nodes representing entities and edges representing relationships.",
+          "Supports various graph types: undirected (Graph), directed (DiGraph), and multigraphs (MultiGraph, MultiDiGraph).",
+          "Key functionalities include: Loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks.",
+          "Nodes and edges can hold arbitrary data.",
+          "Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas.",
+          "Potential applications: Web applications, APIs, microservices, data processing, automation scripts."
+        ],
+        "cost": 0.00036020000000000003,
+        "input_tokens": 3106,
+        "output_tokens": 124,
+        "total_tokens": 3230
+      },
+      "error": null,
+      "cost": 0.00036020000000000003,
+      "start_time": "2025-12-25T02:02:12.550825",
+      "end_time": "2025-12-25T02:02:19.237213",
+      "execution_time": 6.686388,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "networkx_summary_T004": [
+              "NetworkX is a Python package for creating, analyzing, and visualizing complex networks.",
+              "It models systems as graphs with nodes representing entities and edges representing relationships.",
+              "Supports various graph types: undirected (Graph), directed (DiGraph), and multigraphs (MultiGraph, MultiDiGraph).",
+              "Key functionalities include: Loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks.",
+              "Nodes and edges can hold arbitrary data.",
+              "Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas.",
+              "Potential applications: Web applications, APIs, microservices, data processing, automation scripts."
+            ],
+            "cost": 0.00036020000000000003,
+            "input_tokens": 3106,
+            "output_tokens": 124,
+            "total_tokens": 3230
+          }
+        }
+      ],
+      "input_tokens": 3106,
+      "output_tokens": 124,
+      "total_tokens": 3230
+    },
+    {
+      "id": "T005",
+      "description": "Format the accommodation options and NetworkX summary for user presentation.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Create a well-structured Markdown output combining the accommodation summary from `accommodation_summary_T003` and the NetworkX summary from `networkx_summary_T004`. Present the accommodation options in a table format with price, location, and key features. Present the NetworkX summary with a clear explanation of its functionalities and potential use cases.",
+      "reads": [
+        "accommodation_summary_T003",
+        "networkx_summary_T004"
+      ],
+      "writes": [
+        "final_report_T005"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "# Accommodation Options and NetworkX Summary\n\n## Accommodation Options\n\n| Source        | Summary                                                                    | Locations/Options                                                                    | Highlights                                                                                                  |\n|---------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|\n| KAYAK         | Compares hotel deals from hundreds of sites.                                | Singapore, Ooty, Dubai, Mumbai, Paris, London                                          | N/A                                                                                                         |\n| Airbnb        | Provides various accommodation options.                                       | Bengaluru: Hotel rooms, Apartments, Condos, Homes                                     | Top-rated for location and cleanliness, Options near IIMB, Koramangala, Whitefield, and Indiranagar           |\n| The Abroad Log| Guide comparing hotels vs. Airbnb.                                           | N/A                                                                                   | Cost, Convenience, Overall travel experience, Amenities, Personalization, Potential cost savings, Hotel types |\n\n## NetworkX Summary\n\nNetworkX is a Python package for creating, analyzing, and visualizing complex networks. It models systems as graphs with nodes representing entities and edges representing relationships.  It supports various graph types and offers functionalities such as loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks. Nodes and edges can hold arbitrary data.  Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas. Potential applications include web applications, APIs, microservices, data processing, and automation scripts.",
+        "formatted_report_T005": "<div class='report'>\n  <h1>Accommodation Options and NetworkX Summary</h1>\n\n  <h2>Accommodation Options Overview</h2>\n  <p>This section summarizes available accommodation options from various sources, including KAYAK, Airbnb, and The Abroad Log.</p>\n\n  <h3>Accommodation Options by Source</h3>\n  <table>\n    <thead>\n      <tr>\n        <th>Source</th>\n        <th>Summary</th>\n        <th>Locations/Options</th>\n        <th>Highlights</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr>\n        <td>KAYAK</td>\n        <td>Compares hotel deals from hundreds of sites for hotels, holiday rentals, and more.</td>\n        <td>Singapore, Ooty, Dubai, Mumbai, Paris, London</td>\n        <td>N/A</td>\n      </tr>\n      <tr>\n        <td>Airbnb</td>\n        <td>Provides various accommodation options.</td>\n        <td>Bengaluru: Hotel rooms, Apartments, Condos, Homes</td>\n        <td>Top-rated for location and cleanliness. Options near IIMB, Koramangala, Whitefield, and Indiranagar.</td>\n      </tr>\n      <tr>\n        <td>The Abroad Log</td>\n        <td>Guide comparing hotels vs. Airbnb.</td>\n        <td>N/A</td>\n        <td>Cost, Convenience, Overall travel experience, Amenities (room service, concierge), Personalization, Potential cost savings. Hotel types: Luxury resorts, Budget motels.</td>\n      </tr>\n    </tbody>\n  </table>\n\n  <h2>NetworkX Summary</h2>\n  <p>This section provides an overview of the NetworkX Python package.</p>\n\n  <h3>Key Features and Applications of NetworkX</h3>\n  <ul>\n    <li>NetworkX is a Python package for creating, analyzing, and visualizing complex networks.</li>\n    <li>It models systems as graphs with nodes representing entities and edges representing relationships.</li>\n    <li>Supports various graph types: undirected (Graph), directed (DiGraph), and multigraphs (MultiGraph, MultiDiGraph).</li>\n    <li>Key functionalities include: Loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks.</li>\n    <li>Nodes and edges can hold arbitrary data.</li>\n    <li>Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas.</li>\n    <li>Potential applications: Web applications, APIs, microservices, data processing, automation scripts.</li>\n  </ul>\n</div>",
+        "call_self": false,
+        "cost": 0.000981,
+        "input_tokens": 7446,
+        "output_tokens": 591,
+        "total_tokens": 8037
+      },
+      "error": null,
+      "cost": 0.000981,
+      "start_time": "2025-12-25T02:02:19.243619",
+      "end_time": "2025-12-25T02:02:27.607116",
+      "execution_time": 8.363497,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "# Accommodation Options and NetworkX Summary\n\n## Accommodation Options\n\n| Source        | Summary                                                                    | Locations/Options                                                                    | Highlights                                                                                                  |\n|---------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|\n| KAYAK         | Compares hotel deals from hundreds of sites.                                | Singapore, Ooty, Dubai, Mumbai, Paris, London                                          | N/A                                                                                                         |\n| Airbnb        | Provides various accommodation options.                                       | Bengaluru: Hotel rooms, Apartments, Condos, Homes                                     | Top-rated for location and cleanliness, Options near IIMB, Koramangala, Whitefield, and Indiranagar           |\n| The Abroad Log| Guide comparing hotels vs. Airbnb.                                           | N/A                                                                                   | Cost, Convenience, Overall travel experience, Amenities, Personalization, Potential cost savings, Hotel types |\n\n## NetworkX Summary\n\nNetworkX is a Python package for creating, analyzing, and visualizing complex networks. It models systems as graphs with nodes representing entities and edges representing relationships.  It supports various graph types and offers functionalities such as loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks. Nodes and edges can hold arbitrary data.  Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas. Potential applications include web applications, APIs, microservices, data processing, and automation scripts.",
+            "formatted_report_T005": "<div class='report'>\n  <h1>Accommodation Options and NetworkX Summary</h1>\n\n  <h2>Accommodation Options Overview</h2>\n  <p>This section summarizes available accommodation options from various sources, including KAYAK, Airbnb, and The Abroad Log.</p>\n\n  <h3>Accommodation Options by Source</h3>\n  <table>\n    <thead>\n      <tr>\n        <th>Source</th>\n        <th>Summary</th>\n        <th>Locations/Options</th>\n        <th>Highlights</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr>\n        <td>KAYAK</td>\n        <td>Compares hotel deals from hundreds of sites for hotels, holiday rentals, and more.</td>\n        <td>Singapore, Ooty, Dubai, Mumbai, Paris, London</td>\n        <td>N/A</td>\n      </tr>\n      <tr>\n        <td>Airbnb</td>\n        <td>Provides various accommodation options.</td>\n        <td>Bengaluru: Hotel rooms, Apartments, Condos, Homes</td>\n        <td>Top-rated for location and cleanliness. Options near IIMB, Koramangala, Whitefield, and Indiranagar.</td>\n      </tr>\n      <tr>\n        <td>The Abroad Log</td>\n        <td>Guide comparing hotels vs. Airbnb.</td>\n        <td>N/A</td>\n        <td>Cost, Convenience, Overall travel experience, Amenities (room service, concierge), Personalization, Potential cost savings. Hotel types: Luxury resorts, Budget motels.</td>\n      </tr>\n    </tbody>\n  </table>\n\n  <h2>NetworkX Summary</h2>\n  <p>This section provides an overview of the NetworkX Python package.</p>\n\n  <h3>Key Features and Applications of NetworkX</h3>\n  <ul>\n    <li>NetworkX is a Python package for creating, analyzing, and visualizing complex networks.</li>\n    <li>It models systems as graphs with nodes representing entities and edges representing relationships.</li>\n    <li>Supports various graph types: undirected (Graph), directed (DiGraph), and multigraphs (MultiGraph, MultiDiGraph).</li>\n    <li>Key functionalities include: Loading, storing, and generating graphs; analyzing network structures; designing algorithms; drawing networks.</li>\n    <li>Nodes and edges can hold arbitrary data.</li>\n    <li>Requires Python >=3.11 and has optional dependencies like NumPy, SciPy, Matplotlib, and Pandas.</li>\n    <li>Potential applications: Web applications, APIs, microservices, data processing, automation scripts.</li>\n  </ul>\n</div>",
+            "call_self": false,
+            "cost": 0.000981,
+            "input_tokens": 7446,
+            "output_tokens": 591,
+            "total_tokens": 8037
+          }
+        }
+      ],
+      "input_tokens": 7446,
+      "output_tokens": 591,
+      "total_tokens": 8037
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    },
+    {
+      "source": "Query",
+      "target": "T002"
+    },
+    {
+      "source": "T001",
+      "target": "T003"
+    },
+    {
+      "source": "T002",
+      "target": "T004"
+    },
+    {
+      "source": "T003",
+      "target": "T005"
+    },
+    {
+      "source": "T004",
+      "target": "T005"
+    }
+  ]
+}
