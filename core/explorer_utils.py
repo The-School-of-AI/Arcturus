@@ -109,23 +109,70 @@ class CodeSkeletonExtractor:
         return sig + "\n" + "\n".join(body_parts)
 
     def extract_all(self) -> Dict[str, str]:
+        """Extract skeletons from all supported code files."""
         results = {}
+        
+        # Supported code file extensions
+        code_extensions = {
+            '.py', '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte',
+            '.java', '.kt', '.scala', '.go', '.rs', '.rb', '.php',
+            '.c', '.cpp', '.h', '.hpp', '.cs', '.swift', '.m',
+            '.md', '.json', '.yaml', '.yml', '.toml'
+        }
+        
+        print(f"  📂 Scanning: {self.root_path}")
+        print(f"  🔍 Looking for extensions: {code_extensions}")
+        
         for root, dirs, files in os.walk(self.root_path):
             # Skip ignored dirs
             dirs[:] = [d for d in dirs if not self.is_ignored(os.path.join(root, d))]
             
             for file in files:
-                if file.endswith('.py'):
+                ext = os.path.splitext(file)[1].lower()
+                if ext in code_extensions:
                     full_path = os.path.join(root, file)
                     if not self.is_ignored(full_path):
                         rel_path = os.path.relpath(full_path, self.root_path)
-                        results[rel_path] = self.extract_file_skeleton(full_path)
+                        print(f"    ✓ Found: {rel_path}")
+                        # For Python, use AST skeleton; for others, read content directly
+                        if ext == '.py':
+                            results[rel_path] = self.extract_file_skeleton(full_path)
+                        else:
+                            results[rel_path] = self._read_file_content(full_path)
+        
+        print(f"  📊 Total files extracted: {len(results)}")
         return results
+    
+    def _read_file_content(self, file_path: str, max_lines: int = 500) -> str:
+        """Read file content, truncating if too large."""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+                if len(lines) > max_lines:
+                    content = ''.join(lines[:max_lines])
+                    content += f"\n\n... (truncated, {len(lines) - max_lines} more lines)"
+                else:
+                    content = ''.join(lines)
+                return content
+        except Exception as e:
+            return f"# ERROR reading file: {e}"
 
     def scan_project(self) -> Dict[str, Any]:
         """Scan project for file stats."""
         file_stats = []
         summary = {"total_files": 0, "total_size": 0, "total_lines": 0}
+        
+        # File type categorization
+        code_extensions = {
+            '.py', '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte',
+            '.java', '.kt', '.scala', '.go', '.rs', '.rb', '.php',
+            '.c', '.cpp', '.h', '.hpp', '.cs', '.swift', '.m',
+            '.sh', '.bash', '.zsh', '.sql'
+        }
+        config_extensions = {'.json', '.yaml', '.yml', '.toml', '.xml', '.env', '.ini', '.cfg'}
+        doc_extensions = {'.md', '.txt', '.rst', '.html', '.css', '.scss'}
+        asset_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp', '.mp3', '.mp4', '.wav'}
+        binary_extensions = {'.pdf', '.zip', '.tar', '.gz', '.pyc', '.pkl', '.bin', '.exe', '.dll', '.so', '.dylib', '.woff', '.woff2', '.ttf', '.eot'}
         
         for root, dirs, files in os.walk(self.root_path):
             dirs[:] = [d for d in dirs if not self.is_ignored(os.path.join(root, d))]
@@ -139,31 +186,43 @@ class CodeSkeletonExtractor:
                 try:
                     size = os.path.getsize(full_path)
                     lines = 0
-                    is_binary = False
                     extension = os.path.splitext(file)[1].lower()
                     
-                    # Basic binary check based on extension or content
-                    if extension in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.zip', '.tar', '.gz', '.pyc', '.pkl', '.bin', '.exe', '.dll', '.so', '.dylib']:
-                        is_binary = True
+                    # Determine file type
+                    if extension in binary_extensions:
+                        file_type = "binary"
+                    elif extension in asset_extensions:
+                        file_type = "asset"
+                    elif extension in code_extensions:
+                        file_type = "code"
+                    elif extension in config_extensions:
+                        file_type = "code"  # Include configs as analyzable
+                    elif extension in doc_extensions:
+                        file_type = "code"  # Include docs as analyzable
                     else:
+                        # Try to read as text
+                        file_type = "code"
+                    
+                    # Count lines for non-binary files
+                    if file_type != "binary" and file_type != "asset":
                         try:
                             with open(full_path, 'r', encoding='utf-8') as f:
                                 lines = sum(1 for _ in f)
                         except UnicodeDecodeError:
-                            is_binary = True
+                            file_type = "binary"
 
                     stat = {
                         "path": rel_path,
                         "size": size,
                         "lines": lines,
-                        "type": "binary" if is_binary else "code",
+                        "type": file_type,
                         "extension": extension
                     }
                     file_stats.append(stat)
                     
                     summary["total_files"] += 1
                     summary["total_size"] += size
-                    if not is_binary:
+                    if file_type == "code":
                         summary["total_lines"] += lines
                         
                 except Exception as e:

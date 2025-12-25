@@ -951,7 +951,7 @@ async def analyze_project(request: AnalyzeRequest):
             "nodes": [
                 {{ 
                     "id": "1", 
-                    "type": "custom", 
+                    "type": "agent", 
                     "position": {{ "x": 250, "y": 0 }}, 
                     "data": {{ 
                         "label": "ComponentName", 
