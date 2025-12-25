@@ -19,12 +19,12 @@ import dagre from 'dagre';
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-const nodeWidth = 280;
-const nodeHeight = 150;
+const nodeWidth = 340; // Increased from 280
+const nodeHeight = 250; // Increased from 150 to fit rich details
 
 const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
     const isHorizontal = direction === 'LR';
-    dagreGraph.setGraph({ rankdir: direction });
+    dagreGraph.setGraph({ rankdir: direction, ranksep: 150, nodesep: 80 }); // Increased spacing
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
