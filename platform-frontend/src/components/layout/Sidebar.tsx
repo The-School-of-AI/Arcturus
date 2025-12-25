@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
-    LayoutGrid, Newspaper, GraduationCap, Settings
+    LayoutGrid, Newspaper, GraduationCap, Settings, Code2
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
+import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
 import { SettingsModal } from '@/features/settings/SettingsModal';
 
 export const Sidebar: React.FC = () => {
@@ -45,7 +46,7 @@ export const Sidebar: React.FC = () => {
     const NavIcon = ({ icon: Icon, label, tab, onClick }: {
         icon: any,
         label: string,
-        tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'apps' | 'news' | 'learn',
+        tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn',
         onClick?: () => void
     }) => {
         const active = sidebarTab === tab;
@@ -78,7 +79,11 @@ export const Sidebar: React.FC = () => {
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" />
                     <NavIcon icon={Database} label="RAG" tab="rag" />
                     <NavIcon icon={Box} label="MCP" tab="mcp" />
-                    <NavIcon icon={Brain} label="Memory" tab="remme" />
+                    <NavIcon icon={Brain} label="RemMe" tab="remme" />
+                    <NavIcon icon={Code2} label="Explorer" tab="explorer" />
+
+                    <div className="w-8 h-px bg-white/5 my-2 mx-auto" />
+
                     <NavIcon icon={LayoutGrid} label="Apps" tab="apps" onClick={() => { }} />
                     <NavIcon icon={Newspaper} label="News" tab="news" onClick={() => { }} />
                     <NavIcon icon={GraduationCap} label="Learn" tab="learn" onClick={() => { }} />
@@ -195,6 +200,7 @@ export const Sidebar: React.FC = () => {
                 {sidebarTab === 'rag' && <RagPanel />}
                 {sidebarTab === 'mcp' && <McpPanel />}
                 {sidebarTab === 'remme' && <RemmePanel />}
+                {sidebarTab === 'explorer' && <ExplorerPanel />}
                 {['apps', 'news', 'learn'].includes(sidebarTab) && (
                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
                         <div className="p-6 bg-white/5 rounded-full ring-1 ring-white/10">

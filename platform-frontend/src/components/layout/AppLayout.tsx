@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { WorkspacePanel } from '../workspace/WorkspacePanel';
 import { GraphCanvas } from '../graph/GraphCanvas';
+import { FlowWorkspace } from '../workspace/FlowWorkspace';
 import { RunTimeline } from '@/features/replay/RunTimeline';
 import { GripVertical } from 'lucide-react';
 import { DocumentViewer } from '../rag/DocumentViewer';
@@ -92,6 +93,8 @@ export const AppLayout: React.FC = () => {
                 <div className="flex-1 relative bg-grid-dots overflow-hidden">
                     {sidebarTab === 'rag' ? (
                         <DocumentViewer />
+                    ) : sidebarTab === 'explorer' ? (
+                        <FlowWorkspace />
                     ) : (
                         <>
                             <GraphCanvas />
@@ -100,7 +103,7 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {(sidebarTab === 'runs' || sidebarTab === 'rag') && (
+                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer') && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 

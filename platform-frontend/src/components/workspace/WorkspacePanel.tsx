@@ -90,12 +90,18 @@ const ClarificationInput: React.FC<{ selectedNode: any; codeContent: string }> =
 import { DocumentAssistant } from '../rag/DocumentAssistant';
 
 export const WorkspacePanel: React.FC = () => {
-    const { codeContent, webUrl, logs, selectedNodeId, nodes, sidebarTab } = useAppStore();
+    const {
+        codeContent, webUrl, logs, selectedNodeId, nodes, sidebarTab,
+        flowData, selectedExplorerNodeId
+    } = useAppStore();
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
     const [activeIframeUrl, setActiveIframeUrl] = React.useState<string | null>(null);
 
-    const selectedNode = nodes.find(n => n.id === selectedNodeId);
+    const isExplorer = sidebarTab === 'explorer';
+    const selectedNode = isExplorer
+        ? flowData?.nodes.find((n: any) => n.id === selectedExplorerNodeId)
+        : nodes.find(n => n.id === selectedNodeId);
 
     // Auto-switch tabs based on node type/content when selection changes
     React.useEffect(() => {
@@ -191,48 +197,71 @@ export const WorkspacePanel: React.FC = () => {
                             <ClarificationInput selectedNode={selectedNode} codeContent={codeContent} />
                         )}
 
+                        {/* Logic Steps (for Explorer) */}
+                        {isExplorer && selectedNode?.data.details && (
+                            <div className="space-y-2">
+                                <div className="text-[10px] uppercase text-neon-yellow font-bold tracking-widest pb-1 border-b border-neon-yellow/20">
+                                    Logic Implementation Details
+                                </div>
+                                <ul className="space-y-2 pl-1 select-text">
+                                    {selectedNode.data.details.map((detail: string, idx: number) => (
+                                        <li key={idx} className="flex gap-2 items-start group">
+                                            <div className="mt-1.5 h-1 w-1 rounded-full bg-neon-yellow opacity-40 group-hover:opacity-100 transition-opacity" />
+                                            <span className="text-[11px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
+                                                {detail}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {/* Section: I/O Context */}
-                        <div className="grid grid-cols-2 gap-2 select-none">
-                            <div className="space-y-1">
-                                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Inputs (Reads)</div>
-                                <div className="flex flex-wrap gap-1">
-                                    {selectedNode?.data.reads?.length ? selectedNode?.data.reads.map(r => (
-                                        <span key={r} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded select-text">
-                                            {r}
-                                        </span>
-                                    )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
+                        {!isExplorer && (
+                            <div className="grid grid-cols-2 gap-2 select-none">
+                                <div className="space-y-1">
+                                    <div className="text-[10px] uppercase text-muted-foreground font-semibold">Inputs (Reads)</div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {selectedNode?.data.reads?.length ? selectedNode?.data.reads.map((r: string) => (
+                                            <span key={r} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded select-text">
+                                                {r}
+                                            </span>
+                                        )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="text-[10px] uppercase text-muted-foreground font-semibold">Outputs (Writes)</div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {selectedNode?.data.writes?.length ? selectedNode?.data.writes.map((w: string) => (
+                                            <span key={w} className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded select-text">
+                                                {w}
+                                            </span>
+                                        )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Outputs (Writes)</div>
-                                <div className="flex flex-wrap gap-1">
-                                    {selectedNode?.data.writes?.length ? selectedNode?.data.writes.map(w => (
-                                        <span key={w} className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded select-text">
-                                            {w}
-                                        </span>
-                                    )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
-                                </div>
-                            </div>
-                        </div>
+                        )}
 
                         {/* Section: Performance */}
-                        <div className="p-3 bg-black/20 rounded-lg flex items-center justify-between border border-white/5 select-none">
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">Duration:</span>
-                                <span className="text-xs text-foreground font-mono">
-                                    {typeof selectedNode?.data.execution_time === 'number'
-                                        ? `${selectedNode.data.execution_time.toFixed(2)}s`
-                                        : selectedNode?.data.execution_time || "0s"}
-                                </span>
+                        {!isExplorer && (
+                            <div className="p-3 bg-black/20 rounded-lg flex items-center justify-between border border-white/5 select-none">
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">Duration:</span>
+                                    <span className="text-xs text-foreground font-mono">
+                                        {typeof selectedNode?.data.execution_time === 'number'
+                                            ? `${selectedNode.data.execution_time.toFixed(2)}s`
+                                            : selectedNode?.data.execution_time || "0s"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Cost:</span>
+                                    <span className="text-xs text-green-400 font-mono">
+                                        ${selectedNode?.data.cost?.toFixed(6) || "0.000000"}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">Cost:</span>
-                                <span className="text-xs text-green-400 font-mono">
-                                    ${selectedNode?.data.cost?.toFixed(6) || "0.000000"}
-                                </span>
-                            </div>
-                        </div>
+                        )}
 
                         {/* Section: Logs/Output Snippet */}
                         <div className="space-y-2">
@@ -528,7 +557,7 @@ export const WorkspacePanel: React.FC = () => {
                                         const urlRegex = /https?:\/\/[^\s'"]+/g;
                                         const matches = logs.match(urlRegex);
                                         if (matches) {
-                                            matches.forEach(url => addUrl(url, "Log output"));
+                                            matches.forEach((url: string) => addUrl(url, "Log output"));
                                         }
                                     }
 

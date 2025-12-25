@@ -69,10 +69,10 @@ interface SettingsSlice {
 }
 
 interface RagViewerSlice {
-    viewMode: 'graph' | 'rag';
-    setViewMode: (mode: 'graph' | 'rag') => void;
-    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme' | 'apps' | 'news' | 'learn';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme' | 'apps' | 'news' | 'learn') => void;
+    viewMode: 'graph' | 'rag' | 'explorer';
+    setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
+    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn') => void;
     openDocuments: RAGDocument[];
     activeDocumentId: string | null;
     openDocument: (doc: RAGDocument) => void;
@@ -100,9 +100,35 @@ interface RemmeSlice {
     deleteMemory: (id: string) => Promise<void>;
     cleanupDanglingMemories: () => Promise<void>;
 }
+
+interface AnalysisHistoryItem {
+    id: string;
+    name: string;
+    path: string;
+    timestamp: number;
+    type: 'local' | 'github';
+    flowData?: any;
+}
+
+interface ExplorerSlice {
+    explorerRootPath: string | null;
+    setExplorerRootPath: (path: string | null) => void;
+    explorerFiles: any[];
+    setExplorerFiles: (files: any[]) => void;
+    isAnalyzing: boolean;
+    setIsAnalyzing: (analyzing: boolean) => void;
+    flowData: any | null;
+    setFlowData: (data: any | null) => void;
+    selectedExplorerNodeId: string | null;
+    setSelectedExplorerNodeId: (id: string | null) => void;
+    analysisHistory: AnalysisHistoryItem[];
+    addToHistory: (item: Omit<AnalysisHistoryItem, 'id' | 'timestamp'>) => void;
+    removeFromHistory: (id: string) => void;
+}
+
 // --- Store Creation ---
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -383,6 +409,30 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to cleanup dangling memories", e);
                 }
             },
+
+            // --- Explorer Slice ---
+            explorerRootPath: null,
+            setExplorerRootPath: (path) => set({ explorerRootPath: path }),
+            explorerFiles: [],
+            setExplorerFiles: (files) => set({ explorerFiles: files }),
+            isAnalyzing: false,
+            setIsAnalyzing: (analyzing) => set({ isAnalyzing: analyzing }),
+            flowData: null,
+            setFlowData: (data) => set({ flowData: data, viewMode: 'explorer' }),
+            selectedExplorerNodeId: null,
+            setSelectedExplorerNodeId: (id) => set({ selectedExplorerNodeId: id }),
+            analysisHistory: [],
+            addToHistory: (item) => set((state) => {
+                const newItem: AnalysisHistoryItem = {
+                    ...item,
+                    id: Math.random().toString(36).substr(2, 9),
+                    timestamp: Date.now()
+                };
+                return { analysisHistory: [newItem, ...state.analysisHistory].slice(0, 10) }; // Keep last 10
+            }),
+            removeFromHistory: (id) => set((state) => ({
+                analysisHistory: state.analysisHistory.filter(h => h.id !== id)
+            })),
         }),
         {
             name: 'agent-platform-storage',
@@ -394,7 +444,8 @@ export const useAppStore = create<AppState>()(
                 sidebarTab: state.sidebarTab,
                 activeDocumentId: state.activeDocumentId,
                 openDocuments: state.openDocuments,
-                selectedContexts: state.selectedContexts
+                selectedContexts: state.selectedContexts,
+                analysisHistory: state.analysisHistory
             }),
         }
     )

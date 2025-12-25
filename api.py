@@ -19,6 +19,11 @@ from memory.context import ExecutionContextManager
 from remme.store import RemmeStore
 from remme.extractor import RemmeExtractor
 from remme.utils import get_embedding
+import tempfile
+import subprocess
+import shutil
+from core.explorer_utils import CodeSkeletonExtractor
+from core.model_manager import ModelManager
 
 app = FastAPI()
 
@@ -45,6 +50,19 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     await multi_mcp.stop()
+
+# --- Explorer Classes ---
+class AnalyzeRequest(BaseModel):
+    path: str
+    type: str = "local" # local or github
+
+class ExplorerNode(BaseModel):
+    name: str
+    path: str
+    type: str # file or folder
+    children: Optional[List['ExplorerNode']] = None
+
+ExplorerNode.update_forward_refs()
 
 class RunRequest(BaseModel):
     query: str
@@ -770,6 +788,124 @@ async def get_mcp_tools():
         return {"tools": tools}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Explorer Endpoints ---
+
+@app.get("/explorer/list")
+async def list_files(path: str):
+    """Recursively list files for the explorer panel"""
+    try:
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Path not found")
+            
+        extractor = CodeSkeletonExtractor(path)
+        
+        def build_tree(current_path):
+            nodes = []
+            try:
+                items = os.listdir(current_path)
+            except PermissionError:
+                return []
+                
+            for item in items:
+                full_path = os.path.join(current_path, item)
+                if extractor.is_ignored(full_path):
+                    continue
+                    
+                node = {
+                    "name": item,
+                    "path": full_path,
+                    "type": "folder" if os.path.isdir(full_path) else "file"
+                }
+                if os.path.isdir(full_path):
+                    node["children"] = build_tree(full_path)
+                nodes.append(node)
+            
+            # Sort: folders first, then files
+            nodes.sort(key=lambda x: (x["type"] != "folder", x["name"].lower()))
+            return nodes
+
+        return build_tree(path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/explorer/analyze")
+async def analyze_project(request: AnalyzeRequest):
+    """Analyze a project and generate an architecture map"""
+    target_path = request.path
+    is_temp = False
+    
+    try:
+        # 1. HANDLE GITHUB
+        if request.type == "github" or target_path.startswith("http"):
+            is_temp = True
+            temp_dir = tempfile.mkdtemp()
+            print(f"Cloning {target_path} to {temp_dir}...")
+            try:
+                subprocess.run(["git", "clone", "--depth", "1", target_path, temp_dir], check=True)
+                target_path = temp_dir
+            except Exception as e:
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+                raise HTTPException(status_code=400, detail=f"Git clone failed: {str(e)}")
+
+        # 2. EXTRACT SKELETON
+        extractor = CodeSkeletonExtractor(target_path)
+        skeletons = extractor.extract_all()
+        
+        # Combine into a single prompt context
+        context_str = ""
+        for file_path, skel in skeletons.items():
+            context_str += f"--- FILE: {file_path} ---\n{skel}\n\n"
+
+        # 3. LLM ANALYSIS
+        model = ModelManager("gemini-2.0-pro")
+        prompt = f"""
+        You are an elite software architect. Analyze the follow code skeleton and generate a high-level architecture map in FlowStep format.
+        
+        CODE CONTEXT:
+        {context_str}
+        
+        GOAL:
+        Identify the core logical components (nodes) and their relationships (edges).
+        Group related functions into high-level blocks if necessary.
+        
+        OUTPUT FORMAT (JSON ONLY):
+        {{
+            "nodes": [
+                {{ "id": "1", "type": "custom", "position": {{ "x": 0, "y": 0 }}, "data": {{ "label": "ComponentName", "details": ["Logic step 1", "Logic step 2"] }} }}
+            ],
+            "edges": [
+                {{ "id": "e1-2", "source": "1", "target": "2", "type": "smoothstep" }}
+            ],
+            "sequence": ["1", "2"]
+        }}
+        
+        Be concise. Focus on the data flow and logical dependencies.
+        """
+        
+        response_text = await model.generate_text(prompt)
+        
+        # Clean response if it contains markdown code blocks
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+            
+        flow_data = json.loads(response_text)
+        
+        return {
+            "success": True,
+            "flow_data": flow_data,
+            "root_path": request.path # Return original path
+        }
+        
+    except Exception as e:
+        print(f"Analysis Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if is_temp and os.path.exists(target_path):
+            shutil.rmtree(target_path)
 
 if __name__ == "__main__":
     import uvicorn
