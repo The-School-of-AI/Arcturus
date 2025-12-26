@@ -94,7 +94,7 @@ const getSmartDimensions = (type: string) => {
 export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onToggleFullScreen }) => {
     // Container ref for width measurement
     const containerRef = useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = useState(1200);
+    const CANVAS_WIDTH = 1200; // Fixed large canvas width
     const [zoomLevel, setZoomLevel] = useState(1);
 
     // Connect to Store
@@ -115,16 +115,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
 
-    // Measure container width and handle keyboard delete
+    // Handle keyboard delete
     useEffect(() => {
-        const updateWidth = () => {
-            if (containerRef.current) {
-                setContainerWidth(containerRef.current.offsetWidth - 64); // minus padding
-            }
-        };
-
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Only delete if something is selected and we're not in an input/textarea
             if ((e.key === 'Delete' || e.key === 'Backspace') &&
                 selectedAppCardId &&
                 !(document.activeElement instanceof HTMLInputElement) &&
@@ -133,11 +126,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             }
         };
 
-        updateWidth();
-        window.addEventListener('resize', updateWidth);
         window.addEventListener('keydown', handleKeyDown);
+
         return () => {
-            window.removeEventListener('resize', updateWidth);
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [selectedAppCardId, removeAppCard]);
@@ -447,7 +438,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             {/* Grid Area */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-grid-dots"
+                className="flex-1 overflow-auto p-8 custom-scrollbar bg-grid-dots"
                 onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'copy';
@@ -475,7 +466,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
                         // Calculate grid position from mouse coordinates
                         const rect = containerRef.current?.getBoundingClientRect();
-                        const colWidth = containerWidth / 24;
+                        // Use CANVAS_WIDTH for colWidth calculation
+                        const colWidth = CANVAS_WIDTH / 24;
                         const rowHeight = 40;
                         const x = rect ? Math.max(0, Math.floor((e.clientX - rect.left - 32) / colWidth)) : 0;
                         const y = rect ? Math.max(0, Math.floor((e.clientY - rect.top - 32) / rowHeight)) : 0;
@@ -495,10 +487,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         </div>
                     </div>
                 ) : (
-                    <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', width: `${100 / zoomLevel}%` }}>
+                    <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', width: `${CANVAS_WIDTH}px` }}>
                         <RGLResponsive
                             className="layout min-h-[500px]"
-                            width={containerWidth} // We might need to adjust this based on scale effectively
+                            width={CANVAS_WIDTH}
                             layouts={{ lg: appLayout }}
                             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                             cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }} // Double columns for finer granularity
