@@ -20,6 +20,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     change,
     trend,
     subtext,
+    config = {},
     data = {},
     style = {}
 }) => {
@@ -28,6 +29,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     const displayChange = data.change ?? change;
     const displayTrend = data.trend || trend || 'neutral';
     const displaySubtext = data.subtext || subtext;
+
+    // Feature toggles from config
+    const showTitle = config.showTitle !== false;
+    const showTrend = config.showTrend !== false;
+    const showPercent = config.showPercent !== false;
 
     const successColor = style.successColor || '#4ade80';
     const dangerColor = style.dangerColor || '#f87171';
@@ -41,12 +47,12 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     };
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={showTitle ? title : undefined}>
             <div className="flex flex-col justify-center h-full">
                 <div className="text-3xl font-bold tracking-tight" style={{ color: textColor }}>{displayValue}</div>
-                {(displayChange !== undefined || displaySubtext) && (
+                {(showPercent && displayChange !== undefined) || displaySubtext ? (
                     <div className="flex items-center gap-2 mt-2">
-                        {displayChange !== undefined && (
+                        {showPercent && displayChange !== undefined && (
                             <div
                                 className="flex items-center text-xs font-bold px-1.5 py-0.5 rounded"
                                 style={{
@@ -54,15 +60,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                                     backgroundColor: `${getTrendColor()}15`
                                 }}
                             >
-                                {displayTrend === 'up' && <TrendingUp className="w-3 h-3 mr-1" />}
-                                {displayTrend === 'down' && <TrendingDown className="w-3 h-3 mr-1" />}
-                                {displayTrend === 'neutral' && <Minus className="w-3 h-3 mr-1" />}
+                                {showTrend && displayTrend === 'up' && <TrendingUp className="w-3 h-3 mr-1" />}
+                                {showTrend && displayTrend === 'down' && <TrendingDown className="w-3 h-3 mr-1" />}
+                                {showTrend && displayTrend === 'neutral' && <Minus className="w-3 h-3 mr-1" />}
                                 {displayChange > 0 ? '+' : ''}{displayChange}%
                             </div>
                         )}
                         {displaySubtext && <div className="text-xs text-muted-foreground">{displaySubtext}</div>}
                     </div>
-                )}
+                ) : null}
             </div>
         </BaseCard>
     );
