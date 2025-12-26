@@ -12,6 +12,7 @@ import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
+import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsModal } from '@/features/settings/SettingsModal';
 
 export const Sidebar: React.FC = () => {
@@ -84,9 +85,9 @@ export const Sidebar: React.FC = () => {
 
                     <div className="w-8 h-px bg-white/5 my-2 mx-auto" />
 
-                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" onClick={() => { }} />
-                    <NavIcon icon={Newspaper} label="News" tab="news" onClick={() => { }} />
-                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" onClick={() => { }} />
+                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" />
+                    <NavIcon icon={Newspaper} label="News" tab="news" />
+                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" />
                 </div>
 
                 {/* Bottom Tools */}
@@ -201,10 +202,10 @@ export const Sidebar: React.FC = () => {
                 {sidebarTab === 'mcp' && <McpPanel />}
                 {sidebarTab === 'remme' && <RemmePanel />}
                 {sidebarTab === 'explorer' && <ExplorerPanel />}
-                {['apps', 'news', 'learn'].includes(sidebarTab) && (
+                {sidebarTab === 'apps' && <AppsSidebar />}
+                {['news', 'learn'].includes(sidebarTab) && (
                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
                         <div className="p-6 bg-white/5 rounded-full ring-1 ring-white/10">
-                            {sidebarTab === 'apps' && <LayoutGrid className="w-12 h-12" />}
                             {sidebarTab === 'news' && <Newspaper className="w-12 h-12" />}
                             {sidebarTab === 'learn' && <GraduationCap className="w-12 h-12" />}
                         </div>

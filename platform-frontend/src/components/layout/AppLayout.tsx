@@ -24,10 +24,14 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
     </div>
 );
 
+import { AppGrid } from '@/features/apps/components/AppGrid';
+import { AppInspector } from '@/features/apps/components/AppInspector';
+
 export const AppLayout: React.FC = () => {
     const { viewMode, sidebarTab } = useAppStore();
     const [leftWidth, setLeftWidth] = useState(400); // w-64 = 256px
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
+    const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef<'left' | 'right' | null>(null);
     const startXRef = useRef(0);
@@ -95,6 +99,8 @@ export const AppLayout: React.FC = () => {
                         <DocumentViewer />
                     ) : sidebarTab === 'explorer' ? (
                         <FlowWorkspace />
+                    ) : sidebarTab === 'apps' ? (
+                        <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
                     ) : (
                         <>
                             <GraphCanvas />
@@ -103,7 +109,7 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer') && (
+                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps') && !isFullScreen && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 
@@ -112,7 +118,7 @@ export const AppLayout: React.FC = () => {
                             className="h-full border-l border-border bg-card/50 backdrop-blur-sm flex-shrink-0 flex flex-col"
                             style={{ width: rightWidth }}
                         >
-                            <WorkspacePanel />
+                            {sidebarTab === 'apps' ? <AppInspector /> : <WorkspacePanel />}
                         </div>
                     </>
                 )}
