@@ -116,10 +116,13 @@ const COMPONENT_CATEGORIES = [
         ]
     },
     {
-        name: '✨ Premium',
+        name: '✨ blocks.so',
         items: [
-            { type: 'animated_list', label: 'Animated List', icon: MessageSquare },
-            { type: 'bento_grid', label: 'Bento Grid', icon: LayoutGrid },
+            { type: 'stats_trending', label: 'Stats Trending', icon: TrendingUp },
+            { type: 'stats_grid', label: 'Stats Grid', icon: LayoutGrid },
+            { type: 'stats_status', label: 'Stats Status', icon: BarChart3 },
+            { type: 'stats_links', label: 'Stats Links', icon: TrendingUp },
+            { type: 'simple_table', label: 'Simple Table', icon: Table2 },
         ]
     }
 ];

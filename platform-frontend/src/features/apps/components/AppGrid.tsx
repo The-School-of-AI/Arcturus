@@ -29,7 +29,7 @@ import { InputCard, ActionButtonCard, SelectCard, DateRangeCard } from './cards/
 import { LogStreamCard } from './cards/LogStreamCard';
 import { JSONViewerCard } from './cards/JSONViewerCard';
 import { CodeBlockCard } from './cards/CodeBlockCard';
-import { AnimatedListCard, BentoGridCard } from './cards/PremiumCards';
+import { StatsTrendingCard, StatsGridCard, StatsStatusCard, StatsLinksCard, SimpleTableCard } from './cards/BlocksCards';
 
 interface AppGridProps {
     className?: string;
@@ -301,11 +301,17 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'chat':
                 return <div className="p-4 flex flex-col items-center justify-center h-full opacity-20"><span className="text-xs uppercase font-bold">Chat UI Placeholder</span></div>;
 
-            // Premium Cards
-            case 'animated_list':
-                return <AnimatedListCard title={config.showTitle !== false ? label : 'Activity Feed'} {...commonProps} />;
-            case 'bento_grid':
-                return <BentoGridCard title={config.showTitle !== false ? label : 'Dashboard'} {...commonProps} />;
+            // blocks.so Cards
+            case 'stats_trending':
+                return <StatsTrendingCard title={config.showTitle !== false ? label : 'Key Metrics'} {...commonProps} />;
+            case 'stats_grid':
+                return <StatsGridCard title={config.showTitle !== false ? label : 'Analytics'} {...commonProps} />;
+            case 'stats_status':
+                return <StatsStatusCard title={config.showTitle !== false ? label : 'System Status'} {...commonProps} />;
+            case 'stats_links':
+                return <StatsLinksCard title={config.showTitle !== false ? label : 'Quick Links'} {...commonProps} />;
+            case 'simple_table':
+                return <SimpleTableCard title={config.showTitle !== false ? label : 'Tasks'} {...commonProps} />;
 
             default:
                 return (

@@ -195,22 +195,49 @@ export const getDefaultData = (type: string): any => {
                 }
             };
 
-        // Premium Components
-        case 'animated_list':
+        // blocks.so Components
+        case 'stats_trending':
             return {
-                items: [
-                    { id: '1', title: 'Analysis Complete', description: 'AAPL report ready', time: '2m ago', type: 'success' },
-                    { id: '2', title: 'Price Alert', description: 'TSLA threshold crossed', time: '5m ago', type: 'warning' },
-                    { id: '3', title: 'New Insight', description: 'Agent found opportunity', time: '12m ago', type: 'message' },
+                stats: [
+                    { name: 'Profit', value: '$287,654', change: '+8.32%', changeType: 'positive' },
+                    { name: 'Late payments', value: '$9,435', change: '-12.64%', changeType: 'negative' },
+                    { name: 'Pending orders', value: '$173,229', change: '+2.87%', changeType: 'positive' },
                 ]
             };
-        case 'bento_grid':
+        case 'stats_grid':
             return {
-                items: [
-                    { id: '1', title: 'Analytics', description: 'Track performance', icon: 'chart', className: 'md:col-span-2' },
-                    { id: '2', title: 'Reports', description: 'Generate reports', icon: 'file' },
-                    { id: '3', title: 'Team', description: 'Collaborate', icon: 'users' },
-                    { id: '4', title: 'Growth', description: 'Monitor progress', icon: 'trending', className: 'md:col-span-2' },
+                stats: [
+                    { name: 'Unique visitors', value: '10,450', change: '-12.5%', changeType: 'negative' },
+                    { name: 'Bounce rate', value: '56.1%', change: '+1.8%', changeType: 'positive' },
+                    { name: 'Visit duration', value: '5.2min', change: '+19.7%', changeType: 'positive' },
+                    { name: 'Conversion rate', value: '3.2%', change: '-2.4%', changeType: 'negative' },
+                ]
+            };
+        case 'stats_status':
+            return {
+                stats: [
+                    { name: 'API Uptime', value: '99.9%', status: 'success', statusText: 'Operational' },
+                    { name: 'Response Time', value: '142ms', status: 'success', statusText: 'Normal' },
+                    { name: 'Error Rate', value: '0.4%', status: 'warning', statusText: 'Elevated' },
+                    { name: 'Active Users', value: '2,847', status: 'info', statusText: 'Online' },
+                ]
+            };
+        case 'stats_links':
+            return {
+                links: [
+                    { name: 'Active Projects', value: '12', href: '#' },
+                    { name: 'Open Issues', value: '47', href: '#' },
+                    { name: 'Pull Requests', value: '8', href: '#' },
+                    { name: 'Deployments', value: '156', href: '#' },
+                ]
+            };
+        case 'simple_table':
+            return {
+                headers: ['Task', 'Status', 'Due Date'],
+                rows: [
+                    { cells: ['User Authentication', 'In Progress', '2024-03-25'], status: 'warning' },
+                    { cells: ['Dashboard UI', 'Completed', '2024-03-20'], status: 'success' },
+                    { cells: ['API Optimization', 'Pending', '2024-03-22'], status: 'default' },
                 ]
             };
 
@@ -218,6 +245,7 @@ export const getDefaultData = (type: string): any => {
             return {};
     }
 };
+
 
 export const getDefaultStyle = () => ({
     showBorder: false,

@@ -117,14 +117,23 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Border', key: 'showBorder', default: false },
         { name: 'Editable', key: 'editable', default: true },
     ],
-    // Premium Components
-    animated_list: [
+    // blocks.so Components
+    stats_trending: [
         { name: 'Show Title', key: 'showTitle', default: true },
-        { name: 'Auto Advance', key: 'autoAdvance', default: true },
+        { name: 'Show Change %', key: 'showChange', default: true },
     ],
-    bento_grid: [
+    stats_grid: [
         { name: 'Show Title', key: 'showTitle', default: true },
-        { name: 'Show Icons', key: 'showIcons', default: true },
+    ],
+    stats_status: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
+    stats_links: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
+    simple_table: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Striped Rows', key: 'striped', default: true },
     ],
 };
 
@@ -259,12 +268,22 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
         { name: 'Executive Summary', key: 'summary', type: 'textarea' },
         { name: 'Key Points (JSON)', key: 'keyPoints', type: 'json' },
     ],
-    // Premium Components
-    animated_list: [
-        { name: 'Items (JSON Array)', key: 'items', type: 'json' },
+    // blocks.so Components
+    stats_trending: [
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json' },
     ],
-    bento_grid: [
-        { name: 'Grid Items (JSON Array)', key: 'items', type: 'json' },
+    stats_grid: [
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json' },
+    ],
+    stats_status: [
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json' },
+    ],
+    stats_links: [
+        { name: 'Links (JSON Array)', key: 'links', type: 'json' },
+    ],
+    simple_table: [
+        { name: 'Headers (JSON Array)', key: 'headers', type: 'json' },
+        { name: 'Rows (JSON Array)', key: 'rows', type: 'json' },
     ],
 };
 
