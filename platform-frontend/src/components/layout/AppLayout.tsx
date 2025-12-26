@@ -83,15 +83,19 @@ export const AppLayout: React.FC = () => {
             <Header />
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar: Run Library */}
-                <div
-                    className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"
-                    style={{ width: leftWidth }}
-                >
-                    <Sidebar />
-                </div>
+                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps */}
+                {!(isFullScreen && sidebarTab === 'apps') && (
+                    <>
+                        <div
+                            className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"
+                            style={{ width: leftWidth }}
+                        >
+                            <Sidebar />
+                        </div>
 
-                <ResizeHandle onMouseDown={handleMouseDown('left')} />
+                        <ResizeHandle onMouseDown={handleMouseDown('left')} />
+                    </>
+                )}
 
                 {/* Center Canvas or Document Viewer */}
                 <div className="flex-1 relative bg-grid-dots overflow-hidden">
