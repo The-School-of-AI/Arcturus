@@ -29,6 +29,7 @@ import { InputCard, ActionButtonCard, SelectCard, DateRangeCard } from './cards/
 import { LogStreamCard } from './cards/LogStreamCard';
 import { JSONViewerCard } from './cards/JSONViewerCard';
 import { CodeBlockCard } from './cards/CodeBlockCard';
+import { AnimatedListCard, BentoGridCard } from './cards/PremiumCards';
 
 interface AppGridProps {
     className?: string;
@@ -299,6 +300,12 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 return <CodeBlockCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'chat':
                 return <div className="p-4 flex flex-col items-center justify-center h-full opacity-20"><span className="text-xs uppercase font-bold">Chat UI Placeholder</span></div>;
+
+            // Premium Cards
+            case 'animated_list':
+                return <AnimatedListCard title={config.showTitle !== false ? label : 'Activity Feed'} {...commonProps} />;
+            case 'bento_grid':
+                return <BentoGridCard title={config.showTitle !== false ? label : 'Dashboard'} {...commonProps} />;
 
             default:
                 return (

@@ -117,6 +117,15 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Border', key: 'showBorder', default: false },
         { name: 'Editable', key: 'editable', default: true },
     ],
+    // Premium Components
+    animated_list: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Auto Advance', key: 'autoAdvance', default: true },
+    ],
+    bento_grid: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Icons', key: 'showIcons', default: true },
+    ],
 };
 
 
@@ -249,6 +258,13 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     summary: [
         { name: 'Executive Summary', key: 'summary', type: 'textarea' },
         { name: 'Key Points (JSON)', key: 'keyPoints', type: 'json' },
+    ],
+    // Premium Components
+    animated_list: [
+        { name: 'Items (JSON Array)', key: 'items', type: 'json' },
+    ],
+    bento_grid: [
+        { name: 'Grid Items (JSON Array)', key: 'items', type: 'json' },
     ],
 };
 

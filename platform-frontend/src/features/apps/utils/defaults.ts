@@ -195,6 +195,25 @@ export const getDefaultData = (type: string): any => {
                 }
             };
 
+        // Premium Components
+        case 'animated_list':
+            return {
+                items: [
+                    { id: '1', title: 'Analysis Complete', description: 'AAPL report ready', time: '2m ago', type: 'success' },
+                    { id: '2', title: 'Price Alert', description: 'TSLA threshold crossed', time: '5m ago', type: 'warning' },
+                    { id: '3', title: 'New Insight', description: 'Agent found opportunity', time: '12m ago', type: 'message' },
+                ]
+            };
+        case 'bento_grid':
+            return {
+                items: [
+                    { id: '1', title: 'Analytics', description: 'Track performance', icon: 'chart', className: 'md:col-span-2' },
+                    { id: '2', title: 'Reports', description: 'Generate reports', icon: 'file' },
+                    { id: '3', title: 'Team', description: 'Collaborate', icon: 'users' },
+                    { id: '4', title: 'Growth', description: 'Monitor progress', icon: 'trending', className: 'md:col-span-2' },
+                ]
+            };
+
         default:
             return {};
     }

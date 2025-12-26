@@ -114,8 +114,16 @@ const COMPONENT_CATEGORIES = [
             { type: 'terminal', label: 'Terminal', icon: Terminal },
             { type: 'chat', label: 'Chat Interface', icon: MessageSquare },
         ]
+    },
+    {
+        name: '✨ Premium',
+        items: [
+            { type: 'animated_list', label: 'Animated List', icon: MessageSquare },
+            { type: 'bento_grid', label: 'Bento Grid', icon: LayoutGrid },
+        ]
     }
 ];
+
 
 const ComponentLibrary = () => {
     const [search, setSearch] = useState('');
