@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, TrendingDown, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, TrendingDown, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus } from 'lucide-react';
 
 interface AppsSidebarProps {
     className?: string;
@@ -563,8 +563,10 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 };
 
 const SavedAppsList = () => {
-    const { savedApps, saveApp, loadApp, deleteApp } = useAppStore();
+    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp } = useAppStore();
     const [name, setName] = useState('');
+
+    const activeApp = savedApps.find(a => a.id === editingAppId);
 
     const handleSave = () => {
         if (!name.trim()) return;
@@ -574,34 +576,45 @@ const SavedAppsList = () => {
 
     return (
         <div className="space-y-6">
-            {/* Save Controls */}
-            <div className="flex flex-col gap-2 p-3 bg-charcoal-800/50 rounded-xl border border-white/5">
-                <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Save Current Layout</label>
-                <div className="flex gap-2">
-                    <input
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        placeholder="Dashboard Name..."
-                        className="flex-1 bg-charcoal-950 border border-white/10 rounded-lg text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-gray-600"
-                    />
-                    <button
-                        onClick={handleSave}
-                        disabled={!name.trim()}
-                        className="p-2 bg-neon-yellow/20 hover:bg-neon-yellow/30 text-neon-yellow rounded-lg border border-neon-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Save App"
-                    >
-                        <Save className="w-4 h-4" />
-                    </button>
+            {/* Create New / Header */}
+            <div className="flex items-center justify-between px-1">
+                <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                    My Dashboards
                 </div>
+                <button
+                    onClick={createNewApp}
+                    className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-white transition-colors"
+                >
+                    <Plus className="w-3 h-3" />
+                    NEW APP
+                </button>
             </div>
+
+            {/* Save Controls - Only shown when starting fresh or renaming */}
+            {!activeApp && (
+                <div className="flex flex-col gap-2 p-3 bg-charcoal-800/50 rounded-xl border border-white/5">
+                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Save New App</label>
+                    <div className="flex gap-2">
+                        <input
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Dashboard Name..."
+                            className="flex-1 bg-charcoal-950 border border-white/10 rounded-lg text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-gray-600"
+                        />
+                        <button
+                            onClick={handleSave}
+                            disabled={!name.trim()}
+                            className="p-2 bg-neon-yellow/20 hover:bg-neon-yellow/30 text-neon-yellow rounded-lg border border-neon-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Save App"
+                        >
+                            <Save className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* List */}
             <div className="space-y-3">
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center justify-between px-1">
-                    <span>Saved Dashboards</span>
-                    <span className="text-gray-700">{savedApps.length}</span>
-                </div>
-
                 {savedApps.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-center space-y-2 opacity-60">
                         <LayoutGrid className="w-8 h-8 opacity-20" />
@@ -609,25 +622,43 @@ const SavedAppsList = () => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-2">
-                        {savedApps.map(app => (
-                            <div
-                                key={app.id}
-                                className="group flex items-center justify-between p-3 bg-charcoal-900/90 border-2 border-white/10 hover:border-white/30 rounded-xl cursor-pointer transition-all"
-                                onClick={() => loadApp(app.id)}
-                            >
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-bold text-foreground truncate">{app.name}</div>
-                                    <div className="text-[10px] text-gray-500">{new Date(app.lastModified).toLocaleDateString()}</div>
-                                </div>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
-                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-400 rounded-lg transition-all"
-                                    title="Delete App"
+                        {savedApps.map(app => {
+                            const isActive = app.id === editingAppId;
+                            return (
+                                <div
+                                    key={app.id}
+                                    className={cn(
+                                        "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border-2",
+                                        isActive
+                                            ? "bg-charcoal-800 border-neon-yellow shadow-[0_0_15px_rgba(234,255,0,0.1)] scale-[1.02]"
+                                            : "bg-charcoal-900/90 border-white/10 hover:border-white/30"
+                                    )}
+                                    onClick={() => loadApp(app.id)}
                                 >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
-                            </div>
-                        ))}
+                                    <div className="flex-1 min-w-0">
+                                        <div className={cn(
+                                            "text-xs font-bold truncate",
+                                            isActive ? "text-neon-yellow" : "text-foreground"
+                                        )}>
+                                            {app.name}
+                                        </div>
+                                        <div className="text-[10px] text-gray-500">
+                                            {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
+                                        className={cn(
+                                            "p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-400 rounded-lg transition-all",
+                                            isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                        )}
+                                        title="Delete App"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

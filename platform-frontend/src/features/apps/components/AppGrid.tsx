@@ -5,7 +5,7 @@ import 'react-resizable/css/styles.css';
 
 // Cast to any to allow legacy props that types don't include
 const RGLResponsive = RGLResponsiveBase as any;
-import { Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { Maximize2, Minimize2, Trash2, Save, Plus, RotateCcw, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { getDefaultData, getDefaultStyle } from '../utils/defaults';
@@ -105,8 +105,15 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         addAppCard,
         setAppLayout,
         selectAppCard,
-        removeAppCard
+        removeAppCard,
+        editingAppId,
+        savedApps,
+        createNewApp,
+        saveApp,
+        revertAppChanges
     } = useAppStore();
+
+    const activeApp = savedApps.find(a => a.id === editingAppId);
 
     // Measure container width
     useEffect(() => {
@@ -350,20 +357,57 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             className={cn("h-full w-full flex flex-col bg-charcoal-950 relative overflow-hidden", className)}
             onClick={() => selectAppCard(null)} // Auto-deselect on background click
         >
-            {/* Toolbar Overlay */}
+            {/* Management Toolbar (Top Left) */}
+            <div className="absolute top-4 left-4 z-50 flex gap-2">
+                {/* Active App Title */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2">
+                    <FileText className="w-3.5 h-3.5 text-neon-yellow" />
+                    <span className="text-xs font-bold text-foreground max-w-[150px] truncate">
+                        {activeApp ? activeApp.name : "Untitled App"}
+                    </span>
+                    {!activeApp && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">(unsaved)</span>}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg p-1 gap-1">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); createNewApp(); }}
+                        className="p-1.5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors rounded"
+                        title="New App (Clear Canvas)"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); saveApp(); }}
+                        className="p-1.5 hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow transition-colors rounded"
+                        title={activeApp ? "Save All Changes" : "Save as New App"}
+                    >
+                        <Save className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Discard all unsaved changes?")) revertAppChanges(); }}
+                        className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors rounded"
+                        title="Revert to Last Saved State"
+                    >
+                        <RotateCcw className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+
+            {/* View Controls (Top Right) */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
                 <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(0.5, prev - 0.1)); }}
-                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors border-r border-white/10"
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors border-r border-white/10 w-8 h-8 flex items-center justify-center font-bold"
                         title="Zoom Out"
                     >
                         -
                     </button>
-                    <span className="px-2 text-xs text-muted-foreground min-w-[3rem] text-center">{Math.round(zoomLevel * 100)}%</span>
+                    <span className="px-2 text-[10px] font-bold text-muted-foreground min-w-[3rem] text-center uppercase tracking-tighter">{Math.round(zoomLevel * 100)}%</span>
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(1.5, prev + 0.1)); }}
-                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors w-8 h-8 flex items-center justify-center font-bold"
                         title="Zoom In"
                     >
                         +

@@ -133,6 +133,8 @@ interface AppsSlice {
     selectedAppCardId: string | null;
     selectedLibraryComponent: any | null; // For sidebar preview
     savedApps: SavedApp[];
+    editingAppId: string | null;
+    lastSavedState: { cards: AppCard[], layout: any[] } | null;
     setAppCards: (cards: AppCard[]) => void;
     addAppCard: (card: AppCard, layoutItem: any) => void;
     removeAppCard: (id: string) => void;
@@ -143,8 +145,10 @@ interface AppsSlice {
     setAppLayout: (layout: any[]) => void;
     selectAppCard: (id: string | null) => void;
     selectLibraryComponent: (component: any | null) => void;
-    saveApp: (name: string) => void;
+    createNewApp: () => void;
+    saveApp: (name?: string) => void;
     loadApp: (id: string) => void;
+    revertAppChanges: () => void;
     deleteApp: (id: string) => void;
 }
 
@@ -486,6 +490,8 @@ export const useAppStore = create<AppState>()(
             selectedAppCardId: null,
             selectedLibraryComponent: null,
             savedApps: [],
+            editingAppId: null,
+            lastSavedState: null,
             setAppCards: (appCards) => set({ appCards }),
             addAppCard: (card, layoutItem) => set((state) => ({
                 appCards: [...state.appCards, card],
@@ -512,29 +518,79 @@ export const useAppStore = create<AppState>()(
             setAppLayout: (appLayout) => set({ appLayout }),
             selectAppCard: (id) => set({ selectedAppCardId: id, selectedLibraryComponent: null }), // Clear lib selection when canvas card selected
             selectLibraryComponent: (component) => set({ selectedLibraryComponent: component, selectedAppCardId: null }), // Clear canvas selection when lib item selected
-            saveApp: (name) => set((state) => {
-                const newApp: SavedApp = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    name,
-                    lastModified: Date.now(),
-                    cards: state.appCards,
-                    layout: state.appLayout
-                };
-                return { savedApps: [newApp, ...state.savedApps] };
+
+            createNewApp: () => set({
+                appCards: [],
+                appLayout: [],
+                editingAppId: null,
+                lastSavedState: null,
+                selectedAppCardId: null
             }),
+
+            saveApp: (name) => set((state) => {
+                if (state.editingAppId) {
+                    // Update existing
+                    const updatedApps = state.savedApps.map(app =>
+                        app.id === state.editingAppId
+                            ? { ...app, name: name || app.name, cards: state.appCards, layout: state.appLayout, lastModified: Date.now() }
+                            : app
+                    );
+                    return {
+                        savedApps: updatedApps,
+                        lastSavedState: { cards: state.appCards, layout: state.appLayout }
+                    };
+                } else {
+                    // Create new
+                    const newApp: SavedApp = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: name || 'Untitled App',
+                        lastModified: Date.now(),
+                        cards: state.appCards,
+                        layout: state.appLayout
+                    };
+                    return {
+                        savedApps: [newApp, ...state.savedApps],
+                        editingAppId: newApp.id,
+                        lastSavedState: { cards: state.appCards, layout: state.appLayout }
+                    };
+                }
+            }),
+
             loadApp: (id) => set((state) => {
                 const app = state.savedApps.find(a => a.id === id);
                 if (app) {
                     return {
                         appCards: app.cards,
                         appLayout: app.layout,
+                        editingAppId: id,
+                        lastSavedState: { cards: app.cards, layout: app.layout },
                         selectedAppCardId: null
                     };
                 }
                 return state;
             }),
+
+            revertAppChanges: () => set((state) => {
+                if (state.lastSavedState) {
+                    return {
+                        appCards: state.lastSavedState.cards,
+                        appLayout: state.lastSavedState.layout,
+                        selectedAppCardId: null
+                    };
+                } else {
+                    // If never saved, revert means clear
+                    return {
+                        appCards: [],
+                        appLayout: [],
+                        selectedAppCardId: null
+                    };
+                }
+            }),
+
             deleteApp: (id) => set((state) => ({
-                savedApps: state.savedApps.filter(a => a.id !== id)
+                savedApps: state.savedApps.filter(a => a.id !== id),
+                editingAppId: state.editingAppId === id ? null : state.editingAppId,
+                lastSavedState: state.editingAppId === id ? null : state.lastSavedState
             })),
         }),
         {
@@ -551,7 +607,9 @@ export const useAppStore = create<AppState>()(
                 analysisHistory: state.analysisHistory,
                 appCards: state.appCards,
                 appLayout: state.appLayout,
-                savedApps: state.savedApps
+                savedApps: state.savedApps,
+                editingAppId: state.editingAppId,
+                lastSavedState: state.lastSavedState
             }),
         }
     )
