@@ -201,13 +201,13 @@ export const getDefaultData = (type: string): any => {
 };
 
 export const getDefaultStyle = () => ({
-    showBorder: true,
+    showBorder: false,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     opacity: 100,
     accentColor: DEFAULT_COLORS.accent,
-    backgroundColor: 'transparent',
+    backgroundColor: '#000000',
     textColor: '#ffffff',
     successColor: '#4ade80',
     dangerColor: '#f87171',

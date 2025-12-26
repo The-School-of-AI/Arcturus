@@ -419,7 +419,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                 const borderColor = cardStyle.borderColor || 'rgba(255,255,255,0.1)';
                                 const borderRadius = cardStyle.borderRadius ?? 12;
                                 const opacity = (cardStyle.opacity || 100) / 100;
-                                const backgroundColor = cardStyle.backgroundColor || 'transparent';
+                                // Default to black if not set, transparent only if explicitly set
+                                const backgroundColor = cardStyle.backgroundColor || '#000000';
+                                const isTransparentBg = backgroundColor === 'transparent';
 
                                 return (
                                     <div
@@ -427,12 +429,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                         className={cn(
                                             // Match FlowStepNode styling exactly
                                             "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
-                                            // Base styles - match Explorer node
-                                            isTransparent ? "bg-transparent" : (backgroundColor === 'transparent' ? "bg-charcoal-900/90" : ""),
                                             // Selected state glow
                                             isSelected && "ring-4 ring-neon-yellow/20 z-50",
-                                            // No border class when using custom border
-                                            !showBorder && !isSelected && isTransparent && "border border-transparent hover:border-white/10 hover:bg-white/5",
+                                            // Hover effect for transparent backgrounds
+                                            isTransparentBg && !isSelected && "hover:bg-white/5",
                                         )}
                                         style={{
                                             // Apply custom styles
@@ -442,8 +442,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             borderWidth: showBorder || isSelected ? borderWidth : 0,
                                             borderStyle: 'solid',
                                             borderColor: isSelected ? '#eaff00' : (showBorder ? borderColor : 'transparent'),
-                                            // Background if custom
-                                            backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : undefined,
+                                            // Background - always apply it
+                                            backgroundColor: backgroundColor,
                                         }}
                                         onClick={(e) => {
                                             e.stopPropagation();
