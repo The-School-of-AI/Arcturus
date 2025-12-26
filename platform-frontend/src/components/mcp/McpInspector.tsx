@@ -60,14 +60,47 @@ export const McpInspector: React.FC = () => {
         }));
     };
 
+    const isAllEnabled = tools.length > 0 && tools.every(t => enabledTools[t.name]);
+
+    const toggleAll = () => {
+        const newState = !isAllEnabled;
+        const nextStatus: Record<string, boolean> = {};
+        tools.forEach(t => {
+            nextStatus[t.name] = newState;
+        });
+        setEnabledTools(nextStatus);
+    };
+
     return (
         <div className="flex flex-col h-full bg-card/30">
-            <div className="p-4 border-b border-border bg-charcoal-900/50">
-                <div className="flex items-center gap-2 mb-1">
-                    <Settings2 className="w-4 h-4 text-primary" />
-                    <h2 className="text-sm font-bold uppercase tracking-wider">{selectedMcpServer.replace('_', ' ')} Inspector</h2>
+            <div className="p-4 border-b border-border bg-charcoal-900/50 flex items-center justify-between">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Settings2 className="w-4 h-4 text-primary" />
+                        <h2 className="text-sm font-bold uppercase tracking-wider">{selectedMcpServer.replace('_', ' ')} Inspector</h2>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Configure and enable/disable specific capabilities</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Configure and enable/disable specific capabilities</p>
+
+                {tools.length > 0 && (
+                    <div
+                        onClick={toggleAll}
+                        className="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer transition-colors"
+                    >
+                        <span className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground">
+                            {isAllEnabled ? 'Disable All' : 'Enable All'}
+                        </span>
+                        <div className={cn(
+                            "w-6 h-3 rounded-full relative transition-colors",
+                            isAllEnabled ? "bg-primary" : "bg-white/20"
+                        )}>
+                            <div className={cn(
+                                "absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all",
+                                isAllEnabled ? "right-0.5" : "left-0.5"
+                            )} />
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">

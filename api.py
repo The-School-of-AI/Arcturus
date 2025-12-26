@@ -819,6 +819,14 @@ async def get_connected_mcp_tools():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/mcp/refresh/{server_name}")
+async def refresh_mcp_server(server_name: str):
+    """Force refresh tool metadata for a specific MCP server"""
+    success = await multi_mcp.refresh_server(server_name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Server {server_name} not found or not connected")
+    return {"status": "success", "message": f"Metadata for {server_name} refreshed and cached"}
+
 # --- Explorer Endpoints ---
 @app.get("/explorer/scan")
 async def scan_project_files(path: str):

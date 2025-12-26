@@ -17,6 +17,8 @@ class MultiMCP:
         
         # Robust path resolution
         base_dir = Path(__file__).parent
+        self.cache_path = base_dir.parent / "config" / "mcp_cache.json"
+        self._cached_metadata = self._load_cache()
         
         self.server_configs = {
             "browser": {
@@ -60,14 +62,25 @@ class MultiMCP:
                 # Connect
                 read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
                 session = await self.exit_stack.enter_async_context(ClientSession(read, write))
-                await session.initialize()
-                
                 # List tools
-                result = await session.list_tools()
-                self.sessions[name] = session
-                self.tools[name] = result.tools
+                if name in self._cached_metadata:
+                    print(f"  📦 [cyan]{name}[/cyan] tools loaded from cache.")
+                    # Reconstruct Tool objects from dicts
+                    cached_tools = []
+                    for t_dict in self._cached_metadata[name]:
+                        cached_tools.append(Tool(
+                            name=t_dict["name"],
+                            description=t_dict["description"],
+                            inputSchema=t_dict["inputSchema"]
+                        ))
+                    self.tools[name] = cached_tools
+                else:
+                    result = await session.list_tools()
+                    self.tools[name] = result.tools
+                    self._save_to_cache(name, result.tools)
+                    print(f"  ✅ [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
                 
-                print(f"  ✅ [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
+                self.sessions[name] = session
                 
             except Exception as e:
                 print(f"  ❌ [red]{name}[/red] failed to start: {e}")
@@ -138,3 +151,49 @@ class MultiMCP:
                 if tool.name == tool_name:
                     return await self.call_tool(name, tool_name, arguments)
         raise ValueError(f"Tool '{tool_name}' not found in any server")
+
+    def _load_cache(self) -> dict:
+        """Load metadata cache from file"""
+        if self.cache_path.exists():
+            try:
+                import json
+                return json.loads(self.cache_path.read_text())
+            except Exception as e:
+                print(f"  ⚠️ Failed to load MCP cache: {e}")
+        return {}
+
+    def _save_to_cache(self, server_name: str, tools: list):
+        """Save tool metadata to persistent cache"""
+        try:
+            import json
+            # Ensure directory exists
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Load existing
+            cache = self._load_cache()
+            
+            # Update
+            tool_list = []
+            for t in tools:
+                tool_list.append({
+                    "name": t.name,
+                    "description": t.description,
+                    "inputSchema": t.inputSchema
+                })
+            cache[server_name] = tool_list
+            
+            # Write back
+            self.cache_path.write_text(json.dumps(cache, indent=2))
+            print(f"  💾 Cached metadata for [cyan]{server_name}[/cyan]")
+        except Exception as e:
+            print(f"  ⚠️ Failed to save MCP cache for {server_name}: {e}")
+
+    async def refresh_server(self, server_name: str):
+        """Force refresh tool metadata for a server"""
+        if server_name in self.sessions:
+            print(f"  🔄 Refreshing tools for [cyan]{server_name}[/cyan]...")
+            result = await self.sessions[server_name].list_tools()
+            self.tools[server_name] = result.tools
+            self._save_to_cache(server_name, result.tools)
+            return True
+        return False
