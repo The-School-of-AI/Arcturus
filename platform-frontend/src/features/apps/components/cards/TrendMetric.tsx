@@ -14,35 +14,41 @@ export interface TrendMetricProps {
     style?: any;
 }
 
-export const TrendMetric: React.FC<TrendMetricProps> = ({ 
-    title, 
-    value, 
-    change, 
+export const TrendMetric: React.FC<TrendMetricProps> = ({
+    title,
+    value,
+    change,
     sparklineData = [30, 40, 35, 50, 45, 60, 55],
     showSparkline = true,
+    data = {},
     style = {}
 }) => {
-    const isUp = (change || 0) >= 0;
+    // Use data prop values if available, otherwise fall back to direct props
+    const displayValue = data.value || value || '0';
+    const displayChange = data.change ?? change;
+    const displayLabel = data.label || title;
+
+    const isUp = (displayChange || 0) >= 0;
     const successColor = style.successColor || '#4ade80';
     const dangerColor = style.dangerColor || '#fb7185';
     const textColor = style.textColor || undefined;
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={displayLabel}>
             <div className="flex items-center justify-between h-full">
                 <div className="space-y-1">
-                    <div className="text-2xl font-bold tracking-tight" style={{ color: textColor }}>{value}</div>
-                    {change !== undefined && (
+                    <div className="text-2xl font-bold tracking-tight" style={{ color: textColor }}>{displayValue}</div>
+                    {displayChange !== undefined && (
                         <div className={cn(
                             "flex items-center text-[10px] font-bold px-1 py-0.5 rounded w-fit"
                         )}
-                        style={{
-                            color: isUp ? successColor : dangerColor,
-                            backgroundColor: isUp ? `${successColor}15` : `${dangerColor}15`
-                        }}
+                            style={{
+                                color: isUp ? successColor : dangerColor,
+                                backgroundColor: isUp ? `${successColor}15` : `${dangerColor}15`
+                            }}
                         >
                             {isUp ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                            {isUp ? '+' : ''}{change}%
+                            {isUp ? '+' : ''}{displayChange}%
                         </div>
                     )}
                 </div>

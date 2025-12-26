@@ -266,7 +266,11 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'peer_table':
                 return <PeerTableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'ratios':
-                return <TableCard title="Key Ratios" headers={["Ratio", "Value", "Health"]} rows={[["P/E", "24.5", "Fair"], ["PEG", "1.1", "Good"], ["ROE", "22%", "Excellent"]]} {...commonProps} />;
+                // Transform ratios data array into table format
+                const ratiosData = data.ratios || [];
+                const ratiosHeaders = ["Ratio", "Value", "Health"];
+                const ratiosRows = ratiosData.map((r: any) => [r.name || '', String(r.value || ''), r.status || '']);
+                return <TableCard title={config.showTitle !== false ? label : 'Key Ratios'} headers={ratiosHeaders} rows={ratiosRows.length > 0 ? ratiosRows : [["P/E", "24.5", "Fair"]]} {...commonProps} />;
             case 'summary':
                 return <SummaryGrid title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'cash_flow':
