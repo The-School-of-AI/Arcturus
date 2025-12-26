@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Package, Terminal, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
+import { useAppStore } from '@/store';
 
 interface McpTool {
     name: string;
@@ -12,6 +13,7 @@ interface McpTool {
 const API_BASE = 'http://localhost:8000';
 
 export const McpPanel: React.FC = () => {
+    const { setSelectedMcpServer } = useAppStore();
     const [tools, setTools] = useState<McpTool[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -71,11 +73,16 @@ export const McpPanel: React.FC = () => {
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-2">
                     {[
-                        { name: "Google Drive MCP", status: "Connected", desc: "Access Docs, Sheets, and Drive files" },
-                        { name: "GitHub MCP", status: "Disconnected", desc: "Search repos, issues, and PRs" },
-                        { name: "Slack MCP", status: "Connected", desc: "Read and post messages to channels" }
+                        { name: "Alpha Vantage MCP", status: "Connected", desc: "Stock market and financial data", id: "alphavantage" },
+                        { name: "Google Drive MCP", status: "Connected", desc: "Access Docs, Sheets, and Drive files", id: "gdrive" },
+                        { name: "GitHub MCP", status: "Disconnected", desc: "Search repos, issues, and PRs", id: "github" },
+                        { name: "Slack MCP", status: "Connected", desc: "Read and post messages to channels", id: "slack" }
                     ].map((item, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded hover:bg-white/5 transition-colors cursor-pointer group">
+                        <div
+                            key={i}
+                            className="flex items-center gap-3 p-3 rounded hover:bg-white/5 transition-colors cursor-pointer group"
+                            onClick={() => item.id === 'alphavantage' && setSelectedMcpServer(item.id)}
+                        >
                             <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center">
                                 <Package className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
                             </div>

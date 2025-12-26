@@ -1,0 +1,128 @@
+import React, { useEffect, useState } from 'react';
+import { useAppStore } from '@/store';
+import { Settings2, CheckCircle2, ChevronRight, Info } from 'lucide-react';
+import axios from 'axios';
+import { cn } from '@/lib/utils';
+
+interface Tool {
+    name: string;
+    description: string;
+    inputSchema: any;
+}
+
+export const McpInspector: React.FC = () => {
+    const { selectedMcpServer } = useAppStore();
+    const [tools, setTools] = useState<Tool[]>([]);
+    const [enabledTools, setEnabledTools] = useState<Record<string, boolean>>({});
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!selectedMcpServer) return;
+
+        const fetchTools = async () => {
+            setLoading(true);
+            try {
+                const res = await axios.get(`http://localhost:8000/mcp/connected_tools`);
+                const serverTools = res.data.servers[selectedMcpServer] || [];
+                setTools(serverTools);
+
+                // All enabled by default
+                const status: Record<string, boolean> = {};
+                serverTools.forEach((t: Tool) => {
+                    status[t.name] = true;
+                });
+                setEnabledTools(status);
+            } catch (e) {
+                console.error("Failed to fetch mcp tools", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTools();
+    }, [selectedMcpServer]);
+
+    if (!selectedMcpServer) {
+        return (
+            <div className="h-full flex items-center justify-center p-8 text-center bg-card/30">
+                <div className="space-y-3">
+                    <Info className="w-10 h-10 text-muted-foreground mx-auto opacity-20" />
+                    <p className="text-sm text-muted-foreground">Select an MCP server from the library to configure tools</p>
+                </div>
+            </div>
+        );
+    }
+
+    const toggleTool = (name: string) => {
+        setEnabledTools(prev => ({
+            ...prev,
+            [name]: !prev[name]
+        }));
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-card/30">
+            <div className="p-4 border-b border-border bg-charcoal-900/50">
+                <div className="flex items-center gap-2 mb-1">
+                    <Settings2 className="w-4 h-4 text-primary" />
+                    <h2 className="text-sm font-bold uppercase tracking-wider">{selectedMcpServer.replace('_', ' ')} Inspector</h2>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Configure and enable/disable specific capabilities</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {loading ? (
+                    <div className="flex items-center justify-center h-40">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                ) : tools.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-10">No tools found for this server</p>
+                ) : (
+                    tools.map((tool, idx) => (
+                        <div
+                            key={idx}
+                            onClick={() => toggleTool(tool.name)}
+                            className={cn(
+                                "group p-3 rounded-lg border transition-all cursor-pointer",
+                                enabledTools[tool.name]
+                                    ? "bg-primary/5 border-primary/20 hover:border-primary/40"
+                                    : "bg-background/40 border-border opacity-60 hover:opacity-80"
+                            )}
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                    <h4 className="font-mono text-xs font-bold text-primary mb-1 flex items-center gap-2">
+                                        {tool.name}
+                                        {enabledTools[tool.name] && <CheckCircle2 className="w-3 h-3" />}
+                                    </h4>
+                                    <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">
+                                        {tool.description}
+                                    </p>
+                                </div>
+                                <div className={cn(
+                                    "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                                    enabledTools[tool.name] ? "bg-primary border-primary" : "border-muted-foreground/30"
+                                )}>
+                                    {enabledTools[tool.name] && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
+                                </div>
+                            </div>
+
+                            {enabledTools[tool.name] && tool.inputSchema?.properties && (
+                                <div className="mt-2 pt-2 border-t border-primary/10">
+                                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter mb-1">Params:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {Object.keys(tool.inputSchema.properties).map(prop => (
+                                            <span key={prop} className="text-[8px] bg-white/5 px-1.5 py-0.5 rounded font-mono">
+                                                {prop}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};

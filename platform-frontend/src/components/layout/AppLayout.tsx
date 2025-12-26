@@ -26,6 +26,8 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
 
 import { AppGrid } from '@/features/apps/components/AppGrid';
 import { AppInspector } from '@/features/apps/components/AppInspector';
+import { McpBrowser } from '../mcp/McpBrowser';
+import { McpInspector } from '../mcp/McpInspector';
 
 export const AppLayout: React.FC = () => {
     const { viewMode, sidebarTab } = useAppStore();
@@ -105,6 +107,8 @@ export const AppLayout: React.FC = () => {
                         <FlowWorkspace />
                     ) : sidebarTab === 'apps' ? (
                         <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
+                    ) : sidebarTab === 'mcp' ? (
+                        <McpBrowser />
                     ) : (
                         <>
                             <GraphCanvas />
@@ -113,7 +117,7 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps') && !isFullScreen && (
+                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp') && !isFullScreen && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 
@@ -122,7 +126,7 @@ export const AppLayout: React.FC = () => {
                             className="h-full border-l border-border bg-card/50 backdrop-blur-sm flex-shrink-0 flex flex-col"
                             style={{ width: rightWidth }}
                         >
-                            {sidebarTab === 'apps' ? <AppInspector /> : <WorkspacePanel />}
+                            {sidebarTab === 'apps' ? <AppInspector /> : sidebarTab === 'mcp' ? <McpInspector /> : <WorkspacePanel />}
                         </div>
                     </>
                 )}

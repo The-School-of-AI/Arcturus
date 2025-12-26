@@ -90,6 +90,8 @@ interface RagViewerSlice {
     addSelectedContext: (text: string) => void;
     removeSelectedContext: (index: number) => void;
     clearSelectedContexts: () => void;
+    selectedMcpServer: string | null;
+    setSelectedMcpServer: (server: string | null) => void;
 }
 
 interface RemmeSlice {
@@ -416,6 +418,8 @@ export const useAppStore = create<AppState>()(
                 selectedContexts: state.selectedContexts.filter((_, i) => i !== index)
             })),
             clearSelectedContexts: () => set({ selectedContexts: [] }),
+            selectedMcpServer: null,
+            setSelectedMcpServer: (server) => set({ selectedMcpServer: server, sidebarTab: 'mcp' }),
 
             // --- Remme Slice ---
             memories: [],

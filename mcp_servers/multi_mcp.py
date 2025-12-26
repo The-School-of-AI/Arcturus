@@ -30,6 +30,10 @@ class MultiMCP:
             "sandbox": {
                 "command": "uv",
                 "args": ["run", str(base_dir / "server_sandbox.py")],
+            },
+            "alphavantage": {
+                "command": "uvx",
+                "args": ["av-mcp", "VXLTQQFJYNCMMPZE"],
             }
         }
 

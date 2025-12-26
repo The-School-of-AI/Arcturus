@@ -757,27 +757,32 @@ async def get_mcp_tools():
     import re
     tools = []
     try:
-        server_path = Path(__file__).parent / "mcp_servers"
-        # Robust regex: 
-        # 1. Matches @mcp.tool or @tool
-        # 2. Handles optional parentheses/args: (?:\(.*?\))?
-        # 3. Handles newlines/whitespace before def
-        # 4. Matches optional async
-        # 5. Captures function name
-        # 6. Matches arguments
-        # 7. Optionally captures docstring
+        server_path = (Path(__file__).parent / "mcp_servers").resolve()
+        print(f"🔍 Scanning for MCP tools in: {server_path}")
         
+        if not server_path.exists():
+            print(f"❌ server_path DOES NOT EXIST: {server_path}")
+            return {"tools": []}
+
+        # More robust regex:
+        # 1. Matches @mcp.tool or @tool
+        # 2. Handles optional parentheses/args
+        # 3. Matches optional async
+        # 4. Captures function name
+        # 5. Correctly handles type hints and arrows
         tool_pattern = re.compile(
-            r'@(?:mcp\.)?tool\s*(?:\(.*?\))?\s*'  # Decorator
-            r'(?:async\s+)?def\s+(\w+)\s*\(.*?\).*?:' # Function sig
-            r'(?:\s*"""(.*?)""")?', # Docstring
-            re.DOTALL | re.VERBOSE
+            r'@(?:mcp\.)?tool\s*(?:\(.*?\))?\s*'
+            r'(?:async\s+)?def\s+(\w+)\s*\(.*?\)\s*(?:->\s*[\w\[\], \.]+)?\s*:'
+            r'(?:\s*"""(.*?)""")?',
+            re.DOTALL
         )
         
         for py_file in server_path.glob("*.py"):
+            print(f"  📄 Scanning file: {py_file.name}")
             try:
                 content = py_file.read_text()
-                matches = tool_pattern.finditer(content)
+                matches = list(tool_pattern.finditer(content))
+                print(f"    - Found {len(matches)} tools")
                 
                 for match in matches:
                     name = match.group(1)
@@ -794,6 +799,23 @@ async def get_mcp_tools():
                 continue
                 
         return {"tools": tools}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/mcp/connected_tools")
+async def get_connected_mcp_tools():
+    """List tools from all connected MCP sessions"""
+    try:
+        tools_by_server = {}
+        for server_name, tools in multi_mcp.tools.items():
+            tools_by_server[server_name] = [
+                {
+                    "name": t.name,
+                    "description": t.description,
+                    "inputSchema": t.inputSchema
+                } for t in tools
+            ]
+        return {"servers": tools_by_server}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
