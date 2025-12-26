@@ -34,6 +34,10 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
     edges.forEach((edge) => {
         // Force type to custom to ensure labels render
         edge.type = 'custom';
+        // CRITICAL: Force handle connection to specific IDs we defined in FlowStepNode
+        edge.sourceHandle = 'bottom';
+        edge.targetHandle = 'top';
+
         dagreGraph.setEdge(edge.source, edge.target);
     });
 

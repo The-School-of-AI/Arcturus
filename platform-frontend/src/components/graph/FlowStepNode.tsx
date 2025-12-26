@@ -22,12 +22,13 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
 
     const handleClass = "w-2.5 h-2.5 bg-charcoal-700 border-2 border-white/20 transition-all duration-300 hover:scale-150 hover:border-neon-yellow";
 
-    const DualHandle = ({ pos, type }: { pos: Position; type: 'source' | 'target' | 'both' }) => (
+    const DualHandle = ({ pos, type, id }: { pos: Position; type: 'source' | 'target' | 'both', id?: string }) => (
         <>
             {(type === 'target' || type === 'both') && (
                 <Handle
                     type="target"
                     position={pos}
+                    id={id}
                     className={cn(handleClass, "z-10")}
                     style={{
                         backgroundColor: isHighlighted ? activeColor : undefined,
@@ -40,6 +41,7 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
                 <Handle
                     type="source"
                     position={pos}
+                    id={id}
                     className={cn(handleClass, "opacity-0 hover:opacity-100 z-20")}
                     style={{
                         backgroundColor: activeColor,
@@ -61,8 +63,8 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
             )}
         >
             {/* Handles - Top (Target/Input) and Bottom (Source/Output) only */}
-            <DualHandle pos={Position.Top} type="target" />
-            <DualHandle pos={Position.Bottom} type="source" />
+            <DualHandle pos={Position.Top} type="target" id="top" />
+            <DualHandle pos={Position.Bottom} type="source" id="bottom" />
 
             {/* Glowing Accent for Highlighted nodes */}
             {isHighlighted && (
