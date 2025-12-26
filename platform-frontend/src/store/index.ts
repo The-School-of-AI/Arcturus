@@ -136,6 +136,7 @@ interface AppsSlice {
     addAppCard: (card: AppCard, layoutItem: any) => void;
     removeAppCard: (id: string) => void;
     updateAppCardConfig: (id: string, config: any) => void;
+    updateAppCardStyle: (id: string, style: any) => void;
     setAppLayout: (layout: any[]) => void;
     selectAppCard: (id: string | null) => void;
     selectLibraryComponent: (component: any | null) => void;
@@ -495,6 +496,9 @@ export const useAppStore = create<AppState>()(
             })),
             updateAppCardConfig: (id, config) => set((state) => ({
                 appCards: state.appCards.map(c => c.id === id ? { ...c, config: { ...c.config, ...config } } : c)
+            })),
+            updateAppCardStyle: (id, style) => set((state) => ({
+                appCards: state.appCards.map(c => c.id === id ? { ...c, style: { ...c.style, ...style } } : c)
             })),
             setAppLayout: (appLayout) => set({ appLayout }),
             selectAppCard: (id) => set({ selectedAppCardId: id, selectedLibraryComponent: null }), // Clear lib selection when canvas card selected

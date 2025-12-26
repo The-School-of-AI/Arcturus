@@ -296,22 +296,40 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                             {appCards.map(card => {
                                 const isSelected = selectedAppCardId === card.id;
                                 const isTransparent = ['divider', 'spacer'].includes(card.type);
+                                
+                                // Get style settings with defaults
+                                const cardStyle = card.style || {};
+                                const showBorder = cardStyle.showBorder !== false;
+                                const borderWidth = cardStyle.borderWidth || 2;
+                                const borderColor = cardStyle.borderColor || 'rgba(255,255,255,0.1)';
+                                const borderRadius = cardStyle.borderRadius ?? 12;
+                                const opacity = (cardStyle.opacity || 100) / 100;
+                                const backgroundColor = cardStyle.backgroundColor || 'transparent';
 
                                 return (
-                                    <div key={card.id} className={cn(
-                                        // Match FlowStepNode styling exactly
-                                        "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
-                                        // Base styles - match Explorer node
-                                        isTransparent ? "bg-transparent" : "bg-charcoal-900/90",
-                                        // Border / State styles - match Explorer node
-                                        isSelected
-                                            ? "border-2 border-neon-yellow ring-4 ring-neon-yellow/20 z-50"
-                                            : isTransparent
-                                                ? "border border-transparent hover:border-white/10 hover:bg-white/5"
-                                                : "border-2 border-white/10 hover:border-white/30",
-                                        // Rounding - match Explorer node
-                                        card.type === 'divider' ? "rounded-none" : "rounded-xl"
-                                    )}
+                                    <div 
+                                        key={card.id} 
+                                        className={cn(
+                                            // Match FlowStepNode styling exactly
+                                            "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
+                                            // Base styles - match Explorer node
+                                            isTransparent ? "bg-transparent" : (backgroundColor === 'transparent' ? "bg-charcoal-900/90" : ""),
+                                            // Selected state glow
+                                            isSelected && "ring-4 ring-neon-yellow/20 z-50",
+                                            // No border class when using custom border
+                                            !showBorder && !isSelected && isTransparent && "border border-transparent hover:border-white/10 hover:bg-white/5",
+                                        )}
+                                        style={{
+                                            // Apply custom styles
+                                            opacity,
+                                            borderRadius: card.type === 'divider' ? 0 : borderRadius,
+                                            // Border styling
+                                            borderWidth: showBorder || isSelected ? borderWidth : 0,
+                                            borderStyle: 'solid',
+                                            borderColor: isSelected ? '#eaff00' : (showBorder ? borderColor : 'transparent'),
+                                            // Background if custom
+                                            backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : undefined,
+                                        }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             selectAppCard(card.id);
@@ -319,7 +337,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                     >
                                         {/* Glow effect when selected - match FlowStepNode */}
                                         {isSelected && (
-                                            <div className="absolute inset-0 rounded-xl bg-neon-yellow/5 blur-xl -z-10 animate-pulse" />
+                                            <div 
+                                                className="absolute inset-0 bg-neon-yellow/5 blur-xl -z-10 animate-pulse" 
+                                                style={{ borderRadius: borderRadius }}
+                                            />
                                         )}
 
                                         {/* Minimal Drag Handle - Only visible on hover, top-right corner */}
