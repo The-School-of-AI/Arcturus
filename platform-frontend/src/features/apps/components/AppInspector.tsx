@@ -140,13 +140,102 @@ const COLOR_PRESETS = [
     { name: 'White', value: '#ffffff' },
 ];
 
+// Default data for each card type
+const getDefaultData = (type: string): any => {
+    switch (type) {
+        case 'metric':
+            return { value: '2.4M', change: 12.5, trend: 'up', label: 'Revenue Q3' };
+        case 'trend':
+            return { value: '$145.2', change: 2.4, label: 'Stock Price' };
+        case 'profile':
+            return { 
+                name: 'Alphabet Inc.', 
+                ticker: 'GOOGL', 
+                description: 'Alphabet Inc. provides online advertising services, cloud computing platform, software, and hardware.',
+                sector: 'Technology',
+                industry: 'Internet Content & Info',
+                employees: '~180,000'
+            };
+        case 'valuation':
+            return { marketPrice: 145.2, fairValue: 180.5, label: 'Undervalued by 19.6%' };
+        case 'score_card':
+            return { score: 78, label: 'Health Score', subtext: 'Healthy' };
+        case 'grade_card':
+            return { grade: 'A-', label: 'Profitability', subtext: 'Top Tier' };
+        case 'json':
+            return { 
+                json: {
+                    ticker: 'GOOGL',
+                    metrics: { revenue: 282.8, net_income: 59.9, cash: 113.7 },
+                    flags: ['undervalued', 'high_growth']
+                }
+            };
+        case 'markdown':
+            return { content: '# Hello Markdown\n\n- Item 1\n- Item 2\n\n> This is a quote.' };
+        case 'header':
+            return { text: 'Header' };
+        case 'text':
+            return { text: 'Basic paragraph text block. Select to edit.' };
+        default:
+            return {};
+    }
+};
+
+// Data field definitions for each card type
+const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' }[]> = {
+    metric: [
+        { name: 'Value', key: 'value', type: 'text' },
+        { name: 'Change %', key: 'change', type: 'number' },
+        { name: 'Trend', key: 'trend', type: 'text' },
+    ],
+    trend: [
+        { name: 'Value', key: 'value', type: 'text' },
+        { name: 'Change %', key: 'change', type: 'number' },
+    ],
+    profile: [
+        { name: 'Company Name', key: 'name', type: 'text' },
+        { name: 'Ticker', key: 'ticker', type: 'text' },
+        { name: 'Description', key: 'description', type: 'textarea' },
+        { name: 'Sector', key: 'sector', type: 'text' },
+        { name: 'Industry', key: 'industry', type: 'text' },
+        { name: 'Employees', key: 'employees', type: 'text' },
+    ],
+    valuation: [
+        { name: 'Market Price', key: 'marketPrice', type: 'number' },
+        { name: 'Fair Value', key: 'fairValue', type: 'number' },
+        { name: 'Label', key: 'label', type: 'text' },
+    ],
+    score_card: [
+        { name: 'Score (0-100)', key: 'score', type: 'number' },
+        { name: 'Subtext', key: 'subtext', type: 'text' },
+    ],
+    grade_card: [
+        { name: 'Grade', key: 'grade', type: 'text' },
+        { name: 'Subtext', key: 'subtext', type: 'text' },
+    ],
+    header: [
+        { name: 'Text', key: 'text', type: 'text' },
+    ],
+    text: [
+        { name: 'Content', key: 'text', type: 'textarea' },
+    ],
+    markdown: [
+        { name: 'Markdown Content', key: 'content', type: 'textarea' },
+    ],
+    json: [
+        { name: 'JSON Data', key: 'json', type: 'json' },
+    ],
+};
+
 export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
-    const [activeTab, setActiveTab] = useState<'config' | 'triggers' | 'style'>('style');
+    const [activeTab, setActiveTab] = useState<'config' | 'triggers' | 'style'>('config');
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         appearance: true,
         border: true,
         features: true,
         colors: true,
+        data: true,
+        properties: true,
     });
 
     // Connect to Store
@@ -157,7 +246,9 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
         removeAppCard,
         addAppCard,
         updateAppCardConfig,
-        updateAppCardStyle
+        updateAppCardStyle,
+        updateAppCardData,
+        updateAppCardLabel
     } = useAppStore();
 
     const selectedCard = appCards.find(c => c.id === selectedAppCardId);
@@ -177,8 +268,19 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                 type: selectedLibraryComponent.type,
                 label: selectedLibraryComponent.label,
                 config: {},
-                data: {},
-                style: { showBorder: true, opacity: 100, accentColor: DEFAULT_COLORS.accent }
+                data: getDefaultData(selectedLibraryComponent.type),
+                style: {
+                    showBorder: true,
+                    borderWidth: 2,
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                    opacity: 100,
+                    accentColor: DEFAULT_COLORS.accent,
+                    backgroundColor: 'transparent',
+                    textColor: '#ffffff',
+                    successColor: '#4ade80',
+                    dangerColor: '#f87171',
+                }
             };
             addAppCard(newCard, { x: 0, y: Infinity, ...dims });
         };
@@ -270,30 +372,144 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
                 {activeTab === 'config' && (
-                    <div className="space-y-5 animate-in fade-in slide-in-from-right-2 duration-200">
+                    <div className="space-y-3 animate-in fade-in slide-in-from-right-2 duration-200">
+                        
+                        {/* PROPERTIES SECTION */}
+                        <CollapsibleSection
+                            title="Properties"
+                            icon={<Terminal className="w-3 h-3" />}
+                            expanded={expandedSections.properties}
+                            onToggle={() => toggleSection('properties')}
+                        >
                         <div className="space-y-3">
-                            <SectionHeader icon={<Database className="w-3 h-3" />} label="Data Source" />
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Connected Source</label>
-                                <select className="w-full bg-charcoal-800 border border-border rounded text-xs px-2 py-1.5 text-foreground focus:outline-none">
-                                    <option>Local State (Default)</option>
-                                    <option>Research Agent (Live)</option>
-                                    <option>Script Output</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <SectionHeader icon={<Terminal className="w-3 h-3" />} label="Properties" />
                             <div className="space-y-1.5">
                                 <label className="text-[10px] text-muted-foreground font-bold uppercase">Display Title</label>
                                 <Input
                                     value={selectedCard.label}
-                                    onChange={(e) => updateAppCardConfig(selectedCard.id, { label: e.target.value })}
-                                    className="bg-charcoal-800 border-border text-xs h-8"
+                                        onChange={(e) => updateAppCardLabel(selectedCard.id, e.target.value)}
+                                        className="bg-charcoal-800 border-white/10 text-xs h-8"
                                 />
+                                </div>
                             </div>
+                        </CollapsibleSection>
+
+                        {/* DATA SOURCE SECTION */}
+                        <CollapsibleSection
+                            title="Data Source"
+                            icon={<Database className="w-3 h-3" />}
+                            expanded={expandedSections.data}
+                            onToggle={() => toggleSection('data')}
+                        >
+                            <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Source Type</label>
+                                    <select 
+                                        value={selectedCard.config?.dataSource || 'local'}
+                                        onChange={(e) => updateAppCardConfig(selectedCard.id, { dataSource: e.target.value })}
+                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                    >
+                                        <option value="local">Local State (Manual)</option>
+                                        <option value="agent">Research Agent (Live)</option>
+                                        <option value="script">Script Output</option>
+                                        <option value="api">External API</option>
+                                    </select>
+                                </div>
+
+                                {/* Local Data Editor */}
+                                {(!selectedCard.config?.dataSource || selectedCard.config?.dataSource === 'local') && (
+                                    <div className="space-y-3 pt-2 border-t border-white/5">
+                                        <div className="text-[10px] text-primary font-bold uppercase">Edit Card Data</div>
+                                        
+                                        {CARD_DATA_FIELDS[selectedCard.type]?.map(field => (
+                                            <div key={field.key} className="space-y-1">
+                                                <label className="text-[10px] text-muted-foreground font-medium">{field.name}</label>
+                                                {field.type === 'text' && (
+                                                    <Input
+                                                        value={selectedCard.data?.[field.key] || ''}
+                                                        onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
+                                                        className="bg-charcoal-800 border-white/10 text-xs h-8"
+                                                    />
+                                                )}
+                                                {field.type === 'number' && (
+                                                    <Input
+                                                        type="number"
+                                                        value={selectedCard.data?.[field.key] || 0}
+                                                        onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: parseFloat(e.target.value) || 0 })}
+                                                        className="bg-charcoal-800 border-white/10 text-xs h-8"
+                                                    />
+                                                )}
+                                                {field.type === 'textarea' && (
+                                                    <textarea
+                                                        value={selectedCard.data?.[field.key] || ''}
+                                                        onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
+                                                        rows={4}
+                                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                                                    />
+                                                )}
+                                                {field.type === 'json' && (
+                                                    <textarea
+                                                        value={typeof selectedCard.data?.[field.key] === 'object' 
+                                                            ? JSON.stringify(selectedCard.data?.[field.key], null, 2) 
+                                                            : selectedCard.data?.[field.key] || '{}'}
+                                                        onChange={(e) => {
+                                                            try {
+                                                                const parsed = JSON.parse(e.target.value);
+                                                                updateAppCardData(selectedCard.id, { [field.key]: parsed });
+                                                            } catch {
+                                                                // Keep raw string if invalid JSON
+                                                            }
+                                                        }}
+                                                        rows={6}
+                                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {!CARD_DATA_FIELDS[selectedCard.type] && (
+                                            <div className="text-[10px] text-muted-foreground italic py-2">
+                                                This card type uses default data. Custom data fields coming soon.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Agent/Script Info */}
+                                {selectedCard.config?.dataSource === 'agent' && (
+                                    <div className="p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 text-center">
+                                        <Zap className="w-5 h-5 mx-auto text-primary mb-2" />
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Data will be populated by the Research Agent in real-time.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {selectedCard.config?.dataSource === 'script' && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">Script Path</label>
+                                        <Input
+                                            value={selectedCard.config?.scriptPath || ''}
+                                            onChange={(e) => updateAppCardConfig(selectedCard.id, { scriptPath: e.target.value })}
+                                            placeholder="path/to/script.py"
+                                            className="bg-charcoal-800 border-white/10 text-xs h-8 font-mono"
+                                        />
+                                    </div>
+                                )}
+
+                                {selectedCard.config?.dataSource === 'api' && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">API Endpoint</label>
+                                        <Input
+                                            value={selectedCard.config?.apiEndpoint || ''}
+                                            onChange={(e) => updateAppCardConfig(selectedCard.id, { apiEndpoint: e.target.value })}
+                                            placeholder="https://api.example.com/data"
+                                            className="bg-charcoal-800 border-white/10 text-xs h-8 font-mono"
+                                        />
+                                    </div>
+                                )}
                         </div>
+                        </CollapsibleSection>
+
                     </div>
                 )}
 
@@ -346,7 +562,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             </div>
                                         </div>
                                         
-                                        <div className="space-y-1.5">
+                            <div className="space-y-1.5">
                                             <label className="text-[10px] text-muted-foreground font-bold uppercase">Border Color</label>
                                             <ColorPicker
                                                 value={cardStyle.borderColor || 'rgba(255,255,255,0.1)'}
@@ -395,9 +611,9 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     />
                                 </div>
 
-                                <div className="space-y-1.5">
+                            <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">Opacity</label>
+                                <label className="text-[10px] text-muted-foreground font-bold uppercase">Opacity</label>
                                         <span className="text-[10px] text-primary font-mono">{cardStyle.opacity || 100}%</span>
                                     </div>
                                     <input
@@ -507,8 +723,8 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             { name: 'Pink', value: '#ec4899' },
                                         ]}
                                     />
-                                </div>
                             </div>
+                        </div>
                         </CollapsibleSection>
 
                     </div>

@@ -107,9 +107,12 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         return () => window.removeEventListener('resize', updateWidth);
     }, []);
 
+    // Handle drop from external drag (sidebar components)
     const onDrop = (layout: any, layoutItem: any, _event: Event) => {
+        console.log('onDrop triggered', { layout, layoutItem, _event });
         const event = _event as DragEvent;
         const data = event.dataTransfer?.getData('application/json');
+        console.log('Drop data:', data);
         if (!data) return;
 
         try {
@@ -119,13 +122,25 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             // Get smart dimensions
             const dims = getSmartDimensions(type);
 
-            // Create new card
+            // Create new card with default style
             const newCard = {
                 id: newId,
                 type,
                 label,
                 config: {},
-                data: {}
+                data: {},
+                style: {
+                    showBorder: true,
+                    borderWidth: 2,
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                    opacity: 100,
+                    accentColor: '#eaff00',
+                    backgroundColor: 'transparent',
+                    textColor: '#ffffff',
+                    successColor: '#4ade80',
+                    dangerColor: '#f87171',
+                }
             };
 
             // Add to store with smart dimensions override
@@ -148,81 +163,146 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     };
 
     const renderCardContent = (card: any) => {
-        const { type, label } = card;
+        const { type, label, config = {}, data = {}, style = {} } = card;
+
+        // Common props to pass to all cards
+        const commonProps = { config, data, style };
 
         // Match with sidebar types
         switch (type) {
             // Basics
             case 'header':
-                return <div className="p-4"><h1 className="text-2xl font-bold text-foreground">{label}</h1></div>;
+                if (config.showTitle === false) return null;
+                return (
+                    <div className="p-4" style={{ color: style.textColor }}>
+                        <h1 className={cn("text-2xl font-bold", config.centered && "text-center")} style={{ fontWeight: config.bold !== false ? 'bold' : 'normal' }}>
+                            {data.text || label}
+                        </h1>
+                    </div>
+                );
             case 'text':
-                return <div className="p-4 text-sm text-muted-foreground">Basic paragraph text block. Select to edit.</div>;
+                return (
+                    <div className="p-4 text-sm" style={{ color: style.textColor || '#9ca3af' }}>
+                        {data.text || 'Basic paragraph text block. Select to edit.'}
+                    </div>
+                );
             case 'markdown':
-                return <MarkdownCard />;
+                return <MarkdownCard content={data.content} {...commonProps} />;
             case 'image':
-                return <ImageCard title={label} />;
+                return <ImageCard title={label} {...commonProps} />;
             case 'spacer':
                 return <div className="w-full h-full" />;
             case 'divider':
-                return <DividerCard />;
+                return <DividerCard {...commonProps} />;
 
             // Charts & Data
             case 'metric':
-                return <MetricCard title={label} value="2.4M" change={12.5} trend="up" />;
+                return (
+                    <MetricCard 
+                        title={config.showTitle !== false ? label : ''} 
+                        value={data.value || '2.4M'} 
+                        change={config.showPercent !== false ? (data.change || 12.5) : undefined} 
+                        trend={config.showTrend !== false ? (data.trend || 'up') : undefined}
+                        {...commonProps}
+                    />
+                );
             case 'trend':
-                return <TrendMetric title={label} value="$145.2" change={2.4} />;
+                return (
+                    <TrendMetric 
+                        title={config.showTitle !== false ? label : ''} 
+                        value={data.value || '$145.2'} 
+                        change={config.showChange !== false ? (data.change || 2.4) : undefined}
+                        showSparkline={config.showSparkline !== false}
+                        {...commonProps}
+                    />
+                );
             case 'line_chart':
-                return <ChartCard title={label} type="line" />;
+                return <ChartCard title={config.showTitle !== false ? label : ''} type="line" {...commonProps} />;
             case 'bar_chart':
-                return <ChartCard title={label} type="bar" />;
+                return <ChartCard title={config.showTitle !== false ? label : ''} type="bar" {...commonProps} />;
             case 'area_chart':
-                return <ChartCard title={label} type="area" />;
+                return <ChartCard title={config.showTitle !== false ? label : ''} type="area" {...commonProps} />;
             case 'pie_chart':
-                return <PieChartCard title={label} />;
+                return <PieChartCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'candlestick':
-                return <CandlestickCard title={label} />;
+                return <CandlestickCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'table':
-                return <TableCard title={label} />;
+                return <TableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
 
             // Finance
             case 'profile':
-                return <ProfileCard />;
+                return (
+                    <ProfileCard 
+                        showLogo={config.showLogo !== false}
+                        showTicker={config.showTicker !== false}
+                        showDescription={config.showDescription !== false}
+                        showSector={config.showSector !== false}
+                        config={config}
+                        data={data}
+                        style={style}
+                    />
+                );
             case 'valuation':
-                return <ValuationGauge title={label} />;
+                return (
+                    <ValuationGauge 
+                        title={config.showTitle !== false ? label : ''} 
+                        marketPrice={data.marketPrice}
+                        fairValue={data.fairValue}
+                        showPrices={config.showPrices !== false}
+                        showGauge={config.showGauge !== false}
+                        showLabel={config.showLabel !== false}
+                        config={config}
+                        style={style}
+                    />
+                );
             case 'score_card':
-                return <ScoreCard title={label} score={78} subtext="Healthy" />;
+                return (
+                    <ScoreCard 
+                        title={config.showTitle !== false ? label : ''} 
+                        score={data.score || 78} 
+                        subtext={data.subtext || 'Healthy'}
+                        {...commonProps}
+                    />
+                );
             case 'grade_card':
-                return <GradeCard title={label} grade="A-" subtext="Top Tier" />;
+                return (
+                    <GradeCard 
+                        title={config.showTitle !== false ? label : ''} 
+                        grade={data.grade || 'A-'} 
+                        subtext={data.subtext || 'Top Tier'}
+                        {...commonProps}
+                    />
+                );
             case 'peer_table':
-                return <PeerTableCard title={label} />;
+                return <PeerTableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'ratios':
-                return <TableCard title="Key Ratios" headers={["Ratio", "Value", "Health"]} rows={[["P/E", "24.5", "Fair"], ["PEG", "1.1", "Good"], ["ROE", "22%", "Excellent"]]} />;
+                return <TableCard title="Key Ratios" headers={["Ratio", "Value", "Health"]} rows={[["P/E", "24.5", "Fair"], ["PEG", "1.1", "Good"], ["ROE", "22%", "Excellent"]]} {...commonProps} />;
             case 'summary':
-                return <SummaryGrid title={label} />;
+                return <SummaryGrid title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'cash_flow':
             case 'balance_sheet':
             case 'income_stmt':
-                return <TableCard title={label} />;
+                return <TableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
 
             // Controls
             case 'button':
-                return <ActionButtonCard label={label} />;
+                return <ActionButtonCard label={label} {...commonProps} />;
             case 'input':
-                return <InputCard label={label} />;
+                return <InputCard label={label} {...commonProps} />;
             case 'select':
-                return <SelectCard label={label} />;
+                return <SelectCard label={label} {...commonProps} />;
             case 'date_picker':
-                return <DateRangeCard label={label} />;
+                return <DateRangeCard label={label} {...commonProps} />;
 
             // Dev & Feeds
             case 'feed':
-                return <FeedCard title={label} />;
+                return <FeedCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'log':
-                return <LogStreamCard title={label} />;
+                return <LogStreamCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'json':
-                return <JSONViewerCard title={label} />;
+                return <JSONViewerCard title={config.showTitle !== false ? label : ''} jsonData={data.json} config={config} style={style} />;
             case 'code':
-                return <CodeBlockCard title={label} />;
+                return <CodeBlockCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'chat':
                 return <div className="p-4 flex flex-col items-center justify-center h-full opacity-20"><span className="text-xs uppercase font-bold">Chat UI Placeholder</span></div>;
 
@@ -269,7 +349,56 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             </div>
 
             {/* Grid Area */}
-            <div ref={containerRef} className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-grid-dots">
+            <div 
+                ref={containerRef} 
+                className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-grid-dots"
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    const data = e.dataTransfer?.getData('application/json');
+                    console.log('Container drop:', data);
+                    if (!data) return;
+                    
+                    try {
+                        const { type, label } = JSON.parse(data);
+                        const newId = `${type}-${Date.now()}`;
+                        const dims = getSmartDimensions(type);
+                        
+                        const newCard = {
+                            id: newId,
+                            type,
+                            label,
+                            config: {},
+                            data: {},
+                            style: {
+                                showBorder: true,
+                                borderWidth: 2,
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderRadius: 12,
+                                opacity: 100,
+                                accentColor: '#eaff00',
+                                backgroundColor: 'transparent',
+                                textColor: '#ffffff',
+                                successColor: '#4ade80',
+                                dangerColor: '#f87171',
+                            }
+                        };
+                        
+                        // Calculate drop position based on mouse coordinates
+                        const rect = containerRef.current?.getBoundingClientRect();
+                        const x = rect ? Math.floor((e.clientX - rect.left) / 40) : 0;
+                        const y = rect ? Math.floor((e.clientY - rect.top) / 40) : 0;
+                        
+                        const adjustedDims = { ...dims, w: dims.w * 2 };
+                        addAppCard(newCard, { x: Math.max(0, x), y: Math.max(0, y), ...adjustedDims });
+                    } catch (err) {
+                        console.error('Drop error:', err);
+                    }
+                }}
+            >
                 {!RGLResponsive ? (
                     <div className="flex flex-col items-center justify-center h-full text-red-400 space-y-4">
                         <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
@@ -280,17 +409,17 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 ) : (
                     <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', width: `${100 / zoomLevel}%` }}>
                         <RGLResponsive
-                            className="layout min-h-[500px]"
+                        className="layout min-h-[500px]"
                             width={containerWidth} // We might need to adjust this based on scale effectively
                             layouts={{ lg: appLayout }}
-                            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                             cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }} // Double columns for finer granularity
                             rowHeight={40} // Reduced rowHeight for finer control (was 60)
-                            onLayoutChange={handleLayoutChange}
-                            isDroppable={true}
-                            onDrop={onDrop}
+                        onLayoutChange={handleLayoutChange}
+                        isDroppable={true}
+                        onDrop={onDrop}
                             droppingItem={{ i: 'dropping-placeholder', w: 8, h: 4 }} // Default drop size adjusted for 24 cols
-                            draggableHandle=".drag-handle"
+                        draggableHandle=".drag-handle"
                             resizeHandles={['se', 's', 'e']}
                         >
                             {appCards.map(card => {
@@ -330,8 +459,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             // Background if custom
                                             backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : undefined,
                                         }}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                             selectAppCard(card.id);
                                         }}
                                     >
@@ -350,16 +479,16 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                                 ? "opacity-100" 
                                                 : "opacity-0 group-hover:opacity-100",
                                         )}>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
                                                     removeAppCard(card.id);
-                                                }}
+                                            }}
                                                 className="p-1 bg-charcoal-800/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-500 border border-white/10"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                </div>
 
                                         {/* Card Content - Full height now since header is overlay */}
                                         <div className="flex-1 overflow-hidden relative w-full h-full">
