@@ -110,6 +110,28 @@ interface AnalysisHistoryItem {
     flowData?: any;
 }
 
+export interface AppCard {
+    id: string;
+    type: string;
+    label: string;
+    config: any;
+    style?: any;
+}
+
+interface AppsSlice {
+    appCards: AppCard[];
+    appLayout: any[];
+    selectedAppCardId: string | null;
+    selectedLibraryComponent: any | null; // For sidebar preview
+    setAppCards: (cards: AppCard[]) => void;
+    addAppCard: (card: AppCard, layoutItem: any) => void;
+    removeAppCard: (id: string) => void;
+    updateAppCardConfig: (id: string, config: any) => void;
+    setAppLayout: (layout: any[]) => void;
+    selectAppCard: (id: string | null) => void;
+    selectLibraryComponent: (component: any | null) => void;
+}
+
 interface ExplorerSlice {
     explorerRootPath: string | null;
     setExplorerRootPath: (path: string | null) => void;
@@ -129,7 +151,7 @@ interface ExplorerSlice {
 
 // --- Store Creation ---
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -441,6 +463,29 @@ export const useAppStore = create<AppState>()(
                     h.path === path ? { ...h, ...data } : h
                 )
             })),
+
+            // --- Apps Slice ---
+            appCards: [],
+            appLayout: [],
+            selectedAppCardId: null,
+            selectedLibraryComponent: null,
+            setAppCards: (appCards) => set({ appCards }),
+            addAppCard: (card, layoutItem) => set((state) => ({
+                appCards: [...state.appCards, card],
+                appLayout: [...state.appLayout, { ...layoutItem, i: card.id }],
+                selectedAppCardId: card.id
+            })),
+            removeAppCard: (id) => set((state) => ({
+                appCards: state.appCards.filter(c => c.id !== id),
+                appLayout: state.appLayout.filter(l => l.i !== id),
+                selectedAppCardId: state.selectedAppCardId === id ? null : state.selectedAppCardId
+            })),
+            updateAppCardConfig: (id, config) => set((state) => ({
+                appCards: state.appCards.map(c => c.id === id ? { ...c, config: { ...c.config, ...config } } : c)
+            })),
+            setAppLayout: (appLayout) => set({ appLayout }),
+            selectAppCard: (id) => set({ selectedAppCardId: id, selectedLibraryComponent: null }), // Clear lib selection when canvas card selected
+            selectLibraryComponent: (component) => set({ selectedLibraryComponent: component, selectedAppCardId: null }), // Clear canvas selection when lib item selected
         }),
         {
             name: 'agent-platform-storage',
@@ -453,7 +498,9 @@ export const useAppStore = create<AppState>()(
                 activeDocumentId: state.activeDocumentId,
                 openDocuments: state.openDocuments,
                 selectedContexts: state.selectedContexts,
-                analysisHistory: state.analysisHistory
+                analysisHistory: state.analysisHistory,
+                appCards: state.appCards,
+                appLayout: state.appLayout
             }),
         }
     )
