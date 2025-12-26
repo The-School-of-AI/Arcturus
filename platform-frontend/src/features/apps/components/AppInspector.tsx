@@ -121,15 +121,16 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
 
 
 // Data field definitions for each card type
-const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' }[]> = {
+const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' | 'select'; options?: string[] }[]> = {
     metric: [
         { name: 'Value', key: 'value', type: 'text' },
         { name: 'Change %', key: 'change', type: 'number' },
-        { name: 'Trend', key: 'trend', type: 'text' },
+        { name: 'Trend', key: 'trend', type: 'select', options: ['up', 'down', 'neutral'] },
     ],
     trend: [
         { name: 'Value', key: 'value', type: 'text' },
         { name: 'Change %', key: 'change', type: 'number' },
+        { name: 'Label', key: 'label', type: 'text' },
     ],
     profile: [
         { name: 'Company Name', key: 'name', type: 'text' },
@@ -163,6 +164,91 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     ],
     json: [
         { name: 'JSON Data', key: 'json', type: 'json' },
+    ],
+    // Chart types
+    line_chart: [
+        { name: 'Chart Title', key: 'title', type: 'text' },
+        { name: 'Data Points (JSON)', key: 'points', type: 'json' },
+        { name: 'X Axis Label', key: 'xLabel', type: 'text' },
+        { name: 'Y Axis Label', key: 'yLabel', type: 'text' },
+    ],
+    bar_chart: [
+        { name: 'Chart Title', key: 'title', type: 'text' },
+        { name: 'Data Points (JSON)', key: 'points', type: 'json' },
+        { name: 'X Axis Label', key: 'xLabel', type: 'text' },
+        { name: 'Y Axis Label', key: 'yLabel', type: 'text' },
+    ],
+    area_chart: [
+        { name: 'Chart Title', key: 'title', type: 'text' },
+        { name: 'Data Points (JSON)', key: 'points', type: 'json' },
+        { name: 'X Axis Label', key: 'xLabel', type: 'text' },
+        { name: 'Y Axis Label', key: 'yLabel', type: 'text' },
+    ],
+    pie_chart: [
+        { name: 'Slices (JSON Array)', key: 'slices', type: 'json' },
+    ],
+    candlestick: [
+        { name: 'Ticker Symbol', key: 'ticker', type: 'text' },
+        { name: 'OHLC Data (JSON)', key: 'ohlc', type: 'json' },
+    ],
+    // Table types
+    table: [
+        { name: 'Table Title', key: 'title', type: 'text' },
+        { name: 'Headers (JSON Array)', key: 'headers', type: 'json' },
+        { name: 'Rows (JSON Array)', key: 'rows', type: 'json' },
+    ],
+    peer_table: [
+        { name: 'Table Title', key: 'title', type: 'text' },
+        { name: 'Peers (JSON Array)', key: 'peers', type: 'json' },
+    ],
+    ratios: [
+        { name: 'Ratios (JSON Array)', key: 'ratios', type: 'json' },
+    ],
+    // Control types
+    button: [
+        { name: 'Button Label', key: 'label', type: 'text' },
+        { name: 'Action Type', key: 'action', type: 'select', options: ['submit', 'reset', 'navigate', 'custom'] },
+        { name: 'Target URL', key: 'targetUrl', type: 'text' },
+    ],
+    input: [
+        { name: 'Placeholder', key: 'placeholder', type: 'text' },
+        { name: 'Default Value', key: 'defaultValue', type: 'text' },
+        { name: 'Input Type', key: 'inputType', type: 'select', options: ['text', 'number', 'email', 'password'] },
+    ],
+    select: [
+        { name: 'Placeholder', key: 'placeholder', type: 'text' },
+        { name: 'Options (JSON Array)', key: 'options', type: 'json' },
+        { name: 'Default Value', key: 'defaultValue', type: 'text' },
+    ],
+    date_picker: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Start Date', key: 'startDate', type: 'text' },
+        { name: 'End Date', key: 'endDate', type: 'text' },
+    ],
+    // Dev & Feed types
+    feed: [
+        { name: 'Feed Title', key: 'title', type: 'text' },
+        { name: 'Feed URL', key: 'feedUrl', type: 'text' },
+        { name: 'Max Items', key: 'maxItems', type: 'number' },
+    ],
+    log: [
+        { name: 'Log Title', key: 'title', type: 'text' },
+        { name: 'Initial Logs (JSON)', key: 'logs', type: 'json' },
+        { name: 'Max Lines', key: 'maxLines', type: 'number' },
+    ],
+    code: [
+        { name: 'Code Title', key: 'title', type: 'text' },
+        { name: 'Code Content', key: 'code', type: 'textarea' },
+        { name: 'Language', key: 'language', type: 'select', options: ['python', 'javascript', 'typescript', 'json', 'sql', 'bash'] },
+    ],
+    image: [
+        { name: 'Image URL', key: 'url', type: 'text' },
+        { name: 'Alt Text', key: 'alt', type: 'text' },
+        { name: 'Caption', key: 'caption', type: 'text' },
+    ],
+    summary: [
+        { name: 'Executive Summary', key: 'summary', type: 'textarea' },
+        { name: 'Key Points (JSON)', key: 'keyPoints', type: 'json' },
     ],
 };
 
@@ -390,6 +476,17 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                         rows={6}
                                                         className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
                                                     />
+                                                )}
+                                                {field.type === 'select' && field.options && (
+                                                    <select
+                                                        value={selectedCard.data?.[field.key] || field.options[0]}
+                                                        onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
+                                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                                    >
+                                                        {field.options.map(opt => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
                                                 )}
                                             </div>
                                         ))}
