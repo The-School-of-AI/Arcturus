@@ -154,7 +154,7 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
 
 
 // Data field definitions for each card type
-const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' | 'select'; options?: string[] }[]> = {
+const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' | 'select' | 'image_upload'; options?: string[] }[]> = {
     metric: [
         { name: 'Value', key: 'value', type: 'text' },
         { name: 'Change %', key: 'change', type: 'number' },
@@ -275,7 +275,7 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
         { name: 'Language', key: 'language', type: 'select', options: ['python', 'javascript', 'typescript', 'json', 'sql', 'bash'] },
     ],
     image: [
-        { name: 'Image URL', key: 'url', type: 'text' },
+        { name: 'Image URL', key: 'url', type: 'image_upload' },
         { name: 'Alt Text', key: 'alt', type: 'text' },
         { name: 'Caption', key: 'caption', type: 'text' },
     ],
@@ -550,11 +550,53 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                     </div>
                                                 )}
 
+                                                {field.type === 'image_upload' && (
+                                                    <div className="space-y-2">
+                                                        <div className="flex gap-2">
+                                                            <Input
+                                                                value={selectedCard.data?.[field.key] || ''}
+                                                                onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
+                                                                className="flex-1 bg-charcoal-800 border-white/10 text-xs h-8"
+                                                                placeholder="Paste internet URL..."
+                                                            />
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 px-2 border-white/10 bg-charcoal-800 hover:bg-white/10 text-[10px]"
+                                                                onClick={() => {
+                                                                    const input = document.createElement('input');
+                                                                    input.type = 'file';
+                                                                    input.accept = 'image/*';
+                                                                    input.onchange = (e) => {
+                                                                        const file = (e.target as HTMLInputElement).files?.[0];
+                                                                        if (file) {
+                                                                            const reader = new FileReader();
+                                                                            reader.onload = (loadEvent) => {
+                                                                                const base64 = loadEvent.target?.result as string;
+                                                                                updateAppCardData(selectedCard.id, { [field.key]: base64 });
+                                                                            };
+                                                                            reader.readAsDataURL(file);
+                                                                        }
+                                                                    };
+                                                                    input.click();
+                                                                }}
+                                                            >
+                                                                Upload
+                                                            </Button>
+                                                        </div>
+                                                        {selectedCard.data?.[field.key]?.startsWith('data:image') && (
+                                                            <div className="text-[9px] text-neon-yellow/60 italic px-1">
+                                                                Local image uploaded (encoded as Base64)
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 {field.type === 'select' && field.options && (
                                                     <select
                                                         value={selectedCard.data?.[field.key] || field.options[0]}
                                                         onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
-                                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                                        className="w-full bg-charcoal-800 border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                                                     >
                                                         {field.options.map(opt => (
                                                             <option key={opt} value={opt}>{opt}</option>

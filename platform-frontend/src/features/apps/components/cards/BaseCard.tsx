@@ -6,11 +6,15 @@ export interface BaseCardProps {
     className?: string;
     children: React.ReactNode;
     headerAction?: React.ReactNode;
+    style?: React.CSSProperties;
 }
 
-export const BaseCard: React.FC<BaseCardProps> = ({ title, className, children, headerAction }) => {
+export const BaseCard: React.FC<BaseCardProps> = ({ title, className, children, headerAction, style }) => {
     return (
-        <div className={cn("w-full h-full flex flex-col bg-transparent", className)}>
+        <div
+            className={cn("w-full h-full flex flex-col bg-transparent", className)}
+            style={style}
+        >
             {title && (
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
                     <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">{title}</h3>

@@ -36,7 +36,11 @@ export const getDefaultData = (type: string): any => {
         case 'markdown':
             return { content: '# Welcome\n\n- Item 1\n- Item 2\n\n> This is a blockquote.\n\n**Bold** and *italic* text supported.' };
         case 'image':
-            return { url: '', alt: 'Image description', caption: 'Image caption' };
+            return {
+                url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
+                alt: 'Abstract Design',
+                caption: 'Default Abstract Header'
+            };
 
         // Finance cards
         case 'profile':
