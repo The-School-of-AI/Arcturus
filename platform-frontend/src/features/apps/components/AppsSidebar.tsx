@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, GripVertical, Trash2 } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, TrendingDown, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft } from 'lucide-react';
 
 interface AppsSidebarProps {
     className?: string;
@@ -38,7 +38,7 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3 space-y-5 custom-scrollbar">
                 {activeTab === 'components' ? (
                     <ComponentLibrary />
                 ) : (
@@ -53,66 +53,66 @@ const COMPONENT_CATEGORIES = [
     {
         name: 'Basics',
         items: [
-            { type: 'header', label: 'Header', description: 'Large title text', usage: 'Main dashboard title or section break' },
-            { type: 'text', label: 'Text Block', description: 'Basic paragraph text', usage: 'Descriptions, notes, or instructions' },
-            { type: 'markdown', label: 'Markdown', description: 'Rich text with markdown support', usage: 'Detailed reports and formatted notes' },
-            { type: 'image', label: 'Image', description: 'External or uploaded image', usage: 'Company logos or infrastructure diagrams' },
-            { type: 'spacer', label: 'Spacer', description: 'Horizontal/Vertical empty space', usage: 'Fine-tuning layout spacing' },
-            { type: 'divider', label: 'Divider', description: 'Visual horizontal line', usage: 'Separating sections within a column' },
+            { type: 'header', label: 'Header', icon: Type },
+            { type: 'text', label: 'Text Block', icon: AlignLeft },
+            { type: 'markdown', label: 'Markdown', icon: FileText },
+            { type: 'image', label: 'Image', icon: Image },
+            { type: 'spacer', label: 'Spacer', icon: Hash },
+            { type: 'divider', label: 'Divider', icon: Minus },
         ]
     },
     {
         name: 'Charts & Data',
         items: [
-            { type: 'metric', label: 'Metric', description: 'Big number display', usage: 'Revenue, Profit, or KPI highlights' },
-            { type: 'trend', label: 'Trend Metric', description: 'Number with sparkline', usage: 'Price movement or growth rates' },
-            { type: 'line_chart', label: 'Line Chart', description: 'Time-series line graph', usage: 'Historical price or metric tracking' },
-            { type: 'bar_chart', label: 'Bar Chart', description: 'Categorical comparison', usage: 'Quarterly revenue or segment counts' },
-            { type: 'area_chart', label: 'Area Chart', description: 'Volume over time', usage: 'Market share or cumulative totals' },
-            { type: 'pie_chart', label: 'Pie Chart', description: 'Proportional breakdown', usage: 'Portfolio allocation or revenue by sector' },
-            { type: 'candlestick', label: 'Candlestick', description: 'Financial OHLC chart', usage: 'Stock price performance' },
-            { type: 'scatter', label: 'Scatter Plot', description: 'Correlation mapping', usage: 'Risk vs Reward or P/E vs Growth' },
-            { type: 'heatmap', label: 'Heatmap', description: 'Intensity grid', usage: 'Activity tracking or regional performance' },
-            { type: 'table', label: 'Data Table', description: 'Structured grid', usage: 'Raw data listing or report details' },
+            { type: 'metric', label: 'Metric', icon: Hash },
+            { type: 'trend', label: 'Trend Metric', icon: TrendingUp },
+            { type: 'line_chart', label: 'Line Chart', icon: LineChart },
+            { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3 },
+            { type: 'area_chart', label: 'Area Chart', icon: LineChart },
+            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart },
+            { type: 'candlestick', label: 'Candlestick', icon: CandlestickChart },
+            { type: 'scatter', label: 'Scatter Plot', icon: BarChart3 },
+            { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid },
+            { type: 'table', label: 'Data Table', icon: Table2 },
         ]
     },
     {
         name: 'Finance',
         items: [
-            { type: 'profile', label: 'Profile', description: 'Entity information', usage: 'Company overview, ticker, and sector' },
-            { type: 'valuation', label: 'Valuation Gauge', description: 'Fair value vs Market price', usage: 'AlphaSpread style undervaluation' },
-            { type: 'score_card', label: 'Score Card', description: 'Numerical health score', usage: 'Solvency, Health, or Credit Rating' },
-            { type: 'grade_card', label: 'Grade Card', description: 'A-F rating display', usage: 'Profitability or Value grades' },
-            { type: 'peer_table', label: 'Peer Table', description: 'Competitor comparison', usage: 'Market cap and P/E vs Peers' },
-            { type: 'ratios', label: 'Ratios Grid', description: 'Key financial ratios', usage: 'P/E, PEG, ROE, Current Ratio' },
-            { type: 'cash_flow', label: 'Cash Flow', description: 'Inflow/Outflow summary', usage: 'Operating, Investing, Financing flows' },
-            { type: 'balance_sheet', label: 'Balance Sheet', description: 'Assets/Liabilities snapshot', usage: 'Debt levels and liquidity status' },
-            { type: 'income_stmt', label: 'Income Stmt', description: 'P&L summary', usage: 'Revenue, EBITDA, Net Income' },
-            { type: 'summary', label: 'Exec Summary', description: 'Rich summary grid', usage: 'High-level analytical takeaways' },
+            { type: 'profile', label: 'Profile', icon: User },
+            { type: 'valuation', label: 'Valuation Gauge', icon: Gauge },
+            { type: 'score_card', label: 'Score Card', icon: Medal },
+            { type: 'grade_card', label: 'Grade Card', icon: Medal },
+            { type: 'peer_table', label: 'Peer Table', icon: Table2 },
+            { type: 'ratios', label: 'Ratios Grid', icon: LayoutGrid },
+            { type: 'cash_flow', label: 'Cash Flow', icon: TrendingUp },
+            { type: 'balance_sheet', label: 'Balance Sheet', icon: Table2 },
+            { type: 'income_stmt', label: 'Income Stmt', icon: FileText },
+            { type: 'summary', label: 'Exec Summary', icon: FileText },
         ]
     },
     {
         name: 'Controls',
         items: [
-            { type: 'button', label: 'Action Button', description: 'Trigger for agents/scripts', usage: 'Manual run or state update' },
-            { type: 'input', label: 'Text Input', description: 'User input field', usage: 'Manual ticker override or query' },
-            { type: 'select', label: 'Dropdown', description: 'Selection menu', usage: 'Choosing tickers or timeframes' },
-            { type: 'date_picker', label: 'Date Picker', description: 'Calendar selection', usage: 'Setting report start/end dates' },
-            { type: 'multi_select', label: 'Multi-Select', description: 'Multi-choice tag list', usage: 'Selecting multiple sectors or regions' },
-            { type: 'toggle', label: 'Toggle Switch', description: 'Boolean on/off', usage: 'Enabling/Disabling features' },
-            { type: 'slider', label: 'Range Slider', description: 'Numerical range', usage: 'Adjusting sensitivity or thresholds' },
-            { type: 'checkbox', label: 'Checkbox', description: 'Selection flag', usage: 'Agreement or feature flags' },
+            { type: 'button', label: 'Action Button', icon: Play },
+            { type: 'input', label: 'Text Input', icon: Type },
+            { type: 'select', label: 'Dropdown', icon: LayoutGrid },
+            { type: 'date_picker', label: 'Date Picker', icon: Calendar },
+            { type: 'multi_select', label: 'Multi-Select', icon: CheckSquare },
+            { type: 'toggle', label: 'Toggle Switch', icon: ToggleLeft },
+            { type: 'slider', label: 'Range Slider', icon: Sliders },
+            { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
         ]
     },
     {
         name: 'Dev & Feeds',
         items: [
-            { type: 'feed', label: 'News Feed', description: 'Chronological events', usage: 'Latest SEC filings or news headlines' },
-            { type: 'log', label: 'Log Stream', description: 'Live agent activity', usage: 'Debugging and monitoring execution' },
-            { type: 'json', label: 'JSON Viewer', description: 'Tree view for data', usage: 'Inspecting raw API responses' },
-            { type: 'code', label: 'Code Block', description: 'Syntax highlighted code', usage: 'Viewing snippets or configurations' },
-            { type: 'terminal', label: 'Terminal', description: 'Interactive CLI', usage: 'Running low-level commands' },
-            { type: 'chat', label: 'Chat Interface', description: 'Conversation window', usage: 'Direct interaction with agents' },
+            { type: 'feed', label: 'News Feed', icon: Rss },
+            { type: 'log', label: 'Log Stream', icon: Terminal },
+            { type: 'json', label: 'JSON Viewer', icon: Braces },
+            { type: 'code', label: 'Code Block', icon: Code2 },
+            { type: 'terminal', label: 'Terminal', icon: Terminal },
+            { type: 'chat', label: 'Chat Interface', icon: MessageSquare },
         ]
     }
 ];
@@ -129,32 +129,30 @@ const ComponentLibrary = () => {
     })).filter(cat => cat.items.length > 0);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             <div className="relative sticky top-0 z-10 bg-charcoal-900 pb-2">
-                <Search className="absolute left-2.5 top-2.5 w-3 h-3 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
                 <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-background/50 border border-input rounded text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+                    className="w-full bg-charcoal-950 border border-white/10 rounded-lg text-xs pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 focus:border-neon-yellow/30 text-foreground placeholder:text-gray-600 transition-all"
                     placeholder="Search 40+ components..."
                 />
             </div>
 
             {filteredCategories.map(category => (
-                <div key={category.name} className="space-y-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center justify-between">
+                <div key={category.name} className="space-y-2.5">
+                    <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center justify-between px-1">
                         <span>{category.name}</span>
-                        <span className="opacity-40">{category.items.length}</span>
+                        <span className="text-gray-700">{category.items.length}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         {category.items.map(item => (
-                            <DraggableCard
+                            <ComponentPreviewCard
                                 key={item.type}
                                 type={item.type}
                                 label={item.label}
-                                description={item.description}
-                                usage={item.usage}
-                                icon={<LayoutGrid className="w-3 h-3" />}
+                                icon={item.icon}
                             />
                         ))}
                     </div>
@@ -164,9 +162,348 @@ const ComponentLibrary = () => {
     );
 };
 
+// Canva-style Preview Card with actual visual representation
+const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label: string, icon: any }) => {
+    const { selectLibraryComponent, selectedLibraryComponent } = useAppStore();
+    const isSelected = selectedLibraryComponent?.type === type;
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({ type, label }));
+        e.dataTransfer.effectAllowed = 'copy';
+    };
 
-// ... (Header implementation remains same) ...
+    // Render a mini visual preview based on component type
+    const renderPreview = () => {
+        switch (type) {
+            // BASICS
+            case 'header':
+                return (
+                    <div className="w-full h-full flex flex-col justify-center p-3">
+                        <div className="text-[11px] font-bold text-white">Add a heading</div>
+                    </div>
+                );
+            case 'text':
+                return (
+                    <div className="w-full h-full flex flex-col justify-center p-3 gap-1">
+                        <div className="h-1 w-full bg-gray-600 rounded-full" />
+                        <div className="h-1 w-4/5 bg-gray-700 rounded-full" />
+                        <div className="h-1 w-3/5 bg-gray-700 rounded-full" />
+                    </div>
+                );
+            case 'markdown':
+                return (
+                    <div className="w-full h-full flex flex-col p-3 gap-1.5">
+                        <div className="text-[9px] font-bold text-neon-yellow"># Heading</div>
+                        <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 rounded-full bg-gray-500" />
+                            <div className="h-0.5 w-12 bg-gray-600 rounded-full" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 rounded-full bg-gray-500" />
+                            <div className="h-0.5 w-10 bg-gray-600 rounded-full" />
+                        </div>
+                    </div>
+                );
+            case 'image':
+                return (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                        <div className="w-8 h-6 border border-dashed border-gray-600 rounded flex items-center justify-center">
+                            <Image className="w-3 h-3 text-gray-600" />
+                        </div>
+                    </div>
+                );
+            case 'spacer':
+                return (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-full h-4 border border-dashed border-gray-700 rounded flex items-center justify-center">
+                            <div className="text-[8px] text-gray-600">SPACE</div>
+                        </div>
+                    </div>
+                );
+            case 'divider':
+                return (
+                    <div className="w-full h-full flex items-center justify-center px-4">
+                        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent" />
+                    </div>
+                );
+
+            // CHARTS
+            case 'metric':
+                return (
+                    <div className="w-full h-full flex flex-col justify-center p-3">
+                        <div className="text-[8px] text-gray-500 uppercase">Revenue</div>
+                        <div className="text-sm font-black text-white">$2.4M</div>
+                        <div className="flex items-center gap-0.5 text-green-400">
+                            <TrendingUp className="w-2 h-2" />
+                            <span className="text-[8px]">+12.5%</span>
+                        </div>
+                    </div>
+                );
+            case 'trend':
+                return (
+                    <div className="w-full h-full flex flex-col p-3">
+                        <div className="text-[8px] text-gray-500">PRICE</div>
+                        <div className="text-[10px] font-bold text-white">$145.20</div>
+                        <div className="flex-1 flex items-end">
+                            <svg viewBox="0 0 40 12" className="w-full h-3">
+                                <path d="M0 10 Q10 8 15 6 T25 4 T40 2" fill="none" stroke="#4ade80" strokeWidth="1.5" />
+                            </svg>
+                        </div>
+                    </div>
+                );
+            case 'line_chart':
+                return (
+                    <div className="w-full h-full flex items-end p-2 gap-0.5">
+                        <svg viewBox="0 0 50 25" className="w-full h-full">
+                            <path d="M0 20 Q10 15 20 18 T35 8 T50 5" fill="none" stroke="#eaff00" strokeWidth="2" />
+                            <path d="M0 20 Q10 15 20 18 T35 8 T50 5 V25 H0 Z" fill="url(#lineGrad)" opacity="0.2" />
+                            <defs>
+                                <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#eaff00" />
+                                    <stop offset="100%" stopColor="transparent" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                );
+            case 'bar_chart':
+                return (
+                    <div className="w-full h-full flex items-end justify-center gap-1 p-2 pb-3">
+                        {[40, 70, 35, 90, 55].map((h, i) => (
+                            <div key={i} className="w-2 bg-neon-yellow/80 rounded-t-sm" style={{ height: `${h}%` }} />
+                        ))}
+                    </div>
+                );
+            case 'area_chart':
+                return (
+                    <div className="w-full h-full flex items-end p-2">
+                        <svg viewBox="0 0 50 25" className="w-full h-full">
+                            <path d="M0 25 L0 18 Q12 12 25 15 T50 8 V25 Z" fill="#eaff00" opacity="0.3" />
+                            <path d="M0 18 Q12 12 25 15 T50 8" fill="none" stroke="#eaff00" strokeWidth="1.5" />
+                        </svg>
+                    </div>
+                );
+            case 'pie_chart':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                        <svg viewBox="0 0 32 32" className="w-10 h-10">
+                            <circle cx="16" cy="16" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                            <circle cx="16" cy="16" r="14" fill="none" stroke="#eaff00" strokeWidth="4" strokeDasharray="44 88" transform="rotate(-90 16 16)" />
+                            <circle cx="16" cy="16" r="14" fill="none" stroke="#4ade80" strokeWidth="4" strokeDasharray="22 88" strokeDashoffset="-44" transform="rotate(-90 16 16)" />
+                        </svg>
+                    </div>
+                );
+            case 'candlestick':
+                return (
+                    <div className="w-full h-full flex items-end justify-center gap-1.5 p-2 pb-3">
+                        {[
+                            { o: 60, c: 40, h: 70, l: 30, up: false },
+                            { o: 40, c: 55, h: 65, l: 35, up: true },
+                            { o: 55, c: 45, h: 60, l: 40, up: false },
+                            { o: 45, c: 70, h: 80, l: 40, up: true },
+                        ].map((candle, i) => (
+                            <div key={i} className="relative w-2 h-full flex flex-col items-center">
+                                <div className="absolute w-px bg-gray-500" style={{ top: `${100 - candle.h}%`, bottom: `${candle.l}%` }} />
+                                <div
+                                    className={cn("absolute w-1.5 rounded-sm", candle.up ? "bg-green-500" : "bg-red-500")}
+                                    style={{
+                                        top: `${100 - Math.max(candle.o, candle.c)}%`,
+                                        bottom: `${Math.min(candle.o, candle.c)}%`
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                );
+            case 'table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="flex gap-1">
+                            <div className="flex-1 h-1.5 bg-gray-600 rounded-sm" />
+                            <div className="flex-1 h-1.5 bg-gray-600 rounded-sm" />
+                            <div className="flex-1 h-1.5 bg-gray-600 rounded-sm" />
+                        </div>
+                        {[0, 1, 2].map(i => (
+                            <div key={i} className="flex gap-1">
+                                <div className="flex-1 h-1 bg-gray-700/50 rounded-sm" />
+                                <div className="flex-1 h-1 bg-gray-700/50 rounded-sm" />
+                                <div className="flex-1 h-1 bg-gray-700/50 rounded-sm" />
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            // FINANCE
+            case 'profile':
+                return (
+                    <div className="w-full h-full flex items-center gap-2 p-3">
+                        <div className="w-6 h-6 rounded bg-neon-yellow/20 flex items-center justify-center text-[9px] font-black text-neon-yellow">G</div>
+                        <div className="flex flex-col">
+                            <div className="text-[9px] font-bold text-white">Alphabet</div>
+                            <div className="text-[7px] text-gray-500">GOOGL</div>
+                        </div>
+                    </div>
+                );
+            case 'valuation':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-gray-500">FAIR VALUE</div>
+                        <div className="flex items-center gap-1">
+                            <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full w-3/5 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full" />
+                            </div>
+                        </div>
+                        <div className="flex justify-between text-[7px]">
+                            <span className="text-white">$145</span>
+                            <span className="text-green-400">$180</span>
+                        </div>
+                    </div>
+                );
+            case 'score_card':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                        <div className="text-xl font-black text-neon-yellow">78</div>
+                        <div className="text-[7px] text-green-400">Healthy</div>
+                    </div>
+                );
+            case 'grade_card':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                        <div className="text-xl font-black text-neon-yellow">A-</div>
+                        <div className="text-[7px] text-gray-500">Top Tier</div>
+                    </div>
+                );
+            case 'peer_table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        <div className="flex gap-1 text-[6px] text-gray-500">
+                            <span className="flex-1">Ticker</span>
+                            <span className="flex-1">MCap</span>
+                            <span className="flex-1">P/E</span>
+                        </div>
+                        {['AAPL', 'MSFT', 'GOOGL'].map(t => (
+                            <div key={t} className="flex gap-1 text-[6px] text-gray-400">
+                                <span className="flex-1">{t}</span>
+                                <span className="flex-1">2.5T</span>
+                                <span className="flex-1">28</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            // CONTROLS
+            case 'button':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-3">
+                        <div className="px-3 py-1 bg-neon-yellow text-charcoal-900 text-[8px] font-bold rounded">
+                            Run Analysis
+                        </div>
+                    </div>
+                );
+            case 'input':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-3">
+                        <div className="w-full h-5 bg-charcoal-950 border border-gray-700 rounded px-1.5 flex items-center">
+                            <span className="text-[7px] text-gray-600">Enter ticker...</span>
+                        </div>
+                    </div>
+                );
+            case 'select':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-3">
+                        <div className="w-full h-5 bg-charcoal-950 border border-gray-700 rounded px-1.5 flex items-center justify-between">
+                            <span className="text-[7px] text-gray-400">Select...</span>
+                            <span className="text-[7px] text-gray-600">▼</span>
+                        </div>
+                    </div>
+                );
+            case 'date_picker':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-3">
+                        <div className="w-full h-5 bg-charcoal-950 border border-gray-700 rounded px-1.5 flex items-center gap-1">
+                            <Calendar className="w-2 h-2 text-gray-600" />
+                            <span className="text-[7px] text-gray-400">Dec 26, 2025</span>
+                        </div>
+                    </div>
+                );
+
+            // DEV & FEEDS
+            case 'feed':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        {[0, 1].map(i => (
+                            <div key={i} className="flex gap-1 items-start">
+                                <div className="w-1 h-1 rounded-full bg-neon-yellow mt-0.5" />
+                                <div className="flex-1">
+                                    <div className="h-1 w-full bg-gray-600 rounded-full mb-0.5" />
+                                    <div className="h-0.5 w-3/4 bg-gray-700 rounded-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+            case 'log':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5 font-mono">
+                        <div className="text-[6px] text-green-400">[INFO] Starting...</div>
+                        <div className="text-[6px] text-gray-500">[DEBUG] Init</div>
+                        <div className="text-[6px] text-neon-yellow">[WARN] Check</div>
+                    </div>
+                );
+            case 'json':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 font-mono text-[6px]">
+                        <span className="text-gray-500">{"{"}</span>
+                        <span className="pl-1"><span className="text-neon-yellow">"ticker"</span>: <span className="text-green-400">"GOOGL"</span></span>
+                        <span className="text-gray-500">{"}"}</span>
+                    </div>
+                );
+            case 'code':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 font-mono text-[6px]">
+                        <span className="text-purple-400">def</span><span className="text-white"> analyze():</span>
+                        <span className="pl-2 text-gray-500"># logic here</span>
+                        <span className="pl-2 text-blue-400">return</span><span className="text-white"> data</span>
+                    </div>
+                );
+
+            default:
+                return (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-gray-600" />
+                    </div>
+                );
+        }
+    };
+
+    return (
+        <div
+            draggable
+            onDragStart={handleDragStart}
+            onClick={() => selectLibraryComponent({ type, label, description: '', usage: '' })}
+            className={cn(
+                "group relative flex flex-col rounded-xl border-2 cursor-grab active:cursor-grabbing transition-all duration-300 overflow-hidden select-none shadow-lg",
+                // Match Explorer node styling
+                isSelected
+                    ? "bg-charcoal-800 border-neon-yellow ring-4 ring-neon-yellow/20 scale-[1.02]"
+                    : "bg-charcoal-900/90 border-white/10 hover:border-white/30 hover:scale-[1.02]"
+            )}
+        >
+            {/* Preview Area - matches the actual card appearance */}
+            <div className="aspect-[1.3] w-full overflow-hidden bg-charcoal-950/50">
+                {renderPreview()}
+            </div>
+
+            {/* Label */}
+            <div className={cn(
+                "px-2 py-1.5 text-[10px] font-medium text-center border-t transition-colors",
+                isSelected ? "bg-charcoal-800 border-neon-yellow/20 text-neon-yellow" : "bg-charcoal-900 border-white/5 text-gray-400"
+            )}>
+                {label}
+            </div>
+        </div>
+    );
+};
 
 const SavedAppsList = () => {
     const { savedApps, saveApp, loadApp, deleteApp } = useAppStore();
@@ -181,19 +518,19 @@ const SavedAppsList = () => {
     return (
         <div className="space-y-6">
             {/* Save Controls */}
-            <div className="flex flex-col gap-2 p-3 bg-charcoal-800/50 rounded-lg border border-white/5">
+            <div className="flex flex-col gap-2 p-3 bg-charcoal-800/50 rounded-xl border border-white/5">
                 <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Save Current Layout</label>
                 <div className="flex gap-2">
                     <input
                         value={name}
                         onChange={e => setName(e.target.value)}
                         placeholder="Dashboard Name..."
-                        className="flex-1 bg-background/50 border border-input rounded text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+                        className="flex-1 bg-charcoal-950 border border-white/10 rounded-lg text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-gray-600"
                     />
                     <button
                         onClick={handleSave}
                         disabled={!name.trim()}
-                        className="p-2 bg-primary/20 hover:bg-primary/30 text-primary rounded border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 bg-neon-yellow/20 hover:bg-neon-yellow/30 text-neon-yellow rounded-lg border border-neon-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Save App"
                     >
                         <Save className="w-4 h-4" />
@@ -203,9 +540,9 @@ const SavedAppsList = () => {
 
             {/* List */}
             <div className="space-y-3">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center justify-between">
+                <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center justify-between px-1">
                     <span>Saved Dashboards</span>
-                    <span className="opacity-40">{savedApps.length}</span>
+                    <span className="text-gray-700">{savedApps.length}</span>
                 </div>
 
                 {savedApps.length === 0 ? (
@@ -218,16 +555,16 @@ const SavedAppsList = () => {
                         {savedApps.map(app => (
                             <div
                                 key={app.id}
-                                className="group flex items-center justify-between p-3 bg-card border border-border hover:border-primary/50 rounded-lg cursor-pointer transition-all hover:bg-accent/5"
+                                className="group flex items-center justify-between p-3 bg-charcoal-900/90 border-2 border-white/10 hover:border-white/30 rounded-xl cursor-pointer transition-all"
                                 onClick={() => loadApp(app.id)}
                             >
                                 <div className="flex-1 min-w-0">
                                     <div className="text-xs font-bold text-foreground truncate">{app.name}</div>
-                                    <div className="text-[10px] text-muted-foreground">{new Date(app.lastModified).toLocaleDateString()}</div>
+                                    <div className="text-[10px] text-gray-500">{new Date(app.lastModified).toLocaleDateString()}</div>
                                 </div>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
-                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded transition-all"
+                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-400 rounded-lg transition-all"
                                     title="Delete App"
                                 >
                                     <Trash2 className="w-3 h-3" />
@@ -236,72 +573,6 @@ const SavedAppsList = () => {
                         ))}
                     </div>
                 )}
-            </div>
-        </div>
-    );
-};
-
-// Draggable Item Wrapper
-const DraggableCard = ({ type, label, description, usage, icon }: { type: string, label: string, description: string, usage: string, icon: React.ReactNode }) => {
-    const { selectLibraryComponent, selectedLibraryComponent } = useAppStore();
-    const isSelected = selectedLibraryComponent?.type === type;
-
-    const handleDragStart = (e: React.DragEvent) => {
-        // Essential for HTML5 DnD to work with some libraries
-        e.dataTransfer.setData('application/json', JSON.stringify({ type, label }));
-        e.dataTransfer.effectAllowed = 'copy';
-    };
-
-    return (
-        <div
-            draggable
-            onDragStart={handleDragStart}
-            onClick={() => selectLibraryComponent({ type, label, description, usage })}
-            className={cn(
-                "group relative flex flex-col items-center justify-center gap-2 p-2 rounded-lg border bg-card cursor-grab active:cursor-grabbing transition-all hover:scale-[1.02] shadow-sm overflow-hidden select-none",
-                isSelected ? "border-primary ring-1 ring-primary/50 bg-primary/5" : "border-border hover:border-primary/50 hover:bg-accent/50"
-            )}
-        >
-            {/* Tooltip Link (Hidden visually, but useful for screen readers/status) */}
-            <div className="absolute inset-0 z-10" />
-
-            {/* Mini Visual Preview */}
-            <div className="w-full aspect-[1.4] bg-background/50 rounded border border-white/5 mb-1 relative overflow-hidden flex flex-col pointer-events-none">
-                {/* Simulated Content based on type */}
-                {type.includes('chart') && (
-                    <div className="flex-1 flex items-end gap-0.5 p-1 opacity-40">
-                        <div className="flex-1 bg-primary/40 rounded-t-[1px]" style={{ height: '40%' }} />
-                        <div className="flex-1 bg-primary/60 rounded-t-[1px]" style={{ height: '70%' }} />
-                        <div className="flex-1 bg-primary/30 rounded-t-[1px]" style={{ height: '50%' }} />
-                        <div className="flex-1 bg-primary/80 rounded-t-[1px]" style={{ height: '90%' }} />
-                    </div>
-                )}
-                {type === 'metric' && (
-                    <div className="flex-1 flex flex-col justify-center items-start p-1 opacity-40">
-                        <div className="w-2/3 h-0.5 bg-muted-foreground/20 mb-1 rounded-full" />
-                        <div className="w-1/2 h-2 bg-foreground/20 rounded-full" />
-                    </div>
-                )}
-                {type === 'table' && (
-                    <div className="flex-1 flex flex-col p-1 opacity-40 gap-0.5">
-                        <div className="w-full h-0.5 bg-foreground/20 rounded-full" />
-                        <div className="w-full h-0.5 bg-muted-foreground/10 rounded-full" />
-                        <div className="w-full h-0.5 bg-muted-foreground/10 rounded-full" />
-                    </div>
-                )}
-                {/* Fallback for others */}
-                {!['chart', 'metric', 'table'].some(k => type.includes(k)) && (
-                    <div className="flex-1 flex items-center justify-center opacity-10">
-                        {icon}
-                    </div>
-                )}
-                <div className="absolute inset-0 border border-white/5" />
-            </div>
-
-            <div className="text-[9px] font-medium text-center text-foreground w-full truncate leading-none pointer-events-none">{label}</div>
-
-            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-muted-foreground z-20 pointer-events-none">
-                <GripVertical className="w-3 h-3" />
             </div>
         </div>
     );

@@ -75,10 +75,11 @@
   }
 }
 
-/* Custom Grid Background */
+/* Custom Grid Background - Match Explorer/ReactFlow dots */
 .bg-grid-dots {
+  background-color: #0a0b0d; /* charcoal-950 equivalent */
   background-size: 20px 20px;
-  background-image: radial-gradient(circle, #333 1px, transparent 1px);
+  background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
 }
 
 /* Hide attribution, but enable when release in public TODO */

@@ -299,43 +299,45 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
                                 return (
                                     <div key={card.id} className={cn(
-                                        "flex flex-col overflow-hidden group transition-all duration-200",
-                                        // Base styles
-                                        isTransparent ? "bg-transparent" : "bg-charcoal-800",
-                                        // Border / State styles
+                                        // Match FlowStepNode styling exactly
+                                        "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
+                                        // Base styles - match Explorer node
+                                        isTransparent ? "bg-transparent" : "bg-charcoal-900/90",
+                                        // Border / State styles - match Explorer node
                                         isSelected
-                                            ? "ring-1 ring-primary/50 shadow-[0_0_15px_rgba(0,0,0,0.3)] z-50" // High Z-Index when selected
+                                            ? "border-2 border-neon-yellow ring-4 ring-neon-yellow/20 z-50"
                                             : isTransparent
-                                                ? "border border-transparent hover:border-white/10 hover:bg-white/5" // Subtle hover for transparent items
-                                                : "border border-white/5 shadow-sm hover:border-white/20 hover:shadow-md",
-                                        // Rounding
-                                        card.type === 'divider' ? "rounded-none" : "rounded-lg"
+                                                ? "border border-transparent hover:border-white/10 hover:bg-white/5"
+                                                : "border-2 border-white/10 hover:border-white/30",
+                                        // Rounding - match Explorer node
+                                        card.type === 'divider' ? "rounded-none" : "rounded-xl"
                                     )}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             selectAppCard(card.id);
                                         }}
                                     >
-                                        {/* Overlay Drag Handle - Positioned Absolute */}
+                                        {/* Glow effect when selected - match FlowStepNode */}
+                                        {isSelected && (
+                                            <div className="absolute inset-0 rounded-xl bg-neon-yellow/5 blur-xl -z-10 animate-pulse" />
+                                        )}
+
+                                        {/* Minimal Drag Handle - Only visible on hover, top-right corner */}
                                         <div className={cn(
-                                            "drag-handle absolute top-0 left-0 right-0 h-6 px-2 flex items-center justify-between cursor-move select-none transition-opacity duration-200 z-50",
-                                            isSelected ? "opacity-100 bg-charcoal-900/90 backdrop-blur-sm border-b border-white/10" : "opacity-0 group-hover:opacity-100 bg-black/50 backdrop-blur-sm",
+                                            "drag-handle absolute top-1.5 right-1.5 flex items-center gap-1 cursor-move select-none transition-all duration-300 z-50",
+                                            isSelected 
+                                                ? "opacity-100" 
+                                                : "opacity-0 group-hover:opacity-100",
                                         )}>
-                                            <div className="flex items-center gap-2 overflow-hidden">
-                                                <div className={cn("w-1 h-3 rounded-full", isSelected ? "bg-primary" : "bg-muted-foreground/30")} />
-                                                <span className="text-[9px] uppercase font-bold text-muted-foreground truncate">{card.label}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        removeAppCard(card.id);
-                                                    }}
-                                                    className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeAppCard(card.id);
+                                                }}
+                                                className="p-1 bg-charcoal-800/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-500 border border-white/10"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
                                         </div>
 
                                         {/* Card Content - Full height now since header is overlay */}
