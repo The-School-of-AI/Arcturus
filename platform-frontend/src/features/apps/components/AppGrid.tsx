@@ -342,6 +342,44 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             <div
                 ref={containerRef}
                 className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-grid-dots"
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                }}
+                onDrop={(e) => {
+                    // Fallback handler for external drops
+                    e.preventDefault();
+                    const data = e.dataTransfer?.getData('application/json');
+                    console.log('Fallback onDrop triggered on container', data);
+                    if (!data) return;
+
+                    try {
+                        const { type, label } = JSON.parse(data);
+                        const newId = `${type}-${Date.now()}`;
+                        const dims = getSmartDimensions(type);
+
+                        const newCard = {
+                            id: newId,
+                            type,
+                            label,
+                            config: {},
+                            data: getDefaultData(type),
+                            style: getDefaultStyle()
+                        };
+
+                        // Calculate grid position from mouse coordinates
+                        const rect = containerRef.current?.getBoundingClientRect();
+                        const colWidth = containerWidth / 24;
+                        const rowHeight = 40;
+                        const x = rect ? Math.max(0, Math.floor((e.clientX - rect.left - 32) / colWidth)) : 0;
+                        const y = rect ? Math.max(0, Math.floor((e.clientY - rect.top - 32) / rowHeight)) : 0;
+
+                        const adjustedDims = { ...dims, w: dims.w * 2 };
+                        addAppCard(newCard, { x, y, ...adjustedDims });
+                    } catch (err) {
+                        console.error('Fallback drop error:', err);
+                    }
+                }}
             >
                 {!RGLResponsive ? (
                     <div className="flex flex-col items-center justify-center h-full text-red-400 space-y-4">
