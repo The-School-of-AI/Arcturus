@@ -118,11 +118,20 @@ export interface AppCard {
     style?: any;
 }
 
+export interface SavedApp {
+    id: string;
+    name: string;
+    lastModified: number;
+    cards: AppCard[];
+    layout: any[];
+}
+
 interface AppsSlice {
     appCards: AppCard[];
     appLayout: any[];
     selectedAppCardId: string | null;
     selectedLibraryComponent: any | null; // For sidebar preview
+    savedApps: SavedApp[];
     setAppCards: (cards: AppCard[]) => void;
     addAppCard: (card: AppCard, layoutItem: any) => void;
     removeAppCard: (id: string) => void;
@@ -130,6 +139,9 @@ interface AppsSlice {
     setAppLayout: (layout: any[]) => void;
     selectAppCard: (id: string | null) => void;
     selectLibraryComponent: (component: any | null) => void;
+    saveApp: (name: string) => void;
+    loadApp: (id: string) => void;
+    deleteApp: (id: string) => void;
 }
 
 interface ExplorerSlice {
@@ -469,6 +481,7 @@ export const useAppStore = create<AppState>()(
             appLayout: [],
             selectedAppCardId: null,
             selectedLibraryComponent: null,
+            savedApps: [],
             setAppCards: (appCards) => set({ appCards }),
             addAppCard: (card, layoutItem) => set((state) => ({
                 appCards: [...state.appCards, card],
@@ -486,6 +499,30 @@ export const useAppStore = create<AppState>()(
             setAppLayout: (appLayout) => set({ appLayout }),
             selectAppCard: (id) => set({ selectedAppCardId: id, selectedLibraryComponent: null }), // Clear lib selection when canvas card selected
             selectLibraryComponent: (component) => set({ selectedLibraryComponent: component, selectedAppCardId: null }), // Clear canvas selection when lib item selected
+            saveApp: (name) => set((state) => {
+                const newApp: SavedApp = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name,
+                    lastModified: Date.now(),
+                    cards: state.appCards,
+                    layout: state.appLayout
+                };
+                return { savedApps: [newApp, ...state.savedApps] };
+            }),
+            loadApp: (id) => set((state) => {
+                const app = state.savedApps.find(a => a.id === id);
+                if (app) {
+                    return {
+                        appCards: app.cards,
+                        appLayout: app.layout,
+                        selectedAppCardId: null
+                    };
+                }
+                return state;
+            }),
+            deleteApp: (id) => set((state) => ({
+                savedApps: state.savedApps.filter(a => a.id !== id)
+            })),
         }),
         {
             name: 'agent-platform-storage',
@@ -500,7 +537,8 @@ export const useAppStore = create<AppState>()(
                 selectedContexts: state.selectedContexts,
                 analysisHistory: state.analysisHistory,
                 appCards: state.appCards,
-                appLayout: state.appLayout
+                appLayout: state.appLayout,
+                savedApps: state.savedApps
             }),
         }
     )

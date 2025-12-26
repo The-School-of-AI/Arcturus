@@ -8,7 +8,7 @@ export interface ChartCardProps {
 
 export const ChartCard: React.FC<ChartCardProps> = ({ title, type }) => {
     return (
-        <BaseCard title={title}>
+        <BaseCard>
             <div className="w-full h-full flex items-center justify-center opacity-50 relative">
                 {/* Simulated Chart Placeholder */}
                 <svg className="w-full h-full text-primary" viewBox="0 0 100 40" preserveAspectRatio="none">

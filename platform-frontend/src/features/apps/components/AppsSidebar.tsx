@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, GripVertical } from 'lucide-react';
+import { LayoutGrid, Save, Search, GripVertical, Trash2 } from 'lucide-react';
 
 interface AppsSidebarProps {
     className?: string;
@@ -164,11 +164,79 @@ const ComponentLibrary = () => {
     );
 };
 
+
+
+// ... (Header implementation remains same) ...
+
 const SavedAppsList = () => {
+    const { savedApps, saveApp, loadApp, deleteApp } = useAppStore();
+    const [name, setName] = useState('');
+
+    const handleSave = () => {
+        if (!name.trim()) return;
+        saveApp(name);
+        setName('');
+    };
+
     return (
-        <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-center space-y-2 opacity-60">
-            <Save className="w-8 h-8 opacity-20" />
-            <p className="text-xs">No saved apps yet.</p>
+        <div className="space-y-6">
+            {/* Save Controls */}
+            <div className="flex flex-col gap-2 p-3 bg-charcoal-800/50 rounded-lg border border-white/5">
+                <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Save Current Layout</label>
+                <div className="flex gap-2">
+                    <input
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Dashboard Name..."
+                        className="flex-1 bg-background/50 border border-input rounded text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+                    />
+                    <button
+                        onClick={handleSave}
+                        disabled={!name.trim()}
+                        className="p-2 bg-primary/20 hover:bg-primary/30 text-primary rounded border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Save App"
+                    >
+                        <Save className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+
+            {/* List */}
+            <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center justify-between">
+                    <span>Saved Dashboards</span>
+                    <span className="opacity-40">{savedApps.length}</span>
+                </div>
+
+                {savedApps.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-center space-y-2 opacity-60">
+                        <LayoutGrid className="w-8 h-8 opacity-20" />
+                        <p className="text-xs">No saved apps yet.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 gap-2">
+                        {savedApps.map(app => (
+                            <div
+                                key={app.id}
+                                className="group flex items-center justify-between p-3 bg-card border border-border hover:border-primary/50 rounded-lg cursor-pointer transition-all hover:bg-accent/5"
+                                onClick={() => loadApp(app.id)}
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-bold text-foreground truncate">{app.name}</div>
+                                    <div className="text-[10px] text-muted-foreground">{new Date(app.lastModified).toLocaleDateString()}</div>
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
+                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded transition-all"
+                                    title="Delete App"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

@@ -10,7 +10,7 @@ export interface ImageCardProps {
 
 export const ImageCard: React.FC<ImageCardProps> = ({ title, src, alt = "Dashboard Image" }) => {
     return (
-        <BaseCard title={title}>
+        <BaseCard>
             <div className="w-full h-full flex items-center justify-center p-0 overflow-hidden bg-black/20 rounded">
                 {src ? (
                     <img src={src} alt={alt} className="w-full h-full object-contain" />

@@ -82,6 +82,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     // Container ref for width measurement
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(1200);
+    const [zoomLevel, setZoomLevel] = useState(1);
 
     // Connect to Store
     const {
@@ -129,7 +130,13 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
             // Add to store with smart dimensions override
             // layoutItem has x, y from drop, but we enforce w, h
-            addAppCard(newCard, { ...layoutItem, ...dims });
+            // We also need to double the width if we moved to 24 cols,
+            // but for now let's keep dims relative to the column count or adjust them.
+            // If we move to 24 cols, everything becomes half width if we keep same w.
+            // So let's double the smart dimensions w for 24-col layout.
+            const adjustedDims = { ...dims, w: dims.w * 2 }; // Scale for 24 cols
+
+            addAppCard(newCard, { ...layoutItem, ...adjustedDims });
 
         } catch (e) {
             console.error("Failed to parse drop data", e);
@@ -229,11 +236,31 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     };
 
     return (
-        <div className={cn("h-full w-full flex flex-col bg-charcoal-950 relative overflow-hidden", className)}>
+        <div
+            className={cn("h-full w-full flex flex-col bg-charcoal-950 relative overflow-hidden", className)}
+            onClick={() => selectAppCard(null)} // Auto-deselect on background click
+        >
             {/* Toolbar Overlay */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
+                <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(0.5, prev - 0.1)); }}
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors border-r border-white/10"
+                        title="Zoom Out"
+                    >
+                        -
+                    </button>
+                    <span className="px-2 text-xs text-muted-foreground min-w-[3rem] text-center">{Math.round(zoomLevel * 100)}%</span>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(1.5, prev + 0.1)); }}
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                        title="Zoom In"
+                    >
+                        +
+                    </button>
+                </div>
                 <button
-                    onClick={onToggleFullScreen}
+                    onClick={(e) => { e.stopPropagation(); onToggleFullScreen(); }}
                     className="p-2 bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 hover:bg-white/10 transition-colors text-muted-foreground hover:text-white shadow-lg"
                     title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
                 >
@@ -251,18 +278,18 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         </div>
                     </div>
                 ) : (
-                    <>
+                    <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', width: `${100 / zoomLevel}%` }}>
                         <RGLResponsive
                             className="layout min-h-[500px]"
-                            width={containerWidth}
+                            width={containerWidth} // We might need to adjust this based on scale effectively
                             layouts={{ lg: appLayout }}
                             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                            cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }} // Double columns for finer granularity
                             rowHeight={40} // Reduced rowHeight for finer control (was 60)
                             onLayoutChange={handleLayoutChange}
                             isDroppable={true}
                             onDrop={onDrop}
-                            droppingItem={{ i: 'dropping-placeholder', w: 4, h: 4 }}
+                            droppingItem={{ i: 'dropping-placeholder', w: 8, h: 4 }} // Default drop size adjusted for 24 cols
                             draggableHandle=".drag-handle"
                             resizeHandles={['se', 's', 'e']}
                         >
@@ -277,7 +304,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                         isTransparent ? "bg-transparent" : "bg-charcoal-800",
                                         // Border / State styles
                                         isSelected
-                                            ? "ring-1 ring-primary/50 shadow-[0_0_15px_rgba(0,0,0,0.3)] z-10"
+                                            ? "ring-1 ring-primary/50 shadow-[0_0_15px_rgba(0,0,0,0.3)] z-50" // High Z-Index when selected
                                             : isTransparent
                                                 ? "border border-transparent hover:border-white/10 hover:bg-white/5" // Subtle hover for transparent items
                                                 : "border border-white/5 shadow-sm hover:border-white/20 hover:shadow-md",
@@ -289,17 +316,16 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             selectAppCard(card.id);
                                         }}
                                     >
-                                        {/* Card Header / Drag Handle - Only visible on hover or select */}
+                                        {/* Overlay Drag Handle - Positioned Absolute */}
                                         <div className={cn(
-                                            "drag-handle h-6 px-2 flex items-center justify-between cursor-move select-none transition-opacity duration-200",
-                                            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-                                            "bg-white/5 border-b border-white/5"
+                                            "drag-handle absolute top-0 left-0 right-0 h-6 px-2 flex items-center justify-between cursor-move select-none transition-opacity duration-200 z-50",
+                                            isSelected ? "opacity-100 bg-charcoal-900/90 backdrop-blur-sm border-b border-white/10" : "opacity-0 group-hover:opacity-100 bg-black/50 backdrop-blur-sm",
                                         )}>
                                             <div className="flex items-center gap-2 overflow-hidden">
                                                 <div className={cn("w-1 h-3 rounded-full", isSelected ? "bg-primary" : "bg-muted-foreground/30")} />
                                                 <span className="text-[9px] uppercase font-bold text-muted-foreground truncate">{card.label}</span>
                                             </div>
-                                            <div className={cn("flex items-center gap-1", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity")}>
+                                            <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -312,8 +338,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             </div>
                                         </div>
 
-                                        {/* Card Content */}
-                                        <div className="flex-1 overflow-hidden relative">
+                                        {/* Card Content - Full height now since header is overlay */}
+                                        <div className="flex-1 overflow-hidden relative w-full h-full">
                                             {renderCardContent(card)}
                                         </div>
                                     </div>
@@ -329,9 +355,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                 </div>
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>
     );
 };
+
