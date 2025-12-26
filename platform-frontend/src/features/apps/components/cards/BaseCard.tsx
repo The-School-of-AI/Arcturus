@@ -10,9 +10,9 @@ export interface BaseCardProps {
 
 export const BaseCard: React.FC<BaseCardProps> = ({ title, className, children, headerAction }) => {
     return (
-        <div className={cn("w-full h-full flex flex-col bg-charcoal-800", className)}>
+        <div className={cn("w-full h-full flex flex-col bg-transparent", className)}>
             {title && (
-                <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0 bg-charcoal-800/50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
                     <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">{title}</h3>
                     {headerAction && <div>{headerAction}</div>}
                 </div>

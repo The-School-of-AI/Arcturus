@@ -4,6 +4,7 @@ import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, 
 import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DEFAULT_COLORS, COLOR_PRESETS, getDefaultData, getDefaultStyle } from '../utils/defaults';
 
 interface AppInspectorProps {
     className?: string;
@@ -118,68 +119,6 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
     ],
 };
 
-// Default colors for cards
-const DEFAULT_COLORS = {
-    accent: '#eaff00',      // neon-yellow
-    background: '#1a1b1e',  // charcoal-900
-    text: '#ffffff',        // white
-    secondary: '#6b7280',   // gray-500
-    border: 'rgba(255,255,255,0.1)', // white/10
-    success: '#4ade80',     // green-400
-    danger: '#f87171',      // red-400
-};
-
-const COLOR_PRESETS = [
-    { name: 'Neon Yellow', value: '#eaff00' },
-    { name: 'Cyan', value: '#22d3ee' },
-    { name: 'Green', value: '#4ade80' },
-    { name: 'Purple', value: '#a855f7' },
-    { name: 'Pink', value: '#ec4899' },
-    { name: 'Orange', value: '#fb923c' },
-    { name: 'Blue', value: '#3b82f6' },
-    { name: 'White', value: '#ffffff' },
-];
-
-// Default data for each card type
-const getDefaultData = (type: string): any => {
-    switch (type) {
-        case 'metric':
-            return { value: '2.4M', change: 12.5, trend: 'up', label: 'Revenue Q3' };
-        case 'trend':
-            return { value: '$145.2', change: 2.4, label: 'Stock Price' };
-        case 'profile':
-            return { 
-                name: 'Alphabet Inc.', 
-                ticker: 'GOOGL', 
-                description: 'Alphabet Inc. provides online advertising services, cloud computing platform, software, and hardware.',
-                sector: 'Technology',
-                industry: 'Internet Content & Info',
-                employees: '~180,000'
-            };
-        case 'valuation':
-            return { marketPrice: 145.2, fairValue: 180.5, label: 'Undervalued by 19.6%' };
-        case 'score_card':
-            return { score: 78, label: 'Health Score', subtext: 'Healthy' };
-        case 'grade_card':
-            return { grade: 'A-', label: 'Profitability', subtext: 'Top Tier' };
-        case 'json':
-            return { 
-                json: {
-                    ticker: 'GOOGL',
-                    metrics: { revenue: 282.8, net_income: 59.9, cash: 113.7 },
-                    flags: ['undervalued', 'high_growth']
-                }
-            };
-        case 'markdown':
-            return { content: '# Hello Markdown\n\n- Item 1\n- Item 2\n\n> This is a quote.' };
-        case 'header':
-            return { text: 'Header' };
-        case 'text':
-            return { text: 'Basic paragraph text block. Select to edit.' };
-        default:
-            return {};
-    }
-};
 
 // Data field definitions for each card type
 const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' }[]> = {
@@ -269,18 +208,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                 label: selectedLibraryComponent.label,
                 config: {},
                 data: getDefaultData(selectedLibraryComponent.type),
-                style: {
-                    showBorder: true,
-                    borderWidth: 2,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderRadius: 12,
-                    opacity: 100,
-                    accentColor: DEFAULT_COLORS.accent,
-                    backgroundColor: 'transparent',
-                    textColor: '#ffffff',
-                    successColor: '#4ade80',
-                    dangerColor: '#f87171',
-                }
+                style: getDefaultStyle()
             };
             addAppCard(newCard, { x: 0, y: Infinity, ...dims });
         };
@@ -373,7 +301,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
                 {activeTab === 'config' && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-right-2 duration-200">
-                        
+
                         {/* PROPERTIES SECTION */}
                         <CollapsibleSection
                             title="Properties"
@@ -381,14 +309,14 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                             expanded={expandedSections.properties}
                             onToggle={() => toggleSection('properties')}
                         >
-                        <div className="space-y-3">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] text-muted-foreground font-bold uppercase">Display Title</label>
-                                <Input
-                                    value={selectedCard.label}
+                            <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Display Title</label>
+                                    <Input
+                                        value={selectedCard.label}
                                         onChange={(e) => updateAppCardLabel(selectedCard.id, e.target.value)}
                                         className="bg-charcoal-800 border-white/10 text-xs h-8"
-                                />
+                                    />
                                 </div>
                             </div>
                         </CollapsibleSection>
@@ -403,7 +331,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                             <div className="space-y-3">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] text-muted-foreground font-bold uppercase">Source Type</label>
-                                    <select 
+                                    <select
                                         value={selectedCard.config?.dataSource || 'local'}
                                         onChange={(e) => updateAppCardConfig(selectedCard.id, { dataSource: e.target.value })}
                                         className="w-full bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
@@ -419,7 +347,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 {(!selectedCard.config?.dataSource || selectedCard.config?.dataSource === 'local') && (
                                     <div className="space-y-3 pt-2 border-t border-white/5">
                                         <div className="text-[10px] text-primary font-bold uppercase">Edit Card Data</div>
-                                        
+
                                         {CARD_DATA_FIELDS[selectedCard.type]?.map(field => (
                                             <div key={field.key} className="space-y-1">
                                                 <label className="text-[10px] text-muted-foreground font-medium">{field.name}</label>
@@ -448,8 +376,8 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                 )}
                                                 {field.type === 'json' && (
                                                     <textarea
-                                                        value={typeof selectedCard.data?.[field.key] === 'object' 
-                                                            ? JSON.stringify(selectedCard.data?.[field.key], null, 2) 
+                                                        value={typeof selectedCard.data?.[field.key] === 'object'
+                                                            ? JSON.stringify(selectedCard.data?.[field.key], null, 2)
                                                             : selectedCard.data?.[field.key] || '{}'}
                                                         onChange={(e) => {
                                                             try {
@@ -507,7 +435,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         />
                                     </div>
                                 )}
-                        </div>
+                            </div>
                         </CollapsibleSection>
 
                     </div>
@@ -525,7 +453,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                 {activeTab === 'style' && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-right-2 duration-200">
-                        
+
                         {/* BORDER SECTION */}
                         <CollapsibleSection
                             title="Border"
@@ -539,7 +467,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     enabled={cardStyle.showBorder !== false}
                                     onChange={(v) => updateAppCardStyle(selectedCard.id, { showBorder: v })}
                                 />
-                                
+
                                 {cardStyle.showBorder !== false && (
                                     <>
                                         <div className="space-y-1.5">
@@ -561,8 +489,8 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                 ))}
                                             </div>
                                         </div>
-                                        
-                            <div className="space-y-1.5">
+
+                                        <div className="space-y-1.5">
                                             <label className="text-[10px] text-muted-foreground font-bold uppercase">Border Color</label>
                                             <ColorPicker
                                                 value={cardStyle.borderColor || 'rgba(255,255,255,0.1)'}
@@ -611,9 +539,9 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     />
                                 </div>
 
-                            <div className="space-y-1.5">
+                                <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                <label className="text-[10px] text-muted-foreground font-bold uppercase">Opacity</label>
+                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">Opacity</label>
                                         <span className="text-[10px] text-primary font-mono">{cardStyle.opacity || 100}%</span>
                                     </div>
                                     <input
@@ -723,8 +651,8 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             { name: 'Pink', value: '#ec4899' },
                                         ]}
                                     />
+                                </div>
                             </div>
-                        </div>
                         </CollapsibleSection>
 
                     </div>
@@ -757,17 +685,17 @@ const SectionHeader = ({ icon, label }: { icon: React.ReactNode, label: string }
     </div>
 );
 
-const CollapsibleSection = ({ 
-    title, 
-    icon, 
-    expanded, 
-    onToggle, 
-    children 
-}: { 
-    title: string; 
-    icon: React.ReactNode; 
-    expanded: boolean; 
-    onToggle: () => void; 
+const CollapsibleSection = ({
+    title,
+    icon,
+    expanded,
+    onToggle,
+    children
+}: {
+    title: string;
+    icon: React.ReactNode;
+    expanded: boolean;
+    onToggle: () => void;
     children: React.ReactNode;
 }) => (
     <div className="rounded-lg border border-white/5 overflow-hidden bg-charcoal-800/30">
@@ -807,13 +735,13 @@ const ToggleRow = ({ label, enabled, onChange }: { label: string; enabled: boole
     </div>
 );
 
-const ColorPicker = ({ 
-    value, 
-    onChange, 
-    presets 
-}: { 
-    value: string; 
-    onChange: (color: string) => void; 
+const ColorPicker = ({
+    value,
+    onChange,
+    presets
+}: {
+    value: string;
+    onChange: (color: string) => void;
     presets: { name: string; value: string }[];
 }) => {
     const [showCustom, setShowCustom] = useState(false);
@@ -822,7 +750,7 @@ const ColorPicker = ({
         <div className="space-y-2">
             {/* Current Color Preview */}
             <div className="flex items-center gap-2">
-                <div 
+                <div
                     className="w-full h-8 rounded border border-white/10 cursor-pointer transition-all hover:border-white/20"
                     style={{ backgroundColor: value }}
                     onClick={() => setShowCustom(!showCustom)}

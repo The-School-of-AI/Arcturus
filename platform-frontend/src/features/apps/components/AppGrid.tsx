@@ -8,6 +8,7 @@ const RGLResponsive = RGLResponsiveBase as any;
 import { Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
+import { getDefaultData, getDefaultStyle } from '../utils/defaults';
 import { MetricCard } from './cards/MetricCard';
 import { TrendMetric } from './cards/TrendMetric';
 import { ChartCard } from './cards/ChartCard';
@@ -128,19 +129,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 type,
                 label,
                 config: {},
-                data: {},
-                style: {
-                    showBorder: true,
-                    borderWidth: 2,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderRadius: 12,
-                    opacity: 100,
-                    accentColor: '#eaff00',
-                    backgroundColor: 'transparent',
-                    textColor: '#ffffff',
-                    successColor: '#4ade80',
-                    dangerColor: '#f87171',
-                }
+                data: getDefaultData(type),
+                style: getDefaultStyle()
             };
 
             // Add to store with smart dimensions override
@@ -198,19 +188,19 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             // Charts & Data
             case 'metric':
                 return (
-                    <MetricCard 
-                        title={config.showTitle !== false ? label : ''} 
-                        value={data.value || '2.4M'} 
-                        change={config.showPercent !== false ? (data.change || 12.5) : undefined} 
+                    <MetricCard
+                        title={config.showTitle !== false ? label : ''}
+                        value={data.value || '2.4M'}
+                        change={config.showPercent !== false ? (data.change || 12.5) : undefined}
                         trend={config.showTrend !== false ? (data.trend || 'up') : undefined}
                         {...commonProps}
                     />
                 );
             case 'trend':
                 return (
-                    <TrendMetric 
-                        title={config.showTitle !== false ? label : ''} 
-                        value={data.value || '$145.2'} 
+                    <TrendMetric
+                        title={config.showTitle !== false ? label : ''}
+                        value={data.value || '$145.2'}
                         change={config.showChange !== false ? (data.change || 2.4) : undefined}
                         showSparkline={config.showSparkline !== false}
                         {...commonProps}
@@ -232,7 +222,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             // Finance
             case 'profile':
                 return (
-                    <ProfileCard 
+                    <ProfileCard
                         showLogo={config.showLogo !== false}
                         showTicker={config.showTicker !== false}
                         showDescription={config.showDescription !== false}
@@ -244,8 +234,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 );
             case 'valuation':
                 return (
-                    <ValuationGauge 
-                        title={config.showTitle !== false ? label : ''} 
+                    <ValuationGauge
+                        title={config.showTitle !== false ? label : ''}
                         marketPrice={data.marketPrice}
                         fairValue={data.fairValue}
                         showPrices={config.showPrices !== false}
@@ -257,18 +247,18 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 );
             case 'score_card':
                 return (
-                    <ScoreCard 
-                        title={config.showTitle !== false ? label : ''} 
-                        score={data.score || 78} 
+                    <ScoreCard
+                        title={config.showTitle !== false ? label : ''}
+                        score={data.score || 78}
                         subtext={data.subtext || 'Healthy'}
                         {...commonProps}
                     />
                 );
             case 'grade_card':
                 return (
-                    <GradeCard 
-                        title={config.showTitle !== false ? label : ''} 
-                        grade={data.grade || 'A-'} 
+                    <GradeCard
+                        title={config.showTitle !== false ? label : ''}
+                        grade={data.grade || 'A-'}
                         subtext={data.subtext || 'Top Tier'}
                         {...commonProps}
                     />
@@ -349,55 +339,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             </div>
 
             {/* Grid Area */}
-            <div 
-                ref={containerRef} 
+            <div
+                ref={containerRef}
                 className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-grid-dots"
-                onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                    e.preventDefault();
-                    const data = e.dataTransfer?.getData('application/json');
-                    console.log('Container drop:', data);
-                    if (!data) return;
-                    
-                    try {
-                        const { type, label } = JSON.parse(data);
-                        const newId = `${type}-${Date.now()}`;
-                        const dims = getSmartDimensions(type);
-                        
-                        const newCard = {
-                            id: newId,
-                            type,
-                            label,
-                            config: {},
-                            data: {},
-                            style: {
-                                showBorder: true,
-                                borderWidth: 2,
-                                borderColor: 'rgba(255,255,255,0.1)',
-                                borderRadius: 12,
-                                opacity: 100,
-                                accentColor: '#eaff00',
-                                backgroundColor: 'transparent',
-                                textColor: '#ffffff',
-                                successColor: '#4ade80',
-                                dangerColor: '#f87171',
-                            }
-                        };
-                        
-                        // Calculate drop position based on mouse coordinates
-                        const rect = containerRef.current?.getBoundingClientRect();
-                        const x = rect ? Math.floor((e.clientX - rect.left) / 40) : 0;
-                        const y = rect ? Math.floor((e.clientY - rect.top) / 40) : 0;
-                        
-                        const adjustedDims = { ...dims, w: dims.w * 2 };
-                        addAppCard(newCard, { x: Math.max(0, x), y: Math.max(0, y), ...adjustedDims });
-                    } catch (err) {
-                        console.error('Drop error:', err);
-                    }
-                }}
             >
                 {!RGLResponsive ? (
                     <div className="flex flex-col items-center justify-center h-full text-red-400 space-y-4">
@@ -409,23 +353,23 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 ) : (
                     <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', width: `${100 / zoomLevel}%` }}>
                         <RGLResponsive
-                        className="layout min-h-[500px]"
+                            className="layout min-h-[500px]"
                             width={containerWidth} // We might need to adjust this based on scale effectively
                             layouts={{ lg: appLayout }}
-                        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                             cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }} // Double columns for finer granularity
                             rowHeight={40} // Reduced rowHeight for finer control (was 60)
-                        onLayoutChange={handleLayoutChange}
-                        isDroppable={true}
-                        onDrop={onDrop}
+                            onLayoutChange={handleLayoutChange}
+                            isDroppable={true}
+                            onDrop={onDrop}
                             droppingItem={{ i: 'dropping-placeholder', w: 8, h: 4 }} // Default drop size adjusted for 24 cols
-                        draggableHandle=".drag-handle"
+                            draggableHandle=".drag-handle"
                             resizeHandles={['se', 's', 'e']}
                         >
                             {appCards.map(card => {
                                 const isSelected = selectedAppCardId === card.id;
                                 const isTransparent = ['divider', 'spacer'].includes(card.type);
-                                
+
                                 // Get style settings with defaults
                                 const cardStyle = card.style || {};
                                 const showBorder = cardStyle.showBorder !== false;
@@ -436,8 +380,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                 const backgroundColor = cardStyle.backgroundColor || 'transparent';
 
                                 return (
-                                    <div 
-                                        key={card.id} 
+                                    <div
+                                        key={card.id}
                                         className={cn(
                                             // Match FlowStepNode styling exactly
                                             "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
@@ -459,15 +403,15 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             // Background if custom
                                             backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : undefined,
                                         }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             selectAppCard(card.id);
                                         }}
                                     >
                                         {/* Glow effect when selected - match FlowStepNode */}
                                         {isSelected && (
-                                            <div 
-                                                className="absolute inset-0 bg-neon-yellow/5 blur-xl -z-10 animate-pulse" 
+                                            <div
+                                                className="absolute inset-0 bg-neon-yellow/5 blur-xl -z-10 animate-pulse"
                                                 style={{ borderRadius: borderRadius }}
                                             />
                                         )}
@@ -475,20 +419,20 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                         {/* Minimal Drag Handle - Only visible on hover, top-right corner */}
                                         <div className={cn(
                                             "drag-handle absolute top-1.5 right-1.5 flex items-center gap-1 cursor-move select-none transition-all duration-300 z-50",
-                                            isSelected 
-                                                ? "opacity-100" 
+                                            isSelected
+                                                ? "opacity-100"
                                                 : "opacity-0 group-hover:opacity-100",
                                         )}>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     removeAppCard(card.id);
-                                            }}
+                                                }}
                                                 className="p-1 bg-charcoal-800/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-500 border border-white/10"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                </div>
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
 
                                         {/* Card Content - Full height now since header is overlay */}
                                         <div className="flex-1 overflow-hidden relative w-full h-full">

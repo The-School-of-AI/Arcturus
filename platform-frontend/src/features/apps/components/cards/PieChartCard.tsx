@@ -25,12 +25,15 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({ title, data = [
                     </svg>
                 </div>
                 <div className="space-y-1">
-                    {data.map(item => (
+                    {Array.isArray(data) && data.map(item => (
                         <div key={item.label} className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
                             <span className="text-[10px] text-muted-foreground truncate">{item.label}</span>
                         </div>
                     ))}
+                    {!Array.isArray(data) && (
+                        <div className="text-[10px] text-muted-foreground italic">No data available</div>
+                    )}
                 </div>
             </div>
         </BaseCard>
