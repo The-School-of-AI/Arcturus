@@ -116,20 +116,42 @@ const COMPONENT_CATEGORIES = [
         ]
     },
     {
-        name: '✨ blocks.so',
+        name: '✨ blocks.so Stats',
         items: [
             { type: 'stats_trending', label: 'Stats Trending', icon: TrendingUp },
             { type: 'stats_grid', label: 'Stats Grid', icon: LayoutGrid },
             { type: 'stats_status', label: 'Stats Status', icon: BarChart3 },
             { type: 'stats_links', label: 'Stats Links', icon: TrendingUp },
+            { type: 'stats_01', label: 'Financial Stats', icon: Gauge },
+            { type: 'usage_stats', label: 'Usage Stats', icon: BarChart3 },
+            { type: 'storage_card', label: 'Storage Usage', icon: PieChart },
+        ]
+    },
+    {
+        name: '✨ blocks.so Tables',
+        items: [
             { type: 'simple_table', label: 'Simple Table', icon: Table2 },
+            { type: 'accordion_table', label: 'Accordion Table', icon: Table2 },
         ]
     }
 ];
 
 
+
+
 const ComponentLibrary = () => {
     const [search, setSearch] = useState('');
+    // Start with only 'Basics' expanded
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+        'Basics': true,
+    });
+
+    const toggleCategory = (categoryName: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [categoryName]: !prev[categoryName]
+        }));
+    };
 
     const filteredCategories = COMPONENT_CATEGORIES.map(cat => ({
         ...cat,
@@ -139,8 +161,11 @@ const ComponentLibrary = () => {
         )
     })).filter(cat => cat.items.length > 0);
 
+    // When searching, expand all categories
+    const isSearching = search.length > 0;
+
     return (
-        <div className="space-y-5">
+        <div className="space-y-2">
             <div className="relative sticky top-0 z-10 bg-charcoal-900 pb-2">
                 <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
                 <input
@@ -151,27 +176,48 @@ const ComponentLibrary = () => {
                 />
             </div>
 
-            {filteredCategories.map(category => (
-                <div key={category.name} className="space-y-2.5">
-                    <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center justify-between px-1">
-                        <span>{category.name}</span>
-                        <span className="text-gray-700">{category.items.length}</span>
+            {filteredCategories.map(category => {
+                const isExpanded = isSearching || expandedCategories[category.name];
+                return (
+                    <div key={category.name} className="border border-white/5 rounded-lg overflow-hidden bg-charcoal-950/50">
+                        <button
+                            onClick={() => toggleCategory(category.name)}
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/5 transition-colors"
+                        >
+                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+                                {category.name}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-gray-600">{category.items.length}</span>
+                                <svg
+                                    className={`w-3 h-3 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </button>
+                        {isExpanded && (
+                            <div className="grid grid-cols-2 gap-2 p-2 pt-0">
+                                {category.items.map(item => (
+                                    <ComponentPreviewCard
+                                        key={item.type}
+                                        type={item.type}
+                                        label={item.label}
+                                        icon={item.icon}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        {category.items.map(item => (
-                            <ComponentPreviewCard
-                                key={item.type}
-                                type={item.type}
-                                label={item.label}
-                                icon={item.icon}
-                            />
-                        ))}
-                    </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 };
+
 
 // Canva-style Preview Card with actual visual representation
 const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label: string, icon: any }) => {

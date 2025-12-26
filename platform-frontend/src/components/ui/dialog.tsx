@@ -1,93 +1,120 @@
 import * as React from "react"
-import { createPortal } from "react-dom"
-import { cn } from "@/lib/utils"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
-// Simplified Dialog components without Radix UI dependency to avoid install errors
-// This mimics the Shadcn/Radix structure lightly
+import { cn } from "@/lib/utils"
 
-interface DialogProps {
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    children: React.ReactNode;
+const Dialog = DialogPrimitive.Root
+
+const DialogTrigger = DialogPrimitive.Trigger
+
+const DialogPortal = DialogPrimitive.Portal
+
+const DialogClose = DialogPrimitive.Close
+
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      className
+    )}
+    {...props}
+  />
+))
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+))
+DialogContent.displayName = DialogPrimitive.Content.displayName
+
+const DialogHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col space-y-1.5 text-center sm:text-left",
+      className
+    )}
+    {...props}
+  />
+)
+DialogHeader.displayName = "DialogHeader"
+
+const DialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      className
+    )}
+    {...props}
+  />
+)
+DialogFooter.displayName = "DialogFooter"
+
+const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(
+      "text-lg font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+DialogTitle.displayName = DialogPrimitive.Title.displayName
+
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogTrigger,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
 }
-
-export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
-    // We can't easily control the trigger vs content separation without context or direct props
-    // This is a naive implementation where we assume children[0] is trigger and children[1] is content
-    // BUT Sidebar.tsx uses it structurally: Dialog -> Trigger -> Content
-
-    // To make this work without complex Context, we'll use a simple Context
-    return (
-        <DialogContext.Provider value={{ open: !!open, onOpenChange: onOpenChange || (() => { }) }}>
-            {children}
-        </DialogContext.Provider>
-    );
-};
-
-interface DialogContextType {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-}
-const DialogContext = React.createContext<DialogContextType>({ open: false, onOpenChange: () => { } });
-
-export const DialogTrigger: React.FC<{ asChild?: boolean; children: React.ReactNode; onClick?: () => void }> = ({ asChild, children, onClick }) => {
-    const { onOpenChange } = React.useContext(DialogContext);
-
-    // Clone element to attach onClick if asChild
-    if (asChild && React.isValidElement(children)) {
-        const childElement = children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>;
-        return React.cloneElement(childElement, {
-            onClick: (e: React.MouseEvent) => {
-                childElement.props.onClick?.(e);
-                onOpenChange(true);
-            }
-        });
-    }
-
-    return (
-        <div onClick={() => onOpenChange(true)}>
-            {children}
-        </div>
-    );
-};
-
-export const DialogContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => {
-    const { open, onOpenChange } = React.useContext(DialogContext);
-
-    if (!open) return null;
-
-    return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className={cn(
-                "relative z-[9999] grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg border-white/10",
-                className
-            )}>
-                <div onClick={() => onOpenChange(false)} className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground cursor-pointer text-white">
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Close</span>
-                </div>
-                {children}
-            </div>
-        </div>,
-        document.body
-    );
-};
-
-export const DialogHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-    <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}>
-        {children}
-    </div>
-);
-
-export const DialogTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-    <div className={cn("text-lg font-semibold leading-none tracking-tight", className)}>
-        {children}
-    </div>
-);
-
-export const DialogFooter: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-    <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}>
-        {children}
-    </div>
-);

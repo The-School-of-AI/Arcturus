@@ -241,8 +241,61 @@ export const getDefaultData = (type: string): any => {
                 ]
             };
 
+        // blocks.so NEW Data-Bound Components
+        case 'stats_01':
+            return {
+                stats: [
+                    { name: 'Profit', value: '$287,654', change: '+8.32%', changeType: 'positive' },
+                    { name: 'Late payments', value: '$9,435', change: '-12.64%', changeType: 'negative' },
+                    { name: 'Pending orders', value: '$173,229', change: '+2.87%', changeType: 'positive' },
+                    { name: 'Operating costs', value: '$52,891', change: '-5.73%', changeType: 'negative' },
+                ]
+            };
+        case 'usage_stats':
+            return {
+                items: [
+                    { name: 'API Requests', current: '358K', limit: '1M', percentage: 35.8 },
+                    { name: 'Storage', current: '3.07 GB', limit: '10 GB', percentage: 30.7 },
+                    { name: 'Bandwidth', current: '4.98 GB', limit: '100 GB', percentage: 5.0 },
+                    { name: 'Users', current: '24', limit: '50', percentage: 48 },
+                ],
+                subtitle: 'Last 30 days'
+            };
+        case 'storage_card':
+            return {
+                used: 8300,
+                total: 15000,
+                unit: 'MB',
+                segments: [
+                    { label: 'Documents', value: 2400, color: 'bg-blue-500' },
+                    { label: 'Photos', value: 1800, color: 'bg-emerald-500' },
+                    { label: 'Videos', value: 3200, color: 'bg-amber-500' },
+                    { label: 'Music', value: 900, color: 'bg-purple-500' },
+                ]
+            };
+        case 'accordion_table':
+            return {
+                rows: [
+                    {
+                        id: '001', name: 'Project Alpha', category: 'Development', value: 45000, date: '2024-01-15',
+                        children: [
+                            { id: '001-01', name: 'Frontend Module', category: 'Development', value: 15000, date: '2024-01-16' },
+                            { id: '001-02', name: 'Backend Module', category: 'Development', value: 20000, date: '2024-01-21' },
+                        ]
+                    },
+                    {
+                        id: '002', name: 'Marketing Campaign', category: 'Marketing', value: 28500, date: '2024-01-18',
+                        children: [
+                            { id: '002-01', name: 'Social Media', category: 'Marketing', value: 12000, date: '2024-01-19' },
+                        ]
+                    },
+                    { id: '003', name: 'Customer Support', category: 'Service', value: 19800, date: '2024-01-25' },
+                ]
+            };
+
         default:
             return {};
+
     }
 };
 

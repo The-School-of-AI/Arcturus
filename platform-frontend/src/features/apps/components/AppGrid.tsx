@@ -29,7 +29,18 @@ import { InputCard, ActionButtonCard, SelectCard, DateRangeCard } from './cards/
 import { LogStreamCard } from './cards/LogStreamCard';
 import { JSONViewerCard } from './cards/JSONViewerCard';
 import { CodeBlockCard } from './cards/CodeBlockCard';
-import { StatsTrendingCard, StatsGridCard, StatsStatusCard, StatsLinksCard, SimpleTableCard } from './cards/BlocksCards';
+import {
+    StatsTrendingCard,
+    StatsGridCard,
+    StatsStatusCard,
+    StatsLinksCard,
+    SimpleTableCard,
+    Stats01Card,
+    UsageStatsCard,
+    StorageCard,
+    AccordionTableCard
+} from './cards/BlocksCards';
+
 
 interface AppGridProps {
     className?: string;
@@ -301,7 +312,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'chat':
                 return <div className="p-4 flex flex-col items-center justify-center h-full opacity-20"><span className="text-xs uppercase font-bold">Chat UI Placeholder</span></div>;
 
-            // blocks.so Cards
+            // blocks.so Cards (existing wrappers)
             case 'stats_trending':
                 return <StatsTrendingCard title={config.showTitle !== false ? label : 'Key Metrics'} {...commonProps} />;
             case 'stats_grid':
@@ -313,12 +324,24 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'simple_table':
                 return <SimpleTableCard title={config.showTitle !== false ? label : 'Tasks'} {...commonProps} />;
 
+            // blocks.so Data-Bound Cards (new wrappers)
+            case 'stats_01':
+                return <Stats01Card title={config.showTitle !== false ? label : 'Financial Overview'} {...commonProps} />;
+            case 'usage_stats':
+                return <UsageStatsCard title={config.showTitle !== false ? label : 'Resource Usage'} {...commonProps} />;
+            case 'storage_card':
+                return <StorageCard title={config.showTitle !== false ? label : 'Storage Usage'} {...commonProps} />;
+            case 'accordion_table':
+                return <AccordionTableCard title={config.showTitle !== false ? label : 'Projects'} {...commonProps} />;
+
             default:
                 return (
                     <div className="flex-1 flex items-center justify-center p-4 text-xs text-muted-foreground/30">
                         {type} implementation pending
                     </div>
                 );
+
+
         }
     };
 

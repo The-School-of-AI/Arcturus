@@ -135,7 +135,22 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Title', key: 'showTitle', default: true },
         { name: 'Striped Rows', key: 'striped', default: true },
     ],
+    // blocks.so Data-Bound Wrappers (4 new)
+    stats_01: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
+    usage_stats: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
+    storage_card: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
+    accordion_table: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
 };
+
+
 
 
 // Data field definitions for each card type
@@ -270,22 +285,37 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     ],
     // blocks.so Components
     stats_trending: [
-        { name: 'Stats (JSON Array)', key: 'stats', type: 'json' },
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json', options: ['[{"name":"Profit","value":"$287K","change":"+8%","changeType":"positive"}]'] },
     ],
     stats_grid: [
-        { name: 'Stats (JSON Array)', key: 'stats', type: 'json' },
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json', options: ['[{"name":"Visitors","value":"10,450","change":"-12%","changeType":"negative"}]'] },
     ],
     stats_status: [
-        { name: 'Stats (JSON Array)', key: 'stats', type: 'json' },
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json', options: ['[{"name":"API Uptime","value":"99.9%","status":"success","statusText":"Operational"}]'] },
     ],
     stats_links: [
-        { name: 'Links (JSON Array)', key: 'links', type: 'json' },
+        { name: 'Links (JSON Array)', key: 'links', type: 'json', options: ['[{"name":"Projects","value":"12","href":"#"}]'] },
     ],
     simple_table: [
-        { name: 'Headers (JSON Array)', key: 'headers', type: 'json' },
-        { name: 'Rows (JSON Array)', key: 'rows', type: 'json' },
+        { name: 'Headers (JSON Array)', key: 'headers', type: 'json', options: ['["Task","Status","Due"]'] },
+        { name: 'Rows (JSON Array)', key: 'rows', type: 'json', options: ['[{"cells":["Task 1","Done","2024-03-20"],"status":"success"}]'] },
+    ],
+    // blocks.so Data-Bound Wrappers
+    stats_01: [
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json', options: ['[{"name":"Profit","value":"$287K","change":"+8%","changeType":"positive"}]'] },
+    ],
+    usage_stats: [
+        { name: 'Items (JSON Array)', key: 'items', type: 'json', options: ['[{"name":"API Requests","current":"358K","limit":"1M","percentage":35.8}]'] },
+    ],
+    storage_card: [
+        { name: 'Segments (JSON Array)', key: 'segments', type: 'json', options: ['[{"label":"Documents","value":2400,"color":"bg-blue-500"}]'] },
+    ],
+    accordion_table: [
+        { name: 'Rows (JSON Array)', key: 'rows', type: 'json', options: ['[{"id":"001","name":"Project Alpha","category":"Dev","value":45000,"date":"2024-01-15"}]'] },
     ],
 };
+
+
 
 export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
     const [activeTab, setActiveTab] = useState<'config' | 'triggers' | 'style'>('config');
@@ -496,22 +526,30 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                     />
                                                 )}
                                                 {field.type === 'json' && (
-                                                    <textarea
-                                                        value={typeof selectedCard.data?.[field.key] === 'object'
-                                                            ? JSON.stringify(selectedCard.data?.[field.key], null, 2)
-                                                            : selectedCard.data?.[field.key] || '{}'}
-                                                        onChange={(e) => {
-                                                            try {
-                                                                const parsed = JSON.parse(e.target.value);
-                                                                updateAppCardData(selectedCard.id, { [field.key]: parsed });
-                                                            } catch {
-                                                                // Keep raw string if invalid JSON
-                                                            }
-                                                        }}
-                                                        rows={6}
-                                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
-                                                    />
+                                                    <div className="space-y-1">
+                                                        {field.options && field.options[0] && (
+                                                            <div className="text-[9px] text-muted-foreground bg-charcoal-950 rounded px-2 py-1 font-mono break-all">
+                                                                <span className="text-gray-500">Example: </span>{field.options[0]}
+                                                            </div>
+                                                        )}
+                                                        <textarea
+                                                            value={typeof selectedCard.data?.[field.key] === 'object'
+                                                                ? JSON.stringify(selectedCard.data?.[field.key], null, 2)
+                                                                : selectedCard.data?.[field.key] || '{}'}
+                                                            onChange={(e) => {
+                                                                try {
+                                                                    const parsed = JSON.parse(e.target.value);
+                                                                    updateAppCardData(selectedCard.id, { [field.key]: parsed });
+                                                                } catch {
+                                                                    // Keep raw string if invalid JSON
+                                                                }
+                                                            }}
+                                                            rows={6}
+                                                            className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                                                        />
+                                                    </div>
                                                 )}
+
                                                 {field.type === 'select' && field.options && (
                                                     <select
                                                         value={selectedCard.data?.[field.key] || field.options[0]}
