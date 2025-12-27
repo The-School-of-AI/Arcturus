@@ -1,0 +1,411 @@
+{
+  "id": "app-1766819813316",
+  "name": "Japan Trip Report: 4-Day Express",
+  "description": "",
+  "cards": [
+    {
+      "id": "h1",
+      "type": "header",
+      "label": "Trip Overview",
+      "data": {
+        "text": "\ud83c\uddef\ud83c\uddf5 Japan Trip: 4-Day Express Itinerary"
+      },
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "style": {}
+    },
+    {
+      "id": "m1",
+      "type": "metric",
+      "label": "Start Date",
+      "data": {
+        "value": "Jan 15",
+        "change": 0,
+        "trend": "neutral"
+      },
+      "config": {},
+      "style": {}
+    },
+    {
+      "id": "m2",
+      "type": "metric",
+      "label": "Duration",
+      "data": {
+        "value": "4 Days",
+        "change": 0,
+        "trend": "neutral"
+      },
+      "config": {},
+      "style": {}
+    },
+    {
+      "id": "m3",
+      "type": "metric",
+      "label": "Travelers",
+      "data": {
+        "value": "2 Pax",
+        "change": 0,
+        "trend": "neutral"
+      },
+      "config": {},
+      "style": {}
+    },
+    {
+      "id": "m4",
+      "type": "trend",
+      "label": "Total Budget",
+      "data": {
+        "value": "$3,250",
+        "change": 0
+      },
+      "config": {
+        "showSparkline": true
+      },
+      "style": {}
+    },
+    {
+      "id": "chart_bud",
+      "type": "pie_chart",
+      "label": "Budget Allocation",
+      "data": {
+        "slices": [
+          {
+            "name": "Flight",
+            "value": 800
+          },
+          {
+            "name": "Hotel",
+            "value": 1200
+          },
+          {
+            "name": "Food",
+            "value": 800
+          },
+          {
+            "name": "Transport",
+            "value": 300
+          },
+          {
+            "name": "Activities",
+            "value": 150
+          }
+        ]
+      },
+      "config": {},
+      "style": {}
+    },
+    {
+      "id": "table_bud",
+      "type": "table",
+      "label": "Expense Details",
+      "data": {
+        "headers": [
+          "Item",
+          "Cost",
+          "Note"
+        ],
+        "rows": [
+          [
+            "Flight",
+            "$800",
+            "Direct to NRT"
+          ],
+          [
+            "Hotel Gracery",
+            "$1,200",
+            "Shinjuku (3 Nights)"
+          ],
+          [
+            "Food Budget",
+            "$800",
+            "$100/day/pax"
+          ],
+          [
+            "JR Passes",
+            "$300",
+            "Regional Pass"
+          ],
+          [
+            "Tickets",
+            "$150",
+            "Disney/TeamLab"
+          ]
+        ]
+      },
+      "config": {},
+      "style": {}
+    },
+    {
+      "id": "h_itin",
+      "type": "header",
+      "label": "Itinerary",
+      "data": {
+        "text": "Daily Schedule"
+      },
+      "config": {
+        "centered": false
+      },
+      "style": {}
+    },
+    {
+      "id": "d1",
+      "type": "markdown",
+      "label": "Day 1: Jan 15",
+      "data": {
+        "content": "### \ud83d\udccd Arrival & Shinjuku\n* 14:00: Land at Narita (NRT)\n* 15:30: Narita Express to Shinjuku\n* 17:00: Check-in at Hotel Gracery\n* 19:00: Dinner at Omoide Yokocho (Yakitori Alley)\n* 21:00: View of city from Govt Building (Free)"
+      },
+      "config": {},
+      "style": {
+        "borderLeft": "4px solid #FF4081"
+      }
+    },
+    {
+      "id": "d2",
+      "type": "markdown",
+      "label": "Day 2: Jan 16",
+      "data": {
+        "content": "### \ud83d\ude84 Kyoto Day Trip\n* 07:00: Shinkansen to Kyoto\n* 09:30: Fushimi Inari (Torii Gates)\n* 12:30: Lunch at Nishiki Market\n* 14:00: Kinkaku-ji (Golden Pavilion)\n* 17:00: Gion District Walking Tour\n* 20:00: Return train to Tokyo"
+      },
+      "config": {},
+      "style": {
+        "borderLeft": "4px solid #7C4DFF"
+      }
+    },
+    {
+      "id": "d3",
+      "type": "markdown",
+      "label": "Day 3: Jan 17",
+      "data": {
+        "content": "### \ud83c\udfd9 Modern Tokyo\n* 09:00: Meiji Jingu Shrine\n* 11:00: Harajuku (Takeshita St)\n* 13:00: Shibuya Crossing & Sky Deck\n* 16:00: Coffee at Daikanyama T-Site\n* 19:00: Sushi Dinner in Roppongi"
+      },
+      "config": {},
+      "style": {
+        "borderLeft": "4px solid #00E5FF"
+      }
+    },
+    {
+      "id": "d4",
+      "type": "markdown",
+      "label": "Day 4: Jan 18",
+      "data": {
+        "content": "### \ud83d\udc1f Market & Departure\n* 08:00: Tsukiji Outer Market Breakfast\n* 10:30: TeamLab Planets (Toyosu)\n* 13:00: Ginza Shopping (Uniqlo/Muji)\n* 15:30: Limousine Bus to Narita\n* 18:00: Flight Departure"
+      },
+      "config": {},
+      "style": {
+        "borderLeft": "4px solid #FFAB00"
+      }
+    },
+    {
+      "id": "h_recs",
+      "type": "divider",
+      "label": "Divider",
+      "data": {},
+      "config": {},
+      "style": {
+        "marginTop": "20px"
+      }
+    },
+    {
+      "id": "food_recs",
+      "type": "simple_table",
+      "label": "Food Recommendations",
+      "data": {
+        "rows": [
+          [
+            "Ramen",
+            "Ichiran",
+            "Classic Tonkotsu"
+          ],
+          [
+            "Sushi",
+            "Sushiro",
+            "Affordable conveyor"
+          ],
+          [
+            "Beef",
+            "Gyukatsu Motomura",
+            "Fried Cutlet"
+          ],
+          [
+            "Sweet",
+            "Fluffy Pancakes",
+            "A Happy Pancake"
+          ]
+        ]
+      },
+      "config": {},
+      "style": {}
+    },
+    {
+      "id": "checklist",
+      "type": "usage_stats",
+      "label": "Preparation Status",
+      "data": {
+        "items": [
+          {
+            "name": "Flights Booked",
+            "percent": 100
+          },
+          {
+            "name": "Hotels Reserved",
+            "percent": 100
+          },
+          {
+            "name": "JR Pass Order",
+            "percent": 80
+          },
+          {
+            "name": "Pocket Wifi/eSIM",
+            "percent": 0
+          },
+          {
+            "name": "Visit Japan Web",
+            "percent": 0
+          }
+        ]
+      },
+      "config": {},
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "h1",
+      "x": 0,
+      "y": 0,
+      "w": 12,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "m1",
+      "x": 0,
+      "y": 2,
+      "w": 3,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "m2",
+      "x": 3,
+      "y": 2,
+      "w": 3,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "m3",
+      "x": 6,
+      "y": 2,
+      "w": 3,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "m4",
+      "x": 9,
+      "y": 2,
+      "w": 3,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chart_bud",
+      "x": 0,
+      "y": 5,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "table_bud",
+      "x": 6,
+      "y": 5,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "h_itin",
+      "x": 0,
+      "y": 11,
+      "w": 12,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "d1",
+      "x": 0,
+      "y": 13,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "d2",
+      "x": 6,
+      "y": 13,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "d3",
+      "x": 0,
+      "y": 19,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "d4",
+      "x": 6,
+      "y": 19,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "h_recs",
+      "x": 0,
+      "y": 25,
+      "w": 12,
+      "h": 1,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "food_recs",
+      "x": 0,
+      "y": 26,
+      "w": 6,
+      "h": 7,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "checklist",
+      "x": 6,
+      "y": 26,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1766820403622
+}

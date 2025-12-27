@@ -1,0 +1,176 @@
+{
+    "id": "marketing-hub",
+    "name": "Marketing Hub",
+    "lastModified": 1735276000000,
+    "cards": [
+        {
+            "id": "h1",
+            "type": "header",
+            "label": "Campaign Stats",
+            "config": {},
+            "data": {
+                "text": "Q4 Campaign Dashboard"
+            },
+            "style": {}
+        },
+        {
+            "id": "grid1",
+            "type": "stats_grid",
+            "label": "Overview",
+            "config": {},
+            "data": {
+                "stats": [
+                    {
+                        "name": "Impressions",
+                        "value": "2.4M",
+                        "change": "+12%"
+                    },
+                    {
+                        "name": "Clicks",
+                        "value": "45K",
+                        "change": "+8%"
+                    },
+                    {
+                        "name": "CTR",
+                        "value": "1.8%",
+                        "change": "-0.2%"
+                    },
+                    {
+                        "name": "Spend",
+                        "value": "$12.5K",
+                        "change": "+5%"
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "slider1",
+            "type": "slider",
+            "label": "Budget Alloc",
+            "config": {
+                "showLabel": true
+            },
+            "data": {
+                "label": "Social Ad Budget %",
+                "value": 45,
+                "min": 0,
+                "max": 100
+            },
+            "style": {}
+        },
+        {
+            "id": "c1",
+            "type": "line_chart",
+            "label": "Engagement",
+            "config": {},
+            "data": {
+                "title": "Daily Engagement",
+                "points": [
+                    {
+                        "x": "Mon",
+                        "y": 1200
+                    },
+                    {
+                        "x": "Tue",
+                        "y": 1450
+                    },
+                    {
+                        "x": "Wed",
+                        "y": 1300
+                    },
+                    {
+                        "x": "Thu",
+                        "y": 1600
+                    },
+                    {
+                        "x": "Fri",
+                        "y": 1900
+                    },
+                    {
+                        "x": "Sat",
+                        "y": 2100
+                    },
+                    {
+                        "x": "Sun",
+                        "y": 2050
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "tags1",
+            "type": "tags_input",
+            "label": "Keywords",
+            "config": {},
+            "data": {
+                "placeholder": "Add campaign keywords...",
+                "tags": [
+                    "summer_sale",
+                    "discount",
+                    "viral",
+                    "promo"
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "rate1",
+            "type": "rating",
+            "label": "Sentiment",
+            "config": {
+                "max": 5
+            },
+            "data": {
+                "label": "Customer Sentiment",
+                "value": 4
+            },
+            "style": {}
+        }
+    ],
+    "layout": [
+        {
+            "i": "h1",
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "grid1",
+            "x": 0,
+            "y": 2,
+            "w": 24,
+            "h": 4
+        },
+        {
+            "i": "c1",
+            "x": 0,
+            "y": 6,
+            "w": 16,
+            "h": 8
+        },
+        {
+            "i": "slider1",
+            "x": 16,
+            "y": 6,
+            "w": 8,
+            "h": 2
+        },
+        {
+            "i": "tags1",
+            "x": 16,
+            "y": 8,
+            "w": 8,
+            "h": 4
+        },
+        {
+            "i": "rate1",
+            "x": 16,
+            "y": 12,
+            "w": 8,
+            "h": 2
+        }
+    ]
+}

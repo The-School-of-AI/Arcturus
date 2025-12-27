@@ -209,30 +209,39 @@ export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", p
 export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Option", data = {}, config = {}, style = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
-    const options = data.options || ['Option A', 'Option B', 'Option C'];
-    const selected = data.value || options[0];
+
+    // Normalize options - handle both string[] and {label, value}[] formats
+    const rawOptions = data.options || ['Option A', 'Option B', 'Option C'];
+    const options = rawOptions.map((opt: any) => {
+        if (typeof opt === 'string') {
+            return { label: opt, value: opt };
+        }
+        return { label: opt.label || opt.value || String(opt), value: opt.value || opt.label || String(opt) };
+    });
+
+    const selected = data.value || options[0]?.value;
     const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex flex-col gap-2">
             {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <div className="space-y-1.5">
-                {options.map((opt: string) => (
+                {options.map((opt: { label: string; value: string }, idx: number) => (
                     <div
-                        key={opt}
+                        key={idx}
                         className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => isInteractive && onUpdate && onUpdate({ ...data, value: opt })}
+                        onClick={() => isInteractive && onUpdate && onUpdate({ ...data, value: opt.value })}
                     >
                         <div
                             className={cn(
                                 "w-3 h-3 rounded-full border flex items-center justify-center transition-colors",
                                 isInteractive && "hover:border-white/40"
                             )}
-                            style={{ borderColor: selected === opt ? accentColor : 'rgba(255,255,255,0.2)' }}
+                            style={{ borderColor: selected === opt.value ? accentColor : 'rgba(255,255,255,0.2)' }}
                         >
-                            {selected === opt && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />}
+                            {selected === opt.value && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />}
                         </div>
-                        <span className={cn("text-xs", selected === opt ? "text-foreground" : "text-muted-foreground")}>{opt}</span>
+                        <span className={cn("text-xs", selected === opt.value ? "text-foreground" : "text-muted-foreground")}>{opt.label}</span>
                     </div>
                 ))}
             </div>

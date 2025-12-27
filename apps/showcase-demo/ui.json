@@ -1,0 +1,274 @@
+{
+  "id": "showcase-demo",
+  "name": "VerusIQ Showcase",
+  "description": "",
+  "cards": [
+    {
+      "id": "h1",
+      "type": "header",
+      "label": "Market Overview",
+      "config": {
+        "bold": true
+      },
+      "style": {
+        "showBorder": false
+      },
+      "data": {
+        "text": "Market Overview"
+      }
+    },
+    {
+      "id": "d1",
+      "type": "date_picker",
+      "label": "Period",
+      "config": {
+        "showLabel": true
+      },
+      "style": {},
+      "data": {
+        "label": "Period",
+        "startDate": "2024-01-01",
+        "endDate": "2024-12-31"
+      }
+    },
+    {
+      "id": "m1",
+      "type": "metric",
+      "label": "Revenue",
+      "config": {
+        "showTrend": true
+      },
+      "style": {},
+      "data": {
+        "value": "$4.2M",
+        "change": 12.5,
+        "trend": "up"
+      }
+    },
+    {
+      "id": "m2",
+      "type": "metric",
+      "label": "Active Users",
+      "config": {
+        "showTrend": true
+      },
+      "style": {},
+      "data": {
+        "value": "14.5K",
+        "change": 8.2,
+        "trend": "up"
+      }
+    },
+    {
+      "id": "m3",
+      "type": "metric",
+      "label": "Churn Rate",
+      "config": {
+        "showTrend": true
+      },
+      "style": {},
+      "data": {
+        "value": "2.1%",
+        "change": -0.5,
+        "trend": "down"
+      }
+    },
+    {
+      "id": "c1",
+      "type": "line_chart",
+      "label": "Revenue Trend",
+      "config": {
+        "showTitle": true,
+        "showLegend": true
+      },
+      "style": {
+        "borderRadius": 12
+      },
+      "data": {
+        "title": "Monthly Revenue",
+        "points": [
+          {
+            "x": "Jan",
+            "y": 120
+          },
+          {
+            "x": "Feb",
+            "y": 135
+          },
+          {
+            "x": "Mar",
+            "y": 125
+          },
+          {
+            "x": "Apr",
+            "y": 145
+          },
+          {
+            "x": "May",
+            "y": 160
+          },
+          {
+            "x": "Jun",
+            "y": 155
+          }
+        ]
+      }
+    },
+    {
+      "id": "c2",
+      "type": "bar_chart",
+      "label": "User Acquisition",
+      "config": {
+        "showTitle": true
+      },
+      "style": {
+        "borderRadius": 12
+      },
+      "data": {
+        "title": "Sources",
+        "points": [
+          {
+            "x": "Organic",
+            "y": 450
+          },
+          {
+            "x": "Ads",
+            "y": 320
+          },
+          {
+            "x": "Referral",
+            "y": 210
+          },
+          {
+            "x": "Social",
+            "y": 180
+          }
+        ]
+      }
+    },
+    {
+      "id": "t1",
+      "type": "switch",
+      "label": "Live Mode",
+      "config": {
+        "showLabel": true
+      },
+      "style": {},
+      "data": {
+        "label": "Live Updates",
+        "checked": "true"
+      }
+    },
+    {
+      "id": "s1",
+      "type": "slider",
+      "label": "Risk Tolerance",
+      "config": {
+        "showLabel": true
+      },
+      "style": {},
+      "data": {
+        "label": "Risk Lvl",
+        "min": 0,
+        "max": 100,
+        "value": 65
+      }
+    },
+    {
+      "id": "grid1",
+      "type": "stats_grid",
+      "label": "Key KPIs",
+      "config": {
+        "showTitle": true
+      },
+      "style": {},
+      "data": {
+        "stats": [
+          {
+            "name": "LTV",
+            "value": "$450",
+            "change": "+5%"
+          },
+          {
+            "name": "CAC",
+            "value": "$120",
+            "change": "-2%"
+          }
+        ]
+      }
+    }
+  ],
+  "layout": [
+    {
+      "i": "h1",
+      "x": 0,
+      "y": 0,
+      "w": 9,
+      "h": 2
+    },
+    {
+      "i": "d1",
+      "x": 9,
+      "y": 0,
+      "w": 3,
+      "h": 2
+    },
+    {
+      "i": "m1",
+      "x": 0,
+      "y": 2,
+      "w": 4,
+      "h": 3
+    },
+    {
+      "i": "m2",
+      "x": 4,
+      "y": 2,
+      "w": 4,
+      "h": 3
+    },
+    {
+      "i": "m3",
+      "x": 8,
+      "y": 2,
+      "w": 4,
+      "h": 3
+    },
+    {
+      "i": "c1",
+      "x": 0,
+      "y": 5,
+      "w": 8,
+      "h": 8
+    },
+    {
+      "i": "t1",
+      "x": 8,
+      "y": 5,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "s1",
+      "x": 8,
+      "y": 7,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "grid1",
+      "x": 8,
+      "y": 9,
+      "w": 4,
+      "h": 4
+    },
+    {
+      "i": "c2",
+      "x": 0,
+      "y": 13,
+      "w": 12,
+      "h": 6
+    }
+  ],
+  "lastModified": 1766810285003
+}

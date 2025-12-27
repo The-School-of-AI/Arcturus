@@ -39,29 +39,29 @@ class MultiMCP:
             }
         }
 
-    async def start(self):
-        """Start all configured servers"""
-        print("[bold green]🚀 Starting MCP Servers...[/bold green]")
-        
-        for name, config in self.server_configs.items():
-            try:
-                # Check if uv exists, else fallback to python
-                cmd = config["command"]
-                if cmd == "uv" and not shutil.which("uv"):
-                    cmd = sys.executable
-                    args = [config["args"][1]] # just the script path
-                else:
-                    args = config["args"]
+    async def _start_server(self, name: str, config: dict):
+        """Start a single server with timeout protection"""
+        try:
+            # Check if uv exists, else fallback to python
+            cmd = config["command"]
+            if cmd == "uv" and not shutil.which("uv"):
+                cmd = sys.executable
+                args = [config["args"][1]] # just the script path
+            else:
+                args = config["args"]
 
-                server_params = StdioServerParameters(
-                    command=cmd,
-                    args=args,
-                    env=None 
-                )
-                
-                # Connect
+            server_params = StdioServerParameters(
+                command=cmd,
+                args=args,
+                env=None 
+            )
+            
+            # Connect with timeout
+            async with asyncio.timeout(10): # 10s timeout per server
                 read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
                 session = await self.exit_stack.enter_async_context(ClientSession(read, write))
+                await session.initialize()
+                
                 # List tools
                 if name in self._cached_metadata:
                     print(f"  📦 [cyan]{name}[/cyan] tools loaded from cache.")
@@ -81,9 +81,23 @@ class MultiMCP:
                     print(f"  ✅ [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
                 
                 self.sessions[name] = session
-                
-            except Exception as e:
-                print(f"  ❌ [red]{name}[/red] failed to start: {e}")
+
+        except TimeoutError:
+             print(f"  ⏳ [yellow]{name}[/yellow] timed out during startup.")
+        except Exception as e:
+            print(f"  ❌ [red]{name}[/red] failed to start: {e}")
+        except BaseException as e:
+            print(f"  ❌ [red]{name}[/red] CRITICAL FAILURE: {e}")
+
+    async def start(self):
+        """Start all configured servers concurrently"""
+        print("[bold green]🚀 Starting MCP Servers...[/bold green]")
+        
+        tasks = []
+        for name, config in self.server_configs.items():
+            tasks.append(self._start_server(name, config))
+        
+        await asyncio.gather(*tasks)
 
     async def stop(self):
         """Stop all servers"""

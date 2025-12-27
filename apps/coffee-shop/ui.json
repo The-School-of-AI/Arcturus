@@ -1,0 +1,1002 @@
+{
+    "id": "coffee-shop-daily-ops-dashboard",
+    "name": "Coffee Shop Daily Ops Dashboard",
+    "cards": [
+        {
+            "id": "h1",
+            "type": "header",
+            "label": "Header",
+            "config": {
+                "centered": false,
+                "bold": true
+            },
+            "data": {
+                "text": "Coffee Shop Daily Ops Dashboard"
+            },
+            "style": {
+                "color": "#FDE047"
+            }
+        },
+        {
+            "id": "t1",
+            "type": "text",
+            "label": "Subtitle",
+            "config": {},
+            "data": {
+                "text": "A quick, beautiful pulse-check for today: sales, bestsellers, staffing, and what’s coming next."
+            },
+            "style": {
+                "color": "#E5E7EB",
+                "opacity": 0.9
+            }
+        },
+        {
+            "id": "img1",
+            "type": "image",
+            "label": "Hero Image",
+            "config": {},
+            "data": {
+                "url": "[https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1600&q=80](https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1600&q=80)"
+            },
+            "style": {
+                "borderRadius": 16,
+                "borderColor": "#27272A",
+                "borderWidth": 1
+            }
+        },
+        {
+            "id": "div1",
+            "type": "divider",
+            "label": "Divider",
+            "config": {},
+            "data": {},
+            "style": {
+                "marginTop": 8,
+                "mb": 12,
+                "borderColor": "#27272A"
+            }
+        },
+        {
+            "id": "m1",
+            "type": "metric",
+            "label": "Daily Sales",
+            "config": {},
+            "data": {
+                "value": "₹92,450",
+                "change": 7.6,
+                "trend": "up"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "m2",
+            "type": "metric",
+            "label": "Orders",
+            "config": {},
+            "data": {
+                "value": "612",
+                "change": 4.1,
+                "trend": "up"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "m3",
+            "type": "metric",
+            "label": "Avg Ticket",
+            "config": {},
+            "data": {
+                "value": "₹151",
+                "change": -1.8,
+                "trend": "down"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "m4",
+            "type": "metric",
+            "label": "Refunds",
+            "config": {},
+            "data": {
+                "value": "₹1,120",
+                "change": -12.5,
+                "trend": "down"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "lc1",
+            "type": "area_chart",
+            "label": "Sales by Hour",
+            "config": {},
+            "data": {
+                "title": "Sales by Hour (Today)",
+                "points": [
+                    {
+                        "x": "07:00",
+                        "y": 2400
+                    },
+                    {
+                        "x": "08:00",
+                        "y": 6900
+                    },
+                    {
+                        "x": "09:00",
+                        "y": 9800
+                    },
+                    {
+                        "x": "10:00",
+                        "y": 8300
+                    },
+                    {
+                        "x": "11:00",
+                        "y": 7600
+                    },
+                    {
+                        "x": "12:00",
+                        "y": 10400
+                    },
+                    {
+                        "x": "13:00",
+                        "y": 11200
+                    },
+                    {
+                        "x": "14:00",
+                        "y": 9100
+                    },
+                    {
+                        "x": "15:00",
+                        "y": 7200
+                    },
+                    {
+                        "x": "16:00",
+                        "y": 6800
+                    },
+                    {
+                        "x": "17:00",
+                        "y": 7400
+                    },
+                    {
+                        "x": "18:00",
+                        "y": 8900
+                    }
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "tr1",
+            "type": "trend",
+            "label": "Live Run Rate",
+            "config": {
+                "showSparkline": true
+            },
+            "data": {
+                "value": "₹12,850/hr",
+                "change": 3.2
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "sc1",
+            "type": "score_card",
+            "label": "Service Health",
+            "config": {},
+            "data": {
+                "score": 88,
+                "subtext": "Smooth with minor queue spikes"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "gc1",
+            "type": "grade_card",
+            "label": "Customer Mood",
+            "config": {},
+            "data": {
+                "grade": "A-",
+                "subtext": "Great vibes, a few slow-morning notes"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "hd2",
+            "type": "header",
+            "label": "Section Header",
+            "config": {
+                "centered": false,
+                "bold": true
+            },
+            "data": {
+                "text": "Top Products and Mix"
+            },
+            "style": {
+                "color": "#FDE047"
+            }
+        },
+        {
+            "id": "img2",
+            "type": "image",
+            "label": "Products Image",
+            "config": {},
+            "data": {
+                "url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80"
+            },
+            "style": {
+                "borderRadius": 16,
+                "borderColor": "#27272A",
+                "borderWidth": 1
+            }
+        },
+        {
+            "id": "tb1",
+            "type": "table",
+            "label": "Top Products",
+            "config": {},
+            "data": {
+                "headers": [
+                    "Rank",
+                    "Product",
+                    "Units",
+                    "Revenue",
+                    "Margin",
+                    "Note"
+                ],
+                "rows": [
+                    [
+                        "1",
+                        "Iced Latte",
+                        "128",
+                        "₹19,200",
+                        "High",
+                        "Peak 12–2 PM"
+                    ],
+                    [
+                        "2",
+                        "Cappuccino",
+                        "104",
+                        "₹15,600",
+                        "High",
+                        "Strong morning pull"
+                    ],
+                    [
+                        "3",
+                        "Cold Brew",
+                        "86",
+                        "₹17,200",
+                        "Med",
+                        "Steady all day"
+                    ],
+                    [
+                        "4",
+                        "Americano",
+                        "74",
+                        "₹7,400",
+                        "High",
+                        "Fast service"
+                    ],
+                    [
+                        "5",
+                        "Croissant",
+                        "61",
+                        "₹9,150",
+                        "Med",
+                        "Pairs with latte"
+                    ],
+                    [
+                        "6",
+                        "Blueberry Muffin",
+                        "49",
+                        "₹6,860",
+                        "Med",
+                        "Low waste today"
+                    ]
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "pc1",
+            "type": "pie_chart",
+            "label": "Category Mix",
+            "config": {},
+            "data": {
+                "slices": [
+                    {
+                        "name": "Espresso Drinks",
+                        "value": 46
+                    },
+                    {
+                        "name": "Cold Coffee",
+                        "value": 24
+                    },
+                    {
+                        "name": "Tea/Other",
+                        "value": 12
+                    },
+                    {
+                        "name": "Pastries",
+                        "value": 18
+                    }
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "bc1",
+            "type": "bar_chart",
+            "label": "Bestsellers Trend",
+            "config": {},
+            "data": {
+                "title": "Units Sold (Last 7 Days)",
+                "points": [
+                    {
+                        "x": "Mon",
+                        "y": 520
+                    },
+                    {
+                        "x": "Tue",
+                        "y": 560
+                    },
+                    {
+                        "x": "Wed",
+                        "y": 590
+                    },
+                    {
+                        "x": "Thu",
+                        "y": 610
+                    },
+                    {
+                        "x": "Fri",
+                        "y": 740
+                    },
+                    {
+                        "x": "Sat",
+                        "y": 820
+                    },
+                    {
+                        "x": "Sun",
+                        "y": 680
+                    }
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "hd3",
+            "type": "header",
+            "label": "Section Header",
+            "config": {
+                "centered": false,
+                "bold": true
+            },
+            "data": {
+                "text": "Shift Schedule and Ops"
+            },
+            "style": {
+                "color": "#FDE047"
+            }
+        },
+        {
+            "id": "img3",
+            "type": "image",
+            "label": "Team Image",
+            "config": {},
+            "data": {
+                "url": "https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=1600&q=80"
+            },
+            "style": {
+                "borderRadius": 16,
+                "borderColor": "#27272A",
+                "borderWidth": 1
+            }
+        },
+        {
+            "id": "tb2",
+            "type": "table",
+            "label": "Shift Schedule",
+            "config": {},
+            "data": {
+                "headers": [
+                    "Shift",
+                    "Time",
+                    "Lead",
+                    "Barista",
+                    "Cashier",
+                    "Runner",
+                    "Notes"
+                ],
+                "rows": [
+                    [
+                        "Open",
+                        "06:45–11:30",
+                        "Ayesha",
+                        "Rohit",
+                        "Neha",
+                        "Kunal",
+                        "Restock milk by 08:00"
+                    ],
+                    [
+                        "Mid",
+                        "11:00–16:00",
+                        "Meera",
+                        "Zaid",
+                        "Isha",
+                        "Arjun",
+                        "Lunch rush 12–2"
+                    ],
+                    [
+                        "Close",
+                        "15:30–22:30",
+                        "Kabir",
+                        "Tara",
+                        "Vikram",
+                        "Sana",
+                        "Deep clean espresso station"
+                    ]
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "ss1",
+            "type": "stats_status",
+            "label": "Ops Status",
+            "config": {},
+            "data": {
+                "items": [
+                    {
+                        "label": "Espresso Machine",
+                        "value": "OK"
+                    },
+                    {
+                        "label": "Grinder Burr Health",
+                        "value": "Monitor"
+                    },
+                    {
+                        "label": "Milk Stock",
+                        "value": "Low"
+                    },
+                    {
+                        "label": "Pastry Delivery",
+                        "value": "Arrived"
+                    },
+                    {
+                        "label": "Queue Time",
+                        "value": "Normal"
+                    }
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "us1",
+            "type": "usage_stats",
+            "label": "Resource Usage",
+            "config": {},
+            "data": {
+                "items": [
+                    {
+                        "label": "Beans Used",
+                        "value": "8.4 kg",
+                        "subtext": "Target 10 kg"
+                    },
+                    {
+                        "label": "Milk Used",
+                        "value": "46 L",
+                        "subtext": "Order at 55 L"
+                    },
+                    {
+                        "label": "Cups",
+                        "value": "612",
+                        "subtext": "Remaining 780"
+                    }
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "hd4",
+            "type": "header",
+            "label": "Section Header",
+            "config": {
+                "centered": false,
+                "bold": true
+            },
+            "data": {
+                "text": "Today’s Notes and Actions"
+            },
+            "style": {
+                "color": "#FDE047"
+            }
+        },
+        {
+            "id": "md1",
+            "type": "markdown",
+            "label": "Manager Notes",
+            "config": {},
+            "data": {
+                "content": "### Highlights\n- **Cold Brew** is trending today. Consider a small sign near the register.\n- **Avg ticket** dipped slightly; suggest adding a quick upsell prompt: *“Want a croissant warmed?”*\n\n### Watchouts\n- Milk stock is **low**. If delivery slips, switch to smaller latte sizes during peak.\n- Grinder burrs: listen for pitch change, schedule inspection after close.\n\n### Micro-Goals\n- Keep queue under **4 minutes** during 12–2 PM.\n- Cut pastry waste below **6%** today."
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16,
+                "padding": 12
+            }
+        },
+        {
+            "id": "fd1",
+            "type": "feed",
+            "label": "Customer Feedback (Live)",
+            "config": {},
+            "data": {
+                "items": [
+                    {
+                        "title": "“Latte art was gorgeous today.”",
+                        "time": "18m ago"
+                    },
+                    {
+                        "title": "“Line moved fast even at lunch rush.”",
+                        "time": "1h ago"
+                    },
+                    {
+                        "title": "“Would love an extra sugar-free syrup option.”",
+                        "time": "2h ago"
+                    },
+                    {
+                        "title": "“Cold brew is perfect for this weather.”",
+                        "time": "3h ago"
+                    }
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "div2",
+            "type": "divider",
+            "label": "Divider",
+            "config": {},
+            "data": {},
+            "style": {
+                "marginTop": 10,
+                "mb": 10,
+                "borderColor": "#27272A"
+            }
+        },
+        {
+            "id": "hd5",
+            "type": "header",
+            "label": "Controls Header",
+            "config": {
+                "centered": false,
+                "bold": true
+            },
+            "data": {
+                "text": "Quick Controls"
+            },
+            "style": {
+                "color": "#FDE047"
+            }
+        },
+        {
+            "id": "sel1",
+            "type": "select",
+            "label": "Shift Selector",
+            "config": {},
+            "data": {
+                "label": "Select Shift",
+                "options": [
+                    "Open (06:45–11:30)",
+                    "Mid (11:00–16:00)",
+                    "Close (15:30–22:30)"
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "in1",
+            "type": "input",
+            "label": "Add Note",
+            "config": {},
+            "data": {
+                "label": "Add a note",
+                "placeholder": "E.g., ‘Run a Cold Brew promo at 1 PM’"
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "btn1",
+            "type": "button",
+            "label": "Save Note",
+            "config": {},
+            "data": {
+                "label": "Save Note"
+            },
+            "style": {
+                "accentColor": "#FDE047",
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "btn2",
+            "type": "button",
+            "label": "Generate End-of-Day Summary",
+            "config": {},
+            "data": {
+                "label": "Generate End-of-Day Summary"
+            },
+            "style": {
+                "accentColor": "#22C55E",
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "lg1",
+            "type": "log",
+            "label": "System Log",
+            "config": {},
+            "data": {
+                "logs": [
+                    "[07:05] POS connected. Morning sync complete.",
+                    "[08:12] Milk stock warning triggered (below threshold).",
+                    "[12:24] Lunch rush started. Queue peaked at 4m 20s.",
+                    "[14:05] Cold brew batch #3 started.",
+                    "[18:10] Pastry restock verified. Waste trending low."
+                ]
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        },
+        {
+            "id": "js1",
+            "type": "json",
+            "label": "Debug Snapshot",
+            "config": {},
+            "data": {
+                "json": {
+                    "day": "Today",
+                    "currency": "INR",
+                    "sales_total": 92450,
+                    "orders": 612,
+                    "avg_ticket": 151,
+                    "top_product": "Iced Latte",
+                    "shift_focus": "Mid",
+                    "alerts": [
+                        "Milk stock low",
+                        "Monitor grinder burr health"
+                    ]
+                }
+            },
+            "style": {
+                "backgroundColor": "#0B0B0F",
+                "borderColor": "#3F3F46",
+                "borderWidth": 1,
+                "borderRadius": 16
+            }
+        }
+    ],
+    "layout": [
+        {
+            "i": "h1",
+            "x": 0,
+            "y": 0,
+            "w": 18,
+            "h": 2
+        },
+        {
+            "i": "t1",
+            "x": 0,
+            "y": 2,
+            "w": 18,
+            "h": 2
+        },
+        {
+            "i": "img1",
+            "x": 18,
+            "y": 0,
+            "w": 6,
+            "h": 4
+        },
+        {
+            "i": "div1",
+            "x": 0,
+            "y": 4,
+            "w": 24,
+            "h": 1
+        },
+        {
+            "i": "m1",
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "m2",
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "m3",
+            "x": 12,
+            "y": 5,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "m4",
+            "x": 18,
+            "y": 5,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "lc1",
+            "x": 0,
+            "y": 8,
+            "w": 16,
+            "h": 7
+        },
+        {
+            "i": "tr1",
+            "x": 16,
+            "y": 8,
+            "w": 8,
+            "h": 3
+        },
+        {
+            "i": "sc1",
+            "x": 16,
+            "y": 11,
+            "w": 8,
+            "h": 2
+        },
+        {
+            "i": "gc1",
+            "x": 16,
+            "y": 13,
+            "w": 8,
+            "h": 2
+        },
+        {
+            "i": "hd2",
+            "x": 0,
+            "y": 15,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "img2",
+            "x": 0,
+            "y": 17,
+            "w": 8,
+            "h": 6
+        },
+        {
+            "i": "tb1",
+            "x": 8,
+            "y": 17,
+            "w": 16,
+            "h": 6
+        },
+        {
+            "i": "pc1",
+            "x": 0,
+            "y": 23,
+            "w": 8,
+            "h": 6
+        },
+        {
+            "i": "bc1",
+            "x": 8,
+            "y": 23,
+            "w": 16,
+            "h": 6
+        },
+        {
+            "i": "hd3",
+            "x": 0,
+            "y": 29,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "img3",
+            "x": 0,
+            "y": 31,
+            "w": 8,
+            "h": 6
+        },
+        {
+            "i": "tb2",
+            "x": 8,
+            "y": 31,
+            "w": 16,
+            "h": 6
+        },
+        {
+            "i": "ss1",
+            "x": 0,
+            "y": 37,
+            "w": 12,
+            "h": 5
+        },
+        {
+            "i": "us1",
+            "x": 12,
+            "y": 37,
+            "w": 12,
+            "h": 5
+        },
+        {
+            "i": "hd4",
+            "x": 0,
+            "y": 42,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "md1",
+            "x": 0,
+            "y": 44,
+            "w": 14,
+            "h": 8
+        },
+        {
+            "i": "fd1",
+            "x": 14,
+            "y": 44,
+            "w": 10,
+            "h": 8
+        },
+        {
+            "i": "div2",
+            "x": 0,
+            "y": 52,
+            "w": 24,
+            "h": 1
+        },
+        {
+            "i": "hd5",
+            "x": 0,
+            "y": 53,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "sel1",
+            "x": 0,
+            "y": 55,
+            "w": 8,
+            "h": 3
+        },
+        {
+            "i": "in1",
+            "x": 8,
+            "y": 55,
+            "w": 10,
+            "h": 3
+        },
+        {
+            "i": "btn1",
+            "x": 18,
+            "y": 55,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "btn2",
+            "x": 0,
+            "y": 58,
+            "w": 12,
+            "h": 3
+        },
+        {
+            "i": "lg1",
+            "x": 12,
+            "y": 58,
+            "w": 12,
+            "h": 6
+        },
+        {
+            "i": "js1",
+            "x": 0,
+            "y": 61,
+            "w": 12,
+            "h": 6
+        }
+    ]
+}

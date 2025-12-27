@@ -1,0 +1,206 @@
+{
+    "id": "system-monitor",
+    "name": "System Monitor",
+    "lastModified": 1735276000000,
+    "cards": [
+        {
+            "id": "h1",
+            "type": "header",
+            "label": "Server Status",
+            "config": {
+                "centered": true
+            },
+            "data": {
+                "text": "Infrastructure Health"
+            },
+            "style": {}
+        },
+        {
+            "id": "g1",
+            "type": "score_card",
+            "label": "CPU Load",
+            "config": {},
+            "data": {
+                "score": 42,
+                "subtext": "Normal"
+            },
+            "style": {}
+        },
+        {
+            "id": "g2",
+            "type": "score_card",
+            "label": "Memory",
+            "config": {},
+            "data": {
+                "score": 78,
+                "subtext": "High"
+            },
+            "style": {
+                "borderColor": "#fbbf24"
+            }
+        },
+        {
+            "id": "g3",
+            "type": "grade_card",
+            "label": "Network Health",
+            "config": {},
+            "data": {
+                "grade": "A",
+                "subtext": "Optimal"
+            },
+            "style": {}
+        },
+        {
+            "id": "sw1",
+            "type": "switch",
+            "label": "Maintenance Mode",
+            "config": {
+                "showLabel": true
+            },
+            "data": {
+                "label": "Maint. Mode",
+                "checked": false
+            },
+            "style": {
+                "borderColor": "#ef4444"
+            }
+        },
+        {
+            "id": "c1",
+            "type": "area_chart",
+            "label": "Traffic In/Out",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "title": "Network IO (MB/s)",
+                "points": [
+                    {
+                        "x": "10:00",
+                        "y": 45
+                    },
+                    {
+                        "x": "10:05",
+                        "y": 120
+                    },
+                    {
+                        "x": "10:10",
+                        "y": 80
+                    },
+                    {
+                        "x": "10:15",
+                        "y": 60
+                    },
+                    {
+                        "x": "10:20",
+                        "y": 95
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "log1",
+            "type": "log",
+            "label": "System Logs",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "logs": [
+                    "[INFO] Backup completed successfully",
+                    "[WARN] High memory usage detected on node-3",
+                    "[INFO] Autoscaling group scaled up",
+                    "[ERROR] Connection timeout to db-replica-2",
+                    "[INFO] Health check passed"
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "grid1",
+            "type": "stats_status",
+            "label": "Services",
+            "config": {},
+            "data": {
+                "services": [
+                    {
+                        "name": "API Gateway",
+                        "status": "operational"
+                    },
+                    {
+                        "name": "Auth Service",
+                        "status": "operational"
+                    },
+                    {
+                        "name": "Payment Processor",
+                        "status": "degraded"
+                    },
+                    {
+                        "name": "Notification Svc",
+                        "status": "operational"
+                    }
+                ]
+            },
+            "style": {}
+        }
+    ],
+    "layout": [
+        {
+            "i": "h1",
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "g1",
+            "x": 0,
+            "y": 2,
+            "w": 4,
+            "h": 4
+        },
+        {
+            "i": "g2",
+            "x": 4,
+            "y": 2,
+            "w": 4,
+            "h": 4
+        },
+        {
+            "i": "g3",
+            "x": 8,
+            "y": 2,
+            "w": 4,
+            "h": 4
+        },
+        {
+            "i": "sw1",
+            "x": 12,
+            "y": 2,
+            "w": 12,
+            "h": 2
+        },
+        {
+            "i": "c1",
+            "x": 0,
+            "y": 6,
+            "w": 12,
+            "h": 6
+        },
+        {
+            "i": "grid1",
+            "x": 12,
+            "y": 6,
+            "w": 12,
+            "h": 6
+        },
+        {
+            "i": "log1",
+            "x": 0,
+            "y": 12,
+            "w": 24,
+            "h": 8
+        }
+    ]
+}

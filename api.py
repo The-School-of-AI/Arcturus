@@ -739,6 +739,127 @@ async def delete_memory(memory_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# === APP PERSISTENCE ENDPOINTS ===
+
+class CreateAppRequest(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    cards: List[dict] = []
+    layout: List[dict] = []
+
+@app.get("/apps")
+async def list_apps():
+    """List all saved apps from apps/ directory"""
+    try:
+        apps_dir = Path(__file__).parent / "apps"
+        if not apps_dir.exists():
+            return []
+        
+        apps = []
+        for app_folder in apps_dir.iterdir():
+            if app_folder.is_dir():
+                ui_file = app_folder / "ui.json"
+                if ui_file.exists():
+                    try:
+                        data = json.loads(ui_file.read_text())
+                        apps.append({
+                            "id": app_folder.name,
+                            "name": data.get("name", "Untitled App"),
+                            "description": data.get("description", ""),
+                            "lastModified": data.get("lastModified", 0)
+                        })
+                    except:
+                        continue
+        # Sort by recently modified
+        return sorted(apps, key=lambda x: x['lastModified'], reverse=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/apps/{app_id}")
+async def get_app(app_id: str):
+    """Get full app configuration"""
+    try:
+        ui_file = Path(__file__).parent / "apps" / app_id / "ui.json"
+        if not ui_file.exists():
+            raise HTTPException(status_code=404, detail="App not found")
+        
+        return json.loads(ui_file.read_text())
+    except Exception as e:
+        # Re-raise HTTP exceptions, wrap others
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/apps")
+async def save_app(request: CreateAppRequest):
+    """Create or Update an app"""
+    try:
+        apps_dir = Path(__file__).parent / "apps"
+        apps_dir.mkdir(exist_ok=True)
+        
+        # ID generation: use name-timestamp if new, else assume standard ID format handling in frontend?
+        # Actually frontend usually manages state, but here backend should probably own ID if creating new.
+        # But we want to support overlapping saves.
+        
+        # Let's say if we pass an ID in the request it updates, otherwise creates?
+        # The request schema above matches what we send from store usually.
+        # For simplicity, we'll auto-generate ID if it's a "create" action concept, 
+        # but usually frontend sends the whole object. 
+        # Let's adjust schema to accept optional ID, or just handle filename generation here.
+        
+        # Actually, let's look at how frontend works. It generates UUIDs.
+        # So we should probably accept ID in the body or URL.
+        # NOTE: Using a separate endpoint for creation vs update is cleaner, 
+        # but upsert is fine too. Let's assume the ID is part of the request logic in frontend.
+        # Wait, the `CreateAppRequest` doesn't have ID.
+        # We will generate one based on name + salt if not provided?
+        # Let's change the pattern: Frontend generates ID for new apps.
+        # So we really want `PUT /apps/{app_id}` or include `id` in body.
+        
+        # Re-defining request to include ID
+        pass
+    except:
+        pass
+
+# Redefining to be more robust
+class SaveAppRequest(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = ""
+    cards: List[dict]
+    layout: List[dict]
+    lastModified: int
+
+@app.post("/apps/save")
+async def save_app_endpoint(request: SaveAppRequest):
+    try:
+        apps_dir = Path(__file__).parent / "apps"
+        apps_dir.mkdir(exist_ok=True)
+        
+        app_folder = apps_dir / request.id
+        app_folder.mkdir(exist_ok=True)
+        
+        ui_file = app_folder / "ui.json"
+        data = request.dict()
+        
+        # Check if exists to preserve creation time if we tracked it? 
+        # Current schema only has lastModified.
+        
+        ui_file.write_text(json.dumps(data, indent=2))
+        return {"status": "success", "id": request.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/apps/{app_id}")
+async def delete_app(app_id: str):
+    try:
+        app_folder = Path(__file__).parent / "apps" / app_id
+        if app_folder.exists():
+            import shutil
+            shutil.rmtree(app_folder)
+        return {"status": "success", "id": app_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/rag/images/{filename}")
 async def get_rag_image(filename: str):
     """Serve images extracted by MuPDF/indexing process"""
