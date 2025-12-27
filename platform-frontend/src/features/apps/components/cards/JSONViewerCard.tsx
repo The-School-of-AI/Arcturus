@@ -41,7 +41,7 @@ export const JSONViewerCard: React.FC<JSONViewerCardProps> = ({
 
     return (
         <BaseCard title={showTitle ? title : undefined}>
-            <div className="font-mono text-[9px] bg-black/40 p-2 rounded border border-white/5 overflow-auto max-h-full scrollbar-hidden">
+            <div className=" text-[9px] bg-black/40 p-2 rounded border border-white/5 overflow-auto max-h-full scrollbar-hidden">
                 {lineNumbers ? (
                     <div className="flex">
                         <div className="pr-2 border-r border-white/10 mr-2 text-muted-foreground/50 select-none">

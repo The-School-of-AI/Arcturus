@@ -685,19 +685,19 @@ const AccordionRow: React.FC<{ row: AccordionRowData; defaultOpen?: boolean }> =
                         )}
                     </button>
                 </td>
-                <td className="px-3 py-2 text-xs font-mono text-muted-foreground">{row.id}</td>
+                <td className="px-3 py-2 text-xs  text-muted-foreground">{row.id}</td>
                 <td className="px-3 py-2 text-sm font-medium">{row.name}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{row.category}</td>
-                <td className="px-3 py-2 text-sm font-mono font-semibold text-right">${row.value.toLocaleString()}</td>
+                <td className="px-3 py-2 text-sm  font-semibold text-right">${row.value.toLocaleString()}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{row.date}</td>
             </tr>
             {hasChildren && isOpen && row.children?.map(child => (
                 <tr key={child.id} className="border-b border-white/5 bg-black/20">
                     <td className="px-3 py-2 w-8"></td>
-                    <td className="px-3 py-2 text-xs font-mono text-muted-foreground pl-6">{child.id}</td>
+                    <td className="px-3 py-2 text-xs  text-muted-foreground pl-6">{child.id}</td>
                     <td className="px-3 py-2 text-xs">{child.name}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{child.category}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-right">${child.value.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-xs  text-right">${child.value.toLocaleString()}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{child.date}</td>
                 </tr>
             ))}

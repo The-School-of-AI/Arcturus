@@ -24,7 +24,7 @@ export const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, max = 100, s
             <div className="flex flex-col justify-center h-full gap-2">
                 <div className="flex items-end justify-between mb-1">
                     <span className="text-3xl font-bold text-foreground">{score}</span>
-                    <span className="text-xs text-muted-foreground font-mono mb-1">/ {max}</span>
+                    <span className="text-xs text-muted-foreground  mb-1">/ {max}</span>
                 </div>
 
                 {/* Progress Bar Container */}

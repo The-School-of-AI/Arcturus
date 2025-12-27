@@ -62,7 +62,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                         <h2 className="text-lg font-bold text-foreground" style={{ color: style.textColor }}>{name}</h2>
                         {showTicker && (
                             <div
-                                className="text-xs font-mono px-2 py-0.5 rounded inline-block border mt-1"
+                                className="text-xs  px-2 py-0.5 rounded inline-block border mt-1"
                                 style={{
                                     color: style.accentColor || DEFAULT_COLORS.accent,
                                     backgroundColor: `${style.accentColor || DEFAULT_COLORS.accent}15`,

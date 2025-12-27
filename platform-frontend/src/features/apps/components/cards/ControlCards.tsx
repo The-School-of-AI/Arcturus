@@ -137,9 +137,9 @@ export const DateRangeCard: React.FC<ControlCardProps> = ({
             )}
             <div className="flex items-center gap-2 p-2 bg-black/40 border border-white/10 rounded cursor-pointer hover:border-white/20 transition-colors">
                 <Calendar className="w-3 h-3" style={{ color: accentColor }} />
-                <span className="text-[10px] text-foreground font-mono">{startDate}</span>
+                <span className="text-[10px] text-foreground ">{startDate}</span>
                 <span className="text-muted-foreground">→</span>
-                <span className="text-[10px] text-foreground font-mono">{endDate}</span>
+                <span className="text-[10px] text-foreground ">{endDate}</span>
             </div>
         </div>
     );
@@ -252,7 +252,7 @@ export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data 
         <div className="p-3 h-full flex flex-col justify-center gap-2">
             <div className="flex justify-between">
                 {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
-                <span className="text-xs font-mono">{value}</span>
+                <span className="text-xs ">{value}</span>
             </div>
             <input
                 type="range"
@@ -296,7 +296,7 @@ export const NumberInputCard: React.FC<ControlCardProps> = ({ label = "Quantity"
             {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <Input
                 type="number"
-                className="h-8 text-xs bg-black/40 border-white/10 font-mono"
+                className="h-8 text-xs bg-black/40 border-white/10 "
                 defaultValue={data.value || 0}
                 min={data.min}
                 max={data.max}
@@ -314,7 +314,7 @@ export const ColorPickerCard: React.FC<ControlCardProps> = ({ label = "Theme Col
         <div className="p-3 h-full flex items-center justify-between gap-2">
             {showLabel && <label className="text-xs font-medium text-muted-foreground">{displayLabel}</label>}
             <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-muted-foreground">{value}</span>
+                <span className="text-[10px]  text-muted-foreground">{value}</span>
                 <div
                     className="w-6 h-6 rounded border border-white/20"
                     style={{ backgroundColor: value }}
@@ -366,7 +366,7 @@ export const TimePickerCard: React.FC<ControlCardProps> = ({ label = "Time", dat
             <div className="relative">
                 <Input
                     type="time"
-                    className="h-8 text-xs bg-black/40 border-white/10 font-mono pl-8"
+                    className="h-8 text-xs bg-black/40 border-white/10  pl-8"
                     defaultValue={value}
                 />
                 <Clock className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />

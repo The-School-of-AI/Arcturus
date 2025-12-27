@@ -49,95 +49,88 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
     );
 };
 
-const COMPONENT_CATEGORIES = [
+export const COMPONENT_CATEGORIES = [
     {
         name: 'Basics',
         items: [
-            { type: 'header', label: 'Header', icon: Type },
-            { type: 'text', label: 'Text Block', icon: AlignLeft },
-            { type: 'markdown', label: 'Markdown', icon: FileText },
-            { type: 'image', label: 'Image', icon: Image },
-            { type: 'spacer', label: 'Spacer', icon: Hash },
-            { type: 'divider', label: 'Divider', icon: Minus },
+            { type: 'header', label: 'Header', icon: Type, defaultW: 12, defaultH: 2 },
+            { type: 'text', label: 'Text Block', icon: AlignLeft, defaultW: 4, defaultH: 4 },
+            { type: 'markdown', label: 'Markdown', icon: FileText, defaultW: 4, defaultH: 4 },
+            { type: 'image', label: 'Image', icon: Image, defaultW: 4, defaultH: 4 },
+            { type: 'spacer', label: 'Spacer', icon: Hash, defaultW: 12, defaultH: 2 },
+            { type: 'divider', label: 'Divider', icon: Minus, defaultW: 12, defaultH: 2 },
         ]
     },
     {
         name: 'Charts & Data',
         items: [
-            { type: 'metric', label: 'Metric', icon: Hash },
-            { type: 'trend', label: 'Trend Metric', icon: TrendingUp },
-            { type: 'line_chart', label: 'Line Chart', icon: LineChart },
-            { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3 },
-            { type: 'area_chart', label: 'Area Chart', icon: LineChart },
-            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart },
-            { type: 'candlestick', label: 'Candlestick', icon: CandlestickChart },
-            { type: 'scatter', label: 'Scatter Plot', icon: BarChart3 },
-            { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid },
-            { type: 'table', label: 'Data Table', icon: Table2 },
+            { type: 'metric', label: 'Metric', icon: Hash, defaultW: 3, defaultH: 3 },
+            { type: 'trend', label: 'Trend Metric', icon: TrendingUp, defaultW: 3, defaultH: 3 },
+            { type: 'line_chart', label: 'Line Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
+            { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
+            { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
+            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 6 },
+            { type: 'candlestick', label: 'Candlestick', icon: CandlestickChart, defaultW: 6, defaultH: 6 },
+            { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
+            { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
+            { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 8 },
         ]
     },
     {
         name: 'Finance',
         items: [
-            { type: 'profile', label: 'Profile', icon: User },
-            { type: 'valuation', label: 'Valuation Gauge', icon: Gauge },
-            { type: 'score_card', label: 'Score Card', icon: Medal },
-            { type: 'grade_card', label: 'Grade Card', icon: Medal },
-            { type: 'peer_table', label: 'Peer Table', icon: Table2 },
-            { type: 'ratios', label: 'Ratios Grid', icon: LayoutGrid },
-            { type: 'cash_flow', label: 'Cash Flow', icon: TrendingUp },
-            { type: 'balance_sheet', label: 'Balance Sheet', icon: Table2 },
-            { type: 'income_stmt', label: 'Income Stmt', icon: FileText },
-            { type: 'summary', label: 'Exec Summary', icon: FileText },
+            { type: 'profile', label: 'Profile', icon: User, defaultW: 4, defaultH: 4 }, // Adjusted based on common usage
+            { type: 'valuation', label: 'Valuation Gauge', icon: Gauge, defaultW: 6, defaultH: 4 },
+            { type: 'score_card', label: 'Score Card', icon: Medal, defaultW: 3, defaultH: 3 },
+            { type: 'grade_card', label: 'Grade Card', icon: Medal, defaultW: 3, defaultH: 3 },
+            { type: 'peer_table', label: 'Peer Table', icon: Table2, defaultW: 6, defaultH: 8 },
+            { type: 'ratios', label: 'Ratios Grid', icon: LayoutGrid, defaultW: 6, defaultH: 8 },
+            { type: 'cash_flow', label: 'Cash Flow', icon: TrendingUp, defaultW: 6, defaultH: 8 },
+            { type: 'balance_sheet', label: 'Balance Sheet', icon: Table2, defaultW: 6, defaultH: 8 },
+            { type: 'income_stmt', label: 'Income Stmt', icon: FileText, defaultW: 6, defaultH: 8 },
+            { type: 'summary', label: 'Exec Summary', icon: FileText, defaultW: 6, defaultH: 6 },
         ]
     },
     {
         name: 'Controls',
         items: [
-            { type: 'button', label: 'Action Button', icon: Play },
-            { type: 'input', label: 'Text Input', icon: Type },
-            { type: 'textarea', label: 'Text Area', icon: AlignLeft },
-            { type: 'number_input', label: 'Number Input', icon: Hash },
-            { type: 'select', label: 'Dropdown', icon: LayoutGrid },
-            { type: 'radio_group', label: 'Radio Group', icon: CheckSquare },
-            { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
-            { type: 'switch', label: 'Switch', icon: ToggleLeft },
-            { type: 'slider', label: 'Slider', icon: Sliders },
-            { type: 'tags_input', label: 'Tags Input', icon: Hash },
-            { type: 'color_picker', label: 'Color Picker', icon: Palette },
-            { type: 'rating', label: 'Rating', icon: Star },
-            { type: 'date_picker', label: 'Date Picker', icon: Calendar },
-            { type: 'time_picker', label: 'Time Picker', icon: Clock },
+            { type: 'button', label: 'Action Button', icon: Play, defaultW: 3, defaultH: 2 },
+            { type: 'input', label: 'Text Input', icon: Type, defaultW: 3, defaultH: 2 },
+            { type: 'textarea', label: 'Text Area', icon: AlignLeft, defaultW: 3, defaultH: 3 }, // Textarea needs more height
+            { type: 'number_input', label: 'Number Input', icon: Hash, defaultW: 3, defaultH: 2 },
+            { type: 'select', label: 'Dropdown', icon: CheckSquare, defaultW: 3, defaultH: 2 },
+            { type: 'checkbox', label: 'Checkbox', icon: CheckSquare, defaultW: 3, defaultH: 1 },
+            { type: 'switch', label: 'Switch', icon: ToggleLeft, defaultW: 3, defaultH: 1 },
+            { type: 'radio', label: 'Radio Group', icon: CheckSquare, defaultW: 3, defaultH: 3 },
+            { type: 'slider', label: 'Slider', icon: Sliders, defaultW: 3, defaultH: 2 },
+            { type: 'date_picker', label: 'Date Picker', icon: Calendar, defaultW: 4, defaultH: 2 },
+            { type: 'time_picker', label: 'Time Picker', icon: Clock, defaultW: 3, defaultH: 2 },
+            { type: 'tags_input', label: 'Tags Input', icon: Type, defaultW: 4, defaultH: 2 },
+            { type: 'color_picker', label: 'Color Picker', icon: Palette, defaultW: 3, defaultH: 2 },
+            { type: 'rating', label: 'Rating', icon: Star, defaultW: 3, defaultH: 2 },
         ]
     },
     {
-        name: 'Dev & Feeds',
+        name: 'Dev & Feed',
         items: [
-            { type: 'feed', label: 'News Feed', icon: Rss },
-            { type: 'log', label: 'Log Stream', icon: Terminal },
-            { type: 'json', label: 'JSON Viewer', icon: Braces },
-            { type: 'code', label: 'Code Block', icon: Code2 },
-            { type: 'terminal', label: 'Terminal', icon: Terminal },
-            { type: 'chat', label: 'Chat Interface', icon: MessageSquare },
+            { type: 'feed', label: 'RSS / JSON Feed', icon: Rss, defaultW: 6, defaultH: 6 },
+            { type: 'log', label: 'Log Stream', icon: Terminal, defaultW: 6, defaultH: 8 },
+            { type: 'json', label: 'JSON Viewer', icon: Braces, defaultW: 6, defaultH: 8 },
+            { type: 'code', label: 'Code Block', icon: Code2, defaultW: 6, defaultH: 8 },
         ]
     },
     {
-        name: '✨ blocks.so Stats',
+        name: 'Blocks',
         items: [
-            { type: 'stats_trending', label: 'Stats Trending', icon: TrendingUp },
-            { type: 'stats_grid', label: 'Stats Grid', icon: LayoutGrid },
-            { type: 'stats_status', label: 'Stats Status', icon: BarChart3 },
-            { type: 'stats_links', label: 'Stats Links', icon: TrendingUp },
-            { type: 'stats_01', label: 'Financial Stats', icon: Gauge },
-            { type: 'usage_stats', label: 'Usage Stats', icon: BarChart3 },
-            { type: 'storage_card', label: 'Storage Usage', icon: PieChart },
-        ]
-    },
-    {
-        name: '✨ blocks.so Tables',
-        items: [
-            { type: 'simple_table', label: 'Simple Table', icon: Table2 },
-            { type: 'accordion_table', label: 'Accordion Table', icon: Table2 },
+            { type: 'stats_trending', label: 'Stats: Trending', icon: TrendingUp, defaultW: 6, defaultH: 4 },
+            { type: 'stats_grid', label: 'Stats: Grid', icon: LayoutGrid, defaultW: 8, defaultH: 4 },
+            { type: 'stats_status', label: 'Stats: Status', icon: LayoutGrid, defaultW: 8, defaultH: 4 },
+            { type: 'stats_links', label: 'Stats: Links', icon: LayoutGrid, defaultW: 4, defaultH: 6 },
+            { type: 'simple_table', label: 'Simple Table', icon: Table2, defaultW: 6, defaultH: 6 },
+            { type: 'stats_01', label: 'Stats 01', icon: TrendingUp, defaultW: 8, defaultH: 4 },
+            { type: 'usage_stats', label: 'Usage Stats', icon: BarChart3, defaultW: 6, defaultH: 6 },
+            { type: 'storage_card', label: 'Storage Card', icon: PieChart, defaultW: 4, defaultH: 5 },
+            { type: 'accordion_table', label: 'Accordion Table', icon: Table2, defaultW: 6, defaultH: 8 },
         ]
     }
 ];
@@ -507,7 +500,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 );
             case 'log':
                 return (
-                    <div className="w-full h-full flex flex-col p-2 gap-0.5 font-mono">
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5 ">
                         <div className="text-[6px] text-green-400">[INFO] Starting...</div>
                         <div className="text-[6px] text-gray-500">[DEBUG] Init</div>
                         <div className="text-[6px] text-neon-yellow">[WARN] Check</div>
@@ -515,7 +508,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 );
             case 'json':
                 return (
-                    <div className="w-full h-full flex flex-col p-2 font-mono text-[6px]">
+                    <div className="w-full h-full flex flex-col p-2  text-[6px]">
                         <span className="text-gray-500">{"{"}</span>
                         <span className="pl-1"><span className="text-neon-yellow">"ticker"</span>: <span className="text-green-400">"GOOGL"</span></span>
                         <span className="text-gray-500">{"}"}</span>
@@ -523,7 +516,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 );
             case 'code':
                 return (
-                    <div className="w-full h-full flex flex-col p-2 font-mono text-[6px]">
+                    <div className="w-full h-full flex flex-col p-2  text-[6px]">
                         <span className="text-purple-400">def</span><span className="text-white"> analyze():</span>
                         <span className="pl-2 text-gray-500"># logic here</span>
                         <span className="pl-2 text-blue-400">return</span><span className="text-white"> data</span>

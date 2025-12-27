@@ -45,11 +45,11 @@ export const ValuationGauge: React.FC<ValuationGaugeProps> = ({
                     <div className="flex justify-between items-end">
                         <div className="space-y-1">
                             <div className="text-[10px] text-muted-foreground uppercase">Market Price</div>
-                            <div className="text-xl font-bold font-mono" style={{ color: textColor }}>${marketPrice.toFixed(1)}</div>
+                            <div className="text-xl font-bold " style={{ color: textColor }}>${marketPrice.toFixed(1)}</div>
                         </div>
                         <div className="text-right space-y-1">
                             <div className="text-[10px] text-muted-foreground uppercase">Estimated Fair Value</div>
-                            <div className="text-xl font-bold font-mono" style={{ color: accentColor }}>${fairValue.toFixed(1)}</div>
+                            <div className="text-xl font-bold " style={{ color: accentColor }}>${fairValue.toFixed(1)}</div>
                         </div>
                     </div>
                 )}

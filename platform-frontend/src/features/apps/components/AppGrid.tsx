@@ -9,6 +9,7 @@ import { Maximize2, Minimize2, Trash2, Save, Plus, RotateCcw, FileText } from 'l
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { getDefaultData, getDefaultStyle } from '../utils/defaults';
+import { COMPONENT_CATEGORIES } from './AppsSidebar';
 import { MetricCard } from './cards/MetricCard';
 import { TrendMetric } from './cards/TrendMetric';
 import { ChartCard } from './cards/ChartCard';
@@ -62,45 +63,14 @@ interface AppGridProps {
 
 // Helper for Smart Default Dimensions
 const getSmartDimensions = (type: string) => {
-    switch (type) {
-        // Full Width, Short Height
-        case 'divider':
-        case 'spacer':
-        case 'header':
-            return { w: 12, h: 2 };
-
-        // Compact Metrics
-        case 'metric':
-        case 'trend':
-        case 'score_card':
-        case 'grade_card':
-            return { w: 3, h: 3 };
-
-        // Standard Charts
-        case 'line_chart':
-        case 'bar_chart':
-        case 'area_chart':
-        case 'candlestick':
-        case 'scatter':
-        case 'valuation':
-            return { w: 6, h: 6 };
-
-        // Large Views
-        case 'table':
-        case 'peer_table':
-        case 'ratios':
-        case 'cash_flow':
-        case 'balance_sheet':
-        case 'income_stmt':
-        case 'log':
-        case 'code':
-        case 'json':
-            return { w: 6, h: 8 };
-
-        // Default
-        default:
-            return { w: 4, h: 4 };
+    for (const category of COMPONENT_CATEGORIES) {
+        const item = category.items.find(i => i.type === type);
+        if (item && item.defaultW && item.defaultH) {
+            return { w: item.defaultW, h: item.defaultH };
+        }
     }
+    // Fallback default
+    return { w: 4, h: 4 };
 };
 
 export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onToggleFullScreen }) => {

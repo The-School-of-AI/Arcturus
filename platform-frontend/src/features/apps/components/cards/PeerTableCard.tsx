@@ -38,10 +38,10 @@ export const PeerTableCard: React.FC<PeerTableCardProps> = ({
                         <div key={p.ticker} className={`flex items-center py-1 px-1 rounded ${p.active ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-white/5'}`}>
                             <div className="flex-1 flex items-center gap-1.5 min-w-0">
                                 <span className="font-bold truncate">{p.name || p.ticker}</span>
-                                <span className="opacity-40 font-mono text-[9px]">{p.ticker}</span>
+                                <span className="opacity-40  text-[9px]">{p.ticker}</span>
                             </div>
-                            <div className="w-16 text-right font-mono">{p.marketCap || p.cap}</div>
-                            <div className="w-12 text-right font-mono">{p.pe}</div>
+                            <div className="w-16 text-right ">{p.marketCap || p.cap}</div>
+                            <div className="w-12 text-right ">{p.pe}</div>
                         </div>
                     ))}
                 </div>

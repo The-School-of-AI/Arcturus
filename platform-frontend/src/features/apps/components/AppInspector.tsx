@@ -431,7 +431,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
                     <div>
                         <div className="font-bold text-xs uppercase tracking-wider text-primary">Library Preview</div>
-                        <div className="text-[10px] text-muted-foreground font-mono opacity-80">{selectedLibraryComponent.type}</div>
+                        <div className="text-[10px] text-muted-foreground  opacity-80">{selectedLibraryComponent.type}</div>
                     </div>
                 </div>
 
@@ -489,7 +489,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
                     <div>
                         <div className="font-bold text-xs uppercase tracking-wider">{selectedCard.label}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono opacity-50">{selectedCard.id}</div>
+                        <div className="text-[10px] text-muted-foreground  opacity-50">{selectedCard.id}</div>
                     </div>
                 </div>
                 <button
@@ -587,7 +587,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                 {field.type === 'json' && (
                                                     <div className="space-y-1">
                                                         {field.options && field.options[0] && (
-                                                            <div className="text-[9px] text-muted-foreground bg-charcoal-950 rounded px-2 py-1 font-mono break-all">
+                                                            <div className="text-[9px] text-muted-foreground bg-charcoal-950 rounded px-2 py-1  break-all">
                                                                 <span className="text-gray-500">Example: </span>{field.options[0]}
                                                             </div>
                                                         )}
@@ -604,7 +604,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                                 }
                                                             }}
                                                             rows={6}
-                                                            className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                                                            className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground  focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
                                                         />
                                                     </div>
                                                 )}
@@ -690,7 +690,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             value={selectedCard.config?.scriptPath || ''}
                                             onChange={(e) => updateAppCardConfig(selectedCard.id, { scriptPath: e.target.value })}
                                             placeholder="path/to/script.py"
-                                            className="bg-charcoal-800 border-white/10 text-xs h-8 font-mono"
+                                            className="bg-charcoal-800 border-white/10 text-xs h-8 "
                                         />
                                     </div>
                                 )}
@@ -702,7 +702,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             value={selectedCard.config?.apiEndpoint || ''}
                                             onChange={(e) => updateAppCardConfig(selectedCard.id, { apiEndpoint: e.target.value })}
                                             placeholder="https://api.example.com/data"
-                                            className="bg-charcoal-800 border-white/10 text-xs h-8 font-mono"
+                                            className="bg-charcoal-800 border-white/10 text-xs h-8 "
                                         />
                                     </div>
                                 )}
@@ -813,7 +813,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
                                         <label className="text-[10px] text-muted-foreground font-bold uppercase">Opacity</label>
-                                        <span className="text-[10px] text-primary font-mono">{cardStyle.opacity || 100}%</span>
+                                        <span className="text-[10px] text-primary ">{cardStyle.opacity || 100}%</span>
                                     </div>
                                     <input
                                         type="range"
@@ -1058,7 +1058,7 @@ const ColorPicker = ({
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         placeholder="#ffffff"
-                        className="flex-1 bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1 text-foreground font-mono"
+                        className="flex-1 bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1 text-foreground "
                     />
                 </div>
             )}
