@@ -40,6 +40,18 @@ import {
     StorageCard,
     AccordionTableCard
 } from './cards/BlocksCards';
+import {
+    CheckboxCard,
+    SwitchCard,
+    RadioGroupCard,
+    SliderCard,
+    TagsInputCard,
+    TextareaCard,
+    NumberInputCard,
+    ColorPickerCard,
+    RatingCard,
+    TimePickerCard
+} from './cards/ControlCards';
 
 
 interface AppGridProps {
@@ -312,6 +324,28 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 return <SelectCard label={label} {...commonProps} />;
             case 'date_picker':
                 return <DateRangeCard label={label} {...commonProps} />;
+
+            // New Building Blocks
+            case 'checkbox':
+                return <CheckboxCard label={label} {...commonProps} />;
+            case 'switch':
+                return <SwitchCard label={label} {...commonProps} />;
+            case 'radio_group':
+                return <RadioGroupCard label={label} {...commonProps} />;
+            case 'slider':
+                return <SliderCard label={label} {...commonProps} />;
+            case 'tags_input':
+                return <TagsInputCard label={label} {...commonProps} />;
+            case 'textarea':
+                return <TextareaCard label={label} {...commonProps} />;
+            case 'number_input':
+                return <NumberInputCard label={label} {...commonProps} />;
+            case 'color_picker':
+                return <ColorPickerCard label={label} {...commonProps} />;
+            case 'rating':
+                return <RatingCard label={label} {...commonProps} />;
+            case 'time_picker':
+                return <TimePickerCard label={label} {...commonProps} />;
 
             // Dev & Feeds
             case 'feed':

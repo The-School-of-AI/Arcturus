@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, TrendingDown, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, TrendingDown, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles } from 'lucide-react';
 
 interface AppsSidebarProps {
     className?: string;
@@ -96,12 +96,18 @@ const COMPONENT_CATEGORIES = [
         items: [
             { type: 'button', label: 'Action Button', icon: Play },
             { type: 'input', label: 'Text Input', icon: Type },
+            { type: 'textarea', label: 'Text Area', icon: AlignLeft },
+            { type: 'number_input', label: 'Number Input', icon: Hash },
             { type: 'select', label: 'Dropdown', icon: LayoutGrid },
-            { type: 'date_picker', label: 'Date Picker', icon: Calendar },
-            { type: 'multi_select', label: 'Multi-Select', icon: CheckSquare },
-            { type: 'toggle', label: 'Toggle Switch', icon: ToggleLeft },
-            { type: 'slider', label: 'Range Slider', icon: Sliders },
+            { type: 'radio_group', label: 'Radio Group', icon: CheckSquare },
             { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
+            { type: 'switch', label: 'Switch', icon: ToggleLeft },
+            { type: 'slider', label: 'Slider', icon: Sliders },
+            { type: 'tags_input', label: 'Tags Input', icon: Hash },
+            { type: 'color_picker', label: 'Color Picker', icon: Palette },
+            { type: 'rating', label: 'Rating', icon: Star },
+            { type: 'date_picker', label: 'Date Picker', icon: Calendar },
+            { type: 'time_picker', label: 'Time Picker', icon: Clock },
         ]
     },
     {
@@ -547,13 +553,13 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             )}
         >
             {/* Preview Area - matches the actual card appearance */}
-            <div className="aspect-[1.3] w-full overflow-hidden bg-charcoal-950/50">
+            <div className="aspect-[2] w-full overflow-hidden bg-charcoal-950/50">
                 {renderPreview()}
             </div>
 
             {/* Label */}
             <div className={cn(
-                "px-2 py-1.5 text-[10px] font-medium text-center border-t transition-colors",
+                "px-2 py-1 text-[10px] font-medium text-center border-t transition-colors",
                 isSelected ? "bg-charcoal-800 border-neon-yellow/20 text-neon-yellow" : "bg-charcoal-900 border-white/5 text-gray-400"
             )}>
                 {label}
@@ -581,13 +587,22 @@ const SavedAppsList = () => {
                 <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
                     My Dashboards
                 </div>
-                <button
-                    onClick={createNewApp}
-                    className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-white transition-colors"
-                >
-                    <Plus className="w-3 h-3" />
-                    NEW APP
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => useAppStore.getState().loadShowcaseApp()}
+                        className="p-1 text-purple-400 hover:text-white transition-colors"
+                        title="Generate Showcase App"
+                    >
+                        <Sparkles className="w-3 h-3" />
+                    </button>
+                    <button
+                        onClick={createNewApp}
+                        className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-white transition-colors"
+                    >
+                        <Plus className="w-3 h-3" />
+                        NEW APP
+                    </button>
+                </div>
             </div>
 
             {/* Save Controls - Only shown when starting fresh or renaming */}

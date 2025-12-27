@@ -61,5 +61,24 @@ export const api = {
     // Generic access for Extensions
     get: axios.get,
     post: axios.post,
-    delete: axios.delete
+    delete: axios.delete,
+
+    // Apps
+    getApps: async (): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/apps`);
+        return res.data;
+    },
+
+    getApp: async (appId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/apps/${appId}`);
+        return res.data;
+    },
+
+    saveApp: async (app: any): Promise<void> => {
+        await axios.post(`${API_BASE}/apps/save`, app);
+    },
+
+    deleteApp: async (appId: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/apps/${appId}`);
+    }
 };

@@ -148,6 +148,17 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
     accordion_table: [
         { name: 'Show Title', key: 'showTitle', default: true },
     ],
+    // New Building Block Features
+    checkbox: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    switch: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    radio_group: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    slider: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    tags_input: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    textarea: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    number_input: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    color_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    rating: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    time_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
 };
 
 
@@ -312,6 +323,54 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     ],
     accordion_table: [
         { name: 'Rows (JSON Array)', key: 'rows', type: 'json', options: ['[{"id":"001","name":"Project Alpha","category":"Dev","value":45000,"date":"2024-01-15"}]'] },
+    ],
+    // New Building Block Fields
+    checkbox: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Start Checked', key: 'checked', type: 'select', options: ['true', 'false'] }
+    ],
+    switch: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Start On', key: 'checked', type: 'select', options: ['true', 'false'] }
+    ],
+    radio_group: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Options (comma sep)', key: 'options', type: 'text' },
+        { name: 'Default Value', key: 'value', type: 'text' }
+    ],
+    slider: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Min', key: 'min', type: 'number' },
+        { name: 'Max', key: 'max', type: 'number' },
+        { name: 'Default Value', key: 'value', type: 'number' }
+    ],
+    tags_input: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Initial Tags (comma sep)', key: 'value', type: 'text' }
+    ],
+    textarea: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Placeholder', key: 'placeholder', type: 'text' },
+        { name: 'Default Text', key: 'value', type: 'textarea' }
+    ],
+    number_input: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Min', key: 'min', type: 'number' },
+        { name: 'Max', key: 'max', type: 'number' },
+        { name: 'Default Value', key: 'value', type: 'number' }
+    ],
+    color_picker: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Default Color', key: 'value', type: 'text' }
+    ],
+    rating: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Max Stars', key: 'max', type: 'number' },
+        { name: 'Default Rating', key: 'value', type: 'number' }
+    ],
+    time_picker: [
+        { name: 'Label', key: 'label', type: 'text' },
+        { name: 'Default Time', key: 'value', type: 'text' }
     ],
 };
 

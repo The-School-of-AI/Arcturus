@@ -112,22 +112,7 @@ interface AnalysisHistoryItem {
     flowData?: any;
 }
 
-export interface AppCard {
-    id: string;
-    type: string;
-    label: string;
-    config: any;
-    data?: any;
-    style?: any;
-}
-
-export interface SavedApp {
-    id: string;
-    name: string;
-    lastModified: number;
-    cards: AppCard[];
-    layout: any[];
-}
+import type { AppCard, SavedApp } from '../features/apps/types/app-types';
 
 interface AppsSlice {
     appCards: AppCard[];
@@ -147,11 +132,13 @@ interface AppsSlice {
     setAppLayout: (layout: any[]) => void;
     selectAppCard: (id: string | null) => void;
     selectLibraryComponent: (component: any | null) => void;
+    fetchApps: () => Promise<void>;
     createNewApp: () => void;
-    saveApp: (name?: string) => void;
-    loadApp: (id: string) => void;
+    saveApp: (name?: string) => Promise<void>;
+    loadApp: (id: string, initialData?: SavedApp) => Promise<void>;
     revertAppChanges: () => void;
-    deleteApp: (id: string) => void;
+    deleteApp: (id: string) => Promise<void>;
+    loadShowcaseApp: () => Promise<void>;
 }
 
 interface ExplorerSlice {
@@ -523,6 +510,15 @@ export const useAppStore = create<AppState>()(
             selectAppCard: (id) => set({ selectedAppCardId: id, selectedLibraryComponent: null }), // Clear lib selection when canvas card selected
             selectLibraryComponent: (component) => set({ selectedLibraryComponent: component, selectedAppCardId: null }), // Clear canvas selection when lib item selected
 
+            fetchApps: async () => {
+                try {
+                    const apps = await api.getApps();
+                    set({ savedApps: apps as SavedApp[] });
+                } catch (e) {
+                    console.error("Failed to fetch apps", e);
+                }
+            },
+
             createNewApp: () => set({
                 appCards: [],
                 appLayout: [],
@@ -531,48 +527,75 @@ export const useAppStore = create<AppState>()(
                 selectedAppCardId: null
             }),
 
-            saveApp: (name) => set((state) => {
-                if (state.editingAppId) {
-                    // Update existing
-                    const updatedApps = state.savedApps.map(app =>
-                        app.id === state.editingAppId
-                            ? { ...app, name: name || app.name, cards: state.appCards, layout: state.appLayout, lastModified: Date.now() }
-                            : app
-                    );
-                    return {
-                        savedApps: updatedApps,
-                        lastSavedState: { cards: state.appCards, layout: state.appLayout }
-                    };
-                } else {
-                    // Create new
-                    const newApp: SavedApp = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        name: name || 'Untitled App',
-                        lastModified: Date.now(),
-                        cards: state.appCards,
-                        layout: state.appLayout
-                    };
-                    return {
-                        savedApps: [newApp, ...state.savedApps],
-                        editingAppId: newApp.id,
-                        lastSavedState: { cards: state.appCards, layout: state.appLayout }
-                    };
-                }
-            }),
+            saveApp: async (name) => {
+                const state = get();
 
-            loadApp: (id) => set((state) => {
-                const app = state.savedApps.find(a => a.id === id);
-                if (app) {
-                    return {
-                        appCards: app.cards,
-                        appLayout: app.layout,
-                        editingAppId: id,
-                        lastSavedState: { cards: app.cards, layout: app.layout },
-                        selectedAppCardId: null
-                    };
+                let appId = state.editingAppId;
+                let appName = name;
+
+                if (!appId) {
+                    appId = `app-${Date.now()}`;
+                    appName = name || 'Untitled App';
+                } else {
+                    const existing = state.savedApps.find(a => a.id === appId);
+                    if (!appName && existing) appName = existing.name;
+                    if (!appName) appName = 'Untitled App';
                 }
-                return state;
-            }),
+
+                const appData: SavedApp = {
+                    id: appId,
+                    name: appName || 'Untitled',
+                    lastModified: Date.now(),
+                    cards: state.appCards,
+                    layout: state.appLayout
+                };
+
+                try {
+                    await api.saveApp(appData);
+                    set((s) => {
+                        const exists = s.savedApps.find(a => a.id === appId);
+                        let newSavedApps;
+                        if (exists) {
+                            newSavedApps = s.savedApps.map(a => a.id === appId ? appData : a);
+                        } else {
+                            newSavedApps = [appData, ...s.savedApps];
+                        }
+
+                        return {
+                            savedApps: newSavedApps,
+                            editingAppId: appId,
+                            lastSavedState: { cards: appData.cards, layout: appData.layout }
+                        };
+                    });
+                } catch (e) {
+                    console.error("Failed to save app", e);
+                }
+            },
+
+            loadApp: async (id, initialData) => {
+                if (initialData) {
+                    set({
+                        appCards: initialData.cards || [],
+                        appLayout: initialData.layout || [],
+                        editingAppId: id,
+                        lastSavedState: { cards: initialData.cards || [], layout: initialData.layout || [] },
+                        selectedAppCardId: null
+                    });
+                }
+
+                try {
+                    const fullApp = await api.getApp(id);
+                    set({
+                        appCards: fullApp.cards || [],
+                        appLayout: fullApp.layout || [],
+                        editingAppId: id,
+                        lastSavedState: { cards: fullApp.cards || [], layout: fullApp.layout || [] },
+                        selectedAppCardId: null
+                    });
+                } catch (e) {
+                    console.error("Failed to load app", e);
+                }
+            },
 
             revertAppChanges: () => set((state) => {
                 if (state.lastSavedState) {
@@ -582,7 +605,6 @@ export const useAppStore = create<AppState>()(
                         selectedAppCardId: null
                     };
                 } else {
-                    // If never saved, revert means clear
                     return {
                         appCards: [],
                         appLayout: [],
@@ -591,11 +613,60 @@ export const useAppStore = create<AppState>()(
                 }
             }),
 
-            deleteApp: (id) => set((state) => ({
-                savedApps: state.savedApps.filter(a => a.id !== id),
-                editingAppId: state.editingAppId === id ? null : state.editingAppId,
-                lastSavedState: state.editingAppId === id ? null : state.lastSavedState
-            })),
+            deleteApp: async (id) => {
+                try {
+                    await api.deleteApp(id);
+                    set((state) => ({
+                        savedApps: state.savedApps.filter(a => a.id !== id),
+                        editingAppId: state.editingAppId === id ? null : state.editingAppId,
+                        lastSavedState: state.editingAppId === id ? null : state.lastSavedState
+                    }));
+                } catch (e) {
+                    console.error("Failed to delete app", e);
+                }
+            },
+
+            loadShowcaseApp: async () => {
+                const showcaseId = "showcase-demo";
+                const showcaseData: SavedApp = {
+                    id: showcaseId,
+                    name: "VerusIQ Showcase",
+                    lastModified: Date.now(),
+                    cards: [
+                        { id: 'h1', type: 'header', label: 'Market Overview', config: { bold: true }, style: { showBorder: false }, data: { text: "Market Overview" } },
+                        { id: 'd1', type: 'date_picker', label: 'Period', config: { showLabel: true }, style: {}, data: { label: "Period", startDate: "2024-01-01", endDate: "2024-12-31" } },
+                        { id: 'm1', type: 'metric', label: 'Revenue', config: { showTrend: true }, style: {}, data: { value: "$4.2M", change: 12.5, trend: "up" } },
+                        { id: 'm2', type: 'metric', label: 'Active Users', config: { showTrend: true }, style: {}, data: { value: "14.5K", change: 8.2, trend: "up" } },
+                        { id: 'm3', type: 'metric', label: 'Churn Rate', config: { showTrend: true }, style: {}, data: { value: "2.1%", change: -0.5, trend: "down" } },
+                        { id: 'c1', type: 'line_chart', label: 'Revenue Trend', config: { showTitle: true, showLegend: true }, style: { borderRadius: 12 }, data: { title: "Monthly Revenue", points: [{ "x": "Jan", "y": 120 }, { "x": "Feb", "y": 135 }, { "x": "Mar", "y": 125 }, { "x": "Apr", "y": 145 }, { "x": "May", "y": 160 }, { "x": "Jun", "y": 155 }] } },
+                        { id: 'c2', type: 'bar_chart', label: 'User Acquisition', config: { showTitle: true }, style: { borderRadius: 12 }, data: { title: "Sources", points: [{ "x": "Organic", "y": 450 }, { "x": "Ads", "y": 320 }, { "x": "Referral", "y": 210 }, { "x": "Social", "y": 180 }] } },
+                        { id: 't1', type: 'toggle', label: 'Live Mode', config: { showLabel: true }, style: {}, data: { label: "Live Updates", checked: "true" } },
+                        { id: 's1', type: 'slider', label: 'Risk Tolerance', config: { showLabel: true }, style: {}, data: { label: "Risk Lvl", min: 0, max: 100, value: 65 } },
+                        { id: 'grid1', type: 'stats_grid', label: 'Key KPIs', config: { showTitle: true }, style: {}, data: { stats: [{ "name": "LTV", "value": "$450", "change": "+5%" }, { "name": "CAC", "value": "$120", "change": "-2%" }] } }
+                    ],
+                    layout: [
+                        { i: 'h1', x: 0, y: 0, w: 9, h: 2 },
+                        { i: 'd1', x: 9, y: 0, w: 3, h: 2 },
+                        { i: 'm1', x: 0, y: 2, w: 4, h: 3 },
+                        { i: 'm2', x: 4, y: 2, w: 4, h: 3 },
+                        { i: 'm3', x: 8, y: 2, w: 4, h: 3 },
+                        { i: 'c1', x: 0, y: 5, w: 8, h: 8 },
+                        { i: 't1', x: 8, y: 5, w: 4, h: 2 },
+                        { i: 's1', x: 8, y: 7, w: 4, h: 2 },
+                        { i: 'grid1', x: 8, y: 9, w: 4, h: 4 },
+                        { i: 'c2', x: 0, y: 13, w: 12, h: 6 }
+                    ]
+                };
+
+                try {
+                    await api.saveApp(showcaseData);
+                    await get().fetchApps();
+                    await get().loadApp(showcaseId);
+                    set({ sidebarTab: 'apps' });
+                } catch (e) {
+                    console.error("Failed to generate showcase", e);
+                }
+            },
         }),
         {
             name: 'agent-platform-storage',
