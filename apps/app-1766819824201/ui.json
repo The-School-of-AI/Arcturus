@@ -1,7 +1,6 @@
 {
-  "id": "app-1766819824201",
-  "name": "Transformers: Study + Practice (Multi-Card)",
-  "description": "",
+  "id": "transformers-study-page-v3",
+  "name": "Transformers: Study + Practice (Fixed Layout)",
   "cards": [
     {
       "id": "h1",
@@ -19,6 +18,39 @@
         "color": "#EAF0FF",
         "border": "1px solid rgba(255,255,255,0.10)",
         "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "st1",
+      "type": "stats_01",
+      "label": "Today’s Targets",
+      "config": {},
+      "data": {
+        "metrics": [
+          {
+            "label": "Concepts",
+            "value": "9"
+          },
+          {
+            "label": "Diagrams",
+            "value": "2"
+          },
+          {
+            "label": "Quiz Qs",
+            "value": "3"
+          },
+          {
+            "label": "Time",
+            "value": "45m"
+          }
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "10px"
       }
     },
     {
@@ -60,13 +92,49 @@
       }
     },
     {
+      "id": "in1",
+      "type": "input",
+      "label": "Quick Goal",
+      "config": {},
+      "data": {
+        "label": "What do you want to master today?",
+        "placeholder": "e.g., RoPE intuition, attention math, training objective..."
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "se1",
+      "type": "select",
+      "label": "Difficulty",
+      "config": {},
+      "data": {
+        "label": "Study level",
+        "options": [
+          "Beginner-friendly",
+          "Intermediate",
+          "Research-ish"
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
       "id": "m1",
       "type": "metric",
       "label": "Key Idea",
       "config": {},
       "data": {
         "value": "Attention",
-        "change": 0,
+        "change": 0.0,
         "trend": "up"
       },
       "style": {
@@ -83,7 +151,7 @@
       "config": {},
       "data": {
         "value": "Next Token",
-        "change": 0,
+        "change": 0.0,
         "trend": "up"
       },
       "style": {
@@ -100,7 +168,7 @@
       "config": {},
       "data": {
         "value": "Causal",
-        "change": 0,
+        "change": 0.0,
         "trend": "up"
       },
       "style": {
@@ -117,7 +185,7 @@
       "config": {},
       "data": {
         "value": "RoPE/PE",
-        "change": 0,
+        "change": 0.0,
         "trend": "up"
       },
       "style": {
@@ -133,7 +201,7 @@
       "label": "1) Big Picture",
       "config": {},
       "data": {
-        "content": "## 1) Big Picture\nTransformers are sequence models built around **attention**.\n\n**Recipe:** Tokens \u2192 embeddings \u2192 (repeat N times) { attention + MLP } \u2192 logits \u2192 next-token probabilities.\n\n### Why they work well\n- **Global mixing**: tokens can directly attend across long distances.\n- **Parallel training**: all tokens processed at once during training.\n- **Scales nicely** with data/compute (with sane optimization).\n"
+        "content": "## 1) Big Picture\nTransformers are sequence models built around **attention**.\n\n**Recipe:** Tokens → embeddings → (repeat N times) { attention + MLP } → logits → next-token probabilities.\n\n### Why they work well\n- **Global mixing**: tokens can directly attend across long distances.\n- **Parallel training**: all tokens processed at once during training.\n- **Scales nicely** with data/compute (with sane optimization).\n"
       },
       "style": {
         "background": "#0B0F1A",
@@ -149,7 +217,7 @@
       "label": "2) Transformer Block",
       "config": {},
       "data": {
-        "content": "## 2) The Transformer Block\nA typical (Pre-LN) block:\n1. **Norm** \u2192 **Self-Attention** \u2192 **Residual Add**\n2. **Norm** \u2192 **MLP** \u2192 **Residual Add**\n\n### Residuals matter\nThey help gradients flow and let layers learn refinements instead of rebuilding everything.\n"
+        "content": "## 2) The Transformer Block\nA typical (Pre-LN) block:\n1) **Norm** → **Self-Attention** → **Residual Add**\n2) **Norm** → **MLP** → **Residual Add**\n\n### Residuals matter\nThey help gradients flow and let layers learn refinements instead of rebuilding everything.\n\n### Heads matter\nMultiple heads provide multiple views' of relationships: syntax, long-range reference, formatting patterns.\n"
       },
       "style": {
         "background": "#0B0F1A",
@@ -166,7 +234,7 @@
       "config": {},
       "data": {
         "language": "python",
-        "code": "# Scaled Dot-Product Attention (conceptual)\n# Q, K, V: (T, d)\nimport math\n\nscores = (Q @ K.T) / math.sqrt(d)\n# if causal: scores[t, t+1:] = -inf\nweights = softmax(scores, axis=-1)\nout = weights @ V\n"
+        "code": "# Scaled Dot-Product Attention (conceptual)\n# Q, K, V: (T, d)\nimport math\n\nscores = (Q @ K.T) / math.sqrt(d)\n# causal mask: scores[t, t+1:] = -inf\nweights = softmax(scores, axis=-1)\nout = weights @ V\n"
       },
       "style": {
         "background": "#070A12",
@@ -211,7 +279,7 @@
           [
             "Positional Encoding / RoPE",
             "Injects order",
-            "Without it, sequences are bag-of-words-ish"
+            "Without it, sequences lose order awareness"
           ],
           [
             "MLP",
@@ -262,7 +330,7 @@
           },
           {
             "x": 6,
-            "y": 0.1
+            "y": 0.10
           },
           {
             "x": 7,
@@ -284,7 +352,7 @@
       "label": "3) Training + Inference",
       "config": {},
       "data": {
-        "content": "## 3) Training vs Inference\n### Training (Next-token objective)\nGiven a sequence, predict the next token at every position. Loss is **cross-entropy**.\n\n### Inference (Generation)\nAutoregressive loop:\n1) get next-token distribution\n2) sample (temperature/top-p) or take argmax\n3) append token and repeat\n\n**Temperature**: lower \u2192 more deterministic, higher \u2192 more diverse.\n**Top-p**: sample from the smallest set with cumulative probability \u2265 p.\n"
+        "content": "## 3) Training vs Inference\n### Training (Next-token objective)\nPredict the next token at every position. Loss is **cross-entropy**.\n\n### Inference (Generation loop)\n1) Compute next-token distribution\n2) Sample (temperature/top-p) or take argmax\n3) Append token and repeat\n\n**Temperature:** lower → more deterministic; higher → more diverse.\n**Top-p:** sample from the smallest set with cumulative probability ≥ p.\n"
       },
       "style": {
         "background": "#0B0F1A",
@@ -302,18 +370,9 @@
       "data": {
         "label": "What does the causal mask do in GPT-style Transformers?",
         "options": [
-          {
-            "label": "A) Removes softmax for speed",
-            "value": "A"
-          },
-          {
-            "label": "B) Prevents tokens from attending to future tokens",
-            "value": "B"
-          },
-          {
-            "label": "C) Forces each head to attend to different positions",
-            "value": "C"
-          }
+          "A) Removes softmax for speed",
+          "B) Prevents tokens from attending to future tokens",
+          "C) Forces each head to attend to different positions"
         ]
       },
       "style": {
@@ -332,18 +391,9 @@
       "data": {
         "label": "In self-attention, which pair is used to compute similarity scores?",
         "options": [
-          {
-            "label": "A) Q and V",
-            "value": "A"
-          },
-          {
-            "label": "B) K and V",
-            "value": "B"
-          },
-          {
-            "label": "C) Q and K",
-            "value": "C"
-          }
+          "A) Q and V",
+          "B) K and V",
+          "C) Q and K"
         ]
       },
       "style": {
@@ -362,18 +412,9 @@
       "data": {
         "label": "Why use multiple attention heads?",
         "options": [
-          {
-            "label": "A) To reduce vocabulary size",
-            "value": "A"
-          },
-          {
-            "label": "B) To allow specialization across subspaces/patterns",
-            "value": "B"
-          },
-          {
-            "label": "C) To remove the need for an MLP",
-            "value": "C"
-          }
+          "A) To reduce vocabulary size",
+          "B) To allow specialization across subspaces/patterns",
+          "C) To remove the need for an MLP"
         ]
       },
       "style": {
@@ -405,7 +446,7 @@
       "label": "Answer Key",
       "config": {},
       "data": {
-        "content": "## Answer Key\n- **Q1:** B\n- **Q2:** C\n- **Q3:** B\n\n### Tiny self-check\nIf you got any wrong, revisit:\n- Causal mask \u2192 prevents future leakage\n- Similarity is Q\u00b7K\n- Multi-head \u2192 specialization and richer representation\n"
+        "content": "## Answer Key\n- **Q1:** B\n- **Q2:** C\n- **Q3:** B\n\n### Tiny self-check\nIf you missed anything, revisit:\n- Causal mask → prevents future leakage\n- Similarity is Q·K\n- Multi-head → specialization and richer representation\n"
       },
       "style": {
         "background": "#0B0F1A",
@@ -422,163 +463,147 @@
       "x": 0,
       "y": 0,
       "w": 12,
-      "h": 2,
-      "moved": false,
-      "static": false
+      "h": 2
+    },
+    {
+      "i": "st1",
+      "x": 0,
+      "y": 2,
+      "w": 8,
+      "h": 4
     },
     {
       "i": "tg1",
-      "x": 0,
+      "x": 8,
       "y": 2,
-      "w": 7,
-      "h": 2,
-      "moved": false,
-      "static": false
+      "w": 4,
+      "h": 2
     },
     {
       "i": "dp1",
-      "x": 7,
-      "y": 2,
+      "x": 0,
+      "y": 6,
       "w": 4,
-      "h": 2,
-      "moved": false,
-      "static": false
+      "h": 2
+    },
+    {
+      "i": "in1",
+      "x": 4,
+      "y": 6,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "se1",
+      "x": 8,
+      "y": 6,
+      "w": 4,
+      "h": 2
     },
     {
       "i": "m1",
       "x": 0,
-      "y": 4,
+      "y": 8,
       "w": 3,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "m2",
       "x": 3,
-      "y": 4,
+      "y": 8,
       "w": 3,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "m3",
       "x": 6,
-      "y": 4,
+      "y": 8,
       "w": 3,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "m4",
       "x": 9,
-      "y": 4,
+      "y": 8,
       "w": 3,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "mdA",
       "x": 0,
-      "y": 7,
+      "y": 11,
       "w": 6,
-      "h": 9,
-      "moved": false,
-      "static": false
+      "h": 6
     },
     {
       "i": "mdB",
       "x": 6,
-      "y": 7,
+      "y": 11,
       "w": 6,
-      "h": 6,
-      "moved": false,
-      "static": false
+      "h": 6
     },
     {
       "i": "code1",
       "x": 0,
-      "y": 16,
+      "y": 17,
       "w": 6,
-      "h": 8,
-      "moved": false,
-      "static": false
+      "h": 8
     },
     {
       "i": "tb1",
       "x": 6,
-      "y": 13,
-      "w": 9,
-      "h": 6,
-      "moved": false,
-      "static": false
+      "y": 17,
+      "w": 6,
+      "h": 5
     },
     {
       "i": "lc1",
-      "x": 6,
-      "y": 19,
+      "x": 0,
+      "y": 25,
       "w": 6,
-      "h": 8,
-      "moved": false,
-      "static": false
+      "h": 8
     },
     {
       "i": "mdC",
-      "x": 0,
-      "y": 27,
-      "w": 12,
-      "h": 6,
-      "moved": false,
-      "static": false
+      "x": 6,
+      "y": 25,
+      "w": 6,
+      "h": 6
     },
     {
       "i": "rg1",
       "x": 0,
       "y": 33,
       "w": 4,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "rg2",
       "x": 4,
       "y": 33,
       "w": 4,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "rg3",
       "x": 8,
       "y": 33,
       "w": 4,
-      "h": 3,
-      "moved": false,
-      "static": false
+      "h": 3
     },
     {
       "i": "btn1",
       "x": 0,
       "y": 36,
       "w": 3,
-      "h": 2,
-      "moved": false,
-      "static": false
+      "h": 2
     },
     {
       "i": "mdAns",
       "x": 3,
       "y": 36,
       "w": 9,
-      "h": 4,
-      "moved": false,
-      "static": false
+      "h": 4
     }
-  ],
-  "lastModified": 1766820802376
+  ]
 }

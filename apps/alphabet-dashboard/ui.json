@@ -1,130 +1,108 @@
 {
-    "id": "alphabet-dashboard-001",
-    "name": "Alphabet Inc. (GOOGL) - Market & Financial Dashboard",
+    "id": "alphabet-valuation-deep-dive",
+    "name": "Alphabet (GOOGL) Deep Dive Analysis",
     "cards": [
         {
-            "id": "header_main",
+            "id": "h_main",
             "type": "header",
-            "label": "Header",
+            "label": "Main Header",
             "config": {
-                "centered": false,
                 "bold": true
             },
             "data": {
-                "text": "Alphabet Inc. (GOOGL) Market Dashboard"
+                "text": "Alphabet Inc. (GOOGL) - Comprehensive Valuation Dashboard"
             },
-            "style": {}
+            "style": {
+                "color": "#ffffff"
+            }
         },
         {
-            "id": "profile_card",
-            "type": "profile",
-            "label": "Company Profile",
-            "config": {},
-            "data": {
-                "ticker": "GOOGL",
-                "sector": "Communication Services",
-                "industry": "Internet Content & Information"
-            },
-            "style": {}
-        },
-        {
-            "id": "price_trend",
+            "id": "m_price",
             "type": "trend",
-            "label": "Current Price",
+            "label": "Market Price",
             "config": {
                 "showSparkline": true
             },
             "data": {
-                "value": "$173.80",
-                "change": 1.45
+                "items": [
+                    {
+                        "label": "Current Price",
+                        "value": 145.0,
+                        "change": -16.6
+                    },
+                    {
+                        "label": "Base Case",
+                        "value": 245.0,
+                        "change": 40.8
+                    }
+                ]
             },
             "style": {}
         },
         {
-            "id": "metric_mcap",
-            "type": "metric",
-            "label": "Market Cap",
+            "id": "chart_price",
+            "type": "line_chart",
+            "label": "Price Action vs Moving Averages",
             "config": {},
             "data": {
-                "value": "$2.15T",
-                "trend": "up",
-                "change": 0.5
+                "title": "GOOGL (Daily)",
+                "points": [
+                    {
+                        "x": "Jan",
+                        "y": 140
+                    },
+                    {
+                        "x": "Feb",
+                        "y": 138
+                    },
+                    {
+                        "x": "Mar",
+                        "y": 150
+                    },
+                    {
+                        "x": "Apr",
+                        "y": 158
+                    },
+                    {
+                        "x": "May",
+                        "y": 170
+                    },
+                    {
+                        "x": "Jun",
+                        "y": 175
+                    },
+                    {
+                        "x": "Jul",
+                        "y": 185
+                    },
+                    {
+                        "x": "Aug",
+                        "y": 165
+                    },
+                    {
+                        "x": "Sep",
+                        "y": 160
+                    },
+                    {
+                        "x": "Oct",
+                        "y": 168
+                    },
+                    {
+                        "x": "Nov",
+                        "y": 175
+                    },
+                    {
+                        "x": "Dec",
+                        "y": 173
+                    }
+                ]
             },
             "style": {}
         },
         {
-            "id": "metric_pe",
-            "type": "metric",
-            "label": "P/E Ratio (TTM)",
-            "config": {},
-            "data": {
-                "value": "23.4x",
-                "subtext": "vs Sector 18.2x"
-            },
-            "style": {}
-        },
-        {
-            "id": "valuation_gauge",
-            "type": "valuation",
-            "label": "Fair Value Assessment",
-            "config": {
-                "showGauge": true
-            },
-            "data": {
-                "marketPrice": 173.80,
-                "fairValue": 195.00,
-                "currency": "USD"
-            },
-            "style": {}
-        },
-        {
-            "id": "grade_profit",
-            "type": "grade_card",
-            "label": "Profitability",
-            "config": {},
-            "data": {
-                "grade": "A+",
-                "subtext": "Best in class margins"
-            },
-            "style": {}
-        },
-        {
-            "id": "grade_growth",
-            "type": "grade_card",
-            "label": "Growth",
-            "config": {},
-            "data": {
-                "grade": "A-",
-                "subtext": "Cloud accelerating"
-            },
-            "style": {}
-        },
-        {
-            "id": "mkt_share_search",
-            "type": "score_card",
-            "label": "Global Search Share",
-            "config": {},
-            "data": {
-                "score": 91,
-                "subtext": "Dominant Market Leader"
-            },
-            "style": {}
-        },
-        {
-            "id": "mkt_share_cloud",
-            "type": "score_card",
-            "label": "Cloud Market Share",
-            "config": {},
-            "data": {
-                "score": 11,
-                "subtext": "3rd Place (Growing)"
-            },
-            "style": {}
-        },
-        {
-            "id": "rev_breakdown",
+            "id": "chart_rev_seg",
             "type": "pie_chart",
-            "label": "Revenue Breakdown (FY2024)",
+            "label": "Revenue Segmentation",
             "config": {},
             "data": {
                 "slices": [
@@ -134,10 +112,6 @@
                     },
                     {
                         "name": "YouTube Ads",
-                        "value": 10
-                    },
-                    {
-                        "name": "Google Cloud",
                         "value": 11
                     },
                     {
@@ -145,114 +119,163 @@
                         "value": 10
                     },
                     {
-                        "name": "Subscriptions/Other",
-                        "value": 13
+                        "name": "Google Cloud",
+                        "value": 11
+                    },
+                    {
+                        "name": "Other Bets/Subs",
+                        "value": 12
                     }
                 ]
             },
             "style": {}
         },
         {
-            "id": "rev_history",
-            "type": "bar_chart",
-            "label": "Annual Revenue History (in Billions)",
+            "id": "div_2",
+            "type": "divider",
+            "label": "Profile Divider",
             "config": {},
-            "data": {
-                "title": "Revenue Growth",
-                "points": [
-                    {
-                        "x": "2020",
-                        "y": 182
-                    },
-                    {
-                        "x": "2021",
-                        "y": 257
-                    },
-                    {
-                        "x": "2022",
-                        "y": 282
-                    },
-                    {
-                        "x": "2023",
-                        "y": 307
-                    },
-                    {
-                        "x": "2024 (Est)",
-                        "y": 345
-                    }
-                ]
-            },
+            "data": {},
             "style": {
-                "accentColor": "#4285F4"
+                "marginTop": 10,
+                "marginBottom": 10
             }
         },
         {
-            "id": "projection_chart",
-            "type": "area_chart",
-            "label": "EPS Projection (Next 3 Years)",
+            "id": "profile",
+            "type": "profile",
+            "label": "Company Profile",
             "config": {},
             "data": {
-                "title": "Earnings Per Share Forecast",
-                "points": [
+                "ticker": "GOOGL",
+                "sector": "Communication Services",
+                "logo": "https://logo.clearbit.com/abc.xyz",
+                "description": "Leader in digital advertising, cloud computing, consumer hardware, and autonomous driving technology."
+            },
+            "style": {}
+        },
+        {
+            "id": "stats_fund",
+            "type": "stats_grid",
+            "label": "Fundamental Highlights",
+            "config": {},
+            "data": {
+                "stats": [
                     {
-                        "x": "2024",
-                        "y": 7.60
+                        "label": "Market Cap",
+                        "value": "2.05T"
                     },
                     {
-                        "x": "2025",
-                        "y": 8.90
+                        "label": "P/E (TTM)",
+                        "value": "23.4x"
                     },
                     {
-                        "x": "2026",
-                        "y": 10.20
+                        "label": "Fwd P/E",
+                        "value": "19.8x"
                     },
                     {
-                        "x": "2027",
-                        "y": 11.85
+                        "label": "P/S",
+                        "value": "6.2x"
+                    },
+                    {
+                        "label": "P/FCF",
+                        "value": "28.5x"
+                    },
+                    {
+                        "label": "ROIC",
+                        "value": "31.5%"
+                    },
+                    {
+                        "label": "WACC",
+                        "value": "9.2%"
                     }
                 ]
             },
-            "style": {
-                "accentColor": "#34A853"
-            }
+            "style": {}
         },
         {
-            "id": "financial_table",
-            "type": "table",
-            "label": "Key Financial Metrics",
+            "id": "fin_inc",
+            "type": "income_stmt",
+            "label": "Income Statement",
             "config": {},
             "data": {
-                "headers": [
-                    "Metric",
-                    "Value",
-                    "YoY Change"
-                ],
-                "rows": [
-                    [
-                        "Operating Margin",
-                        "32%",
-                        "+400 bps"
-                    ],
-                    [
-                        "Free Cash Flow",
-                        "$71B",
-                        "+15%"
-                    ],
-                    [
-                        "R&D Spend",
-                        "$45B",
-                        "+8%"
-                    ],
-                    [
-                        "Cash on Hand",
-                        "$110B",
-                        "-2%"
-                    ],
-                    [
-                        "Cloud Revenue",
-                        "$41B",
-                        "+26%"
-                    ]
+                "revenue": "328B",
+                "cogs": "140B",
+                "netIncome": "40.2B",
+                "liabilities": "120B",
+                "equity": "282B"
+            },
+            "style": {}
+        },
+        {
+            "id": "fin_cf",
+            "type": "cash_flow",
+            "label": "Cash Flow",
+            "config": {},
+            "data": {
+                "operating": "101B",
+                "investing": "-24B",
+                "financing": "-3.1B"
+            },
+            "style": {}
+        },
+        {
+            "id": "risk_log",
+            "type": "log",
+            "label": "Risk Factors",
+            "config": {},
+            "data": {
+                "logs": [
+                    {
+                        "level": "High",
+                        "message": "DOJ antitrust suit regarding ad tech monopoly."
+                    },
+                    {
+                        "level": "Medium",
+                        "message": "AI search competition from OpenAI and Perplexity."
+                    },
+                    {
+                        "level": "Low",
+                        "message": "EU regulatory fines related to data privacy."
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "news_feed",
+            "type": "feed",
+            "label": "Recent News",
+            "config": {},
+            "data": {
+                "items": [
+                    {
+                        "title": "Google Cloud reports 28% YoY growth in Q3",
+                        "time": "2h ago"
+                    },
+                    {
+                        "title": "Waymo expands driverless service to Austin",
+                        "time": "1d ago"
+                    },
+                    {
+                        "title": "Alphabet announces new share buyback program",
+                        "time": "3d ago"
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "exec_sum",
+            "type": "summary",
+            "label": "Investment Thesis",
+            "config": {},
+            "data": {
+                "text": "Alphabet remains a top-tier compounder with a highly defensive balance sheet. While antitrust risks loom, the valuation discounts these heavily.",
+                "bulletPoints": [
+                    "Dominant search market share above 90%.",
+                    "Cloud business becoming a major profit driver.",
+                    "Significant AI investments beginning to yield product improvements."
                 ]
             },
             "style": {}
@@ -260,102 +283,88 @@
     ],
     "layout": [
         {
-            "i": "header_main",
+            "i": "h_main",
             "x": 0,
             "y": 0,
-            "w": 24,
+            "w": 18,
             "h": 2
         },
         {
-            "i": "profile_card",
+            "i": "m_price",
             "x": 0,
             "y": 2,
-            "w": 6,
-            "h": 4
+            "w": 4,
+            "h": 3
         },
         {
-            "i": "price_trend",
+            "i": "chart_price",
+            "x": 0,
+            "y": 6,
+            "w": 9,
+            "h": 8
+        },
+        {
+            "i": "chart_rev_seg",
+            "x": 9,
+            "y": 6,
+            "w": 9,
+            "h": 8
+        },
+        {
+            "i": "div_2",
+            "x": 0,
+            "y": 14,
+            "w": 18,
+            "h": 1
+        },
+        {
+            "i": "profile",
+            "x": 0,
+            "y": 15,
+            "w": 6,
+            "h": 5
+        },
+        {
+            "i": "stats_fund",
             "x": 6,
-            "y": 2,
-            "w": 6,
-            "h": 4
+            "y": 15,
+            "w": 12,
+            "h": 5
         },
         {
-            "i": "metric_mcap",
-            "x": 12,
-            "y": 2,
-            "w": 6,
-            "h": 4
-        },
-        {
-            "i": "metric_pe",
-            "x": 18,
-            "y": 2,
-            "w": 6,
-            "h": 4
-        },
-        {
-            "i": "valuation_gauge",
-            "x": 0,
-            "y": 6,
-            "w": 8,
-            "h": 6
-        },
-        {
-            "i": "grade_profit",
-            "x": 8,
-            "y": 6,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "grade_growth",
-            "x": 12,
-            "y": 6,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "mkt_share_search",
-            "x": 8,
-            "y": 9,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "mkt_share_cloud",
-            "x": 12,
-            "y": 9,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "rev_breakdown",
-            "x": 16,
-            "y": 6,
-            "w": 8,
-            "h": 6
-        },
-        {
-            "i": "rev_history",
-            "x": 0,
-            "y": 12,
-            "w": 14,
-            "h": 8
-        },
-        {
-            "i": "projection_chart",
-            "x": 14,
-            "y": 12,
-            "w": 10,
-            "h": 8
-        },
-        {
-            "i": "financial_table",
+            "i": "fin_inc",
             "x": 0,
             "y": 20,
-            "w": 24,
-            "h": 8
+            "w": 6,
+            "h": 5
+        },
+        {
+            "i": "fin_cf",
+            "x": 6,
+            "y": 20,
+            "w": 6,
+            "h": 5
+        },
+        {
+            "i": "risk_log",
+            "x": 12,
+            "y": 20,
+            "w": 6,
+            "h": 5
+        },
+        {
+            "i": "news_feed",
+            "x": 0,
+            "y": 25,
+            "w": 9,
+            "h": 6
+        },
+        {
+            "i": "exec_sum",
+            "x": 9,
+            "y": 25,
+            "w": 9,
+            "h": 6
         }
     ]
 }
