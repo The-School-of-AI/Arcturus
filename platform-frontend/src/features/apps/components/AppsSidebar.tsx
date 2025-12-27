@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, TrendingDown, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles, RefreshCw } from 'lucide-react';
 
 interface AppsSidebarProps {
     className?: string;
@@ -569,8 +569,19 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 };
 
 const SavedAppsList = () => {
-    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp } = useAppStore();
+    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps } = useAppStore();
     const [name, setName] = useState('');
+
+    // Auto-refresh apps every 5 seconds (Pseudo Hot-Loading)
+    useEffect(() => {
+        // Initial fetch
+        fetchApps();
+
+        const interval = setInterval(() => {
+            fetchApps();
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [fetchApps]);
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
 
@@ -588,6 +599,13 @@ const SavedAppsList = () => {
                     My Dashboards
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => fetchApps()}
+                        className="p-1 text-gray-400 hover:text-white transition-colors"
+                        title="Refresh List"
+                    >
+                        <RefreshCw className="w-3 h-3" />
+                    </button>
                     <button
                         onClick={() => useAppStore.getState().loadShowcaseApp()}
                         className="p-1 text-purple-400 hover:text-white transition-colors"
