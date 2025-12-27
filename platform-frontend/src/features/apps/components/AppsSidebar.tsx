@@ -58,13 +58,13 @@ export const COMPONENT_CATEGORIES = [
             { type: 'markdown', label: 'Markdown', icon: FileText, defaultW: 4, defaultH: 4 },
             { type: 'image', label: 'Image', icon: Image, defaultW: 4, defaultH: 4 },
             { type: 'spacer', label: 'Spacer', icon: Hash, defaultW: 12, defaultH: 2 },
-            { type: 'divider', label: 'Divider', icon: Minus, defaultW: 12, defaultH: 2 },
+            { type: 'divider', label: 'Divider', icon: Minus, defaultW: 12, defaultH: 1 },
         ]
     },
     {
         name: 'Charts & Data',
         items: [
-            { type: 'metric', label: 'Metric', icon: Hash, defaultW: 3, defaultH: 3 },
+            { type: 'metric', label: 'Metric', icon: Hash, defaultW: 2, defaultH: 3 },
             { type: 'trend', label: 'Trend Metric', icon: TrendingUp, defaultW: 3, defaultH: 3 },
             { type: 'line_chart', label: 'Line Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },

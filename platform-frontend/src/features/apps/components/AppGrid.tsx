@@ -529,7 +529,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
                                 // Get style settings with defaults
                                 const cardStyle = card.style || {};
-                                const showBorder = cardStyle.showBorder !== false;
+                                const showBorder = cardStyle.showBorder === true;
                                 const borderWidth = cardStyle.borderWidth || 2;
                                 const borderColor = cardStyle.borderColor || 'rgba(255,255,255,0.1)';
                                 const borderRadius = cardStyle.borderRadius ?? 12;

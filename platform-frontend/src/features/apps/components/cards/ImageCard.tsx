@@ -1,6 +1,7 @@
 import React from 'react';
 import { BaseCard } from './BaseCard';
 import { ImageIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface ImageCardProps {
     data?: any;
@@ -22,7 +23,10 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
                         <img
                             src={url}
                             alt={alt}
-                            className="w-full h-full object-contain transition-transform duration-500"
+                            className={cn(
+                                "w-full h-full transition-transform duration-500",
+                                config.fillArea ? "object-cover" : "object-contain"
+                            )}
                         />
                     ) : (
                         <div className="flex flex-col items-center gap-2 opacity-20">

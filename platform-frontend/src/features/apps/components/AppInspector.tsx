@@ -159,6 +159,7 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
     color_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
     rating: [{ name: 'Show Label', key: 'showLabel', default: true }],
     time_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
+    image: [{ name: 'Fill Area', key: 'fillArea', default: false }],
 };
 
 
