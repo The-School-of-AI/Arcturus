@@ -149,10 +149,16 @@ const ComponentLibrary = () => {
     });
 
     const toggleCategory = (categoryName: string) => {
-        setExpandedCategories(prev => ({
-            ...prev,
-            [categoryName]: !prev[categoryName]
-        }));
+        setExpandedCategories(prev => {
+            const isCurrentlyExpanded = prev[categoryName];
+            // Accordion behavior: collapse all others, toggle current
+            if (isCurrentlyExpanded) {
+                return { ...prev, [categoryName]: false };
+            } else {
+                // Collapse all, expand only this one
+                return { [categoryName]: true };
+            }
+        });
     };
 
     const filteredCategories = COMPONENT_CATEGORIES.map(cat => ({
@@ -552,6 +558,137 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     <div className="w-full h-full overflow-hidden pointer-events-none">
                         <div className="w-[300px] h-[200px] origin-top-left" style={{ transform: 'scale(0.35)' }}>
                             <HeatmapCard title="" config={{ showLegend: false, showAxisLabels: false }} />
+                        </div>
+                    </div>
+                );
+
+            // Blocks components
+            case 'stats_trending':
+                return (
+                    <div className="w-full h-full flex flex-col gap-1 p-2 justify-center">
+                        {[
+                            { label: 'Profit', value: '$287K', change: '+8.3%', positive: true },
+                            { label: 'Pending', value: '$173K', change: '+2.8%', positive: true },
+                        ].map((stat, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                                <div className="text-[7px] text-gray-500">{stat.label}</div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-[8px] font-bold text-white">{stat.value}</span>
+                                    <span className={`text-[6px] ${stat.positive ? 'text-green-400' : 'text-red-400'}`}>{stat.change}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'stats_grid':
+                return (
+                    <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
+                        {[{ v: '10.4K', c: '-12%', neg: true }, { v: '56.1%', c: '+1.8%' }, { v: '5.2m', c: '+19%' }, { v: '3.2%', c: '-2.4%', neg: true }].map((s, i) => (
+                            <div key={i} className="bg-charcoal-800/50 rounded p-1 flex flex-col items-center">
+                                <div className="text-[9px] font-bold text-white">{s.v}</div>
+                                <div className={`text-[6px] ${s.neg ? 'text-red-400' : 'text-green-400'}`}>{s.c}</div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'stats_status':
+                return (
+                    <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
+                        {[{ v: '99.9%', s: 'success' }, { v: '142ms', s: 'success' }, { v: '0.4%', s: 'warning' }, { v: '2,847', s: 'info' }].map((s, i) => (
+                            <div key={i} className="bg-charcoal-800/50 rounded p-1 flex items-center gap-1">
+                                <div className={`w-1.5 h-1.5 rounded-full ${s.s === 'success' ? 'bg-green-500' : s.s === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'}`} />
+                                <div className="text-[8px] font-bold text-white">{s.v}</div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'stats_links':
+                return (
+                    <div className="w-full h-full flex flex-col gap-1 p-2 justify-center">
+                        {['Projects: 12', 'Issues: 47', 'PRs: 8'].map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-[7px] text-gray-400 hover:text-white">
+                                <span>{item.split(':')[0]}</span>
+                                <span className="text-white font-bold">{item.split(':')[1]}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'simple_table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        <div className="flex gap-1 text-[6px] text-gray-500 border-b border-white/10 pb-0.5">
+                            <span className="flex-1">Task</span><span className="flex-1">Status</span>
+                        </div>
+                        {[['Auth', '🟡'], ['UI', '🟢'], ['API', '⚪']].map(([t, s], i) => (
+                            <div key={i} className="flex gap-1 text-[6px] text-gray-400">
+                                <span className="flex-1">{t}</span><span className="flex-1">{s}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'stats_01':
+                return (
+                    <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
+                        {[{ v: '$287K', c: '+8%', pos: true }, { v: '$9.4K', c: '-12%' }, { v: '$173K', c: '+2%', pos: true }, { v: '$52K', c: '-5%' }].map((s, i) => (
+                            <div key={i} className="flex flex-col items-center justify-center">
+                                <div className="text-[9px] font-bold text-white">{s.v}</div>
+                                <div className={`text-[6px] ${s.pos ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'usage_stats':
+                return (
+                    <div className="w-full h-full flex flex-col gap-1 p-2 justify-center">
+                        {[{ n: 'API', p: 35 }, { n: 'Storage', p: 30 }, { n: 'Users', p: 48 }].map((u, i) => (
+                            <div key={i} className="flex flex-col gap-0.5">
+                                <div className="flex justify-between text-[6px]">
+                                    <span className="text-gray-500">{u.n}</span>
+                                    <span className="text-gray-400">{u.p}%</span>
+                                </div>
+                                <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'storage_card':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
+                        <svg viewBox="0 0 36 36" className="w-10 h-10">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#3b82f6" strokeWidth="4" strokeDasharray="30 58" transform="rotate(-90 18 18)" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="20 68" strokeDashoffset="-30" transform="rotate(-90 18 18)" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4" strokeDasharray="15 73" strokeDashoffset="-50" transform="rotate(-90 18 18)" />
+                        </svg>
+                        <div className="text-[7px] text-gray-500">8.3 / 15 GB</div>
+                    </div>
+                );
+
+            case 'accordion_table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        <div className="flex items-center gap-1 text-[6px] text-white bg-charcoal-800/50 rounded px-1 py-0.5">
+                            <span className="text-gray-500">▶</span>
+                            <span>Project A</span>
+                            <span className="ml-auto text-neon-yellow">$45K</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[6px] text-gray-400 pl-2">
+                            <span>└ Frontend</span>
+                            <span className="ml-auto">$15K</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[6px] text-white bg-charcoal-800/50 rounded px-1 py-0.5">
+                            <span className="text-gray-500">▶</span>
+                            <span>Campaign</span>
+                            <span className="ml-auto text-neon-yellow">$28K</span>
                         </div>
                     </div>
                 );
