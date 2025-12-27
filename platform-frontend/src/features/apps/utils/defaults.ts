@@ -16,6 +16,7 @@ export const COLOR_PRESETS = [
     { name: 'Green', value: '#4ade80' },
     { name: 'Purple', value: '#a855f7' },
     { name: 'Pink', value: '#ec4899' },
+    { name: 'Red', value: '#ef4444' },
     { name: 'Orange', value: '#fb923c' },
     { name: 'Blue', value: '#3b82f6' },
     { name: 'White', value: '#ffffff' },

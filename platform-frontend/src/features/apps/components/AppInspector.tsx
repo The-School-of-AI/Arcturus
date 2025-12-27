@@ -103,6 +103,14 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Description', key: 'showDescription', default: true },
         { name: 'Show Sector Info', key: 'showSector', default: true },
     ],
+    score_card: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Progress Ring', key: 'showRing', default: true },
+    ],
+    grade_card: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Use Grade Colors', key: 'useGradeColors', default: true }, // When false, uses accent color instead
+    ],
     valuation: [
         { name: 'Show Title', key: 'showTitle', default: true },
         { name: 'Show Prices', key: 'showPrices', default: true },

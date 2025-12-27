@@ -125,14 +125,14 @@ export const COMPONENT_CATEGORIES = [
     {
         name: 'Blocks',
         items: [
-            { type: 'stats_trending', label: 'Stats: Trending', icon: TrendingUp, defaultW: 6, defaultH: 4 },
-            { type: 'stats_grid', label: 'Stats: Grid', icon: LayoutGrid, defaultW: 8, defaultH: 4 },
-            { type: 'stats_status', label: 'Stats: Status', icon: LayoutGrid, defaultW: 8, defaultH: 4 },
+            { type: 'stats_trending', label: 'Stats: Trending', icon: TrendingUp, defaultW: 6, defaultH: 6 },
+            { type: 'stats_grid', label: 'Stats: Grid', icon: LayoutGrid, defaultW: 8, defaultH: 5 },
+            { type: 'stats_status', label: 'Stats: Status', icon: LayoutGrid, defaultW: 8, defaultH: 5 },
             { type: 'stats_links', label: 'Stats: Links', icon: LayoutGrid, defaultW: 4, defaultH: 6 },
-            { type: 'simple_table', label: 'Simple Table', icon: Table2, defaultW: 6, defaultH: 6 },
+            { type: 'simple_table', label: 'Simple Table', icon: Table2, defaultW: 6, defaultH: 5 },
             { type: 'stats_01', label: 'Stats 01', icon: TrendingUp, defaultW: 8, defaultH: 4 },
             { type: 'usage_stats', label: 'Usage Stats', icon: BarChart3, defaultW: 6, defaultH: 6 },
-            { type: 'storage_card', label: 'Storage Card', icon: PieChart, defaultW: 4, defaultH: 5 },
+            { type: 'storage_card', label: 'Storage Card', icon: PieChart, defaultW: 4, defaultH: 4 },
             { type: 'accordion_table', label: 'Accordion Table', icon: Table2, defaultW: 6, defaultH: 8 },
         ]
     }
