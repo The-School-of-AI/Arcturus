@@ -14,14 +14,25 @@ interface ControlCardProps {
     data?: any;
     config?: any;
     style?: any;
+    onUpdate?: (data: any) => void;
+    isInteractive?: boolean;
 }
+
+// Helper generic handler
+const handleUpdate = (key: string, value: any, onUpdate?: (d: any) => void, currentData?: any) => {
+    if (onUpdate) {
+        onUpdate({ ...currentData, [key]: value });
+    }
+};
 
 export const InputCard: React.FC<ControlCardProps> = ({
     label = "Text Input",
     placeholder = "e.g. MSFT",
     data = {},
     config = {},
-    style = {}
+    style = {},
+    onUpdate,
+    isInteractive
 }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
@@ -35,7 +46,11 @@ export const InputCard: React.FC<ControlCardProps> = ({
             <Input
                 className="h-8 text-xs bg-black/40 border-white/10"
                 placeholder={displayPlaceholder}
-                defaultValue={data.defaultValue || ''}
+                defaultValue={data.value || ''}
+                placeholder={displayPlaceholder}
+                defaultValue={data.value || ''}
+                onChange={(e) => handleUpdate('value', e.target.value, onUpdate, data)}
+                readOnly={!isInteractive}
             />
         </div>
     );
@@ -45,7 +60,9 @@ export const ActionButtonCard: React.FC<ControlCardProps> = ({
     label = "Run Analysis",
     data = {},
     config = {},
-    style = {}
+    style = {},
+    onUpdate,
+    isInteractive
 }) => {
     const displayLabel = data.label || label;
     const accentColor = style.accentColor || '#eaff00';
@@ -53,7 +70,9 @@ export const ActionButtonCard: React.FC<ControlCardProps> = ({
     return (
         <div className="p-3 h-full flex items-center justify-center">
             <Button
-                className="w-full text-xs h-8"
+                className="w-full text-xs h-8 scale-95 active:scale-90 transition-transform"
+                onClick={() => onUpdate && onUpdate({ ...data, lastClicked: Date.now() })}
+                disabled={!isInteractive}
                 style={{
                     backgroundColor: accentColor,
                     color: '#000'
@@ -69,7 +88,9 @@ export const SelectCard: React.FC<ControlCardProps> = ({
     label = "Dropdown",
     data = {},
     config = {},
-    style = {}
+    style = {},
+    onUpdate,
+    isInteractive
 }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
@@ -83,8 +104,11 @@ export const SelectCard: React.FC<ControlCardProps> = ({
             )}
             <div className="relative">
                 <select
-                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-foreground appearance-none focus:outline-none"
-                    defaultValue={defaultValue}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-foreground appearance-none focus:outline-none disabled:opacity-50"
+                    value={defaultValue}
+                    value={defaultValue}
+                    onChange={(e) => handleUpdate('defaultValue', e.target.value, onUpdate, data)}
+                    disabled={!isInteractive}
                 >
                     {options.map((opt: string) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -125,33 +149,43 @@ export const DateRangeCard: React.FC<ControlCardProps> = ({
 
 // --- NEW COMPONENT BLOCKS ---
 
-export const CheckboxCard: React.FC<ControlCardProps> = ({ label = "Enable Feature", data = {}, config = {} }) => {
+export const CheckboxCard: React.FC<ControlCardProps> = ({ label = "Enable Feature", data = {}, config = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
-    const checked = data.value || data.checked || false;
+    const checked = data.checked ?? false; // Use checked instead of value for bools
 
     return (
         <div className="p-3 h-full flex items-center gap-3">
-            <Checkbox checked={checked} className="border-white/20 data-[state=checked]:bg-neon-yellow data-[state=checked]:text-black" />
-            {showLabel && <label className="text-xs font-medium cursor-pointer">{displayLabel}</label>}
+            <Checkbox
+                checked={checked}
+                onCheckedChange={(c) => isInteractive && onUpdate && onUpdate({ ...data, checked: c })}
+                disabled={!isInteractive}
+                className="border-white/20 data-[state=checked]:bg-neon-yellow data-[state=checked]:text-black"
+            />
+            {showLabel && <label className="text-xs font-medium cursor-pointer" onClick={() => isInteractive && onUpdate && onUpdate({ ...data, checked: !checked })}>{displayLabel}</label>}
         </div>
     );
 };
 
-export const SwitchCard: React.FC<ControlCardProps> = ({ label = "Toggle Mode", data = {}, config = {} }) => {
+export const SwitchCard: React.FC<ControlCardProps> = ({ label = "Toggle Mode", data = {}, config = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
-    const checked = data.value || data.checked || false;
+    const checked = data.checked ?? false;
 
     return (
         <div className="p-3 h-full flex items-center justify-between gap-2">
             {showLabel && <label className="text-xs font-medium">{displayLabel}</label>}
-            <Switch checked={checked} className="data-[state=checked]:bg-neon-yellow" />
+            <Switch
+                checked={checked}
+                onCheckedChange={(c) => isInteractive && onUpdate && onUpdate({ ...data, checked: c })}
+                disabled={!isInteractive}
+                className="data-[state=checked]:bg-neon-yellow"
+            />
         </div>
     );
 };
 
-export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", placeholder = "Enter details...", data = {}, config = {} }) => {
+export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", placeholder = "Enter details...", data = {}, config = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     return (
@@ -161,12 +195,14 @@ export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", p
                 placeholder={data.placeholder || placeholder}
                 className="resize-none bg-black/40 border-white/10 text-xs min-h-[60px]"
                 defaultValue={data.value}
+                onChange={(e) => isInteractive && onUpdate && onUpdate({ ...data, value: e.target.value })}
+                readOnly={!isInteractive}
             />
         </div>
     );
 };
 
-export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Option", data = {}, config = {} }) => {
+export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Option", data = {}, config = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     const options = data.options || ['Option A', 'Option B', 'Option C'];
@@ -177,14 +213,19 @@ export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Opt
             {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <div className="space-y-1.5">
                 {options.map((opt: string) => (
-                    <div key={opt} className="flex items-center gap-2">
+                    <div
+                        key={opt}
+                        className="flex items-center gap-2 cursor-pointer"
+                        onClick={() => isInteractive && onUpdate && onUpdate({ ...data, value: opt })}
+                    >
                         <div className={cn(
-                            "w-3 h-3 rounded-full border flex items-center justify-center",
-                            selected === opt ? "border-neon-yellow" : "border-white/20"
+                            "w-3 h-3 rounded-full border flex items-center justify-center transition-colors",
+                            selected === opt ? "border-neon-yellow" : "border-white/20",
+                            isInteractive && "hover:border-white/40"
                         )}>
                             {selected === opt && <div className="w-1.5 h-1.5 rounded-full bg-neon-yellow" />}
                         </div>
-                        <span className="text-xs text-muted-foreground">{opt}</span>
+                        <span className={cn("text-xs", selected === opt ? "text-foreground" : "text-muted-foreground")}>{opt}</span>
                     </div>
                 ))}
             </div>
@@ -192,7 +233,7 @@ export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Opt
     );
 };
 
-export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data = {}, config = {} }) => {
+export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data = {}, config = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     const value = data.value || 50;
@@ -209,9 +250,11 @@ export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data 
                 type="range"
                 min={min}
                 max={max}
+                max={max}
                 value={value}
-                onChange={() => { }} // ReadOnly for mockup
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-yellow"
+                onChange={(e) => onUpdate && onUpdate({ ...data, value: parseInt(e.target.value) })}
+                disabled={!isInteractive}
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-yellow disabled:opacity-50"
             />
         </div>
     );
@@ -273,10 +316,10 @@ export const ColorPickerCard: React.FC<ControlCardProps> = ({ label = "Theme Col
     );
 };
 
-export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data = {}, config = {} }) => {
+export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data = {}, config = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
-    const value = data.value || 3;
+    const value = data.value || 0;
     const max = 5;
 
     return (
@@ -286,7 +329,12 @@ export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data 
                 {Array.from({ length: max }).map((_, i) => (
                     <Star
                         key={i}
-                        className={cn("w-4 h-4", i < value ? "fill-neon-yellow text-neon-yellow" : "text-muted-foreground/20")}
+                        onClick={() => isInteractive && onUpdate && onUpdate({ ...data, value: i + 1 })}
+                        className={cn(
+                            "w-4 h-4 transition-colors",
+                            isInteractive && "cursor-pointer hover:text-neon-yellow/70",
+                            i < value ? "fill-neon-yellow text-neon-yellow" : "text-muted-foreground/20"
+                        )}
                     />
                 ))}
             </div>

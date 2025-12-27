@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Box, Database, Square } from 'lucide-react';
+import { Play, Box, Database, Square, Eye, Edit } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,20 @@ export const Header: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+                {/* Apps View Toggle */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                        "h-8 gap-2 transition-all mr-4",
+                        useAppStore().isAppViewMode ? "text-neon-yellow bg-neon-yellow/10" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={() => useAppStore.getState().setIsAppViewMode(!useAppStore.getState().isAppViewMode)}
+                >
+                    {useAppStore().isAppViewMode ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                    <span className="text-xs font-bold">{useAppStore().isAppViewMode ? "VIEW MODE" : "EDIT MODE"}</span>
+                </Button>
+
                 <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-foreground">
                     <Database className="w-4 h-4" />
                     <span className="text-xs">Gemini-2.0-Pro</span>

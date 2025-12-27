@@ -122,7 +122,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         savedApps,
         createNewApp,
         saveApp,
-        revertAppChanges
+        revertAppChanges,
+        isAppViewMode,
+        updateAppCardData
     } = useAppStore();
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
@@ -190,10 +192,15 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     };
 
     const renderCardContent = (card: any) => {
-        const { type, label, config = {}, data = {}, style = {} } = card;
+        const { id, type, label, config = {}, data = {}, style = {} } = card;
+
+        // Callback to update card data (interactive mode)
+        const onUpdate = (newData: any) => {
+            updateAppCardData(id, newData);
+        };
 
         // Common props to pass to all cards
-        const commonProps = { config, data, style };
+        const commonProps = { config, data, style, onUpdate, isInteractive: isAppViewMode };
 
         // Match with sidebar types
         switch (type) {
@@ -397,49 +404,51 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             className={cn("h-full w-full flex flex-col bg-charcoal-950 relative overflow-hidden", className)}
             onClick={() => selectAppCard(null)} // Auto-deselect on background click
         >
-            {/* Management Toolbar (Top Left) */}
-            <div className="absolute top-4 left-4 z-50 flex gap-2">
-                {/* Active App Title - Editable */}
-                <div className="flex items-center gap-2 px-3 py-1 bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2 group/title">
-                    <FileText className="w-3.5 h-3.5 text-neon-yellow" />
-                    <input
-                        className="bg-transparent border-none outline-none text-xs font-bold text-foreground w-[150px] focus:ring-1 focus:ring-neon-yellow/30 rounded px-1"
-                        value={activeApp ? activeApp.name : "Untitled App"}
-                        onChange={(e) => {
-                            if (activeApp) {
-                                saveApp(e.target.value);
-                            }
-                        }}
-                        placeholder="App Name..."
-                    />
-                    {!activeApp && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">(unsaved)</span>}
-                </div>
+            {/* Management Toolbar (Top Left) - Hidden in View Mode */}
+            {!isAppViewMode && (
+                <div className="absolute top-4 left-4 z-50 flex gap-2">
+                    {/* Active App Title - Editable */}
+                    <div className="flex items-center gap-2 px-3 py-1 bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2 group/title">
+                        <FileText className="w-3.5 h-3.5 text-neon-yellow" />
+                        <input
+                            className="bg-transparent border-none outline-none text-xs font-bold text-foreground w-[150px] focus:ring-1 focus:ring-neon-yellow/30 rounded px-1"
+                            value={activeApp ? activeApp.name : "Untitled App"}
+                            onChange={(e) => {
+                                if (activeApp) {
+                                    saveApp(e.target.value);
+                                }
+                            }}
+                            placeholder="App Name..."
+                        />
+                        {!activeApp && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">(unsaved)</span>}
+                    </div>
 
-                {/* Actions */}
-                <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg p-1 gap-1">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); createNewApp(); }}
-                        className="p-1.5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors rounded"
-                        title="New App (Clear Canvas)"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); saveApp(); }}
-                        className="p-1.5 hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow transition-colors rounded"
-                        title={activeApp ? "Save All Changes" : "Save as New App"}
-                    >
-                        <Save className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm("Discard all unsaved changes?")) revertAppChanges(); }}
-                        className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors rounded"
-                        title="Revert to Last Saved State"
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                    </button>
+                    {/* Actions */}
+                    <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg p-1 gap-1">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); createNewApp(); }}
+                            className="p-1.5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors rounded"
+                            title="New App (Clear Canvas)"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); saveApp(); }}
+                            className="p-1.5 hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow transition-colors rounded"
+                            title={activeApp ? "Save All Changes" : "Save as New App"}
+                        >
+                            <Save className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); if (confirm("Discard all unsaved changes?")) revertAppChanges(); }}
+                            className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors rounded"
+                            title="Revert to Last Saved State"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* View Controls (Top Right) */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
@@ -525,15 +534,17 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         <RGLResponsive
                             className="layout min-h-[500px]"
                             width={CANVAS_WIDTH}
-                            layouts={{ lg: appLayout }}
+                            layouts={{ lg: appLayout.map(item => ({ ...item, static: isAppViewMode })) }}
                             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                             cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }} // Double columns for finer granularity
                             rowHeight={40} // Reduced rowHeight for finer control (was 60)
                             onLayoutChange={handleLayoutChange}
-                            isDroppable={true}
+                            isDroppable={!isAppViewMode}
                             onDrop={onDrop}
                             droppingItem={{ i: 'dropping-placeholder', w: 8, h: 4 }} // Default drop size adjusted for 24 cols
-                            draggableHandle=".drag-handle"
+                            draggableHandle={!isAppViewMode ? ".drag-handle" : undefined}
+                            isDraggable={!isAppViewMode}
+                            isResizable={!isAppViewMode}
                             resizeHandles={['se', 's', 'e']}
                         >
                             {appCards.map(card => {
@@ -557,52 +568,60 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                         className={cn(
                                             // Match FlowStepNode styling exactly
                                             "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
-                                            // Selected state glow
-                                            isSelected && "ring-4 ring-neon-yellow/20 z-50",
+                                            // Selected state glow - only in edit mode
+                                            isSelected && !isAppViewMode && "ring-4 ring-neon-yellow/20 z-50",
                                             // Hover effect for transparent backgrounds
-                                            isTransparentBg && !isSelected && "hover:bg-white/5",
+                                            isTransparentBg && !isSelected && !isAppViewMode && "hover:bg-white/5",
                                         )}
                                         style={{
                                             // Apply custom styles
                                             opacity,
                                             borderRadius: card.type === 'divider' ? 0 : borderRadius,
                                             // Border styling
-                                            borderWidth: showBorder || isSelected ? borderWidth : 0,
+                                            borderWidth: (showBorder || (isSelected && !isAppViewMode)) ? borderWidth : 0,
                                             borderStyle: 'solid',
-                                            borderColor: isSelected ? '#eaff00' : (showBorder ? borderColor : 'transparent'),
+                                            borderColor: (isSelected && !isAppViewMode) ? '#eaff00' : (showBorder ? borderColor : 'transparent'),
                                             // Background - always apply it
                                             backgroundColor: backgroundColor,
                                         }}
                                         onClick={(e) => {
-                                            e.stopPropagation();
-                                            selectAppCard(card.id);
+                                            // Only stop prop if NOT in view mode (to allow selecting).
+                                            // In view mode, we want clicks to pass through to inputs/buttons if valid.
+                                            // But actually, for standard selects/inputs, we don't need to stop prop on the container
+                                            // unless we are selecting the card itself.
+                                            if (!isAppViewMode) {
+                                                e.stopPropagation();
+                                                selectAppCard(card.id);
+                                            }
                                         }}
                                     >
                                         {/* Glow effect when selected - match FlowStepNode */}
-                                        {isSelected && (
+                                        {isSelected && !isAppViewMode && (
                                             <div
                                                 className="absolute inset-0 bg-neon-yellow/5 blur-xl -z-10 animate-pulse"
                                                 style={{ borderRadius: borderRadius }}
                                             />
                                         )}
 
-                                        {/* Minimal Drag Handle - Only visible on hover, top-right corner */}
-                                        <div className={cn(
-                                            "drag-handle absolute top-1.5 right-1.5 flex items-center gap-1 cursor-move select-none transition-all duration-300 z-50",
-                                            isSelected
-                                                ? "opacity-100"
-                                                : "opacity-0 group-hover:opacity-100",
-                                        )}>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeAppCard(card.id);
-                                                }}
-                                                className="p-1 bg-charcoal-800/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-500 border border-white/10"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                                        {/* Minimal Drag Handle - Only visible on hover, top-right corner. Hidden in view mode */}
+                                        {!isAppViewMode && (
+                                            <div className={cn(
+                                                "drag-handle absolute top-1.5 right-1.5 flex items-center gap-1 cursor-move select-none transition-all duration-300 z-50",
+                                                isSelected
+                                                    ? "opacity-100"
+                                                    : "opacity-0 group-hover:opacity-100",
+                                            )}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        removeAppCard(card.id);
+                                                    }}
+                                                    className="p-1 bg-charcoal-800/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-500 border border-white/10"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        )}
 
                                         {/* Card Content - Full height now since header is overlay */}
                                         <div className="flex-1 overflow-hidden relative w-full h-full">

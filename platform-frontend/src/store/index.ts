@@ -139,6 +139,8 @@ interface AppsSlice {
     revertAppChanges: () => void;
     deleteApp: (id: string) => Promise<void>;
     loadShowcaseApp: () => Promise<void>;
+    isAppViewMode: boolean;
+    setIsAppViewMode: (isView: boolean) => void;
 }
 
 interface ExplorerSlice {
@@ -626,6 +628,9 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
+            isAppViewMode: false,
+            setIsAppViewMode: (isView) => set({ isAppViewMode: isView }),
+
             loadShowcaseApp: async () => {
                 const showcaseId = "showcase-demo";
                 const showcaseData: SavedApp = {
@@ -640,7 +645,7 @@ export const useAppStore = create<AppState>()(
                         { id: 'm3', type: 'metric', label: 'Churn Rate', config: { showTrend: true }, style: {}, data: { value: "2.1%", change: -0.5, trend: "down" } },
                         { id: 'c1', type: 'line_chart', label: 'Revenue Trend', config: { showTitle: true, showLegend: true }, style: { borderRadius: 12 }, data: { title: "Monthly Revenue", points: [{ "x": "Jan", "y": 120 }, { "x": "Feb", "y": 135 }, { "x": "Mar", "y": 125 }, { "x": "Apr", "y": 145 }, { "x": "May", "y": 160 }, { "x": "Jun", "y": 155 }] } },
                         { id: 'c2', type: 'bar_chart', label: 'User Acquisition', config: { showTitle: true }, style: { borderRadius: 12 }, data: { title: "Sources", points: [{ "x": "Organic", "y": 450 }, { "x": "Ads", "y": 320 }, { "x": "Referral", "y": 210 }, { "x": "Social", "y": 180 }] } },
-                        { id: 't1', type: 'toggle', label: 'Live Mode', config: { showLabel: true }, style: {}, data: { label: "Live Updates", checked: "true" } },
+                        { id: 't1', type: 'switch', label: 'Live Mode', config: { showLabel: true }, style: {}, data: { label: "Live Updates", checked: "true" } },
                         { id: 's1', type: 'slider', label: 'Risk Tolerance', config: { showLabel: true }, style: {}, data: { label: "Risk Lvl", min: 0, max: 100, value: 65 } },
                         { id: 'grid1', type: 'stats_grid', label: 'Key KPIs', config: { showTitle: true }, style: {}, data: { stats: [{ "name": "LTV", "value": "$450", "change": "+5%" }, { "name": "CAC", "value": "$120", "change": "-2%" }] } }
                     ],
@@ -684,7 +689,8 @@ export const useAppStore = create<AppState>()(
                 appLayout: state.appLayout,
                 savedApps: state.savedApps,
                 editingAppId: state.editingAppId,
-                lastSavedState: state.lastSavedState
+                lastSavedState: state.lastSavedState,
+                isAppViewMode: state.isAppViewMode
             }),
         }
     )

@@ -30,7 +30,7 @@ import { McpBrowser } from '../mcp/McpBrowser';
 import { McpInspector } from '../mcp/McpInspector';
 
 export const AppLayout: React.FC = () => {
-    const { viewMode, sidebarTab } = useAppStore();
+    const { viewMode, sidebarTab, isAppViewMode } = useAppStore();
     const [leftWidth, setLeftWidth] = useState(400); // w-64 = 256px
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -85,8 +85,8 @@ export const AppLayout: React.FC = () => {
             <Header />
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps */}
-                {!(isFullScreen && sidebarTab === 'apps') && (
+                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode */}
+                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && (
                     <>
                         <div
                             className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"
@@ -117,7 +117,7 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp') && !isFullScreen && (
+                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp') && !isFullScreen && !isAppViewMode && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 
