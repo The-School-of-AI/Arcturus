@@ -82,12 +82,13 @@
 }
 
 /* Custom Grid Background - Subtle grid lines showing snap guides */
+/* Grid matches AppGrid: 24 cols on 1200px = 50px/col, rowHeight = 40px */
 .bg-grid-lines {
   background-color: hsl(var(--background));
-  background-size: 20px 20px;
+  background-size: 60px 50px;
   background-image:
-    linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
+    linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px);
 }
 
 /* Hide attribution, but enable when release in public TODO */
