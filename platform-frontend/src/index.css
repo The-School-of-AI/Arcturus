@@ -81,11 +81,13 @@
   }
 }
 
-/* Custom Grid Background - Match Explorer/ReactFlow dots */
-.bg-grid-dots {
+/* Custom Grid Background - Subtle grid lines showing snap guides */
+.bg-grid-lines {
   background-color: hsl(var(--background));
   background-size: 20px 20px;
-  background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
 }
 
 /* Hide attribution, but enable when release in public TODO */

@@ -419,26 +419,26 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
             {/* View Controls (Top Right) */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
-                {/* EDIT / VIEW Mode Toggle - Always visible */}
+                {/* PREVIEW / EDIT Mode Toggle - Always visible */}
                 <button
                     onClick={(e) => { e.stopPropagation(); setIsAppViewMode(!isAppViewMode); }}
                     className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-lg border shadow-lg transition-all",
                         isAppViewMode
-                            ? "bg-primary/20 border-primary text-primary"
-                            : "bg-muted/80 backdrop-blur border-border text-muted-foreground hover:text-foreground"
+                            ? "bg-muted/80 backdrop-blur border-border text-muted-foreground hover:text-foreground"
+                            : "bg-primary/20 border-primary text-primary"
                     )}
-                    title={isAppViewMode ? "Switch to Edit Mode" : "Switch to View Mode"}
+                    title={isAppViewMode ? "Switch to Edit Mode" : "Preview App"}
                 >
                     {isAppViewMode ? (
                         <>
-                            <Eye className="w-4 h-4" />
-                            <span className="text-xs font-bold">VIEW</span>
+                            <Edit className="w-4 h-4" />
+                            <span className="text-xs font-bold">EDIT</span>
                         </>
                     ) : (
                         <>
-                            <Edit className="w-4 h-4" />
-                            <span className="text-xs font-bold">EDIT</span>
+                            <Eye className="w-4 h-4" />
+                            <span className="text-xs font-bold">PREVIEW</span>
                         </>
                     )}
                 </button>
@@ -472,7 +472,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             {/* Grid Area */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-auto p-8 custom-scrollbar bg-grid-dots"
+                className={cn(
+                    "flex-1 overflow-auto p-8 custom-scrollbar",
+                    !isAppViewMode && "bg-grid-lines"
+                )}
                 onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'copy';
