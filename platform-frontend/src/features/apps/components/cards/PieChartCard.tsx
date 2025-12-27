@@ -9,6 +9,22 @@ export interface PieChartCardProps {
     style?: any;
 }
 
+// Vibrant color palette for auto-assigning colors when not specified
+const DEFAULT_CHART_COLORS = [
+    '#4ecdc4', // Teal
+    '#ff6b6b', // Coral
+    '#eaff00', // Neon Yellow
+    '#a29bfe', // Lavender
+    '#00cec9', // Cyan
+    '#fd79a8', // Pink
+    '#6c5ce7', // Purple
+    '#00b894', // Mint
+    '#e17055', // Burnt Orange
+    '#74b9ff', // Sky Blue
+    '#ffeaa7', // Cream Yellow
+    '#55a3ff', // Bright Blue
+];
+
 const defaultSlices = [
     { label: 'Category A', value: 40, color: '#4ecdc4' },
     { label: 'Category B', value: 30, color: '#ff6b6b' },
@@ -26,7 +42,13 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
 
     // Support both data.slices (from inspector) and direct array (legacy)
-    const slices = Array.isArray(data) ? data : (data.slices || defaultSlices);
+    const rawSlices = Array.isArray(data) ? data : (data.slices || defaultSlices);
+
+    // Auto-assign colors if not provided
+    const slices = rawSlices.map((slice: any, idx: number) => ({
+        ...slice,
+        color: slice.color || DEFAULT_CHART_COLORS[idx % DEFAULT_CHART_COLORS.length]
+    }));
 
     // Feature toggles from config
     const showLegend = config.showLegend !== false;

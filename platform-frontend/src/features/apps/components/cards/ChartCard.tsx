@@ -2,6 +2,20 @@ import React, { useState } from 'react';
 import { BaseCard } from './BaseCard';
 import { cn } from '@/lib/utils';
 
+// Vibrant color palette for auto-assigning colors when not specified
+const DEFAULT_CHART_COLORS = [
+    '#4ecdc4', // Teal
+    '#ff6b6b', // Coral
+    '#eaff00', // Neon Yellow
+    '#a29bfe', // Lavender
+    '#00cec9', // Cyan
+    '#fd79a8', // Pink
+    '#6c5ce7', // Purple
+    '#00b894', // Mint
+    '#e17055', // Burnt Orange
+    '#74b9ff', // Sky Blue
+];
+
 export interface ChartCardProps {
     title: string;
     type: 'line' | 'bar' | 'area';
@@ -76,11 +90,15 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     const xLabel = data.xLabel || '';
     const yLabel = data.yLabel || '';
 
-    // Normalize Data to Series with defaults
+    // Normalize Data to Series with defaults + auto-assign colors
     let series: any[] = [];
     if (type === 'line' || type === 'area') {
         if (data.series?.length > 0) {
-            series = data.series;
+            // Auto-assign colors to series if not provided
+            series = data.series.map((s: any, idx: number) => ({
+                ...s,
+                color: s.color || DEFAULT_CHART_COLORS[idx % DEFAULT_CHART_COLORS.length]
+            }));
         } else if (data.points?.length > 0) {
             series = [{ name: 'Data', data: data.points, color: accentColor }];
         } else {
@@ -88,9 +106,14 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         }
     }
 
-    const barPoints = (type === 'bar')
+    // Auto-assign colors to bar points if not provided
+    const rawBarPoints = (type === 'bar')
         ? (data.points?.length > 0 ? data.points : DEFAULT_BAR_DATA.points)
         : [];
+    const barPoints = rawBarPoints.map((p: any, idx: number) => ({
+        ...p,
+        color: p.color || DEFAULT_CHART_COLORS[idx % DEFAULT_CHART_COLORS.length]
+    }));
 
     // Determine Global Min/Max for Scaling (Line/Area)
     let minVal = 0;

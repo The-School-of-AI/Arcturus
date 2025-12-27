@@ -571,6 +571,18 @@ const defaultSegments: StorageSegment[] = [
     { label: 'Music', value: 900, color: 'bg-purple-500' },
 ];
 
+// Default colors for auto-assignment
+const DEFAULT_SEGMENT_COLORS = [
+    'bg-blue-500',
+    'bg-emerald-500',
+    'bg-amber-500',
+    'bg-purple-500',
+    'bg-cyan-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-teal-500',
+];
+
 export const StorageCard: React.FC<StorageCardProps> = ({
     title = 'Storage Usage',
     data = {},
@@ -581,7 +593,14 @@ export const StorageCard: React.FC<StorageCardProps> = ({
     const used = data?.used || 8300;
     const total = data?.total || 15000;
     const unit = data?.unit || 'MB';
-    const segments = data?.segments || defaultSegments;
+
+    // Auto-assign colors if not provided
+    const rawSegments = data?.segments || defaultSegments;
+    const segments = rawSegments.map((seg: any, idx: number) => ({
+        ...seg,
+        color: seg.color || DEFAULT_SEGMENT_COLORS[idx % DEFAULT_SEGMENT_COLORS.length]
+    }));
+
     const freeValue = total - used;
 
     return (
