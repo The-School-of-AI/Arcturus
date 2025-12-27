@@ -101,8 +101,8 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
 
         const cardWidth = 400;
         const cardHeight = 300;
-        const nodeWidth = 20;
-        const padding = 0;
+        const nodeWidth = 14;
+        const horizontalPadding = 2; // Near-zero padding on sides
         const topPadding = 0;
 
         if (nodes.length === 0) return { nodes: [], links: [], cardWidth, cardHeight };
@@ -148,10 +148,11 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
         const sourceOffsets = new Array(nodes.length).fill(0);
         const targetOffsets = new Array(nodes.length).fill(0);
 
-        // 3. Assign X Positions
-        const layerWidth = (cardWidth - (padding * 2)) / (Math.max(1, maxLayer));
+        // 3. Assign X Positions - Use full width with minimal padding
+        const usableWidth = cardWidth - (horizontalPadding * 2) - nodeWidth; // Subtract nodeWidth so last node fits
+        const layerWidth = usableWidth / Math.max(1, maxLayer); // Distance between layer starts
         nodes.forEach(n => {
-            n.x = padding + ((n.layer || 0) * layerWidth);
+            n.x = horizontalPadding + ((n.layer || 0) * layerWidth);
             n.w = nodeWidth;
         });
 
@@ -160,13 +161,14 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
         for (let i = 0; i <= maxLayer; i++) layers.push([]);
         nodes.forEach(n => layers[n.layer || 0].push(n));
 
-        const usableHeight = cardHeight - topPadding - 0;
+        const usableHeight = cardHeight - topPadding;
         layers.forEach(layerNodes => {
             const totalValue = layerNodes.reduce((sum, n) => sum + (n.value || 0), 0);
             const gapCount = layerNodes.length - 1;
-            const gapSize = 8;
+            const gapSize = 6;
             const availableForNodes = usableHeight - (gapCount * gapSize);
             const scale = availableForNodes / Math.max(totalValue, 1);
+
 
             let currentY = topPadding;
             layerNodes.forEach(n => {

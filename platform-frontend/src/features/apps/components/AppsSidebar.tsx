@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles, RefreshCw, ArrowRight } from 'lucide-react';
+import { SankeyCard } from './cards/SankeyCard';
+import { ScatterCard } from './cards/ScatterCard';
+import { HeatmapCard } from './cards/HeatmapCard';
 
 interface AppsSidebarProps {
     className?: string;
@@ -70,7 +73,7 @@ export const COMPONENT_CATEGORIES = [
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
             { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 6 },
-            { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 4, defaultH: 6 },
+            { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 4, defaultH: 8 },
             { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
             { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 5 },
@@ -84,11 +87,11 @@ export const COMPONENT_CATEGORIES = [
             { type: 'score_card', label: 'Score Card', icon: Medal, defaultW: 3, defaultH: 3 },
             { type: 'grade_card', label: 'Grade Card', icon: Medal, defaultW: 3, defaultH: 3 },
             { type: 'peer_table', label: 'Peer Table', icon: Table2, defaultW: 6, defaultH: 8 },
-            { type: 'ratios', label: 'Ratios Grid', icon: LayoutGrid, defaultW: 6, defaultH: 8 },
-            { type: 'cash_flow', label: 'Cash Flow', icon: TrendingUp, defaultW: 6, defaultH: 8 },
-            { type: 'balance_sheet', label: 'Balance Sheet', icon: Table2, defaultW: 6, defaultH: 8 },
-            { type: 'income_stmt', label: 'Income Stmt', icon: FileText, defaultW: 6, defaultH: 8 },
-            { type: 'summary', label: 'Exec Summary', icon: FileText, defaultW: 6, defaultH: 6 },
+            { type: 'ratios', label: 'Ratios Grid', icon: LayoutGrid, defaultW: 6, defaultH: 5 },
+            { type: 'cash_flow', label: 'Cash Flow', icon: TrendingUp, defaultW: 6, defaultH: 5 },
+            { type: 'balance_sheet', label: 'Balance Sheet', icon: Table2, defaultW: 6, defaultH: 5 },
+            { type: 'income_stmt', label: 'Income Stmt', icon: FileText, defaultW: 6, defaultH: 5 },
+            { type: 'summary', label: 'Exec Summary', icon: FileText, defaultW: 6, defaultH: 5 },
         ]
     },
     {
@@ -520,6 +523,36 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                         <span className="text-purple-400">def</span><span className="text-white"> analyze():</span>
                         <span className="pl-2 text-gray-500"># logic here</span>
                         <span className="pl-2 text-blue-400">return</span><span className="text-white"> data</span>
+                    </div>
+                );
+
+            // Sankey Chart Preview - Use actual component
+            case 'sankey':
+                return (
+                    <div className="w-full h-full overflow-hidden pointer-events-none">
+                        <div className="w-[300px] h-[200px] origin-top-left" style={{ transform: 'scale(0.35)' }}>
+                            <SankeyCard title="" config={{ showLegend: false }} />
+                        </div>
+                    </div>
+                );
+
+            // Scatter Plot Preview - Use actual component
+            case 'scatter':
+                return (
+                    <div className="w-full h-full overflow-hidden pointer-events-none">
+                        <div className="w-[300px] h-[200px] origin-top-left" style={{ transform: 'scale(0.35)' }}>
+                            <ScatterCard title="" config={{ showLegend: false, showAxisLabels: false }} />
+                        </div>
+                    </div>
+                );
+
+            // Heatmap Preview - Use actual component
+            case 'heatmap':
+                return (
+                    <div className="w-full h-full overflow-hidden pointer-events-none">
+                        <div className="w-[300px] h-[200px] origin-top-left" style={{ transform: 'scale(0.35)' }}>
+                            <HeatmapCard title="" config={{ showLegend: false, showAxisLabels: false }} />
+                        </div>
                     </div>
                 );
 
