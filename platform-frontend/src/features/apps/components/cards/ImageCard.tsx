@@ -42,7 +42,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
                     )}
                 </div>
                 {caption && config.showCaption !== false && (
-                    <div className="px-3 py-1.5 bg-black/40 backdrop-blur-sm border-t border-border/50 shrink-0">
+                    <div className="px-3 py-1.5 bg-muted backdrop-blur-sm border-t border-border/50 shrink-0">
                         <p className="text-[10px] text-muted-foreground italic text-center truncate">{caption}</p>
                     </div>
                 )}

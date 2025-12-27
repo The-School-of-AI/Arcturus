@@ -64,7 +64,7 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
                 {stats.map((stat, index) => (
                     <div
                         key={index}
-                        className="p-3 rounded-lg bg-black/30 border border-border"
+                        className="p-3 rounded-lg bg-muted border border-border"
                     >
                         <div className="flex items-center justify-between gap-2 mb-1">
                             <span className="text-xs font-medium text-muted-foreground">{stat.name}</span>
@@ -134,7 +134,7 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
                 columns === 4 && "grid-cols-4"
             )}>
                 {stats.map((item, index) => (
-                    <Card key={index} className="p-4 py-3 bg-black/30 border-border">
+                    <Card key={index} className="p-4 py-3 bg-muted border-border">
                         <CardContent className="p-0">
                             <dt className="text-xs font-medium text-muted-foreground">{item.name}</dt>
                             <dd className="mt-1 flex items-baseline space-x-2">
@@ -210,7 +210,7 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
             )}
             <div className="grid grid-cols-2 gap-3 flex-1">
                 {stats.map((item, index) => (
-                    <div key={index} className="p-3 rounded-lg bg-black/30 border border-border">
+                    <div key={index} className="p-3 rounded-lg bg-muted border border-border">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-muted-foreground">{item.name}</span>
                             <Badge variant="outline" className={statusStyles[item.status]}>
@@ -380,7 +380,7 @@ export const StatsLinksCard: React.FC<StatsLinksCardProps> = ({
                 {links.map((link, index) => (
                     <div
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-border hover:bg-muted/50 cursor-pointer transition-colors group"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted border border-border hover:bg-muted/50 cursor-pointer transition-colors group"
                     >
                         <div>
                             <span className="text-sm font-medium text-foreground">{link.name}</span>
@@ -719,7 +719,7 @@ const AccordionRow: React.FC<{ row: AccordionRowData; defaultOpen?: boolean }> =
                 <td className="px-3 py-2 text-xs text-muted-foreground">{row.date}</td>
             </tr>
             {hasChildren && isOpen && row.children?.map(child => (
-                <tr key={child.id} className="border-b border-border/50 bg-black/20">
+                <tr key={child.id} className="border-b border-border/50 bg-muted/50">
                     <td className="px-3 py-2 w-8"></td>
                     <td className="px-3 py-2 text-xs  text-muted-foreground pl-6">{child.id}</td>
                     <td className="px-3 py-2 text-xs">{child.name}</td>
@@ -752,7 +752,7 @@ export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
             )}
             <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm">
-                    <thead className="bg-black/30 sticky top-0">
+                    <thead className="bg-muted sticky top-0">
                         <tr className="border-b border-border">
                             <th className="px-3 py-2 w-8"></th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">ID</th>

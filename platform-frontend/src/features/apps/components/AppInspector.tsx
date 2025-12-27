@@ -96,7 +96,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-3 flex flex-col gap-2">
                     <label className="text-[10px] uppercase font-bold text-muted-foreground">Date Range</label>
-                    <div className="flex items-center gap-2 p-2 bg-black/40 border border-border rounded text-[10px] text-foreground">
+                    <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded text-[10px] text-foreground">
                         📅 2024-01-01 → Present
                     </div>
                 </div>
@@ -690,7 +690,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
 
                     {/* Live Preview - Render the actual component */}
-                    <div className="rounded-xl overflow-hidden bg-black border border-border shadow-lg">
+                    <div className="rounded-xl overflow-hidden bg-card border border-border shadow-lg">
                         <div className="w-full aspect-[16/10] relative">
                             <div className="absolute inset-0 p-2">
                                 <div className="w-full h-full">
@@ -701,13 +701,13 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
 
                     {/* Typical Usage - Below the preview */}
-                    <div className="p-3 rounded-lg bg-black/40 border border-border space-y-1.5">
+                    <div className="p-3 rounded-lg bg-muted border border-border space-y-1.5">
                         <div className="text-[10px] uppercase font-bold text-primary/80 tracking-wider">Typical Usage</div>
                         <p className="text-xs text-foreground/80 leading-relaxed">{usageText}</p>
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-border bg-black/20">
+                <div className="p-4 border-t border-border bg-muted/50">
                     <Button onClick={onAddClick} className="w-full gap-2 bg-primary text-primary-foreground font-bold text-xs h-10 uppercase tracking-widest hover:bg-primary/90">
                         <Zap className="w-4 h-4" /> Add to Canvas
                     </Button>
@@ -755,7 +755,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-border bg-black/20">
+            <div className="flex border-b border-border bg-muted/50">
                 <TabButton active={activeTab === 'config'} onClick={() => setActiveTab('config')} icon={<Settings2 className="w-3.5 h-3.5" />} label="Config" />
                 <TabButton active={activeTab === 'triggers'} onClick={() => setActiveTab('triggers')} icon={<Zap className="w-3.5 h-3.5" />} label="Triggers" />
                 <TabButton active={activeTab === 'style'} onClick={() => setActiveTab('style')} icon={<Palette className="w-3.5 h-3.5" />} label="Style" />
