@@ -549,7 +549,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                         key={card.id}
                                         className={cn(
                                             // Match FlowStepNode styling exactly
-                                            "relative flex flex-col overflow-hidden group transition-all duration-500 shadow-2xl",
+                                            "relative flex flex-col overflow-hidden group transition-all duration-500",
+                                            // Only show shadow when border is visible (to avoid gray outline on borderless cards)
+                                            (showBorder || isSelected) && "shadow-2xl",
                                             // Selected state glow - only in edit mode
                                             isSelected && !isAppViewMode && "ring-4 ring-neon-yellow/20 z-50",
                                             // Hover effect for transparent backgrounds
@@ -559,10 +561,14 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             // Apply custom styles
                                             opacity,
                                             borderRadius: card.type === 'divider' ? 0 : borderRadius,
-                                            // Border styling
-                                            borderWidth: (showBorder || (isSelected && !isAppViewMode)) ? borderWidth : 0,
-                                            borderStyle: 'solid',
-                                            borderColor: (isSelected && !isAppViewMode) ? '#eaff00' : (showBorder ? borderColor : 'transparent'),
+                                            // Border styling - completely remove border when not shown
+                                            ...(showBorder || (isSelected && !isAppViewMode)) ? {
+                                                borderWidth: borderWidth,
+                                                borderStyle: 'solid',
+                                                borderColor: (isSelected && !isAppViewMode) ? '#eaff00' : borderColor,
+                                            } : {
+                                                border: 'none',
+                                            },
                                             // Background - always apply it
                                             backgroundColor: backgroundColor,
                                         }}

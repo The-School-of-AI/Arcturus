@@ -17,7 +17,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
 
     return (
         <BaseCard style={style}>
-            <div className="w-full h-full flex flex-col overflow-hidden bg-black/20 rounded">
+            <div className="w-full h-full flex flex-col overflow-hidden">
                 {/* Image container - uses absolute positioning to prevent stretching */}
                 <div className="flex-1 relative min-h-0">
                     {url ? (
