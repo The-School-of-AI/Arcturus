@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BaseCard } from './BaseCard';
+import { cn } from '@/lib/utils';
 
 export interface PieChartCardProps {
     title: string;
@@ -9,10 +10,10 @@ export interface PieChartCardProps {
 }
 
 const defaultSlices = [
-    { label: 'Category A', value: 40, color: '#3b82f6' },
-    { label: 'Category B', value: 30, color: '#10b981' },
-    { label: 'Category C', value: 20, color: '#f59e0b' },
-    { label: 'Category D', value: 10, color: '#ef4444' },
+    { label: 'Category A', value: 40, color: '#4ecdc4' },
+    { label: 'Category B', value: 30, color: '#ff6b6b' },
+    { label: 'Category C', value: 20, color: '#eaff00' },
+    { label: 'Category D', value: 10, color: '#a29bfe' },
 ];
 
 export const PieChartCard: React.FC<PieChartCardProps> = ({
@@ -21,6 +22,9 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     config = {},
     style = {}
 }) => {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
+
     // Support both data.slices (from inspector) and direct array (legacy)
     const slices = Array.isArray(data) ? data : (data.slices || defaultSlices);
 
@@ -28,35 +32,67 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     const showLegend = config.showLegend !== false;
     const showPercent = config.showPercent !== false;
     const isDonut = config.donut === true;
+    const animate = config.animate !== false;
 
     // Calculate total for percentages
     const total = slices.reduce((sum: number, s: any) => sum + (s.value || 0), 0);
 
-    // Calculate stroke offsets for each slice
-    const circumference = 2 * Math.PI * 40; // radius = 40
+    // Donut vs Pie settings
+    const strokeWidth = isDonut ? 18 : 50;
+    const radius = isDonut ? 41 : 25;
+    const circumference = 2 * Math.PI * radius;
+
+    // Calculate angles for hit detection
+    const getSliceAngles = () => {
+        let cumulative = 0;
+        return slices.map((slice: any) => {
+            const percentage = total > 0 ? (slice.value / total) * 100 : 0;
+            const startAngle = cumulative;
+            cumulative += (percentage / 100) * 360;
+            return { startAngle, endAngle: cumulative, slice, percentage };
+        });
+    };
+
+    const sliceAngles = getSliceAngles();
+
+    const showTooltipForSlice = (e: React.MouseEvent, slice: any, percentage: number) => {
+        const rect = (e.currentTarget.closest('.pie-container') as HTMLElement)?.getBoundingClientRect();
+        if (rect) {
+            setTooltip({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top - 15,
+                content: `${slice.label}: ${slice.value} (${percentage.toFixed(1)}%)`,
+                visible: true
+            });
+        }
+    };
+
+    const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
+
     let cumulativeOffset = 0;
-
-    // Donut vs Pie: donut has thinner stroke
-    // For pie chart (solid): radius should be half the size (25) and strokeWidth full size (50) to fill it.
-    // However, the previous logic used radius 40.
-    // To make it look "filled" with stroke-dasharray hack:
-    // radius = 25 (center of stroke is at 25px from center)
-    // strokeWidth = 50 (covers 0 to 50px)
-    // isDonut: radius 40, width 15 (covers 32.5 to 47.5 approx) - looks good for donut.
-
-    const strokeWidth = isDonut ? 15 : 50;
-    const radius = isDonut ? 42 : 25;
 
     return (
         <BaseCard title={title}>
-            <div className="flex items-center h-full gap-4">
-                <div className="w-24 h-24 shrink-0 relative">
-                    <svg viewBox="0 0 100 100" className="rotate-[-90deg]">
+            <div className="flex items-center h-full gap-4 pie-container relative">
+                {/* Tooltip */}
+                {tooltip.visible && (
+                    <div
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[10px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+                    >
+                        {tooltip.content}
+                    </div>
+                )}
+
+                <div className="w-28 h-28 shrink-0 relative">
+                    <svg viewBox="0 0 100 100" className={cn("rotate-[-90deg]", animate && "animate-in zoom-in-95 duration-500")}>
                         {slices.map((slice: any, idx: number) => {
                             const percentage = total > 0 ? (slice.value / total) * 100 : 0;
-                            const strokeLength = (percentage / 100) * (2 * Math.PI * radius);
+                            const strokeLength = (percentage / 100) * circumference;
                             const offset = cumulativeOffset;
                             cumulativeOffset += strokeLength;
+
+                            const isHovered = hoveredIndex === idx;
 
                             return (
                                 <circle
@@ -67,21 +103,62 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
                                     fill="transparent"
                                     stroke={slice.color || '#3b82f6'}
                                     strokeWidth={strokeWidth}
-                                    strokeDasharray={`${strokeLength} ${2 * Math.PI * radius}`}
+                                    strokeDasharray={`${strokeLength} ${circumference}`}
                                     strokeDashoffset={-offset}
+                                    className={cn(
+                                        "cursor-crosshair transition-all duration-200",
+                                        isHovered && "brightness-125"
+                                    )}
+                                    style={{
+                                        transform: isHovered ? 'scale(1.03)' : 'scale(1)',
+                                        transformOrigin: 'center',
+                                        filter: isHovered ? 'drop-shadow(0 0 8px rgba(255,255,255,0.3))' : undefined
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        setHoveredIndex(idx);
+                                        showTooltipForSlice(e as any, slice, percentage);
+                                    }}
+                                    onMouseMove={(e) => showTooltipForSlice(e as any, slice, percentage)}
+                                    onMouseLeave={() => {
+                                        setHoveredIndex(null);
+                                        hideTooltip();
+                                    }}
                                 />
                             );
                         })}
                     </svg>
+
+                    {/* Center label for donut */}
+                    {isDonut && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="text-lg font-bold" style={{ color: style.textColor || '#fff' }}>{total}</div>
+                                <div className="text-[8px] text-muted-foreground">Total</div>
+                            </div>
+                        </div>
+                    )}
                 </div>
+
                 {showLegend && (
-                    <div className="space-y-1">
-                        {Array.isArray(slices) && slices.map((item: any) => {
+                    <div className="space-y-1.5">
+                        {Array.isArray(slices) && slices.map((item: any, idx: number) => {
                             const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
+                            const isHovered = hoveredIndex === idx;
                             return (
-                                <div key={item.label} className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                                    <span className="text-[10px] text-muted-foreground truncate">
+                                <div
+                                    key={item.label}
+                                    className={cn(
+                                        "flex items-center gap-2 cursor-pointer transition-all duration-200",
+                                        isHovered && "translate-x-1"
+                                    )}
+                                    onMouseEnter={() => setHoveredIndex(idx)}
+                                    onMouseLeave={() => setHoveredIndex(null)}
+                                >
+                                    <div
+                                        className={cn("w-2 h-2 rounded-sm transition-all", isHovered && "scale-125")}
+                                        style={{ backgroundColor: item.color }}
+                                    />
+                                    <span className={cn("text-[10px] text-muted-foreground truncate transition-colors", isHovered && "text-white")}>
                                         {item.label}{showPercent && ` (${percentage}%)`}
                                     </span>
                                 </div>

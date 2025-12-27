@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BaseCard } from './BaseCard';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,45 @@ export interface ChartCardProps {
     style?: any;
 }
 
+// Default sample data
+const DEFAULT_LINE_DATA = {
+    series: [
+        {
+            name: 'Revenue',
+            color: '#4ecdc4',
+            data: [
+                { x: 'Jan', y: 120 },
+                { x: 'Feb', y: 150 },
+                { x: 'Mar', y: 180 },
+                { x: 'Apr', y: 160 },
+                { x: 'May', y: 200 },
+                { x: 'Jun', y: 220 }
+            ]
+        },
+        {
+            name: 'Cost',
+            color: '#ff6b6b',
+            data: [
+                { x: 'Jan', y: 80 },
+                { x: 'Feb', y: 90 },
+                { x: 'Mar', y: 100 },
+                { x: 'Apr', y: 95 },
+                { x: 'May', y: 110 },
+                { x: 'Jun', y: 120 }
+            ]
+        }
+    ]
+};
+
+const DEFAULT_BAR_DATA = {
+    points: [
+        { x: 'Q1', y: 45, color: '#eaff00' },
+        { x: 'Q2', y: 62, color: '#4ecdc4' },
+        { x: 'Q3', y: 58, color: '#ff6b6b' },
+        { x: 'Q4', y: 75, color: '#a29bfe' }
+    ]
+};
+
 export const ChartCard: React.FC<ChartCardProps> = ({
     title,
     type,
@@ -17,38 +56,41 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     config = {},
     style = {}
 }) => {
+    const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
+
     // Feature toggles
     const showLegend = config.showLegend !== false;
     const showGrid = config.showGrid !== false;
     const showAxis = config.showAxis !== false;
     const showValues = config.showValues === true;
     const animate = config.animate !== false;
-    const isCurved = config.tension !== false; // Default to curved
-    const isThick = config.strokeWidth === true; // "Thick Lines" toggle
+    const isCurved = config.tension !== false;
+    const isThick = config.strokeWidth === true;
 
     // Style
     const accentColor = style.accentColor || '#eaff00';
     const textColor = style.textColor || '#ffffff';
 
-    // Data Parsing
+    // Data Parsing with defaults
     const chartTitle = title || data.title || '';
     const xLabel = data.xLabel || '';
     const yLabel = data.yLabel || '';
 
-    // Normalize Data to Series
+    // Normalize Data to Series with defaults
     let series: any[] = [];
     if (type === 'line' || type === 'area') {
-        if (data.series) {
+        if (data.series?.length > 0) {
             series = data.series;
-        } else if (data.points) {
-            // Legacy/Single series fallback
+        } else if (data.points?.length > 0) {
             series = [{ name: 'Data', data: data.points, color: accentColor }];
+        } else {
+            series = DEFAULT_LINE_DATA.series;
         }
-    } else {
-        // Bar chart logic remains mostly single series for now, or unified later
-        // For now, mapping bar chart points to a single series structure for unified scaling if needed
-        // But render logic below handles bar separately.
     }
+
+    const barPoints = (type === 'bar')
+        ? (data.points?.length > 0 ? data.points : DEFAULT_BAR_DATA.points)
+        : [];
 
     // Determine Global Min/Max for Scaling (Line/Area)
     let minVal = 0;
@@ -59,15 +101,14 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         if (allValues.length > 0) {
             minVal = Math.min(...allValues);
             maxVal = Math.max(...allValues);
-            // Add padding
             const range = maxVal - minVal;
             maxVal += range * 0.1;
-            minVal = Math.max(0, minVal - (range * 0.1)); // Don't go below 0 unless data is negative? Assuming 0 baseline for now.
+            minVal = Math.max(0, minVal - (range * 0.1));
         }
     }
 
-    // Generate Path Helpers
-    const getCoordinates = (p: any, i: number, total: number) => {
+    // Generate percentage coordinates for both SVG and HTML overlay
+    const getPercentCoordinates = (p: any, i: number, total: number) => {
         const x = (i / (total - 1)) * 100;
         const y = 100 - ((p.y - minVal) / (maxVal - minVal)) * 100;
         return { x, y };
@@ -75,15 +116,12 @@ export const ChartCard: React.FC<ChartCardProps> = ({
 
     const generatePath = (dataPoints: any[]) => {
         if (dataPoints.length === 0) return '';
-
-        const coords = dataPoints.map((p, i) => getCoordinates(p, i, dataPoints.length));
+        const coords = dataPoints.map((p, i) => getPercentCoordinates(p, i, dataPoints.length));
 
         if (!isCurved) {
             return `M ${coords.map(c => `${c.x},${c.y}`).join(' L ')}`;
         }
 
-        // Catmull-Rom to Cubic Bezier conversion logic or simple smoothing
-        // Simple smoothing strategy: control points based on neighbors
         let d = `M ${coords[0].x},${coords[0].y}`;
         for (let i = 0; i < coords.length - 1; i++) {
             const p0 = coords[i === 0 ? 0 : i - 1];
@@ -91,7 +129,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
             const p2 = coords[i + 1];
             const p3 = coords[i + 2] || p2;
 
-            const cp1x = p1.x + (p2.x - p0.x) * 0.15; // Tension factor
+            const cp1x = p1.x + (p2.x - p0.x) * 0.15;
             const cp1y = p1.y + (p2.y - p0.y) * 0.15;
             const cp2x = p2.x - (p3.x - p1.x) * 0.15;
             const cp2y = p2.y - (p3.y - p1.y) * 0.15;
@@ -101,9 +139,23 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         return d;
     };
 
+    const showTooltip = (e: React.MouseEvent, content: string) => {
+        const parentRect = (e.currentTarget.closest('.chart-container') as HTMLElement)?.getBoundingClientRect();
+        if (parentRect) {
+            setTooltip({
+                x: e.clientX - parentRect.left,
+                y: e.clientY - parentRect.top - 10,
+                content,
+                visible: true
+            });
+        }
+    };
+
+    const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
+
     return (
         <BaseCard title={chartTitle}>
-            <div className="w-full h-full flex flex-col relative p-4">
+            <div className="w-full h-full flex flex-col relative p-4 chart-container">
                 {/* Legend */}
                 {showLegend && series.length > 1 && (type === 'line' || type === 'area') && (
                     <div className="flex flex-wrap gap-4 mb-2">
@@ -113,6 +165,16 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                                 <span className="text-[10px] text-muted-foreground font-medium">{s.name}</span>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Tooltip */}
+                {tooltip.visible && (
+                    <div
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[10px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+                    >
+                        {tooltip.content}
                     </div>
                 )}
 
@@ -127,7 +189,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                         </div>
                     )}
 
-                    {/* Y-Axis Labels (Overlay) */}
+                    {/* Y-Axis Labels */}
                     {showAxis && (type === 'line' || type === 'area') && (
                         <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[8px] text-muted-foreground pointer-events-none translate-y-1.5">
                             {[maxVal, (maxVal + minVal) * 0.75, (maxVal + minVal) * 0.5, (maxVal + minVal) * 0.25, minVal].map((val, i) => (
@@ -136,33 +198,68 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                         </div>
                     )}
 
-                    {/* SVG Layer */}
-                    <div className="absolute inset-0 ml-6 mb-4"> {/* Margin for axes */}
+                    {/* SVG Layer for Line/Area (lines only) */}
+                    <div className="absolute inset-0 ml-6 mb-4">
                         {type !== 'bar' ? (
-                            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                {series.map((s: any, i: number) => (
-                                    <path
-                                        key={i}
-                                        d={generatePath(s.data)}
-                                        fill="none"
-                                        stroke={s.color || accentColor}
-                                        strokeWidth={isThick ? 3 : 1.5}
-                                        vectorEffect="non-scaling-stroke"
-                                        className={cn("transition-all duration-300", animate && "animate-in fade-in zoom-in-95 duration-1000")}
-                                        style={{ opacity: 0.9 }}
-                                    />
-                                ))}
-                            </svg>
+                            <>
+                                {/* SVG for line paths only */}
+                                <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    {series.map((s: any, i: number) => (
+                                        <path
+                                            key={i}
+                                            d={generatePath(s.data)}
+                                            fill="none"
+                                            stroke={s.color || accentColor}
+                                            strokeWidth={isThick ? 3 : 1.5}
+                                            vectorEffect="non-scaling-stroke"
+                                            className={cn("transition-all duration-300", animate && "animate-in fade-in zoom-in-95 duration-1000")}
+                                            style={{ opacity: 0.9 }}
+                                        />
+                                    ))}
+                                </svg>
+
+                                {/* HTML overlay for data points (fixed pixel size) */}
+                                <div className="absolute inset-0">
+                                    {series.map((s: any, seriesIdx: number) =>
+                                        s.data.map((p: any, i: number) => {
+                                            const coords = getPercentCoordinates(p, i, s.data.length);
+                                            return (
+                                                <div
+                                                    key={`${seriesIdx}-${i}`}
+                                                    className="absolute w-2 h-2 rounded-full cursor-crosshair hover:scale-150 transition-transform z-10 group"
+                                                    style={{
+                                                        left: `${coords.x}%`,
+                                                        top: `${coords.y}%`,
+                                                        backgroundColor: s.color || accentColor,
+                                                        transform: 'translate(-50%, -50%)',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                                                    }}
+                                                    onMouseEnter={(e) => showTooltip(e, `${s.name}: ${p.y} (${p.x})`)}
+                                                    onMouseMove={(e) => showTooltip(e, `${s.name}: ${p.y} (${p.x})`)}
+                                                    onMouseLeave={hideTooltip}
+                                                />
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </>
                         ) : (
-                            /* Bar Chart Logic (Simplified from original for now, keeping separate if needed or could unify) */
+                            /* Bar Chart with tooltips */
                             <div className="flex items-end justify-between h-full gap-1">
-                                {(data.points || []).map((point: any, i: number) => {
-                                    const heightPercent = ((point.y || 0) / (Math.max(...(data.points || []).map((p: any) => p.y || 0)) * 1.1)) * 100;
+                                {barPoints.map((point: any, i: number) => {
+                                    const maxY = Math.max(...barPoints.map((p: any) => p.y || 0));
+                                    const heightPercent = ((point.y || 0) / (maxY * 1.1)) * 100;
                                     return (
                                         <div key={i} className="relative flex-1 h-full flex items-end group">
                                             <div
-                                                className={cn("w-full rounded-t-sm transition-all duration-500 hover:opacity-100", animate && "origin-bottom animate-in slide-in-from-bottom-2")}
-                                                style={{ height: `${heightPercent}%`, backgroundColor: point.color || accentColor, opacity: 0.8 }}
+                                                className={cn(
+                                                    "w-full rounded-t-sm transition-all duration-300 cursor-crosshair hover:brightness-125",
+                                                    animate && "origin-bottom animate-in slide-in-from-bottom-2"
+                                                )}
+                                                style={{ height: `${heightPercent}%`, backgroundColor: point.color || accentColor, opacity: 0.85 }}
+                                                onMouseEnter={(e) => showTooltip(e, `${point.x}: ${point.y}`)}
+                                                onMouseMove={(e) => showTooltip(e, `${point.x}: ${point.y}`)}
+                                                onMouseLeave={hideTooltip}
                                             >
                                                 {showValues && (
                                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold" style={{ color: textColor }}>
@@ -180,15 +277,10 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                     {/* X-Axis Labels */}
                     {showAxis && (
                         <div className="absolute bottom-0 left-6 right-0 flex justify-between text-[8px] text-muted-foreground mt-1">
-                            {/* Simplistic X-Axis strategy: show first and last, or distributed? */}
-                            {/* Let's show labels from the first series for now */}
-                            {series?.[0]?.data?.map((p: any, i: number, arr: any[]) => (
-                                (i === 0 || i === arr.length - 1 || i === Math.floor(arr.length / 2)) && (
-                                    <span key={i} style={{ color: textColor, opacity: 0.5 }}>{p.x}</span>
+                            {(type === 'bar' ? barPoints : series?.[0]?.data)?.map((p: any, i: number, arr: any[]) => (
+                                (type === 'bar' || i === 0 || i === arr.length - 1 || i === Math.floor(arr.length / 2)) && (
+                                    <span key={i} className={cn(type === 'bar' && "truncate text-center w-full")} style={{ color: textColor, opacity: 0.5 }}>{p.x}</span>
                                 )
-                            ))}
-                            {type === 'bar' && (data.points || []).map((p: any, i: number) => (
-                                <span key={i} className="truncate text-center w-full" style={{ color: textColor, opacity: 0.5 }}>{p.x}</span>
                             ))}
                         </div>
                     )}

@@ -5,43 +5,22 @@ import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DEFAULT_COLORS, COLOR_PRESETS, getDefaultData, getDefaultStyle } from '../utils/defaults';
+import { COMPONENT_CATEGORIES } from './AppsSidebar';
 
 interface AppInspectorProps {
     className?: string;
 }
 
-// Helper for Smart Default Dimensions (Duplicate of AppGrid logic for now)
+// Helper for Smart Default Dimensions - Uses COMPONENT_CATEGORIES as single source of truth
 const getSmartDimensions = (type: string) => {
-    switch (type) {
-        case 'divider':
-        case 'spacer':
-        case 'header':
-            return { w: 12, h: 2 };
-        case 'metric':
-        case 'trend':
-        case 'score_card':
-        case 'grade_card':
-            return { w: 3, h: 3 };
-        case 'line_chart':
-        case 'bar_chart':
-        case 'area_chart':
-        case 'candlestick':
-        case 'scatter':
-        case 'valuation':
-            return { w: 6, h: 6 };
-        case 'table':
-        case 'peer_table':
-        case 'ratios':
-        case 'cash_flow':
-        case 'balance_sheet':
-        case 'income_stmt':
-        case 'log':
-        case 'code':
-        case 'json':
-            return { w: 6, h: 8 };
-        default:
-            return { w: 4, h: 4 };
+    for (const category of COMPONENT_CATEGORIES) {
+        const item = category.items.find(i => i.type === type);
+        if (item && item.defaultW && item.defaultH) {
+            return { w: item.defaultW, h: item.defaultH };
+        }
     }
+    // Fallback default
+    return { w: 4, h: 4 };
 };
 
 // Define features for each card type

@@ -70,7 +70,7 @@ export const COMPONENT_CATEGORIES = [
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
             { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 6 },
-            { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 8, defaultH: 6 },
+            { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 4, defaultH: 6 },
             { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
             { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 5 },
