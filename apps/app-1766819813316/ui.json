@@ -93,7 +93,9 @@
           }
         ]
       },
-      "config": {},
+      "config": {
+        "donut": true
+      },
       "style": {}
     },
     {
@@ -407,5 +409,5 @@
       "static": false
     }
   ],
-  "lastModified": 1766820403622
+  "lastModified": 1766841218221
 }

@@ -57,6 +57,7 @@ app.add_middleware(
 # In production, use database or persistent store
 active_loops = {}
 multi_mcp = MultiMCP()
+remme_store = RemmeStore()  # Initialize memory store
 
 # --- Explorer Classes ---
 class AnalyzeRequest(BaseModel):

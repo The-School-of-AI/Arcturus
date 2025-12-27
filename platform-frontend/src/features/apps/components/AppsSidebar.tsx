@@ -12,36 +12,50 @@ interface AppsSidebarProps {
 
 export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
     const [activeTab, setActiveTab] = useState<'components' | 'apps'>('apps');
+    const { savedApps } = useAppStore();
 
     return (
-        <div className={cn("h-full flex flex-col bg-card border-r border-border", className)}>
-            {/* Header / Tabs */}
-            <div className="flex items-center border-b border-border">
+        <div className={cn("h-full flex flex-col bg-card text-foreground", className)}>
+            {/* Header - Matches Remme Style */}
+            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
+                        <LayoutGrid className="w-5 h-5 text-neon-yellow" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">App Builder</h2>
+                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{savedApps.length} DASHBOARDS</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center border-b border-border/50 bg-muted/20">
                 <button
                     onClick={() => setActiveTab('apps')}
                     className={cn(
-                        "flex-1 py-3 text-xs font-medium transition-colors hover:text-foreground relative",
-                        activeTab === 'apps' ? "text-primary" : "text-muted-foreground"
+                        "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-foreground relative",
+                        activeTab === 'apps' ? "text-neon-yellow" : "text-muted-foreground"
                     )}
                 >
                     My Apps
-                    {activeTab === 'apps' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+                    {activeTab === 'apps' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-yellow" />}
                 </button>
                 <div className="w-px h-4 bg-border" />
                 <button
                     onClick={() => setActiveTab('components')}
                     className={cn(
-                        "flex-1 py-3 text-xs font-medium transition-colors hover:text-foreground relative",
-                        activeTab === 'components' ? "text-primary" : "text-muted-foreground"
+                        "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-foreground relative",
+                        activeTab === 'components' ? "text-neon-yellow" : "text-muted-foreground"
                     )}
                 >
                     Components
-                    {activeTab === 'components' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+                    {activeTab === 'components' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-yellow" />}
                 </button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-5 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
                 {activeTab === 'apps' ? (
                     <SavedAppsList />
                 ) : (
@@ -903,7 +917,7 @@ const SavedAppsList = () => {
                         <p className="text-xs">No saved apps yet.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="space-y-4">
                         {savedApps
                             .filter(app => app.name.toLowerCase().includes(searchQuery.toLowerCase()))
                             .sort((a, b) => a.name.localeCompare(b.name))
@@ -913,34 +927,44 @@ const SavedAppsList = () => {
                                     <div
                                         key={app.id}
                                         className={cn(
-                                            "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border-2",
+                                            "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                            "bg-gradient-to-br from-card to-muted/20",
+                                            "hover:shadow-md",
                                             isActive
-                                                ? "bg-muted border-neon-yellow shadow-[0_0_15px_rgba(234,255,0,0.1)] scale-[1.02]"
-                                                : "bg-card/90 border-border hover:border-white/30"
+                                                ? "border-neon-yellow/40 hover:border-neon-yellow/60"
+                                                : "border-border/50 hover:border-white/20"
                                         )}
                                         onClick={() => loadApp(app.id)}
                                     >
-                                        <div className="flex-1 min-w-0">
-                                            <div className={cn(
-                                                "text-xs font-bold truncate",
-                                                isActive ? "text-neon-yellow" : "text-foreground"
-                                            )}>
-                                                {app.name}
+                                        <div className="flex justify-between items-start gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className={cn(
+                                                    "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
+                                                    "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
+                                                    isActive ? "text-neon-yellow" : "text-foreground"
+                                                )}>
+                                                    {app.name}
+                                                </p>
                                             </div>
-                                            <div className="text-[10px] text-muted-foreground">
-                                                {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
-                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
+                                                title="Delete App"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
-                                            className={cn(
-                                                "p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded-lg transition-all",
-                                                isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+
+                                        <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between">
+                                            <span className="text-[9px] text-muted-foreground font-mono">
+                                                {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
+                                            </span>
+                                            {isActive && (
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter bg-neon-yellow/10 text-neon-yellow">
+                                                    ACTIVE
+                                                </span>
                                             )}
-                                            title="Delete App"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
+                                        </div>
                                     </div>
                                 );
                             })}

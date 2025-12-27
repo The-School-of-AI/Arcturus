@@ -225,11 +225,16 @@ export const ExplorerPanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-card text-foreground overflow-hidden">
-            {/* Header */}
-            <div className="p-4 border-b border-border flex flex-shrink-0 items-center justify-between bg-card z-10 shadow-xl">
+            {/* Header - Matches Remme Style */}
+            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                    <Code2 className="w-5 h-5 text-neon-yellow" />
-                    <h2 className="font-bold text-sm tracking-tight uppercase">Explorer</h2>
+                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
+                        <Code2 className="w-5 h-5 text-neon-yellow" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">Explorer</h2>
+                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{analysisHistory.length} PROJECTS</p>
+                    </div>
                 </div>
                 {explorerRootPath && (
                     <Button

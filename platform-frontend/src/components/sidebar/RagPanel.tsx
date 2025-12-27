@@ -307,15 +307,28 @@ export const RagPanel: React.FC = () => {
     }, [files]);
 
     return (
-        <div id="rag-panel-container" className="flex flex-col h-full bg-card border-r border-border">
-            {/* Header: Search & Toggle */}
-            <div className="p-3 border-b border-border space-y-3 bg-card/80 backdrop-blur-md shrink-0">
-                <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border border-border/50">
+        <div id="rag-panel-container" className="flex flex-col h-full bg-card text-foreground">
+            {/* Header - Matches Remme Style */}
+            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
+                        <FileText className="w-5 h-5 text-neon-yellow" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">RAG Documents</h2>
+                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{files.length} SOURCES</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mode Toggle */}
+            <div className="p-3 border-b border-border/50 bg-muted/20 shrink-0">
+                <div className="flex items-center gap-2 bg-card/50 p-1 rounded-lg border border-border/50">
                     <button
                         onClick={() => setPanelMode('browse')}
                         className={cn(
                             "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
-                            panelMode === 'browse' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            panelMode === 'browse' ? "bg-neon-yellow text-neutral-950 shadow-sm" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <Library className="w-3 h-3" />
@@ -325,19 +338,22 @@ export const RagPanel: React.FC = () => {
                         onClick={() => setPanelMode('seek')}
                         className={cn(
                             "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
-                            panelMode === 'seek' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            panelMode === 'seek' ? "bg-neon-yellow text-neutral-950 shadow-sm" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <FileSearch className="w-3 h-3" />
                         Seek
                     </button>
                 </div>
+            </div>
 
+            {/* Search & Actions */}
+            <div className="p-3 border-b border-border/50 bg-muted/20 shrink-0">
                 <div className="flex items-center justify-between">
                     <form onSubmit={handleSearchSubmit} className="relative flex-1">
-                        <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                         <Input
-                            className="bg-background/50 border-input pl-9 h-9 text-xs text-foreground"
+                            className="pl-9 bg-card/50 border-border/50 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-muted-foreground h-9 transition-all"
                             placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
                             value={innerSearch}
                             onChange={(e) => setInnerSearch(e.target.value)}
@@ -347,7 +363,7 @@ export const RagPanel: React.FC = () => {
                     <div className="flex items-center gap-1 pl-2">
                         <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
                             <DialogTrigger asChild>
-                                <button className="p-1.5 hover:bg-muted/50 rounded-md hover:text-primary transition-all text-muted-foreground" title="New Folder">
+                                <button className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="New Folder">
                                     <FolderPlus className="w-3.5 h-3.5" />
                                 </button>
                             </DialogTrigger>
@@ -358,16 +374,16 @@ export const RagPanel: React.FC = () => {
                             </DialogContent>
                         </Dialog>
 
-                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-primary transition-all text-muted-foreground" title="Upload File">
+                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="Upload File">
                             <UploadCloud className="w-3.5 h-3.5" />
                         </button>
                         <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
 
-                        <button onClick={() => handleReindex()} className={cn("p-1.5 hover:bg-muted/50 rounded-md transition-all text-muted-foreground hover:text-yellow-400", indexing && "animate-pulse")} title="Index All">
+                        <button onClick={() => handleReindex()} className={cn("p-1.5 hover:bg-muted/50 rounded-md transition-all text-muted-foreground hover:text-neon-yellow", indexing && "animate-pulse")} title="Index All">
                             <Zap className="w-3.5 h-3.5" />
                         </button>
 
-                        <button onClick={fetchFiles} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-primary transition-all text-muted-foreground" title="Refresh Library">
+                        <button onClick={fetchFiles} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="Refresh Library">
                             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
                         </button>
                     </div>

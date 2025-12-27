@@ -121,7 +121,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-foreground text-[9px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-[9px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         <div className="font-bold">{tooltip.value}</div>
