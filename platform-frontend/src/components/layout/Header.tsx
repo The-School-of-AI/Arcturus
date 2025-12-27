@@ -1,13 +1,44 @@
-import React from 'react';
-import { Play, Box, Database, Square, Eye, Edit } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Box, Square, Circle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { ThemeToggle } from '@/components/theme';
 
+const TAB_LABELS: Record<string, string> = {
+    runs: 'Runs',
+    rag: 'RAG Documents',
+    mcp: 'MCP Servers',
+    remme: 'Remme Memory',
+    explorer: 'Code Explorer',
+    apps: 'App Builder',
+    news: 'News Feed',
+    learn: 'Learning'
+};
+
 export const Header: React.FC = () => {
-    const { currentRun } = useAppStore();
+    const { currentRun, sidebarTab } = useAppStore();
+    const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+    // Check Ollama status on mount and periodically
+    useEffect(() => {
+        const checkOllama = async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:11434/api/tags', {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000)
+                });
+                setOllamaStatus(response.ok ? 'online' : 'offline');
+            } catch {
+                setOllamaStatus('offline');
+            }
+        };
+
+        checkOllama();
+        const interval = setInterval(checkOllama, 30000); // Check every 30s
+        return () => clearInterval(interval);
+    }, []);
 
     const handleStop = async () => {
         if (!currentRun) return;
@@ -28,46 +59,48 @@ export const Header: React.FC = () => {
 
                 <div className="h-6 w-px bg-border mx-2" />
 
-                {currentRun ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">{currentRun.name}</span>
-                        <span className={cn(
-                            "px-2 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider",
-                            currentRun.status === 'running' && "bg-yellow-500/20 text-yellow-500 animate-pulse",
-                            currentRun.status === 'completed' && "bg-green-500/20 text-green-500",
-                            currentRun.status === 'failed' && "bg-red-500/20 text-red-500",
-                        )}>
-                            {currentRun.status}
-                        </span>
-                    </div>
-                ) : (
-                    <span className="text-sm text-muted-foreground italic">Select or create a run...</span>
+                {/* Active Tab Name */}
+                <span className="text-sm font-medium text-foreground">
+                    {TAB_LABELS[sidebarTab] || sidebarTab}
+                </span>
+
+                {/* Show run status when a run is active */}
+                {currentRun && (
+                    <>
+                        <div className="h-4 w-px bg-border mx-1" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{currentRun.name}</span>
+                            <span className={cn(
+                                "px-2 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider",
+                                currentRun.status === 'running' && "bg-yellow-500/20 text-yellow-500 animate-pulse",
+                                currentRun.status === 'completed' && "bg-green-500/20 text-green-500",
+                                currentRun.status === 'failed' && "bg-red-500/20 text-red-500",
+                            )}>
+                                {currentRun.status}
+                            </span>
+                        </div>
+                    </>
                 )}
             </div>
 
             <div className="flex items-center gap-2">
-                {/* Apps View Toggle */}
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                        "h-8 gap-2 transition-all mr-4",
-                        useAppStore().isAppViewMode ? "text-neon-yellow bg-neon-yellow/10" : "text-muted-foreground hover:text-foreground"
-                    )}
-                    onClick={() => useAppStore.getState().setIsAppViewMode(!useAppStore.getState().isAppViewMode)}
-                >
-                    {useAppStore().isAppViewMode ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-                    <span className="text-xs font-bold">{useAppStore().isAppViewMode ? "VIEW MODE" : "EDIT MODE"}</span>
-                </Button>
-
-                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-foreground">
-                    <Database className="w-4 h-4" />
-                    <span className="text-xs">Gemini-2.0-Pro</span>
-                </Button>
+                {/* Ollama Status Indicator */}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
+                    <Circle
+                        className={cn(
+                            "w-2.5 h-2.5 fill-current",
+                            ollamaStatus === 'online' && "text-green-500",
+                            ollamaStatus === 'offline' && "text-red-500",
+                            ollamaStatus === 'checking' && "text-yellow-500 animate-pulse"
+                        )}
+                    />
+                    <span className="text-xs text-muted-foreground">Ollama</span>
+                </div>
 
                 <ThemeToggle />
 
-                {currentRun?.status === 'running' ? (
+                {/* Stop button only when running */}
+                {currentRun?.status === 'running' && (
                     <Button
                         variant="destructive"
                         size="sm"
@@ -76,11 +109,6 @@ export const Header: React.FC = () => {
                     >
                         <Square className="w-3 h-3 fill-current" />
                         Stop
-                    </Button>
-                ) : (
-                    <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary text-primary hover:bg-primary/10 transition-all">
-                        <Play className="w-3 h-3 mr-1.5 fill-current" />
-                        Run
                     </Button>
                 )}
             </div>

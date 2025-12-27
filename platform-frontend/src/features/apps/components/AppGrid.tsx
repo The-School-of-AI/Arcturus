@@ -5,7 +5,7 @@ import 'react-resizable/css/styles.css';
 
 // Cast to any to allow legacy props that types don't include
 const RGLResponsive = RGLResponsiveBase as any;
-import { Maximize2, Minimize2, Trash2, Save, Plus, RotateCcw, FileText } from 'lucide-react';
+import { Maximize2, Minimize2, Trash2, Save, Plus, RotateCcw, FileText, Eye, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { getDefaultData, getDefaultStyle } from '../utils/defaults';
@@ -96,6 +96,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         saveApp,
         revertAppChanges,
         isAppViewMode,
+        setIsAppViewMode,
         updateAppCardData
     } = useAppStore();
 
@@ -418,6 +419,30 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
             {/* View Controls (Top Right) */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
+                {/* EDIT / VIEW Mode Toggle - Always visible */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); setIsAppViewMode(!isAppViewMode); }}
+                    className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-lg border shadow-lg transition-all",
+                        isAppViewMode
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "bg-muted/80 backdrop-blur border-border text-muted-foreground hover:text-foreground"
+                    )}
+                    title={isAppViewMode ? "Switch to Edit Mode" : "Switch to View Mode"}
+                >
+                    {isAppViewMode ? (
+                        <>
+                            <Eye className="w-4 h-4" />
+                            <span className="text-xs font-bold">VIEW</span>
+                        </>
+                    ) : (
+                        <>
+                            <Edit className="w-4 h-4" />
+                            <span className="text-xs font-bold">EDIT</span>
+                        </>
+                    )}
+                </button>
+
                 <div className="flex items-center bg-muted/80 backdrop-blur rounded-lg border border-border shadow-lg mr-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(0.5, prev - 0.1)); }}

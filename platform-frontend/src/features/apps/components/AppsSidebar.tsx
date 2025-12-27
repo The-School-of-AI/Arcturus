@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight, Eye, Edit } from 'lucide-react';
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
@@ -11,23 +11,12 @@ interface AppsSidebarProps {
 }
 
 export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
-    const [activeTab, setActiveTab] = useState<'components' | 'apps'>('components');
+    const [activeTab, setActiveTab] = useState<'components' | 'apps'>('apps');
 
     return (
         <div className={cn("h-full flex flex-col bg-card border-r border-border", className)}>
             {/* Header / Tabs */}
             <div className="flex items-center border-b border-border">
-                <button
-                    onClick={() => setActiveTab('components')}
-                    className={cn(
-                        "flex-1 py-3 text-xs font-medium transition-colors hover:text-foreground relative",
-                        activeTab === 'components' ? "text-primary" : "text-muted-foreground"
-                    )}
-                >
-                    Components
-                    {activeTab === 'components' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
-                </button>
-                <div className="w-px h-4 bg-border" />
                 <button
                     onClick={() => setActiveTab('apps')}
                     className={cn(
@@ -38,14 +27,25 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
                     My Apps
                     {activeTab === 'apps' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
                 </button>
+                <div className="w-px h-4 bg-border" />
+                <button
+                    onClick={() => setActiveTab('components')}
+                    className={cn(
+                        "flex-1 py-3 text-xs font-medium transition-colors hover:text-foreground relative",
+                        activeTab === 'components' ? "text-primary" : "text-muted-foreground"
+                    )}
+                >
+                    Components
+                    {activeTab === 'components' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+                </button>
             </div>
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto p-3 space-y-5 custom-scrollbar">
-                {activeTab === 'components' ? (
-                    <ComponentLibrary />
-                ) : (
+                {activeTab === 'apps' ? (
                     <SavedAppsList />
+                ) : (
+                    <ComponentLibrary />
                 )}
             </div>
         </div>
@@ -813,7 +813,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 };
 
 const SavedAppsList = () => {
-    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps } = useAppStore();
+    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps, isAppViewMode, setIsAppViewMode } = useAppStore();
     const [name, setName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -856,7 +856,7 @@ const SavedAppsList = () => {
                         className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-foreground transition-colors"
                     >
                         <Plus className="w-3 h-3" />
-                        NEW APP
+                        NEW
                     </button>
                 </div>
             </div>
