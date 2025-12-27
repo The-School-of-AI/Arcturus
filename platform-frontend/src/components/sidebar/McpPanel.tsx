@@ -37,7 +37,7 @@ export const McpPanel: React.FC = () => {
         <div className="flex flex-col h-full">
             {/* Top 50%: Local Tools */}
             <div className="h-[50%] border-b border-border flex flex-col">
-                <div className="p-3 border-b border-border bg-charcoal-900/50">
+                <div className="p-3 border-b border-border bg-card/50">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                         <Terminal className="w-3 h-3" />
                         Local MCP Tools
@@ -45,7 +45,7 @@ export const McpPanel: React.FC = () => {
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-2">
                     {tools.map((tool, idx) => (
-                        <div key={idx} className="p-3 bg-white/5 rounded border border-white/5 hover:border-primary/20 transition-colors group">
+                        <div key={idx} className="p-3 bg-muted/50 rounded border border-border/50 hover:border-primary/20 transition-colors group">
                             <div className="flex justify-between items-start mb-1">
                                 <div className="font-mono text-xs text-primary font-bold">{tool.name}</div>
                                 <div className="text-[10px] text-muted-foreground bg-primary/10 px-1.5 rounded">{tool.file}</div>
@@ -64,8 +64,8 @@ export const McpPanel: React.FC = () => {
             </div>
 
             {/* Bottom 50%: External MCPs */}
-            <div className="h-[50%] flex flex-col bg-charcoal-900/30">
-                <div className="p-3 border-b border-border bg-charcoal-900/50">
+            <div className="h-[50%] flex flex-col bg-card/30">
+                <div className="p-3 border-b border-border bg-card/50">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                         <Box className="w-3 h-3" />
                         External MCP Servers
@@ -80,10 +80,10 @@ export const McpPanel: React.FC = () => {
                     ].map((item, i) => (
                         <div
                             key={i}
-                            className="flex items-center gap-3 p-3 rounded hover:bg-white/5 transition-colors cursor-pointer group"
+                            className="flex items-center gap-3 p-3 rounded hover:bg-muted/50 transition-colors cursor-pointer group"
                             onClick={() => item.id === 'alphavantage' && setSelectedMcpServer(item.id)}
                         >
-                            <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
                                 <Package className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
                             </div>
                             <div className="flex-1 min-w-0">

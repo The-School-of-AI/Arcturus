@@ -39,9 +39,9 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             className={cn(
                 "relative min-w-[180px] bg-card border rounded-xl shadow-lg transition-all duration-300 group",
                 selected
-                    ? "border-neon-yellow shadow-[0_0_15px_rgba(246,255,77,0.3)] bg-charcoal-800"
-                    : "border-border hover:border-primary/50 bg-charcoal-800/80 backdrop-blur-sm",
-                isRunning && "animate-pulse-subtle border-neon-yellow ring-2 ring-neon-yellow ring-offset-2 ring-offset-charcoal-900 shadow-[0_0_20px_rgba(246,255,77,0.5)] bg-charcoal-800"
+                    ? "border-neon-yellow shadow-[0_0_15px_rgba(246,255,77,0.3)] bg-card"
+                    : "border-border hover:border-primary/50 bg-card/80 backdrop-blur-sm",
+                isRunning && "animate-pulse-subtle border-neon-yellow ring-2 ring-neon-yellow ring-offset-2 ring-offset-background shadow-[0_0_20px_rgba(246,255,77,0.5)] bg-card"
             )}
             onClick={() => selectNode(id)}
         >

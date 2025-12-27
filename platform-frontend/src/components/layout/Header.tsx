@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { ThemeToggle } from '@/components/theme';
 
 export const Header: React.FC = () => {
     const { currentRun } = useAppStore();
@@ -18,7 +19,7 @@ export const Header: React.FC = () => {
     };
 
     return (
-        <header className="h-14 border-b border-border bg-charcoal-900 flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
+        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight">
                     <Box className="w-6 h-6 animate-pulse" />
@@ -63,6 +64,8 @@ export const Header: React.FC = () => {
                     <Database className="w-4 h-4" />
                     <span className="text-xs">Gemini-2.0-Pro</span>
                 </Button>
+
+                <ThemeToggle />
 
                 {currentRun?.status === 'running' ? (
                     <Button

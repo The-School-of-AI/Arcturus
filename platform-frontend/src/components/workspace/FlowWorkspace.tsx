@@ -218,17 +218,17 @@ const FlowWorkspaceInner: React.FC = () => {
 
     if (!flowData) {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-charcoal-950 p-12 text-center text-white">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-background p-12 text-center text-foreground">
                 <div className="relative mb-8">
                     <div className="absolute inset-0 bg-neon-yellow/10 blur-3xl rounded-full" />
-                    <div className="relative p-8 bg-charcoal-900 border border-white/5 rounded-3xl shadow-2xl">
+                    <div className="relative p-8 bg-card border border-border/50 rounded-3xl shadow-2xl">
                         <Layout className="w-20 h-20 text-neon-yellow/20" />
                         <Code2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-neon-yellow animate-pulse" />
                     </div>
                 </div>
                 <div className="max-w-md space-y-4">
                     <h2 className="text-3xl font-black tracking-tighter uppercase italic">Architecture Map</h2>
-                    <p className="text-gray-500 text-sm leading-relaxed">
+                    <p className="text-muted-foreground text-sm leading-relaxed">
                         Select a function or module in the left panel and click <strong className="text-neon-yellow">"Start Analysis"</strong> to visualize the execution flow and logical dependencies of your code.
                     </p>
                 </div>
@@ -242,14 +242,14 @@ const FlowWorkspaceInner: React.FC = () => {
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex gap-4 items-start pointer-events-none">
                 <div className="flex flex-col gap-4 items-center pointer-events-auto">
                     {/* Mode Toggle */}
-                    <div className="bg-charcoal-900/80 backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1">
+                    <div className="bg-card/80 backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1">
                         <button
                             onClick={() => handleModeChange('READER')}
                             className={cn(
                                 "flex items-center gap-2 px-6 py-2.5 rounded-sm transition-all duration-300 text-xs font-black uppercase tracking-widest",
                                 mode === 'READER'
                                     ? "bg-neon-yellow text-charcoal-950 shadow-[0_0_20px_rgba(234,255,0,0.2)]"
-                                    : "text-gray-500 hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                         >
                             <Layout className="w-3.5 h-3.5" />
@@ -261,7 +261,7 @@ const FlowWorkspaceInner: React.FC = () => {
                                 "flex items-center gap-2 px-6 py-2.5 rounded-sm transition-all duration-300 text-xs font-black uppercase tracking-widest",
                                 mode === 'SEQUENCE'
                                     ? "bg-neon-yellow text-charcoal-950 shadow-[0_0_20px_rgba(234,255,0,0.2)]"
-                                    : "text-gray-500 hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                         >
                             <ListOrdered className="w-3.5 h-3.5" />
@@ -271,12 +271,12 @@ const FlowWorkspaceInner: React.FC = () => {
 
                     {/* Sequence Controls */}
                     {mode === 'SEQUENCE' && (
-                        <div className="bg-charcoal-900/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1 animate-in slide-in-from-top-4">
+                        <div className="bg-card/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1 animate-in slide-in-from-top-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={initializeSequence}
-                                className="h-10 w-10 p-0 text-gray-500 hover:text-neon-yellow hover:bg-neon-yellow/5 rounded-sm"
+                                className="h-10 w-10 p-0 text-muted-foreground hover:text-neon-yellow hover:bg-neon-yellow/5 rounded-sm"
                                 title="Reset Flow"
                             >
                                 <RotateCcw className="w-4 h-4" />
@@ -316,13 +316,13 @@ const FlowWorkspaceInner: React.FC = () => {
                 elementsSelectable={true}
             >
                 <Background color="#1a1a1a" gap={20} />
-                <Controls className="bg-charcoal-900 border-white/10 fill-white" />
+                <Controls className="bg-card border-border fill-white" />
             </ReactFlow>
 
             {/* Sequence Tooltip */}
             {mode === 'SEQUENCE' && (
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                    <div className="bg-charcoal-900/90 backdrop-blur px-8 py-4 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-neon-yellow/20 flex items-center gap-4 animate-pulse shrink-0">
+                    <div className="bg-card/90 backdrop-blur px-8 py-4 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-neon-yellow/20 flex items-center gap-4 animate-pulse shrink-0">
                         <span className="font-black text-xs uppercase tracking-widest text-neon-yellow">
                             {canGoNext ? "Click 'Next' or a node to follow the logic" : 'End of mapped sequence'}
                         </span>

@@ -83,7 +83,7 @@ const FileTree: React.FC<{
             case 'doc':
             case 'docx': return <FileText className="w-4 h-4 text-blue-400" />;
             case 'txt':
-            case 'md': return <FileText className="w-4 h-4 text-gray-400" />;
+            case 'md': return <FileText className="w-4 h-4 text-muted-foreground" />;
             default: return <File className="w-4 h-4 text-muted-foreground" />;
         }
     };
@@ -93,7 +93,7 @@ const FileTree: React.FC<{
             <div
                 className={cn(
                     "group flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer select-none transition-colors",
-                    selectedPath === item.path ? "bg-primary/20 text-white" : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                    selectedPath === item.path ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
@@ -307,10 +307,10 @@ export const RagPanel: React.FC = () => {
     }, [files]);
 
     return (
-        <div id="rag-panel-container" className="flex flex-col h-full bg-charcoal-900 border-r border-border">
+        <div id="rag-panel-container" className="flex flex-col h-full bg-card border-r border-border">
             {/* Header: Search & Toggle */}
-            <div className="p-3 border-b border-border space-y-3 bg-charcoal-900/80 backdrop-blur-md shrink-0">
-                <div className="flex items-center gap-2 bg-charcoal-800/50 p-1 rounded-lg border border-white/5">
+            <div className="p-3 border-b border-border space-y-3 bg-card/80 backdrop-blur-md shrink-0">
+                <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border border-border/50">
                     <button
                         onClick={() => setPanelMode('browse')}
                         className={cn(
@@ -337,7 +337,7 @@ export const RagPanel: React.FC = () => {
                     <form onSubmit={handleSearchSubmit} className="relative flex-1">
                         <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
                         <Input
-                            className="bg-background/50 border-input pl-9 h-9 text-xs text-white"
+                            className="bg-background/50 border-input pl-9 h-9 text-xs text-foreground"
                             placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
                             value={innerSearch}
                             onChange={(e) => setInnerSearch(e.target.value)}
@@ -347,27 +347,27 @@ export const RagPanel: React.FC = () => {
                     <div className="flex items-center gap-1 pl-2">
                         <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
                             <DialogTrigger asChild>
-                                <button className="p-1.5 hover:bg-white/5 rounded-md hover:text-primary transition-all text-muted-foreground" title="New Folder">
+                                <button className="p-1.5 hover:bg-muted/50 rounded-md hover:text-primary transition-all text-muted-foreground" title="New Folder">
                                     <FolderPlus className="w-3.5 h-3.5" />
                                 </button>
                             </DialogTrigger>
-                            <DialogContent className="bg-charcoal-900 border-border sm:max-w-xs text-white">
-                                <DialogHeader><DialogTitle className="text-white text-sm">New Folder</DialogTitle></DialogHeader>
-                                <Input placeholder="Folder Name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="bg-charcoal-800 border-gray-600 text-white h-8 text-xs my-2" />
+                            <DialogContent className="bg-card border-border sm:max-w-xs text-foreground">
+                                <DialogHeader><DialogTitle className="text-foreground text-sm">New Folder</DialogTitle></DialogHeader>
+                                <Input placeholder="Folder Name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="bg-muted border-input text-foreground h-8 text-xs my-2" />
                                 <DialogFooter><Button size="sm" onClick={handleCreateFolder}>Create</Button></DialogFooter>
                             </DialogContent>
                         </Dialog>
 
-                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 hover:bg-white/5 rounded-md hover:text-primary transition-all text-muted-foreground" title="Upload File">
+                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-primary transition-all text-muted-foreground" title="Upload File">
                             <UploadCloud className="w-3.5 h-3.5" />
                         </button>
                         <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
 
-                        <button onClick={() => handleReindex()} className={cn("p-1.5 hover:bg-white/5 rounded-md transition-all text-muted-foreground hover:text-yellow-400", indexing && "animate-pulse")} title="Index All">
+                        <button onClick={() => handleReindex()} className={cn("p-1.5 hover:bg-muted/50 rounded-md transition-all text-muted-foreground hover:text-yellow-400", indexing && "animate-pulse")} title="Index All">
                             <Zap className="w-3.5 h-3.5" />
                         </button>
 
-                        <button onClick={fetchFiles} className="p-1.5 hover:bg-white/5 rounded-md hover:text-primary transition-all text-muted-foreground" title="Refresh Library">
+                        <button onClick={fetchFiles} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-primary transition-all text-muted-foreground" title="Refresh Library">
                             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
                         </button>
                     </div>
@@ -410,7 +410,7 @@ export const RagPanel: React.FC = () => {
                             return (
                                 <div
                                     key={i}
-                                    className="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-pointer group"
+                                    className="p-3 rounded-lg bg-muted/50 border border-border/50 hover:border-primary/30 transition-all cursor-pointer group"
                                     onClick={() => path && openDocument({ id: path, title: name, type: path.split('.').pop() || 'txt' })}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
@@ -433,7 +433,7 @@ export const RagPanel: React.FC = () => {
 
             {/* Draggable Handle */}
             <div
-                className="h-1 bg-charcoal-800 hover:bg-primary/50 cursor-row-resize flex items-center justify-center shrink-0 transition-colors"
+                className="h-1 bg-muted hover:bg-primary/50 cursor-row-resize flex items-center justify-center shrink-0 transition-colors"
                 onMouseDown={(e) => {
                     const startY = e.clientY;
                     const startHeight = splitRatio;
@@ -446,12 +446,12 @@ export const RagPanel: React.FC = () => {
                     document.addEventListener('mouseup', onUp);
                 }}
             >
-                <div className="w-6 h-0.5 bg-white/10 rounded-full" />
+                <div className="w-6 h-0.5 bg-muted rounded-full" />
             </div>
 
             {/* Footer Area: Info & Actions */}
-            <div className="flex-1 bg-charcoal-900/50 p-3 overflow-y-auto space-y-4 min-h-0 custom-scrollbar">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+            <div className="flex-1 bg-card/50 p-3 overflow-y-auto space-y-4 min-h-0 custom-scrollbar">
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Context Details</h4>
                 </div>
 
@@ -462,7 +462,7 @@ export const RagPanel: React.FC = () => {
                             <div className="text-xs font-mono text-primary truncate" title={selectedFile.path}>{selectedFile.path}</div>
                         </div>
                         {selectedFile.type !== 'folder' && (
-                            <div className="flex items-center justify-between bg-black/20 p-2 rounded border border-white/5">
+                            <div className="flex items-center justify-between bg-muted/20 p-2 rounded border border-border/50">
                                 <span className="text-[10px] font-bold uppercase text-muted-foreground">Status</span>
                                 {selectedFile.indexed ? (
                                     <div className="flex items-center gap-1.5 text-green-500 font-bold text-[10px]"><CheckCircle className="w-3 h-3" /> INDEXED</div>
@@ -486,7 +486,7 @@ export const RagPanel: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-white/5 rounded-lg text-center px-4">
+                        <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-border/50 rounded-lg text-center px-4">
                             Select a document to manage its indexing state
                         </div>
 
@@ -496,7 +496,7 @@ export const RagPanel: React.FC = () => {
                                     <Zap className={cn("w-6 h-6", indexing && "animate-pulse")} />
                                 </div>
                                 <div className="space-y-1">
-                                    <h5 className="text-xs font-bold text-neon-yellow/80 uppercase">Unindexed Content Found</h5>
+                                    <h5 className="text-xs font-bold text-neon-yellow uppercase">Unindexed Content Found</h5>
                                     <p className="text-[10px] text-muted-foreground leading-tight">
                                         New documents were detected that haven't been processed yet.
                                     </p>
@@ -504,7 +504,7 @@ export const RagPanel: React.FC = () => {
                                 <Button
                                     onClick={() => handleReindex()}
                                     disabled={indexing}
-                                    className="w-full bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-bold h-9 gap-2 shadow-lg shadow-neon-yellow/20"
+                                    className="w-full bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-bold h-9 gap-2 shadow-lg shadow-neon-yellow/20"
                                 >
                                     {indexing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
                                     {indexing ? "SCANNING DOCUMENTS..." : "START BACKGROUND SCAN"}

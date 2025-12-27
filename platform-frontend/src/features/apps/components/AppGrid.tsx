@@ -383,17 +383,17 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
     return (
         <div
-            className={cn("h-full w-full flex flex-col bg-charcoal-950 relative overflow-hidden", className)}
+            className={cn("h-full w-full flex flex-col bg-background relative overflow-hidden", className)}
             onClick={() => selectAppCard(null)} // Auto-deselect on background click
         >
             {/* Management Toolbar (Top Left) - Hidden in View Mode */}
             {!isAppViewMode && (
                 <div className="absolute top-4 left-4 z-50 flex gap-2">
                     {/* Actions */}
-                    <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg p-1 gap-1">
+                    <div className="flex items-center bg-muted/80 backdrop-blur rounded-lg border border-border shadow-lg p-1 gap-1">
                         <button
                             onClick={(e) => { e.stopPropagation(); createNewApp(); }}
-                            className="p-1.5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors rounded"
+                            className="p-1.5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors rounded"
                             title="New App (Clear Canvas)"
                         >
                             <Plus className="w-4 h-4" />
@@ -418,10 +418,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
             {/* View Controls (Top Right) */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
-                <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2">
+                <div className="flex items-center bg-muted/80 backdrop-blur rounded-lg border border-border shadow-lg mr-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(0.5, prev - 0.1)); }}
-                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors border-r border-white/10 w-8 h-8 flex items-center justify-center font-bold"
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors border-r border-border w-8 h-8 flex items-center justify-center font-bold"
                         title="Zoom Out"
                     >
                         -
@@ -429,7 +429,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     <span className="px-2 text-[10px] font-bold text-muted-foreground min-w-[3rem] text-center uppercase tracking-tighter">{Math.round(zoomLevel * 100)}%</span>
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(1.5, prev + 0.1)); }}
-                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors w-8 h-8 flex items-center justify-center font-bold"
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center font-bold"
                         title="Zoom In"
                     >
                         +
@@ -437,7 +437,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 </div>
                 <button
                     onClick={(e) => { e.stopPropagation(); onToggleFullScreen(); }}
-                    className="p-2 bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 hover:bg-white/10 transition-colors text-muted-foreground hover:text-white shadow-lg"
+                    className="p-2 bg-muted/80 backdrop-blur rounded-lg border border-border hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground shadow-lg"
                     title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
                 >
                     {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -521,11 +521,11 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                 const cardStyle = card.style || {};
                                 const showBorder = cardStyle.showBorder === true;
                                 const borderWidth = cardStyle.borderWidth || 2;
-                                const borderColor = cardStyle.borderColor || 'rgba(255,255,255,0.1)';
+                                const borderColor = cardStyle.borderColor || 'hsl(var(--border))';
                                 const borderRadius = cardStyle.borderRadius ?? 12;
                                 const opacity = (cardStyle.opacity || 100) / 100;
-                                // Default to black if not set, transparent only if explicitly set
-                                const backgroundColor = cardStyle.backgroundColor || '#000000';
+                                // Default to card background if not set
+                                const backgroundColor = cardStyle.backgroundColor || 'hsl(var(--card))';
                                 const isTransparentBg = backgroundColor === 'transparent';
 
                                 return (
@@ -588,7 +588,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                                         e.stopPropagation();
                                                         removeAppCard(card.id);
                                                     }}
-                                                    className="p-1 bg-charcoal-800/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-500 border border-white/10"
+                                                    className="p-1 bg-muted/80 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-muted-foreground border border-border"
                                                 >
                                                     <Trash2 className="w-3 h-3" />
                                                 </button>
@@ -607,7 +607,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         {appCards.length === 0 && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="text-center space-y-2 opacity-30">
-                                    <div className="text-4xl font-bold tracking-tighter text-white">BUILDER CANVAS</div>
+                                    <div className="text-4xl font-bold tracking-tighter text-foreground">BUILDER CANVAS</div>
                                     <p className="text-sm">Select a component from the library to start building</p>
                                 </div>
                             </div>

@@ -34,13 +34,13 @@ export const TableCard: React.FC<TableCardProps> = ({
         <BaseCard title={tableTitle}>
             <div className={cn(
                 "w-full text-xs text-left text-muted-foreground min-w-[200px]",
-                showBorders && "border border-white/10 rounded"
+                showBorders && "border border-border rounded"
             )}>
                 {/* Headers */}
                 {showHeader && (
                     <div className={cn(
                         "flex pb-2 mb-2 font-bold text-foreground",
-                        showBorders ? "border-b border-white/10 px-2 pt-2" : "border-b border-white/10"
+                        showBorders ? "border-b border-border px-2 pt-2" : "border-b border-border"
                     )}>
                         {tableHeaders.map((h: string, i: number) => (
                             <div key={i} className="flex-1 px-1">{h}</div>
@@ -55,8 +55,8 @@ export const TableCard: React.FC<TableCardProps> = ({
                             key={idx}
                             className={cn(
                                 "flex py-1.5 px-1 -mx-1 transition-colors rounded",
-                                striped && idx % 2 === 1 && "bg-white/5",
-                                hoverHighlight && "hover:bg-white/10"
+                                striped && idx % 2 === 1 && "bg-muted/50",
+                                hoverHighlight && "hover:bg-muted"
                             )}
                         >
                             {row.map((cell: string, cellIdx: number) => (

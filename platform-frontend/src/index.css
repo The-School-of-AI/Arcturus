@@ -24,6 +24,8 @@
     --input: 240 5.9% 90%;
     --ring: 240 10% 3.9%;
     --radius: 0.5rem;
+    --neon-yellow: 55 95% 40%;
+    /* Darker Gold/Yellow for Light Mode visibility */
   }
 
   /* Defaulting to Dark Mode values for this app */
@@ -62,6 +64,8 @@
     --border: 220 16% 14%;
     --input: 220 16% 14%;
     --ring: 63 100% 65%;
+    --neon-yellow: 63 100% 65%;
+    /* Original Neon Yellow */
   }
 }
 
@@ -77,9 +81,9 @@
 
 /* Custom Grid Background - Match Explorer/ReactFlow dots */
 .bg-grid-dots {
-  background-color: #0a0b0d; /* charcoal-950 equivalent */
+  background-color: hsl(var(--background));
   background-size: 20px 20px;
-  background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+  background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px);
 }
 
 /* Hide attribution, but enable when release in public TODO */
@@ -92,10 +96,10 @@
 .react-flow__controls {
   display: flex !important;
   flex-direction: column !important;
-  /* Match RunTimeline: bg-charcoal-800/90 backdrop-blur */
-  background: hsl(220 16% 12% / 0.9) !important;
+  /* Match RunTimeline: bg-card/90 backdrop-blur */
+  background: hsl(var(--card) / 0.9) !important;
   backdrop-filter: blur(8px) !important;
-  border: 1px solid hsl(220 16% 14%) !important;
+  border: 1px solid hsl(var(--border)) !important;
   /* border-border */
   border-radius: 0.35rem !important;
   /* rounded-xl */
@@ -114,7 +118,7 @@
   border: none !important;
   border-bottom: none !important;
   /* Reset default */
-  color: hsl(240 5% 64.9%) !important;
+  color: hsl(var(--muted-foreground)) !important;
   /* muted-foreground */
   width: 28px !important;
   height: 28px !important;
@@ -176,7 +180,7 @@
 }
 
 .prose strong {
-  @apply text-white font-bold;
+  @apply text-foreground font-bold;
 }
 
 .prose blockquote {
@@ -184,11 +188,11 @@
 }
 
 .prose code {
-  @apply bg-white/10 px-1.5 py-0.5 rounded font-mono text-xs text-primary;
+  @apply bg-muted px-1.5 py-0.5 rounded font-mono text-xs text-primary;
 }
 
 .prose pre {
-  @apply bg-charcoal-900/50 p-4 rounded-xl border border-white/10 my-4 overflow-x-auto;
+  @apply bg-muted p-4 rounded-xl border border-border my-4 overflow-x-auto;
 }
 
 .prose pre code {
@@ -207,7 +211,7 @@
 
 .docx-viewer {
   scroll-behavior: smooth;
-  background-color: #0f1115 !important;
+  background-color: hsl(var(--background)) !important;
   /* charcoal-950 */
 }
 

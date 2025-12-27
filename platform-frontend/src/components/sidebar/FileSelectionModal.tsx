@@ -93,55 +93,55 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
             case 'code': return <FileCode className="w-3.5 h-3.5 text-blue-400" />;
             case 'binary': return <Database className="w-3.5 h-3.5 text-orange-400" />;
             case 'asset': return <FileImage className="w-3.5 h-3.5 text-purple-400" />;
-            default: return <FileText className="w-3.5 h-3.5 text-gray-400" />;
+            default: return <FileText className="w-3.5 h-3.5 text-muted-foreground" />;
         }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl h-[80vh] bg-charcoal-900 border-white/10 flex flex-col p-0 gap-0 overflow-hidden">
+            <DialogContent className="max-w-4xl h-[80vh] bg-card border-border flex flex-col p-0 gap-0 overflow-hidden">
                 {/* Header */}
-                <DialogHeader className="p-6 pb-4 border-b border-white/10 bg-charcoal-800/50">
+                <DialogHeader className="p-6 pb-4 border-b border-border bg-muted/50">
                     <DialogTitle className="flex items-center justify-between">
                         <div className="flex flex-col gap-1">
-                            <span className="text-lg font-bold text-white tracking-tight">Select Context for Analysis</span>
-                            <span className="text-xs font-mono text-gray-500">{rootPath}</span>
+                            <span className="text-lg font-bold text-foreground tracking-tight">Select Context for Analysis</span>
+                            <span className="text-xs font-mono text-muted-foreground">{rootPath}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs font-mono bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
+                        <div className="flex items-center gap-4 text-xs font-mono bg-black/40 px-3 py-1.5 rounded-lg border border-border/50">
                             <span className={cn(stats.tokens > 1000000 ? "text-red-400 animate-pulse" : "text-neon-yellow")}>
                                 ~{Math.round(stats.tokens / 1000)}k Tokens
                             </span>
-                            <span className="text-gray-500">|</span>
+                            <span className="text-muted-foreground">|</span>
                             <span>{stats.count} Files</span>
-                            <span className="text-gray-500">|</span>
+                            <span className="text-muted-foreground">|</span>
                             <span>{formatSize(stats.size)}</span>
                         </div>
                     </DialogTitle>
                 </DialogHeader>
 
                 {/* Toolbar */}
-                <div className="flex items-center gap-3 p-3 px-6 bg-charcoal-900 border-b border-white/5">
+                <div className="flex items-center gap-3 p-3 px-6 bg-card border-b border-border/50">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                         <input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Filter files..."
-                            className="w-full bg-white/5 border border-white/10 rounded-md py-1.5 pl-9 pr-3 text-xs text-gray-200 focus:outline-none focus:border-neon-yellow/50 transition-all font-mono"
+                            className="w-full bg-muted/50 border border-border rounded-md py-1.5 pl-9 pr-3 text-xs text-foreground focus:outline-none focus:border-neon-yellow/50 transition-all font-mono"
                         />
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={toggleAll}
-                        className="text-[10px] uppercase font-bold tracking-wider text-gray-400 hover:text-white"
+                        className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground hover:text-foreground"
                     >
                         {selectedPaths.size === filteredFiles.length ? "Select None" : "Select All"}
                     </Button>
                 </div>
 
                 {/* File List */}
-                <ScrollArea className="flex-1 bg-charcoal-950/50">
+                <ScrollArea className="flex-1 bg-background/50">
                     <div className="p-2 space-y-0.5">
                         {filteredFiles.map((file) => {
                             const isSelected = selectedPaths.has(file.path);
@@ -153,7 +153,7 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                                     key={file.path}
                                     onClick={() => !isBinary && toggleFile(file.path)}
                                     className={cn(
-                                        "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-all hover:bg-white/5 border border-transparent font-mono",
+                                        "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-all hover:bg-muted/50 border border-transparent font-mono",
                                         isSelected ? "bg-neon-yellow/5 border-neon-yellow/10" : "opacity-70 hover:opacity-100",
                                         isBinary && "opacity-40 cursor-not-allowed grayscale hover:bg-transparent"
                                     )}
@@ -161,7 +161,7 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                                     <div className={cn(
                                         "w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
                                         isSelected ? "bg-neon-yellow border-neon-yellow" : "border-white/20 bg-transparent",
-                                        isBinary && "border-white/5 bg-white/5"
+                                        isBinary && "border-border/50 bg-muted/50"
                                     )}>
                                         {isSelected && <Check className="w-3 h-3 text-black stroke-[3]" />}
                                     </div>
@@ -170,7 +170,7 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                                         {getIcon(file.type)}
                                         <span className={cn(
                                             "text-xs truncate",
-                                            isSelected ? "text-white font-medium" : "text-gray-400"
+                                            isSelected ? "text-foreground font-medium" : "text-muted-foreground"
                                         )}>
                                             {file.path}
                                         </span>
@@ -185,13 +185,13 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                                             </span>
                                         )}
                                         {isBinary && (
-                                            <span className="text-[10px] text-gray-600 italic px-2">Binary</span>
+                                            <span className="text-[10px] text-muted-foreground italic px-2">Binary</span>
                                         )}
 
-                                        <div className="w-20 text-right text-[10px] text-gray-500">
+                                        <div className="w-20 text-right text-[10px] text-muted-foreground">
                                             {file.lines > 0 ? `${file.lines} lines` : ''}
                                         </div>
-                                        <div className="w-16 text-right text-[10px] text-gray-600">
+                                        <div className="w-16 text-right text-[10px] text-muted-foreground">
                                             {formatSize(file.size)}
                                         </div>
                                     </div>
@@ -202,8 +202,8 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                 </ScrollArea>
 
                 {/* Footer */}
-                <DialogFooter className="p-4 border-t border-white/10 bg-charcoal-900 gap-3">
-                    <div className="flex-1 text-[10px] text-gray-500 italic flex items-center gap-2">
+                <DialogFooter className="p-4 border-t border-border bg-card gap-3">
+                    <div className="flex-1 text-[10px] text-muted-foreground italic flex items-center gap-2">
                         <ShieldAlert className="w-3 h-3 text-amber-500" />
                         Gemini 1.5 Pro Context Window: ~1M Tokens. Select wisely.
                     </div>

@@ -1,14 +1,29 @@
 
 // Default colors for cards
 export const DEFAULT_COLORS = {
-    accent: '#eaff00',      // neon-yellow
-    background: '#1a1b1e',  // charcoal-900
-    text: '#ffffff',        // white
-    secondary: '#6b7280',   // gray-500
-    border: 'rgba(255,255,255,0.1)', // white/10
-    success: '#4ade80',     // green-400
-    danger: '#f87171',      // red-400
+    accent: '#eaff00',      // neon-yellow (keep fixed for now or make variable)
+    background: 'hsl(var(--card))',
+    text: 'hsl(var(--foreground))',
+    secondary: 'hsl(var(--muted-foreground))',
+    border: 'hsl(var(--border))',
+    success: '#4ade80',
+    danger: '#f87171',
 };
+
+// ... (keep middle content)
+
+export const getDefaultStyle = () => ({
+    showBorder: false,
+    borderWidth: 2,
+    borderColor: 'hsl(var(--border))',
+    borderRadius: 12,
+    opacity: 100,
+    accentColor: DEFAULT_COLORS.accent,
+    backgroundColor: 'hsl(var(--card))',
+    textColor: 'hsl(var(--foreground))',
+    successColor: '#4ade80',
+    dangerColor: '#f87171',
+});
 
 export const COLOR_PRESETS = [
     { name: 'Neon Yellow', value: '#eaff00' },
@@ -367,18 +382,7 @@ export const getDefaultData = (type: string): any => {
 };
 
 
-export const getDefaultStyle = () => ({
-    showBorder: false,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    opacity: 100,
-    accentColor: DEFAULT_COLORS.accent,
-    backgroundColor: '#000000',
-    textColor: '#ffffff',
-    successColor: '#4ade80',
-    dangerColor: '#f87171',
-});
+
 
 // Typical usage descriptions for all component types
 export const COMPONENT_USAGE: Record<string, string> = {

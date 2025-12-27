@@ -64,7 +64,7 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
                 {stats.map((stat, index) => (
                     <div
                         key={index}
-                        className="p-3 rounded-lg bg-black/30 border border-white/10"
+                        className="p-3 rounded-lg bg-black/30 border border-border"
                     >
                         <div className="flex items-center justify-between gap-2 mb-1">
                             <span className="text-xs font-medium text-muted-foreground">{stat.name}</span>
@@ -134,7 +134,7 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
                 columns === 4 && "grid-cols-4"
             )}>
                 {stats.map((item, index) => (
-                    <Card key={index} className="p-4 py-3 bg-black/30 border-white/10">
+                    <Card key={index} className="p-4 py-3 bg-black/30 border-border">
                         <CardContent className="p-0">
                             <dt className="text-xs font-medium text-muted-foreground">{item.name}</dt>
                             <dd className="mt-1 flex items-baseline space-x-2">
@@ -210,7 +210,7 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
             )}
             <div className="grid grid-cols-2 gap-3 flex-1">
                 {stats.map((item, index) => (
-                    <div key={index} className="p-3 rounded-lg bg-black/30 border border-white/10">
+                    <div key={index} className="p-3 rounded-lg bg-black/30 border border-border">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-muted-foreground">{item.name}</span>
                             <Badge variant="outline" className={statusStyles[item.status]}>
@@ -279,7 +279,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
     return (
         <div className="h-full flex flex-col">
             {showTitle && (
-                <div className="px-4 py-3 border-b border-white/10">
+                <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {title}
                     </h3>
@@ -288,7 +288,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
             <div className="flex-1 overflow-auto">
                 <table className="w-full">
                     <thead>
-                        <tr className="border-b border-white/10">
+                        <tr className="border-b border-border">
                             {headers.map((header: string, i: number) => (
                                 <th key={i} className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                                     {header}
@@ -301,8 +301,8 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
                             <tr
                                 key={rowIndex}
                                 className={cn(
-                                    "border-b border-white/5",
-                                    striped && rowIndex % 2 === 1 && "bg-white/5"
+                                    "border-b border-border/50",
+                                    striped && rowIndex % 2 === 1 && "bg-muted/50"
                                 )}
                             >
                                 {(row.cells || []).map((cell: string, cellIndex: number) => (
@@ -315,7 +315,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
                                                     row.status === 'success' && "bg-green-500/15 text-green-400",
                                                     row.status === 'warning' && "bg-amber-500/15 text-amber-400",
                                                     row.status === 'error' && "bg-red-500/15 text-red-400",
-                                                    row.status === 'default' && "bg-gray-500/15 text-gray-400"
+                                                    row.status === 'default' && "bg-gray-500/15 text-muted-foreground"
                                                 )}
                                             >
                                                 {cell}
@@ -380,7 +380,7 @@ export const StatsLinksCard: React.FC<StatsLinksCardProps> = ({
                 {links.map((link, index) => (
                     <div
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-white/10 hover:bg-white/5 cursor-pointer transition-colors group"
+                        className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-border hover:bg-muted/50 cursor-pointer transition-colors group"
                     >
                         <div>
                             <span className="text-sm font-medium text-foreground">{link.name}</span>
@@ -436,7 +436,7 @@ export const Stats01Card: React.FC<Stats01CardProps> = ({
     return (
         <div className="h-full flex flex-col">
             {showTitle && (
-                <div className="px-4 py-3 border-b border-white/10">
+                <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {title}
                     </h3>
@@ -506,7 +506,7 @@ export const UsageStatsCard: React.FC<UsageStatsCardProps> = ({
     return (
         <div className="h-full flex flex-col">
             {showTitle && (
-                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {title}
                     </h3>
@@ -695,13 +695,13 @@ const AccordionRow: React.FC<{ row: AccordionRowData; defaultOpen?: boolean }> =
 
     return (
         <>
-            <tr className="border-b border-white/5 hover:bg-white/5">
+            <tr className="border-b border-border/50 hover:bg-muted/50">
                 <td className="px-3 py-2 w-8">
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className={cn(
                             "p-1 rounded transition-colors",
-                            hasChildren ? "hover:bg-white/10 cursor-pointer" : "opacity-30 cursor-default"
+                            hasChildren ? "hover:bg-muted cursor-pointer" : "opacity-30 cursor-default"
                         )}
                         disabled={!hasChildren}
                     >
@@ -719,7 +719,7 @@ const AccordionRow: React.FC<{ row: AccordionRowData; defaultOpen?: boolean }> =
                 <td className="px-3 py-2 text-xs text-muted-foreground">{row.date}</td>
             </tr>
             {hasChildren && isOpen && row.children?.map(child => (
-                <tr key={child.id} className="border-b border-white/5 bg-black/20">
+                <tr key={child.id} className="border-b border-border/50 bg-black/20">
                     <td className="px-3 py-2 w-8"></td>
                     <td className="px-3 py-2 text-xs  text-muted-foreground pl-6">{child.id}</td>
                     <td className="px-3 py-2 text-xs">{child.name}</td>
@@ -744,7 +744,7 @@ export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
     return (
         <div className="h-full flex flex-col">
             {showTitle && (
-                <div className="px-4 py-3 border-b border-white/10">
+                <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {title}
                     </h3>
@@ -753,7 +753,7 @@ export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
             <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm">
                     <thead className="bg-black/30 sticky top-0">
-                        <tr className="border-b border-white/10">
+                        <tr className="border-b border-border">
                             <th className="px-3 py-2 w-8"></th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">ID</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Name</th>

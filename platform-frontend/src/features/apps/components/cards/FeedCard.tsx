@@ -16,7 +16,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({ title, items = [
         <BaseCard title={title}>
             <div className="space-y-3">
                 {items.map(item => (
-                    <div key={item.id} className="group relative pl-4 border-l-2 border-white/5 hover:border-primary/50 transition-colors pb-1">
+                    <div key={item.id} className="group relative pl-4 border-l-2 border-border/50 hover:border-primary/50 transition-colors pb-1">
                         <div className="flex items-center justify-between mb-0.5">
                             <div className="text-[10px] uppercase font-bold text-primary opacity-80">{item.source}</div>
                             <div className="text-[10px] text-muted-foreground">{item.time}</div>

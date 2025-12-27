@@ -109,8 +109,8 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                 content: (
                     <div>
                         <div className="font-bold mb-0.5">{pt.label || `Point ${index + 1}`}</div>
-                        {pt.category && <div className="text-gray-400 text-[8px]">{pt.category}</div>}
-                        <div className="text-gray-400">x: {pt.x}, y: {pt.y}</div>
+                        {pt.category && <div className="text-muted-foreground text-[8px]">{pt.category}</div>}
+                        <div className="text-muted-foreground">x: {pt.x}, y: {pt.y}</div>
                     </div>
                 ),
                 visible: true
@@ -126,7 +126,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[9px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-foreground text-[9px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}
@@ -194,7 +194,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
 
                 {/* Legend */}
                 {showLegend && autoMultiColor && categories.length > 1 && (
-                    <div className="flex flex-wrap gap-3 justify-center border-t border-white/5 pt-2 mt-1">
+                    <div className="flex flex-wrap gap-3 justify-center border-t border-border/50 pt-2 mt-1">
                         {categories.map((cat, i) => (
                             <div key={i} className="flex items-center gap-1.5">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colorMap[cat as string] }} />

@@ -27,7 +27,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
     return (
         <div className="space-y-3">
             {thinking && (
-                <div className="bg-black/20 border border-white/5 rounded-xl overflow-hidden mb-2">
+                <div className="bg-black/20 border border-border/50 rounded-xl overflow-hidden mb-2">
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
                         className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:bg-white/5 transition-colors"
@@ -42,7 +42,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                         {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     </button>
                     {isExpanded && (
-                        <div className="px-4 py-3 text-[11px] text-foreground/50 border-t border-white/5 leading-relaxed bg-black/40 italic">
+                        <div className="px-4 py-3 text-[11px] text-foreground/50 border-t border-border/50 leading-relaxed bg-black/40 italic">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{thinking}</ReactMarkdown>
                         </div>
                     )}
@@ -178,7 +178,7 @@ export const DocumentAssistant: React.FC = () => {
 
     if (!activeDoc) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-charcoal-900">
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-background">
                 <ScrollText className="w-12 h-12 mb-4 opacity-20" />
                 <h3 className="font-semibold text-foreground mb-2">Document Assistant</h3>
                 <p className="text-sm">Select a document from the library to start an interactive deep-dive.</p>
@@ -187,9 +187,9 @@ export const DocumentAssistant: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-charcoal-900">
+        <div className="h-full flex flex-col bg-background">
             {/* Header */}
-            <div className="p-4 border-b border-border bg-charcoal-900/95 sticky top-0 z-10 flex items-center justify-between">
+            <div className="p-4 border-b border-border bg-card/95 sticky top-0 z-10 flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <MessageSquare className="w-4 h-4 text-primary" />
@@ -215,7 +215,7 @@ export const DocumentAssistant: React.FC = () => {
                     )}>
                         <div className={cn(
                             "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
-                            msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-white/10 text-foreground"
+                            msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                         )}>
                             {msg.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                         </div>
@@ -223,7 +223,7 @@ export const DocumentAssistant: React.FC = () => {
                             "max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
                             msg.role === 'user'
                                 ? "bg-primary/20 text-foreground border border-primary/20 rounded-tr-none"
-                                : "bg-white/5 text-foreground/90 border border-white/5 rounded-tl-none px-0 py-0 overflow-hidden" // Special padding for assistant to allow full-width thought blocks
+                                : "bg-muted text-foreground/90 border border-border/50 rounded-tl-none px-0 py-0 overflow-hidden" // Special padding for assistant to allow full-width thought blocks
                         )}>
                             <div className={cn(msg.role === 'assistant' ? "p-4" : "")}>
                                 <MessageContent content={msg.content} role={msg.role} />
@@ -234,10 +234,10 @@ export const DocumentAssistant: React.FC = () => {
 
                 {isThinking && (
                     <div className="flex gap-3 animate-pulse">
-                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-1">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-1">
                             <Bot className="w-3 h-3" />
                         </div>
-                        <div className="bg-white/5 border border-white/5 rounded-2xl rounded-tl-none px-4 py-2">
+                        <div className="bg-muted border border-border/50 rounded-2xl rounded-tl-none px-4 py-2">
                             <div className="flex gap-1">
                                 <span className="w-1 h-1 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: '0ms' }} />
                                 <span className="w-1 h-1 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -258,7 +258,7 @@ export const DocumentAssistant: React.FC = () => {
                         </div>
                         <button
                             onClick={clearSelectedContexts}
-                            className="text-[9px] font-bold text-muted-foreground hover:text-white transition-colors"
+                            className="text-[9px] font-bold text-muted-foreground hover:text-foreground transition-colors"
                         >
                             Clear All
                         </button>
@@ -267,7 +267,7 @@ export const DocumentAssistant: React.FC = () => {
                         {selectedContexts.map((ctx, idx) => (
                             <div
                                 key={idx}
-                                className="group flex items-center gap-2 bg-charcoal-800 border border-white/5 rounded-full pl-3 pr-1 py-1 max-w-full animate-in zoom-in-95 duration-200"
+                                className="group flex items-center gap-2 bg-charcoal-800 border border-border/50 rounded-full pl-3 pr-1 py-1 max-w-full animate-in zoom-in-95 duration-200"
                             >
                                 <span className="text-[10px] text-foreground/90 truncate flex-1 min-w-0 font-medium">
                                     {ctx.length > 50 ? `${ctx.substring(0, 50)}...` : ctx}
@@ -285,7 +285,7 @@ export const DocumentAssistant: React.FC = () => {
             )}
 
             {/* Input Area */}
-            <div className="p-4 border-t border-border bg-charcoal-900 space-y-3">
+            <div className="p-4 border-t border-border bg-card space-y-3">
                 {/* Image Preview */}
                 {pastedImage && (
                     <div className="relative w-24 h-24 group animate-in zoom-in-95 duration-200">
@@ -296,7 +296,7 @@ export const DocumentAssistant: React.FC = () => {
                         />
                         <button
                             onClick={() => setPastedImage(null)}
-                            className="absolute -top-2 -right-2 p-1 bg-charcoal-800 border border-border rounded-full hover:bg-red-500 hover:text-white transition-all shadow-xl"
+                            className="absolute -top-2 -right-2 p-1 bg-charcoal-800 border border-border rounded-full hover:bg-red-500 hover:text-foreground transition-all shadow-xl"
                         >
                             <X className="w-3 h-3" />
                         </button>
@@ -311,7 +311,7 @@ export const DocumentAssistant: React.FC = () => {
                         onKeyDown={(e) => e.key === 'Enter' && !isThinking && handleSend()}
                         onPaste={handlePaste}
                         placeholder="Type or paste image..."
-                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+                        className="w-full bg-black/40 border border-border rounded-xl px-4 py-3 pr-12 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
                         disabled={isThinking}
                     />
                     <button

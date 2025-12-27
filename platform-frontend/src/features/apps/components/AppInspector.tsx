@@ -75,9 +75,9 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'divider':
             return <DividerCard {...commonProps} />;
         case 'header':
-            return <div className="p-4 text-xl font-bold text-white">{data.text || 'Dashboard Header'}</div>;
+            return <div className="p-4 text-xl font-bold text-foreground">{data.text || 'Dashboard Header'}</div>;
         case 'text':
-            return <div className="p-4 text-sm text-gray-400">{data.text || 'Text block content...'}</div>;
+            return <div className="p-4 text-sm text-muted-foreground">{data.text || 'Text block content...'}</div>;
 
         // Controls
         case 'button':
@@ -95,8 +95,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'date_picker':
             return (
                 <div className="p-3 flex flex-col gap-2">
-                    <label className="text-[10px] uppercase font-bold text-gray-500">Date Range</label>
-                    <div className="flex items-center gap-2 p-2 bg-black/40 border border-white/10 rounded text-[10px] text-white">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Date Range</label>
+                    <div className="flex items-center gap-2 p-2 bg-black/40 border border-border rounded text-[10px] text-foreground">
                         📅 2024-01-01 → Present
                     </div>
                 </div>
@@ -120,8 +120,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-3 grid grid-cols-2 gap-2">
                     {[{ v: '$287K', c: '+8%' }, { v: '$9.4K', c: '-12%' }, { v: '$173K', c: '+2%' }, { v: '$52K', c: '-5%' }].map((s, i) => (
-                        <div key={i} className="bg-charcoal-800/50 rounded p-2 flex flex-col items-center">
-                            <div className="text-sm font-bold text-white">{s.v}</div>
+                        <div key={i} className="bg-muted/50 rounded p-2 flex flex-col items-center">
+                            <div className="text-sm font-bold text-foreground">{s.v}</div>
                             <div className={`text-[10px] ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
                         </div>
                     ))}
@@ -131,9 +131,9 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-3 flex flex-col gap-2">
                     {['Projects: 12', 'Issues: 47', 'PRs: 8'].map((item, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs text-gray-400">
+                        <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>{item.split(':')[0]}</span>
-                            <span className="text-white font-bold">{item.split(':')[1]}</span>
+                            <span className="text-foreground font-bold">{item.split(':')[1]}</span>
                         </div>
                     ))}
                 </div>
@@ -141,11 +141,11 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'simple_table':
             return (
                 <div className="p-3 flex flex-col gap-1">
-                    <div className="flex gap-2 text-[10px] text-gray-500 border-b border-white/10 pb-1">
+                    <div className="flex gap-2 text-[10px] text-muted-foreground border-b border-border pb-1">
                         <span className="flex-1">Task</span><span className="flex-1">Status</span>
                     </div>
                     {[['Auth', '🟡'], ['UI', '🟢'], ['API', '⚪']].map(([t, s], i) => (
-                        <div key={i} className="flex gap-2 text-xs text-gray-400">
+                        <div key={i} className="flex gap-2 text-xs text-muted-foreground">
                             <span className="flex-1">{t}</span><span className="flex-1">{s}</span>
                         </div>
                     ))}
@@ -157,8 +157,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     {[{ n: 'API', p: 35 }, { n: 'Storage', p: 30 }, { n: 'Users', p: 48 }].map((u, i) => (
                         <div key={i} className="flex flex-col gap-1">
                             <div className="flex justify-between text-[10px]">
-                                <span className="text-gray-500">{u.n}</span>
-                                <span className="text-gray-400">{u.p}%</span>
+                                <span className="text-muted-foreground">{u.n}</span>
+                                <span className="text-muted-foreground">{u.p}%</span>
                             </div>
                             <div className="h-1.5 bg-charcoal-700 rounded-full overflow-hidden">
                                 <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
@@ -175,18 +175,18 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                         <circle cx="18" cy="18" r="14" fill="none" stroke="#3b82f6" strokeWidth="4" strokeDasharray="30 58" transform="rotate(-90 18 18)" />
                         <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="20 68" strokeDashoffset="-30" transform="rotate(-90 18 18)" />
                     </svg>
-                    <div className="text-xs text-gray-500">8.3 / 15 GB</div>
+                    <div className="text-xs text-muted-foreground">8.3 / 15 GB</div>
                 </div>
             );
         case 'accordion_table':
             return (
                 <div className="p-3 flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-xs text-white bg-charcoal-800/50 rounded px-2 py-1">
-                        <span className="text-gray-500">▶</span>
+                    <div className="flex items-center gap-2 text-xs text-foreground bg-muted/50 rounded px-2 py-1">
+                        <span className="text-muted-foreground">▶</span>
                         <span>Project A</span>
                         <span className="ml-auto text-neon-yellow">$45K</span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-400 pl-4">
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground pl-4">
                         <span>└ Frontend</span>
                         <span className="ml-auto">$15K</span>
                     </div>
@@ -194,7 +194,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             );
 
         default:
-            return <div className="flex items-center justify-center h-full text-gray-500 text-xs">Preview not available</div>;
+            return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Preview not available</div>;
     }
 };
 
@@ -672,7 +672,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
         const previewStyle = getDefaultStyle();
 
         return (
-            <div className={cn("h-full flex flex-col bg-charcoal-900 border-l border-border", className)}>
+            <div className={cn("h-full flex flex-col bg-card border-l border-border", className)}>
                 <div className="p-4 border-b border-border flex items-center gap-2 bg-primary/5">
                     <div className="p-1.5 rounded bg-primary/20 text-primary">
                         <Component className="w-4 h-4" />
@@ -690,7 +690,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
 
                     {/* Live Preview - Render the actual component */}
-                    <div className="rounded-xl overflow-hidden bg-black border border-white/10 shadow-lg">
+                    <div className="rounded-xl overflow-hidden bg-black border border-border shadow-lg">
                         <div className="w-full aspect-[16/10] relative">
                             <div className="absolute inset-0 p-2">
                                 <div className="w-full h-full">
@@ -701,7 +701,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
 
                     {/* Typical Usage - Below the preview */}
-                    <div className="p-3 rounded-lg bg-black/40 border border-white/10 space-y-1.5">
+                    <div className="p-3 rounded-lg bg-black/40 border border-border space-y-1.5">
                         <div className="text-[10px] uppercase font-bold text-primary/80 tracking-wider">Typical Usage</div>
                         <p className="text-xs text-foreground/80 leading-relaxed">{usageText}</p>
                     </div>
@@ -718,7 +718,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
     if (!selectedCard) {
         return (
-            <div className={cn("h-full flex flex-col items-center justify-center p-8 bg-charcoal-900 text-center space-y-4", className)}>
+            <div className={cn("h-full flex flex-col items-center justify-center p-8 bg-card text-center space-y-4", className)}>
                 <div className="p-4 rounded-full bg-white/5">
                     <Settings2 className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
@@ -734,7 +734,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
     const cardFeatures = CARD_FEATURES[selectedCard.type] || [];
 
     return (
-        <div className={cn("h-full flex flex-col bg-charcoal-900 border-l border-border", className)}>
+        <div className={cn("h-full flex flex-col bg-card border-l border-border", className)}>
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -779,7 +779,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     <Input
                                         value={selectedCard.label}
                                         onChange={(e) => updateAppCardLabel(selectedCard.id, e.target.value)}
-                                        className="bg-charcoal-800 border-white/10 text-xs h-8"
+                                        className="bg-muted border-border text-xs h-8"
                                     />
                                 </div>
                             </div>
@@ -798,7 +798,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     <select
                                         value={selectedCard.config?.dataSource || 'local'}
                                         onChange={(e) => updateAppCardConfig(selectedCard.id, { dataSource: e.target.value })}
-                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                        className="w-full bg-muted border border-border rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                                     >
                                         <option value="local">Local State (Manual)</option>
                                         <option value="agent">Research Agent (Live)</option>
@@ -809,7 +809,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                                 {/* Local Data Editor */}
                                 {(!selectedCard.config?.dataSource || selectedCard.config?.dataSource === 'local') && (
-                                    <div className="space-y-3 pt-2 border-t border-white/5">
+                                    <div className="space-y-3 pt-2 border-t border-border/50">
                                         <div className="text-[10px] text-primary font-bold uppercase">Edit Card Data</div>
 
                                         {CARD_DATA_FIELDS[selectedCard.type]?.map(field => (
@@ -819,7 +819,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                     <Input
                                                         value={selectedCard.data?.[field.key] || ''}
                                                         onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
-                                                        className="bg-charcoal-800 border-white/10 text-xs h-8"
+                                                        className="bg-muted border-border text-xs h-8"
                                                     />
                                                 )}
                                                 {field.type === 'number' && (
@@ -827,7 +827,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                         type="number"
                                                         value={selectedCard.data?.[field.key] || 0}
                                                         onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: parseFloat(e.target.value) || 0 })}
-                                                        className="bg-charcoal-800 border-white/10 text-xs h-8"
+                                                        className="bg-muted border-border text-xs h-8"
                                                     />
                                                 )}
                                                 {field.type === 'textarea' && (
@@ -835,14 +835,14 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                         value={selectedCard.data?.[field.key] || ''}
                                                         onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
                                                         rows={4}
-                                                        className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                                                        className="w-full bg-muted border border-border rounded text-xs p-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
                                                     />
                                                 )}
                                                 {field.type === 'json' && (
                                                     <div className="space-y-1">
                                                         {field.options && field.options[0] && (
-                                                            <div className="text-[9px] text-muted-foreground bg-charcoal-950 rounded px-2 py-1  break-all">
-                                                                <span className="text-gray-500">Example: </span>{field.options[0]}
+                                                            <div className="text-[9px] text-muted-foreground bg-background rounded px-2 py-1  break-all">
+                                                                <span className="text-muted-foreground">Example: </span>{field.options[0]}
                                                             </div>
                                                         )}
                                                         <textarea
@@ -858,7 +858,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                                 }
                                                             }}
                                                             rows={6}
-                                                            className="w-full bg-charcoal-800 border border-white/10 rounded text-xs p-2 text-foreground  focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                                                            className="w-full bg-muted border border-border rounded text-xs p-2 text-foreground  focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
                                                         />
                                                     </div>
                                                 )}
@@ -869,13 +869,13 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                             <Input
                                                                 value={selectedCard.data?.[field.key] || ''}
                                                                 onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
-                                                                className="flex-1 bg-charcoal-800 border-white/10 text-xs h-8"
+                                                                className="flex-1 bg-muted border-border text-xs h-8"
                                                                 placeholder="Paste internet URL..."
                                                             />
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="h-8 px-2 border-white/10 bg-charcoal-800 hover:bg-white/10 text-[10px]"
+                                                                className="h-8 px-2 border-border bg-muted hover:bg-white/10 text-[10px]"
                                                                 onClick={() => {
                                                                     const input = document.createElement('input');
                                                                     input.type = 'file';
@@ -909,7 +909,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                     <select
                                                         value={selectedCard.data?.[field.key] || field.options[0]}
                                                         onChange={(e) => updateAppCardData(selectedCard.id, { [field.key]: e.target.value })}
-                                                        className="w-full bg-charcoal-800 border-white/10 rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                                        className="w-full bg-muted border-border rounded text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                                                     >
                                                         {field.options.map(opt => (
                                                             <option key={opt} value={opt}>{opt}</option>
@@ -944,7 +944,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             value={selectedCard.config?.scriptPath || ''}
                                             onChange={(e) => updateAppCardConfig(selectedCard.id, { scriptPath: e.target.value })}
                                             placeholder="path/to/script.py"
-                                            className="bg-charcoal-800 border-white/10 text-xs h-8 "
+                                            className="bg-muted border-border text-xs h-8 "
                                         />
                                     </div>
                                 )}
@@ -956,7 +956,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                             value={selectedCard.config?.apiEndpoint || ''}
                                             onChange={(e) => updateAppCardConfig(selectedCard.id, { apiEndpoint: e.target.value })}
                                             placeholder="https://api.example.com/data"
-                                            className="bg-charcoal-800 border-white/10 text-xs h-8 "
+                                            className="bg-muted border-border text-xs h-8 "
                                         />
                                     </div>
                                 )}
@@ -1006,7 +1006,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                             "flex-1 py-1.5 text-[10px] rounded border transition-colors",
                                                             (cardStyle.borderWidth || 2) === w
                                                                 ? "bg-primary/20 border-primary text-primary"
-                                                                : "bg-charcoal-800 border-white/10 text-muted-foreground hover:border-white/20"
+                                                                : "bg-muted border-border text-muted-foreground hover:border-white/20"
                                                         )}
                                                     >
                                                         {w}px
@@ -1075,7 +1075,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         max="100"
                                         value={cardStyle.opacity || 100}
                                         onChange={(e) => updateAppCardStyle(selectedCard.id, { opacity: parseInt(e.target.value) })}
-                                        className="w-full h-1.5 bg-charcoal-800 rounded-full appearance-none cursor-pointer accent-primary"
+                                        className="w-full h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
                                     />
                                 </div>
 
@@ -1095,7 +1095,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                     "flex-1 py-1.5 text-[10px] rounded border transition-colors",
                                                     (cardStyle.borderRadius ?? 12) === opt.value
                                                         ? "bg-primary/20 border-primary text-primary"
-                                                        : "bg-charcoal-800 border-white/10 text-muted-foreground hover:border-white/20"
+                                                        : "bg-muted border-border text-muted-foreground hover:border-white/20"
                                                 )}
                                             >
                                                 {opt.label}
@@ -1223,7 +1223,7 @@ const CollapsibleSection = ({
     onToggle: () => void;
     children: React.ReactNode;
 }) => (
-    <div className="rounded-lg border border-white/5 overflow-hidden bg-charcoal-800/30">
+    <div className="rounded-lg border border-border/50 overflow-hidden bg-muted/30">
         <button
             onClick={onToggle}
             className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
@@ -1235,7 +1235,7 @@ const CollapsibleSection = ({
             {expanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
         </button>
         {expanded && (
-            <div className="p-3 pt-0 border-t border-white/5 animate-in slide-in-from-top-1 duration-200">
+            <div className="p-3 pt-0 border-t border-border/50 animate-in slide-in-from-top-1 duration-200">
                 {children}
             </div>
         )}
@@ -1276,7 +1276,7 @@ const ColorPicker = ({
             {/* Current Color Preview */}
             <div className="flex items-center gap-2">
                 <div
-                    className="w-full h-8 rounded border border-white/10 cursor-pointer transition-all hover:border-white/20"
+                    className="w-full h-8 rounded border border-border cursor-pointer transition-all hover:border-white/20"
                     style={{ backgroundColor: value }}
                     onClick={() => setShowCustom(!showCustom)}
                 />
@@ -1312,7 +1312,7 @@ const ColorPicker = ({
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         placeholder="#ffffff"
-                        className="flex-1 bg-charcoal-800 border border-white/10 rounded text-xs px-2 py-1 text-foreground "
+                        className="flex-1 bg-muted border border-border rounded text-xs px-2 py-1 text-foreground "
                     />
                 </div>
             )}

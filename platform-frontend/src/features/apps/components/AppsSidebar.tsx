@@ -14,7 +14,7 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
     const [activeTab, setActiveTab] = useState<'components' | 'apps'>('components');
 
     return (
-        <div className={cn("h-full flex flex-col bg-charcoal-900 border-r border-border", className)}>
+        <div className={cn("h-full flex flex-col bg-card border-r border-border", className)}>
             {/* Header / Tabs */}
             <div className="flex items-center border-b border-border">
                 <button
@@ -174,12 +174,12 @@ const ComponentLibrary = () => {
 
     return (
         <div className="space-y-2">
-            <div className="relative sticky top-0 z-10 bg-charcoal-900 pb-2">
+            <div className="relative sticky top-0 z-10 bg-card pb-2">
                 <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
                 <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-charcoal-950 border border-white/10 rounded-lg text-xs pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 focus:border-neon-yellow/30 text-foreground placeholder:text-gray-600 transition-all"
+                    className="w-full bg-background border border-border rounded-lg text-xs pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 focus:border-neon-yellow/30 text-foreground placeholder:text-muted-foreground transition-all"
                     placeholder="Search 40+ components..."
                 />
             </div>
@@ -187,18 +187,18 @@ const ComponentLibrary = () => {
             {filteredCategories.map(category => {
                 const isExpanded = isSearching || expandedCategories[category.name];
                 return (
-                    <div key={category.name} className="border border-white/5 rounded-lg overflow-hidden bg-charcoal-950/50">
+                    <div key={category.name} className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
                         <button
                             onClick={() => toggleCategory(category.name)}
                             className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/5 transition-colors"
                         >
-                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
                                 {category.name}
                             </span>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-gray-600">{category.items.length}</span>
+                                <span className="text-[10px] text-muted-foreground">{category.items.length}</span>
                                 <svg
-                                    className={`w-3 h-3 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                    className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -244,7 +244,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             case 'header':
                 return (
                     <div className="w-full h-full flex flex-col justify-center p-3">
-                        <div className="text-[11px] font-bold text-white">Add a heading</div>
+                        <div className="text-[11px] font-bold text-foreground">Add a heading</div>
                     </div>
                 );
             case 'text':
@@ -273,7 +273,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                         <div className="w-8 h-6 border border-dashed border-gray-600 rounded flex items-center justify-center">
-                            <Image className="w-3 h-3 text-gray-600" />
+                            <Image className="w-3 h-3 text-muted-foreground" />
                         </div>
                     </div>
                 );
@@ -281,7 +281,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex items-center justify-center">
                         <div className="w-full h-4 border border-dashed border-gray-700 rounded flex items-center justify-center">
-                            <div className="text-[8px] text-gray-600">SPACE</div>
+                            <div className="text-[8px] text-muted-foreground">SPACE</div>
                         </div>
                     </div>
                 );
@@ -296,8 +296,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             case 'metric':
                 return (
                     <div className="w-full h-full flex flex-col justify-center p-3">
-                        <div className="text-[8px] text-gray-500 uppercase">Revenue</div>
-                        <div className="text-sm font-black text-white">$2.4M</div>
+                        <div className="text-[8px] text-muted-foreground uppercase">Revenue</div>
+                        <div className="text-sm font-black text-foreground">$2.4M</div>
                         <div className="flex items-center gap-0.5 text-green-400">
                             <TrendingUp className="w-2 h-2" />
                             <span className="text-[8px]">+12.5%</span>
@@ -307,8 +307,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             case 'trend':
                 return (
                     <div className="w-full h-full flex flex-col p-3">
-                        <div className="text-[8px] text-gray-500">PRICE</div>
-                        <div className="text-[10px] font-bold text-white">$145.20</div>
+                        <div className="text-[8px] text-muted-foreground">PRICE</div>
+                        <div className="text-[10px] font-bold text-foreground">$145.20</div>
                         <div className="flex-1 flex items-end">
                             <svg viewBox="0 0 40 12" className="w-full h-3">
                                 <path d="M0 10 Q10 8 15 6 T25 4 T40 2" fill="none" stroke="#4ade80" strokeWidth="1.5" />
@@ -404,22 +404,22 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     <div className="w-full h-full flex items-center gap-2 p-3">
                         <div className="w-6 h-6 rounded bg-neon-yellow/20 flex items-center justify-center text-[9px] font-black text-neon-yellow">G</div>
                         <div className="flex flex-col">
-                            <div className="text-[9px] font-bold text-white">Alphabet</div>
-                            <div className="text-[7px] text-gray-500">GOOGL</div>
+                            <div className="text-[9px] font-bold text-foreground">Alphabet</div>
+                            <div className="text-[7px] text-muted-foreground">GOOGL</div>
                         </div>
                     </div>
                 );
             case 'valuation':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-gray-500">FAIR VALUE</div>
+                        <div className="text-[7px] text-muted-foreground">FAIR VALUE</div>
                         <div className="flex items-center gap-1">
                             <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
                                 <div className="h-full w-3/5 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full" />
                             </div>
                         </div>
                         <div className="flex justify-between text-[7px]">
-                            <span className="text-white">$145</span>
+                            <span className="text-foreground">$145</span>
                             <span className="text-green-400">$180</span>
                         </div>
                     </div>
@@ -435,19 +435,19 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex flex-col items-center justify-center p-2">
                         <div className="text-xl font-black text-neon-yellow">A-</div>
-                        <div className="text-[7px] text-gray-500">Top Tier</div>
+                        <div className="text-[7px] text-muted-foreground">Top Tier</div>
                     </div>
                 );
             case 'peer_table':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-0.5">
-                        <div className="flex gap-1 text-[6px] text-gray-500">
+                        <div className="flex gap-1 text-[6px] text-muted-foreground">
                             <span className="flex-1">Ticker</span>
                             <span className="flex-1">MCap</span>
                             <span className="flex-1">P/E</span>
                         </div>
                         {['AAPL', 'MSFT', 'GOOGL'].map(t => (
-                            <div key={t} className="flex gap-1 text-[6px] text-gray-400">
+                            <div key={t} className="flex gap-1 text-[6px] text-muted-foreground">
                                 <span className="flex-1">{t}</span>
                                 <span className="flex-1">2.5T</span>
                                 <span className="flex-1">28</span>
@@ -465,8 +465,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                             { n: 'ROE', v: '22%', s: 'text-green-400' },
                             { n: 'D/E', v: '0.45', s: 'text-green-400' }
                         ].map((r, i) => (
-                            <div key={i} className="bg-charcoal-800/50 rounded p-1 flex flex-col items-center">
-                                <div className="text-[6px] text-gray-500">{r.n}</div>
+                            <div key={i} className="bg-muted/50 rounded p-1 flex flex-col items-center">
+                                <div className="text-[6px] text-muted-foreground">{r.n}</div>
                                 <div className={`text-[9px] font-bold ${r.s}`}>{r.v}</div>
                             </div>
                         ))}
@@ -482,7 +482,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                             { n: 'Financing', v: '-$600M', pos: false }
                         ].map((c, i) => (
                             <div key={i} className="flex justify-between items-center">
-                                <span className="text-[7px] text-gray-500">{c.n}</span>
+                                <span className="text-[7px] text-muted-foreground">{c.n}</span>
                                 <span className={`text-[8px] font-bold ${c.pos ? 'text-green-400' : 'text-red-400'}`}>{c.v}</span>
                             </div>
                         ))}
@@ -512,8 +512,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                         ].map((r, i) => (
                             <div key={i} className="flex flex-col gap-0.5">
                                 <div className="flex justify-between text-[6px]">
-                                    <span className="text-gray-500">{r.n}</span>
-                                    <span className="text-white">{r.v}</span>
+                                    <span className="text-muted-foreground">{r.n}</span>
+                                    <span className="text-foreground">{r.v}</span>
                                 </div>
                                 <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
                                     <div className="h-full bg-neon-yellow/70 rounded-full" style={{ width: r.w }} />
@@ -526,7 +526,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             case 'summary':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1 justify-center">
-                        <div className="text-[6px] text-gray-400 leading-tight">Strong fundamentals with healthy growth...</div>
+                        <div className="text-[6px] text-muted-foreground leading-tight">Strong fundamentals with healthy growth...</div>
                         <div className="flex flex-col gap-0.5">
                             {['✓ Revenue +15% YoY', '✓ Market leader', '✓ Strong cash'].map((p, i) => (
                                 <div key={i} className="text-[6px] text-green-400">{p}</div>
@@ -547,26 +547,26 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             case 'input':
                 return (
                     <div className="w-full h-full flex items-center justify-center p-3">
-                        <div className="w-full h-5 bg-charcoal-950 border border-gray-700 rounded px-1.5 flex items-center">
-                            <span className="text-[7px] text-gray-600">Enter ticker...</span>
+                        <div className="w-full h-5 bg-background border border-gray-700 rounded px-1.5 flex items-center">
+                            <span className="text-[7px] text-muted-foreground">Enter ticker...</span>
                         </div>
                     </div>
                 );
             case 'select':
                 return (
                     <div className="w-full h-full flex items-center justify-center p-3">
-                        <div className="w-full h-5 bg-charcoal-950 border border-gray-700 rounded px-1.5 flex items-center justify-between">
-                            <span className="text-[7px] text-gray-400">Select...</span>
-                            <span className="text-[7px] text-gray-600">▼</span>
+                        <div className="w-full h-5 bg-background border border-gray-700 rounded px-1.5 flex items-center justify-between">
+                            <span className="text-[7px] text-muted-foreground">Select...</span>
+                            <span className="text-[7px] text-muted-foreground">▼</span>
                         </div>
                     </div>
                 );
             case 'date_picker':
                 return (
                     <div className="w-full h-full flex items-center justify-center p-3">
-                        <div className="w-full h-5 bg-charcoal-950 border border-gray-700 rounded px-1.5 flex items-center gap-1">
-                            <Calendar className="w-2 h-2 text-gray-600" />
-                            <span className="text-[7px] text-gray-400">Dec 26, 2025</span>
+                        <div className="w-full h-5 bg-background border border-gray-700 rounded px-1.5 flex items-center gap-1">
+                            <Calendar className="w-2 h-2 text-muted-foreground" />
+                            <span className="text-[7px] text-muted-foreground">Dec 26, 2025</span>
                         </div>
                     </div>
                 );
@@ -590,24 +590,24 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-0.5 ">
                         <div className="text-[6px] text-green-400">[INFO] Starting...</div>
-                        <div className="text-[6px] text-gray-500">[DEBUG] Init</div>
+                        <div className="text-[6px] text-muted-foreground">[DEBUG] Init</div>
                         <div className="text-[6px] text-neon-yellow">[WARN] Check</div>
                     </div>
                 );
             case 'json':
                 return (
                     <div className="w-full h-full flex flex-col p-2  text-[6px]">
-                        <span className="text-gray-500">{"{"}</span>
+                        <span className="text-muted-foreground">{"{"}</span>
                         <span className="pl-1"><span className="text-neon-yellow">"ticker"</span>: <span className="text-green-400">"GOOGL"</span></span>
-                        <span className="text-gray-500">{"}"}</span>
+                        <span className="text-muted-foreground">{"}"}</span>
                     </div>
                 );
             case 'code':
                 return (
                     <div className="w-full h-full flex flex-col p-2  text-[6px]">
-                        <span className="text-purple-400">def</span><span className="text-white"> analyze():</span>
-                        <span className="pl-2 text-gray-500"># logic here</span>
-                        <span className="pl-2 text-blue-400">return</span><span className="text-white"> data</span>
+                        <span className="text-purple-400">def</span><span className="text-foreground"> analyze():</span>
+                        <span className="pl-2 text-muted-foreground"># logic here</span>
+                        <span className="pl-2 text-blue-400">return</span><span className="text-foreground"> data</span>
                     </div>
                 );
 
@@ -650,9 +650,9 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                             { label: 'Pending', value: '$173K', change: '+2.8%', positive: true },
                         ].map((stat, i) => (
                             <div key={i} className="flex items-center justify-between">
-                                <div className="text-[7px] text-gray-500">{stat.label}</div>
+                                <div className="text-[7px] text-muted-foreground">{stat.label}</div>
                                 <div className="flex items-center gap-1">
-                                    <span className="text-[8px] font-bold text-white">{stat.value}</span>
+                                    <span className="text-[8px] font-bold text-foreground">{stat.value}</span>
                                     <span className={`text-[6px] ${stat.positive ? 'text-green-400' : 'text-red-400'}`}>{stat.change}</span>
                                 </div>
                             </div>
@@ -664,8 +664,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
                         {[{ v: '10.4K', c: '-12%', neg: true }, { v: '56.1%', c: '+1.8%' }, { v: '5.2m', c: '+19%' }, { v: '3.2%', c: '-2.4%', neg: true }].map((s, i) => (
-                            <div key={i} className="bg-charcoal-800/50 rounded p-1 flex flex-col items-center">
-                                <div className="text-[9px] font-bold text-white">{s.v}</div>
+                            <div key={i} className="bg-muted/50 rounded p-1 flex flex-col items-center">
+                                <div className="text-[9px] font-bold text-foreground">{s.v}</div>
                                 <div className={`text-[6px] ${s.neg ? 'text-red-400' : 'text-green-400'}`}>{s.c}</div>
                             </div>
                         ))}
@@ -676,9 +676,9 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
                         {[{ v: '99.9%', s: 'success' }, { v: '142ms', s: 'success' }, { v: '0.4%', s: 'warning' }, { v: '2,847', s: 'info' }].map((s, i) => (
-                            <div key={i} className="bg-charcoal-800/50 rounded p-1 flex items-center gap-1">
+                            <div key={i} className="bg-muted/50 rounded p-1 flex items-center gap-1">
                                 <div className={`w-1.5 h-1.5 rounded-full ${s.s === 'success' ? 'bg-green-500' : s.s === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'}`} />
-                                <div className="text-[8px] font-bold text-white">{s.v}</div>
+                                <div className="text-[8px] font-bold text-foreground">{s.v}</div>
                             </div>
                         ))}
                     </div>
@@ -688,9 +688,9 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex flex-col gap-1 p-2 justify-center">
                         {['Projects: 12', 'Issues: 47', 'PRs: 8'].map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-[7px] text-gray-400 hover:text-white">
+                            <div key={i} className="flex items-center justify-between text-[7px] text-muted-foreground hover:text-foreground">
                                 <span>{item.split(':')[0]}</span>
-                                <span className="text-white font-bold">{item.split(':')[1]}</span>
+                                <span className="text-foreground font-bold">{item.split(':')[1]}</span>
                             </div>
                         ))}
                     </div>
@@ -699,11 +699,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             case 'simple_table':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-0.5">
-                        <div className="flex gap-1 text-[6px] text-gray-500 border-b border-white/10 pb-0.5">
+                        <div className="flex gap-1 text-[6px] text-muted-foreground border-b border-border pb-0.5">
                             <span className="flex-1">Task</span><span className="flex-1">Status</span>
                         </div>
                         {[['Auth', '🟡'], ['UI', '🟢'], ['API', '⚪']].map(([t, s], i) => (
-                            <div key={i} className="flex gap-1 text-[6px] text-gray-400">
+                            <div key={i} className="flex gap-1 text-[6px] text-muted-foreground">
                                 <span className="flex-1">{t}</span><span className="flex-1">{s}</span>
                             </div>
                         ))}
@@ -715,7 +715,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
                         {[{ v: '$287K', c: '+8%', pos: true }, { v: '$9.4K', c: '-12%' }, { v: '$173K', c: '+2%', pos: true }, { v: '$52K', c: '-5%' }].map((s, i) => (
                             <div key={i} className="flex flex-col items-center justify-center">
-                                <div className="text-[9px] font-bold text-white">{s.v}</div>
+                                <div className="text-[9px] font-bold text-foreground">{s.v}</div>
                                 <div className={`text-[6px] ${s.pos ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
                             </div>
                         ))}
@@ -728,8 +728,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                         {[{ n: 'API', p: 35 }, { n: 'Storage', p: 30 }, { n: 'Users', p: 48 }].map((u, i) => (
                             <div key={i} className="flex flex-col gap-0.5">
                                 <div className="flex justify-between text-[6px]">
-                                    <span className="text-gray-500">{u.n}</span>
-                                    <span className="text-gray-400">{u.p}%</span>
+                                    <span className="text-muted-foreground">{u.n}</span>
+                                    <span className="text-muted-foreground">{u.p}%</span>
                                 </div>
                                 <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
                                     <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
@@ -748,24 +748,24 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                             <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="20 68" strokeDashoffset="-30" transform="rotate(-90 18 18)" />
                             <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4" strokeDasharray="15 73" strokeDashoffset="-50" transform="rotate(-90 18 18)" />
                         </svg>
-                        <div className="text-[7px] text-gray-500">8.3 / 15 GB</div>
+                        <div className="text-[7px] text-muted-foreground">8.3 / 15 GB</div>
                     </div>
                 );
 
             case 'accordion_table':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-0.5">
-                        <div className="flex items-center gap-1 text-[6px] text-white bg-charcoal-800/50 rounded px-1 py-0.5">
-                            <span className="text-gray-500">▶</span>
+                        <div className="flex items-center gap-1 text-[6px] text-foreground bg-muted/50 rounded px-1 py-0.5">
+                            <span className="text-muted-foreground">▶</span>
                             <span>Project A</span>
                             <span className="ml-auto text-neon-yellow">$45K</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[6px] text-gray-400 pl-2">
+                        <div className="flex items-center gap-1 text-[6px] text-muted-foreground pl-2">
                             <span>└ Frontend</span>
                             <span className="ml-auto">$15K</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[6px] text-white bg-charcoal-800/50 rounded px-1 py-0.5">
-                            <span className="text-gray-500">▶</span>
+                        <div className="flex items-center gap-1 text-[6px] text-foreground bg-muted/50 rounded px-1 py-0.5">
+                            <span className="text-muted-foreground">▶</span>
                             <span>Campaign</span>
                             <span className="ml-auto text-neon-yellow">$28K</span>
                         </div>
@@ -775,7 +775,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             default:
                 return (
                     <div className="w-full h-full flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-gray-600" />
+                        <Icon className="w-5 h-5 text-muted-foreground" />
                     </div>
                 );
         }
@@ -790,12 +790,12 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 "group relative flex flex-col rounded-xl border-2 cursor-grab active:cursor-grabbing transition-all duration-300 overflow-hidden select-none shadow-lg",
                 // Match Explorer node styling
                 isSelected
-                    ? "bg-charcoal-800 border-neon-yellow ring-4 ring-neon-yellow/20 scale-[1.02]"
-                    : "bg-charcoal-900/90 border-white/10 hover:border-white/30 hover:scale-[1.02]"
+                    ? "bg-muted border-neon-yellow ring-4 ring-neon-yellow/20 scale-[1.02]"
+                    : "bg-card/90 border-border hover:border-white/30 hover:scale-[1.02]"
             )}
         >
             {/* Preview Area - matches the actual card appearance with animation */}
-            <div className="aspect-[2] w-full overflow-hidden bg-charcoal-950/50 group-hover:bg-charcoal-900/80 transition-colors">
+            <div className="aspect-[2] w-full overflow-hidden bg-background/50 group-hover:bg-card/80 transition-colors">
                 <div className="w-full h-full animate-in fade-in slide-in-from-bottom-1 duration-500">
                     {renderPreview()}
                 </div>
@@ -804,7 +804,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
             {/* Label */}
             <div className={cn(
                 "px-2 py-1 text-[10px] font-medium text-center border-t transition-colors",
-                isSelected ? "bg-charcoal-800 border-neon-yellow/20 text-neon-yellow" : "bg-charcoal-900 border-white/5 text-gray-400"
+                isSelected ? "bg-muted border-neon-yellow/20 text-neon-yellow" : "bg-card border-border/50 text-muted-foreground"
             )}>
                 {label}
             </div>
@@ -840,20 +840,20 @@ const SavedAppsList = () => {
         <div className="space-y-6">
             {/* Create New / Header */}
             <div className="flex items-center justify-between px-1">
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
                     My Dashboards
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => fetchApps()}
-                        className="p-1 text-gray-400 hover:text-white transition-colors"
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
                         title="Refresh List"
                     >
                         <RefreshCw className="w-3 h-3" />
                     </button>
                     <button
                         onClick={createNewApp}
-                        className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-white transition-colors"
+                        className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-foreground transition-colors"
                     >
                         <Plus className="w-3 h-3" />
                         NEW APP
@@ -863,25 +863,25 @@ const SavedAppsList = () => {
 
             {/* Search Bar */}
             <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <input
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search apps..."
-                    className="w-full bg-charcoal-800 border border-white/10 rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-gray-600"
+                    className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground"
                 />
             </div>
 
             {/* Save Controls - Only shown when starting fresh or renaming */}
             {!activeApp && (
-                <div className="flex flex-col gap-2 p-3 bg-charcoal-800/50 rounded-xl border border-white/5">
+                <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-xl border border-border/50">
                     <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Save New App</label>
                     <div className="flex gap-2">
                         <input
                             value={name}
                             onChange={e => setName(e.target.value)}
                             placeholder="Dashboard Name..."
-                            className="flex-1 bg-charcoal-950 border border-white/10 rounded-lg text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-gray-600"
+                            className="flex-1 bg-background border border-border rounded-lg text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground"
                         />
                         <button
                             onClick={handleSave}
@@ -915,8 +915,8 @@ const SavedAppsList = () => {
                                         className={cn(
                                             "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border-2",
                                             isActive
-                                                ? "bg-charcoal-800 border-neon-yellow shadow-[0_0_15px_rgba(234,255,0,0.1)] scale-[1.02]"
-                                                : "bg-charcoal-900/90 border-white/10 hover:border-white/30"
+                                                ? "bg-muted border-neon-yellow shadow-[0_0_15px_rgba(234,255,0,0.1)] scale-[1.02]"
+                                                : "bg-card/90 border-border hover:border-white/30"
                                         )}
                                         onClick={() => loadApp(app.id)}
                                     >
@@ -927,14 +927,14 @@ const SavedAppsList = () => {
                                             )}>
                                                 {app.name}
                                             </div>
-                                            <div className="text-[10px] text-gray-500">
+                                            <div className="text-[10px] text-muted-foreground">
                                                 {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
                                             </div>
                                         </div>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
                                             className={cn(
-                                                "p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-400 rounded-lg transition-all",
+                                                "p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded-lg transition-all",
                                                 isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                                             )}
                                             title="Delete App"

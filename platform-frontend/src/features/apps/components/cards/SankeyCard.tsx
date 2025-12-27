@@ -254,7 +254,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[10px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-foreground text-[10px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}
@@ -333,7 +333,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                 </div>
 
                 {showLegend && nodes.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-1 justify-center border-t border-white/5 pt-2">
+                    <div className="flex flex-wrap gap-2 mt-1 justify-center border-t border-border/50 pt-2">
                         {nodes.map((n, i) => (
                             <div key={i} className="flex items-center gap-1.5">
                                 <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: n.color || accentColor }} />

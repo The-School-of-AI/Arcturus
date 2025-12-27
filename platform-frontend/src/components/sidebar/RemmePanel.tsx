@@ -38,16 +38,16 @@ export const RemmePanel: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0a0a0a] text-white">
+        <div className="flex flex-col h-full bg-card text-foreground">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-charcoal-900/50 backdrop-blur-md sticky top-0 z-10">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
                         <Brain className="w-5 h-5 text-neon-yellow animate-pulse" />
                     </div>
                     <div>
-                        <h2 className="font-semibold text-sm tracking-tight text-gray-100 uppercase">Memory Vault</h2>
-                        <p className="text-[10px] text-neon-yellow/50 font-mono tracking-widest">{memories.length} PERSISTENT FACTS</p>
+                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">Memory Vault</h2>
+                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{memories.length} PERSISTENT FACTS</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -56,11 +56,11 @@ export const RemmePanel: React.FC = () => {
             </div>
 
             {/* Search */}
-            <div className="p-3 border-b border-white/5 bg-[#0d0d0d]">
+            <div className="p-3 border-b border-border/50 bg-muted/20">
                 <div className="relative group">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600 group-focus-within:text-neon-yellow transition-colors" />
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground group-focus-within:text-neon-yellow transition-colors" />
                     <Input
-                        className="pl-9 bg-charcoal-900/50 border-white/5 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-gray-700 h-9 transition-all"
+                        className="pl-9 bg-card/50 border-border/50 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-muted-foreground h-9 transition-all"
                         placeholder="Search your memories..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -69,11 +69,11 @@ export const RemmePanel: React.FC = () => {
             </div>
 
             {/* Actions Area */}
-            <div className="p-2 grid grid-cols-2 gap-2 border-b border-white/5 bg-charcoal-900/30">
+            <div className="p-2 grid grid-cols-2 gap-2 border-b border-border/50 bg-card/30">
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="text-[11px] text-gray-400 hover:text-neon-yellow hover:bg-neon-yellow/5 h-8"
+                    className="text-[11px] text-muted-foreground hover:text-neon-yellow hover:bg-neon-yellow/5 h-8"
                     onClick={() => setIsAddOpen(!isAddOpen)}
                 >
                     <Plus className="w-3.5 h-3.5 mr-1.5" /> Manual Add
@@ -87,7 +87,7 @@ export const RemmePanel: React.FC = () => {
                         "text-[11px] h-8",
                         danglingCount > 0
                             ? "text-orange-400 hover:text-orange-300 hover:bg-orange-400/10"
-                            : "text-gray-600 opacity-50 cursor-not-allowed"
+                            : "text-muted-foreground opacity-50 cursor-not-allowed"
                     )}
                     onClick={() => {
                         if (confirm(`Cleanup ${danglingCount} memories with missing source sessions?`)) {
@@ -101,9 +101,9 @@ export const RemmePanel: React.FC = () => {
 
             {/* Add New Memory Overlay/Area */}
             {isAddOpen && (
-                <div className="p-4 bg-charcoal-800 border-b border-white/10 animate-in slide-in-from-top-2">
+                <div className="p-4 bg-muted border-b border-border animate-in slide-in-from-top-2">
                     <textarea
-                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg p-3 text-sm text-gray-200 mb-3 focus:outline-none focus:border-neon-yellow/50 transition-colors placeholder:text-gray-700"
+                        className="w-full bg-input border border-border rounded-lg p-3 text-sm text-foreground mb-3 focus:outline-none focus:border-neon-yellow/50 transition-colors placeholder:text-muted-foreground"
                         rows={3}
                         placeholder="Define a new fact for the agent to remember..."
                         value={newMemoryText}
@@ -112,7 +112,7 @@ export const RemmePanel: React.FC = () => {
                     />
                     <div className="flex justify-end gap-2">
                         <Button size="sm" variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                        <Button size="sm" className="bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-bold px-4 shadow-[0_0_15px_rgba(234,255,0,0.2)]" onClick={handleAdd}>
+                        <Button size="sm" className="bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-bold px-4 shadow-[0_0_15px_rgba(234,255,0,0.2)]" onClick={handleAdd}>
                             Save Fact
                         </Button>
                     </div>
@@ -122,7 +122,7 @@ export const RemmePanel: React.FC = () => {
             {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
                 {filteredMemories.length === 0 ? (
-                    <div className="text-center py-20 text-gray-700">
+                    <div className="text-center py-20 text-muted-foreground">
                         <div className="relative inline-block mb-4">
                             <Brain className="w-12 h-12 mx-auto opacity-10" />
                             <Search className="w-6 h-6 absolute bottom-0 right-0 opacity-20" />
@@ -135,17 +135,17 @@ export const RemmePanel: React.FC = () => {
                             key={memory.id}
                             className={cn(
                                 "group relative p-4 rounded-xl border transition-all duration-300",
-                                "bg-gradient-to-br from-charcoal-800/80 to-charcoal-900/40",
-                                "hover:from-charcoal-800 hover:to-charcoal-900 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]",
+                                "bg-gradient-to-br from-card to-muted/20",
+                                "hover:shadow-md",
                                 memory.source_exists === false
                                     ? "border-orange-500/20 hover:border-orange-500/40"
-                                    : "border-white/5 hover:border-white/20"
+                                    : "border-border/50 hover:border-white/20"
                             )}
                         >
                             <div className="flex justify-between items-start gap-3">
                                 <div className="flex-1 min-w-0">
                                     <p className={cn(
-                                        "text-[13px] text-gray-200 leading-relaxed font-normal selection:bg-neon-yellow/30",
+                                        "text-[13px] text-foreground leading-relaxed font-normal selection:bg-neon-yellow/30",
                                         "line-clamp-2 group-hover:line-clamp-none transition-all duration-300"
                                     )}>
                                         {memory.text}
@@ -153,7 +153,7 @@ export const RemmePanel: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col gap-2 -mr-1">
                                     <button
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-gray-600 hover:text-red-400 transition-all duration-200"
+                                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
                                         onClick={() => deleteMemory(memory.id)}
                                         title="Forget this memory"
                                     >
@@ -171,7 +171,7 @@ export const RemmePanel: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                            <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <span className={cn(
                                         "px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter",
@@ -181,11 +181,11 @@ export const RemmePanel: React.FC = () => {
                                     )}>
                                         {memory.category}
                                     </span>
-                                    <span className="text-[9px] text-gray-600 font-mono">
+                                    <span className="text-[9px] text-muted-foreground font-mono">
                                         {formatDistanceToNow(new Date(memory.created_at))} ago
                                     </span>
                                 </div>
-                                <div className="text-[9px] text-gray-700 font-mono truncate max-w-[80px] hover:text-gray-400 transition-colors cursor-help" title={memory.source}>
+                                <div className="text-[9px] text-muted-foreground font-mono truncate max-w-[80px] hover:text-muted-foreground transition-colors cursor-help" title={memory.source}>
                                     SRC: {memory.source.split(',')[0]}
                                 </div>
                             </div>

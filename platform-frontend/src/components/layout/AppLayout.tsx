@@ -18,7 +18,7 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
         className="w-1 cursor-col-resize group relative flex items-center justify-center hover:bg-primary/30 active:bg-primary/50 transition-colors"
         onMouseDown={onMouseDown}
     >
-        <div className="absolute z-10 flex items-center justify-center w-4 h-8 rounded bg-charcoal-800 border border-border opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute z-10 flex items-center justify-center w-4 h-8 rounded bg-muted border border-border opacity-0 group-hover:opacity-100 transition-opacity">
             <GripVertical className="w-3 h-3 text-muted-foreground" />
         </div>
     </div>

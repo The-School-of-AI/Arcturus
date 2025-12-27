@@ -44,7 +44,7 @@ export const McpInspector: React.FC = () => {
 
     if (!selectedMcpServer) {
         return (
-            <div className="h-full flex items-center justify-center p-8 text-center bg-card/30">
+            <div className="h-full flex items-center justify-center p-8 text-center bg-background">
                 <div className="space-y-3">
                     <Info className="w-10 h-10 text-muted-foreground mx-auto opacity-20" />
                     <p className="text-sm text-muted-foreground">Select an MCP server from the library to configure tools</p>
@@ -72,8 +72,8 @@ export const McpInspector: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-card/30">
-            <div className="p-4 border-b border-border bg-charcoal-900/50 flex items-center justify-between">
+        <div className="flex flex-col h-full bg-background">
+            <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <Settings2 className="w-4 h-4 text-primary" />

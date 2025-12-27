@@ -82,7 +82,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 )}
 
                 {showSector && (
-                    <div className="flex gap-4 pt-2 border-t border-white/5">
+                    <div className="flex gap-4 pt-2 border-t border-border/50">
                         <div className="text-xs">
                             <span className="text-muted-foreground block">Sector</span>
                             <span className="font-medium" style={{ color: style.textColor }}>{sector}</span>

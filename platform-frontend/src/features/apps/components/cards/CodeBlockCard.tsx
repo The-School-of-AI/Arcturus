@@ -32,7 +32,7 @@ export const CodeBlockCard: React.FC<CodeBlockCardProps> = ({
 
     return (
         <BaseCard title={showTitle ? (data.title || title) : undefined}>
-            <div className="h-full overflow-hidden rounded border border-white/5 text-[10px]">
+            <div className="h-full overflow-hidden rounded border border-border/50 text-[10px]">
                 {highlight ? (
                     <SyntaxHighlighter
                         language={displayLang}

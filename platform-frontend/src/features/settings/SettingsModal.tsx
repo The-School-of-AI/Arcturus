@@ -15,8 +15,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-charcoal-800 border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between p-4 border-b border-border/50">
                     <h2 className="text-lg font-semibold text-foreground">Settings</h2>
                     <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 hover:text-destructive">
                         <X className="w-4 h-4" />
@@ -30,7 +30,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                         </label>
                         <input
                             type="password"
-                            className="w-full bg-charcoal-900 border border-border rounded-md px-3 py-2 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-mono"
+                            className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-mono text-foreground"
                             placeholder="AIzaSy..."
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
@@ -43,7 +43,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                             Local Model (Ollama)
                         </label>
                         <select
-                            className="w-full bg-charcoal-900 border border-border rounded-md px-3 py-2 text-sm focus:border-primary/50 transition-all"
+                            className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm focus:border-primary/50 transition-all text-foreground"
                             value={localModel}
                             onChange={(e) => setLocalModel(e.target.value)}
                         >
@@ -57,7 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                         <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                             System Prompts
                         </label>
-                        <div className="text-xs bg-charcoal-900 border border-border rounded p-3 text-muted-foreground">
+                        <div className="text-xs bg-muted border border-border rounded p-3 text-muted-foreground">
                             Global prompts editing coming soon...
                         </div>
                     </div>
@@ -65,7 +65,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
 
                 </div>
 
-                <div className="p-4 bg-charcoal-900/50 border-t border-white/5 flex justify-end">
+                <div className="p-4 bg-muted/50 border-t border-border/50 flex justify-end">
                     <Button onClick={onClose} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                         <Save className="w-4 h-4" />
                         Save Changes

@@ -144,7 +144,7 @@ export const RunTimeline: React.FC = () => {
     const displayTotal = totalSteps;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-charcoal-800/90 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-card/90 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
             <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"
@@ -207,7 +207,7 @@ export const RunTimeline: React.FC = () => {
                     {totalSteps > 1 && Array.from({ length: totalSteps }).map((_, i) => (
                         <div
                             key={i}
-                            className="absolute top-0 bottom-0 w-px bg-charcoal-900/50"
+                            className="absolute top-0 bottom-0 w-px bg-border/50"
                             style={{ left: `${(i / maxStep) * 100}%` }}
                         />
                     ))}

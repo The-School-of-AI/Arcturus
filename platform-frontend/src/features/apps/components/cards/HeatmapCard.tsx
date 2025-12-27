@@ -121,11 +121,11 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[9px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-foreground text-[9px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         <div className="font-bold">{tooltip.value}</div>
-                        <div className="text-gray-400">{tooltip.xLabel}, {tooltip.yLabel}</div>
+                        <div className="text-muted-foreground">{tooltip.xLabel}, {tooltip.yLabel}</div>
                     </div>
                 )}
 
@@ -145,7 +145,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                                     key={j}
                                     className={cn(
                                         "flex-1 rounded-sm transition-all hover:brightness-125 hover:scale-105 min-w-0 cursor-crosshair",
-                                        showGrid && "border border-white/5"
+                                        showGrid && "border border-border/50"
                                     )}
                                     style={{
                                         backgroundColor: getCellColor(val),
@@ -173,7 +173,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
                 {/* Legend */}
                 {showLegend && (
-                    <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
+                    <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/50 mt-2">
                         <span className="text-[9px] text-muted-foreground">Low</span>
                         <div className="flex h-2 w-24 rounded-full overflow-hidden">
                             {autoMultiColor ? (

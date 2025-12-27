@@ -72,7 +72,7 @@ const ClarificationInput: React.FC<{ selectedNode: any; codeContent: string }> =
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !isSubmitting && handleSubmit()}
                     placeholder="Type your response here..."
-                    className="flex-1 bg-black/30 border border-white/10 rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-yellow-500/50 transition-colors"
+                    className="flex-1 bg-background border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-yellow-500/50 transition-colors"
                     disabled={isSubmitting}
                 />
                 <button
@@ -136,7 +136,7 @@ export const WorkspacePanel: React.FC = () => {
     if (!effectiveSelectedNodeId) {
         return (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
                     <Terminal className="w-8 h-8 opacity-50" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Agent Inspector</h3>
@@ -146,9 +146,9 @@ export const WorkspacePanel: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-charcoal-900 border-l border-border">
+        <div className="h-full flex flex-col bg-card border-l border-border">
             {/* Sticky Header */}
-            <div className="p-4 border-b border-border bg-charcoal-900/95 backdrop-blur z-10">
+            <div className="p-4 border-b border-border bg-card/95 backdrop-blur z-10">
                 <div className="flex items-center gap-2 mb-2">
                     <div className={cn(
                         "w-2 h-2 rounded-full",
@@ -189,7 +189,7 @@ export const WorkspacePanel: React.FC = () => {
                             <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2 select-none">
                                 <Terminal className="w-3 h-3" /> Original Prompt
                             </div>
-                            <div className="p-3 bg-white/5 rounded-md text-foreground/90 leading-relaxed text-xs border border-white/5 select-text">
+                            <div className="p-3 bg-muted/50 rounded-md text-foreground/90 leading-relaxed text-xs border border-border/50 select-text">
                                 {selectedNode?.data.prompt || "N/A"}
                             </div>
                         </div>
@@ -208,7 +208,7 @@ export const WorkspacePanel: React.FC = () => {
                                         <div className="text-[10px] uppercase text-neon-yellow/60 font-bold tracking-widest">
                                             Component Mission
                                         </div>
-                                        <div className="text-sm text-gray-200 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/5">
+                                        <div className="text-sm text-foreground leading-relaxed bg-muted/50 p-3 rounded-lg border border-border/50">
                                             {selectedNode.data.description}
                                         </div>
                                     </div>
@@ -235,13 +235,13 @@ export const WorkspacePanel: React.FC = () => {
                                     <div className="space-y-2">
                                         <div className="text-[10px] uppercase text-neon-yellow font-bold tracking-widest pb-1 border-b border-neon-yellow/20 flex items-center justify-between">
                                             Implementation Details
-                                            <span className="text-[9px] text-gray-500 font-normal">Internal Logic</span>
+                                            <span className="text-[9px] text-muted-foreground font-normal">Internal Logic</span>
                                         </div>
                                         <ul className="space-y-2 pl-1 select-text">
                                             {selectedNode.data.details.map((detail: string, idx: number) => (
                                                 <li key={idx} className="flex gap-2 items-start group">
                                                     <div className="mt-1.5 h-1 w-1 rounded-full bg-neon-yellow opacity-40 group-hover:opacity-100 transition-opacity" />
-                                                    <span className="text-[11px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
+                                                    <span className="text-[11px] leading-relaxed text-muted-foreground group-hover:text-foreground transition-colors">
                                                         {detail}
                                                     </span>
                                                 </li>
@@ -280,7 +280,7 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* Section: Performance */}
                         {!isExplorer && (
-                            <div className="p-3 bg-black/20 rounded-lg flex items-center justify-between border border-white/5 select-none">
+                            <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between border border-border/50 select-none">
                                 <div className="flex items-center gap-2">
                                     <Clock className="w-3 h-3 text-muted-foreground" />
                                     <span className="text-xs text-muted-foreground">Duration:</span>
@@ -301,11 +301,11 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* Section: Logs/Output Snippet */}
                         <div className="space-y-2">
-                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold border-b border-white/10 pb-1 select-none">
+                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold border-b border-border pb-1 select-none">
                                 Execution Output
                             </div>
                             {logs.map((log, i) => (
-                                <div key={i} className="flex flex-col gap-1 pl-2 border-l border-white/10 select-text">
+                                <div key={i} className="flex flex-col gap-1 pl-2 border-l border-border select-text">
                                     <div className="text-[10px] text-muted-foreground uppercase opacity-70 select-none">
                                         {log.split(':')[0]}
                                     </div>
@@ -323,7 +323,7 @@ export const WorkspacePanel: React.FC = () => {
                                             {Object.entries(parsed).slice(0, 5).map(([k, v]) => {
                                                 if (typeof v === 'object' || String(v).length > 200 || k === 'code_variants') return null;
                                                 return (
-                                                    <div key={k} className="flex justify-between text-xs py-0.5 border-b border-white/5">
+                                                    <div key={k} className="flex justify-between text-xs py-0.5 border-b border-border/50">
                                                         <span className="text-muted-foreground select-none">{k}</span>
                                                         <span className="text-foreground truncate max-w-[150px]">{String(v)}</span>
                                                     </div>
@@ -412,11 +412,11 @@ export const WorkspacePanel: React.FC = () => {
                 {
                     activeTab === 'output' && (
                         <div className="p-4 font-mono text-xs space-y-4 overflow-y-auto h-full select-text">
-                            <div className="text-green-400 font-bold border-b border-white/10 pb-2 mb-2 select-none">
+                            <div className="text-green-400 font-bold border-b border-border pb-2 mb-2 select-none">
                                 # Node Execution Details
                             </div>
                             {logs.map((log, i) => (
-                                <div key={i} className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3 py-1 bg-white/5 rounded-r hover:bg-white/10 transition-colors">
+                                <div key={i} className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3 py-1 bg-muted/50 rounded-r hover:bg-muted transition-colors">
                                     <div className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-70 select-none">
                                         {log.split(':')[0]}
                                     </div>
@@ -430,12 +430,12 @@ export const WorkspacePanel: React.FC = () => {
                                 try {
                                     const parsed = JSON.parse(codeContent);
                                     return (
-                                        <div className="mt-4 pt-4 border-t border-white/10">
+                                        <div className="mt-4 pt-4 border-t border-border">
                                             <div className="text-yellow-400 font-bold mb-2 select-none"># Results</div>
                                             {Object.entries(parsed).map(([k, v]) => {
                                                 if (typeof v === 'object' || String(v).length > 200) return null; // Skip non-primitive or huge
                                                 return (
-                                                    <div key={k} className="flex justify-between border-b border-white/5 py-1">
+                                                    <div key={k} className="flex justify-between border-b border-border/50 py-1">
                                                         <span className="text-muted-foreground select-none">{k}</span>
                                                         <span className="text-foreground">{String(v)}</span>
                                                     </div>
@@ -621,7 +621,7 @@ export const WorkspacePanel: React.FC = () => {
                                             </div>
 
                                             {/* DEBUG: Dump node data to see what we actually have */}
-                                            <div className="w-full text-left bg-black/50 p-4 rounded text-[10px] font-mono whitespace-pre overflow-auto max-h-96 border border-white/10">
+                                            <div className="w-full text-left bg-black/50 p-4 rounded text-[10px] font-mono whitespace-pre overflow-auto max-h-96 border border-border">
                                                 <div className="font-bold text-red-400 mb-2">RAW DATA DUMP</div>
                                                 {JSON.stringify({
                                                     iterations: selectedNode?.data?.iterations,
@@ -645,11 +645,11 @@ export const WorkspacePanel: React.FC = () => {
                                             </div>
 
                                             {urls.map((urlInfo, idx) => (
-                                                <div key={idx} className="border border-white/10 rounded-lg overflow-hidden bg-charcoal-800">
+                                                <div key={idx} className="border border-border rounded-lg overflow-hidden bg-muted">
                                                     {/* Accordion Header */}
                                                     <button
                                                         onClick={() => setExpandedUrl(expandedUrl === urlInfo.url ? null : urlInfo.url)}
-                                                        className="w-full p-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                                                        className="w-full p-3 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
                                                     >
                                                         <div className={cn(
                                                             "w-5 h-5 flex items-center justify-center transition-transform",
@@ -677,7 +677,7 @@ export const WorkspacePanel: React.FC = () => {
 
                                                     {/* Accordion Content */}
                                                     {expandedUrl === urlInfo.url && (
-                                                        <div className="px-4 pb-4 pt-2 border-t border-white/5">
+                                                        <div className="px-4 pb-4 pt-2 border-t border-border/50">
 
                                                             {/* Iframe View */}
                                                             {activeIframeUrl === urlInfo.url ? (
@@ -694,7 +694,7 @@ export const WorkspacePanel: React.FC = () => {
                                                                             Switch to Text Limit
                                                                         </button>
                                                                     </div>
-                                                                    <div className="w-full h-96 bg-white overflow-hidden rounded relative border border-white/10">
+                                                                    <div className="w-full h-96 bg-white overflow-hidden rounded relative border border-border">
                                                                         <div className="absolute inset-0 w-[200%] h-[200%] origin-top-left scale-50">
                                                                             <iframe
                                                                                 src={urlInfo.url}
@@ -738,7 +738,7 @@ export const WorkspacePanel: React.FC = () => {
 
                 {
                     activeTab === 'preview' && (
-                        <div className="h-full p-6 overflow-auto bg-charcoal-900">
+                        <div className="h-full p-6 overflow-auto bg-card">
                             {(() => {
                                 let formatContent: string | null = null;
                                 let contentType: 'html' | 'markdown' = 'markdown';
@@ -864,7 +864,7 @@ export const WorkspacePanel: React.FC = () => {
                                         : formatContent;
 
                                     return (
-                                        <div className="preview-content bg-charcoal-800 p-6 rounded-lg border border-white/10 select-text">
+                                        <div className="preview-content bg-muted p-6 rounded-lg border border-border select-text">
                                             <style>{`
                                                 .preview-content h1 { font-size: 1.75rem; font-weight: bold; color: #F6FF4D; margin-bottom: 1rem; }
                                                 .preview-content h2 { font-size: 1.5rem; font-weight: bold; color: #F6FF4D; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }

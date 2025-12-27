@@ -28,7 +28,7 @@ export const ScoreCard: React.FC<ScoreCardProps> = ({ title, score, max = 100, s
                 </div>
 
                 {/* Progress Bar Container */}
-                <div className="h-2 w-full bg-charcoal-900 rounded-full overflow-hidden border border-white/5">
+                <div className="h-2 w-full bg-charcoal-900 rounded-full overflow-hidden border border-border/50">
                     <div
                         className={cn("h-full transition-all duration-1000 ease-out", getColor(percentage))}
                         style={{ width: `${percentage}%` }}

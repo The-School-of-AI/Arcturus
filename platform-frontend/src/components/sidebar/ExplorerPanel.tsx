@@ -35,23 +35,23 @@ export const ExplorerPanel: React.FC = () => {
             <div key={node.path} className="select-none">
                 <div
                     className={cn(
-                        "flex items-center py-1.5 px-2 hover:bg-white/5 cursor-pointer rounded-md transition-colors group",
+                        "flex items-center py-1.5 px-2 hover:bg-muted/50 cursor-pointer rounded-md transition-colors group",
                         depth > 0 && "ml-2"
                     )}
                     onClick={() => node.type === 'folder' ? toggleFolder(node.path) : null}
                 >
                     {node.type === 'folder' ? (
                         <>
-                            {isExpanded[node.path] ? <ChevronDown className="w-3.5 h-3.5 mr-1.5 text-gray-500" /> : <ChevronRight className="w-3.5 h-3.5 mr-1.5 text-gray-500" />}
+                            {isExpanded[node.path] ? <ChevronDown className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />}
                             <Folder className="w-4 h-4 mr-2 text-neon-yellow/70" />
                         </>
                     ) : (
                         <FileCode className="w-4 h-4 mr-2 ml-5 text-blue-400/70" />
                     )}
-                    <span className="text-[13px] text-gray-300 truncate font-medium group-hover:text-white">{node.name}</span>
+                    <span className="text-[13px] text-muted-foreground truncate font-medium group-hover:text-foreground">{node.name}</span>
                 </div>
                 {node.type === 'folder' && isExpanded[node.path] && node.children && (
-                    <div className="border-l border-white/5 ml-3 mt-0.5 mb-1">
+                    <div className="border-l border-border/50 ml-3 mt-0.5 mb-1">
                         {renderTree(node.children, depth + 1)}
                     </div>
                 )}
@@ -224,9 +224,9 @@ export const ExplorerPanel: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-charcoal-900 text-white overflow-hidden">
+        <div className="flex flex-col h-full bg-card text-foreground overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex flex-shrink-0 items-center justify-between bg-charcoal-900 z-10 shadow-xl">
+            <div className="p-4 border-b border-border flex flex-shrink-0 items-center justify-between bg-card z-10 shadow-xl">
                 <div className="flex items-center gap-2">
                     <Code2 className="w-5 h-5 text-neon-yellow" />
                     <h2 className="font-bold text-sm tracking-tight uppercase">Explorer</h2>
@@ -235,7 +235,7 @@ export const ExplorerPanel: React.FC = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-gray-500 hover:text-white"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => setExplorerRootPath(null)}
                         title="Close active project"
                     >
@@ -250,8 +250,8 @@ export const ExplorerPanel: React.FC = () => {
                     <div className="flex flex-col flex-1 min-h-0">
                         {!explorerRootPath && (
                             <div className="px-4 py-3 flex items-center justify-between flex-shrink-0">
-                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] select-none">Recent Analyses</h3>
-                                <div className="h-px flex-1 bg-white/5 ml-4" />
+                                <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] select-none">Recent Analyses</h3>
+                                <div className="h-px flex-1 bg-muted/50 ml-4" />
                             </div>
                         )}
                         <div className={cn("px-2 space-y-1 overflow-y-auto custom-scrollbar pb-2 flex-1", explorerRootPath ? "p-1" : "p-2")}>
@@ -260,7 +260,7 @@ export const ExplorerPanel: React.FC = () => {
                                     <div
                                         className={cn(
                                             "group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border border-transparent flex-shrink-0",
-                                            explorerRootPath === item.path ? "bg-neon-yellow/10 border-neon-yellow/20" : "hover:bg-white/5"
+                                            explorerRootPath === item.path ? "bg-neon-yellow/10 border-neon-yellow/20" : "hover:bg-muted/50"
                                         )}
                                         onClick={() => loadHistoryItem(item)}
                                     >
@@ -272,13 +272,13 @@ export const ExplorerPanel: React.FC = () => {
                                                 {item.type === 'github' ? <Github className="w-3.5 h-3.5" /> : <Folder className="w-3.5 h-3.5" />}
                                             </div>
                                             <div className="flex flex-col min-w-0">
-                                                <span className="text-xs font-bold text-gray-200 truncate">{item.name}</span>
-                                                <span className="text-[9px] text-gray-500 truncate font-mono opacity-60">{item.path}</span>
+                                                <span className="text-xs font-bold text-foreground truncate">{item.name}</span>
+                                                <span className="text-[9px] text-muted-foreground truncate font-mono opacity-60">{item.path}</span>
                                             </div>
                                         </div>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); removeFromHistory(item.id); }}
-                                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-gray-600 transition-all"
+                                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-muted-foreground transition-all"
                                         >
                                             <Trash2 className="w-3 h-3" />
                                         </button>
@@ -286,13 +286,13 @@ export const ExplorerPanel: React.FC = () => {
 
                                     {/* NESTED FILE TREE */}
                                     {explorerRootPath === item.path && (
-                                        <div className="ml-9 mt-1 mb-4 border-l border-white/5 pl-2">
+                                        <div className="ml-9 mt-1 mb-4 border-l border-border/50 pl-2">
                                             {explorerFiles.length > 0 ? (
                                                 <div className="space-y-0.5">
                                                     {renderTree(explorerFiles)}
                                                 </div>
                                             ) : (
-                                                <div className="py-4 text-[10px] text-gray-500 italic">
+                                                <div className="py-4 text-[10px] text-muted-foreground italic">
                                                     {item.type === 'github' || item.path.startsWith('http')
                                                         ? "GitHub architecture map loaded (Start Analysis to see details)"
                                                         : isAnalyzing ? "Loading files..." : "No files found."}
@@ -318,21 +318,21 @@ export const ExplorerPanel: React.FC = () => {
                                         value={connectInput}
                                         onChange={(e) => setConnectInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                                        className="w-full bg-charcoal-950 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-neon-yellow/50 transition-all placeholder:text-gray-600"
+                                        className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-neon-yellow/50 transition-all placeholder:text-muted-foreground"
                                     />
-                                    <Globe className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-600" />
+                                    <Globe className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
                                 </div>
                                 <Button
                                     onClick={handleConnect}
                                     disabled={isAnalyzing || !connectInput.trim()}
-                                    className="w-full bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-black text-xs py-5 rounded-xl shadow-xl shadow-neon-yellow/5 disabled:bg-gray-800 disabled:text-gray-500"
+                                    className="w-full bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-black text-xs py-5 rounded-xl shadow-xl shadow-neon-yellow/5 disabled:bg-muted disabled:text-muted-foreground"
                                 >
                                     Connect Repository
                                 </Button>
                             </div>
 
-                            <p className="text-[10px] text-gray-500 text-center leading-relaxed">
-                                💡 <span className="text-gray-400">Mac tip:</span> Right-click folder in Finder → Get Info → copy path from "Where:"
+                            <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                                💡 <span className="text-muted-foreground">Mac tip:</span> Right-click folder in Finder → Get Info → copy path from "Where:"
                             </p>
                         </div>
                     )}
@@ -341,15 +341,15 @@ export const ExplorerPanel: React.FC = () => {
 
             {/* Bottom Analysis Action */}
             {explorerRootPath && (
-                <div className="p-4 border-t border-white/10 bg-charcoal-900 z-20">
+                <div className="p-4 border-t border-border bg-card z-20">
                     <Button
                         disabled={isAnalyzing || isScanning}
                         onClick={handleAnalyze}
                         className={cn(
                             "w-full gap-2 font-black uppercase tracking-[0.15em] text-xs py-6 rounded-xl transition-all",
                             isAnalyzing || isScanning
-                                ? "bg-gray-800 text-gray-500"
-                                : "bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 shadow-[0_0_20px_rgba(234,255,0,0.1)] active:scale-95"
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 shadow-[0_0_20px_rgba(234,255,0,0.1)] active:scale-95"
                         )}
                     >
                         {isAnalyzing ? (
@@ -369,9 +369,9 @@ export const ExplorerPanel: React.FC = () => {
                 </div>
             )}
             {/* Credits Footer */}
-            <div className="p-3 text-center border-t border-white/5 bg-charcoal-950">
-                <p className="text-[10px] text-gray-600">
-                    Inspired by <a href="https://github.com/KalaINC/flowstep" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-neon-yellow transition-colors underline decoration-dotted">flowstep</a>
+            <div className="p-3 text-center border-t border-border/50 bg-background">
+                <p className="text-[10px] text-muted-foreground">
+                    Inspired by <a href="https://github.com/KalaINC/flowstep" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-neon-yellow transition-colors underline decoration-dotted">flowstep</a>
                 </p>
             </div>
 

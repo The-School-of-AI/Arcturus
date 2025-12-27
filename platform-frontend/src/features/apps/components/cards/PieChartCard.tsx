@@ -99,7 +99,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[10px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-foreground text-[10px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}
@@ -181,7 +181,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
                                         className={cn("w-2 h-2 rounded-sm transition-all", isHovered && "scale-125")}
                                         style={{ backgroundColor: item.color }}
                                     />
-                                    <span className={cn("text-[10px] text-muted-foreground truncate transition-colors", isHovered && "text-white")}>
+                                    <span className={cn("text-[10px] text-muted-foreground truncate transition-colors", isHovered && "text-foreground")}>
                                         {itemLabel}{showPercent && ` (${percentage}%)`}
                                     </span>
                                 </div>

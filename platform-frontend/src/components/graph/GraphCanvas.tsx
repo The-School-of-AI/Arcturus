@@ -61,11 +61,11 @@ export const GraphCanvas: React.FC = () => {
                 edgeTypes={EDGE_TYPES}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
-                className="bg-charcoal-900"
+                className="bg-background"
                 minZoom={0.2}
                 maxZoom={2}
             >
-                <Background color="#333" gap={20} size={1} />
+                <Background color="#888" gap={20} size={1} className="opacity-20" />
                 <Controls className="react-flow__controls--dark" />
                 <AutoFitter nodeCount={visibleNodes.length} />
             </ReactFlow>

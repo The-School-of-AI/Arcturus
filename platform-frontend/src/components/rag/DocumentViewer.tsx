@@ -29,7 +29,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, active, onClick }) => (
         onClick={onClick}
         className={cn(
             "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
-            active ? (label === 'Insights' ? "bg-primary text-charcoal-950" : "bg-white/10 text-white") : "text-muted-foreground hover:text-white"
+            active ? (label === 'Insights' ? "bg-primary text-charcoal-950" : "bg-white/10 text-foreground") : "text-muted-foreground hover:text-foreground"
         )}
     >
         {label}
@@ -94,7 +94,7 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
     return (
         <div
             ref={menuRef}
-            className="fixed z-[9999] flex items-center gap-2 p-1 bg-charcoal-800 border border-border rounded-lg shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
+            className="fixed z-[9999] flex items-center gap-2 p-1 bg-popover border border-border rounded-lg shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
             style={{ left: position.x, top: position.y, transform: 'translateX(-50%)' }}
         >
             <button
@@ -102,7 +102,7 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
                 className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all active:scale-95",
                     isAdded
-                        ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
+                        ? "bg-green-500 text-foreground shadow-lg shadow-green-500/20"
                         : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
                 )}
             >
@@ -255,7 +255,7 @@ export const DocumentViewer: React.FC = () => {
     return (
         <div className="h-full flex flex-col relative">
             {/* Tab Bar - Browser Style */}
-            <div className="flex items-center justify-between border-b border-border bg-charcoal-900 pr-4 shrink-0 h-12 shadow-md">
+            <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-12 shadow-md">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
                     {openDocuments.map(doc => (
                         <div
@@ -264,8 +264,8 @@ export const DocumentViewer: React.FC = () => {
                             className={cn(
                                 "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[140px] max-w-[200px] border-x border-t border-transparent relative",
                                 activeDocumentId === doc.id
-                                    ? "bg-charcoal-950 border-border text-white z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-charcoal-950"
-                                    : "bg-charcoal-900/30 text-muted-foreground hover:bg-white/5"
+                                    ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
                             )}
                         >
                             {isCodeFile(doc.type) ? <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
@@ -287,7 +287,7 @@ export const DocumentViewer: React.FC = () => {
                     {openDocuments.length > 0 && (
                         <button
                             onClick={closeAllDocuments}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-white transition-all bg-black/20 border border-white/5"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/20 border border-border/50"
                         >
                             <X className="w-2.5 h-2.5" />
                             Clear
@@ -295,7 +295,7 @@ export const DocumentViewer: React.FC = () => {
                     )}
 
                     {activeDoc && canPreview(activeDoc.type) && (
-                        <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5">
+                        <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-border/50">
                             <TabButton
                                 label="Source"
                                 active={viewType === 'source'}
@@ -312,10 +312,10 @@ export const DocumentViewer: React.FC = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden relative bg-charcoal-950 selection:bg-primary/20 select-text">
+            <div className="flex-1 overflow-hidden relative bg-background selection:bg-primary/20 select-text">
                 {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-charcoal-950 z-[100] space-y-4">
-                        <div className="p-4 rounded-2xl bg-charcoal-900 border border-white/5 shadow-2xl">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-[100] space-y-4">
+                        <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-2xl">
                             <Loader2 className="w-10 h-10 text-primary animate-spin" />
                         </div>
                         <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 animate-pulse">Initializing Extraction...</div>
@@ -337,18 +337,18 @@ export const DocumentViewer: React.FC = () => {
 
                 {/* Image Viewer */}
                 {isImage(activeDoc?.type || '') && imageUrl && (
-                    <div className="h-full flex items-center justify-center p-8 bg-charcoal-950 overflow-auto">
+                    <div className="h-full flex items-center justify-center p-8 bg-background overflow-auto">
                         <img
                             src={imageUrl}
                             alt={activeDoc?.title}
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10 shadow-black/80"
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-border shadow-black/80"
                         />
                     </div>
                 )}
 
                 {/* DOCX Viewer (Source Mode) */}
                 {isDocx && viewType === 'source' && (
-                    <div className="h-full overflow-y-auto bg-charcoal-900 p-8 docx-viewer">
+                    <div className="h-full overflow-y-auto bg-background p-8 docx-viewer">
                         <div ref={docxContainerRef} className="max-w-[900px] mx-auto min-h-full" />
                     </div>
                 )}
@@ -358,21 +358,21 @@ export const DocumentViewer: React.FC = () => {
                     <>
                         {/* Insights View (Markdown Extraction) */}
                         {viewType === 'ai' && activeDoc && canPreview(activeDoc.type) ? (
-                            <div className="flex-1 overflow-y-auto p-12 bg-charcoal-900 select-text relative group">
+                            <div className="flex-1 overflow-y-auto p-12 bg-background select-text relative group">
                                 <div className="max-w-[800px] mx-auto prose prose-invert">
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
                                         components={{
                                             img: ({ node, ...props }) => (
-                                                <img {...props} className="rounded-lg border border-white/10 shadow-xl max-w-full my-8" />
+                                                <img {...props} className="rounded-lg border border-border shadow-xl max-w-full my-8" />
                                             ),
                                             table: ({ node, ...props }) => (
-                                                <div className="overflow-x-auto my-6 border border-white/10 rounded-lg">
+                                                <div className="overflow-x-auto my-6 border border-border rounded-lg">
                                                     <table {...props} className="min-w-full border-collapse" />
                                                 </div>
                                             ),
-                                            th: ({ node, ...props }) => <th {...props} className="bg-white/5 p-3 text-left font-bold border-b border-white/10" />,
-                                            td: ({ node, ...props }) => <td {...props} className="p-3 border-b border-white/5" />
+                                            th: ({ node, ...props }) => <th {...props} className="bg-white/5 p-3 text-left font-bold border-b border-border" />,
+                                            td: ({ node, ...props }) => <td {...props} className="p-3 border-b border-border/50" />
                                         }}
                                     >
                                         {content || "Extracting insights..."}
@@ -382,7 +382,7 @@ export const DocumentViewer: React.FC = () => {
                         ) : (
                             <div className="h-full overflow-y-auto p-12 md:p-20 max-w-5xl mx-auto">
                                 {isCode && viewType === 'source' ? (
-                                    <div className="rounded-xl overflow-hidden border border-white/5 bg-black/40 shadow-2xl">
+                                    <div className="rounded-xl overflow-hidden border border-border/50 bg-black/40 shadow-2xl">
                                         <SyntaxHighlighter
                                             language={codeLang}
                                             style={vscDarkPlus}
@@ -393,7 +393,7 @@ export const DocumentViewer: React.FC = () => {
                                         </SyntaxHighlighter>
                                     </div>
                                 ) : (
-                                    <div className="prose prose-invert prose-lg max-w-none prose-headings:text-primary prose-strong:text-white prose-a:text-primary">
+                                    <div className="prose prose-invert prose-lg max-w-none prose-headings:text-primary prose-strong:text-foreground prose-a:text-primary">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
                                     </div>
                                 )}
@@ -409,20 +409,20 @@ export const DocumentViewer: React.FC = () => {
                 )}
 
                 {/* Empty State */}
-                {!activeDoc && (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 space-y-8 bg-charcoal-950">
+                {!activeDoc ? (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 space-y-8 bg-background">
                         <div className="relative">
-                            <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-full" />
-                            <div className="relative p-10 rounded-[3rem] bg-charcoal-900 border border-white/5 shadow-inner">
-                                <Library className="w-24 h-24 opacity-20" />
+                            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                            <div className="relative p-10 rounded-[3rem] bg-card border border-border/50 shadow-inner">
+                                <FileText className="w-24 h-24 text-primary/40" />
                             </div>
                         </div>
-                        <div className="text-center space-y-3 z-10">
-                            <h3 className="text-sm font-bold uppercase tracking-[0.5em] text-primary/40">Discovery Workspace</h3>
-                            <p className="text-[11px] italic opacity-40 max-w-xs leading-relaxed">Select a document from the left panel to begin your deep research flow.</p>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-xl font-bold text-foreground tracking-tight">Document Viewer</h3>
+                            <p className="text-sm">Select a document from the library to view</p>
                         </div>
                     </div>
-                )}
+                ) : null}
             </div>
         </div>
     );

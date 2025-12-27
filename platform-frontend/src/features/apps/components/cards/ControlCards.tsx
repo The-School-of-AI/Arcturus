@@ -45,7 +45,7 @@ export const InputCard: React.FC<ControlCardProps> = ({
                 <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>
             )}
             <Input
-                className="h-8 text-xs bg-black/40 border-white/10"
+                className="h-8 text-xs bg-black/40 border-border"
                 placeholder={displayPlaceholder}
                 defaultValue={data.value || ''}
                 onChange={(e) => handleUpdate('value', e.target.value, onUpdate, data)}
@@ -103,7 +103,7 @@ export const SelectCard: React.FC<ControlCardProps> = ({
             )}
             <div className="relative">
                 <select
-                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-foreground appearance-none focus:outline-none disabled:opacity-50"
+                    className="w-full bg-black/40 border border-border rounded px-2 py-1.5 text-xs text-foreground appearance-none focus:outline-none disabled:opacity-50"
                     value={defaultValue}
                     onChange={(e) => handleUpdate('defaultValue', e.target.value, onUpdate, data)}
                     disabled={!isInteractive}
@@ -135,7 +135,7 @@ export const DateRangeCard: React.FC<ControlCardProps> = ({
             {showLabel && displayLabel && (
                 <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>
             )}
-            <div className="flex items-center gap-2 p-2 bg-black/40 border border-white/10 rounded cursor-pointer hover:border-white/20 transition-colors">
+            <div className="flex items-center gap-2 p-2 bg-black/40 border border-border rounded cursor-pointer hover:border-white/20 transition-colors">
                 <Calendar className="w-3 h-3" style={{ color: accentColor }} />
                 <span className="text-[10px] text-foreground ">{startDate}</span>
                 <span className="text-muted-foreground">→</span>
@@ -197,7 +197,7 @@ export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", p
             {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <Textarea
                 placeholder={data.placeholder || placeholder}
-                className="resize-none bg-black/40 border-white/10 text-xs min-h-[60px]"
+                className="resize-none bg-black/40 border-border text-xs min-h-[60px]"
                 defaultValue={data.value}
                 onChange={(e) => isInteractive && onUpdate && onUpdate({ ...data, value: e.target.value })}
                 readOnly={!isInteractive}
@@ -270,7 +270,7 @@ export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data 
                 value={value}
                 onChange={(e) => onUpdate && onUpdate({ ...data, value: parseInt(e.target.value) })}
                 disabled={!isInteractive}
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer disabled:opacity-50"
                 style={{ accentColor: accentColor }}
             />
         </div>
@@ -292,7 +292,7 @@ export const TagsInputCard: React.FC<ControlCardProps> = ({ label = "Tags", data
                     </span>
                 ))}
             </div>
-            <Input className="h-7 text-xs bg-black/40 border-white/10" placeholder="Add tag..." />
+            <Input className="h-7 text-xs bg-black/40 border-border" placeholder="Add tag..." />
         </div>
     );
 };
@@ -305,7 +305,7 @@ export const NumberInputCard: React.FC<ControlCardProps> = ({ label = "Quantity"
             {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <Input
                 type="number"
-                className="h-8 text-xs bg-black/40 border-white/10 "
+                className="h-8 text-xs bg-black/40 border-border "
                 defaultValue={data.value || 0}
                 min={data.min}
                 max={data.max}
@@ -375,7 +375,7 @@ export const TimePickerCard: React.FC<ControlCardProps> = ({ label = "Time", dat
             <div className="relative">
                 <Input
                     type="time"
-                    className="h-8 text-xs bg-black/40 border-white/10  pl-8"
+                    className="h-8 text-xs bg-black/40 border-border  pl-8"
                     defaultValue={value}
                 />
                 <Clock className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />

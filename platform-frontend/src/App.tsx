@@ -1,11 +1,11 @@
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ThemeProvider } from '@/components/theme';
 
 function App() {
   return (
-    <div className="dark">
-      {/* Force dark mode class for now since our theme relies on it */}
+    <ThemeProvider defaultTheme="dark">
       <AppLayout />
-    </div>
+    </ThemeProvider>
   );
 }
 

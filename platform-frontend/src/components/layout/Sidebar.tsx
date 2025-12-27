@@ -58,7 +58,7 @@ export const Sidebar: React.FC = () => {
                     "w-full aspect-square flex flex-col items-center justify-center gap-1 transition-all rounded-lg group relative",
                     active
                         ? "text-neon-yellow bg-neon-yellow/10"
-                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
                 title={label}
             >
@@ -74,7 +74,7 @@ export const Sidebar: React.FC = () => {
             <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
             {/* NavRail - Left Vertical Bar */}
-            <div className="w-16 border-r border-border bg-charcoal-950 flex flex-col items-center py-4 gap-2 shrink-0 z-20">
+            <div className="w-16 border-r border-border bg-background flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools */}
                 <div className="flex-1 w-full px-2 space-y-2">
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" />
@@ -83,7 +83,7 @@ export const Sidebar: React.FC = () => {
                     <NavIcon icon={Brain} label="RemMe" tab="remme" />
                     <NavIcon icon={Code2} label="Explorer" tab="explorer" />
 
-                    <div className="w-8 h-px bg-white/5 my-2 mx-auto" />
+                    <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
                     <NavIcon icon={LayoutGrid} label="Apps" tab="apps" />
                     <NavIcon icon={Newspaper} label="News" tab="news" />
@@ -97,7 +97,7 @@ export const Sidebar: React.FC = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 min-w-0 bg-charcoal-900/40 backdrop-blur-sm flex flex-col overflow-hidden relative">
+            <div className="flex-1 min-w-0 bg-card/40 backdrop-blur-sm flex flex-col overflow-hidden relative">
                 {sidebarTab === 'runs' && (
                     <>
                         <div className="p-4 border-b border-border space-y-3">
@@ -110,26 +110,26 @@ export const Sidebar: React.FC = () => {
                                         New Run
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="bg-charcoal-900 border-border sm:max-w-md text-white">
+                                <DialogContent className="bg-card border-border sm:max-w-md text-foreground">
                                     <DialogHeader>
-                                        <DialogTitle className="text-white text-lg">Start New Agent Run</DialogTitle>
+                                        <DialogTitle className="text-foreground text-lg">Start New Agent Run</DialogTitle>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">What should the agent do?</label>
+                                            <label className="text-sm font-medium text-muted-foreground">What should the agent do?</label>
                                             <Input
                                                 placeholder="e.g., Research latest AI trends..."
                                                 value={newQuery}
                                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
-                                                className="bg-charcoal-800 border-gray-600 text-white placeholder:text-gray-500"
+                                                className="bg-muted border-input text-foreground placeholder:text-muted-foreground"
                                                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
                                                 autoFocus
                                             />
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-white hover:bg-white/10">Cancel</Button>
-                                        <Button onClick={handleStartRun} className="bg-neon-yellow text-charcoal-900 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                        <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
+                                        <Button onClick={handleStartRun} className="bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -137,7 +137,7 @@ export const Sidebar: React.FC = () => {
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
                                 <input
-                                    className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-muted-foreground"
+                                    className="w-full bg-background/50 border border-input rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground"
                                     placeholder="Search runs..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -154,7 +154,7 @@ export const Sidebar: React.FC = () => {
                                         "group p-3 rounded-lg cursor-pointer transition-all border border-transparent",
                                         currentRun?.id === run.id
                                             ? "bg-accent/40 border-primary/20 shadow-sm"
-                                            : "hover:bg-white/5"
+                                            : "hover:bg-muted/50"
                                     )}
                                 >
                                     <div className="flex justify-between items-start mb-1 gap-2">
@@ -205,12 +205,12 @@ export const Sidebar: React.FC = () => {
                 {sidebarTab === 'apps' && <AppsSidebar />}
                 {['news', 'learn'].includes(sidebarTab) && (
                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
-                        <div className="p-6 bg-white/5 rounded-full ring-1 ring-white/10">
+                        <div className="p-6 bg-muted/50 rounded-full ring-1 ring-white/10">
                             {sidebarTab === 'news' && <Newspaper className="w-12 h-12" />}
                             {sidebarTab === 'learn' && <GraduationCap className="w-12 h-12" />}
                         </div>
                         <div className="space-y-1">
-                            <h2 className="text-xl font-bold text-white uppercase tracking-tighter">Under Construction</h2>
+                            <h2 className="text-xl font-bold text-foreground uppercase tracking-tighter">Under Construction</h2>
                             <p className="text-xs text-muted-foreground">This feature is currently in development and will be available in a future update.</p>
                         </div>
                     </div>

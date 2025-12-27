@@ -39,7 +39,7 @@ export default {
                     foreground: 'hsl(var(--card-foreground))'
                 },
                 neon: {
-                    yellow: '#F6FF4D',
+                    yellow: 'hsl(var(--neon-yellow))',
                     lime: '#D7E600',
                     cyan: '#00F0FF',
                 },

@@ -52,14 +52,14 @@ const CustomEdge = ({
                 >
                     {/* Render Edge Label if present */}
                     {label && (
-                        <div className="bg-charcoal-900 text-white text-[10px] font-medium px-2 py-1 rounded border border-white/10 shadow-lg hover:border-neon-yellow/50 transition-colors">
+                        <div className="bg-popover text-popover-foreground text-[10px] font-medium px-2 py-1 rounded border border-border shadow-lg hover:border-neon-yellow/50 transition-colors">
                             {label}
                         </div>
                     )}
 
                     {/* Tiny Plus Button for inserts (hidden unless hovered) */}
                     <button
-                        className="w-4 h-4 bg-charcoal-800 border border-white/20 text-white/50 rounded-full flex items-center justify-center hover:bg-neon-yellow hover:text-charcoal-900 hover:scale-110 transition-all opacity-0 hover:opacity-100"
+                        className="w-4 h-4 bg-muted border border-border text-muted-foreground rounded-full flex items-center justify-center hover:bg-neon-yellow hover:text-neutral-950 hover:scale-110 transition-all opacity-0 hover:opacity-100"
                         onClick={onEdgeClick}
                     >
                         <Plus className="w-2.5 h-2.5" />
