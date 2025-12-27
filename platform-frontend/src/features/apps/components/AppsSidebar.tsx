@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles, RefreshCw, ArrowRight } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight } from 'lucide-react';
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
@@ -815,6 +815,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 const SavedAppsList = () => {
     const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps } = useAppStore();
     const [name, setName] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Auto-refresh apps every 5 seconds (Pseudo Hot-Loading)
     useEffect(() => {
@@ -851,13 +852,6 @@ const SavedAppsList = () => {
                         <RefreshCw className="w-3 h-3" />
                     </button>
                     <button
-                        onClick={() => useAppStore.getState().loadShowcaseApp()}
-                        className="p-1 text-purple-400 hover:text-white transition-colors"
-                        title="Generate Showcase App"
-                    >
-                        <Sparkles className="w-3 h-3" />
-                    </button>
-                    <button
                         onClick={createNewApp}
                         className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-white transition-colors"
                     >
@@ -865,6 +859,17 @@ const SavedAppsList = () => {
                         NEW APP
                     </button>
                 </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search apps..."
+                    className="w-full bg-charcoal-800 border border-white/10 rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-gray-600"
+                />
             </div>
 
             {/* Save Controls - Only shown when starting fresh or renaming */}
@@ -899,43 +904,46 @@ const SavedAppsList = () => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-2">
-                        {savedApps.map(app => {
-                            const isActive = app.id === editingAppId;
-                            return (
-                                <div
-                                    key={app.id}
-                                    className={cn(
-                                        "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border-2",
-                                        isActive
-                                            ? "bg-charcoal-800 border-neon-yellow shadow-[0_0_15px_rgba(234,255,0,0.1)] scale-[1.02]"
-                                            : "bg-charcoal-900/90 border-white/10 hover:border-white/30"
-                                    )}
-                                    onClick={() => loadApp(app.id)}
-                                >
-                                    <div className="flex-1 min-w-0">
-                                        <div className={cn(
-                                            "text-xs font-bold truncate",
-                                            isActive ? "text-neon-yellow" : "text-foreground"
-                                        )}>
-                                            {app.name}
-                                        </div>
-                                        <div className="text-[10px] text-gray-500">
-                                            {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
+                        {savedApps
+                            .filter(app => app.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(app => {
+                                const isActive = app.id === editingAppId;
+                                return (
+                                    <div
+                                        key={app.id}
                                         className={cn(
-                                            "p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-400 rounded-lg transition-all",
-                                            isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                            "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border-2",
+                                            isActive
+                                                ? "bg-charcoal-800 border-neon-yellow shadow-[0_0_15px_rgba(234,255,0,0.1)] scale-[1.02]"
+                                                : "bg-charcoal-900/90 border-white/10 hover:border-white/30"
                                         )}
-                                        title="Delete App"
+                                        onClick={() => loadApp(app.id)}
                                     >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            );
-                        })}
+                                        <div className="flex-1 min-w-0">
+                                            <div className={cn(
+                                                "text-xs font-bold truncate",
+                                                isActive ? "text-neon-yellow" : "text-foreground"
+                                            )}>
+                                                {app.name}
+                                            </div>
+                                            <div className="text-[10px] text-gray-500">
+                                                {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
+                                            className={cn(
+                                                "p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-400 rounded-lg transition-all",
+                                                isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                            )}
+                                            title="Delete App"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
                     </div>
                 )}
             </div>

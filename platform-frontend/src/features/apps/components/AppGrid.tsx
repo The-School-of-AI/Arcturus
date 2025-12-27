@@ -389,22 +389,6 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             {/* Management Toolbar (Top Left) - Hidden in View Mode */}
             {!isAppViewMode && (
                 <div className="absolute top-4 left-4 z-50 flex gap-2">
-                    {/* Active App Title - Editable */}
-                    <div className="flex items-center gap-2 px-3 py-1 bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg mr-2 group/title">
-                        <FileText className="w-3.5 h-3.5 text-neon-yellow" />
-                        <input
-                            className="bg-transparent border-none outline-none text-xs font-bold text-foreground w-[150px] focus:ring-1 focus:ring-neon-yellow/30 rounded px-1"
-                            value={activeApp ? activeApp.name : "Untitled App"}
-                            onChange={(e) => {
-                                if (activeApp) {
-                                    saveApp(e.target.value);
-                                }
-                            }}
-                            placeholder="App Name..."
-                        />
-                        {!activeApp && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">(unsaved)</span>}
-                    </div>
-
                     {/* Actions */}
                     <div className="flex items-center bg-charcoal-800/80 backdrop-blur rounded-lg border border-white/10 shadow-lg p-1 gap-1">
                         <button
