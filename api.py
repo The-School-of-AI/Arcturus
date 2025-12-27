@@ -25,7 +25,24 @@ import shutil
 from core.explorer_utils import CodeSkeletonExtractor
 from core.model_manager import ModelManager
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🚀 API Starting up...")
+    await multi_mcp.start()
+    # Check git
+    try:
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
+        print("✅ Git found.")
+    except Exception:
+        print("⚠️ Git NOT found. GitHub explorer features will fail.")
+    
+    yield
+    
+    await multi_mcp.stop()
+
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS for Frontend
 app.add_middleware(
@@ -40,23 +57,6 @@ app.add_middleware(
 # In production, use database or persistent store
 active_loops = {}
 multi_mcp = MultiMCP()
-remme_store = RemmeStore()
-remme_extractor = RemmeExtractor()
-
-@app.on_event("startup")
-async def startup_event():
-    print("🚀 API Starting up...")
-    await multi_mcp.start()
-    # Check git
-    try:
-        subprocess.run(["git", "--version"], capture_output=True, check=True)
-        print("✅ Git found.")
-    except Exception:
-        print("⚠️ Git NOT found. GitHub explorer features will fail.")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await multi_mcp.stop()
 
 # --- Explorer Classes ---
 class AnalyzeRequest(BaseModel):
@@ -452,8 +452,23 @@ async def rag_search(query: str):
     try:
         args = {"query": query}
         result = await multi_mcp.call_tool("rag", "search_stored_documents_rag", args)
-        # Result is already a list of strings from the tool
-        return {"status": "success", "results": result}
+        
+        # Extract results from CallToolResult
+        results = []
+        if hasattr(result, 'content') and isinstance(result.content, list):
+            for item in result.content:
+                if hasattr(item, 'text'):
+                    try:
+                        import ast
+                        parsed = ast.literal_eval(item.text)
+                        if isinstance(parsed, list):
+                            results.extend(parsed)
+                        else:
+                            results.append(item.text)
+                    except:
+                        results.append(item.text)
+        
+        return {"status": "success", "results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

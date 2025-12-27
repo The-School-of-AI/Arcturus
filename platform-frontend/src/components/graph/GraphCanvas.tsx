@@ -28,6 +28,10 @@ const AutoFitter = ({ nodeCount }: { nodeCount: number }) => {
 
 const NODE_TYPES = {
     agentNode: AgentNode,
+    module: AgentNode,
+    ui: AgentNode,
+    data: AgentNode,
+    utility: AgentNode,
 };
 
 const EDGE_TYPES = {

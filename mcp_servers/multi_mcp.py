@@ -90,14 +90,11 @@ class MultiMCP:
             print(f"  ❌ [red]{name}[/red] CRITICAL FAILURE: {e}")
 
     async def start(self):
-        """Start all configured servers concurrently"""
+        """Start all configured servers sequentially (required for AsyncExitStack)"""
         print("[bold green]🚀 Starting MCP Servers...[/bold green]")
         
-        tasks = []
         for name, config in self.server_configs.items():
-            tasks.append(self._start_server(name, config))
-        
-        await asyncio.gather(*tasks)
+            await self._start_server(name, config)
 
     async def stop(self):
         """Stop all servers"""

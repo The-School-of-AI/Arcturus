@@ -405,7 +405,7 @@ export const RagPanel: React.FC = () => {
                                 <RefreshCw className="w-6 h-6 animate-spin text-primary" />
                             </div>
                         )}
-                        {!seeking && ragSearchResults.map((res, i) => {
+                        {!seeking && Array.isArray(ragSearchResults) && ragSearchResults.map((res, i) => {
                             const { path, content, name } = parseResult(res);
                             return (
                                 <div
