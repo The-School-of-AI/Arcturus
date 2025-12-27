@@ -100,9 +100,9 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
         const links: SankeyLink[] = JSON.parse(JSON.stringify(inputData.links || []));
 
         const cardWidth = 400;
-        const cardHeight = 250;
-        const nodeWidth = 12;
-        const padding = 10;
+        const cardHeight = 300;
+        const nodeWidth = 20;
+        const padding = 0;
         const topPadding = 0;
 
         if (nodes.length === 0) return { nodes: [], links: [], cardWidth, cardHeight };
@@ -160,7 +160,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
         for (let i = 0; i <= maxLayer; i++) layers.push([]);
         nodes.forEach(n => layers[n.layer || 0].push(n));
 
-        const usableHeight = cardHeight - topPadding - 30;
+        const usableHeight = cardHeight - topPadding - 0;
         layers.forEach(layerNodes => {
             const totalValue = layerNodes.reduce((sum, n) => sum + (n.value || 0), 0);
             const gapCount = layerNodes.length - 1;

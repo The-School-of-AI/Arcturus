@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BaseCard } from './BaseCard';
 import { cn } from '@/lib/utils';
 
@@ -53,16 +53,17 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
     style = {},
     isInteractive = false
 }) => {
+    const [tooltip, setTooltip] = useState<{ x: number; y: number; content: React.ReactNode; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
+
     // Config options
     const showLegend = config.showLegend !== false;
     const showGrid = config.showGrid !== false;
     const showAxis = config.showAxisLabels !== false;
     const animate = config.animate !== false;
-    const autoMultiColor = config.autoMultiColor !== false; // Default ON
+    const autoMultiColor = config.autoMultiColor !== false;
 
     // Style
     const accentColor = style.accentColor || '#eaff00';
-    const textColor = style.textColor || '#ffffff';
 
     // Use default data if not provided
     const points = data.points?.length > 0 ? data.points : DEFAULT_SCATTER_DATA.points;
@@ -79,7 +80,6 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
         const minY = Math.min(...yVals);
         const maxY = Math.max(...yVals);
 
-        // Get unique categories for legend
         const categories = [...new Set(points.map((p: any) => p.category || 'Default'))];
         const colorMap: Record<string, string> = {};
         categories.forEach((cat, i) => {
@@ -89,9 +89,8 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
         return { minX, maxX, minY, maxY, categories, colorMap };
     }, [points]);
 
-    // Scale point to percentage
-    const scaleX = (x: number) => ((x - minX) / (maxX - minX || 1)) * 90 + 5; // 5-95%
-    const scaleY = (y: number) => ((y - minY) / (maxY - minY || 1)) * 90 + 5; // 5-95%
+    const scaleX = (x: number) => ((x - minX) / (maxX - minX || 1)) * 90 + 5;
+    const scaleY = (y: number) => ((y - minY) / (maxY - minY || 1)) * 90 + 5;
 
     const getPointColor = (pt: any, index: number) => {
         if (pt.color) return pt.color;
@@ -100,9 +99,40 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
         return accentColor;
     };
 
+    const showTooltip = (e: React.MouseEvent, pt: any, index: number) => {
+        const container = e.currentTarget.closest('.scatter-container') as HTMLElement;
+        if (container) {
+            const rect = container.getBoundingClientRect();
+            setTooltip({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top - 10,
+                content: (
+                    <div>
+                        <div className="font-bold mb-0.5">{pt.label || `Point ${index + 1}`}</div>
+                        {pt.category && <div className="text-gray-400 text-[8px]">{pt.category}</div>}
+                        <div className="text-gray-400">x: {pt.x}, y: {pt.y}</div>
+                    </div>
+                ),
+                visible: true
+            });
+        }
+    };
+
+    const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
+
     return (
         <BaseCard title={title}>
-            <div className="w-full h-full flex flex-col p-4 relative select-none">
+            <div className="w-full h-full flex flex-col p-4 relative select-none scatter-container">
+                {/* Tooltip */}
+                {tooltip.visible && (
+                    <div
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[9px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+                    >
+                        {tooltip.content}
+                    </div>
+                )}
+
                 <div className="flex-1 relative border-l border-b border-white/20 mb-5 ml-6">
                     {/* Grid lines */}
                     {showGrid && (
@@ -130,7 +160,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                         <div
                             key={i}
                             className={cn(
-                                "absolute w-3 h-3 rounded-full hover:scale-150 hover:ring-2 ring-white/30 transition-all cursor-crosshair group z-10 shadow-lg",
+                                "absolute w-3 h-3 rounded-full hover:scale-150 hover:ring-2 ring-white/30 transition-all cursor-crosshair z-10 shadow-lg",
                                 animate && "animate-in zoom-in-50 duration-500"
                             )}
                             style={{
@@ -140,13 +170,10 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                                 transform: 'translate(-50%, 50%)',
                                 animationDelay: animate ? `${i * 50}ms` : undefined
                             }}
-                        >
-                            <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-black/95 text-white text-[9px] rounded pointer-events-none whitespace-nowrap z-50 border border-white/10 shadow-xl">
-                                <div className="font-bold mb-0.5">{pt.label || `Point ${i + 1}`}</div>
-                                {pt.category && <div className="text-gray-400 text-[8px]">{pt.category}</div>}
-                                <div className="text-gray-400">x: {pt.x}, y: {pt.y}</div>
-                            </div>
-                        </div>
+                            onMouseEnter={(e) => showTooltip(e, pt, i)}
+                            onMouseMove={(e) => showTooltip(e, pt, i)}
+                            onMouseLeave={hideTooltip}
+                        />
                     ))}
                 </div>
 

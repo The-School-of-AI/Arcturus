@@ -1,21 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BaseCard } from './BaseCard';
 import { cn } from '@/lib/utils';
-
-// Multi-color palette for auto-color mode
-const MULTI_COLOR_PALETTE = [
-    '#eaff00', // Neon Yellow
-    '#ff6b6b', // Coral Red
-    '#4ecdc4', // Teal
-    '#45b7d1', // Sky Blue
-    '#96ceb4', // Sage Green
-    '#ffeaa7', // Light Yellow
-    '#fd79a8', // Pink
-    '#a29bfe', // Lavender
-    '#00b894', // Mint
-    '#e17055', // Burnt Orange
-    '#74b9ff', // Soft Blue
-];
 
 export interface HeatmapCardProps {
     title: string;
@@ -28,12 +13,12 @@ export interface HeatmapCardProps {
 // Default sample data
 const DEFAULT_HEATMAP_DATA = {
     xLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    yLabels: ['00:00', '06:00', '12:00', '18:00'],
+    yLabels: ['Morning', 'Afternoon', 'Evening', 'Night'],
     values: [
-        [10, 20, 30, 45, 50, 40, 20],
         [15, 25, 55, 70, 60, 45, 25],
         [25, 45, 80, 95, 85, 60, 35],
-        [12, 18, 35, 50, 45, 30, 18]
+        [12, 18, 35, 50, 45, 30, 18],
+        [8, 12, 20, 30, 25, 15, 10]
     ]
 };
 
@@ -61,12 +46,16 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
     style = {},
     isInteractive = false
 }) => {
+    const [tooltip, setTooltip] = useState<{ x: number; y: number; value: number; xLabel: string; yLabel: string; visible: boolean }>({
+        x: 0, y: 0, value: 0, xLabel: '', yLabel: '', visible: false
+    });
+
     // Config options
     const showLegend = config.showLegend !== false;
     const showGrid = config.showGrid !== false;
     const showAxis = config.showAxisLabels !== false;
     const animate = config.animate !== false;
-    const autoMultiColor = config.autoMultiColor !== false; // Default ON
+    const autoMultiColor = config.autoMultiColor !== false;
 
     // Style
     const accentColor = style.accentColor || '#eaff00';
@@ -76,10 +65,9 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
     const yLabels = data.yLabels?.length > 0 ? data.yLabels : DEFAULT_HEATMAP_DATA.yLabels;
     const values = data.values?.length > 0 ? data.values : DEFAULT_HEATMAP_DATA.values;
 
-    const { flatValues, maxValue, minValue } = useMemo(() => {
+    const { maxValue, minValue } = useMemo(() => {
         const flat = values.flat();
         return {
-            flatValues: flat,
             maxValue: flat.length > 0 ? Math.max(...flat) : 100,
             minValue: flat.length > 0 ? Math.min(...flat) : 0
         };
@@ -90,7 +78,6 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
         const normalized = (val - minValue) / (maxValue - minValue || 1);
 
         if (autoMultiColor) {
-            // Multi-color gradient: dark blue -> teal -> yellow -> red
             if (normalized < 0.25) {
                 return interpolateColor('#1a1a2e', '#4ecdc4', normalized * 4);
             } else if (normalized < 0.5) {
@@ -101,7 +88,6 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 return interpolateColor('#ff6b6b', '#ff2e63', (normalized - 0.75) * 4);
             }
         } else {
-            // Single color with opacity variation
             return accentColor;
         }
     };
@@ -112,16 +98,44 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
         return Math.max(0.15, normalized);
     };
 
+    const showTooltip = (e: React.MouseEvent, value: number, xLabel: string, yLabel: string) => {
+        const container = e.currentTarget.closest('.heatmap-container') as HTMLElement;
+        if (container) {
+            const rect = container.getBoundingClientRect();
+            setTooltip({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top - 10,
+                value,
+                xLabel,
+                yLabel,
+                visible: true
+            });
+        }
+    };
+
+    const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
+
     return (
         <BaseCard title={title}>
-            <div className="w-full h-full flex flex-col p-4 overflow-hidden select-none">
+            <div className="w-full h-full flex flex-col p-4 overflow-hidden select-none heatmap-container relative">
+                {/* Tooltip */}
+                {tooltip.visible && (
+                    <div
+                        className="absolute z-50 px-2 py-1.5 bg-black/95 text-white text-[9px] rounded border border-white/10 shadow-xl pointer-events-none whitespace-nowrap"
+                        style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+                    >
+                        <div className="font-bold">{tooltip.value}</div>
+                        <div className="text-gray-400">{tooltip.xLabel}, {tooltip.yLabel}</div>
+                    </div>
+                )}
+
                 <div className="flex-1 flex flex-col gap-0.5 min-h-0">
                     {/* Rows */}
                     {values.map((row: number[], i: number) => (
                         <div key={i} className={cn("flex-1 flex gap-0.5 min-h-0", animate && "animate-in fade-in duration-500")} style={{ animationDelay: `${i * 100}ms` }}>
                             {/* Y Label */}
                             {showAxis && (
-                                <div className="w-12 flex items-center justify-end pr-2 text-[10px] text-muted-foreground truncate shrink-0 font-medium">
+                                <div className="w-16 flex items-center justify-end pr-2 text-[9px] text-muted-foreground truncate shrink-0 font-medium">
                                     {yLabels[i] || ''}
                                 </div>
                             )}
@@ -130,21 +144,17 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                                 <div
                                     key={j}
                                     className={cn(
-                                        "flex-1 rounded-sm transition-all hover:brightness-125 hover:scale-105 relative group min-w-0 cursor-crosshair",
+                                        "flex-1 rounded-sm transition-all hover:brightness-125 hover:scale-105 min-w-0 cursor-crosshair",
                                         showGrid && "border border-white/5"
                                     )}
                                     style={{
                                         backgroundColor: getCellColor(val),
                                         opacity: getCellOpacity(val)
                                     }}
-                                    title={`${xLabels[j] || ''}, ${yLabels[i] || ''}: ${val}`}
-                                >
-                                    {/* Tooltip on hover */}
-                                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black/95 text-white text-[9px] rounded pointer-events-none whitespace-nowrap z-50 border border-white/10 shadow-xl">
-                                        <div className="font-bold">{val}</div>
-                                        <div className="text-gray-400">{xLabels[j]}, {yLabels[i]}</div>
-                                    </div>
-                                </div>
+                                    onMouseEnter={(e) => showTooltip(e, val, xLabels[j] || '', yLabels[i] || '')}
+                                    onMouseMove={(e) => showTooltip(e, val, xLabels[j] || '', yLabels[i] || '')}
+                                    onMouseLeave={hideTooltip}
+                                />
                             ))}
                         </div>
                     ))}
@@ -152,7 +162,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
                 {/* X Labels */}
                 {showAxis && (
-                    <div className="flex gap-0.5 pl-12 pt-1.5 h-5 shrink-0">
+                    <div className="flex gap-0.5 pl-16 pt-1.5 h-5 shrink-0">
                         {xLabels.map((label: string, i: number) => (
                             <div key={i} className="flex-1 text-[9px] text-muted-foreground text-center truncate font-medium">
                                 {label}
