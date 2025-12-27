@@ -1,5 +1,6 @@
 import React from 'react';
 import { BaseCard } from './BaseCard';
+import { DEFAULT_COLORS } from '../../utils/defaults';
 import { cn } from '@/lib/utils';
 
 export interface ValuationGaugeProps {
@@ -14,9 +15,9 @@ export interface ValuationGaugeProps {
     style?: any;
 }
 
-export const ValuationGauge: React.FC<ValuationGaugeProps> = ({ 
-    title = "Valuation Gauge", 
-    marketPrice = 145.2, 
+export const ValuationGauge: React.FC<ValuationGaugeProps> = ({
+    title = "Valuation Gauge",
+    marketPrice = 145.2,
     fairValue = 180.5,
     showPrices = true,
     showGauge = true,
@@ -25,10 +26,10 @@ export const ValuationGauge: React.FC<ValuationGaugeProps> = ({
 }) => {
     const discount = ((fairValue - marketPrice) / fairValue) * 100;
     const isUndervalued = discount > 0;
-    
+
     const successColor = style.successColor || '#4ade80';
     const dangerColor = style.dangerColor || '#f87171';
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
     const textColor = style.textColor;
 
     // Calculate slider position (0-100)
@@ -62,7 +63,7 @@ export const ValuationGauge: React.FC<ValuationGaugeProps> = ({
                 )}
 
                 {showLabel && (
-                    <div 
+                    <div
                         className={cn(
                             "text-xs font-bold text-center py-2 rounded-lg border"
                         )}

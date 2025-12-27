@@ -1,5 +1,6 @@
 import React from 'react';
 import { BaseCard } from './BaseCard';
+import { DEFAULT_COLORS } from '../../utils/defaults';
 
 export interface ProfileCardProps {
     title?: string;
@@ -26,11 +27,11 @@ export interface ProfileCardProps {
     style?: any;
 }
 
-export const ProfileCard: React.FC<ProfileCardProps> = ({ 
-    title = "Company Profile", 
-    companyName, 
-    ticker, 
-    description, 
+export const ProfileCard: React.FC<ProfileCardProps> = ({
+    title = "Company Profile",
+    companyName,
+    ticker,
+    description,
     logoUrl,
     showLogo = true,
     showTicker = true,
@@ -60,12 +61,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                     <div>
                         <h2 className="text-lg font-bold text-foreground" style={{ color: style.textColor }}>{name}</h2>
                         {showTicker && (
-                            <div 
+                            <div
                                 className="text-xs font-mono px-2 py-0.5 rounded inline-block border mt-1"
-                                style={{ 
-                                    color: style.accentColor || '#eaff00',
-                                    backgroundColor: `${style.accentColor || '#eaff00'}15`,
-                                    borderColor: `${style.accentColor || '#eaff00'}30`
+                                style={{
+                                    color: style.accentColor || DEFAULT_COLORS.accent,
+                                    backgroundColor: `${style.accentColor || DEFAULT_COLORS.accent}15`,
+                                    borderColor: `${style.accentColor || DEFAULT_COLORS.accent}30`
                                 }}
                             >
                                 {tickerSymbol}
@@ -73,13 +74,13 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                         )}
                     </div>
                 </div>
-                
+
                 {showDescription && (
                     <div className="text-sm leading-relaxed line-clamp-4" style={{ color: style.textColor ? `${style.textColor}99` : '#9ca3af' }}>
                         {desc}
                     </div>
                 )}
-                
+
                 {showSector && (
                     <div className="flex gap-4 pt-2 border-t border-white/5">
                         <div className="text-xs">

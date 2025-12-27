@@ -37,8 +37,15 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     let cumulativeOffset = 0;
 
     // Donut vs Pie: donut has thinner stroke
-    const strokeWidth = isDonut ? 15 : 40;
-    const radius = isDonut ? 42 : 40;
+    // For pie chart (solid): radius should be half the size (25) and strokeWidth full size (50) to fill it.
+    // However, the previous logic used radius 40.
+    // To make it look "filled" with stroke-dasharray hack:
+    // radius = 25 (center of stroke is at 25px from center)
+    // strokeWidth = 50 (covers 0 to 50px)
+    // isDonut: radius 40, width 15 (covers 32.5 to 47.5 approx) - looks good for donut.
+
+    const strokeWidth = isDonut ? 15 : 50;
+    const radius = isDonut ? 42 : 25;
 
     return (
         <BaseCard title={title}>

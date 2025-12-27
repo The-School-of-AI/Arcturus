@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar, ChevronDown, Clock, Star, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DEFAULT_COLORS } from '../../utils/defaults';
 
 interface ControlCardProps {
     label?: string;
@@ -47,8 +48,6 @@ export const InputCard: React.FC<ControlCardProps> = ({
                 className="h-8 text-xs bg-black/40 border-white/10"
                 placeholder={displayPlaceholder}
                 defaultValue={data.value || ''}
-                placeholder={displayPlaceholder}
-                defaultValue={data.value || ''}
                 onChange={(e) => handleUpdate('value', e.target.value, onUpdate, data)}
                 readOnly={!isInteractive}
             />
@@ -65,7 +64,7 @@ export const ActionButtonCard: React.FC<ControlCardProps> = ({
     isInteractive
 }) => {
     const displayLabel = data.label || label;
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex items-center justify-center">
@@ -106,7 +105,6 @@ export const SelectCard: React.FC<ControlCardProps> = ({
                 <select
                     className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-foreground appearance-none focus:outline-none disabled:opacity-50"
                     value={defaultValue}
-                    value={defaultValue}
                     onChange={(e) => handleUpdate('defaultValue', e.target.value, onUpdate, data)}
                     disabled={!isInteractive}
                 >
@@ -130,7 +128,7 @@ export const DateRangeCard: React.FC<ControlCardProps> = ({
     const displayLabel = data.label || label;
     const startDate = data.startDate || '2023-01-01';
     const endDate = data.endDate || 'Present';
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
@@ -149,10 +147,11 @@ export const DateRangeCard: React.FC<ControlCardProps> = ({
 
 // --- NEW COMPONENT BLOCKS ---
 
-export const CheckboxCard: React.FC<ControlCardProps> = ({ label = "Enable Feature", data = {}, config = {}, onUpdate, isInteractive }) => {
+export const CheckboxCard: React.FC<ControlCardProps> = ({ label = "Enable Feature", data = {}, config = {}, style = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
-    const checked = data.checked ?? false; // Use checked instead of value for bools
+    const checked = data.checked ?? false;
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex items-center gap-3">
@@ -160,17 +159,22 @@ export const CheckboxCard: React.FC<ControlCardProps> = ({ label = "Enable Featu
                 checked={checked}
                 onCheckedChange={(c) => isInteractive && onUpdate && onUpdate({ ...data, checked: c })}
                 disabled={!isInteractive}
-                className="border-white/20 data-[state=checked]:bg-neon-yellow data-[state=checked]:text-black"
+                className="border-white/20 data-[state=checked]:text-black"
+                style={{
+                    backgroundColor: checked ? accentColor : undefined,
+                    borderColor: checked ? accentColor : undefined
+                }}
             />
             {showLabel && <label className="text-xs font-medium cursor-pointer" onClick={() => isInteractive && onUpdate && onUpdate({ ...data, checked: !checked })}>{displayLabel}</label>}
         </div>
     );
 };
 
-export const SwitchCard: React.FC<ControlCardProps> = ({ label = "Toggle Mode", data = {}, config = {}, onUpdate, isInteractive }) => {
+export const SwitchCard: React.FC<ControlCardProps> = ({ label = "Toggle Mode", data = {}, config = {}, style = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     const checked = data.checked ?? false;
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex items-center justify-between gap-2">
@@ -179,7 +183,7 @@ export const SwitchCard: React.FC<ControlCardProps> = ({ label = "Toggle Mode", 
                 checked={checked}
                 onCheckedChange={(c) => isInteractive && onUpdate && onUpdate({ ...data, checked: c })}
                 disabled={!isInteractive}
-                className="data-[state=checked]:bg-neon-yellow"
+                style={{ backgroundColor: checked ? accentColor : undefined }}
             />
         </div>
     );
@@ -202,11 +206,12 @@ export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", p
     );
 };
 
-export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Option", data = {}, config = {}, onUpdate, isInteractive }) => {
+export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Option", data = {}, config = {}, style = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     const options = data.options || ['Option A', 'Option B', 'Option C'];
     const selected = data.value || options[0];
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex flex-col gap-2">
@@ -218,12 +223,14 @@ export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Opt
                         className="flex items-center gap-2 cursor-pointer"
                         onClick={() => isInteractive && onUpdate && onUpdate({ ...data, value: opt })}
                     >
-                        <div className={cn(
-                            "w-3 h-3 rounded-full border flex items-center justify-center transition-colors",
-                            selected === opt ? "border-neon-yellow" : "border-white/20",
-                            isInteractive && "hover:border-white/40"
-                        )}>
-                            {selected === opt && <div className="w-1.5 h-1.5 rounded-full bg-neon-yellow" />}
+                        <div
+                            className={cn(
+                                "w-3 h-3 rounded-full border flex items-center justify-center transition-colors",
+                                isInteractive && "hover:border-white/40"
+                            )}
+                            style={{ borderColor: selected === opt ? accentColor : 'rgba(255,255,255,0.2)' }}
+                        >
+                            {selected === opt && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />}
                         </div>
                         <span className={cn("text-xs", selected === opt ? "text-foreground" : "text-muted-foreground")}>{opt}</span>
                     </div>
@@ -233,12 +240,13 @@ export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Opt
     );
 };
 
-export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data = {}, config = {}, onUpdate, isInteractive }) => {
+export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data = {}, config = {}, style = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     const value = data.value || 50;
     const min = data.min || 0;
     const max = data.max || 100;
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
@@ -250,11 +258,11 @@ export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data 
                 type="range"
                 min={min}
                 max={max}
-                max={max}
                 value={value}
                 onChange={(e) => onUpdate && onUpdate({ ...data, value: parseInt(e.target.value) })}
                 disabled={!isInteractive}
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-yellow disabled:opacity-50"
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                style={{ accentColor: accentColor }}
             />
         </div>
     );
@@ -300,7 +308,7 @@ export const NumberInputCard: React.FC<ControlCardProps> = ({ label = "Quantity"
 export const ColorPickerCard: React.FC<ControlCardProps> = ({ label = "Theme Color", data = {}, config = {} }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
-    const value = data.value || "#eaff00";
+    const value = data.value || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex items-center justify-between gap-2">
@@ -316,11 +324,12 @@ export const ColorPickerCard: React.FC<ControlCardProps> = ({ label = "Theme Col
     );
 };
 
-export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data = {}, config = {}, onUpdate, isInteractive }) => {
+export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data = {}, config = {}, style = {}, onUpdate, isInteractive }) => {
     const showLabel = config.showLabel !== false;
     const displayLabel = data.label || label;
     const value = data.value || 0;
     const max = 5;
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-1">
@@ -332,9 +341,13 @@ export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data 
                         onClick={() => isInteractive && onUpdate && onUpdate({ ...data, value: i + 1 })}
                         className={cn(
                             "w-4 h-4 transition-colors",
-                            isInteractive && "cursor-pointer hover:text-neon-yellow/70",
-                            i < value ? "fill-neon-yellow text-neon-yellow" : "text-muted-foreground/20"
+                            isInteractive && "cursor-pointer",
+                            i >= value && "text-muted-foreground/20"
                         )}
+                        style={{
+                            fill: i < value ? accentColor : 'none',
+                            color: i < value ? accentColor : undefined
+                        }}
                     />
                 ))}
             </div>

@@ -200,7 +200,13 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         };
 
         // Common props to pass to all cards
-        const commonProps = { config, data, style, onUpdate, isInteractive: isAppViewMode };
+        const commonProps = {
+            config,
+            data,
+            style: { ...style, accentColor: style.accentColor || '#eaff00' },
+            onUpdate,
+            isInteractive: isAppViewMode
+        };
 
         // Match with sidebar types
         switch (type) {

@@ -2,6 +2,7 @@ import React from 'react';
 import { BaseCard } from './BaseCard';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DEFAULT_COLORS } from '../../utils/defaults';
 
 export interface MetricCardProps {
     title?: string;
@@ -38,7 +39,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     const successColor = style.successColor || '#4ade80';
     const dangerColor = style.dangerColor || '#f87171';
     const textColor = style.textColor || undefined;
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     const getTrendColor = () => {
         if (displayTrend === 'up') return successColor;
