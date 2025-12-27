@@ -1,11 +1,202 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
+import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, View, Component, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DEFAULT_COLORS, COLOR_PRESETS, getDefaultData, getDefaultStyle } from '../utils/defaults';
+import { DEFAULT_COLORS, COLOR_PRESETS, getDefaultData, getDefaultStyle, COMPONENT_USAGE } from '../utils/defaults';
 import { COMPONENT_CATEGORIES } from './AppsSidebar';
+
+// Import card components for library preview
+import { MetricCard } from './cards/MetricCard';
+import { TrendMetric } from './cards/TrendMetric';
+import { ChartCard } from './cards/ChartCard';
+import { PieChartCard } from './cards/PieChartCard';
+import { SankeyCard } from './cards/SankeyCard';
+import { ScatterCard } from './cards/ScatterCard';
+import { HeatmapCard } from './cards/HeatmapCard';
+import { TableCard } from './cards/TableCard';
+import { ProfileCard } from './cards/ProfileCard';
+import { ValuationGauge } from './cards/ValuationGauge';
+import { ScoreCard } from './cards/ScoreCard';
+import { GradeCard } from './cards/GradeCard';
+import { ImageCard } from './cards/ImageCard';
+import { MarkdownCard } from './cards/MarkdownCard';
+import { DividerCard } from './cards/DividerCard';
+import { InputCard, SelectCard, CheckboxCard, SliderCard, ActionButtonCard, RadioGroupCard } from './cards/ControlCards';
+import { FeedCard } from './cards/FeedCard';
+import { LogStreamCard } from './cards/LogStreamCard';
+import { CodeBlockCard } from './cards/CodeBlockCard';
+import { JSONViewerCard } from './cards/JSONViewerCard';
+
+// Helper to render a preview component with default data
+const renderPreviewComponent = (type: string, data: any, style: any) => {
+    const config = {};
+    const commonProps = { data, style, config, isInteractive: false };
+
+    switch (type) {
+        // Charts & Data
+        case 'metric':
+            return <MetricCard title="" value={data.value} change={data.change} trend={data.trend} {...commonProps} />;
+        case 'trend':
+            return <TrendMetric title="" value={data.value} change={data.change} {...commonProps} />;
+        case 'line_chart':
+            return <ChartCard title="" type="line" {...commonProps} />;
+        case 'bar_chart':
+            return <ChartCard title="" type="bar" {...commonProps} />;
+        case 'area_chart':
+            return <ChartCard title="" type="area" {...commonProps} />;
+        case 'pie_chart':
+            return <PieChartCard title="" {...commonProps} />;
+        case 'sankey':
+            return <SankeyCard title="" {...commonProps} />;
+        case 'scatter':
+            return <ScatterCard title="" {...commonProps} />;
+        case 'heatmap':
+            return <HeatmapCard title="" {...commonProps} />;
+        case 'table':
+            return <TableCard title="" {...commonProps} />;
+
+        // Finance
+        case 'profile':
+            return <ProfileCard {...commonProps} />;
+        case 'valuation':
+            return <ValuationGauge marketPrice={data.marketPrice} fairValue={data.fairValue} {...commonProps} />;
+        case 'score_card':
+            return <ScoreCard title="" score={data.score} subtext={data.subtext} {...commonProps} />;
+        case 'grade_card':
+            return <GradeCard title="" grade={data.grade} subtext={data.subtext} {...commonProps} />;
+
+        // Content
+        case 'image':
+            return <ImageCard {...commonProps} />;
+        case 'markdown':
+            return <MarkdownCard content={data.content} {...commonProps} />;
+        case 'divider':
+            return <DividerCard {...commonProps} />;
+        case 'header':
+            return <div className="p-4 text-xl font-bold text-white">{data.text || 'Dashboard Header'}</div>;
+        case 'text':
+            return <div className="p-4 text-sm text-gray-400">{data.text || 'Text block content...'}</div>;
+
+        // Controls
+        case 'button':
+            return <ActionButtonCard {...commonProps} />;
+        case 'input':
+            return <InputCard {...commonProps} />;
+        case 'select':
+            return <SelectCard {...commonProps} />;
+        case 'checkbox':
+            return <CheckboxCard {...commonProps} />;
+        case 'radio':
+            return <RadioGroupCard {...commonProps} />;
+        case 'slider':
+            return <SliderCard {...commonProps} />;
+        case 'date_picker':
+            return (
+                <div className="p-3 flex flex-col gap-2">
+                    <label className="text-[10px] uppercase font-bold text-gray-500">Date Range</label>
+                    <div className="flex items-center gap-2 p-2 bg-black/40 border border-white/10 rounded text-[10px] text-white">
+                        📅 2024-01-01 → Present
+                    </div>
+                </div>
+            );
+
+        // Dev & Feed
+        case 'feed':
+            return <FeedCard title="" {...commonProps} />;
+        case 'log':
+            return <LogStreamCard title="" {...commonProps} />;
+        case 'code':
+            return <CodeBlockCard title="" {...commonProps} />;
+        case 'json':
+            return <JSONViewerCard title="" {...commonProps} />;
+
+        // Blocks - inline previews (to avoid import complexity)
+        case 'stats_trending':
+        case 'stats_grid':
+        case 'stats_status':
+        case 'stats_01':
+            return (
+                <div className="p-3 grid grid-cols-2 gap-2">
+                    {[{ v: '$287K', c: '+8%' }, { v: '$9.4K', c: '-12%' }, { v: '$173K', c: '+2%' }, { v: '$52K', c: '-5%' }].map((s, i) => (
+                        <div key={i} className="bg-charcoal-800/50 rounded p-2 flex flex-col items-center">
+                            <div className="text-sm font-bold text-white">{s.v}</div>
+                            <div className={`text-[10px] ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'stats_links':
+            return (
+                <div className="p-3 flex flex-col gap-2">
+                    {['Projects: 12', 'Issues: 47', 'PRs: 8'].map((item, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs text-gray-400">
+                            <span>{item.split(':')[0]}</span>
+                            <span className="text-white font-bold">{item.split(':')[1]}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'simple_table':
+            return (
+                <div className="p-3 flex flex-col gap-1">
+                    <div className="flex gap-2 text-[10px] text-gray-500 border-b border-white/10 pb-1">
+                        <span className="flex-1">Task</span><span className="flex-1">Status</span>
+                    </div>
+                    {[['Auth', '🟡'], ['UI', '🟢'], ['API', '⚪']].map(([t, s], i) => (
+                        <div key={i} className="flex gap-2 text-xs text-gray-400">
+                            <span className="flex-1">{t}</span><span className="flex-1">{s}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'usage_stats':
+            return (
+                <div className="p-3 flex flex-col gap-2">
+                    {[{ n: 'API', p: 35 }, { n: 'Storage', p: 30 }, { n: 'Users', p: 48 }].map((u, i) => (
+                        <div key={i} className="flex flex-col gap-1">
+                            <div className="flex justify-between text-[10px]">
+                                <span className="text-gray-500">{u.n}</span>
+                                <span className="text-gray-400">{u.p}%</span>
+                            </div>
+                            <div className="h-1.5 bg-charcoal-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'storage_card':
+            return (
+                <div className="p-3 flex flex-col items-center justify-center gap-2">
+                    <svg viewBox="0 0 36 36" className="w-16 h-16">
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#3b82f6" strokeWidth="4" strokeDasharray="30 58" transform="rotate(-90 18 18)" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="20 68" strokeDashoffset="-30" transform="rotate(-90 18 18)" />
+                    </svg>
+                    <div className="text-xs text-gray-500">8.3 / 15 GB</div>
+                </div>
+            );
+        case 'accordion_table':
+            return (
+                <div className="p-3 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-xs text-white bg-charcoal-800/50 rounded px-2 py-1">
+                        <span className="text-gray-500">▶</span>
+                        <span>Project A</span>
+                        <span className="ml-auto text-neon-yellow">$45K</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400 pl-4">
+                        <span>└ Frontend</span>
+                        <span className="ml-auto">$15K</span>
+                    </div>
+                </div>
+            );
+
+        default:
+            return <div className="flex items-center justify-center h-full text-gray-500 text-xs">Preview not available</div>;
+    }
+};
 
 interface AppInspectorProps {
     className?: string;
@@ -473,11 +664,18 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
             addAppCard(newCard, { x: 0, y: Infinity, ...dims });
         };
 
+        // Get the usage description from centralized data
+        const usageText = COMPONENT_USAGE[selectedLibraryComponent.type] || 'A versatile component for your dashboard.';
+
+        // Get default data for the preview
+        const previewData = getDefaultData(selectedLibraryComponent.type);
+        const previewStyle = getDefaultStyle();
+
         return (
             <div className={cn("h-full flex flex-col bg-charcoal-900 border-l border-border", className)}>
                 <div className="p-4 border-b border-border flex items-center gap-2 bg-primary/5">
                     <div className="p-1.5 rounded bg-primary/20 text-primary">
-                        <Info className="w-4 h-4" />
+                        <Component className="w-4 h-4" />
                     </div>
                     <div>
                         <div className="font-bold text-xs uppercase tracking-wider text-primary">Library Preview</div>
@@ -485,21 +683,27 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
                 </div>
 
-                <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                    <div className="space-y-2 text-center">
-                        <h3 className="text-xl font-bold text-foreground">{selectedLibraryComponent.label}</h3>
-                        <p className="text-sm text-muted-foreground">{selectedLibraryComponent.description}</p>
+                <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                    {/* Component Name */}
+                    <div className="text-left">
+                        <h3 className="text-lg font-bold text-foreground">{selectedLibraryComponent.label}</h3>
                     </div>
 
-                    <div className="p-4 rounded-lg bg-black/40 border border-white/10 space-y-2">
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground">Typical Usage</div>
-                        <p className="text-xs text-foreground leading-relaxed">{selectedLibraryComponent.usage}</p>
-                    </div>
-
-                    <div className="flex justify-center">
-                        <div className="w-32 h-20 border border-dashed border-white/20 rounded-lg flex items-center justify-center text-xs text-muted-foreground">
-                            Visual Preview
+                    {/* Live Preview - Render the actual component */}
+                    <div className="rounded-xl overflow-hidden bg-black border border-white/10 shadow-lg">
+                        <div className="w-full aspect-[16/10] relative">
+                            <div className="absolute inset-0 p-2">
+                                <div className="w-full h-full">
+                                    {renderPreviewComponent(selectedLibraryComponent.type, previewData, previewStyle)}
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Typical Usage - Below the preview */}
+                    <div className="p-3 rounded-lg bg-black/40 border border-white/10 space-y-1.5">
+                        <div className="text-[10px] uppercase font-bold text-primary/80 tracking-wider">Typical Usage</div>
+                        <p className="text-xs text-foreground/80 leading-relaxed">{usageText}</p>
                     </div>
                 </div>
 

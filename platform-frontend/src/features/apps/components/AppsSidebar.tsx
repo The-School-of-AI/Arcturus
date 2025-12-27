@@ -59,7 +59,7 @@ export const COMPONENT_CATEGORIES = [
             { type: 'header', label: 'Header', icon: Type, defaultW: 12, defaultH: 2 },
             { type: 'text', label: 'Text Block', icon: AlignLeft, defaultW: 4, defaultH: 4 },
             { type: 'markdown', label: 'Markdown', icon: FileText, defaultW: 4, defaultH: 4 },
-            { type: 'image', label: 'Image', icon: Image, defaultW: 4, defaultH: 4 },
+            { type: 'image', label: 'Image', icon: Image, defaultW: 4, defaultH: 6 },
             { type: 'spacer', label: 'Spacer', icon: Hash, defaultW: 12, defaultH: 2 },
             { type: 'divider', label: 'Divider', icon: Minus, defaultW: 12, defaultH: 1 },
         ]

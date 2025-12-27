@@ -379,3 +379,63 @@ export const getDefaultStyle = () => ({
     successColor: '#4ade80',
     dangerColor: '#f87171',
 });
+
+// Typical usage descriptions for all component types
+export const COMPONENT_USAGE: Record<string, string> = {
+    // Basics
+    metric: 'Display key performance indicators like revenue, users, or any single important value with optional trend indicator.',
+    trend: 'Show stock prices, currency rates, or any value that changes over time with directional trend.',
+    header: 'Section headers to organize and label different areas of your dashboard.',
+    text: 'Add descriptive text, notes, or explanations anywhere in your dashboard.',
+    markdown: 'Rich formatted content with headings, lists, links, and code blocks.',
+    image: 'Display logos, banners, product photos, or any visual content.',
+    divider: 'Visual separator to create clear sections between groups of components.',
+
+    // Charts & Data
+    line_chart: 'Visualize trends over time - perfect for revenue, user growth, or any time-series data.',
+    bar_chart: 'Compare values across categories - ideal for sales by region, product comparisons.',
+    area_chart: 'Show cumulative totals or volume over time with filled visual areas.',
+    pie_chart: 'Display proportions and percentages - market share, budget allocation, demographics.',
+    sankey: 'Visualize flow and conversions - user journeys, budget flows, process funnels.',
+    scatter: 'Show correlations between two variables - pricing vs sales, height vs weight.',
+    heatmap: 'Display intensity patterns - activity by day/hour, correlation matrices.',
+    table: 'Structured data display with rows and columns - reports, lists, detailed data.',
+
+    // Finance
+    profile: 'Company profile with logo, ticker, sector info - perfect for stock analysis dashboards.',
+    valuation: 'Fair value gauge showing if an asset is over/undervalued with price comparison.',
+    score_card: 'Circular score indicator (0-100) - quality scores, ratings, health metrics.',
+    grade_card: 'Letter grade display (A+ to F) - ratings, performance grades, quality tiers.',
+    peer_table: 'Side-by-side comparison of companies or products with key metrics.',
+    ratios: 'Financial ratios grid - P/E, ROE, debt ratios with status indicators.',
+    cash_flow: 'Operating, investing, and financing cash flow breakdown.',
+    balance_sheet: 'Assets, liabilities, and equity visualization.',
+    income_stmt: 'Revenue to net income waterfall breakdown.',
+    summary: 'Executive summary with key points and highlights.',
+
+    // Controls
+    button: 'Trigger actions, run analyses, or navigate to other pages.',
+    input: 'Text input for user data entry - search, filters, form fields.',
+    select: 'Dropdown selection from predefined options.',
+    checkbox: 'Toggle options on/off - filters, settings, selections.',
+    radio: 'Single selection from multiple exclusive options.',
+    slider: 'Numeric value selection with a draggable range control.',
+    date_picker: 'Select dates or date ranges for filtering data.',
+
+    // Dev & Feed
+    feed: 'RSS/JSON feed display - news, updates, notifications.',
+    log: 'System logs with color-coded levels - debugging, monitoring.',
+    code: 'Syntax-highlighted code display - snippets, examples, scripts.',
+    json: 'Interactive JSON viewer with collapsible nodes - API responses, configs.',
+
+    // Blocks
+    stats_trending: 'Trending stats list with value changes - financial metrics, KPIs.',
+    stats_grid: 'Grid of statistics with trend indicators - dashboard overview.',
+    stats_status: 'Status indicators with health badges - system monitoring.',
+    stats_links: 'Clickable stat links - navigation, quick access metrics.',
+    simple_table: 'Minimal table with status indicators - task lists, status tracking.',
+    stats_01: 'Horizontal stat cards with change indicators.',
+    usage_stats: 'Usage meters with progress bars - quotas, limits, consumption.',
+    storage_card: 'Storage usage donut chart with segment breakdown.',
+    accordion_table: 'Expandable hierarchical data table - nested data, categories.',
+};
