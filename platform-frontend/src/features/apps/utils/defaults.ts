@@ -125,14 +125,58 @@ export const getDefaultData = (type: string): any => {
                     { label: 'Category D', value: 10, color: '#ef4444' }
                 ]
             };
-        case 'candlestick':
+        case 'sankey':
             return {
-                ticker: 'AAPL',
-                ohlc: [
-                    { date: '2024-01-01', open: 185, high: 188, low: 183, close: 187 },
-                    { date: '2024-01-02', open: 187, high: 190, low: 186, close: 189 },
-                    { date: '2024-01-03', open: 189, high: 192, low: 188, close: 191 },
-                    { date: '2024-01-04', open: 191, high: 193, low: 189, close: 190 }
+                title: 'User Flow',
+                nodes: [
+                    { name: 'Landing' },
+                    { name: 'Sign Up' },
+                    { name: 'Explore' },
+                    { name: 'Purchase' },
+                    { name: 'Drop' }
+                ],
+                links: [
+                    { source: 0, target: 1, value: 50 },
+                    { source: 0, target: 2, value: 30 },
+                    { source: 0, target: 4, value: 20 },
+                    { source: 1, target: 3, value: 40 },
+                    { source: 2, target: 3, value: 10 },
+                    { source: 2, target: 4, value: 20 }
+                ]
+            };
+        case 'heatmap':
+            return {
+                title: 'Activity Heatmap',
+                xLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                yLabels: ['Morning', 'Afternoon', 'Evening'],
+                matrix: [
+                    [10, 20, 30, 40, 50],
+                    [20, 40, 60, 80, 100],
+                    [5, 15, 25, 35, 45]
+                ]
+            };
+        case 'scatter':
+            return {
+                title: 'Height vs Weight',
+                xLabel: 'Height (cm)',
+                yLabel: 'Weight (kg)',
+                points: [
+                    { x: 170, y: 70 },
+                    { x: 180, y: 80 },
+                    { x: 165, y: 60 },
+                    { x: 190, y: 90 },
+                    { x: 175, y: 75 }
+                ]
+            };
+        case 'cash_flow':
+        case 'balance_sheet':
+        case 'income_stmt':
+            return {
+                title: 'Financial Statement',
+                data: [
+                    { label: 'Revenue', value: 1000 },
+                    { label: 'Cost of Goods', value: 400 },
+                    { label: 'Gross Profit', value: 600 }
                 ]
             };
 

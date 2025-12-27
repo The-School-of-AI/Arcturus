@@ -88,6 +88,19 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Percentages', key: 'showPercent', default: true },
         { name: 'Donut Style', key: 'donut', default: false },
     ],
+    sankey: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Legend', key: 'showLegend', default: false },
+    ],
+    heatmap: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Legend', key: 'showLegend', default: true },
+    ],
+    scatter: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Grid', key: 'showGrid', default: true },
+        { name: 'Show Axis Labels', key: 'showAxis', default: true },
+    ],
     table: [
         { name: 'Show Header', key: 'showHeader', default: true },
         { name: 'Striped Rows', key: 'striped', default: true },
@@ -245,9 +258,34 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     pie_chart: [
         { name: 'Slices (JSON Array)', key: 'slices', type: 'json' },
     ],
-    candlestick: [
-        { name: 'Ticker Symbol', key: 'ticker', type: 'text' },
-        { name: 'OHLC Data (JSON)', key: 'ohlc', type: 'json' },
+    sankey: [
+        { name: 'Chart Title', key: 'title', type: 'text' },
+        { name: 'Nodes (JSON Array)', key: 'nodes', type: 'json' },
+        { name: 'Links (JSON Array)', key: 'links', type: 'json' },
+    ],
+    heatmap: [
+        { name: 'Chart Title', key: 'title', type: 'text' },
+        { name: 'Data Matrix (JSON)', key: 'matrix', type: 'json' },
+        { name: 'X Labels (JSON)', key: 'xLabels', type: 'json' },
+        { name: 'Y Labels (JSON)', key: 'yLabels', type: 'json' },
+    ],
+    scatter: [
+        { name: 'Chart Title', key: 'title', type: 'text' },
+        { name: 'Points (JSON Array)', key: 'points', type: 'json' },
+        { name: 'X Axis Label', key: 'xLabel', type: 'text' },
+        { name: 'Y Axis Label', key: 'yLabel', type: 'text' },
+    ],
+    cash_flow: [
+        { name: 'Title', key: 'title', type: 'text' },
+        { name: 'Data (JSON)', key: 'data', type: 'json' },
+    ],
+    balance_sheet: [
+        { name: 'Title', key: 'title', type: 'text' },
+        { name: 'Data (JSON)', key: 'data', type: 'json' },
+    ],
+    income_stmt: [
+        { name: 'Title', key: 'title', type: 'text' },
+        { name: 'Data (JSON)', key: 'data', type: 'json' },
     ],
     // Table types
     table: [

@@ -14,7 +14,9 @@ import { MetricCard } from './cards/MetricCard';
 import { TrendMetric } from './cards/TrendMetric';
 import { ChartCard } from './cards/ChartCard';
 import { PieChartCard } from './cards/PieChartCard';
-import { CandlestickCard } from './cards/CandlestickCard';
+import { SankeyCard } from './cards/SankeyCard';
+import { HeatmapCard } from './cards/HeatmapCard';
+import { ScatterCard } from './cards/ScatterCard';
 import { ProfileCard } from './cards/ProfileCard';
 import { GradeCard } from './cards/GradeCard';
 import { ScoreCard } from './cards/ScoreCard';
@@ -234,8 +236,12 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 return <ChartCard title={config.showTitle !== false ? label : ''} type="area" {...commonProps} />;
             case 'pie_chart':
                 return <PieChartCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
-            case 'candlestick':
-                return <CandlestickCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
+            case 'sankey':
+                return <SankeyCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
+            case 'scatter':
+                return <ScatterCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
+            case 'heatmap':
+                return <HeatmapCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
             case 'table':
                 return <TableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
 

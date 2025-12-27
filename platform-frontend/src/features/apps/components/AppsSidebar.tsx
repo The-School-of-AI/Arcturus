@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles, RefreshCw } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, Sparkles, RefreshCw, ArrowRight } from 'lucide-react';
 
 interface AppsSidebarProps {
     className?: string;
@@ -70,7 +70,7 @@ export const COMPONENT_CATEGORIES = [
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
             { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 6 },
-            { type: 'candlestick', label: 'Candlestick', icon: CandlestickChart, defaultW: 6, defaultH: 6 },
+            { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 8, defaultH: 6 },
             { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
             { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 5 },
@@ -101,7 +101,7 @@ export const COMPONENT_CATEGORIES = [
             { type: 'select', label: 'Dropdown', icon: CheckSquare, defaultW: 3, defaultH: 2 },
             { type: 'checkbox', label: 'Checkbox', icon: CheckSquare, defaultW: 3, defaultH: 1 },
             { type: 'switch', label: 'Switch', icon: ToggleLeft, defaultW: 3, defaultH: 1 },
-            { type: 'radio', label: 'Radio Group', icon: CheckSquare, defaultW: 3, defaultH: 3 },
+            { type: 'radio_group', label: 'Radio Group', icon: CheckSquare, defaultW: 3, defaultH: 3 },
             { type: 'slider', label: 'Slider', icon: Sliders, defaultW: 3, defaultH: 2 },
             { type: 'date_picker', label: 'Date Picker', icon: Calendar, defaultW: 4, defaultH: 2 },
             { type: 'time_picker', label: 'Time Picker', icon: Clock, defaultW: 3, defaultH: 2 },
