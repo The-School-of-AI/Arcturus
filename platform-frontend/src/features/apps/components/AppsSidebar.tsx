@@ -456,6 +456,85 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     </div>
                 );
 
+            case 'ratios':
+                return (
+                    <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
+                        {[
+                            { n: 'P/E', v: '24.5', s: 'text-yellow-400' },
+                            { n: 'PEG', v: '1.1', s: 'text-green-400' },
+                            { n: 'ROE', v: '22%', s: 'text-green-400' },
+                            { n: 'D/E', v: '0.45', s: 'text-green-400' }
+                        ].map((r, i) => (
+                            <div key={i} className="bg-charcoal-800/50 rounded p-1 flex flex-col items-center">
+                                <div className="text-[6px] text-gray-500">{r.n}</div>
+                                <div className={`text-[9px] font-bold ${r.s}`}>{r.v}</div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'cash_flow':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5 justify-center">
+                        {[
+                            { n: 'Operating', v: '+$2.4B', pos: true },
+                            { n: 'Investing', v: '-$800M', pos: false },
+                            { n: 'Financing', v: '-$600M', pos: false }
+                        ].map((c, i) => (
+                            <div key={i} className="flex justify-between items-center">
+                                <span className="text-[7px] text-gray-500">{c.n}</span>
+                                <span className={`text-[8px] font-bold ${c.pos ? 'text-green-400' : 'text-red-400'}`}>{c.v}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'balance_sheet':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1 justify-center">
+                        <div className="flex items-center gap-1">
+                            <div className="flex-1 h-3 bg-green-500/30 rounded-sm flex items-center justify-center text-[6px] text-green-400">Assets</div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <div className="flex-[0.6] h-3 bg-red-500/30 rounded-sm flex items-center justify-center text-[6px] text-red-400">Liab</div>
+                            <div className="flex-[0.4] h-3 bg-blue-500/30 rounded-sm flex items-center justify-center text-[6px] text-blue-400">Equity</div>
+                        </div>
+                    </div>
+                );
+
+            case 'income_stmt':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5 justify-center">
+                        {[
+                            { n: 'Revenue', v: '$100M', w: '100%' },
+                            { n: 'COGS', v: '-$40M', w: '60%' },
+                            { n: 'Net Income', v: '$25M', w: '25%' }
+                        ].map((r, i) => (
+                            <div key={i} className="flex flex-col gap-0.5">
+                                <div className="flex justify-between text-[6px]">
+                                    <span className="text-gray-500">{r.n}</span>
+                                    <span className="text-white">{r.v}</span>
+                                </div>
+                                <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-neon-yellow/70 rounded-full" style={{ width: r.w }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'summary':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1 justify-center">
+                        <div className="text-[6px] text-gray-400 leading-tight">Strong fundamentals with healthy growth...</div>
+                        <div className="flex flex-col gap-0.5">
+                            {['✓ Revenue +15% YoY', '✓ Market leader', '✓ Strong cash'].map((p, i) => (
+                                <div key={i} className="text-[6px] text-green-400">{p}</div>
+                            ))}
+                        </div>
+                    </div>
+                );
+
             // CONTROLS
             case 'button':
                 return (
@@ -715,9 +794,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     : "bg-charcoal-900/90 border-white/10 hover:border-white/30 hover:scale-[1.02]"
             )}
         >
-            {/* Preview Area - matches the actual card appearance */}
-            <div className="aspect-[2] w-full overflow-hidden bg-charcoal-950/50">
-                {renderPreview()}
+            {/* Preview Area - matches the actual card appearance with animation */}
+            <div className="aspect-[2] w-full overflow-hidden bg-charcoal-950/50 group-hover:bg-charcoal-900/80 transition-colors">
+                <div className="w-full h-full animate-in fade-in slide-in-from-bottom-1 duration-500">
+                    {renderPreview()}
+                </div>
             </div>
 
             {/* Label */}

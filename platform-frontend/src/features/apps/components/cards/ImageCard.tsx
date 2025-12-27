@@ -17,26 +17,32 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
 
     return (
         <BaseCard style={style}>
-            <div className="w-full h-full flex flex-col p-0 overflow-hidden bg-black/20 rounded">
-                <div className="flex-1 w-full h-full flex items-center justify-center relative group">
+            <div className="w-full h-full flex flex-col overflow-hidden bg-black/20 rounded">
+                {/* Image container - uses absolute positioning to prevent stretching */}
+                <div className="flex-1 relative min-h-0">
                     {url ? (
                         <img
                             src={url}
                             alt={alt}
                             className={cn(
-                                "w-full h-full transition-transform duration-500",
-                                config.fillArea ? "object-cover" : "object-contain"
+                                "absolute inset-0 transition-transform duration-500",
+                                // Both modes use object-fit to ALWAYS preserve aspect ratio
+                                // Fill mode: cover (crops to fill, centered)
+                                // Contain mode: contain (fits inside, may have letterboxing)
+                                config.fillArea
+                                    ? "w-full h-full object-cover object-center"
+                                    : "w-full h-full object-contain object-center"
                             )}
                         />
                     ) : (
-                        <div className="flex flex-col items-center gap-2 opacity-20">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-20">
                             <ImageIcon className="w-8 h-8" />
                             <span className="text-[10px] uppercase font-bold tracking-widest text-white">No Image</span>
                         </div>
                     )}
                 </div>
                 {caption && config.showCaption !== false && (
-                    <div className="px-3 py-1.5 bg-black/40 backdrop-blur-sm border-t border-white/5">
+                    <div className="px-3 py-1.5 bg-black/40 backdrop-blur-sm border-t border-white/5 shrink-0">
                         <p className="text-[10px] text-gray-400 italic text-center truncate">{caption}</p>
                     </div>
                 )}
