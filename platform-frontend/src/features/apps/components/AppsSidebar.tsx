@@ -66,14 +66,14 @@ export const COMPONENT_CATEGORIES = [
         items: [
             { type: 'metric', label: 'Metric', icon: Hash, defaultW: 2, defaultH: 3 },
             { type: 'trend', label: 'Trend Metric', icon: TrendingUp, defaultW: 3, defaultH: 3 },
-            { type: 'line_chart', label: 'Line Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
+            { type: 'line_chart', label: 'Line Chart', icon: LineChart, defaultW: 6, defaultH: 8 },
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
             { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 6 },
             { type: 'candlestick', label: 'Candlestick', icon: CandlestickChart, defaultW: 6, defaultH: 6 },
             { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
-            { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 8 },
+            { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 5 },
         ]
     },
     {

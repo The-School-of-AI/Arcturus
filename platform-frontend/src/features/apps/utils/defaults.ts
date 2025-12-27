@@ -62,16 +62,34 @@ export const getDefaultData = (type: string): any => {
         // Chart cards
         case 'line_chart':
             return {
-                title: 'Revenue Trend',
+                title: 'Revenue vs Cost',
                 xLabel: 'Month',
-                yLabel: 'Revenue ($M)',
-                points: [
-                    { x: 'Jan', y: 120 },
-                    { x: 'Feb', y: 135 },
-                    { x: 'Mar', y: 148 },
-                    { x: 'Apr', y: 162 },
-                    { x: 'May', y: 175 },
-                    { x: 'Jun', y: 190 }
+                yLabel: 'Amount ($K)',
+                series: [
+                    {
+                        name: 'Revenue',
+                        color: '#4ade80',
+                        data: [
+                            { x: 'Jan', y: 120 },
+                            { x: 'Feb', y: 135 },
+                            { x: 'Mar', y: 148 },
+                            { x: 'Apr', y: 162 },
+                            { x: 'May', y: 175 },
+                            { x: 'Jun', y: 190 }
+                        ]
+                    },
+                    {
+                        name: 'Cost',
+                        color: '#f87171',
+                        data: [
+                            { x: 'Jan', y: 80 },
+                            { x: 'Feb', y: 85 },
+                            { x: 'Mar', y: 92 },
+                            { x: 'Apr', y: 98 },
+                            { x: 'May', y: 110 },
+                            { x: 'Jun', y: 115 }
+                        ]
+                    }
                 ]
             };
         case 'bar_chart':

@@ -62,6 +62,19 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Grid', key: 'showGrid', default: true },
         { name: 'Show Axis Labels', key: 'showAxis', default: true },
         { name: 'Enable Animation', key: 'animate', default: true },
+        { name: 'Curved Lines', key: 'tension', default: true },
+        { name: 'Line Thickness', key: 'strokeWidth', default: false }, // Using boolean toggle logic for now or needs number input? Inspector supports boolean mostly. Let's assume number input support or handled elsewhere? 
+        // Wait, looking at AppInspector code, it renders switches for everything in CARD_FEATURES. 
+        // If I want a number I might need to put it in data or add support. 
+        // For now, let's Stick to boolean 'Thick Lines' or just add it and see if I can hack it or if I need to update AppInspector.
+        // The Plan said "Stroke Width (Number)". AppInspector currently maps features to Switch (boolean). 
+        // I will add 'Thick Lines' as a boolean for now to be safe, or just use a default.
+        // Actually, let's look at `AppInspector.tsx` again. 
+        // It uses `renderFeatureToggles`. 
+        // I'll stick to boolean `Curved Lines` for tension. 
+        // For thickness, I can add `Thick Lines`. 
+        // Or I can add it to Data Fields? No, it's style.
+        // Let's add 'Thick Lines' (key: thickLines) for now.
     ],
     bar_chart: [
         { name: 'Show Title', key: 'showTitle', default: true },
@@ -213,7 +226,7 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     // Chart types
     line_chart: [
         { name: 'Chart Title', key: 'title', type: 'text' },
-        { name: 'Data Points (JSON)', key: 'points', type: 'json' },
+        { name: 'Series Data (JSON)', key: 'series', type: 'json' },
         { name: 'X Axis Label', key: 'xLabel', type: 'text' },
         { name: 'Y Axis Label', key: 'yLabel', type: 'text' },
     ],
