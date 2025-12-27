@@ -266,7 +266,15 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
     const showTitle = config.showTitle !== false;
     const striped = config.striped !== false;
     const headers = data.headers || defaultTableData.headers;
-    const rows = data.rows || defaultTableData.rows;
+
+    // Normalize rows - handle both [{cells: [...]}] and [[...]] formats
+    const rawRows = data.rows || defaultTableData.rows;
+    const rows = rawRows.map((row: any) => {
+        if (Array.isArray(row)) {
+            return { cells: row, status: 'default' as const };
+        }
+        return row;
+    });
 
     return (
         <div className="h-full flex flex-col">
@@ -281,7 +289,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-white/10">
-                            {headers.map((header, i) => (
+                            {headers.map((header: string, i: number) => (
                                 <th key={i} className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">
                                     {header}
                                 </th>
@@ -289,7 +297,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map((row, rowIndex) => (
+                        {rows.map((row: any, rowIndex: number) => (
                             <tr
                                 key={rowIndex}
                                 className={cn(
@@ -297,7 +305,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
                                     striped && rowIndex % 2 === 1 && "bg-white/5"
                                 )}
                             >
-                                {row.cells.map((cell, cellIndex) => (
+                                {(row.cells || []).map((cell: string, cellIndex: number) => (
                                     <td key={cellIndex} className="px-4 py-3 text-sm text-foreground">
                                         {cellIndex === 1 && row.status ? (
                                             <Badge

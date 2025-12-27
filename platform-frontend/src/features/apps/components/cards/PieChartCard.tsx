@@ -144,9 +144,10 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
                         {Array.isArray(slices) && slices.map((item: any, idx: number) => {
                             const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
                             const isHovered = hoveredIndex === idx;
+                            const itemLabel = item.label || item.name || `Slice ${idx + 1}`;
                             return (
                                 <div
-                                    key={item.label}
+                                    key={idx}
                                     className={cn(
                                         "flex items-center gap-2 cursor-pointer transition-all duration-200",
                                         isHovered && "translate-x-1"
@@ -159,7 +160,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
                                         style={{ backgroundColor: item.color }}
                                     />
                                     <span className={cn("text-[10px] text-muted-foreground truncate transition-colors", isHovered && "text-white")}>
-                                        {item.label}{showPercent && ` (${percentage}%)`}
+                                        {itemLabel}{showPercent && ` (${percentage}%)`}
                                     </span>
                                 </div>
                             );
