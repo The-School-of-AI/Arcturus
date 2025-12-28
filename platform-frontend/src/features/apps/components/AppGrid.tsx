@@ -635,8 +635,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                         className={cn(
                                             // Match FlowStepNode styling exactly
                                             "relative flex flex-col overflow-hidden group transition-all duration-500",
-                                            // Only show shadow when border is visible (to avoid gray outline on borderless cards)
-                                            (showBorder || isSelected) && "shadow-2xl",
+                                            // Shadow: always in view mode (except divider/spacer), or when border is visible in edit mode
+                                            card.type !== 'divider' && card.type !== 'spacer' && (isAppViewMode ? "shadow-lg" : ((showBorder || isSelected) && "shadow-2xl")),
                                             // Selected state glow - only in edit mode
                                             isSelected && !isAppViewMode && "ring-4 ring-neon-yellow/20 z-50",
                                             // Hover effect for transparent backgrounds
@@ -654,8 +654,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             } : {
                                                 border: 'none',
                                             },
-                                            // Background - always apply it
-                                            backgroundColor: backgroundColor,
+                                            // Background - transparent for divider/spacer, otherwise use card background
+                                            backgroundColor: (card.type === 'divider' || card.type === 'spacer') ? 'transparent' : backgroundColor,
                                         }}
                                         onClick={(e) => {
                                             // Only stop prop if NOT in view mode (to allow selecting).
