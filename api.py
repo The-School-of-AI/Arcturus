@@ -472,12 +472,21 @@ def find_page_for_chunk(doc_path: str, chunk_text: str) -> int:
             return 1  # Default to page 1 for non-PDFs
         
         doc = pymupdf.open(str(full_path))
-        # Use first 80 chars of chunk for search (avoid special chars issues)
-        search_text = chunk_text[:80].strip().replace('\n', ' ')
+        # Clean markdown formatting and use first 60 chars for search
+        search_text = chunk_text[:150].strip()
+        # Remove markdown formatting
+        search_text = re.sub(r'\*\*|##|#|\[|\]|\(|\)|!\[|\n', ' ', search_text)
+        search_text = re.sub(r'\s+', ' ', search_text).strip()[:60]
         
+        if len(search_text) < 10:
+            doc.close()
+            return 1  # Too short to search
+
+        print(f"DEBUG Page search: '{search_text[:40]}...' in {doc_path}")  # DEBUG
         for page_num, page in enumerate(doc):
             # Search for text on this page
             if page.search_for(search_text):
+                print(f"DEBUG Found on page {page_num + 1}")  # DEBUG
                 doc.close()
                 return page_num + 1  # 1-indexed
         

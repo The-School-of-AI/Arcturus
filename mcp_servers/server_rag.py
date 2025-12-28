@@ -260,8 +260,13 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
             if not full_path.exists():
                 # Removed/Renamed file -> Skip
                 continue
+            
+            # Skip empty chunks (corrupted data)
+            chunk_text = data.get('chunk', '').strip()
+            if not chunk_text:
+                continue
 
-            results.append(f"{data['chunk']}\n[Source: {doc_rel_path}]")
+            results.append(f"{chunk_text}\n[Source: {doc_rel_path}]")
         mcp_log("DEBUG", f"Returning {len(results)} results")
         return results
     except Exception as e:
