@@ -1286,10 +1286,10 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         value={cardStyle.backgroundColor || 'transparent'}
                                         onChange={(c) => updateAppCardStyle(selectedCard.id, { backgroundColor: c })}
                                         presets={[
-                                            { name: 'Default', value: 'transparent' },
+                                            { name: 'Default', value: 'hsl(var(--card))' },
+                                            { name: 'None', value: 'transparent' },
                                             { name: 'Dark', value: '#0a0b0d' },
                                             { name: 'Charcoal', value: '#1a1b1e' },
-                                            { name: 'Lighter', value: '#2a2b2e' },
                                         ]}
                                     />
                                 </div>
