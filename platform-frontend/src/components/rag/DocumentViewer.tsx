@@ -433,7 +433,7 @@ export const DocumentViewer: React.FC = () => {
                             </div>
                         ) : (
                             /* Code View */
-                            <div className={cn("h-full overflow-hidden", viewType === 'source' ? "bg-[#1e1e1e]" : "bg-background")}>
+                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? "bg-[#1e1e1e]" : "bg-background")}>
                                 {isCode && viewType === 'source' ? (
                                     <SyntaxHighlighter
                                         language={codeLang}
