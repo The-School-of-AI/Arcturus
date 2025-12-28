@@ -741,6 +741,7 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     ],
     quiz_likert: [
         { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Items to Rate (JSON)', key: 'items', type: 'json' },
         { name: 'Scale Labels (JSON)', key: 'scaleLabels', type: 'json' },
         { name: 'Points', key: 'score', type: 'number' },
     ],

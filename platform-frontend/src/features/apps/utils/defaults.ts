@@ -407,8 +407,9 @@ export const getDefaultData = (type: string): any => {
             };
         case 'quiz_likert':
             return {
-                question: 'I found the material easy to understand.',
-                scaleLabels: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+                question: 'Rate yourself in your skill',
+                items: ['Python', 'PyTorch', 'AWS'],
+                scaleLabels: ['No Idea', 'Bad', 'New', 'Good', 'Master'],
                 score: 0
             };
         case 'quiz_nps':
