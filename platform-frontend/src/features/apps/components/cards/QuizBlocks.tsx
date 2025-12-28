@@ -396,7 +396,11 @@ export const QuizRankingCard: React.FC<QuizBlockProps> = ({ data = {}, config = 
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
     const handleDragStart = (e: React.DragEvent, index: number) => {
-        if (!isInteractive || submitted) return;
+        if (!isInteractive || submitted) {
+            e.preventDefault();
+            return;
+        }
+        e.stopPropagation();
         setDraggedIndex(index);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', index.toString());
@@ -404,27 +408,33 @@ export const QuizRankingCard: React.FC<QuizBlockProps> = ({ data = {}, config = 
 
     const handleDragOver = (e: React.DragEvent, index: number) => {
         e.preventDefault();
+        e.stopPropagation();
         if (!isInteractive || submitted || draggedIndex === null) return;
         setDragOverIndex(index);
     };
 
-    const handleDragLeave = () => {
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.stopPropagation();
         setDragOverIndex(null);
     };
 
     const handleDrop = (e: React.DragEvent, toIndex: number) => {
         e.preventDefault();
+        e.stopPropagation();
         if (!isInteractive || submitted || draggedIndex === null) return;
 
-        const newRanked = [...ranked];
-        const [removed] = newRanked.splice(draggedIndex, 1);
-        newRanked.splice(toIndex, 0, removed);
-        setRanked(newRanked);
+        if (draggedIndex !== toIndex) {
+            const newRanked = [...ranked];
+            const [removed] = newRanked.splice(draggedIndex, 1);
+            newRanked.splice(toIndex, 0, removed);
+            setRanked(newRanked);
+        }
         setDraggedIndex(null);
         setDragOverIndex(null);
     };
 
-    const handleDragEnd = () => {
+    const handleDragEnd = (e: React.DragEvent) => {
+        e.stopPropagation();
         setDraggedIndex(null);
         setDragOverIndex(null);
     };
@@ -461,9 +471,9 @@ export const QuizRankingCard: React.FC<QuizBlockProps> = ({ data = {}, config = 
                             draggable={isInteractive && !submitted}
                             onDragStart={(e) => handleDragStart(e, i)}
                             onDragOver={(e) => handleDragOver(e, i)}
-                            onDragLeave={handleDragLeave}
+                            onDragLeave={(e) => handleDragLeave(e)}
                             onDrop={(e) => handleDrop(e, i)}
-                            onDragEnd={handleDragEnd}
+                            onDragEnd={(e) => handleDragEnd(e)}
                             className={cn(
                                 "flex items-center gap-2 p-2 rounded-lg border bg-muted/30 w-full transition-all",
                                 draggedIndex === i && "opacity-50 border-neon-yellow",
