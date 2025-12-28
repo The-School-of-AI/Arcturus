@@ -207,7 +207,11 @@ export const RagPanel: React.FC = () => {
             setSeeking(true);
             try {
                 const res = await axios.get(`${API_BASE}/rag/search`, { params: { query: innerSearch } });
-                setRagSearchResults(res.data.results || []);
+                console.log("SEEK Response:", res.data);  // DEBUG
+                console.log("Results:", res.data?.results);  // DEBUG
+                const results = res.data?.results || [];
+                console.log("Setting ragSearchResults:", results.length);  // DEBUG
+                setRagSearchResults(results);
             } catch (e) {
                 console.error("RAG search failed", e);
             } finally {
@@ -220,12 +224,28 @@ export const RagPanel: React.FC = () => {
         if (path) setIndexingPath(path);
         else setIndexing(true);
 
-        setIndexStatus(path ? `Indexing...` : "Re-scanning all...");
+        setIndexStatus(path ? `Indexing...` : "Starting scan...");
+
+        // Start polling for status
+        const pollInterval = setInterval(async () => {
+            try {
+                const statusRes = await axios.get(`${API_BASE}/rag/indexing_status`);
+                const status = statusRes.data;
+                if (status.active && status.total > 0) {
+                    const currentFile = status.currentFile || "...";
+                    setIndexStatus(`Indexing ${status.completed}/${status.total}: ${currentFile}`);
+                }
+            } catch (e) {
+                // Ignore polling errors
+            }
+        }, 2000);
 
         try {
             const res = await axios.post(`${API_BASE}/rag/reindex`, null, {
                 params: path ? { path } : {}
             });
+
+            clearInterval(pollInterval);
 
             if (res.data.status === 'success') {
                 setIndexStatus("Done!");
@@ -233,6 +253,7 @@ export const RagPanel: React.FC = () => {
                 setTimeout(() => setIndexStatus(null), 2000);
             }
         } catch (e) {
+            clearInterval(pollInterval);
             setIndexStatus("Failed");
             setTimeout(() => setIndexStatus(null), 2000);
         } finally {

@@ -24,6 +24,7 @@ import pymupdf4llm
 import re
 import base64 # ollama needs base64-encoded-image
 import asyncio
+import concurrent.futures
 
 
 
@@ -33,7 +34,7 @@ EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
 OLLAMA_CHAT_URL = "http://127.0.0.1:11434/api/chat"
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 EMBED_MODEL = "nomic-embed-text"
-RAG_LLM_MODEL = "llama3.2:latest" # Faster than Qwen for text splitting
+RAG_LLM_MODEL = "gemma3:1b" # Faster than Qwen/Llama3, better for parallel semantic chunking
 QWEN_MODEL = "qwen3-vl:8b" # Keep for vision and continuity
 CHUNK_SIZE = 256
 CHUNK_OVERLAP = 40
@@ -41,6 +42,14 @@ MAX_CHUNK_LENGTH = 512  # characters
 TOP_K = 3  # FAISS top-K matches
 OLLAMA_TIMEOUT = 300 # Seconds
 ROOT = Path(__file__).parent.resolve()
+
+# Global indexing status for progress tracking
+INDEXING_STATUS = {
+    "active": False,
+    "total": 0,
+    "completed": 0,
+    "currentFile": ""
+}
 
 
 def get_embedding(text: str) -> np.ndarray:
@@ -230,8 +239,8 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
         index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
         metadata = json.loads((ROOT / "faiss_index" / "metadata.json").read_text())
         query_vec = get_embedding(query).reshape(1, -1)
-        # Increase k if we are searching only one document to ensure we find something
-        D, I = index.search(query_vec, k=10 if doc_path else 5)
+        # Increase k to get more candidates (filtering reduces final count)
+        D, I = index.search(query_vec, k=50 if doc_path else 20)
         results = []
         for idx in I[0]:
             if idx < 0 or idx >= len(metadata): continue
@@ -247,11 +256,13 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
             
             # Use data dir relative check
             full_path = ROOT.parent / "data" / doc_rel_path
+            mcp_log("DEBUG", f"Checking path: {full_path} - exists: {full_path.exists()}")
             if not full_path.exists():
                 # Removed/Renamed file -> Skip
                 continue
 
             results.append(f"{data['chunk']}\n[Source: {doc_rel_path}]")
+        mcp_log("DEBUG", f"Returning {len(results)} results")
         return results
     except Exception as e:
         return [f"ERROR: Failed to search: {str(e)}"]
@@ -401,7 +412,9 @@ def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
         markdown.replace("\\", "/")
     )
 
-    markdown = replace_images_with_captions(markdown)
+    # DEFERRED VISION: Disable inline captioning to speed up ingestion
+    # markdown = replace_images_with_captions(markdown)
+    mcp_log("INFO", f"Skipped inline captioning for {string}. Images are saved.")
     return MarkdownOutput(markdown=markdown)
 
 
@@ -483,14 +496,108 @@ Keep markdown formatting intact.
 
 
 
-def process_documents(target_path: str = None):
-    """Process documents and create FAISS index using unified multimodal strategy.
-    
-    If target_path is provided, it will focus indexing on that specific file.
-    """
+def file_hash(path):
+    return hashlib.md5(Path(path).read_bytes()).hexdigest()
+
+def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
+    """Worker function to process a single file: Extract -> Chunk -> Embed."""
+    try:
+        rel_path = file.relative_to(doc_path_root).as_posix()
+        fhash = file_hash(file)
+        
+        # Cache Check
+        if rel_path in cache_meta:
+            if cache_meta[rel_path] == fhash:
+                return {"status": "SKIP", "rel_path": rel_path, "hash": fhash}
+            else:
+                mcp_log("INFO", f"Change detected: {rel_path} (re-indexing)")
+        else:
+            mcp_log("INFO", f"New file: {rel_path}")
+
+        mcp_log("PROC", f"Processing: {rel_path}")
+
+        # Extraction
+        ext = file.suffix.lower()
+        markdown = ""
+
+        if ext == ".pdf":
+            markdown = convert_pdf_to_markdown(str(file)).markdown
+        elif ext in [".html", ".htm", ".url"]:
+            markdown = extract_webpage(UrlInput(url=file.read_text().strip())).markdown
+        elif ext == ".py":
+            text = file.read_text()
+            markdown = f"```python\n{text}\n```"
+        else:
+            # Fallback
+            converter = MarkItDown()
+            markdown = converter.convert(str(file)).text_content
+
+        if not markdown.strip():
+            return {"status": "WARN", "rel_path": rel_path, "message": "No content extracted"}
+
+        # Semantic Chunking
+        try:
+            if len(markdown.split()) < 50:
+                chunks = [markdown.strip()]
+            else:
+                chunks = semantic_merge(markdown)
+        except Exception as e:
+            chunks = list(chunk_text(markdown))
+
+        embeddings_for_file = []
+        new_metadata_entries = []
+        
+        final_safe_chunks = []
+        for c in chunks:
+            final_safe_chunks.extend(get_safe_chunks(c))
+
+        # Batch Embedding (Local)
+        BATCH_SIZE = 32
+        
+        # Process in batches
+        for i in range(0, len(final_safe_chunks), BATCH_SIZE):
+            batch = final_safe_chunks[i : i + BATCH_SIZE]
+            
+            # Call batch API
+            try:
+                batch_url = EMBED_URL.replace("/api/embeddings", "/api/embed")
+                res = requests.post(batch_url, json={
+                    "model": EMBED_MODEL,
+                    "input": batch
+                }, timeout=OLLAMA_TIMEOUT)
+                res.raise_for_status()
+                embeddings_list = [np.array(e, dtype=np.float32) for e in res.json()["embeddings"]]
+            except Exception as e:
+                # Fallback
+                embeddings_list = [get_embedding(t) for t in batch]
+
+            # Add to results
+            for j, embedding in enumerate(embeddings_list):
+                real_idx = i + j
+                chunk = batch[j]
+                embeddings_for_file.append(embedding)
+                new_metadata_entries.append({
+                    "doc": rel_path,
+                    "chunk": chunk,
+                    "chunk_id": f"{rel_path}_{real_idx}"
+                })
+        
+        return {
+            "status": "SUCCESS",
+            "rel_path": rel_path,
+            "hash": fhash,
+            "embeddings": embeddings_for_file,
+            "metadata": new_metadata_entries
+        }
+
+    except Exception as e:
+        return {"status": "ERROR", "rel_path": str(file), "message": str(e)}
+
+
+def process_documents(target_path: str = None, specific_files: list[Path] = None):
+    """Process documents and create FAISS index using Parallel Processing (ThreadPoolExecutor)."""
     mcp_log("INFO", f"Indexing documents... {'(Target: ' + target_path + ')' if target_path else ''}")
     ROOT = Path(__file__).parent.resolve()
-    # Data is now 2 levels up in 'data' folder
     DOC_PATH = ROOT.parent / "data"
     INDEX_CACHE = ROOT / "faiss_index"
     INDEX_CACHE.mkdir(exist_ok=True)
@@ -498,140 +605,108 @@ def process_documents(target_path: str = None):
     METADATA_FILE = INDEX_CACHE / "metadata.json"
     CACHE_FILE = INDEX_CACHE / "doc_index_cache.json"
 
-    def file_hash(path):
-        return hashlib.md5(Path(path).read_bytes()).hexdigest()
-
     CACHE_META = json.loads(CACHE_FILE.read_text()) if CACHE_FILE.exists() else {}
     metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
 
-    # Count existing entries in cache
     mcp_log("INFO", f"Loaded cache with {len(CACHE_META)} files")
 
     index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
 
-    # Use relative paths for caching to allow folder restructuring
     files_to_process = []
-    if target_path:
-        # Resolve target_path relative to DOC_PATH
+    if specific_files:
+        files_to_process = specific_files
+    elif target_path:
         target_file = DOC_PATH / target_path
         if target_file.exists() and target_file.is_file():
             files_to_process = [target_file]
         else:
-            mcp_log("ERROR", f"Target path not found or not a file: {target_path}")
+            mcp_log("ERROR", f"Target path not found: {target_path}")
             return
     else:
-        files_to_process = DOC_PATH.rglob("*.*")
+        # Glob first, filter images
+        all_files = DOC_PATH.rglob("*.*")
+        files_to_process = [f for f in all_files if f.suffix.lower() not in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg']]
 
-    for file in files_to_process:
-        # Skip all image files (can't extract text without vision model)
-        if file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg']:
-            continue
-            
-        try:
-            rel_path = file.relative_to(DOC_PATH).as_posix()
-            fhash = file_hash(file)
-            
-            # Key by relative path, not just filename
-            if rel_path in CACHE_META:
-                if CACHE_META[rel_path] == fhash:
-                    mcp_log("SKIP", f"Skipping unchanged file: {rel_path}")
-                    continue
-                else:
-                    mcp_log("INFO", f"Change detected: {rel_path} (re-indexing)")
-            else:
-                mcp_log("INFO", f"New file: {rel_path}")
-
-            mcp_log("PROC", f"Processing: {rel_path}")
-
-            
-            # 🧹 CLEANUP: If this file was already indexed but hash changed, remove its old entries
-            if rel_path in CACHE_META:
-                mcp_log("INFO", f"Cleaning up old entries for: {rel_path}")
-                # Filter metadata
-                metadata = [m for m in metadata if m.get("doc") != rel_path]
-                # Note: Removing from FAISS index is hard (requires Reconstruct or ID tracking)
-                # For now, we rely on metadata filtering during search, 
-                # but to avoid index bloat, a full re-index is eventually needed.
-                # However, metadata filtering will hide the old versions.
-
-            
-            ext = file.suffix.lower()
-            markdown = ""
-
-            if ext == ".pdf":
-                mcp_log("INFO", f"Using MuPDF4LLM to extract {file.name}")
-                markdown = convert_pdf_to_markdown(str(file)).markdown
-
-            elif ext in [".html", ".htm", ".url"]:
-                mcp_log("INFO", f"Using Trafilatura to extract {file.name}")
-                markdown = extract_webpage(UrlInput(url=file.read_text().strip())).markdown
-
-            elif ext == ".py":
-                 # Simple code splitter validation
-                 text = file.read_text()
-                 markdown = f"```python\n{text}\n```"
-
-            else:
-                # Fallback to MarkItDown for other formats
-                converter = MarkItDown()
-                mcp_log("INFO", f"Using MarkItDown fallback for {file.name}")
-                markdown = converter.convert(str(file)).text_content
-
-            if not markdown.strip():
-                mcp_log("WARN", f"No content extracted from {file.name}")
-                continue
-
-            # Semantic merge strategy
-            try:
-                if len(markdown.split()) < 50: # Increased threshold slightly
-                    chunks = [markdown.strip()]
-                else:
-                    mcp_log("INFO", f"Running semantic merge on {file.name}")
-                    chunks = semantic_merge(markdown)
-            except Exception as e:
-                mcp_log("WARN", f"Semantic merge failed for {file.name}, falling back to simple chunking: {e}")
-                chunks = list(chunk_text(markdown))
-
-            embeddings_for_file = []
-            new_metadata = []
-            desc = f"Embedding {file.name}"
-            
-            # Sub-split technically if LLM chunks are too massive for the embedder
-            final_safe_chunks = []
-            for c in chunks:
-                final_safe_chunks.extend(get_safe_chunks(c))
-
-            try:
-                for i, chunk in enumerate(tqdm(final_safe_chunks, desc=desc)):
-                    embedding = get_embedding(chunk)
-                    embeddings_for_file.append(embedding)
-                    new_metadata.append({
-                        "doc": rel_path,
-                        "chunk": chunk,
-                        "chunk_id": f"{rel_path}_{i}"
-                    })
-            except Exception as e:
-                mcp_log("ERROR", f"Failed to generate embeddings for {file.name}: {e}")
-                continue
-
-            if embeddings_for_file:
-                if index is None:
-                    dim = len(embeddings_for_file[0])
-                    index = faiss.IndexFlatL2(dim)
-                index.add(np.stack(embeddings_for_file))
-                metadata.extend(new_metadata)
-                CACHE_META[rel_path] = fhash # Cache by relative path
-
-                # ✅ Immediately save index and metadata
-                CACHE_FILE.write_text(json.dumps(CACHE_META, indent=2))
-                METADATA_FILE.write_text(json.dumps(metadata, indent=2))
-                faiss.write_index(index, str(INDEX_FILE))
-                mcp_log("SAVE", f"Saved FAISS index after {file.name}")
-
-        except Exception as e:
-            mcp_log("ERROR", f"Failed to process {file.name}: {e}")
+    # PARALLEL EXECUTION
+    # Max workers = 2 (reduced from 4 to prevent Ollama timeouts)
+    MAX_WORKERS = 2
+    mcp_log("INFO", f"Starting parallel ingestion with {MAX_WORKERS} workers on {len(files_to_process)} files")
     
+    # Initialize progress tracking
+    global INDEXING_STATUS
+    INDEXING_STATUS = {
+        "active": True,
+        "total": len(files_to_process),
+        "completed": 0,
+        "currentFile": ""
+    }
+    
+    param_cache_meta = CACHE_META.copy() # Read-only for threads
+    
+    # Thread-safe lock for incremental saves
+    import threading
+    index_lock = threading.Lock()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        # Map futures
+        futures = {executor.submit(process_single_file, f, DOC_PATH, param_cache_meta): f for f in files_to_process}
+        
+        # Collect results as they complete
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(files_to_process), desc="Indexing"):
+            result = future.result()
+            status = result.get("status")
+            rel_path = result.get("rel_path")
+            
+            if status == "SKIP":
+                # mcp_log("SKIP", f"Skipping {rel_path}")
+                pass
+            
+            elif status == "SUCCESS":
+                fhash = result.get("hash")
+                new_embs = result.get("embeddings")
+                new_meta = result.get("metadata")
+                
+                if new_embs:
+                    # Thread-safe index update and save
+                    with index_lock:
+                        # 1. Cleanup old entries if exist
+                        if rel_path in CACHE_META:
+                            metadata = [m for m in metadata if m.get("doc") != rel_path]
+                            
+                        # 2. Add new
+                        if index is None:
+                            dim = len(new_embs[0])
+                            index = faiss.IndexFlatL2(dim)
+                        
+                        index.add(np.stack(new_embs))
+                        metadata.extend(new_meta)
+                        CACHE_META[rel_path] = fhash # Update cache
+                        
+                        # 3. INCREMENTAL SAVE (Crash-safe)
+                        try:
+                            CACHE_FILE.write_text(json.dumps(CACHE_META, indent=2))
+                            METADATA_FILE.write_text(json.dumps(metadata, indent=2))
+                            faiss.write_index(index, str(INDEX_FILE))
+                        except Exception as e:
+                            mcp_log("WARN", f"Incremental save failed: {e}")
+                        
+                        mcp_log("DONE", f"Indexed {rel_path} ({len(new_embs)} chunks)")
+                        
+                        # Update progress
+                        INDEXING_STATUS["completed"] += 1
+                        INDEXING_STATUS["currentFile"] = Path(rel_path).name
+            
+            elif status == "WARN":
+                mcp_log("WARN", f"{rel_path}: {result.get('message')}")
+                
+            elif status == "ERROR":
+                mcp_log("ERROR", f"Failed {rel_path}: {result.get('message')}")
+
+    # Reset indexing status
+    INDEXING_STATUS["active"] = False
+    INDEXING_STATUS["currentFile"] = ""
     mcp_log("INFO", "READY")
+
 
 @mcp.tool()
 async def reindex_documents(target_path: str = None) -> str:
@@ -642,6 +717,95 @@ async def reindex_documents(target_path: str = None) -> str:
     # Run the blocking process_documents in a separate thread
     await asyncio.to_thread(process_documents, target_path)
     return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed successfully."
+
+
+@mcp.tool()
+async def get_indexing_status() -> str:
+    """Get the current indexing progress status as JSON."""
+    return json.dumps(INDEXING_STATUS)
+
+
+@mcp.tool()
+async def index_images() -> str:
+    """Background Worker: Scans for un-captioned images, captions them using Vision Model, and updates the index."""
+    ROOT = Path(__file__).parent.resolve()
+    IMG_DIR = ROOT / "documents" / "images"
+    CAPTIONS_FILE = ROOT / "faiss_index" / "captions.json"
+    INDEX_CACHE = ROOT / "faiss_index"
+    INDEX_FILE = INDEX_CACHE / "index.bin"
+    METADATA_FILE = INDEX_CACHE / "metadata.json"
+    
+    if not IMG_DIR.exists():
+        return "No images directory found."
+
+    captions_ledger = json.loads(CAPTIONS_FILE.read_text()) if CAPTIONS_FILE.exists() else {}
+    metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
+    index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
+
+    # Find pending images
+    all_images = list(IMG_DIR.glob("*.png")) + list(IMG_DIR.glob("*.jpg"))
+    pending_images = [img for img in all_images if img.name not in captions_ledger]
+    
+    if not pending_images:
+        return "No new images to caption."
+    
+    # Sort to keep order deterministic
+    pending_images.sort(key=lambda x: x.name)
+    
+    mcp_log("INFO", f"Found {len(pending_images)} images to caption in background.")
+    
+    new_embeddings = []
+    new_meta = []
+    
+    # Process in batches or one by one (caption_image is sequential due to VRAM)
+    for img in pending_images:
+        try:
+            mcp_log("PROC", f"Captioning {img.name}...")
+            # 1. Generate Caption (Vision Model)
+            # using sync call inside async tool might block loop, but acceptable for background worker
+            caption = caption_image(str(img))
+            
+            # 2. Add to Ledger
+            captions_ledger[img.name] = caption
+            
+            # 3. Create Semantic Chunk (Additive)
+            # Try to infer original doc: filename.pdf-page-imgIdx
+            try:
+                original_doc = img.stem.rsplit("-", 2)[0] 
+            except:
+                original_doc = img.stem
+
+            chunk_text = f"Image Context from {original_doc} (Page {img.stem.split('-')[-2]}): {caption}"
+            
+            # 4. Embed
+            embedding = get_embedding(chunk_text)
+            new_embeddings.append(embedding)
+            
+            new_meta.append({
+                "doc": str(img.name), # We link to the image file so UI can show it
+                "chunk": chunk_text,
+                "chunk_id": f"IMG_{img.name}",
+                "type": "image_caption",
+                "source_doc": original_doc
+            })
+            
+        except Exception as e:
+            mcp_log("ERROR", f"Failed to caption {img.name}: {e}")
+
+    # Save Updates
+    if new_embeddings:
+        if index is None:
+             index = faiss.IndexFlatL2(len(new_embeddings[0]))
+        index.add(np.stack(new_embeddings))
+        metadata.extend(new_meta)
+        
+        CAPTIONS_FILE.write_text(json.dumps(captions_ledger, indent=2))
+        METADATA_FILE.write_text(json.dumps(metadata, indent=2))
+        faiss.write_index(index, str(INDEX_FILE))
+        
+        return f"Successfully processed {len(new_embeddings)} images. Index updated."
+    
+    return "Processed images but no valid captions generated."
 
 
 def ensure_faiss_ready():

@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import asyncio
 import json
 from pathlib import Path
@@ -447,31 +448,178 @@ async def reindex_rag_documents(path: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to trigger reindex: {str(e)}")
 
+@app.get("/rag/indexing_status")
+async def get_indexing_status():
+    """Get current indexing progress"""
+    try:
+        result = await multi_mcp.call_tool("rag", "get_indexing_status", {})
+        # Parse JSON string from MCP tool
+        if hasattr(result, 'content') and isinstance(result.content, list):
+            for item in result.content:
+                if hasattr(item, 'text'):
+                    import json
+                    return json.loads(item.text)
+        return {"active": False, "total": 0, "completed": 0, "currentFile": ""}
+    except Exception as e:
+        return {"active": False, "total": 0, "completed": 0, "currentFile": ""}
+
+def find_page_for_chunk(doc_path: str, chunk_text: str) -> int:
+    """Lazily find which page contains the chunk text using pymupdf text search."""
+    try:
+        import pymupdf
+        full_path = Path(__file__).parent / "data" / doc_path
+        if not full_path.exists() or not doc_path.endswith('.pdf'):
+            return 1  # Default to page 1 for non-PDFs
+        
+        doc = pymupdf.open(str(full_path))
+        # Use first 80 chars of chunk for search (avoid special chars issues)
+        search_text = chunk_text[:80].strip().replace('\n', ' ')
+        
+        for page_num, page in enumerate(doc):
+            # Search for text on this page
+            if page.search_for(search_text):
+                doc.close()
+                return page_num + 1  # 1-indexed
+        
+        doc.close()
+        return 1  # Default to page 1 if not found
+    except Exception as e:
+        print(f"Page lookup failed: {e}")
+        return 1
+
 @app.get("/rag/search")
 async def rag_search(query: str):
-    """Semantic search against indexed RAG documents"""
+    """Semantic search against indexed RAG documents with page numbers"""
     try:
         args = {"query": query}
         result = await multi_mcp.call_tool("rag", "search_stored_documents_rag", args)
         
+        # DEBUG: Log raw MCP result
+        print(f"DEBUG MCP Result type: {type(result)}")
+        print(f"DEBUG MCP Result: {result}")
+        
         # Extract results from CallToolResult
-        results = []
+        raw_results = []
         if hasattr(result, 'content') and isinstance(result.content, list):
-            for item in result.content:
+            print(f"DEBUG: Found content list with {len(result.content)} items")
+            for i, item in enumerate(result.content):
+                print(f"DEBUG: Item {i} type: {type(item)}, hasattr text: {hasattr(item, 'text')}")
                 if hasattr(item, 'text'):
+                    print(f"DEBUG: Item text (first 200 chars): {item.text[:200] if len(item.text) > 200 else item.text}")
                     try:
                         import ast
                         parsed = ast.literal_eval(item.text)
+                        print(f"DEBUG: Parsed type: {type(parsed)}, is list: {isinstance(parsed, list)}")
                         if isinstance(parsed, list):
-                            results.extend(parsed)
+                            raw_results.extend(parsed)
                         else:
-                            results.append(item.text)
-                    except:
-                        results.append(item.text)
+                            raw_results.append(item.text)
+                    except Exception as parse_err:
+                        print(f"DEBUG: Parse error: {parse_err}")
+                        raw_results.append(item.text)
+        else:
+            print(f"DEBUG: No content list found. hasattr content: {hasattr(result, 'content')}")
         
-        return {"status": "success", "results": results}
+        # Parse results and add page numbers
+        structured_results = []
+        for r in raw_results:
+            # Parse "[Source: path]" format
+            match = re.search(r'\[Source:\s*(.+?)\]$', r)
+            if match:
+                source = match.group(1)
+                content = r[:match.start()].strip()
+                # Lazy page lookup
+                page = find_page_for_chunk(source, content)
+                structured_results.append({
+                    "content": content,
+                    "source": source,
+                    "page": page
+                })
+            else:
+                structured_results.append({
+                    "content": r,
+                    "source": "unknown",
+                    "page": 1
+                })
+        
+        return {"status": "success", "results": structured_results}
+    except Exception as e:
+        import traceback
+        print(f"RAG SEARCH ERROR: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/rag/document_chunks")
+async def get_document_chunks(path: str):
+    """Get cached chunks for a document from the FAISS metadata - FAST, no re-processing."""
+    try:
+        meta_path = Path(__file__).parent / "mcp_servers" / "faiss_index" / "metadata.json"
+        if not meta_path.exists():
+            return {"status": "error", "markdown": "No index found. Please index documents first."}
+        
+        metadata = json.loads(meta_path.read_text())
+        
+        # Filter chunks for this document
+        doc_chunks = [m["chunk"] for m in metadata if m.get("doc") == path]
+        
+        if not doc_chunks:
+            return {"status": "error", "markdown": f"No chunks found for document: {path}. Try re-indexing."}
+        
+        # Concatenate chunks with separators
+        full_text = "\n\n---\n\n".join(doc_chunks)
+
+        # Detect if this is a code file
+        code_exts = {
+            '.py': 'python', '.tsx': 'typescript', '.ts': 'typescript', 
+            '.js': 'javascript', '.jsx': 'javascript', '.html': 'html', 
+            '.css': 'css', '.json': 'json', '.c': 'c', '.cpp': 'cpp',
+            '.h': 'c', '.hpp': 'cpp', '.md': 'markdown', '.txt': 'text'
+        }
+        file_ext = Path(path).suffix.lower()
+        
+        if file_ext in code_exts and file_ext not in ['.md', '.txt']:
+            # Wrap in code block
+            lang = code_exts[file_ext]
+            full_text = f"```{lang}\n{full_text}\n```"
+        elif file_ext not in ['.md', '.txt']:
+            # Apply heuristics to restore structure from flattened text (DOCS only)
+            import re
+            # 1. Restore headers
+            full_text = re.sub(r'\s(#{1,6})\s', r'\n\n\1 ', full_text)
+            
+            # 2. Add breaks before " **" if it looks like a header
+            full_text = re.sub(r'(\.|\:)\s+\*\*', r'\1\n\n**', full_text)
+
+            # 3. Restore Tables: 
+            # Pattern A: Header | Separator (Space between)
+            # Find pipe followed by space(s) followed by |--- or |:---
+            full_text = re.sub(r'(\|\s*)(?=\|[:\-]+\|)', r'\1\n', full_text)
+
+            # Pattern B: Separator | Row (Space between)
+            # Find |---| followed by space(s) followed by |
+            full_text = re.sub(r'(\|[:\-]+\|)(\s+)(?=\|)', r'\1\n', full_text)
+            
+            # Pattern C: Row | Row (Space between)
+            # Find | ending a cell, spaces, then | starting new row
+            # Use lookbehind for pipe, lookahead for pipe
+            # Be careful not to match empty cells | | inside a row
+            # We assume |   | (3 spaces) is empty cell, but | | (1 space) might be row break?
+            # Safe bet: |<text>| <space> |<text>|
+            # Let's match: Pipe, Space(s), Pipe. Replace with Pipe, Newline, Pipe.
+            # But only if it's NOT an empty cell.
+            # Only apply if we are "in" a table context? Hard to know.
+            # Strategy: If we see `| ... | | ... |` it is likely a row break if it's a long stream.
+            pass
+        
+        return {
+            "status": "success", 
+            "markdown": full_text, 
+            "chunks": doc_chunks, 
+            "chunk_count": len(doc_chunks)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/rag/keyword_search")
 async def rag_keyword_search(query: str):

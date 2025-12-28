@@ -1,0 +1,3 @@
+Sequential: 1.1454s
+Batched: 0.6745s
+Speedup: 1.70x
