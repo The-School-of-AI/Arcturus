@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+const API_BASE = 'http://localhost:8000';
 
 const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | 'system' }> = ({ content, role }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -96,9 +98,24 @@ export const DocumentAssistant: React.FC = () => {
         if ((!inputValue.trim() && !pastedImage) || !activeDoc) return;
 
         // Combine all selected contexts
-        const contextString = selectedContexts.length > 0
+        let contextString = selectedContexts.length > 0
             ? `Context extracts from document:\n${selectedContexts.map(c => `> ${c}`).join('\n\n')}\n\n`
             : '';
+
+        // SPECIAL CASE: For Summarize/Key Takeaways, fetch FULL chunks
+        if (inputValue.includes("Summarize") || inputValue.includes("Key Takeaways") || inputValue.includes("takeaways")) {
+            try {
+                const res = await fetch(`${API_BASE}/rag/document_chunks?path=${encodeURIComponent(activeDoc.id)}`);
+                const data = await res.json();
+                if (data.status === 'success' && data.markdown) {
+                    // Limit context to ~30k chars to avoid token limits (adjust based on model)
+                    const chunks = data.markdown.slice(0, 30000);
+                    contextString += `\n\nFULL DOCUMENT CONTENT (Truncated to first 30k chars):\n${chunks}\n\n`;
+                }
+            } catch (e) {
+                console.error("Failed to fetch full context", e);
+            }
+        }
 
         const userMsgId = Date.now().toString();
         const userMsg = {
@@ -127,13 +144,13 @@ export const DocumentAssistant: React.FC = () => {
         addMessageToDocChat(activeDoc.id, botMsg);
 
         try {
-            const response = await fetch('http://localhost:8000/rag/ask', {
+            const response = await fetch(`${API_BASE}/rag/ask`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     docId: activeDoc.id,
                     query: fullMessage,
-                    history: history,
+                    history: history, // Send full history including context
                     image: currentPastedImage
                 })
             });
@@ -157,9 +174,8 @@ export const DocumentAssistant: React.FC = () => {
                             const data = JSON.parse(line.slice(6));
                             if (data.content) {
                                 accumulatedContent += data.content;
-                                // Update the bot message in real-time
-                                const updatedBotMsg = { ...botMsg, content: accumulatedContent };
-                                addMessageToDocChat(activeDoc.id, updatedBotMsg);
+                                // Update the SPECIFIC bot message using its ID
+                                useAppStore.getState().updateMessageContent(activeDoc.id, botMsgId, accumulatedContent);
                             } else if (data.error) {
                                 console.error("Streaming error:", data.error);
                             }
@@ -171,6 +187,7 @@ export const DocumentAssistant: React.FC = () => {
             }
         } catch (e) {
             console.error("Failed to ask document:", e);
+            useAppStore.getState().updateMessageContent(activeDoc.id, botMsgId, "⚠️ Error communicating with AI. Please try again.");
         } finally {
             setIsThinking(false);
         }
@@ -192,8 +209,8 @@ export const DocumentAssistant: React.FC = () => {
             <div className="p-4 border-b border-border bg-card/95 sticky top-0 z-10 flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                        <h3 className="font-bold text-xs uppercase tracking-widest text-foreground">Talk to Document</h3>
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                        <h3 className="font-bold text-xs uppercase tracking-widest text-foreground">Insights</h3>
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{activeDoc.title}</p>
                 </div>
@@ -202,9 +219,38 @@ export const DocumentAssistant: React.FC = () => {
             {/* Chat History */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                 {history.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-center opacity-50 space-y-2">
-                        <Bot className="w-8 h-8" />
-                        <p className="text-xs">Ask anything about this document.<br />Selected text from the viewer will be added as context automatically.</p>
+                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-8">
+                        <div className="opacity-50 space-y-2">
+                            <Bot className="w-8 h-8 mx-auto" />
+                            <p className="text-xs">Ask anything about this document.<br />Selected text from the viewer will be added as context automatically.</p>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Quick Actions</p>
+                            <button
+                                onClick={() => {
+                                    setInputValue('Summarize this document in 3-5 concise bullet points');
+                                    setTimeout(handleSend, 100);
+                                }}
+                                disabled={isThinking}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 hover:bg-muted rounded-lg text-sm text-foreground transition-all border border-border/50 hover:border-primary/30"
+                            >
+                                <ScrollText className="w-4 h-4 text-primary" />
+                                Summarize Document
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setInputValue('Extract the key takeaways and insights from this document. Focus on actionable points.');
+                                    setTimeout(handleSend, 100);
+                                }}
+                                disabled={isThinking}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 hover:bg-muted rounded-lg text-sm text-foreground transition-all border border-border/50 hover:border-primary/30"
+                            >
+                                <Quote className="w-4 h-4 text-primary" />
+                                Key Takeaways
+                            </button>
+                        </div>
                     </div>
                 )}
 

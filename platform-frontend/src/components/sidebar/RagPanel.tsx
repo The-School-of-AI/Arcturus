@@ -421,21 +421,36 @@ export const RagPanel: React.FC = () => {
                                 <RefreshCw className="w-6 h-6 animate-spin text-primary" />
                             </div>
                         )}
-                        {!seeking && Array.isArray(ragSearchResults) && ragSearchResults.map((res, i) => {
-                            const { path, content, name } = parseResult(res);
+                        {!seeking && Array.isArray(ragSearchResults) && ragSearchResults.map((res: any, i) => {
+                            // Handle both old string format and new object format
+                            const isStructured = typeof res === 'object' && res !== null;
+                            const content = isStructured ? res.content : (parseResult(res)).content;
+                            const source = isStructured ? res.source : (parseResult(res)).path;
+                            const page = isStructured ? res.page : 1;
+                            const name = source?.split('/').pop() || 'Unknown';
+                            const ext = source?.split('.').pop() || 'txt';
+
                             return (
                                 <div
                                     key={i}
                                     className="p-3 rounded-lg bg-muted/50 border border-border/50 hover:border-primary/30 transition-all cursor-pointer group"
-                                    onClick={() => path && openDocument({ id: path, title: name, type: path.split('.').pop() || 'txt' })}
+                                    onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page })}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
                                         <FileText className="w-3 h-3 text-red-400" />
-                                        <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[150px]">{name}</span>
+                                        <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[120px]">{name}</span>
+                                        {page > 1 && (
+                                            <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-bold">
+                                                p.{page}
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4 italic">"{content}"</p>
-                                    <div className="mt-2 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-[10px] text-primary flex items-center gap-1 font-semibold">View Source <ChevronRight className="w-2.5 h-2.5" /></span>
+                                    <div className="mt-2 flex justify-between items-center">
+                                        {page > 1 && (
+                                            <span className="text-[9px] text-muted-foreground">Page {page}</span>
+                                        )}
+                                        <span className="text-[10px] text-primary flex items-center gap-1 font-semibold opacity-0 group-hover:opacity-100 transition-opacity ml-auto">View Source <ChevronRight className="w-2.5 h-2.5" /></span>
                                     </div>
                                 </div>
                             );

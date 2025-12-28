@@ -75,4 +75,5 @@ export interface RAGDocument {
     type: string;
     content?: string;
     chatHistory?: ChatMessage[];
+    targetPage?: number;
 }

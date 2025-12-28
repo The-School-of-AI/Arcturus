@@ -86,6 +86,7 @@ interface RagViewerSlice {
     ragKeywordMatches: string[];
     setRagKeywordMatches: (matches: string[]) => void;
     addMessageToDocChat: (docId: string, message: ChatMessage) => void;
+    updateMessageContent: (docId: string, messageId: string, newContent: string) => void;
     selectedContexts: string[];
     addSelectedContext: (text: string) => void;
     removeSelectedContext: (index: number) => void;
@@ -396,6 +397,18 @@ export const useAppStore = create<AppState>()(
                 openDocuments: state.openDocuments.map((doc) =>
                     doc.id === docId
                         ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                        : doc
+                )
+            })),
+            updateMessageContent: (docId, messageId, newContent) => set((state) => ({
+                openDocuments: state.openDocuments.map((doc) =>
+                    doc.id === docId
+                        ? {
+                            ...doc,
+                            chatHistory: (doc.chatHistory || []).map(msg =>
+                                msg.id === messageId ? { ...msg, content: newContent } : msg
+                            )
+                        }
                         : doc
                 )
             })),

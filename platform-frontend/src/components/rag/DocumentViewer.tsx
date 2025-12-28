@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, FileText, Loader2, Library, Code2, Quote, PlusCircle } from 'lucide-react';
+import { X, FileText, Loader2, Library, Code2, Quote, PlusCircle, Sparkles, MessageSquare, ListChecks, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import axios from 'axios';
@@ -7,6 +7,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import { pageNavigationPlugin } from '@react-pdf-viewer/page-navigation';
+import '@react-pdf-viewer/page-navigation/lib/styles/index.css';
 import { renderAsync } from 'docx-preview';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -29,7 +31,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, active, onClick }) => (
         onClick={onClick}
         className={cn(
             "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
-            active ? (label === 'Insights' ? "bg-primary text-charcoal-950" : "bg-white/10 text-foreground") : "text-muted-foreground hover:text-foreground"
+            active ? (label === 'MD' ? "bg-primary text-charcoal-950" : "bg-white/10 text-foreground") : "text-muted-foreground hover:text-foreground"
         )}
     >
         {label}
@@ -137,9 +139,28 @@ export const DocumentViewer: React.FC = () => {
     const [isCode, setIsCode] = useState(false);
     const [codeLang, setCodeLang] = useState('javascript');
 
+    // Insights Panel State
+    const [showInsights, setShowInsights] = useState(false);
+    const [insightsLoading, setInsightsLoading] = useState(false);
+    const [insightsResult, setInsightsResult] = useState<string | null>(null);
+    const [insightsQuestion, setInsightsQuestion] = useState('');
+
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
     const defaultLayoutPluginInstance = defaultLayoutPlugin();
+    const pageNavigationPluginInstance = pageNavigationPlugin();
+    const { jumpToPage } = pageNavigationPluginInstance;
+
+    // Jump to target page when PDF loads from search result
+    useEffect(() => {
+        if (activeDoc?.targetPage && activeDoc.targetPage > 1 && pdfUrl) {
+            // Small delay to ensure PDF is fully loaded
+            const timer = setTimeout(() => {
+                jumpToPage(activeDoc.targetPage! - 1); // 0-indexed
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [activeDoc?.targetPage, pdfUrl, jumpToPage]);
 
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => ['pdf', 'docx', 'doc'].includes(type.toLowerCase());
@@ -167,19 +188,24 @@ export const DocumentViewer: React.FC = () => {
                 else if (docType === 'ts' || docType === 'tsx') setCodeLang('typescript');
                 else setCodeLang(docType);
 
-                // For AI View or forced DOCX AI
+                // For AI View - use cached chunks for FAST loading
                 if (viewType === 'ai' && canPreview(docType)) {
-                    const res = await axios.get(`${API_BASE}/rag/document_preview`, {
+                    // Try fast chunks first
+                    const res = await axios.get(`${API_BASE}/rag/document_chunks`, {
                         params: { path: activeDoc.id }
                     });
-                    let markdown = res.data.markdown || "No preview available.";
-                    markdown = markdown.replace(/!\[\]\(images\//g, `![](${API_BASE}/rag/images/`);
-                    setContent(markdown);
+                    if (res.data.status === 'success') {
+                        const markdown = res.data.markdown || "No chunks available.";
+                        setContent(`*${res.data.chunk_count} chunks indexed*\n\n---\n\n${markdown}`);
+                    } else {
+                        // Fallback message
+                        setContent("Document not indexed yet. Please index first.");
+                    }
                     setPdfUrl(null);
                     setImageUrl(null);
                     setDocxBlob(null);
                     setIsDocx(false);
-                    setIsCode(false); // AI View is always Markdown
+                    setIsCode(false);
                 } else if (docType === 'pdf') {
                     const response = await fetch(`${API_BASE}/rag/document_content?path=${encodeURIComponent(activeDoc.id)}`);
                     if (!response.ok) throw new Error("Fetch failed");
@@ -295,18 +321,32 @@ export const DocumentViewer: React.FC = () => {
                     )}
 
                     {activeDoc && canPreview(activeDoc.type) && (
-                        <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-border/50">
-                            <TabButton
-                                label="Source"
-                                active={viewType === 'source'}
-                                onClick={() => setViewType('source')}
-                            />
-                            <TabButton
-                                label="Insights"
-                                active={viewType === 'ai'}
-                                onClick={() => setViewType('ai')}
-                            />
-                        </div>
+                        <>
+                            <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-border/50">
+                                <TabButton
+                                    label="Source"
+                                    active={viewType === 'source'}
+                                    onClick={() => setViewType('source')}
+                                />
+                                <TabButton
+                                    label="MD"
+                                    active={viewType === 'ai'}
+                                    onClick={() => setViewType('ai')}
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowInsights(!showInsights)}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all border",
+                                    showInsights
+                                        ? "bg-purple-500 text-white border-purple-400"
+                                        : "bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/30"
+                                )}
+                            >
+                                <Sparkles className="w-3 h-3" />
+                                Insights
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -322,16 +362,201 @@ export const DocumentViewer: React.FC = () => {
                     </div>
                 )}
 
+                {/* Insights Panel - Slide out from right */}
+                {showInsights && activeDoc && (
+                    <div className="absolute right-0 top-0 bottom-0 w-80 bg-card border-l border-border z-50 flex flex-col shadow-2xl">
+                        <div className="p-4 border-b border-border bg-purple-500/10">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-purple-400" />
+                                    <span className="font-bold text-sm text-foreground">AI Insights</span>
+                                </div>
+                                <button onClick={() => setShowInsights(false)} className="p-1 hover:bg-white/10 rounded">
+                                    <X className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="p-3 space-y-2 border-b border-border">
+                            <button
+                                onClick={async () => {
+                                    setInsightsLoading(true);
+                                    setInsightsResult(null);
+                                    try {
+                                        const response = await fetch(`${API_BASE}/rag/ask`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                docId: activeDoc.id,
+                                                query: 'Summarize this document in 3-5 concise bullet points. Be very brief.',
+                                                history: []
+                                            })
+                                        });
+                                        const reader = response.body?.getReader();
+                                        const decoder = new TextDecoder();
+                                        let result = '';
+                                        while (reader) {
+                                            const { done, value } = await reader.read();
+                                            if (done) break;
+                                            const chunk = decoder.decode(value);
+                                            const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+                                            for (const line of lines) {
+                                                try {
+                                                    const data = JSON.parse(line.replace('data: ', ''));
+                                                    result += data.content || '';
+                                                    setInsightsResult(result);
+                                                } catch { }
+                                            }
+                                        }
+                                    } catch (e) {
+                                        setInsightsResult('Error generating summary');
+                                    } finally {
+                                        setInsightsLoading(false);
+                                    }
+                                }}
+                                disabled={insightsLoading}
+                                className="w-full flex items-center gap-2 px-3 py-2 bg-muted/50 hover:bg-muted rounded-lg text-sm text-foreground transition-all border border-border/50 hover:border-purple-500/30"
+                            >
+                                <ListChecks className="w-4 h-4 text-purple-400" />
+                                <span className="flex-1 text-left">Summarize</span>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setInsightsLoading(true);
+                                    setInsightsResult(null);
+                                    try {
+                                        const response = await fetch(`${API_BASE}/rag/ask`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                docId: activeDoc.id,
+                                                query: 'Extract the key takeaways and insights from this document. Focus on actionable points.',
+                                                history: []
+                                            })
+                                        });
+                                        const reader = response.body?.getReader();
+                                        const decoder = new TextDecoder();
+                                        let result = '';
+                                        while (reader) {
+                                            const { done, value } = await reader.read();
+                                            if (done) break;
+                                            const chunk = decoder.decode(value);
+                                            const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+                                            for (const line of lines) {
+                                                try {
+                                                    const data = JSON.parse(line.replace('data: ', ''));
+                                                    result += data.content || '';
+                                                    setInsightsResult(result);
+                                                } catch { }
+                                            }
+                                        }
+                                    } catch (e) {
+                                        setInsightsResult('Error extracting takeaways');
+                                    } finally {
+                                        setInsightsLoading(false);
+                                    }
+                                }}
+                                disabled={insightsLoading}
+                                className="w-full flex items-center gap-2 px-3 py-2 bg-muted/50 hover:bg-muted rounded-lg text-sm text-foreground transition-all border border-border/50 hover:border-purple-500/30"
+                            >
+                                <MessageSquare className="w-4 h-4 text-purple-400" />
+                                <span className="flex-1 text-left">Key Takeaways</span>
+                            </button>
+                        </div>
+
+                        {/* Ask Question */}
+                        <div className="p-3 border-b border-border">
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                if (!insightsQuestion.trim()) return;
+                                setInsightsLoading(true);
+                                setInsightsResult(null);
+                                try {
+                                    const response = await fetch(`${API_BASE}/rag/ask`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            docId: activeDoc.id,
+                                            query: insightsQuestion,
+                                            history: []
+                                        })
+                                    });
+                                    const reader = response.body?.getReader();
+                                    const decoder = new TextDecoder();
+                                    let result = '';
+                                    while (reader) {
+                                        const { done, value } = await reader.read();
+                                        if (done) break;
+                                        const chunk = decoder.decode(value);
+                                        const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+                                        for (const line of lines) {
+                                            try {
+                                                const data = JSON.parse(line.replace('data: ', ''));
+                                                result += data.content || '';
+                                                setInsightsResult(result);
+                                            } catch { }
+                                        }
+                                    }
+                                } catch (e) {
+                                    setInsightsResult('Error answering question');
+                                } finally {
+                                    setInsightsLoading(false);
+                                    setInsightsQuestion('');
+                                }
+                            }} className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={insightsQuestion}
+                                    onChange={(e) => setInsightsQuestion(e.target.value)}
+                                    placeholder="Ask a question..."
+                                    className="flex-1 px-3 py-2 bg-muted border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                                />
+                                <button type="submit" disabled={insightsLoading || !insightsQuestion.trim()} className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50">
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Results */}
+                        <div className="flex-1 overflow-y-auto p-3">
+                            {insightsLoading && (
+                                <div className="flex items-center gap-2 text-purple-400 text-sm">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Thinking...</span>
+                                </div>
+                            )}
+                            {insightsResult && (
+                                <div className="prose prose-invert prose-sm max-w-none">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {insightsResult.replace(/<think>[\s\S]*?<\/think>/g, '')}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
+                            {!insightsLoading && !insightsResult && (
+                                <div className="text-center text-muted-foreground text-xs py-8">
+                                    Click an action above or ask a question
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* PDF Viewer */}
                 {activeDoc?.type.toLowerCase() === 'pdf' && pdfUrl && viewType === 'source' && (
                     <div className="h-full overflow-hidden bg-[#2a2a2e]">
                         <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
                             <Viewer
                                 fileUrl={pdfUrl}
-                                plugins={[defaultLayoutPluginInstance]}
+                                plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance]}
                                 theme="dark"
                             />
                         </Worker>
+                        {activeDoc.targetPage && activeDoc.targetPage > 1 && (
+                            <div className="absolute top-4 right-4 z-50 px-3 py-1.5 rounded-full bg-primary text-charcoal-950 text-xs font-bold shadow-lg animate-pulse">
+                                Jumped to page {activeDoc.targetPage}
+                            </div>
+                        )}
                     </div>
                 )}
 
