@@ -205,9 +205,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                 <div className="flex-1 relative">
                     {/* Grid & Axis Lines */}
                     {showGrid && (
-                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-30">
                             {[0, 1, 2, 3, 4].map(i => (
-                                <div key={i} className="w-full border-t border-white" />
+                                <div key={i} className="w-full border-t border-foreground" />
                             ))}
                         </div>
                     )}
@@ -227,18 +227,33 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                             <>
                                 {/* SVG for line paths only */}
                                 <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                    {series.map((s: any, i: number) => (
-                                        <path
-                                            key={i}
-                                            d={generatePath(s.data)}
-                                            fill="none"
-                                            stroke={s.color || accentColor}
-                                            strokeWidth={isThick ? 3 : 1.5}
-                                            vectorEffect="non-scaling-stroke"
-                                            className={cn("transition-all duration-300", animate && "animate-in fade-in zoom-in-95 duration-1000")}
-                                            style={{ opacity: 0.9 }}
-                                        />
-                                    ))}
+                                    {series.map((s: any, i: number) => {
+                                        const pathD = generatePath(s.data);
+                                        const fillColor = s.color || accentColor;
+                                        return (
+                                            <g key={i}>
+                                                {/* Area fill (only for area charts) */}
+                                                {type === 'area' && pathD && (
+                                                    <path
+                                                        d={`${pathD} L 100,100 L 0,100 Z`}
+                                                        fill={fillColor}
+                                                        fillOpacity={0.2}
+                                                        className={cn("transition-all duration-300", animate && "animate-in fade-in duration-1000")}
+                                                    />
+                                                )}
+                                                {/* Line stroke */}
+                                                <path
+                                                    d={pathD}
+                                                    fill="none"
+                                                    stroke={fillColor}
+                                                    strokeWidth={isThick ? 3 : 1.5}
+                                                    vectorEffect="non-scaling-stroke"
+                                                    className={cn("transition-all duration-300", animate && "animate-in fade-in zoom-in-95 duration-1000")}
+                                                    style={{ opacity: 0.9 }}
+                                                />
+                                            </g>
+                                        );
+                                    })}
                                 </svg>
 
                                 {/* HTML overlay for data points (fixed pixel size) */}
@@ -249,10 +264,12 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                                             return (
                                                 <div
                                                     key={`${seriesIdx}-${i}`}
-                                                    className="absolute w-2 h-2 rounded-full cursor-crosshair hover:scale-150 transition-transform z-10 group"
+                                                    className="absolute rounded-full cursor-crosshair hover:scale-150 transition-transform z-10 group"
                                                     style={{
                                                         left: `${coords.x}%`,
                                                         top: `${coords.y}%`,
+                                                        width: '6px',
+                                                        height: '6px',
                                                         backgroundColor: s.color || accentColor,
                                                         transform: 'translate(-50%, -50%)',
                                                         boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
