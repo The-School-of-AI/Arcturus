@@ -68,6 +68,7 @@ export const DocumentAssistant: React.FC = () => {
     const [isThinking, setIsThinking] = useState(false);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
     const history = activeDoc?.chatHistory || [];
@@ -77,6 +78,13 @@ export const DocumentAssistant: React.FC = () => {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [history, isThinking]);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
 
     const handlePaste = (e: React.ClipboardEvent) => {
         const items = e.clipboardData.items;
@@ -265,13 +273,15 @@ export const DocumentAssistant: React.FC = () => {
                         )}>
                             {msg.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                         </div>
-                        <div className={cn(
-                            "max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
-                            msg.role === 'user'
-                                ? "bg-primary/20 text-foreground border border-primary/20 rounded-tr-none"
-                                : "bg-muted text-foreground/90 border border-border/50 rounded-tl-none px-0 py-0 overflow-hidden" // Special padding for assistant to allow full-width thought blocks
-                        )}>
-                            <div className={cn(msg.role === 'assistant' ? "p-4" : "")}>
+                        <div
+                            className={cn(
+                                "p-3 rounded-2xl max-w-[85%] text-xs leading-relaxed shadow-sm relative group",
+                                msg.role === 'user'
+                                    ? "bg-primary text-primary-foreground rounded-tr-none ml-auto"
+                                    : "bg-muted text-foreground rounded-tl-none border border-border"
+                            )}
+                        >
+                            <div className={cn(msg.role === 'assistant' ? "" : "")}> {/* Removed p-4 for assistant, now handled by outer div */}
                                 <MessageContent content={msg.content} role={msg.role} />
                             </div>
                         </div>
@@ -294,79 +304,64 @@ export const DocumentAssistant: React.FC = () => {
                 )}
             </div>
 
-            {/* Selection Context Indicator - Pills View */}
-            {selectedContexts.length > 0 && (
-                <div className="px-4 py-2 bg-black/40 border-t border-border space-y-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-primary/60">
-                            <Quote className="w-2.5 h-2.5" />
-                            Active Context ({selectedContexts.length})
-                        </div>
-                        <button
-                            onClick={clearSelectedContexts}
-                            className="text-[9px] font-bold text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            Clear All
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto no-scrollbar pb-1">
-                        {selectedContexts.map((ctx, idx) => (
-                            <div
-                                key={idx}
-                                className="group flex items-center gap-2 bg-charcoal-800 border border-border/50 rounded-full pl-3 pr-1 py-1 max-w-full animate-in zoom-in-95 duration-200"
-                            >
-                                <span className="text-[10px] text-foreground/90 truncate flex-1 min-w-0 font-medium">
-                                    {ctx.length > 50 ? `${ctx.substring(0, 50)}...` : ctx}
-                                </span>
-                                <button
-                                    onClick={() => removeSelectedContext(idx)}
-                                    className="p-1 rounded-full hover:bg-white/10 text-muted-foreground hover:text-red-400 transition-all opacity-60 group-hover:opacity-100"
-                                >
-                                    <X className="w-2.5 h-2.5" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* Input Area */}
-            <div className="p-4 border-t border-border bg-card space-y-3">
+            <div className="p-4 bg-card border-t border-border">
                 {/* Image Preview */}
                 {pastedImage && (
-                    <div className="relative w-24 h-24 group animate-in zoom-in-95 duration-200">
-                        <img
-                            src={pastedImage}
-                            alt="Pasted content"
-                            className="w-full h-full object-cover rounded-lg border border-primary/30 shadow-lg shadow-primary/10"
-                        />
+                    <div className="relative mb-2 inline-block">
+                        <img src={pastedImage} alt="Pasted" className="h-20 rounded-md border border-border" />
                         <button
                             onClick={() => setPastedImage(null)}
-                            className="absolute -top-2 -right-2 p-1 bg-charcoal-800 border border-border rounded-full hover:bg-red-500 hover:text-foreground transition-all shadow-xl"
+                            className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
                         >
                             <X className="w-3 h-3" />
                         </button>
                     </div>
                 )}
 
-                <div className="relative group">
-                    <input
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !isThinking && handleSend()}
-                        onPaste={handlePaste}
-                        placeholder="Type or paste image..."
-                        className="w-full bg-black/40 border border-border rounded-xl px-4 py-3 pr-12 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-                        disabled={isThinking}
-                    />
+                {/* Selected Context Pills */}
+                {selectedContexts.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedContexts.map((ctx, i) => (
+                            <div key={i} className="flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-400 text-[10px] rounded max-w-full">
+                                <span className="truncate max-w-[200px]"><Quote className="w-3 h-3 inline mr-1" />{ctx.substring(0, 30)}...</span>
+                                <button onClick={() => removeSelectedContext(i)} className="hover:text-purple-300"><X className="w-3 h-3" /></button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex gap-2 items-end">
+                    <div className="flex-1 relative">
+                        <textarea
+                            ref={textareaRef}
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onPaste={handlePaste}
+                            placeholder={selectedContexts.length > 0 ? "Ask about selected text..." : "Ask a question..."}
+                            className="w-full bg-muted/50 text-foreground placeholder:text-muted-foreground border border-input rounded-xl px-3 py-2 pr-10 text-xs focus:outline-none focus:ring-1 focus:ring-ring resize-none min-h-[40px] max-h-[120px]"
+                            style={{
+                                height: 'auto',
+                                overflow: inputValue.split('\n').length > 3 ? 'auto' : 'hidden'
+                            }}
+                        />
+                    </div>
                     <button
                         onClick={handleSend}
-                        disabled={(!inputValue.trim() && !pastedImage) || isThinking}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-all disabled:opacity-30 disabled:grayscale"
+                        disabled={!inputValue.trim() && !pastedImage}
+                        className={cn(
+                            "p-2.5 rounded-xl transition-all",
+                            inputValue.trim() || pastedImage
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        )}
                     >
                         <Send className="w-4 h-4" />
                     </button>
+                </div>
+                <div className="mt-2 text-[10px] text-muted-foreground text-center">
+                    AI can make mistakes. Review generated responses.
                 </div>
             </div>
         </div>
