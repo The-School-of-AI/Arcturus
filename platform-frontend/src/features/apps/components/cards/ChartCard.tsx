@@ -85,8 +85,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     const accentColor = style.accentColor || '#eaff00';
     const textColor = style.textColor || '#ffffff';
 
-    // Data Parsing with defaults
-    const chartTitle = title || data.title || '';
+    // Data Parsing with defaults - title undefined means use data.title, empty string means no title
+    const chartTitle = title !== undefined ? title : (data.title || '');
     const xLabel = data.xLabel || '';
     const yLabel = data.yLabel || '';
 

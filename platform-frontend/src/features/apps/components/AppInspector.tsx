@@ -252,6 +252,15 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Grid', key: 'showGrid', default: true },
         { name: 'Show Values', key: 'showValues', default: false },
     ],
+    area_chart: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Legend', key: 'showLegend', default: true },
+        { name: 'Show Grid', key: 'showGrid', default: true },
+        { name: 'Show Axis Labels', key: 'showAxis', default: true },
+        { name: 'Enable Animation', key: 'animate', default: true },
+        { name: 'Curved Lines', key: 'tension', default: true },
+        { name: 'Line Thickness', key: 'strokeWidth', default: false },
+    ],
     pie_chart: [
         { name: 'Show Title', key: 'showTitle', default: true },
         { name: 'Show Legend', key: 'showLegend', default: true },
@@ -374,7 +383,64 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
     color_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
     rating: [{ name: 'Show Label', key: 'showLabel', default: true }],
     time_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
-    image: [{ name: 'Fill Area', key: 'fillArea', default: false }],
+    image: [
+        { name: 'Fill Area', key: 'fillArea', default: false },
+        { name: 'Show Caption', key: 'showCaption', default: true },
+    ],
+    // Controls - Additional
+    button: [
+        { name: 'Full Width', key: 'fullWidth', default: false },
+        { name: 'Show Icon', key: 'showIcon', default: true },
+    ],
+    input: [
+        { name: 'Show Label', key: 'showLabel', default: true },
+        { name: 'Required', key: 'required', default: false },
+    ],
+    select: [
+        { name: 'Show Label', key: 'showLabel', default: true },
+        { name: 'Searchable', key: 'searchable', default: false },
+        { name: 'Clearable', key: 'clearable', default: true },
+    ],
+    date_picker: [
+        { name: 'Show Label', key: 'showLabel', default: true },
+        { name: 'Show Time', key: 'showTime', default: false },
+    ],
+    // Dev & Feed
+    feed: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Auto Refresh', key: 'autoRefresh', default: false },
+        { name: 'Show Timestamps', key: 'showTimestamps', default: true },
+    ],
+    log: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Auto Scroll', key: 'autoScroll', default: true },
+        { name: 'Show Timestamps', key: 'showTimestamps', default: true },
+    ],
+    // Finance Components
+    peer_table: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Header', key: 'showHeader', default: true },
+        { name: 'Striped Rows', key: 'striped', default: true },
+    ],
+    ratios: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Categories', key: 'showCategories', default: true },
+    ],
+    cash_flow: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Totals', key: 'showTotals', default: true },
+    ],
+    balance_sheet: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Totals', key: 'showTotals', default: true },
+    ],
+    income_stmt: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Totals', key: 'showTotals', default: true },
+    ],
+    summary: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+    ],
 
     // Quiz Blocks - Shared base features
     quiz_mcq: [
