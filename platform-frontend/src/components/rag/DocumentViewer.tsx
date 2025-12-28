@@ -442,13 +442,22 @@ export const DocumentViewer: React.FC = () => {
                                                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chunk {i + 1}</span>
                                                         {isCodeFile(activeDoc.type) && <span className="text-[10px] font-mono text-primary/70">{activeDoc.type.toUpperCase()}</span>}
                                                     </div>
-                                                    <div className="p-6 prose dark:prose-invert prose-sm max-w-none">
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkGfm]}
-                                                            components={markdownComponents}
-                                                        >
-                                                            {chunk}
-                                                        </ReactMarkdown>
+                                                    <div className="p-4 overflow-x-auto">
+                                                        {isCodeFile(activeDoc.type) ? (
+                                                            <SyntaxHighlighter
+                                                                style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
+                                                                language={codeLang || 'text'}
+                                                                PreTag="div"
+                                                                customStyle={{ margin: 0, padding: 0, background: 'transparent', fontSize: '11px', lineHeight: '1.5' }}
+                                                                wrapLongLines={true}
+                                                            >
+                                                                {chunk}
+                                                            </SyntaxHighlighter>
+                                                        ) : (
+                                                            <div className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
+                                                                {chunk}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
