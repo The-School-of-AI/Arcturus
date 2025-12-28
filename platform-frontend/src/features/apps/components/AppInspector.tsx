@@ -193,6 +193,258 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                 </div>
             );
 
+        // Quiz Blocks - Phase 1: Simple Selection
+        case 'quiz_mcq':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">What is the capital of France?</div>
+                    <div className="flex flex-col gap-2">
+                        {['Paris', 'London', 'Berlin', 'Madrid'].map((opt, i) => (
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${i === 0 ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border bg-muted/30'}`}>
+                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${i === 0 ? 'border-neon-yellow' : 'border-muted-foreground'}`}>
+                                    {i === 0 && <div className="w-2 h-2 rounded-full bg-neon-yellow" />}
+                                </div>
+                                <span className={`text-sm ${i === 0 ? 'text-neon-yellow' : 'text-muted-foreground'}`}>{opt}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="text-[10px] text-green-400">✓ 10 points</div>
+                </div>
+            );
+        case 'quiz_tf':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">The Earth is flat.</div>
+                    <div className="flex gap-3">
+                        <div className="flex-1 py-3 px-4 rounded-lg bg-muted/30 border border-border text-center text-sm text-muted-foreground">TRUE</div>
+                        <div className="flex-1 py-3 px-4 rounded-lg bg-green-500/20 border border-green-500 text-center text-sm text-green-400 font-medium">FALSE</div>
+                    </div>
+                </div>
+            );
+        case 'quiz_multi':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Select all prime numbers:</div>
+                    <div className="flex flex-col gap-2">
+                        {[['2', true], ['3', true], ['4', false], ['5', true]].map(([opt, checked], i) => (
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${checked ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border bg-muted/30'}`}>
+                                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center ${checked ? 'border-neon-yellow bg-neon-yellow' : 'border-muted-foreground'}`}>
+                                    {checked && <span className="text-black text-[10px]">✓</span>}
+                                </div>
+                                <span className={`text-sm ${checked ? 'text-neon-yellow' : 'text-muted-foreground'}`}>{opt}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        case 'quiz_rating':
+            return (
+                <div className="p-4 flex flex-col items-center gap-3">
+                    <div className="text-sm font-medium text-foreground">Rate your experience:</div>
+                    <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                            <span key={s} className={`text-2xl ${s <= 4 ? 'text-neon-yellow' : 'text-gray-600'}`}>{s <= 4 ? '★' : '☆'}</span>
+                        ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">4 / 5 stars</div>
+                </div>
+            );
+        case 'quiz_likert':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">I found this course helpful:</div>
+                    <div className="flex justify-between items-center gap-2">
+                        {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map((label, i) => (
+                            <div key={i} className="flex flex-col items-center gap-1">
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${i === 3 ? 'border-neon-yellow bg-neon-yellow' : 'border-gray-500'}`}>
+                                    {i === 3 && <div className="w-2 h-2 rounded-full bg-black" />}
+                                </div>
+                                <span className="text-[8px] text-muted-foreground text-center w-12">{label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        case 'quiz_nps':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">How likely are you to recommend us?</div>
+                    <div className="flex gap-1">
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <div key={n} className={`flex-1 py-2 rounded text-xs text-center font-medium ${n <= 6 ? 'bg-red-500/30 text-red-400' : n <= 8 ? 'bg-yellow-500/30 text-yellow-400' : 'bg-green-500/30 text-green-400'
+                                } ${n === 9 ? 'ring-2 ring-neon-yellow' : ''}`}>{n}</div>
+                        ))}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>Not at all likely</span><span>Extremely likely</span>
+                    </div>
+                </div>
+            );
+        case 'quiz_ranking':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Rank programming languages:</div>
+                    <div className="flex flex-col gap-2">
+                        {['1. Python', '2. JavaScript', '3. Go', '4. Rust'].map((item, i) => (
+                            <div key={i} className="flex items-center gap-3 bg-muted/30 rounded-lg px-3 py-2 border border-border">
+                                <span className="text-muted-foreground">⋮⋮</span>
+                                <span className="text-sm text-foreground">{item}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        // Phase 2: Input-Based
+        case 'quiz_fitb':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm text-foreground">
+                        The largest planet in our solar system is <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow rounded border border-neon-yellow">Jupiter</span>
+                    </div>
+                </div>
+            );
+        case 'quiz_fitmb':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm text-foreground">
+                        <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow rounded border border-neon-yellow">H₂O</span> is the chemical formula for
+                        <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow rounded border border-neon-yellow ml-1">water</span>
+                    </div>
+                </div>
+            );
+        case 'quiz_number':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">What is 12 × 8?</div>
+                    <input type="text" value="96" readOnly className="w-full px-3 py-2 bg-muted border border-neon-yellow rounded text-neon-yellow font-mono text-lg" />
+                </div>
+            );
+        case 'quiz_formula':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Solve: 2x + 5 = 15</div>
+                    <div className="px-3 py-2 bg-muted border border-neon-yellow rounded text-neon-yellow font-mono">x = 5</div>
+                </div>
+            );
+        case 'quiz_date':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">When was the Moon landing?</div>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded text-muted-foreground">
+                        <span>📅</span> <span>July 20, 1969</span>
+                    </div>
+                </div>
+            );
+        case 'quiz_essay':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Explain the importance of clean code:</div>
+                    <div className="h-32 p-3 bg-muted border border-border rounded text-sm text-muted-foreground">
+                        Clean code is important because it improves readability, maintainability, and reduces bugs...
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">Word count: 12 / 500</div>
+                </div>
+            );
+
+        // Phase 3: Advanced Interactive
+        case 'quiz_match':
+            return (
+                <div className="p-4 flex gap-4">
+                    <div className="flex-1 flex flex-col gap-2">
+                        {['HTML', 'CSS', 'JS'].map((l) => <div key={l} className="px-3 py-2 bg-muted/30 rounded border border-border text-sm text-foreground">{l}</div>)}
+                    </div>
+                    <div className="flex items-center text-neon-yellow">→</div>
+                    <div className="flex-1 flex flex-col gap-2">
+                        {['Styling', 'Structure', 'Logic'].map((r) => <div key={r} className="px-3 py-2 bg-neon-yellow/10 rounded border border-neon-yellow text-sm text-neon-yellow">{r}</div>)}
+                    </div>
+                </div>
+            );
+        case 'quiz_dropdown':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm text-foreground">
+                        The <span className="px-2 py-1 bg-muted rounded border border-border">🔽 quick</span> brown
+                        <span className="px-2 py-1 bg-muted rounded border border-border ml-1">🔽 fox</span> jumps over the lazy dog.
+                    </div>
+                </div>
+            );
+        case 'quiz_code':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Write a function to add two numbers:</div>
+                    <div className="bg-charcoal-900 rounded-lg p-3 font-mono text-sm">
+                        <div className="text-purple-400">def <span className="text-neon-yellow">add</span>(a, b):</div>
+                        <div className="text-foreground pl-4">return a + b</div>
+                    </div>
+                </div>
+            );
+        case 'quiz_upload':
+            return (
+                <div className="p-4 flex flex-col items-center justify-center gap-3">
+                    <div className="text-sm font-medium text-foreground">Upload your assignment:</div>
+                    <div className="w-full h-24 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center gap-2">
+                        <span className="text-2xl">📁</span>
+                        <span className="text-xs text-muted-foreground">Drag & drop or click to upload</span>
+                    </div>
+                </div>
+            );
+        case 'quiz_image':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Click on the correct part:</div>
+                    <div className="relative h-32 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center">
+                        <span className="text-4xl">🖼️</span>
+                        <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-red-500/50 border-2 border-red-500" />
+                        <div className="absolute bottom-4 left-4 w-4 h-4 rounded-full bg-neon-yellow/50 border-2 border-neon-yellow" />
+                    </div>
+                </div>
+            );
+
+        // Phase 4: Structural & AI
+        case 'quiz_text':
+            return (
+                <div className="p-4 flex flex-col gap-2">
+                    <div className="text-lg font-bold text-foreground">Instructions</div>
+                    <div className="text-sm text-muted-foreground">Read each question carefully. You have 30 minutes to complete this quiz.</div>
+                </div>
+            );
+        case 'quiz_section':
+            return (
+                <div className="p-4 flex items-center justify-center">
+                    <div className="text-xl font-bold text-foreground border-b-2 border-neon-yellow pb-1">Section 1: Fundamentals</div>
+                </div>
+            );
+        case 'quiz_media':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="h-32 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                            <span className="text-white text-xl">▶</span>
+                        </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground text-center">Watch the video before answering</div>
+                </div>
+            );
+        case 'quiz_branch':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">Conditional Logic</div>
+                    <div className="text-sm text-muted-foreground">If answer = "Yes" → Go to Question 5</div>
+                    <div className="text-sm text-muted-foreground">If answer = "No" → Go to Question 8</div>
+                </div>
+            );
+        case 'quiz_ai':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="text-sm font-medium text-foreground">AI-Graded Task</div>
+                    <div className="flex items-center gap-2 text-purple-400">
+                        <span className="text-lg">🤖</span>
+                        <span className="text-sm">AI will evaluate your response based on the rubric</span>
+                    </div>
+                </div>
+            );
+
         default:
             return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Preview not available</div>;
     }
