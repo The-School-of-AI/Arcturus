@@ -614,4 +614,35 @@ export const COMPONENT_USAGE: Record<string, string> = {
     usage_stats: 'Usage meters with progress bars - quotas, limits, consumption.',
     storage_card: 'Storage usage donut chart with segment breakdown.',
     accordion_table: 'Expandable hierarchical data table - nested data, categories.',
+
+    // Quiz Blocks - Phase 1: Simple Selection
+    quiz_mcq: 'Single-answer multiple choice question. Use for testing factual knowledge with one correct answer from several options.',
+    quiz_tf: 'True/False binary question. Ideal for testing simple facts, definitions, or statement validity.',
+    quiz_multi: 'Multi-select checkbox question. Perfect when multiple correct answers exist - select all that apply.',
+    quiz_rating: 'Star rating input (1-5 stars). Use for satisfaction surveys, feedback collection, or opinion gathering.',
+    quiz_likert: '5-point agreement scale (Strongly Disagree → Strongly Agree). Standard for measuring attitudes and opinions.',
+    quiz_nps: 'Net Promoter Score (0-10). Industry standard for measuring customer loyalty and satisfaction.',
+    quiz_ranking: 'Drag-to-reorder ranking. Use when order matters - prioritization, preferences, or sequence questions.',
+
+    // Quiz Blocks - Phase 2: Input-Based
+    quiz_fitb: 'Fill-in-the-blank with single answer. Tests recall of specific terms, names, or values.',
+    quiz_fitmb: 'Multiple blanks in a sentence. Great for testing relationships, sequences, or complex recall.',
+    quiz_number: 'Numerical answer input. Use for math problems, calculations, or quantitative questions.',
+    quiz_formula: 'Mathematical formula input. Supports tolerance for rounding. Ideal for STEM assessments.',
+    quiz_date: 'Date picker answer. Use for historical events, deadlines, or date-based questions.',
+    quiz_essay: 'Long-form text response with word count. Use for explanations, arguments, or creative responses.',
+
+    // Quiz Blocks - Phase 3: Advanced Interactive
+    quiz_match: 'Matching pairs drag-and-drop. Connect related items - terms to definitions, causes to effects.',
+    quiz_dropdown: 'Inline dropdowns within text. Great for grammar, cloze tests, or contextual vocabulary.',
+    quiz_code: 'Syntax-highlighted code editor. Use for programming questions, code completion, or debugging.',
+    quiz_upload: 'File upload for submissions. Accept documents, images, or other file types as answers.',
+    quiz_image: 'Hotspot interaction on images. Click to identify regions - anatomy, maps, diagrams.',
+
+    // Quiz Blocks - Phase 4: Structural & AI
+    quiz_text: 'Non-question text block. Add instructions, context, or explanatory content between questions.',
+    quiz_section: 'Section header/divider. Organize quizzes into logical parts or topics with clear breaks.',
+    quiz_media: 'Video/audio with questions. Present media content before asking comprehension questions.',
+    quiz_branch: 'Conditional branching logic. Route to different questions based on previous answers.',
+    quiz_ai: 'AI-graded open response. Uses LLM to evaluate answers against a rubric - essays, explanations.',
 };
