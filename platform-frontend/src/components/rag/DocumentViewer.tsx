@@ -131,6 +131,7 @@ export const DocumentViewer: React.FC = () => {
 
     const [content, setContent] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [chunks, setChunks] = useState<string[] | null>(null);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [docxBlob, setDocxBlob] = useState<Blob | null>(null);
@@ -169,9 +170,40 @@ export const DocumentViewer: React.FC = () => {
     };
     const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh'].includes(type.toLowerCase());
 
+    const markdownComponents = {
+        img: ({ node, ...props }: any) => (
+            <img {...props} className="rounded-lg border border-border shadow-xl max-w-full my-8" />
+        ),
+        table: ({ node, ...props }: any) => (
+            <div className="overflow-x-auto my-6 border border-border rounded-lg">
+                <table {...props} className="min-w-full border-collapse" />
+            </div>
+        ),
+        th: ({ node, ...props }: any) => <th {...props} className="bg-muted p-3 text-left font-bold border-b border-border" />,
+        td: ({ node, ...props }: any) => <td {...props} className="p-3 border-b border-border/50" />,
+        code({ node, className, children, ref, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || '');
+            return match ? (
+                <SyntaxHighlighter
+                    {...props}
+                    children={String(children).replace(/\n$/, '')}
+                    style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{ margin: '1em 0', borderRadius: '0.5rem', background: 'transparent' }}
+                />
+            ) : (
+                <code {...props} className={cn("bg-muted px-1.5 py-0.5 rounded font-mono text-sm", className)}>
+                    {children}
+                </code>
+            );
+        }
+    };
+
     useEffect(() => {
         if (!activeDoc) {
             setContent(null);
+            setChunks(null);
             setPdfUrl(null);
             setImageUrl(null);
             setDocxBlob(null);
@@ -182,6 +214,7 @@ export const DocumentViewer: React.FC = () => {
 
         const loadContent = async () => {
             setLoading(true);
+            setChunks(null);
             try {
                 const docType = activeDoc.type.toLowerCase();
                 const codeNode = isCodeFile(docType);
@@ -198,11 +231,17 @@ export const DocumentViewer: React.FC = () => {
                         params: { path: activeDoc.id }
                     });
                     if (res.data.status === 'success') {
+                        const chunkData = res.data.chunks;
+                        if (chunkData && Array.isArray(chunkData)) {
+                            setChunks(chunkData);
+                        }
+                        // Keep content as fallback equivalent if chunks fail, or construction string
                         const markdown = res.data.markdown || "No chunks available.";
                         setContent(`*${res.data.chunk_count} chunks indexed*\n\n---\n\n${markdown}`);
                     } else {
                         // Fallback message
                         setContent("Document not indexed yet. Please index first.");
+                        setChunks(null);
                     }
                     setPdfUrl(null);
                     setImageUrl(null);
@@ -332,7 +371,7 @@ export const DocumentViewer: React.FC = () => {
                                     onClick={() => setViewType('source')}
                                 />
                                 <TabButton
-                                    label="MD"
+                                    label="Chunks"
                                     active={viewType === 'ai'}
                                     onClick={() => setViewType('ai')}
                                 />
@@ -394,41 +433,36 @@ export const DocumentViewer: React.FC = () => {
                         {/* Insights View (Markdown Extraction) */}
                         {viewType === 'ai' && activeDoc && canPreview(activeDoc.type) ? (
                             <div className="absolute inset-0 overflow-y-auto p-12 bg-background select-text">
-                                <div className="max-w-[800px] mx-auto prose dark:prose-invert">
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            img: ({ node, ...props }) => (
-                                                <img {...props} className="rounded-lg border border-border shadow-xl max-w-full my-8" />
-                                            ),
-                                            table: ({ node, ...props }) => (
-                                                <div className="overflow-x-auto my-6 border border-border rounded-lg">
-                                                    <table {...props} className="min-w-full border-collapse" />
+                                <div className="max-w-[800px] mx-auto">
+                                    {chunks ? (
+                                        <div className="space-y-6">
+                                            {chunks.map((chunk, i) => (
+                                                <div key={i} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transform transition-all duration-200 hover:shadow-md hover:border-primary/20">
+                                                    <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chunk {i + 1}</span>
+                                                        {isCodeFile(activeDoc.type) && <span className="text-[10px] font-mono text-primary/70">{activeDoc.type.toUpperCase()}</span>}
+                                                    </div>
+                                                    <div className="p-6 prose dark:prose-invert prose-sm max-w-none">
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkGfm]}
+                                                            components={markdownComponents}
+                                                        >
+                                                            {chunk}
+                                                        </ReactMarkdown>
+                                                    </div>
                                                 </div>
-                                            ),
-                                            th: ({ node, ...props }) => <th {...props} className="bg-muted p-3 text-left font-bold border-b border-border" />,
-                                            td: ({ node, ...props }) => <td {...props} className="p-3 border-b border-border/50" />,
-                                            code({ node, className, children, ref, ...props }) {
-                                                const match = /language-(\w+)/.exec(className || '');
-                                                return match ? (
-                                                    <SyntaxHighlighter
-                                                        {...props}
-                                                        children={String(children).replace(/\n$/, '')}
-                                                        style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
-                                                        language={match[1]}
-                                                        PreTag="div"
-                                                        customStyle={{ margin: '1em 0', borderRadius: '0.5rem', background: 'transparent' }}
-                                                    />
-                                                ) : (
-                                                    <code {...props} className={cn("bg-muted px-1.5 py-0.5 rounded font-mono text-sm", className)}>
-                                                        {children}
-                                                    </code>
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        {content}
-                                    </ReactMarkdown>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="prose dark:prose-invert">
+                                            <ReactMarkdown
+                                                remarkPlugins={[remarkGfm]}
+                                                components={markdownComponents}
+                                            >
+                                                {content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (
