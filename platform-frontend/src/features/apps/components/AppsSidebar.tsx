@@ -818,6 +818,240 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     </div>
                 );
 
+            // QUIZ BLOCKS - Phase 1: Simple Selection
+            case 'quiz_mcq':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground font-medium">What is 2+2?</div>
+                        <div className="flex flex-col gap-0.5">
+                            {['4', '5', '3'].map((opt, i) => (
+                                <div key={i} className={cn("flex items-center gap-1 px-1 py-0.5 rounded text-[6px]", i === 0 ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted/40 text-muted-foreground")}>
+                                    <div className={cn("w-2 h-2 rounded-full border", i === 0 ? "border-neon-yellow bg-neon-yellow" : "border-gray-500")} />
+                                    <span>{opt}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'quiz_tf':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground font-medium">The sky is blue</div>
+                        <div className="flex gap-1">
+                            <div className="flex-1 bg-green-500/20 text-green-400 rounded px-2 py-1 text-[8px] text-center font-medium">TRUE</div>
+                            <div className="flex-1 bg-muted/40 text-muted-foreground rounded px-2 py-1 text-[8px] text-center">FALSE</div>
+                        </div>
+                    </div>
+                );
+            case 'quiz_multi':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground font-medium">Select all that apply</div>
+                        <div className="flex flex-col gap-0.5">
+                            {['Option A', 'Option B', 'Option C'].map((opt, i) => (
+                                <div key={i} className={cn("flex items-center gap-1 px-1 py-0.5 rounded text-[6px]", i < 2 ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted/40 text-muted-foreground")}>
+                                    <div className={cn("w-2 h-2 rounded-sm border", i < 2 ? "border-neon-yellow bg-neon-yellow" : "border-gray-500")} />
+                                    <span>{opt}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'quiz_rating':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
+                        <div className="text-[7px] text-foreground font-medium">Rate this</div>
+                        <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} className={cn("w-3 h-3", s <= 4 ? "fill-neon-yellow text-neon-yellow" : "text-gray-500")} />
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'quiz_likert':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[6px] text-foreground font-medium">I agree with...</div>
+                        <div className="flex gap-0.5 justify-center">
+                            {['1', '2', '3', '4', '5'].map((n, i) => (
+                                <div key={i} className={cn("w-3 h-3 rounded-full border flex items-center justify-center text-[5px]", i === 3 ? "bg-neon-yellow border-neon-yellow text-black" : "border-gray-500 text-gray-500")}>
+                                    {n}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex justify-between text-[5px] text-muted-foreground">
+                            <span>Disagree</span><span>Agree</span>
+                        </div>
+                    </div>
+                );
+            case 'quiz_nps':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[6px] text-foreground font-medium">How likely to recommend?</div>
+                        <div className="flex gap-0.5">
+                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                <div key={n} className={cn("w-2 h-3 rounded-sm text-[4px] flex items-center justify-center",
+                                    n <= 6 ? "bg-red-500/50" : n <= 8 ? "bg-yellow-500/50" : "bg-green-500/50",
+                                    n === 9 ? "ring-1 ring-neon-yellow" : ""
+                                )}>{n}</div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'quiz_ranking':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        <div className="text-[6px] text-foreground font-medium">Rank in order</div>
+                        {['1. Apple', '2. Banana', '3. Cherry'].map((item, i) => (
+                            <div key={i} className="flex items-center gap-1 bg-muted/40 rounded px-1 py-0.5 text-[6px] text-muted-foreground">
+                                <LayoutGrid className="w-2 h-2" />
+                                <span>{item}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            // Phase 2: Input-Based
+            case 'quiz_fitb':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground">The capital of France is <span className="px-1 bg-neon-yellow/20 text-neon-yellow rounded">Paris</span></div>
+                    </div>
+                );
+            case 'quiz_fitmb':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[6px] text-foreground"><span className="px-1 bg-neon-yellow/20 text-neon-yellow rounded">A</span> + <span className="px-1 bg-neon-yellow/20 text-neon-yellow rounded">B</span> = C</div>
+                    </div>
+                );
+            case 'quiz_number':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground">What is 5 × 7?</div>
+                        <div className="bg-muted/40 rounded px-2 py-1 text-[10px] text-neon-yellow font-mono">35</div>
+                    </div>
+                );
+            case 'quiz_formula':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground">Solve: x² = 16</div>
+                        <div className="bg-muted/40 rounded px-2 py-1 text-[8px] text-neon-yellow font-mono">x = ±4</div>
+                    </div>
+                );
+            case 'quiz_date':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground">When did WWII end?</div>
+                        <div className="flex items-center gap-1 bg-muted/40 rounded px-2 py-1 text-[8px] text-muted-foreground">
+                            <Calendar className="w-2 h-2" />
+                            <span>1945-09-02</span>
+                        </div>
+                    </div>
+                );
+            case 'quiz_essay':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground">Explain your answer</div>
+                        <div className="flex-1 border border-dashed border-gray-600 rounded p-1">
+                            <div className="h-0.5 w-full bg-gray-600 rounded mb-0.5" />
+                            <div className="h-0.5 w-4/5 bg-gray-700 rounded mb-0.5" />
+                            <div className="h-0.5 w-3/5 bg-gray-700 rounded" />
+                        </div>
+                    </div>
+                );
+
+            // Phase 3: Advanced Interactive
+            case 'quiz_match':
+                return (
+                    <div className="w-full h-full flex p-2 gap-1">
+                        <div className="flex-1 flex flex-col gap-0.5">
+                            {['A', 'B'].map((l) => <div key={l} className="bg-muted/40 rounded px-1 py-0.5 text-[6px] text-muted-foreground">{l}</div>)}
+                        </div>
+                        <div className="flex items-center"><ArrowRight className="w-2 h-2 text-neon-yellow" /></div>
+                        <div className="flex-1 flex flex-col gap-0.5">
+                            {['1', '2'].map((r) => <div key={r} className="bg-neon-yellow/20 rounded px-1 py-0.5 text-[6px] text-neon-yellow">{r}</div>)}
+                        </div>
+                    </div>
+                );
+            case 'quiz_dropdown':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[6px] text-foreground">The <span className="px-1 bg-muted rounded text-neon-yellow">🔽 cat</span> sat on the <span className="px-1 bg-muted rounded text-neon-yellow">🔽 mat</span></div>
+                    </div>
+                );
+            case 'quiz_code':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5 bg-charcoal-900 rounded">
+                        <div className="text-[6px] text-purple-400">def</div>
+                        <div className="text-[6px] text-neon-yellow">  solve():</div>
+                        <div className="text-[6px] text-gray-400">    # code</div>
+                    </div>
+                );
+            case 'quiz_upload':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                        <div className="border-2 border-dashed border-gray-600 rounded p-2 flex flex-col items-center">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <div className="text-[6px] text-muted-foreground">Upload</div>
+                        </div>
+                    </div>
+                );
+            case 'quiz_image':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="flex-1 bg-gradient-to-br from-gray-700 to-gray-800 rounded flex items-center justify-center">
+                            <Image className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex gap-0.5">
+                            <div className="w-2 h-2 rounded-full bg-red-500/50" />
+                            <div className="w-2 h-2 rounded-full bg-neon-yellow/50" />
+                        </div>
+                    </div>
+                );
+
+            // Phase 4: Structural & AI
+            case 'quiz_text':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[8px] text-foreground font-medium">Instructions</div>
+                        <div className="h-0.5 w-full bg-gray-600 rounded" />
+                        <div className="h-0.5 w-4/5 bg-gray-700 rounded" />
+                    </div>
+                );
+            case 'quiz_section':
+                return (
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                        <div className="text-[9px] font-bold text-foreground border-b-2 border-neon-yellow pb-0.5">Section 1</div>
+                    </div>
+                );
+            case 'quiz_media':
+                return (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 rounded">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                            <Play className="w-3 h-3 text-white" />
+                        </div>
+                    </div>
+                );
+            case 'quiz_branch':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[6px] text-foreground">If answer = A</div>
+                        <div className="flex items-center gap-1 text-[6px] text-neon-yellow">
+                            <ArrowRight className="w-2 h-2" /><span>Go to Q5</span>
+                        </div>
+                    </div>
+                );
+            case 'quiz_ai':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="text-[7px] text-foreground">AI will grade:</div>
+                        <div className="flex items-center gap-1 text-[6px] text-purple-400">
+                            <MessageSquare className="w-3 h-3" />
+                            <span>Evaluating...</span>
+                        </div>
+                    </div>
+                );
+
             default:
                 return (
                     <div className="w-full h-full flex items-center justify-center">
