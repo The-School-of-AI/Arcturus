@@ -15,7 +15,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
     const caption = data.caption || "";
 
     return (
-        <div className="w-full h-full flex flex-col overflow-hidden" style={style}>
+        <div className="w-full h-full flex flex-col overflow-hidden relative" style={style}>
             {/* Image container - uses absolute positioning to prevent stretching */}
             <div className="flex-1 relative min-h-0">
                 {url ? (
@@ -40,8 +40,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
                 )}
             </div>
             {caption && config.showCaption !== false && (
-                <div className="px-3 py-1.5 bg-muted/80 backdrop-blur-sm border-t border-border/50 shrink-0">
-                    <p className="text-[10px] text-muted-foreground italic text-center truncate">{caption}</p>
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/60 to-transparent">
+                    <p className="text-[10px] text-white/90 italic text-center truncate drop-shadow-md">{caption}</p>
                 </div>
             )}
         </div>
