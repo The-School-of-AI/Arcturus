@@ -488,14 +488,14 @@ export const QuizRankingCard: React.FC<QuizBlockProps> = ({ data = {}, config = 
                                     disabled={!isInteractive || submitted || i === 0}
                                     className={cn("p-0.5 rounded hover:bg-muted transition-colors", i === 0 && "opacity-30")}
                                 >
-                                    <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                                    <ChevronUp className="w-2 h-2 text-muted-foreground" />
                                 </button>
                                 <button
                                     onClick={() => moveItem(i, 'down')}
                                     disabled={!isInteractive || submitted || i === ranked.length - 1}
                                     className={cn("p-0.5 rounded hover:bg-muted transition-colors", i === ranked.length - 1 && "opacity-30")}
                                 >
-                                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                    <ChevronDown className="w-2 h-2 text-muted-foreground" />
                                 </button>
                             </div>
                             <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab" />
@@ -720,7 +720,7 @@ export const QuizEssayCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
 // PHASE 3: ADVANCED INTERACTIVE BLOCKS
 // =============================================================
 
-// 14. Matching Question - FULL FUNCTIONAL UI
+// 14. Matching Question - WITH UNDO CAPABILITY
 export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, isInteractive }) => {
     const {
         question = 'Match each country with its capital:',
@@ -734,12 +734,40 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
 
     const handleLeftClick = (index: number) => {
         if (!isInteractive) return;
-        setSelectedLeft(index);
+
+        // If already matched, clicking again will clear the match (undo)
+        if (matches[index] !== undefined && matches[index] !== null) {
+            setMatches(prev => {
+                const newMatches = { ...prev };
+                delete newMatches[index];
+                return newMatches;
+            });
+            setSelectedLeft(null);
+            return;
+        }
+
+        // Toggle selection
+        if (selectedLeft === index) {
+            setSelectedLeft(null);
+        } else {
+            setSelectedLeft(index);
+        }
     };
 
     const handleRightClick = (index: number) => {
         if (!isInteractive || selectedLeft === null) return;
+
+        // Check if this right item is already matched to something else
+        const existingLeftForRight = Object.entries(matches).find(([_, rightIdx]) => rightIdx === index);
+        if (existingLeftForRight) return; // Already matched
+
         setMatches(prev => ({ ...prev, [selectedLeft]: index }));
+        setSelectedLeft(null);
+    };
+
+    const clearAllMatches = () => {
+        if (!isInteractive) return;
+        setMatches({});
         setSelectedLeft(null);
     };
 
@@ -747,33 +775,59 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
         return matches[leftIndex] ?? null;
     };
 
+    const isRightMatched = (rightIndex: number): boolean => {
+        return Object.values(matches).includes(rightIndex);
+    };
+
+    const matchedCount = Object.keys(matches).length;
+
     return (
         <BaseCard>
             <div className="p-4 flex flex-col gap-4 h-full w-full">
                 <div className="flex justify-between items-start gap-2 w-full">
                     <p className={QUIZ_QUESTION_CLASS}>{question}</p>
-                    <span className={QUIZ_POINTS_CLASS}>{score} pts</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {matchedCount > 0 && (
+                            <button
+                                onClick={clearAllMatches}
+                                className="text-[10px] px-2 py-0.5 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                            >
+                                Clear All
+                            </button>
+                        )}
+                        <span className={QUIZ_POINTS_CLASS}>{score} pts</span>
+                    </div>
                 </div>
 
                 <div className="flex gap-4 w-full">
                     {/* Left Column */}
                     <div className="flex-1 flex flex-col gap-2">
-                        {leftItems.map((item: string, i: number) => (
-                            <button
-                                key={i}
-                                onClick={() => handleLeftClick(i)}
-                                className={cn(
-                                    "p-2 rounded-lg border text-xs text-left transition-all",
-                                    selectedLeft === i ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border hover:border-neon-yellow/50',
-                                    getMatchedRight(i) !== null && 'border-emerald-500/50 bg-emerald-500/5'
-                                )}
-                            >
-                                <span className="font-medium">{item}</span>
-                                {getMatchedRight(i) !== null && (
-                                    <span className="ml-2 text-emerald-400">→ {rightItems[getMatchedRight(i)!]}</span>
-                                )}
-                            </button>
-                        ))}
+                        {leftItems.map((item: string, i: number) => {
+                            const matchedRightIndex = getMatchedRight(i);
+                            const isMatched = matchedRightIndex !== null;
+
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => handleLeftClick(i)}
+                                    className={cn(
+                                        "p-2 rounded-lg border text-xs text-left transition-all flex items-center justify-between",
+                                        selectedLeft === i && !isMatched && 'border-neon-yellow bg-neon-yellow/10',
+                                        isMatched && 'border-emerald-500 bg-emerald-500/10 hover:border-red-400 hover:bg-red-500/10',
+                                        !isMatched && selectedLeft !== i && 'border-border hover:border-neon-yellow/50'
+                                    )}
+                                >
+                                    <span className="font-medium">{item}</span>
+                                    {isMatched && (
+                                        <span className="flex items-center gap-1 text-emerald-400">
+                                            <ArrowRight className="w-3 h-3" />
+                                            <span>{rightItems[matchedRightIndex]}</span>
+                                            <X className="w-3 h-3 text-red-400 opacity-0 hover:opacity-100 ml-1" />
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Arrow */}
@@ -784,7 +838,7 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                     {/* Right Column */}
                     <div className="flex-1 flex flex-col gap-2">
                         {rightItems.map((item: string, i: number) => {
-                            const isMatched = Object.values(matches).includes(i);
+                            const isMatched = isRightMatched(i);
                             return (
                                 <button
                                     key={i}
@@ -792,8 +846,9 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                                     disabled={isMatched}
                                     className={cn(
                                         "p-2 rounded-lg border text-xs text-left transition-all",
-                                        isMatched ? 'border-emerald-500/50 bg-emerald-500/5 opacity-50' : 'border-border hover:border-neon-yellow/50',
-                                        selectedLeft !== null && !isMatched && 'hover:bg-neon-yellow/10'
+                                        isMatched && 'border-emerald-500/50 bg-emerald-500/5 opacity-50 cursor-not-allowed',
+                                        !isMatched && 'border-border hover:border-neon-yellow/50',
+                                        selectedLeft !== null && !isMatched && 'hover:bg-neon-yellow/10 border-neon-yellow/30'
                                     )}
                                 >
                                     {item}
@@ -801,6 +856,11 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                             );
                         })}
                     </div>
+                </div>
+
+                {/* Progress indicator */}
+                <div className="text-[10px] text-muted-foreground">
+                    Matched: {matchedCount} / {leftItems.length}
                 </div>
             </div>
         </BaseCard>
