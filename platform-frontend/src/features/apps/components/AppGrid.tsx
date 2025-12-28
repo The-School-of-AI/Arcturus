@@ -55,6 +55,31 @@ import {
     RatingCard,
     TimePickerCard
 } from './cards/ControlCards';
+import {
+    QuizMCQCard,
+    QuizTFCard,
+    QuizMultiCard,
+    QuizRatingCard,
+    QuizLikertCard,
+    QuizNPSCard,
+    QuizRankingCard,
+    QuizFITBCard,
+    QuizFITMBCard,
+    QuizNumberCard,
+    QuizFormulaCard,
+    QuizDateCard,
+    QuizEssayCard,
+    QuizMatchCard,
+    QuizDropdownCard,
+    QuizCodeCard,
+    QuizUploadCard,
+    QuizImageCard,
+    QuizTextCard,
+    QuizSectionCard,
+    QuizMediaCard,
+    QuizBranchCard,
+    QuizAICard
+} from './cards/QuizBlocks';
 
 
 interface AppGridProps {
@@ -370,6 +395,54 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 return <StorageCard title={config.showTitle !== false ? label : 'Storage Usage'} {...commonProps} />;
             case 'accordion_table':
                 return <AccordionTableCard title={config.showTitle !== false ? label : 'Projects'} {...commonProps} />;
+
+            // Quiz Blocks
+            case 'quiz_mcq':
+                return <QuizMCQCard {...commonProps} />;
+            case 'quiz_tf':
+                return <QuizTFCard {...commonProps} />;
+            case 'quiz_multi':
+                return <QuizMultiCard {...commonProps} />;
+            case 'quiz_rating':
+                return <QuizRatingCard {...commonProps} />;
+            case 'quiz_likert':
+                return <QuizLikertCard {...commonProps} />;
+            case 'quiz_nps':
+                return <QuizNPSCard {...commonProps} />;
+            case 'quiz_ranking':
+                return <QuizRankingCard {...commonProps} />;
+            case 'quiz_fitb':
+                return <QuizFITBCard {...commonProps} />;
+            case 'quiz_fitmb':
+                return <QuizFITMBCard {...commonProps} />;
+            case 'quiz_number':
+                return <QuizNumberCard {...commonProps} />;
+            case 'quiz_formula':
+                return <QuizFormulaCard {...commonProps} />;
+            case 'quiz_date':
+                return <QuizDateCard {...commonProps} />;
+            case 'quiz_essay':
+                return <QuizEssayCard {...commonProps} />;
+            case 'quiz_match':
+                return <QuizMatchCard {...commonProps} />;
+            case 'quiz_dropdown':
+                return <QuizDropdownCard {...commonProps} />;
+            case 'quiz_code':
+                return <QuizCodeCard {...commonProps} />;
+            case 'quiz_upload':
+                return <QuizUploadCard {...commonProps} />;
+            case 'quiz_image':
+                return <QuizImageCard {...commonProps} />;
+            case 'quiz_text':
+                return <QuizTextCard {...commonProps} />;
+            case 'quiz_section':
+                return <QuizSectionCard {...commonProps} />;
+            case 'quiz_media':
+                return <QuizMediaCard {...commonProps} />;
+            case 'quiz_branch':
+                return <QuizBranchCard {...commonProps} />;
+            case 'quiz_ai':
+                return <QuizAICard {...commonProps} />;
 
             default:
                 return (

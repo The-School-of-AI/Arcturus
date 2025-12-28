@@ -375,6 +375,177 @@ export const getDefaultData = (type: string): any => {
                 ]
             };
 
+        // Quiz Blocks Default Data
+        case 'quiz_mcq':
+            return {
+                question: 'What is the capital of France?',
+                options: ['London', 'Berlin', 'Paris', 'Madrid'],
+                correctAnswer: 2,
+                score: 1,
+                explanation: 'Paris is the capital and largest city of France.'
+            };
+        case 'quiz_tf':
+            return {
+                question: 'The Earth is flat.',
+                correctAnswer: 'false',
+                score: 1,
+                explanation: 'The Earth is approximately spherical in shape.'
+            };
+        case 'quiz_multi':
+            return {
+                question: 'Which of the following are programming languages?',
+                options: ['Python', 'HTML', 'JavaScript', 'CSS'],
+                correctAnswers: [0, 2],
+                score: 2,
+                explanation: 'Python and JavaScript are programming languages. HTML and CSS are markup/styling languages.'
+            };
+        case 'quiz_rating':
+            return {
+                question: 'How would you rate this course?',
+                maxStars: 5,
+                score: 0
+            };
+        case 'quiz_likert':
+            return {
+                question: 'I found the material easy to understand.',
+                scaleLabels: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+                score: 0
+            };
+        case 'quiz_nps':
+            return {
+                question: 'How likely are you to recommend this to a friend?',
+                score: 0
+            };
+        case 'quiz_ranking':
+            return {
+                question: 'Rank these planets by distance from the Sun (closest first):',
+                items: ['Mars', 'Earth', 'Venus', 'Mercury'],
+                correctOrder: [3, 2, 1, 0],
+                score: 2
+            };
+        case 'quiz_fitb':
+            return {
+                sentence: 'The chemical symbol for water is ___.',
+                correctAnswer: 'H2O',
+                score: 1,
+                explanation: 'Water is composed of two hydrogen atoms and one oxygen atom.'
+            };
+        case 'quiz_fitmb':
+            return {
+                passage: 'The ___1___ is the largest organ in the human body. The ___2___ pumps blood throughout the body.',
+                correctAnswers: ['skin', 'heart'],
+                score: 2
+            };
+        case 'quiz_number':
+            return {
+                question: 'What is 15 × 8?',
+                correctAnswer: 120,
+                tolerance: 0,
+                score: 1
+            };
+        case 'quiz_formula':
+            return {
+                question: 'Calculate the area of a circle with radius r.',
+                formula: 'A = πr²',
+                variables: { r: 5 },
+                correctAnswer: 78.54,
+                score: 2
+            };
+        case 'quiz_date':
+            return {
+                question: 'When did World War II end?',
+                correctAnswer: '1945-09-02',
+                score: 1
+            };
+        case 'quiz_essay':
+            return {
+                question: 'Discuss the causes and effects of climate change.',
+                minWords: 100,
+                maxWords: 500,
+                score: 10,
+                rubric: 'Clear thesis, supporting evidence, proper structure, grammar.'
+            };
+        case 'quiz_match':
+            return {
+                question: 'Match each country with its capital:',
+                leftItems: ['France', 'Japan', 'Brazil', 'Egypt'],
+                rightItems: ['Tokyo', 'Paris', 'Cairo', 'Brasília'],
+                correctPairs: { '0': '1', '1': '0', '2': '3', '3': '2' },
+                score: 4
+            };
+        case 'quiz_dropdown':
+            return {
+                content: {
+                    text: 'The {0} is the powerhouse of the cell. DNA is stored in the {1}.',
+                    dropdowns: [
+                        { options: ['Nucleus', 'Mitochondria', 'Ribosome'], correct: 1 },
+                        { options: ['Cytoplasm', 'Nucleus', 'Cell Wall'], correct: 1 }
+                    ]
+                },
+                score: 2
+            };
+        case 'quiz_code':
+            return {
+                question: 'Write a function that returns the sum of two numbers.',
+                starterCode: 'def add(a, b):\n    # Your code here\n    pass',
+                language: 'python',
+                testCases: [
+                    { input: [2, 3], expected: 5 },
+                    { input: [-1, 1], expected: 0 }
+                ],
+                score: 5
+            };
+        case 'quiz_upload':
+            return {
+                question: 'Upload your completed assignment (PDF or DOCX).',
+                allowedTypes: ['.pdf', '.docx', '.doc'],
+                maxSize: 10,
+                score: 10
+            };
+        case 'quiz_image':
+            return {
+                question: 'Click on the brain in this image.',
+                imageUrl: '',
+                hotspots: [{ x: 50, y: 30, width: 20, height: 20, label: 'Brain' }],
+                score: 1
+            };
+        case 'quiz_text':
+            return {
+                content: '## Instructions\n\nRead the following passage carefully before answering the questions below.'
+            };
+        case 'quiz_section':
+            return {
+                title: 'Section 1: Multiple Choice',
+                description: 'Answer all questions in this section. Each question is worth 1 point.'
+            };
+        case 'quiz_media':
+            return {
+                question: 'Watch the video and answer the question below.',
+                mediaUrl: '',
+                mediaType: 'video',
+                score: 2
+            };
+        case 'quiz_branch':
+            return {
+                question: 'Did you complete the prerequisite course?',
+                branchLogic: {
+                    'yes': 'continue',
+                    'no': 'skip_to_section_2'
+                }
+            };
+        case 'quiz_ai':
+            return {
+                question: 'Explain the concept of machine learning in your own words.',
+                rubric: {
+                    criteria: [
+                        { name: 'Understanding', weight: 40, description: 'Shows clear understanding of ML concepts' },
+                        { name: 'Examples', weight: 30, description: 'Provides relevant examples' },
+                        { name: 'Clarity', weight: 30, description: 'Well-structured and clear explanation' }
+                    ]
+                },
+                score: 10
+            };
+
         default:
             return {};
 

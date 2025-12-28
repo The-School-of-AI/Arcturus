@@ -375,6 +375,105 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
     rating: [{ name: 'Show Label', key: 'showLabel', default: true }],
     time_picker: [{ name: 'Show Label', key: 'showLabel', default: true }],
     image: [{ name: 'Fill Area', key: 'fillArea', default: false }],
+
+    // Quiz Blocks - Shared base features
+    quiz_mcq: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Shuffle Options', key: 'shuffleOptions', default: false },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_tf: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_multi: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Shuffle Options', key: 'shuffleOptions', default: false },
+        { name: 'Partial Credit', key: 'partialCredit', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_rating: [
+        { name: 'Show Feedback', key: 'showFeedback', default: false },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_likert: [
+        { name: 'Show Feedback', key: 'showFeedback', default: false },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_nps: [
+        { name: 'Show Feedback', key: 'showFeedback', default: false },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_ranking: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Partial Credit', key: 'partialCredit', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_fitb: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Case Sensitive', key: 'caseSensitive', default: false },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_fitmb: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Case Sensitive', key: 'caseSensitive', default: false },
+        { name: 'Partial Credit', key: 'partialCredit', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_number: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Allow Tolerance', key: 'allowTolerance', default: false },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_formula: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Allow Tolerance', key: 'allowTolerance', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_date: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_essay: [
+        { name: 'Show Word Count', key: 'showWordCount', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_match: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Shuffle Items', key: 'shuffleItems', default: true },
+        { name: 'Partial Credit', key: 'partialCredit', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_dropdown: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Partial Credit', key: 'partialCredit', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_code: [
+        { name: 'Show Line Numbers', key: 'showLineNumbers', default: true },
+        { name: 'Syntax Highlighting', key: 'syntaxHighlight', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_upload: [
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_image: [
+        { name: 'Show Feedback', key: 'showFeedback', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
+    quiz_text: [],
+    quiz_section: [],
+    quiz_media: [
+        { name: 'Auto Play', key: 'autoPlay', default: false },
+        { name: 'Show Controls', key: 'showControls', default: true },
+    ],
+    quiz_branch: [
+        { name: 'Show Logic', key: 'showLogic', default: false },
+    ],
+    quiz_ai: [
+        { name: 'Show Rubric', key: 'showRubric', default: true },
+        { name: 'Required', key: 'required', default: true },
+    ],
 };
 
 
@@ -612,6 +711,136 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     time_picker: [
         { name: 'Label', key: 'label', type: 'text' },
         { name: 'Default Time', key: 'value', type: 'text' }
+    ],
+
+    // Quiz Blocks Data Fields
+    quiz_mcq: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Options (JSON)', key: 'options', type: 'json' },
+        { name: 'Correct Answer (index)', key: 'correctAnswer', type: 'number' },
+        { name: 'Points', key: 'score', type: 'number' },
+        { name: 'Explanation', key: 'explanation', type: 'textarea' },
+    ],
+    quiz_tf: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Correct Answer', key: 'correctAnswer', type: 'select', options: ['true', 'false'] },
+        { name: 'Points', key: 'score', type: 'number' },
+        { name: 'Explanation', key: 'explanation', type: 'textarea' },
+    ],
+    quiz_multi: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Options (JSON)', key: 'options', type: 'json' },
+        { name: 'Correct Answers (JSON indices)', key: 'correctAnswers', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+        { name: 'Explanation', key: 'explanation', type: 'textarea' },
+    ],
+    quiz_rating: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Max Stars', key: 'maxStars', type: 'number' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_likert: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Scale Labels (JSON)', key: 'scaleLabels', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_nps: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_ranking: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Items to Rank (JSON)', key: 'items', type: 'json' },
+        { name: 'Correct Order (JSON indices)', key: 'correctOrder', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_fitb: [
+        { name: 'Sentence (use ___ for blank)', key: 'sentence', type: 'textarea' },
+        { name: 'Correct Answer', key: 'correctAnswer', type: 'text' },
+        { name: 'Points', key: 'score', type: 'number' },
+        { name: 'Explanation', key: 'explanation', type: 'textarea' },
+    ],
+    quiz_fitmb: [
+        { name: 'Passage (use ___1___, ___2___ etc)', key: 'passage', type: 'textarea' },
+        { name: 'Correct Answers (JSON)', key: 'correctAnswers', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_number: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Correct Answer', key: 'correctAnswer', type: 'number' },
+        { name: 'Tolerance (+/-)', key: 'tolerance', type: 'number' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_formula: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Formula (LaTeX)', key: 'formula', type: 'text' },
+        { name: 'Variables (JSON)', key: 'variables', type: 'json' },
+        { name: 'Correct Answer', key: 'correctAnswer', type: 'number' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_date: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Correct Date (YYYY-MM-DD)', key: 'correctAnswer', type: 'text' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_essay: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Min Words', key: 'minWords', type: 'number' },
+        { name: 'Max Words', key: 'maxWords', type: 'number' },
+        { name: 'Points', key: 'score', type: 'number' },
+        { name: 'Rubric', key: 'rubric', type: 'textarea' },
+    ],
+    quiz_match: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Left Items (JSON)', key: 'leftItems', type: 'json' },
+        { name: 'Right Items (JSON)', key: 'rightItems', type: 'json' },
+        { name: 'Correct Pairs (JSON)', key: 'correctPairs', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_dropdown: [
+        { name: 'Text with Dropdowns (JSON)', key: 'content', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_code: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Starter Code', key: 'starterCode', type: 'textarea' },
+        { name: 'Language', key: 'language', type: 'select', options: ['python', 'javascript', 'java', 'cpp', 'sql'] },
+        { name: 'Test Cases (JSON)', key: 'testCases', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_upload: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Allowed Types (JSON)', key: 'allowedTypes', type: 'json' },
+        { name: 'Max File Size (MB)', key: 'maxSize', type: 'number' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_image: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Image URL', key: 'imageUrl', type: 'image_upload' },
+        { name: 'Hotspots (JSON)', key: 'hotspots', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_text: [
+        { name: 'Content', key: 'content', type: 'textarea' },
+    ],
+    quiz_section: [
+        { name: 'Section Title', key: 'title', type: 'text' },
+        { name: 'Description', key: 'description', type: 'textarea' },
+    ],
+    quiz_media: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Media URL', key: 'mediaUrl', type: 'text' },
+        { name: 'Media Type', key: 'mediaType', type: 'select', options: ['video', 'audio', 'pdf'] },
+        { name: 'Points', key: 'score', type: 'number' },
+    ],
+    quiz_branch: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Branch Logic (JSON)', key: 'branchLogic', type: 'json' },
+    ],
+    quiz_ai: [
+        { name: 'Question', key: 'question', type: 'textarea' },
+        { name: 'Rubric (JSON)', key: 'rubric', type: 'json' },
+        { name: 'Points', key: 'score', type: 'number' },
     ],
 };
 

@@ -149,6 +149,38 @@ export const COMPONENT_CATEGORIES = [
             { type: 'storage_card', label: 'Storage Card', icon: PieChart, defaultW: 4, defaultH: 4 },
             { type: 'accordion_table', label: 'Accordion Table', icon: Table2, defaultW: 6, defaultH: 8 },
         ]
+    },
+    {
+        name: 'Quiz Blocks',
+        items: [
+            // Phase 1: Simple Selection
+            { type: 'quiz_mcq', label: 'Multiple Choice', icon: CheckSquare, defaultW: 6, defaultH: 5 },
+            { type: 'quiz_tf', label: 'True / False', icon: ToggleLeft, defaultW: 4, defaultH: 4 },
+            { type: 'quiz_multi', label: 'Multiple Answers', icon: CheckSquare, defaultW: 6, defaultH: 6 },
+            { type: 'quiz_rating', label: 'Rating', icon: Star, defaultW: 4, defaultH: 3 },
+            { type: 'quiz_likert', label: 'Likert Scale', icon: Sliders, defaultW: 6, defaultH: 4 },
+            { type: 'quiz_nps', label: 'Net Promoter Score', icon: Gauge, defaultW: 6, defaultH: 4 },
+            { type: 'quiz_ranking', label: 'Ranking', icon: LayoutGrid, defaultW: 5, defaultH: 6 },
+            // Phase 2: Input-Based
+            { type: 'quiz_fitb', label: 'Fill In the Blank', icon: Type, defaultW: 6, defaultH: 4 },
+            { type: 'quiz_fitmb', label: 'Fill Multiple Blanks', icon: AlignLeft, defaultW: 6, defaultH: 5 },
+            { type: 'quiz_number', label: 'Numerical Answer', icon: Hash, defaultW: 4, defaultH: 4 },
+            { type: 'quiz_formula', label: 'Formula Question', icon: Code2, defaultW: 6, defaultH: 5 },
+            { type: 'quiz_date', label: 'Date Question', icon: Calendar, defaultW: 4, defaultH: 4 },
+            { type: 'quiz_essay', label: 'Essay Question', icon: FileText, defaultW: 6, defaultH: 8 },
+            // Phase 3: Advanced Interactive
+            { type: 'quiz_match', label: 'Matching', icon: ArrowRight, defaultW: 6, defaultH: 6 },
+            { type: 'quiz_dropdown', label: 'Multiple Dropdowns', icon: CheckSquare, defaultW: 6, defaultH: 5 },
+            { type: 'quiz_code', label: 'Code Editor', icon: Code2, defaultW: 6, defaultH: 8 },
+            { type: 'quiz_upload', label: 'File Upload', icon: FileText, defaultW: 4, defaultH: 4 },
+            { type: 'quiz_image', label: 'Image Interaction', icon: Image, defaultW: 6, defaultH: 6 },
+            // Phase 4: Structural & AI
+            { type: 'quiz_text', label: 'Text (No Question)', icon: AlignLeft, defaultW: 6, defaultH: 3 },
+            { type: 'quiz_section', label: 'Section', icon: LayoutGrid, defaultW: 12, defaultH: 2 },
+            { type: 'quiz_media', label: 'Media-Based', icon: Play, defaultW: 6, defaultH: 6 },
+            { type: 'quiz_branch', label: 'Conditional Branch', icon: ArrowRight, defaultW: 6, defaultH: 5 },
+            { type: 'quiz_ai', label: 'AI-Graded Task', icon: MessageSquare, defaultW: 6, defaultH: 8 },
+        ]
     }
 ];
 
@@ -936,7 +968,7 @@ const SavedAppsList = () => {
                                         )}
                                         onClick={() => loadApp(app.id)}
                                     >
-                                        <div className="flex justify-between items-start gap-3">
+                                        <div className="flex justify-between items-start gap-0">
                                             <div className="flex-1 min-w-0">
                                                 <p className={cn(
                                                     "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
@@ -955,7 +987,7 @@ const SavedAppsList = () => {
                                             </button>
                                         </div>
 
-                                        <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between">
+                                        <div className="mt-0 pt-0 border-t border-border/50 flex items-center justify-between">
                                             <span className="text-[9px] text-muted-foreground font-mono">
                                                 {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
                                             </span>
