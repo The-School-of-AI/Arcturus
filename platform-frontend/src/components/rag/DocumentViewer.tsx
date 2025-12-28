@@ -11,7 +11,7 @@ import { pageNavigationPlugin } from '@react-pdf-viewer/page-navigation';
 import '@react-pdf-viewer/page-navigation/lib/styles/index.css';
 import { renderAsync } from 'docx-preview';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { api } from '@/lib/api';
 
 // Import styles
@@ -163,7 +163,10 @@ export const DocumentViewer: React.FC = () => {
     }, [activeDoc?.targetPage, pdfUrl, jumpToPage]);
 
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
-    const canPreview = (type: string) => ['pdf', 'docx', 'doc'].includes(type.toLowerCase());
+    const canPreview = (type: string) => {
+        const t = type.toLowerCase();
+        return ['pdf', 'docx', 'doc', 'txt', 'md', 'json', 'ts', 'tsx', 'js', 'jsx', 'py', 'c', 'cpp', 'h', 'hpp', 'css', 'html'].includes(t);
+    };
     const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh'].includes(type.toLowerCase());
 
     useEffect(() => {
@@ -404,7 +407,24 @@ export const DocumentViewer: React.FC = () => {
                                                 </div>
                                             ),
                                             th: ({ node, ...props }) => <th {...props} className="bg-muted p-3 text-left font-bold border-b border-border" />,
-                                            td: ({ node, ...props }) => <td {...props} className="p-3 border-b border-border/50" />
+                                            td: ({ node, ...props }) => <td {...props} className="p-3 border-b border-border/50" />,
+                                            code({ node, className, children, ref, ...props }) {
+                                                const match = /language-(\w+)/.exec(className || '');
+                                                return match ? (
+                                                    <SyntaxHighlighter
+                                                        {...props}
+                                                        children={String(children).replace(/\n$/, '')}
+                                                        style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
+                                                        language={match[1]}
+                                                        PreTag="div"
+                                                        customStyle={{ margin: '1em 0', borderRadius: '0.5rem', background: 'transparent' }}
+                                                    />
+                                                ) : (
+                                                    <code {...props} className={cn("bg-muted px-1.5 py-0.5 rounded font-mono text-sm", className)}>
+                                                        {children}
+                                                    </code>
+                                                );
+                                            }
                                         }}
                                     >
                                         {content}
@@ -413,7 +433,7 @@ export const DocumentViewer: React.FC = () => {
                             </div>
                         ) : (
                             /* Code View */
-                            <div className="h-full overflow-hidden bg-[#1e1e1e]">
+                            <div className={cn("h-full overflow-hidden", viewType === 'source' ? "bg-[#1e1e1e]" : "bg-background")}>
                                 {isCode && viewType === 'source' ? (
                                     <SyntaxHighlighter
                                         language={codeLang}

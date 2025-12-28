@@ -22,17 +22,18 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
         return <div className="text-xs text-muted-foreground italic">Invalid message content</div>;
     }
 
-    const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/);
+    // Handle partial tags during streaming using check for end of string or closing tag
+    const thinkMatch = content.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
     const thinking = thinkMatch ? thinkMatch[1].trim() : null;
-    const mainAnswer = content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+    const mainAnswer = content.replace(/<think>([\s\S]*?)(?:<\/think>|$)/, '').trim();
 
     return (
         <div className="space-y-3">
             {thinking && (
-                <div className="bg-black/20 border border-border/50 rounded-xl overflow-hidden mb-2">
+                <div className="bg-muted border border-border/50 rounded-xl overflow-hidden mb-2">
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:bg-white/5 transition-colors"
+                        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-primary/80 hover:bg-background/50 transition-colors"
                     >
                         <div className="flex items-center gap-2">
                             <span className="relative flex h-2 w-2">
@@ -44,7 +45,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                         {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     </button>
                     {isExpanded && (
-                        <div className="px-4 py-3 text-[11px] text-foreground/50 border-t border-border/50 leading-relaxed bg-black/40 italic">
+                        <div className="px-4 py-3 text-[11px] text-muted-foreground border-t border-border/50 leading-relaxed bg-background/50 italic">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{thinking}</ReactMarkdown>
                         </div>
                     )}
