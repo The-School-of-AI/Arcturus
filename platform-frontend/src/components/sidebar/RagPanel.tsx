@@ -455,7 +455,7 @@ export const RagPanel: React.FC = () => {
                                 <div
                                     key={i}
                                     className="p-3 rounded-lg bg-muted/50 border border-border/50 hover:border-primary/30 transition-all cursor-pointer group"
-                                    onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page })}
+                                    onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
                                         <FileText className="w-3 h-3 text-red-400" />

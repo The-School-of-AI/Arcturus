@@ -529,7 +529,7 @@ async def rag_search(query: str):
         else:
             print(f"DEBUG: No content list found. hasattr content: {hasattr(result, 'content')}")
         
-        # Parse results and add page numbers
+        # Parse results - page navigation handled by frontend search
         structured_results = []
         for r in raw_results:
             # Parse "[Source: path]" format
@@ -537,12 +537,10 @@ async def rag_search(query: str):
             if match:
                 source = match.group(1)
                 content = r[:match.start()].strip()
-                # Lazy page lookup
-                page = find_page_for_chunk(source, content)
                 structured_results.append({
                     "content": content,
                     "source": source,
-                    "page": page
+                    "page": 1  # Frontend PDF search will navigate to correct location
                 })
             else:
                 structured_results.append({

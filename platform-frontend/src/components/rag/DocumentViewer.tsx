@@ -8,7 +8,9 @@ import remarkGfm from 'remark-gfm';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import { pageNavigationPlugin } from '@react-pdf-viewer/page-navigation';
+import { searchPlugin } from '@react-pdf-viewer/search';
 import '@react-pdf-viewer/page-navigation/lib/styles/index.css';
+import '@react-pdf-viewer/search/lib/styles/index.css';
 import { renderAsync } from 'docx-preview';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -148,20 +150,39 @@ export const DocumentViewer: React.FC = () => {
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    const searchPluginInstance = searchPlugin();
+    const { highlight, jumpToNextMatch } = searchPluginInstance;
     const defaultLayoutPluginInstance = defaultLayoutPlugin();
     const pageNavigationPluginInstance = pageNavigationPlugin();
     const { jumpToPage } = pageNavigationPluginInstance;
 
-    // Jump to target page when PDF loads from search result
+    // Store functions in refs to avoid dependency issues
+    const highlightRef = useRef(highlight);
+    const jumpToNextMatchRef = useRef(jumpToNextMatch);
     useEffect(() => {
-        if (activeDoc?.targetPage && activeDoc.targetPage > 1 && pdfUrl) {
-            // Small delay to ensure PDF is fully loaded
+        highlightRef.current = highlight;
+        jumpToNextMatchRef.current = jumpToNextMatch;
+    });
+
+    // Auto-search for chunk text when PDF loads from SEEK result
+    useEffect(() => {
+        if (activeDoc?.searchText && pdfUrl) {
+            // Delay to ensure PDF is fully loaded
             const timer = setTimeout(() => {
-                jumpToPage(activeDoc.targetPage! - 1); // 0-indexed
-            }, 500);
+                // Clean the search text and trigger search
+                const cleanText = activeDoc.searchText!.slice(0, 50).replace(/[*#\[\]()!\n]/g, ' ').trim();
+                if (cleanText.length > 10) {
+                    console.log('Auto-searching for:', cleanText);
+                    highlightRef.current(cleanText);
+                    // Jump to first match after a brief delay for search to complete
+                    setTimeout(() => {
+                        jumpToNextMatchRef.current();
+                    }, 500);
+                }
+            }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [activeDoc?.targetPage, pdfUrl, jumpToPage]);
+    }, [activeDoc?.searchText, pdfUrl]);
 
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => {
@@ -398,15 +419,24 @@ export const DocumentViewer: React.FC = () => {
                         <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
                             <Viewer
                                 fileUrl={pdfUrl}
-                                plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance]}
+                                plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance, searchPluginInstance]}
                                 theme="dark"
+                                onDocumentLoad={() => {
+                                    // Trigger search if searchText is provided (from SEEK result)
+                                    if (activeDoc?.searchText) {
+                                        setTimeout(() => {
+                                            const cleanText = activeDoc.searchText!.slice(0, 40).replace(/[*#\[\]()!\n]/g, ' ').trim();
+                                            if (cleanText.length > 5) {
+                                                console.log('Auto-searching for:', cleanText);
+                                                highlight(cleanText);
+                                                // Jump to first match after search completes
+                                                setTimeout(() => jumpToNextMatchRef.current(), 500);
+                                            }
+                                        }, 300);
+                                    }
+                                }}
                             />
                         </Worker>
-                        {activeDoc.targetPage && activeDoc.targetPage > 1 && (
-                            <div className="absolute top-4 right-4 z-50 px-3 py-1.5 rounded-full bg-primary text-charcoal-950 text-xs font-bold shadow-lg animate-pulse">
-                                Jumped to page {activeDoc.targetPage}
-                            </div>
-                        )}
                     </div>
                 )}
 

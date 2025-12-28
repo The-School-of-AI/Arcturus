@@ -76,4 +76,5 @@ export interface RAGDocument {
     content?: string;
     chatHistory?: ChatMessage[];
     targetPage?: number;
+    searchText?: string;  // Text to auto-search when opening from SEEK result
 }
