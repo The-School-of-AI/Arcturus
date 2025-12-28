@@ -253,3 +253,23 @@
   /* primary color with opacity */
   color: inherit;
 }
+
+/* React Grid Layout Resize Handle - Theme Aware */
+.react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.react-resizable:hover .react-resizable-handle {
+  opacity: 1;
+}
+
+.react-resizable-handle::after {
+  border-color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Make resize handle more visible */
+.react-resizable-handle-se {
+  bottom: 4px !important;
+  right: 4px !important;
+}
