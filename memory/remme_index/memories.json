@@ -104,8 +104,8 @@
     "text": "NetworkX is a Python package for the creation, manipulation, and study of complex networks. It provides tools for working with graphs and networks, making it useful for various applications in fields like social sciences, biology, and computer science.",
     "category": "historical",
     "created_at": "2025-12-25T07:09:12.370841",
-    "updated_at": "2025-12-25T07:09:12.370853",
-    "source": "backfill_1766402289",
+    "updated_at": "2025-12-29T15:39:59.252164",
+    "source": "backfill_1766402289, run_66401968",
     "faiss_id": 10,
     "source_exists": true
   },
@@ -586,7 +586,8 @@
     "created_at": "2025-12-29T15:37:47.888034",
     "updated_at": "2025-12-29T15:37:47.888046",
     "source": "run_1766402229",
-    "faiss_id": 60
+    "faiss_id": 60,
+    "source_exists": true
   },
   {
     "id": "eea75ea2-e371-440e-90df-e55474b867df",
@@ -595,7 +596,8 @@
     "created_at": "2025-12-29T15:37:50.711685",
     "updated_at": "2025-12-29T15:37:50.711692",
     "source": "run_1766402163",
-    "faiss_id": 61
+    "faiss_id": 61,
+    "source_exists": true
   },
   {
     "id": "f7111d94-bb6d-4770-8a25-b2b45b504124",
@@ -604,6 +606,34 @@
     "created_at": "2025-12-29T15:37:52.484633",
     "updated_at": "2025-12-29T15:37:52.484641",
     "source": "run_1766402162",
-    "faiss_id": 62
+    "faiss_id": 62,
+    "source_exists": true
+  },
+  {
+    "id": "bf52d956-f25f-4a14-9bf9-021e577a9551",
+    "text": "NetworkX simplifies graph analysis with a high-level Python interface and pre-built algorithms, reducing development overhead. It supports versatile network modeling through directed, undirected, and multigraph data structures, enabling precise representation of complex relationships. It offers a comprehensive suite of algorithms for pathfinding, centrality measures, and community detection, accelerating analysis and providing deeper insights. It integrates seamlessly with Python and its scientific computing ecosystem, facilitating rapid prototyping and collaboration. It provides robust tools for structural analysis, including degree distribution and clustering coefficients, to understand network properties. It enhances visualization capabilities with Matplotlib integration, improving understanding and communication of findings. It benefits from strong open-source community support, providing resources, tutorials, and collaborative development opportunities. It streamlines algorithm implementation for graph problems, eliminating the need to write algorithms from scratch.",
+    "category": "derived",
+    "created_at": "2025-12-29T15:39:46.548861",
+    "updated_at": "2025-12-29T15:39:46.548868",
+    "source": "run_66402074",
+    "faiss_id": 63
+  },
+  {
+    "id": "f999965c-f367-477e-93ca-e7fe87481a53",
+    "text": "Mem0 is a comprehensive report detailing its functionalities, potential applications, and key considerations for effective utilization. The report includes sections on executive summary, key highlights (functionality, applications, considerations), detailed overview (functionality breakdown, potential applications, implementation considerations, limitations, best practices, dependencies, technical specifications, security considerations, conclusion, appendix).",
+    "category": "derived",
+    "created_at": "2025-12-29T15:39:51.974390",
+    "updated_at": "2025-12-29T15:39:51.974397",
+    "source": "run_66401994",
+    "faiss_id": 64
+  },
+  {
+    "id": "b4bb0e56-9826-4b63-98d8-25367afdfa3d",
+    "text": "No description provided",
+    "category": "derived",
+    "created_at": "2025-12-29T15:40:01.835185",
+    "updated_at": "2025-12-29T15:40:01.835192",
+    "source": "run_66402002",
+    "faiss_id": 65
   }
 ]
