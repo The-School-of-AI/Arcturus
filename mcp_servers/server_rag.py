@@ -454,18 +454,22 @@ def semantic_merge(text: str) -> list[str]:
                 final_chunks.append(chunk_text)
             break
         
-        # OPTIMIZED: Shortened input (600+300 chars instead of full text)
-        text_preview = chunk_text[:600] + "\n...[MIDDLE]...\n" + chunk_text[-300:]
+        # OPTIMIZED: Shortened input (word-aware slicing around 600+300 char boundaries)
+        prefix_end = chunk_text.rfind(' ', 0, 600)
+        suffix_start = chunk_text.find(' ', len(chunk_text) - 300)
         
-        prompt = fprompt = f"""You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
+        preview_prefix = chunk_text[:prefix_end] if prefix_end > 0 else chunk_text[:600]
+        preview_suffix = chunk_text[suffix_start:] if suffix_start > 0 else chunk_text[-300:]
+        text_preview = f"{preview_prefix}\n...[MIDDLE]...\n{preview_suffix}"
+        
+        prompt = f"""You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
 
 Does the TEXT BLOCK below have 2+ distinct topics? Should these two chunks appear in the **same paragraph or flow of writing**? Even if the subject changes slightly (e.g., One person to another), treat them as related **if they belong to the same broader context or topic** (like cricket, AI, or real estate). Also consider cues like continuity words (e.g., "However", "But", "Also") or references that link the sentences.
 
 YES: Reply with first 15 words of second topic.
-NO: Reply "SINGLE
+NO: Reply "SINGLE"
 
 TEXT BLOCK: {text_preview}
-
 """
 
         try:
