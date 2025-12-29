@@ -54,8 +54,8 @@
     "text": "NetworkX is a powerful Python library for the creation, manipulation, and study of complex networks. It offers a wide range of advantages for network analysis, including flexibility, ease of use, comprehensive algorithms, visualization, and open-source availability.",
     "category": "historical",
     "created_at": "2025-12-25T07:08:01.684446",
-    "updated_at": "2025-12-25T07:08:01.684471",
-    "source": "backfill_66402070",
+    "updated_at": "2025-12-29T15:34:33.219696",
+    "source": "backfill_66402070, run_1766402778",
     "faiss_id": 5,
     "source_exists": true
   },
@@ -124,8 +124,8 @@
     "text": "NetworkX is a Python package for the creation, manipulation, and study of the structure, dynamics, and functions of complex networks. It provides tools for working with graphs and networks in a simple and intuitive manner, making it suitable for a wide range of applications, from social network analysis to biological network modeling.",
     "category": "historical",
     "created_at": "2025-12-25T07:09:39.521336",
-    "updated_at": "2025-12-25T07:09:39.523571",
-    "source": "backfill_1766402582",
+    "updated_at": "2025-12-29T15:34:56.047652",
+    "source": "backfill_1766402582, run_1766402582, run_1766402327",
     "faiss_id": 12,
     "source_exists": true
   },
@@ -134,8 +134,8 @@
     "text": "NetworkX is a Python library for the creation, manipulation, and study of complex networks. It offers a wide range of algorithms for analyzing graph structures, including centrality measures, pathfinding, and community detection.",
     "category": "historical",
     "created_at": "2025-12-25T07:09:50.686804",
-    "updated_at": "2025-12-25T07:09:50.686822",
-    "source": "backfill_1766402605",
+    "updated_at": "2025-12-29T15:34:43.569970",
+    "source": "backfill_1766402605, run_1766402605",
     "faiss_id": 13,
     "source_exists": true
   },
@@ -496,7 +496,8 @@
     "created_at": "2025-12-29T14:49:01.719446",
     "updated_at": "2025-12-29T14:49:01.719457",
     "source": "run_1766468206",
-    "faiss_id": 51
+    "faiss_id": 51,
+    "source_exists": true
   },
   {
     "id": "4373013e-b5b6-4724-8f20-69591efc1419",
@@ -505,7 +506,8 @@
     "created_at": "2025-12-29T14:49:13.113712",
     "updated_at": "2025-12-29T14:49:13.113727",
     "source": "run_1766467447",
-    "faiss_id": 52
+    "faiss_id": 52,
+    "source_exists": true
   },
   {
     "id": "441aea89-1a9d-42aa-bdc2-79e0135b8850",
@@ -514,7 +516,8 @@
     "created_at": "2025-12-29T14:49:19.923122",
     "updated_at": "2025-12-29T14:49:19.923129",
     "source": "run_1766463423",
-    "faiss_id": 53
+    "faiss_id": 53,
+    "source_exists": true
   },
   {
     "id": "e0b6b74c-6fff-4da1-aaec-0288c6eecec5",
@@ -523,16 +526,18 @@
     "created_at": "2025-12-29T14:49:24.105796",
     "updated_at": "2025-12-29T14:49:24.105809",
     "source": "run_1766461645",
-    "faiss_id": 54
+    "faiss_id": 54,
+    "source_exists": true
   },
   {
     "id": "6cf8d7ee-8f95-45e4-bb80-b549a58c46b3",
     "text": "The Macbook Pro M5 16-inch is expected to launch in Q4 2026, according to analyst reports.",
     "category": "derived",
     "created_at": "2025-12-29T14:49:27.099631",
-    "updated_at": "2025-12-29T14:49:27.099650",
-    "source": "run_1766460673",
-    "faiss_id": 55
+    "updated_at": "2025-12-29T15:33:18.056079",
+    "source": "run_1766460673, run_1767000223",
+    "faiss_id": 55,
+    "source_exists": true
   },
   {
     "id": "f67a42f4-3e47-498d-bd03-c7bc262731dc",
@@ -541,7 +546,8 @@
     "created_at": "2025-12-29T14:49:31.140827",
     "updated_at": "2025-12-29T14:49:31.140833",
     "source": "run_1766460143",
-    "faiss_id": 56
+    "faiss_id": 56,
+    "source_exists": true
   },
   {
     "id": "41397ee1-d01e-4e2b-b1e1-a261a34baf8c",
@@ -550,7 +556,8 @@
     "created_at": "2025-12-29T14:49:36.855090",
     "updated_at": "2025-12-29T14:49:36.855103",
     "source": "run_1766458236",
-    "faiss_id": 57
+    "faiss_id": 57,
+    "source_exists": true
   },
   {
     "id": "6dad5db1-b499-41f1-8020-2294df58ea73",
@@ -559,6 +566,44 @@
     "created_at": "2025-12-29T14:49:42.956540",
     "updated_at": "2025-12-29T14:49:42.956563",
     "source": "run_1766403536",
-    "faiss_id": 58
+    "faiss_id": 58,
+    "source_exists": true
+  },
+  {
+    "id": "ff3dabba-0744-46f4-98b0-d56b5d6f937f",
+    "text": "The user is requesting a list of 3 benefits of the networkx library.",
+    "category": "derived",
+    "created_at": "2025-12-29T15:37:43.354722",
+    "updated_at": "2025-12-29T15:37:43.354735",
+    "source": "run_1766402230",
+    "faiss_id": 59,
+    "source_exists": true
+  },
+  {
+    "id": "bdcbcf9e-8e43-4f84-a110-d2f2560caa8c",
+    "text": "User requested calculation of the 10th Fibonacci number using Python. The assistant provided Python code to calculate the Fibonacci sequence, specifically the nth Fibonacci number, using an iterative approach. The code initializes variables a and b to 0 and 1, respectively, and then iterates from 2 to n+1, updating a and b in each iteration. The function returns the value of b, which represents the nth Fibonacci number. The assistant executed the code and returned the result 55.",
+    "category": "derived",
+    "created_at": "2025-12-29T15:37:47.888034",
+    "updated_at": "2025-12-29T15:37:47.888046",
+    "source": "run_1766402229",
+    "faiss_id": 60
+  },
+  {
+    "id": "eea75ea2-e371-440e-90df-e55474b867df",
+    "text": "User requested a list of 3 benefits of NetworkX. The assistant responded with a report stating that no specific benefits were identified due to a lack of available data, providing a detailed HTML report outlining this conclusion.",
+    "category": "derived",
+    "created_at": "2025-12-29T15:37:50.711685",
+    "updated_at": "2025-12-29T15:37:50.711692",
+    "source": "run_1766402163",
+    "faiss_id": 61
+  },
+  {
+    "id": "f7111d94-bb6d-4770-8a25-b2b45b504124",
+    "text": "User requested calculation of the 10th Fibonacci number using Python.",
+    "category": "derived",
+    "created_at": "2025-12-29T15:37:52.484633",
+    "updated_at": "2025-12-29T15:37:52.484641",
+    "source": "run_1766402162",
+    "faiss_id": 62
   }
 ]

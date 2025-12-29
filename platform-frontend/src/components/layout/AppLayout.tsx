@@ -29,6 +29,7 @@ import { AppInspector } from '@/features/apps/components/AppInspector';
 import { McpBrowser } from '../mcp/McpBrowser';
 import { McpInspector } from '../mcp/McpInspector';
 import { SettingsPage } from '../settings/SettingsPage';
+import { RemMeProfileView } from '../remme/RemmeProfileView';
 
 export const AppLayout: React.FC = () => {
     const { viewMode, sidebarTab, isAppViewMode } = useAppStore();
@@ -101,22 +102,34 @@ export const AppLayout: React.FC = () => {
                 )}
 
                 {/* Center Canvas or Document Viewer */}
-                <div className="flex-1 relative bg-grid-dots overflow-hidden">
-                    {sidebarTab === 'rag' ? (
-                        <DocumentViewer />
-                    ) : sidebarTab === 'explorer' ? (
-                        <FlowWorkspace />
-                    ) : sidebarTab === 'apps' ? (
-                        <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
-                    ) : sidebarTab === 'mcp' ? (
-                        <McpBrowser />
-                    ) : sidebarTab === 'settings' ? (
-                        <SettingsPage />
-                    ) : (
-                        <>
-                            <GraphCanvas />
-                            <RunTimeline />
-                        </>
+                <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative overflow-hidden">
+                    {/* Content Logic */}
+                    {!isAppViewMode && (
+                        sidebarTab === 'apps' ? (
+                            <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
+                        ) : sidebarTab === 'mcp' ? (
+                            <McpBrowser />
+                        ) : sidebarTab === 'settings' ? (
+                            <SettingsPage />
+                        ) : sidebarTab === 'rag' ? (
+                            <DocumentViewer />
+                        ) : sidebarTab === 'remme' ? (
+                            <RemMeProfileView />
+                        ) : sidebarTab === 'explorer' ? (
+                            <FlowWorkspace />
+                        ) : (
+                            <>
+                                <GraphCanvas />
+                                <RunTimeline />
+                            </>
+                        )
+                    )}
+
+                    {/* APP RUNTIME VIEW (When "View App" is clicked) */}
+                    {isAppViewMode && (
+                        <div className="absolute inset-0 z-50 bg-background">
+                            <AppGrid isFullScreen={false} onToggleFullScreen={() => { }} />
+                        </div>
                     )}
                 </div>
 
