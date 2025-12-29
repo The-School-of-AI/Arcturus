@@ -141,6 +141,7 @@ export const DocumentViewer: React.FC = () => {
     const [isDocx, setIsDocx] = useState(false);
     const [isCode, setIsCode] = useState(false);
     const [codeLang, setCodeLang] = useState('javascript');
+    const [expandedChunk, setExpandedChunk] = useState<number | null>(null);
 
     // Insights Panel State
     const [showInsights, setShowInsights] = useState(false);
@@ -230,12 +231,14 @@ export const DocumentViewer: React.FC = () => {
             setDocxBlob(null);
             setIsDocx(false);
             setIsCode(false);
+            setExpandedChunk(null);
             return;
         }
 
         const loadContent = async () => {
             setLoading(true);
             setChunks(null);
+            setExpandedChunk(null);
             try {
                 const docType = activeDoc.type.toLowerCase();
                 const codeNode = isCodeFile(docType);
@@ -465,32 +468,70 @@ export const DocumentViewer: React.FC = () => {
                             <div className="absolute inset-0 overflow-y-auto p-12 bg-background select-text">
                                 <div className="max-w-[800px] mx-auto">
                                     {chunks ? (
-                                        <div className="space-y-6">
-                                            {chunks.map((chunk, i) => (
-                                                <div key={i} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transform transition-all duration-200 hover:shadow-md hover:border-primary/20">
-                                                    <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chunk {i + 1}</span>
-                                                        {isCodeFile(activeDoc.type) && <span className="text-[10px] font-mono text-primary/70">{activeDoc.type.toUpperCase()}</span>}
-                                                    </div>
-                                                    <div className="p-4 overflow-x-auto">
-                                                        {isCodeFile(activeDoc.type) ? (
-                                                            <SyntaxHighlighter
-                                                                style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
-                                                                language={codeLang || 'text'}
-                                                                PreTag="div"
-                                                                customStyle={{ margin: 0, padding: 0, background: 'transparent', fontSize: '11px', lineHeight: '1.5' }}
-                                                                wrapLongLines={true}
-                                                            >
-                                                                {chunk}
-                                                            </SyntaxHighlighter>
-                                                        ) : (
-                                                            <div className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
-                                                                {chunk}
-                                                            </div>
+                                        <div className="space-y-4">
+                                            {chunks.map((chunk, i) => {
+                                                const isExpanded = expandedChunk === i;
+                                                return (
+                                                    <div
+                                                        key={i}
+                                                        onClick={() => setExpandedChunk(isExpanded ? null : i)}
+                                                        className={cn(
+                                                            "rounded-xl border bg-card shadow-sm overflow-hidden transition-all duration-300 cursor-pointer group hover:border-primary/40",
+                                                            isExpanded ? "border-primary/40 ring-1 ring-primary/20 shadow-md" : "border-border hover:shadow-sm"
                                                         )}
+                                                    >
+                                                        <div className={cn(
+                                                            "px-4 py-2 border-b flex items-center justify-between transition-colors",
+                                                            isExpanded ? "bg-primary/5 border-primary/20" : "bg-muted/30 border-border/50 group-hover:bg-muted/50"
+                                                        )}>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={cn("w-1.5 h-1.5 rounded-full transition-colors", isExpanded ? "bg-primary" : "bg-muted-foreground/40")} />
+                                                                <span className={cn("text-[10px] font-bold uppercase tracking-widest", isExpanded ? "text-primary" : "text-muted-foreground")}>
+                                                                    Chunk {i + 1}
+                                                                </span>
+                                                            </div>
+                                                            {isCodeFile(activeDoc.type) && <span className="text-[10px] font-mono text-primary/70">{activeDoc.type.toUpperCase()}</span>}
+                                                        </div>
+
+                                                        <div className="relative p-4">
+                                                            <div className={cn(
+                                                                "transition-all duration-300 overflow-hidden",
+                                                                isExpanded ? "max-h-none opacity-100" : "max-h-[60px] opacity-80"
+                                                            )}>
+                                                                {isCodeFile(activeDoc.type) ? (
+                                                                    <SyntaxHighlighter
+                                                                        style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
+                                                                        language={codeLang || 'text'}
+                                                                        PreTag="div"
+                                                                        customStyle={{
+                                                                            margin: 0,
+                                                                            padding: 0,
+                                                                            background: 'transparent',
+                                                                            fontSize: '11px',
+                                                                            lineHeight: '1.6',
+                                                                            // Force wrap for logic
+                                                                            whiteSpace: "pre-wrap",
+                                                                            wordBreak: "break-all"
+                                                                        }}
+                                                                        wrapLongLines={true}
+                                                                    >
+                                                                        {chunk}
+                                                                    </SyntaxHighlighter>
+                                                                ) : (
+                                                                    <div className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90 break-words">
+                                                                        {chunk}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Gradient mask for unexpanded state */}
+                                                            {!isExpanded && (
+                                                                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <div className="prose dark:prose-invert">
