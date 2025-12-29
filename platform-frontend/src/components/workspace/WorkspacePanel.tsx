@@ -1,5 +1,6 @@
 import React from 'react';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
@@ -98,6 +99,7 @@ export const WorkspacePanel: React.FC = () => {
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
     const [activeIframeUrl, setActiveIframeUrl] = React.useState<string | null>(null);
+    const [isZenMode, setIsZenMode] = React.useState(false);
 
     const isExplorer = sidebarTab === 'explorer';
     const selectedNode = isExplorer
@@ -146,39 +148,68 @@ export const WorkspacePanel: React.FC = () => {
         );
     }
 
-    return (
-        <div className="h-full flex flex-col bg-card border-l border-border">
-            {/* Sticky Header */}
-            <div className="p-4 border-b border-border bg-card/95 backdrop-blur z-10">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        selectedNode?.data.status === 'completed' ? "bg-green-500" :
-                            selectedNode?.data.status === 'running' ? "bg-yellow-500 animate-pulse" :
-                                selectedNode?.data.status === 'waiting_input' ? "bg-yellow-400 animate-pulse" :
-                                    selectedNode?.data.status === 'failed' ? "bg-red-500" : "bg-white/20"
-                    )} />
-                    <span className="font-mono font-bold text-sm tracking-wide uppercase text-foreground">
-                        {selectedNode?.data.label || "Unknown Agent"}
-                    </span>
-                    <span className="ml-auto text-[10px] text-muted-foreground font-mono">
-                        {selectedNode?.id}
-                    </span>
-                </div>
-                {/* Truncated Prompt Header */}
-                <div className="text-xs text-muted-foreground line-clamp-2 font-medium border-l-2 border-primary/20 pl-2">
-                    {selectedNode?.data.prompt || "No prompt available for this agent."}
-                </div>
-            </div>
+    const panelContent = (
+        <div className={cn(
+            "h-full flex flex-col bg-card border-l border-border transition-all duration-300",
+            isZenMode ? "fixed inset-0 z-[9999] w-screen h-screen" : ""
+        )}>
+            {/* Sticky Header - Hidden in Zen Mode */}
+            {!isZenMode && (
+                <div className="p-4 border-b border-border bg-card/95 backdrop-blur z-10 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                        {/* ... status dot ... */}
+                        <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            selectedNode?.data.status === 'completed' ? "bg-green-500" :
+                                selectedNode?.data.status === 'running' ? "bg-yellow-500 animate-pulse" :
+                                    selectedNode?.data.status === 'waiting_input' ? "bg-yellow-400 animate-pulse" :
+                                        selectedNode?.data.status === 'failed' ? "bg-red-500" : "bg-white/20"
+                        )} />
+                        <span className="font-mono font-bold text-sm tracking-wide uppercase text-foreground">
+                            {selectedNode?.data.label || "Unknown Agent"}
+                        </span>
+                        <span className="ml-auto text-[10px] text-muted-foreground font-mono">
+                            {selectedNode?.id}
+                        </span>
 
-            {/* Tabs */}
-            <div className="flex items-center border-b border-border px-2">
-                <PanelTab label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Terminal className="w-3 h-3" />} />
-                <PanelTab label="Code" active={activeTab === 'code'} onClick={() => setActiveTab('code')} icon={<Code2 className="w-3 h-3" />} />
-                <PanelTab label="Web" active={activeTab === 'web'} onClick={() => setActiveTab('web')} icon={<Globe className="w-3 h-3" />} />
-                <PanelTab label="Preview" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Eye className="w-3 h-3" />} />
-                <PanelTab label="Stats" active={activeTab === 'output'} onClick={() => setActiveTab('output')} icon={<Terminal className="w-3 h-3" />} />
-            </div>
+                        {/* Zen Mode Toggle */}
+                        <button
+                            onClick={() => setIsZenMode(!isZenMode)}
+                            className="ml-2 p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                            title="Enter Zen Mode"
+                        >
+                            <Maximize2 className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    {/* Truncated Prompt Header */}
+                    <div className="text-xs text-muted-foreground line-clamp-2 font-medium border-l-2 border-primary/20 pl-2">
+                        {selectedNode?.data.prompt || "No prompt available for this agent."}
+                    </div>
+                </div>
+            )}
+
+            {/* Tabs - Hidden in Zen Mode */}
+            {!isZenMode && (
+                <div className="flex items-center border-b border-border px-2">
+                    <PanelTab label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Terminal className="w-3 h-3" />} />
+                    <PanelTab label="Code" active={activeTab === 'code'} onClick={() => setActiveTab('code')} icon={<Code2 className="w-3 h-3" />} />
+                    <PanelTab label="Web" active={activeTab === 'web'} onClick={() => setActiveTab('web')} icon={<Globe className="w-3 h-3" />} />
+                    <PanelTab label="Preview" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Eye className="w-3 h-3" />} />
+                    <PanelTab label="Stats" active={activeTab === 'output'} onClick={() => setActiveTab('output')} icon={<Terminal className="w-3 h-3" />} />
+                </div>
+            )}
+
+            {/* Zen Mode Floating Controls */}
+            {isZenMode && (
+                <button
+                    onClick={() => setIsZenMode(false)}
+                    className="absolute top-4 right-4 z-[10000] p-2 bg-background/50 hover:bg-background border border-border rounded-full backdrop-blur-sm shadow-sm transition-all text-muted-foreground hover:text-foreground"
+                    title="Exit Zen Mode"
+                >
+                    <Minimize2 className="w-5 h-5" />
+                </button>
+            )}
 
             {/* Content Area */}
             <div className="flex-1 overflow-hidden relative">
@@ -921,4 +952,10 @@ export const WorkspacePanel: React.FC = () => {
             </div >
         </div >
     );
+
+    if (isZenMode) {
+        return createPortal(panelContent, document.body);
+    }
+
+    return panelContent;
 };
