@@ -35,8 +35,8 @@ EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
 OLLAMA_CHAT_URL = "http://127.0.0.1:11434/api/chat"
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 EMBED_MODEL = "nomic-embed-text"
-RAG_LLM_MODEL = "gemma3:1b" # Faster than Qwen/Llama3, better for parallel semantic chunking
-QWEN_MODEL = "qwen3-vl:8b" # Keep for vision and continuity
+RAG_LLM_MODEL = "gemma3:4b"  # Used for semantic chunking (upgraded from 1b)
+VISION_MODEL = "gemma3:4b"  # Good text extraction (4B multimodal)
 CHUNK_SIZE = 256
 CHUNK_OVERLAP = 40
 MAX_CHUNK_LENGTH = 512  # characters
@@ -112,7 +112,7 @@ Just respond in one word (Yes or No), and do not provide any further explanation
     print(f"  Chunk {index+1} → {chunk2[:60]}{'...' if len(chunk2) > 60 else ''}")
 
     result = requests.post(OLLAMA_CHAT_URL, json={
-        "model": QWEN_MODEL,
+        "model": VISION_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False
     }, timeout=OLLAMA_TIMEOUT)
@@ -202,7 +202,7 @@ CONTEXT FROM DOCUMENT:
         # For now, let's make it yield chunks.
         
         response = requests.post(OLLAMA_CHAT_URL, json={
-            "model": QWEN_MODEL,
+            "model": VISION_MODEL,
             "messages": messages,
             "stream": True # Enable streaming
         }, timeout=OLLAMA_TIMEOUT, stream=True)
@@ -304,39 +304,67 @@ def keyword_search(query: str) -> list[str]:
 def caption_image(img_url_or_path: str) -> str:
     mcp_log("CAPTION", f"Attempting to caption image: {img_url_or_path}")
 
-    # Check if input is a URL
-    if img_url_or_path.startswith("http://") or img_url_or_path.startswith("https://"):
+    # Load image data
+    image_data = None
+    try:
+        if img_url_or_path.startswith("http://") or img_url_or_path.startswith("https://"):
+            resp = requests.get(img_url_or_path, timeout=10)
+            if resp.status_code == 200:
+                image_data = resp.content
+            else:
+                mcp_log("ERROR", f"Failed to fetch image URL: {resp.status_code}")
+                return f"[Image download failed: {img_url_or_path}]"
+        else:
+            full_path = Path(__file__).parent / "documents" / img_url_or_path
+            full_path = full_path.resolve()
+            if full_path.exists():
+                image_data = full_path.read_bytes()
+            else:
+                mcp_log("ERROR", f"Image file not found: {full_path}")
+                return f"[Image file not found: {img_url_or_path}]"
+
+        if not image_data:
+            return "[No image data]"
+
+        # Process Image with PIL (Resize if needed)
         try:
-            result = requests.get(img_url_or_path)
-            if result.status_code != 200:
-                raise Exception(f"HTTP {result.status_code}")
-            encoded_image = base64.b64encode(result.content).decode("utf-8")
+            from PIL import Image
+            import io
+            
+            with Image.open(io.BytesIO(image_data)) as img:
+                # Convert to RGB (in case of RGBA/P)
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                
+                # Check dimensions
+                width, height = img.size
+                MAX_DIM = 1024
+                
+                if width > MAX_DIM or height > MAX_DIM:
+                    mcp_log("INFO", f"Resizing image from {width}x{height} to max {MAX_DIM}px")
+                    img.thumbnail((MAX_DIM, MAX_DIM), Image.Resampling.LANCZOS)
+                
+                # Save to buffer for encoding
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=85)
+                encoded_image = base64.b64encode(buf.getvalue()).decode("utf-8")
+        
+        except ImportError:
+            mcp_log("WARN", "PIL (Pillow) not installed, sending raw image.")
+            encoded_image = base64.b64encode(image_data).decode("utf-8")
         except Exception as e:
-            mcp_log("ERROR", f"Failed to download image from URL: {e}")
-            return f"[Image could not be downloaded: {img_url_or_path}]"
-    else:
-        full_path = Path(__file__).parent / "documents" / img_url_or_path
-        full_path = full_path.resolve()
+             mcp_log("WARN", f"Image processing error: {e}, sending raw.")
+             encoded_image = base64.b64encode(image_data).decode("utf-8")
 
-        if not full_path.exists():
-            mcp_log("ERROR", f"Image file not found: {full_path}")
-            return f"[Image file not found: {img_url_or_path}]"
-
-        with open(full_path, "rb") as img_file:
-            encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
+    except Exception as e:
+        mcp_log("ERROR", f"Failed to prepare image: {e}")
+        return f"[Image error: {img_url_or_path}]"
 
 
     try:
-        if img_url_or_path.startswith("http"): # for extract_web_pages
-            result = requests.get(img_url_or_path)
-            encoded_image = base64.b64encode(result.content).decode("utf-8")
-        else:
-            with open(full_path, "rb") as img_file:
-                encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
-
         # Set stream=True to get the full generator-style output
         with requests.post(OLLAMA_URL, json={
-                "model": QWEN_MODEL,
+                "model": VISION_MODEL,
                 "prompt": "Look only at the attached image. If it's code, output it exactly as text. If it's a visual scene, describe it as you would for an image alt-text. Never generate new code. Return only the contents of the image.",
                 "images": [encoded_image],
                 "stream": True
@@ -606,6 +634,50 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
         if not markdown.strip():
             return {"status": "WARN", "rel_path": rel_path, "message": "No content extracted"}
 
+        # === CAPTION-FIRST: Replace image placeholders with actual captions ===
+        # This ensures the FAISS index contains searchable image content
+        image_pattern = re.compile(r'!\[.*?\]\((.*?)\)')
+        images_found = image_pattern.findall(markdown)
+        
+        if images_found:
+            mcp_log("IMG", f"Found {len(images_found)} images in {rel_path}, captioning inline...")
+            
+            # Load/create captions ledger
+            captions_file = ROOT / "faiss_index" / "captions.json"
+            captions_ledger = json.loads(captions_file.read_text()) if captions_file.exists() else {}
+            
+            def caption_replacer(match):
+                img_path = match.group(1)  # e.g. "images/file.png" or "https://..."
+                
+                # SKIP: Remote URLs (badges, shields, external images)
+                if img_path.startswith("http://") or img_path.startswith("https://"):
+                    return match.group(0)  # Keep as-is
+                
+                filename = Path(img_path).name
+                
+                # Check ledger first (skip if already captioned)
+                if filename in captions_ledger and captions_ledger[filename]:
+                    caption = captions_ledger[filename]
+                    return f"**[Image Caption]:** *{caption}*"
+                
+                # Generate new caption
+                try:
+                    caption = caption_image(img_path)
+                    if caption and caption.strip() and not caption.startswith("["):  # Skip error/empty
+                        captions_ledger[filename] = caption
+                        # Incremental save
+                        captions_file.parent.mkdir(exist_ok=True)
+                        captions_file.write_text(json.dumps(captions_ledger, indent=2))
+                        return f"**[Image Caption]:** *{caption}*"
+                except Exception as e:
+                    mcp_log("WARN", f"Caption failed for {filename}: {e}")
+                
+                return match.group(0)  # Keep original if failed
+            
+            # Apply captioning to markdown
+            markdown = image_pattern.sub(caption_replacer, markdown)
+        # === END CAPTION-FIRST ===
+
         # Semantic Chunking
         try:
             if len(markdown.split()) < 50:
@@ -802,13 +874,10 @@ async def reindex_documents(target_path: str = None) -> str:
                     mcp_log("WARN", f"Failed to delete {f}: {e}")
                     
     # Run the blocking process_documents in a separate thread
+    # NOTE: Images are now captioned INLINE during processing (caption-first pipeline)
     await asyncio.to_thread(process_documents, target_path)
     
-    # Trigger background image indexing (fire and forget)
-    mcp_log("INFO", "Triggering background image captioning...")
-    asyncio.create_task(index_images())
-    
-    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed successfully. Image analysis running in background."
+    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed. Images captioned inline."
 
 
 @mcp.tool()
@@ -880,6 +949,9 @@ async def index_images() -> str:
                 "type": "image_caption",
                 "source_doc": original_doc
             })
+            
+            # INCREMENTAL SAVE: Save ledger after each caption so progress is not lost
+            CAPTIONS_FILE.write_text(json.dumps(captions_ledger, indent=2))
             
         except Exception as e:
             mcp_log("ERROR", f"Failed to caption {img.name}: {e}")

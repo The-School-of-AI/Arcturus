@@ -572,6 +572,32 @@ async def get_document_chunks(path: str):
         if not doc_chunks:
             return {"status": "error", "markdown": f"No chunks found for document: {path}. Try re-indexing."}
         
+        # --- BACKEND CAPTION INJECTION ---
+        # Load captions.json and replace ![](images/X.png) with actual captions
+        try:
+            captions_path = meta_path.parent / "captions.json"
+            if captions_path.exists():
+                captions_ledger = json.loads(captions_path.read_text())
+                
+                # Define replacer at this scope
+                def caption_replacer(match):
+                    img_path = match.group(1)  # e.g. "images/file.png"
+                    filename = Path(img_path).name  # e.g. "file.png"
+                    
+                    if filename in captions_ledger and captions_ledger[filename]:
+                        caption = captions_ledger[filename]
+                        return f"**[Image Caption]:** *{caption}*"
+                    return match.group(0)  # Keep original if no caption yet
+                
+                # Apply regex at outer scope where 're' is accessible
+                image_pattern = re.compile(r'!\[.*?\]\((.*?)\)')
+                doc_chunks = [image_pattern.sub(caption_replacer, c) for c in doc_chunks]
+        except Exception as e:
+            print(f"Caption injection ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+        # ---------------------------------
+        
         # Concatenate chunks with separators
         full_text = "\n\n---\n\n".join(doc_chunks)
 
