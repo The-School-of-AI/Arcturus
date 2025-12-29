@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock } from 'lucide-react';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
@@ -93,7 +93,7 @@ import { DocumentAssistant } from '../rag/DocumentAssistant';
 export const WorkspacePanel: React.FC = () => {
     const {
         codeContent, webUrl, logs, selectedNodeId, nodes, sidebarTab,
-        flowData, selectedExplorerNodeId
+        flowData, selectedExplorerNodeId, currentRun
     } = useAppStore();
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
@@ -185,10 +185,22 @@ export const WorkspacePanel: React.FC = () => {
                 {activeTab === 'overview' && (
                     <div className="p-4 space-y-6 overflow-y-auto h-full font-mono text-sm select-text">
 
-                        {/* Section: Prompt */}
+                        {/* Section: User Query (Global) */}
+                        {!isExplorer && currentRun && (
+                            <div className="space-y-2">
+                                <div className="text-xs uppercase tracking-widest text-white/50 font-bold flex items-center gap-2 select-none">
+                                    <Terminal className="w-3 h-3" /> User Query
+                                </div>
+                                <div className="p-1 bg-white/5 rounded-md text-foreground/90 leading-relaxed text-lg border border-white/10 select-text font-sans">
+                                    {currentRun.name}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Section: Agent Role (System Prompt) */}
                         <div className="space-y-2">
                             <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2 select-none">
-                                <Terminal className="w-3 h-3" /> Original Prompt
+                                <Brain className="w-3 h-3" /> Agent Goal
                             </div>
                             <div className="p-3 bg-muted/50 rounded-md text-foreground/90 leading-relaxed text-xs border border-border/50 select-text">
                                 {selectedNode?.data.prompt || "N/A"}

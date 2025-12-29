@@ -186,7 +186,9 @@ export const Sidebar: React.FC = () => {
                                                     "text-[13px] leading-relaxed font-medium transition-all duration-300",
                                                     isActive
                                                         ? "text-neon-yellow selection:bg-neon-yellow/30"
-                                                        : "text-foreground group-hover:text-foreground/80"
+                                                        : displayStatus === 'failed'
+                                                            ? "text-red-500 group-hover:text-red-400"
+                                                            : "text-foreground group-hover:text-foreground/80"
                                                 )}>
                                                     {run.name}
                                                 </p>
