@@ -7,7 +7,7 @@
         "embedding": "nomic-embed-text",
         "semantic_chunking": "gemma3:4b",
         "image_captioning": "gemma3:4b",
-        "memory_extraction": "qwen3-vl:8b",
+        "memory_extraction": "gemma3:4b",
         "insights_provider": "ollama"
     },
     "rag": {

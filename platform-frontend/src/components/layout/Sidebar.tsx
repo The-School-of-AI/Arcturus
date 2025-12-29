@@ -215,6 +215,12 @@ export const Sidebar: React.FC = () => {
                                                         <Clock className="w-3 h-3" />
                                                         {new Date(run.createdAt).toLocaleDateString()}
                                                     </span>
+                                                    {run.total_tokens !== undefined && (
+                                                        <span className="text-[9px] text-muted-foreground font-mono opacity-70">
+                                                            • {run.total_tokens.toLocaleString()} tks
+                                                        </span>
+                                                    )}
+
                                                 </div>
                                                 <span className={cn(
                                                     "px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter",

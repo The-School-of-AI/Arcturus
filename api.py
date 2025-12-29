@@ -252,11 +252,16 @@ async def list_runs():
                         # Fallback to graph-level status or completed
                         computed_status = graph_details.get("status", "completed")
                     
+                    total_tokens = sum(
+                        (n.get("total_tokens", 0) or 0) for n in nodes
+                    )
+                    
                     runs.append({
                         "id": session_file.stem.replace("session_", ""),
                         "query": query, 
                         "created_at": created_at, 
-                        "status": computed_status
+                        "status": computed_status,
+                        "total_tokens": total_tokens
                     })
                 except:
                     continue

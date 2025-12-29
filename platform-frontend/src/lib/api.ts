@@ -9,6 +9,7 @@ export interface API_Run {
     created_at: string;
     query: string;
     model?: string;  // Model used for this run
+    total_tokens?: number;
 }
 
 export interface API_RunDetail {
@@ -30,7 +31,8 @@ export const api = {
             createdAt: new Date(r.created_at).getTime(), // Map string to timestamp
             status: r.status as Run['status'],
             model: r.model || 'default', // Use model from response or 'default'
-            ragEnabled: true
+            ragEnabled: true,
+            total_tokens: r.total_tokens
         }));
     },
 

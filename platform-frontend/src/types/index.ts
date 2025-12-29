@@ -11,6 +11,7 @@ export interface Run {
     status: RunStatus;
     model: string;
     ragEnabled: boolean;
+    total_tokens?: number;
 }
 
 export interface AgentNodeData {

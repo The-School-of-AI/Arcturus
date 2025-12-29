@@ -46,7 +46,6 @@ class MultiMCP:
         try:
             self.config_path.write_text(json.dumps(self.server_configs, indent=2))
         except Exception as e:
-        except Exception as e:
             print(f"⚠️ Failed to save MCP config: {e}")
 
     def _load_disabled_tools(self):

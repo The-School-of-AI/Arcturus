@@ -77,7 +77,7 @@ A JSON list of command objects:
                     "options": {"temperature": 0.1}, # Low temp for deterministic extraction
                     "format": "json" # Enforce JSON mode if supported by model version
                 },
-                timeout=OLLAMA_TIMEOUT
+                timeout=get_timeout()
             )
             response.raise_for_status()
             result = response.json()
