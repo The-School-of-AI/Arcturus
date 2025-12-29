@@ -428,12 +428,16 @@ export const SettingsPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-medium text-foreground">{selectedPrompt.filename}</h3>
                             <div className="flex gap-2">
-                                {selectedPrompt.has_backup && (
-                                    <Button size="sm" variant="outline" onClick={resetPrompt}>
-                                        <RotateCcw className="w-3 h-3 mr-1" />
-                                        Reset to Original
-                                    </Button>
-                                )}
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={resetPrompt}
+                                    disabled={!selectedPrompt.has_backup}
+                                    title={selectedPrompt.has_backup ? "Reset to original" : "No changes to reset"}
+                                >
+                                    <RotateCcw className="w-3 h-3 mr-1" />
+                                    Reset
+                                </Button>
                                 <Button size="sm" onClick={savePrompt} disabled={saving || !hasChanges}>
                                     {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
                                     Save Prompt
