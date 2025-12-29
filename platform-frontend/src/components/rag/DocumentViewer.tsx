@@ -15,6 +15,7 @@ import { renderAsync } from 'docx-preview';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { api } from '@/lib/api';
+import { useTheme } from '@/components/theme';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
@@ -130,6 +131,7 @@ export const DocumentViewer: React.FC = () => {
         closeDocument,
         closeAllDocuments
     } = useAppStore();
+    const { theme } = useTheme();
 
     const [content, setContent] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -209,7 +211,7 @@ export const DocumentViewer: React.FC = () => {
                 <SyntaxHighlighter
                     {...props}
                     children={String(children).replace(/\n$/, '')}
-                    style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
+                    style={theme === 'dark' ? vscDarkPlus : prism}
                     language={match[1]}
                     PreTag="div"
                     customStyle={{ margin: '1em 0', borderRadius: '0.5rem', background: 'transparent' }}
@@ -418,12 +420,12 @@ export const DocumentViewer: React.FC = () => {
 
                 {/* PDF Viewer */}
                 {activeDoc?.type.toLowerCase() === 'pdf' && pdfUrl && viewType === 'source' && (
-                    <div className="h-full overflow-hidden bg-[#2a2a2e]">
+                    <div className={cn("h-full overflow-hidden", theme === 'dark' ? "bg-[#2a2a2e]" : "bg-[#ebebeb]")}>
                         <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
                             <Viewer
                                 fileUrl={pdfUrl}
                                 plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance, searchPluginInstance]}
-                                theme="dark"
+                                theme={theme}
                                 onDocumentLoad={() => {
                                     // Trigger search if searchText is provided (from SEEK result)
                                     if (activeDoc?.searchText) {
@@ -500,7 +502,7 @@ export const DocumentViewer: React.FC = () => {
                                                             )}>
                                                                 {isCodeFile(activeDoc.type) ? (
                                                                     <SyntaxHighlighter
-                                                                        style={document.documentElement.classList.contains('dark') ? vscDarkPlus : prism}
+                                                                        style={theme === 'dark' ? vscDarkPlus : prism}
                                                                         language={codeLang || 'text'}
                                                                         PreTag="div"
                                                                         customStyle={{
@@ -547,11 +549,11 @@ export const DocumentViewer: React.FC = () => {
                             </div>
                         ) : (
                             /* Code View */
-                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? "bg-[#1e1e1e]" : "bg-background")}>
+                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? (theme === 'dark' ? "bg-[#1e1e1e]" : "bg-background") : "bg-background")}>
                                 {isCode && viewType === 'source' ? (
                                     <SyntaxHighlighter
                                         language={codeLang}
-                                        style={vscDarkPlus}
+                                        style={theme === 'dark' ? vscDarkPlus : prism}
                                         customStyle={{ margin: 0, height: '100%', fontSize: '14px', lineHeight: '1.5' }}
                                         showLineNumbers
                                     >
@@ -559,7 +561,7 @@ export const DocumentViewer: React.FC = () => {
                                     </SyntaxHighlighter>
                                 ) : (
                                     <div className="h-full overflow-y-auto p-12 md:p-20 max-w-5xl mx-auto">
-                                        <div className="prose prose-invert prose-lg max-w-none prose-headings:text-primary prose-strong:text-foreground prose-a:text-primary">
+                                        <div className={cn("prose prose-lg max-w-none prose-headings:text-primary prose-strong:text-foreground prose-a:text-primary", theme === 'dark' && "prose-invert")}>
                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
                                         </div>
                                     </div>
