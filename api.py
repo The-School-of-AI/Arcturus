@@ -77,7 +77,12 @@ ExplorerNode.update_forward_refs()
 
 class RunRequest(BaseModel):
     query: str
-    model: str = "gemini-2.0-pro"
+    model: str = None  # Will use settings default if not provided
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.model is None:
+            self.model = settings.get("agent", {}).get("default_model", "gemini-2.5-flash")
 
 class RunResponse(BaseModel):
     id: str

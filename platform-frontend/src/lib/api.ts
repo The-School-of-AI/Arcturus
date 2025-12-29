@@ -8,6 +8,7 @@ export interface API_Run {
     status: string;
     created_at: string;
     query: string;
+    model?: string;  // Model used for this run
 }
 
 export interface API_RunDetail {
@@ -28,14 +29,16 @@ export const api = {
             name: r.query, // Map query to name
             createdAt: new Date(r.created_at).getTime(), // Map string to timestamp
             status: r.status as Run['status'],
-            model: 'gemini-2.0-pro', // Default or from API
+            model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true
         }));
     },
 
-    // Trigger new run
-    createRun: async (query: string, model: string): Promise<API_Run> => {
-        const res = await axios.post(`${API_BASE}/runs`, { query, model });
+    // Trigger new run (model optional - backend uses settings default if not provided)
+    createRun: async (query: string, model?: string): Promise<API_Run> => {
+        const payload: { query: string; model?: string } = { query };
+        if (model) payload.model = model;
+        const res = await axios.post(`${API_BASE}/runs`, payload);
         return res.data;
     },
 

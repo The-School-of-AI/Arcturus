@@ -39,7 +39,7 @@ export const Sidebar: React.FC = () => {
     const handleStartRun = async () => {
         if (!newQuery.trim()) return;
         setIsNewRunOpen(false);
-        await createNewRun(newQuery, "gemini-2.0-pro");
+        await createNewRun(newQuery);  // Backend uses settings default model
         setNewQuery("");
     };
 

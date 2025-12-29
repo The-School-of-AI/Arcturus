@@ -167,8 +167,15 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
         return "Error: `browser-use` library is not installed."
 
     try:
+        # Import settings for default model
+        try:
+            from config.settings_loader import settings
+            default_model = settings.get("agent", {}).get("default_model", "gemini-2.5-flash")
+        except:
+            default_model = "gemini-2.5-flash"
+        
         # Initialize LLM
-        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
+        llm = ChatGoogleGenerativeAI(model=default_model, google_api_key=os.getenv("GEMINI_API_KEY"))
         
         # Initialize Agent
         agent = Agent(
