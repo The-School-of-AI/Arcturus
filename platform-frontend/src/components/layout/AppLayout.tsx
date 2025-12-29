@@ -86,8 +86,8 @@ export const AppLayout: React.FC = () => {
             <Header />
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode */}
-                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && (
+                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR on Settings page */}
+                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && sidebarTab !== 'settings' && (
                     <>
                         <div
                             className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"

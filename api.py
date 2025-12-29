@@ -1030,6 +1030,131 @@ async def restart_server():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to restart: {str(e)}")
 
+# === OLLAMA API ENDPOINTS ===
+
+@app.get("/ollama/models")
+async def get_ollama_models():
+    """Get list of available Ollama models from local instance"""
+    try:
+        import requests
+        from config.settings_loader import get_ollama_url
+        
+        ollama_url = get_ollama_url("base")
+        response = requests.get(f"{ollama_url}/api/tags", timeout=10)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to connect to Ollama")
+        
+        data = response.json()
+        models = []
+        for model in data.get("models", []):
+            name = model.get("name", "")
+            size_bytes = model.get("size", 0)
+            size_gb = round(size_bytes / (1024**3), 2) if size_bytes else 0
+            
+            # Infer capabilities from model name
+            capabilities = []
+            name_lower = name.lower()
+            if "embed" in name_lower or "nomic" in name_lower:
+                capabilities.append("embedding")
+            if "vl" in name_lower or "vision" in name_lower or "llava" in name_lower or "moondream" in name_lower:
+                capabilities.extend(["text", "image"])
+            else:
+                capabilities.append("text")
+            
+            models.append({
+                "name": name,
+                "size_gb": size_gb,
+                "capabilities": capabilities,
+                "modified_at": model.get("modified_at", "")
+            })
+        
+        return {"status": "success", "models": models}
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=503, detail="Ollama server not running")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class PullModelRequest(BaseModel):
+    name: str
+
+@app.post("/ollama/pull")
+async def pull_ollama_model(request: PullModelRequest):
+    """Pull a new model from Ollama registry (starts async download)"""
+    try:
+        import requests
+        from config.settings_loader import get_ollama_url
+        
+        ollama_url = get_ollama_url("base")
+        # Use streaming=False for now, just initiate the pull
+        response = requests.post(
+            f"{ollama_url}/api/pull",
+            json={"name": request.name, "stream": False},
+            timeout=600  # 10 min timeout for large models
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Failed to pull model: {response.text}")
+        
+        return {"status": "success", "message": f"Model '{request.name}' pulled successfully"}
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail="Model pull timed out - try from terminal")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/gemini/status")
+async def get_gemini_status():
+    """Check if Gemini API key is configured via environment variable"""
+    try:
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        return {
+            "status": "success",
+            "configured": bool(api_key),
+            "key_preview": f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === PROMPTS API ENDPOINTS ===
+
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+@app.get("/prompts")
+async def list_prompts():
+    """List all prompt files with their content"""
+    try:
+        prompts = []
+        if PROMPTS_DIR.exists():
+            for f in PROMPTS_DIR.glob("*.md"):
+                content = f.read_text()
+                prompts.append({
+                    "name": f.stem,
+                    "filename": f.name,
+                    "content": content,
+                    "lines": len(content.splitlines())
+                })
+        return {"status": "success", "prompts": sorted(prompts, key=lambda x: x["name"])}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class UpdatePromptRequest(BaseModel):
+    content: str
+
+@app.put("/prompts/{prompt_name}")
+async def update_prompt(prompt_name: str, request: UpdatePromptRequest):
+    """Update a prompt file's content"""
+    try:
+        prompt_file = PROMPTS_DIR / f"{prompt_name}.md"
+        if not prompt_file.exists():
+            raise HTTPException(status_code=404, detail=f"Prompt '{prompt_name}' not found")
+        
+        prompt_file.write_text(request.content)
+        return {"status": "success", "message": f"Prompt '{prompt_name}' updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # === APP PERSISTENCE ENDPOINTS ===
 
 class CreateAppRequest(BaseModel):
