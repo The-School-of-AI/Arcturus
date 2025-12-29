@@ -1,11 +1,15 @@
 import requests
 import numpy as np
 import sys
+from pathlib import Path
 
-# Configuration matches server_rag.py for consistency
-EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
-EMBED_MODEL = "nomic-embed-text"
-OLLAMA_TIMEOUT = 300
+# Import from centralized settings
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config.settings_loader import get_ollama_url, get_model, get_timeout
+
+EMBED_URL = get_ollama_url("embeddings")
+EMBED_MODEL = get_model("embedding")
+OLLAMA_TIMEOUT = get_timeout()
 
 def get_embedding(text: str, task_type: str = "search_document") -> np.ndarray:
     """Generate embedding for text using local Ollama instance with Nomic prefixes."""

@@ -1,13 +1,19 @@
 import requests
 import json
 import uuid
+import sys
 from typing import List, Dict
-from .utils import EMBED_URL, OLLAMA_TIMEOUT
+from pathlib import Path
+
+# Add project root to path and import settings
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config.settings_loader import settings, get_ollama_url, get_model, get_timeout
 
 class RemmeExtractor:
-    def __init__(self, model: str = "qwen3-vl:8b"): # Using 8b as default for speed/quality balance
-        self.model = model
-        self.api_url = "http://127.0.0.1:11434/api/chat"
+    def __init__(self, model: str = None):
+        # Use provided model or default from settings
+        self.model = model or get_model("memory_extraction")
+        self.api_url = get_ollama_url("chat")
 
     def extract(self, query: str, conversation_history: List[Dict], existing_memories: List[Dict] = None) -> List[Dict]:
         """

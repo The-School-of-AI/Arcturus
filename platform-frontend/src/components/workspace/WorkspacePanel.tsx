@@ -5,6 +5,7 @@ import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from 'react-markdown';
 import DOMPurify from 'dompurify';
+import { API_BASE } from '@/lib/api';
 
 // Helper component for tabs (assuming it's a simple button for now)
 const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; icon: React.ReactNode }> = ({ label, active, onClick, icon }) => (
@@ -41,7 +42,7 @@ const ClarificationInput: React.FC<{ selectedNode: any; codeContent: string }> =
         try {
             const runId = useAppStore.getState().currentRun?.id;
             if (runId) {
-                await fetch(`http://localhost:8000/runs/${runId}/input`, {
+                await fetch(`${API_BASE}/runs/${runId}/input`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ input: inputValue })

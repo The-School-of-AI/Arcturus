@@ -4,8 +4,7 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from '@/lib/api';
 
 const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | 'system' }> = ({ content, role }) => {
     const [isExpanded, setIsExpanded] = useState(false);

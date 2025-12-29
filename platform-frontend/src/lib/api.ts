@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Run, PlatformNode, PlatformEdge } from '../types';
 
-const API_BASE = 'http://localhost:8000';
+export const API_BASE = 'http://localhost:8000';
 
 export interface API_Run {
     id: string;

@@ -10,7 +10,7 @@ import type {
     Memory,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
-import { api } from '../lib/api';
+import { api, API_BASE } from '../lib/api';
 
 // --- Slices Types ---
 
@@ -71,8 +71,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn') => void;
+    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings') => void;
     openDocuments: RAGDocument[];
     activeDocumentId: string | null;
     openDocument: (doc: RAGDocument) => void;
@@ -428,7 +428,7 @@ export const useAppStore = create<AppState>()(
             setMemories: (memories) => set({ memories }),
             fetchMemories: async () => {
                 try {
-                    const res = await api.get('http://localhost:8000/remme/memories');
+                    const res = await api.get(`${API_BASE}/remme/memories`);
                     set({ memories: res.data.memories });
                 } catch (e) {
                     console.error("Failed to fetch memories", e);
@@ -436,7 +436,7 @@ export const useAppStore = create<AppState>()(
             },
             addMemory: async (text, category = "general") => {
                 try {
-                    await api.post('http://localhost:8000/remme/add', { text, category });
+                    await api.post(`${API_BASE}/remme/add`, { text, category });
                     get().fetchMemories();
                 } catch (e) {
                     console.error("Failed to add memory", e);
@@ -444,7 +444,7 @@ export const useAppStore = create<AppState>()(
             },
             deleteMemory: async (id) => {
                 try {
-                    await api.delete(`http://localhost:8000/remme/memories/${id}`);
+                    await api.delete(`${API_BASE}/remme/memories/${id}`);
                     get().fetchMemories();
                 } catch (e) {
                     console.error("Failed to delete memory", e);
@@ -452,7 +452,7 @@ export const useAppStore = create<AppState>()(
             },
             cleanupDanglingMemories: async () => {
                 try {
-                    await api.post('http://localhost:8000/remme/cleanup_dangling');
+                    await api.post(`${API_BASE}/remme/cleanup_dangling`);
                     get().fetchMemories();
                 } catch (e) {
                     console.error("Failed to cleanup dangling memories", e);

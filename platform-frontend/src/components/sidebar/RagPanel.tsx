@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
+import { API_BASE } from '@/lib/api';
 
 interface RagItem {
     name: string;
@@ -16,8 +17,6 @@ interface RagItem {
     hash?: string;
     children?: RagItem[];
 }
-
-const API_BASE = 'http://localhost:8000';
 
 const FileTree: React.FC<{
     item: RagItem;

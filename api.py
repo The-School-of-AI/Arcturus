@@ -25,6 +25,7 @@ import subprocess
 import shutil
 from core.explorer_utils import CodeSkeletonExtractor
 from core.model_manager import ModelManager
+from config.settings_loader import settings, save_settings, reset_settings, reload_settings
 
 from contextlib import asynccontextmanager
 
@@ -935,6 +936,99 @@ async def delete_memory(memory_id: str):
         return {"status": "success", "id": memory_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# === SETTINGS API ENDPOINTS ===
+
+@app.get("/settings")
+async def get_settings():
+    """Get all current settings from config/settings.json"""
+    try:
+        # Force reload to get latest from disk
+        current_settings = reload_settings()
+        return {"status": "success", "settings": current_settings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load settings: {str(e)}")
+
+class UpdateSettingsRequest(BaseModel):
+    settings: dict
+
+@app.put("/settings")
+async def update_settings(request: UpdateSettingsRequest):
+    """Update settings and save to config/settings.json
+    
+    Note: Some settings require re-indexing (chunk_size, chunk_overlap, etc.)
+    or server restart to take effect.
+    """
+    try:
+        global settings
+        # Deep merge incoming settings with existing
+        def deep_merge(base: dict, update: dict) -> dict:
+            for key, value in update.items():
+                if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                    deep_merge(base[key], value)
+                else:
+                    base[key] = value
+            return base
+        
+        deep_merge(settings, request.settings)
+        save_settings()
+        
+        # Identify settings that require action
+        warnings = []
+        rag_keys = ["chunk_size", "chunk_overlap", "max_chunk_length", "semantic_word_limit"]
+        if "rag" in request.settings:
+            for key in rag_keys:
+                if key in request.settings["rag"]:
+                    warnings.append(f"Changed '{key}' - requires re-indexing documents to take effect")
+        
+        if "models" in request.settings:
+            warnings.append("Model changes take effect on next document processing or server restart")
+        
+        return {
+            "status": "success",
+            "message": "Settings saved successfully",
+            "warnings": warnings if warnings else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save settings: {str(e)}")
+
+@app.post("/settings/reset")
+async def reset_to_defaults():
+    """Reset all settings to default values from config/settings.defaults.json"""
+    try:
+        reset_settings()
+        return {"status": "success", "message": "Settings reset to defaults"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reset settings: {str(e)}")
+
+@app.post("/settings/restart")
+async def restart_server():
+    """Trigger a server restart by executing the restart script.
+    
+    This will restart both frontend and backend (npm run dev:all).
+    The response is sent before restart occurs.
+    """
+    try:
+        import signal
+        import os
+        
+        # Find and execute restart script
+        restart_script = Path(__file__).parent / "restart.sh"
+        
+        if not restart_script.exists():
+            raise HTTPException(status_code=404, detail="restart.sh not found. Create it first.")
+        
+        # Execute restart in background (non-blocking)
+        subprocess.Popen(
+            ["bash", str(restart_script)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        
+        return {"status": "success", "message": "Restart initiated. Server will restart shortly."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to restart: {str(e)}")
 
 # === APP PERSISTENCE ENDPOINTS ===
 

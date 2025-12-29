@@ -5,6 +5,7 @@ import { FileCode, Folder, ChevronRight, ChevronDown, Play, Code2, Globe, Trash2
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FileSelectionModal } from './FileSelectionModal';
+import { API_BASE } from '@/lib/api';
 
 interface FileNode {
     name: string;
@@ -67,7 +68,7 @@ export const ExplorerPanel: React.FC = () => {
         try {
             setIsAnalyzing(true);
             if (isGithub) {
-                const res = await axios.post('http://localhost:8000/explorer/analyze', { path, type: 'github' });
+                const res = await axios.post(`${API_BASE}/explorer/analyze`, { path, type: 'github' });
                 if (res.data.success) {
                     setFlowData(res.data.flow_data);
                     setExplorerRootPath(path);
@@ -80,7 +81,7 @@ export const ExplorerPanel: React.FC = () => {
                     setExplorerFiles([]);
                 }
             } else {
-                const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(path)}`);
+                const res = await axios.get(`${API_BASE}/explorer/list?path=${encodeURIComponent(path)}`);
                 const { files, root_path, error } = res.data;
 
                 if (error) {
@@ -117,7 +118,7 @@ export const ExplorerPanel: React.FC = () => {
 
         if (item.type === 'local') {
             try {
-                const res = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(item.path)}`);
+                const res = await axios.get(`${API_BASE}/explorer/list?path=${encodeURIComponent(item.path)}`);
                 const { files, root_path, error } = res.data;
 
                 if (error) {
@@ -149,7 +150,7 @@ export const ExplorerPanel: React.FC = () => {
         setIsAnalyzing(true);
         try {
             const isGithub = explorerRootPath!.startsWith('http');
-            const res = await axios.post('http://localhost:8000/explorer/analyze', {
+            const res = await axios.post(`${API_BASE}/explorer/analyze`, {
                 path: explorerRootPath,
                 type: isGithub ? 'github' : 'local',
                 files: selectedFiles
@@ -166,7 +167,7 @@ export const ExplorerPanel: React.FC = () => {
                 const isAbsolutePath = root_path && (root_path.startsWith('/') || root_path.includes(':\\'));
                 if (isAbsolutePath && !root_path.startsWith('http')) {
                     try {
-                        const filesRes = await axios.get(`http://localhost:8000/explorer/list?path=${encodeURIComponent(root_path)}`);
+                        const filesRes = await axios.get(`${API_BASE}/explorer/list?path=${encodeURIComponent(root_path)}`);
                         if (filesRes.data.files && filesRes.data.files.length > 0) {
                             setExplorerFiles(filesRes.data.files);
                         }
@@ -209,7 +210,7 @@ export const ExplorerPanel: React.FC = () => {
                 await performAnalysis(null);
             } else {
                 // Local: Scan first
-                const res = await axios.get(`http://localhost:8000/explorer/scan?path=${encodeURIComponent(explorerRootPath)}`);
+                const res = await axios.get(`${API_BASE}/explorer/scan?path=${encodeURIComponent(explorerRootPath)}`);
                 if (res.data.success) {
                     setScannedFiles(res.data.scan.files);
                     setShowSelectionModal(true);

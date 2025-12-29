@@ -13,11 +13,9 @@ import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
 import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
-import { SettingsModal } from '@/features/settings/SettingsModal';
 
 export const Sidebar: React.FC = () => {
     const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
-    const [settingsOpen, setSettingsOpen] = React.useState(false);
 
     // Fetch runs on mount
     React.useEffect(() => {
@@ -47,7 +45,7 @@ export const Sidebar: React.FC = () => {
     const NavIcon = ({ icon: Icon, label, tab, onClick }: {
         icon: any,
         label: string,
-        tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn',
+        tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings',
         onClick?: () => void
     }) => {
         const active = sidebarTab === tab;
@@ -71,8 +69,6 @@ export const Sidebar: React.FC = () => {
 
     return (
         <div className="h-full flex overflow-hidden">
-            <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-
             {/* NavRail - Left Vertical Bar */}
             <div className="w-16 border-r border-border bg-background flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools */}
@@ -92,7 +88,7 @@ export const Sidebar: React.FC = () => {
 
                 {/* Bottom Tools */}
                 <div className="w-full px-2">
-                    <NavIcon icon={Settings} label="Settings" onClick={() => setSettingsOpen(true)} />
+                    <NavIcon icon={Settings} label="Settings" tab="settings" />
                 </div>
             </div>
 

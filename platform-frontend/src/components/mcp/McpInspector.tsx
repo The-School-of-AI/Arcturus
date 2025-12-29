@@ -3,6 +3,7 @@ import { useAppStore } from '@/store';
 import { Settings2, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
+import { API_BASE } from '@/lib/api';
 
 interface Tool {
     name: string;
@@ -22,7 +23,7 @@ export const McpInspector: React.FC = () => {
         const fetchTools = async () => {
             setLoading(true);
             try {
-                const res = await axios.get(`http://localhost:8000/mcp/connected_tools`);
+                const res = await axios.get(`${API_BASE}/mcp/connected_tools`);
                 const serverTools = res.data.servers[selectedMcpServer] || [];
                 setTools(serverTools);
 

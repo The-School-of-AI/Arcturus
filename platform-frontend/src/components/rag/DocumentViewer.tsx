@@ -14,14 +14,12 @@ import '@react-pdf-viewer/search/lib/styles/index.css';
 import { renderAsync } from 'docx-preview';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 import { useTheme } from '@/components/theme';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
-
-const API_BASE = 'http://localhost:8000';
 
 interface TabButtonProps {
     label: string;

@@ -3,14 +3,13 @@ import { Box, Package, Terminal, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { useAppStore } from '@/store';
+import { API_BASE } from '@/lib/api';
 
 interface McpTool {
     name: string;
     description: string;
     file: string;
 }
-
-const API_BASE = 'http://localhost:8000';
 
 export const McpPanel: React.FC = () => {
     const { setSelectedMcpServer } = useAppStore();

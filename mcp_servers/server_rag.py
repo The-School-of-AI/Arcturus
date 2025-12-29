@@ -27,21 +27,24 @@ import asyncio
 import concurrent.futures
 import threading
 
-
+# Add config to path and import settings
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config.settings_loader import settings, get_ollama_url, get_model, get_timeout
 
 mcp = FastMCP("Local Storage RAG")
 
-EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
-OLLAMA_CHAT_URL = "http://127.0.0.1:11434/api/chat"
-OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-EMBED_MODEL = "nomic-embed-text"
-RAG_LLM_MODEL = "gemma3:4b"  # Used for semantic chunking (upgraded from 1b)
-VISION_MODEL = "gemma3:4b"  # Good text extraction (4B multimodal)
-CHUNK_SIZE = 256
-CHUNK_OVERLAP = 40
-MAX_CHUNK_LENGTH = 512  # characters
-TOP_K = 3  # FAISS top-K matches
-OLLAMA_TIMEOUT = 300 # Seconds
+# --- Settings from centralized config ---
+EMBED_URL = get_ollama_url("embeddings")
+OLLAMA_CHAT_URL = get_ollama_url("chat")
+OLLAMA_URL = get_ollama_url("generate")
+EMBED_MODEL = get_model("embedding")
+RAG_LLM_MODEL = get_model("semantic_chunking")
+VISION_MODEL = get_model("image_captioning")
+CHUNK_SIZE = settings["rag"]["chunk_size"]
+CHUNK_OVERLAP = settings["rag"]["chunk_overlap"]
+MAX_CHUNK_LENGTH = settings["rag"]["max_chunk_length"]
+TOP_K = settings["rag"]["top_k"]
+OLLAMA_TIMEOUT = get_timeout()
 ROOT = Path(__file__).parent.resolve()
 
 # Global indexing status for progress tracking

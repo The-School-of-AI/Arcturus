@@ -28,6 +28,7 @@ import { AppGrid } from '@/features/apps/components/AppGrid';
 import { AppInspector } from '@/features/apps/components/AppInspector';
 import { McpBrowser } from '../mcp/McpBrowser';
 import { McpInspector } from '../mcp/McpInspector';
+import { SettingsPage } from '../settings/SettingsPage';
 
 export const AppLayout: React.FC = () => {
     const { viewMode, sidebarTab, isAppViewMode } = useAppStore();
@@ -101,7 +102,9 @@ export const AppLayout: React.FC = () => {
 
                 {/* Center Canvas or Document Viewer */}
                 <div className="flex-1 relative bg-grid-dots overflow-hidden">
-                    {sidebarTab === 'rag' ? (
+                    {sidebarTab === 'settings' ? (
+                        <SettingsPage />
+                    ) : sidebarTab === 'rag' ? (
                         <DocumentViewer />
                     ) : sidebarTab === 'explorer' ? (
                         <FlowWorkspace />
