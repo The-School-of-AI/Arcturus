@@ -1,0 +1,544 @@
+{
+  "id": "bangalore",
+  "name": "Bangalore in 2026",
+  "description": "",
+  "cards": [
+    {
+      "id": "h1",
+      "type": "header",
+      "label": "Bangalore in 2026",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Bangalore in 2026: Weather, neighborhoods, costs, transit, and a practical plan"
+      },
+      "style": {}
+    },
+    {
+      "id": "t1",
+      "type": "trend",
+      "label": "Avg Rent (2BHK)",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "\u20b945K",
+        "change": 6.8
+      },
+      "style": {}
+    },
+    {
+      "id": "t2",
+      "type": "trend",
+      "label": "Commute Time",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "47 min",
+        "change": -3.2
+      },
+      "style": {}
+    },
+    {
+      "id": "t3",
+      "type": "trend",
+      "label": "AQI (Typical)",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "92",
+        "change": 4.1
+      },
+      "style": {}
+    },
+    {
+      "id": "t4",
+      "type": "trend",
+      "label": "Cafe Spend",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "\u20b9380",
+        "change": 2.5
+      },
+      "style": {}
+    },
+    {
+      "id": "md1",
+      "type": "markdown",
+      "label": "Quick Orientation",
+      "config": {},
+      "data": {
+        "content": "## What Bangalore feels like in 2026\n- **Neighborhood-first city**: traffic makes proximity your superpower.\n- **Work + cafes + parks** rhythm.\n- **Two big seasons to plan for**: monsoon vs pleasant months.\n\n**Goal**: pick *where to stay*, *how to commute*, and *what to do* without burning time in traffic."
+      },
+      "style": {}
+    },
+    {
+      "id": "line1",
+      "type": "line_chart",
+      "label": "Weather Pattern Snapshot",
+      "config": {},
+      "data": {
+        "title": "Typical Temperature & Rain Feel (Illustrative)",
+        "xLabel": "Month",
+        "yLabel": "Index",
+        "series": [
+          {
+            "name": "Temp Comfort",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 82
+              },
+              {
+                "x": "Feb",
+                "y": 84
+              },
+              {
+                "x": "Mar",
+                "y": 78
+              },
+              {
+                "x": "Apr",
+                "y": 72
+              },
+              {
+                "x": "May",
+                "y": 70
+              },
+              {
+                "x": "Jun",
+                "y": 58
+              },
+              {
+                "x": "Jul",
+                "y": 55
+              },
+              {
+                "x": "Aug",
+                "y": 57
+              },
+              {
+                "x": "Sep",
+                "y": 60
+              },
+              {
+                "x": "Oct",
+                "y": 66
+              },
+              {
+                "x": "Nov",
+                "y": 76
+              },
+              {
+                "x": "Dec",
+                "y": 80
+              }
+            ]
+          },
+          {
+            "name": "Rain Intensity",
+            "color": "#a29bfe",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 8
+              },
+              {
+                "x": "Feb",
+                "y": 9
+              },
+              {
+                "x": "Mar",
+                "y": 14
+              },
+              {
+                "x": "Apr",
+                "y": 22
+              },
+              {
+                "x": "May",
+                "y": 35
+              },
+              {
+                "x": "Jun",
+                "y": 78
+              },
+              {
+                "x": "Jul",
+                "y": 86
+              },
+              {
+                "x": "Aug",
+                "y": 80
+              },
+              {
+                "x": "Sep",
+                "y": 62
+              },
+              {
+                "x": "Oct",
+                "y": 40
+              },
+              {
+                "x": "Nov",
+                "y": 18
+              },
+              {
+                "x": "Dec",
+                "y": 10
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "bar1",
+      "type": "bar_chart",
+      "label": "Neighborhood Vibes",
+      "config": {
+        "showValues": true
+      },
+      "data": {
+        "title": "Where People Usually Anchor (Illustrative)",
+        "xLabel": "Area",
+        "yLabel": "Popularity Index",
+        "points": [
+          {
+            "x": "Indiranagar",
+            "y": 82,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Koramangala",
+            "y": 78,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "HSR",
+            "y": 74,
+            "color": "#eaff00"
+          },
+          {
+            "x": "Whitefield",
+            "y": 70,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "Jayanagar",
+            "y": 66,
+            "color": "#00cec9"
+          },
+          {
+            "x": "Hebbal",
+            "y": 58,
+            "color": "#6c5ce7"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "tbl1",
+      "type": "table",
+      "label": "Area Shortlist Matrix",
+      "config": {},
+      "data": {
+        "headers": [
+          "Area",
+          "Best For",
+          "Commute Risk",
+          "Nightlife",
+          "Greenery",
+          "Notes"
+        ],
+        "rows": [
+          [
+            "Indiranagar",
+            "Cafes + social",
+            "Medium",
+            "High",
+            "Medium",
+            "Great if you stay close to work"
+          ],
+          [
+            "Koramangala",
+            "Startups + food",
+            "Medium",
+            "High",
+            "Medium",
+            "Busy, energetic, lots of options"
+          ],
+          [
+            "HSR",
+            "Balanced living",
+            "Medium",
+            "Medium",
+            "Medium",
+            "Good value; depends on sector"
+          ],
+          [
+            "Whitefield",
+            "Tech parks",
+            "High",
+            "Medium",
+            "Medium",
+            "Stay here if work is here"
+          ],
+          [
+            "Jayanagar",
+            "Quiet + parks",
+            "Low",
+            "Low",
+            "High",
+            "Classic Bengaluru, calmer pace"
+          ],
+          [
+            "Hebbal",
+            "Airport-side",
+            "Medium",
+            "Low",
+            "Medium",
+            "Useful if frequent airport runs"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed1",
+      "type": "feed",
+      "label": "City Pulse",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Traffic advisory: peak-hour corridor hotspots",
+            "time": "Today"
+          },
+          {
+            "title": "Weather note: light showers likely this week",
+            "time": "Yesterday"
+          },
+          {
+            "title": "Weekend events: art markets + live gigs",
+            "time": "2d ago"
+          },
+          {
+            "title": "Metro update: station access & last-mile tips",
+            "time": "3d ago"
+          },
+          {
+            "title": "Food trail: new openings in Indiranagar",
+            "time": "4d ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "sum1",
+      "type": "summary",
+      "label": "Suggested Plan (7 Days)",
+      "config": {},
+      "data": {
+        "text": "A practical 7-day arc: settle, scout neighborhoods, do 2 experience days, and keep 1 buffer day for traffic surprises.",
+        "bullets": [
+          "\u2713 Day 1: Arrive + local SIM + commute test run",
+          "\u2713 Day 2: Neighborhood walk: Indiranagar/Koramangala",
+          "\u2713 Day 3: Workday simulation: cafe + meetings + transit",
+          "\u2713 Day 4: Green day: Cubbon/Lalbagh + museums",
+          "\u2713 Day 5: South Bengaluru: Jayanagar + food trail",
+          "\u2713 Day 6: Weekend escape option (Nandi/Skandagiri/Mysuru)",
+          "\u2713 Day 7: Wrap + shortlist stays + budget check"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "txt1",
+      "type": "text",
+      "label": "Packing Notes",
+      "config": {},
+      "data": {
+        "text": "Bring a light rain layer year-round, comfy walking shoes, and a power bank. If monsoon months: quick-dry clothing, waterproof bag cover, and spare footwear. If you\u2019ll do coworking hops: a laptop sleeve and a compact extension plug help."
+      },
+      "style": {}
+    },
+    {
+      "id": "ta1",
+      "type": "textarea",
+      "label": "Notes & Constraints",
+      "config": {},
+      "data": {
+        "label": "Notes",
+        "placeholder": "E.g., office location, preferred vibe, max commute, diet, must-visit places..."
+      },
+      "style": {}
+    },
+    {
+      "id": "log1",
+      "type": "log",
+      "label": "Planner Log",
+      "config": {},
+      "data": {
+        "logs": [
+          {
+            "level": "info",
+            "message": "Loaded Bangalore template (2026)"
+          },
+          {
+            "level": "info",
+            "message": "Ready: pick dates, purpose, and stay style"
+          },
+          {
+            "level": "warning",
+            "message": "Traffic variance can dominate day plans"
+          },
+          {
+            "level": "info",
+            "message": "Use area shortlist matrix to reduce commute risk"
+          }
+        ]
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "h1",
+      "x": 0,
+      "y": 0,
+      "w": 20,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "t1",
+      "x": 0,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "t2",
+      "x": 5,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "t3",
+      "x": 10,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "t4",
+      "x": 15,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "md1",
+      "x": 0,
+      "y": 5,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "line1",
+      "x": 0,
+      "y": 11,
+      "w": 12,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "bar1",
+      "x": 0,
+      "y": 17,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "tbl1",
+      "x": 12,
+      "y": 11,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "feed1",
+      "x": 8,
+      "y": 5,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "sum1",
+      "x": 12,
+      "y": 17,
+      "w": 8,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "txt1",
+      "x": 12,
+      "y": 22,
+      "w": 8,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "ta1",
+      "x": 0,
+      "y": 25,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "log1",
+      "x": 6,
+      "y": 25,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767006669604
+}
