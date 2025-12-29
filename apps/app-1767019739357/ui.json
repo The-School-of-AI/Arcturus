@@ -1,0 +1,504 @@
+{
+  "id": "app-1767019739357",
+  "name": "Kasauli",
+  "description": "",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Kasauli: A Hill Station Overview",
+      "context": "Title of the dashboard, introducing Kasauli.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Kasauli: A Hill Station Overview"
+      },
+      "style": {}
+    },
+    {
+      "id": "weather_metric",
+      "type": "metric",
+      "label": "Current Temperature",
+      "context": "Current temperature in Kasauli.",
+      "config": {},
+      "data": {
+        "value": "13\u00b0C",
+        "change": -8,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "humidity_metric",
+      "type": "metric",
+      "label": "Humidity",
+      "context": "Current humidity level in Kasauli.",
+      "config": {},
+      "data": {
+        "value": "74%",
+        "change": 36,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "wind_metric",
+      "type": "metric",
+      "label": "Wind Speed",
+      "context": "Current wind speed in Kasauli.",
+      "config": {},
+      "data": {
+        "value": "6 km/h",
+        "change": 1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "elevation_metric",
+      "type": "metric",
+      "label": "Elevation",
+      "context": "Elevation of Kasauli above sea level.",
+      "config": {},
+      "data": {
+        "value": "1,800m",
+        "change": 0,
+        "trend": "stable"
+      },
+      "style": {}
+    },
+    {
+      "id": "forecast_chart",
+      "type": "line_chart",
+      "label": "Temperature Forecast",
+      "context": "Temperature forecast for the next 5 days in Kasauli.",
+      "config": {},
+      "data": {
+        "title": "5-Day Temperature Forecast",
+        "xLabel": "Day",
+        "yLabel": "Temperature (\u00b0C)",
+        "series": [
+          {
+            "name": "Temperature",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Dec 30",
+                "y": 14
+              },
+              {
+                "x": "Dec 31",
+                "y": 14
+              },
+              {
+                "x": "Jan 1",
+                "y": 10
+              },
+              {
+                "x": "Jan 2",
+                "y": 9
+              },
+              {
+                "x": "Jan 3",
+                "y": 11
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "precipitation_chart",
+      "type": "bar_chart",
+      "label": "Precipitation Forecast",
+      "context": "Precipitation forecast for the next 5 days in Kasauli.",
+      "config": {},
+      "data": {
+        "title": "5-Day Precipitation Forecast",
+        "xLabel": "Day",
+        "yLabel": "Precipitation (mm)",
+        "points": [
+          {
+            "x": "Dec 30",
+            "y": 0,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "Dec 31",
+            "y": 0,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "Jan 1",
+            "y": 0,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "Jan 2",
+            "y": 0,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "Jan 3",
+            "y": 0,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "population_metric",
+      "type": "metric",
+      "label": "Population",
+      "context": "Current population of Kasauli.",
+      "config": {},
+      "data": {
+        "value": "3,885",
+        "change": 0,
+        "trend": "stable"
+      },
+      "style": {}
+    },
+    {
+      "id": "avg_temp_metric",
+      "type": "metric",
+      "label": "Avg. Yearly Temperature",
+      "context": "Average yearly temperature in Kasauli.",
+      "config": {},
+      "data": {
+        "value": "21\u00b0C",
+        "change": 3,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "literacy_metric",
+      "type": "metric",
+      "label": "Literacy Rate",
+      "context": "Literacy rate in Kasauli.",
+      "config": {},
+      "data": {
+        "value": "91.23%",
+        "change": 0,
+        "trend": "stable"
+      },
+      "style": {}
+    },
+    {
+      "id": "tourist_metric",
+      "type": "metric",
+      "label": "Annual Tourist Visits",
+      "context": "Number of tourists visiting Kasauli annually.",
+      "config": {},
+      "data": {
+        "value": "7,400,000",
+        "change": 3.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "about_kasauli",
+      "type": "text",
+      "label": "About Kasauli",
+      "context": "Brief description about Kasauli's history and significance.",
+      "config": {},
+      "data": {
+        "text": "Kasauli is a cantonment town and a popular hill station in the Solan district of Himachal Pradesh, India. It is located in the foothills of the Himalayas, offering scenic views and a pleasant climate. The cantonment was established by the British Raj in 1842 as a Colonial hill station"
+      },
+      "style": {}
+    },
+    {
+      "id": "places_to_visit",
+      "type": "markdown",
+      "label": "Places to Visit",
+      "context": "List of popular places to visit in Kasauli.",
+      "config": {},
+      "data": {
+        "content": "## Top Attractions:\n* Monkey Point\n* Gilbert Trail\n* Sunset Point\n* Christ Church\n* Kasauli Brewery"
+      },
+      "style": {}
+    },
+    {
+      "id": "image_kasauli",
+      "type": "image",
+      "label": "Kasauli Image",
+      "context": "Representative image of Kasauli.",
+      "config": {},
+      "data": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Kasauli_aerial_view.jpg/1280px-Kasauli_aerial_view.jpg"
+      },
+      "style": {}
+    },
+    {
+      "id": "divider",
+      "type": "divider",
+      "label": "Divider",
+      "context": "Horizontal line separator.",
+      "config": {},
+      "data": {},
+      "style": {}
+    },
+    {
+      "id": "feed",
+      "type": "feed",
+      "label": "News about Himachal Pradesh",
+      "context": "Latest news about Himachal Pradesh.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Himachal Pradesh reels under flash floods: 2 dead, 6 missing after cloudbursts",
+            "time": "2025-12-29"
+          },
+          {
+            "title": "Medical services severely hit across Himachal Pradesh as doctors go on indefinite strike",
+            "time": "2025-12-29"
+          },
+          {
+            "title": "Fresh snowfall revives tourist buzz at Rohtang, Shinkula ahead of New Year",
+            "time": "2025-12-25"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "hotel_rating",
+      "type": "rating",
+      "label": "Hotel Rating",
+      "context": "Average rating of hotels in Kasauli.",
+      "config": {},
+      "data": {
+        "value": 4,
+        "max": 5
+      },
+      "style": {}
+    },
+    {
+      "id": "best_time",
+      "type": "text",
+      "label": "Best Time to Visit",
+      "context": "Best time to visit Kasauli.",
+      "config": {},
+      "data": {
+        "text": "The best time to visit Kasauli is during the months of February, March, October, November and December, with comfortable temperatures from 19.5\u00b0C to 28.0\u00b0C."
+      },
+      "style": {}
+    },
+    {
+      "id": "local_cuisine",
+      "type": "tags_input",
+      "label": "Local Cuisine",
+      "context": "List of local cuisine available in Kasauli.",
+      "config": {},
+      "data": {
+        "tags": [
+          "Momos",
+          "Thukpa",
+          "Sidu",
+          "Madra"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "spacer",
+      "type": "spacer",
+      "label": "Spacer",
+      "context": "Empty vertical space",
+      "config": {},
+      "data": {},
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 18,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "weather_metric",
+      "x": 0,
+      "y": 8,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "humidity_metric",
+      "x": 6,
+      "y": 8,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "wind_metric",
+      "x": 12,
+      "y": 8,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "elevation_metric",
+      "x": 12,
+      "y": 11,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "forecast_chart",
+      "x": 0,
+      "y": 11,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "precipitation_chart",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "population_metric",
+      "x": 12,
+      "y": 14,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "avg_temp_metric",
+      "x": 12,
+      "y": 23,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "literacy_metric",
+      "x": 12,
+      "y": 17,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "tourist_metric",
+      "x": 12,
+      "y": 20,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "about_kasauli",
+      "x": 0,
+      "y": 27,
+      "w": 8,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "places_to_visit",
+      "x": 8,
+      "y": 27,
+      "w": 8,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "image_kasauli",
+      "x": 0,
+      "y": 2,
+      "w": 18,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "divider",
+      "x": 0,
+      "y": 31,
+      "w": 20,
+      "h": 1,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "feed",
+      "x": 0,
+      "y": 32,
+      "w": 12,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "hotel_rating",
+      "x": 12,
+      "y": 32,
+      "w": 6,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "best_time",
+      "x": 12,
+      "y": 36,
+      "w": 6,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "local_cuisine",
+      "x": 12,
+      "y": 34,
+      "w": 6,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "spacer",
+      "x": 0,
+      "y": 40,
+      "w": 20,
+      "h": 2,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767025594212,
+  "lastHydrated": null
+}

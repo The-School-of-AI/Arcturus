@@ -90,5 +90,10 @@ export const api = {
     hydrateApp: async (appId: string): Promise<any> => {
         const res = await axios.post(`${API_BASE}/apps/${appId}/hydrate`);
         return res.data;
+    },
+
+    generateApp: async (name: string, prompt: string): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/apps/generate`, { name, prompt });
+        return res.data;
     }
 };

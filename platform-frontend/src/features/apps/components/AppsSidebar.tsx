@@ -5,6 +5,8 @@ import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, Cand
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
+import { AppCreationModal } from './AppCreationModal';
+import { AppGenerationModal } from './AppGenerationModal';
 
 interface AppsSidebarProps {
     className?: string;
@@ -1093,9 +1095,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 };
 
 const SavedAppsList = () => {
-    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps, isAppViewMode, setIsAppViewMode } = useAppStore();
+    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps, isAppViewMode, setIsAppViewMode, generateApp } = useAppStore();
     const [name, setName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [showCreationModal, setShowCreationModal] = useState(false);
+    const [showGenerationModal, setShowGenerationModal] = useState(false);
 
     // Auto-refresh apps every 5 seconds (Pseudo Hot-Loading)
     useEffect(() => {
@@ -1132,7 +1136,7 @@ const SavedAppsList = () => {
                         <RefreshCw className="w-3 h-3" />
                     </button>
                     <button
-                        onClick={createNewApp}
+                        onClick={() => setShowCreationModal(true)}
                         className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-foreground transition-colors"
                     >
                         <Plus className="w-3 h-3" />
@@ -1152,28 +1156,23 @@ const SavedAppsList = () => {
                 />
             </div>
 
-            {/* Save Controls - Only shown when starting fresh or renaming */}
-            {!activeApp && (
-                <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-xl border border-border/50">
-                    <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Save New App</label>
-                    <div className="flex gap-2">
-                        <input
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            placeholder="Dashboard Name..."
-                            className="flex-1 bg-background border border-border rounded-lg text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground"
-                        />
-                        <button
-                            onClick={handleSave}
-                            disabled={!name.trim()}
-                            className="p-2 bg-neon-yellow/20 hover:bg-neon-yellow/30 text-neon-yellow rounded-lg border border-neon-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="Save App"
-                        >
-                            <Save className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Modals */}
+            <AppCreationModal
+                isOpen={showCreationModal}
+                onClose={() => setShowCreationModal(false)}
+                onCreateBlank={() => {
+                    createNewApp();
+                }}
+                onGenerateWithAI={() => setShowGenerationModal(true)}
+            />
+
+            <AppGenerationModal
+                isOpen={showGenerationModal}
+                onClose={() => setShowGenerationModal(false)}
+                onGenerate={async (name, prompt) => {
+                    await generateApp(name, prompt);
+                }}
+            />
 
             {/* List */}
             <div className="space-y-3">

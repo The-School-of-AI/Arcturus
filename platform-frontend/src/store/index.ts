@@ -146,6 +146,7 @@ interface AppsSlice {
     revertAppChanges: () => void;
     deleteApp: (id: string) => Promise<void>;
     hydrateApp: (id: string) => Promise<void>;
+    generateApp: (name: string, prompt: string) => Promise<void>;
     loadShowcaseApp: () => Promise<void>;
     isAppViewMode: boolean;
     setIsAppViewMode: (isView: boolean) => void;
@@ -712,6 +713,21 @@ export const useAppStore = create<AppState>()(
                     }
                 } catch (e) {
                     console.error("Failed to hydrate app", e);
+                    throw e;
+                }
+            },
+
+            generateApp: async (name, prompt) => {
+                try {
+                    const result = await api.generateApp(name, prompt);
+                    if (result.status === 'success' && result.data) {
+                        // Refresh apps list to include the new generated app
+                        await get().fetchApps();
+                        // Load the newly generated app
+                        await get().loadApp(result.id, result.data);
+                    }
+                } catch (e) {
+                    console.error("Failed to generate app", e);
                     throw e;
                 }
             },

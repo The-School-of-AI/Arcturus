@@ -1332,6 +1332,116 @@ async def delete_app(app_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class GenerateAppRequest(BaseModel):
+    name: str
+    prompt: str
+    model: Optional[str] = None
+
+
+@app.post("/apps/generate")
+async def generate_app(request: GenerateAppRequest):
+    """Generate a new app using AI based on user prompt."""
+    import time
+    from datetime import datetime
+    try:
+        print(f"[Generate] Starting app generation: {request.name}")
+        print(f"[Generate] User prompt: {request.prompt[:100]}...")
+        
+        # Load generation prompt
+        prompt_file = Path(__file__).parent / "AppGenerationPrompt.md"
+        if not prompt_file.exists():
+            raise HTTPException(status_code=500, detail="App generation prompt not found")
+        
+        generation_prompt = prompt_file.read_text()
+        generation_prompt = generation_prompt.replace("{{USER_PROMPT}}", request.prompt)
+        print(f"[Generate] Prompt prepared, length: {len(generation_prompt)} chars")
+        
+        # Get model from settings (same as agents)
+        import yaml
+        config_dir = Path(__file__).parent / "config"
+        profile = yaml.safe_load((config_dir / "profiles.yaml").read_text())
+        models_config = json.loads((config_dir / "models.json").read_text())
+        
+        model_key = profile.get("llm", {}).get("text_generation", "gemini")
+        model_info = models_config.get("models", {}).get(model_key, {})
+        model = model_info.get("model", "gemini-2.0-flash")
+        
+        # Allow request override
+        if request.model:
+            model = request.model
+        print(f"[Generate] Using model: {model} (from config key: {model_key})")
+        
+        # Call Gemini for generation with Google Search enabled
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+        # Enable Google Search for real-time data
+        google_search_tool = types.Tool(google_search=types.GoogleSearch())
+        
+        print("[Generate] Calling Gemini with Google Search enabled...")
+        response = client.models.generate_content(
+            model=model,
+            contents=generation_prompt,
+            config=types.GenerateContentConfig(
+                tools=[google_search_tool],
+                temperature=0.3  # Slightly higher for creativity in layout
+            )
+        )
+        response_text = response.text.strip()
+        print(f"[Generate] Got response, length: {len(response_text)} chars")
+        
+        # Clean up response - extract JSON from markdown fences or explanatory text
+        import re
+        
+        # Try to find JSON within markdown code fences
+        json_match = re.search(r'```(?:json)?\s*\n(.*?)\n```', response_text, re.DOTALL)
+        if json_match:
+            response_text = json_match.group(1).strip()
+            print("[Generate] Extracted JSON from markdown fences")
+        else:
+            # Try to find JSON by looking for the opening brace
+            json_start = response_text.find('{')
+            if json_start > 0:
+                response_text = response_text[json_start:].strip()
+                print(f"[Generate] Trimmed explanatory text, JSON starts at char {json_start}")
+        
+        # Parse the generated JSON
+        generated_data = json.loads(response_text)
+        print(f"[Generate] Parsed JSON successfully, {len(generated_data.get('cards', []))} cards")
+        
+        # Create app ID and folder
+        app_id = f"app-{int(time.time() * 1000)}"
+        apps_dir = Path(__file__).parent / "apps"
+        apps_dir.mkdir(exist_ok=True)
+        
+        app_folder = apps_dir / app_id
+        app_folder.mkdir(exist_ok=True)
+        
+        # Add metadata
+        generated_data["id"] = app_id
+        generated_data["name"] = request.name
+        generated_data["description"] = request.prompt[:200]  # First 200 chars as description
+        generated_data["lastModified"] = int(time.time() * 1000)
+        generated_data["lastHydrated"] = int(time.time() * 1000)  # Just generated = hydrated
+        
+        # Save to file
+        ui_file = app_folder / "ui.json"
+        ui_file.write_text(json.dumps(generated_data, indent=2))
+        print(f"[Generate] Saved generated app to {ui_file}")
+        
+        return {"status": "success", "id": app_id, "data": generated_data}
+    except json.JSONDecodeError as e:
+        print(f"[Generate] JSON parse error: {e}")
+        print(f"[Generate] Response was: {response_text[:500] if 'response_text' in dir() else 'N/A'}...")
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response as JSON: {str(e)}")
+    except Exception as e:
+        print(f"[Generate] Error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class HydrateRequest(BaseModel):
     model: Optional[str] = None  # Override model if needed
 
@@ -1402,14 +1512,21 @@ async def hydrate_app(app_id: str, request: HydrateRequest = None):
         response_text = response.text.strip()
         print(f"[Hydrate] Got response, length: {len(response_text)} chars")
         
-        # Clean up response (remove markdown fences if present)
-        if response_text.startswith("```"):
-            lines = response_text.split("\n")
-            # Handle both ```json and ``` endings
-            start_idx = 1
-            end_idx = -1 if lines[-1].strip() in ("```", "") else len(lines)
-            response_text = "\n".join(lines[start_idx:end_idx]).strip()
-            print("[Hydrate] Cleaned markdown fences from response")
+        # Clean up response - extract JSON from markdown fences or explanatory text
+        # Gemini often adds "Okay, here's the JSON:" or similar before the actual JSON
+        import re
+        
+        # Try to find JSON within markdown code fences
+        json_match = re.search(r'```(?:json)?\s*\n(.*?)\n```', response_text, re.DOTALL)
+        if json_match:
+            response_text = json_match.group(1).strip()
+            print("[Hydrate] Extracted JSON from markdown fences")
+        else:
+            # Try to find JSON by looking for the opening brace
+            json_start = response_text.find('{')
+            if json_start > 0:
+                response_text = response_text[json_start:].strip()
+                print(f"[Hydrate] Trimmed explanatory text, JSON starts at char {json_start}")
         
         # Parse the hydrated JSON
         hydrated_data = json.loads(response_text)
