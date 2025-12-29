@@ -82,46 +82,6 @@ def get_safe_chunks(text: str, max_words=512, overlap=50) -> list[str]:
             break
     return sub_chunks
 
-# === CHUNKING ===
-
-
-
-
-
-def are_related(chunk1: str, chunk2: str, index: int) -> bool:
-    prompt = f"""
-You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up.
-
-CHUNK 1: "{chunk1}"
-CHUNK 2: "{chunk2}"
-
-Should these two chunks appear in the **same paragraph or flow of writing**?
-
-Even if the subject changes slightly (e.g., One person to another), treat them as related **if they belong to the same broader context or topic** (like cricket, AI, or real estate). 
-
-Also consider cues like continuity words (e.g., "However", "But", "Also") or references that link the sentences.
-
-Answer with:
-Yes – if the chunks should appear together in the same paragraph or section  
-No – if they are about different topics and should be separated
-
-Just respond in one word (Yes or No), and do not provide any further explanation.
-"""
-    print(f"\nComparing chunk {index} and {index+1}")
-    print(f"  Chunk {index} → {chunk1[:60]}{'...' if len(chunk1) > 60 else ''}")
-    print(f"  Chunk {index+1} → {chunk2[:60]}{'...' if len(chunk2) > 60 else ''}")
-
-    result = requests.post(OLLAMA_CHAT_URL, json={
-        "model": VISION_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False
-    }, timeout=OLLAMA_TIMEOUT)
-    result.raise_for_status()
-    reply = result.json().get("message", {}).get("content", "").strip().lower()
-    print(f"Model reply: {reply}")
-    return reply.startswith("yes")
-
-
 
 @mcp.tool()
 def preview_document(path: str) -> MarkdownOutput:
@@ -497,11 +457,16 @@ def semantic_merge(text: str) -> list[str]:
         # OPTIMIZED: Shortened input (600+300 chars instead of full text)
         text_preview = chunk_text[:600] + "\n...[MIDDLE]...\n" + chunk_text[-300:]
         
-        prompt = f"""Does this text have 2+ distinct topics?
-YES: Reply with first 15 words of second topic.
-NO: Reply "SINGLE"
+        prompt = fprompt = f"""You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
 
-{text_preview}"""
+Does the TEXT BLOCK below have 2+ distinct topics? Should these two chunks appear in the **same paragraph or flow of writing**? Even if the subject changes slightly (e.g., One person to another), treat them as related **if they belong to the same broader context or topic** (like cricket, AI, or real estate). Also consider cues like continuity words (e.g., "However", "But", "Also") or references that link the sentences.
+
+YES: Reply with first 15 words of second topic.
+NO: Reply "SINGLE
+
+TEXT BLOCK: {text_preview}
+
+"""
 
         try:
             result = requests.post(OLLAMA_CHAT_URL, json={
