@@ -465,7 +465,15 @@ def semantic_merge(text: str) -> list[str]:
         preview_suffix = chunk_text[suffix_start:] if suffix_start > 0 else chunk_text[-300:]
         text_preview = f"{preview_prefix}\n...[MIDDLE]...\n{preview_suffix}"
         
-        prompt = f"""You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
+        try:
+            # Try to load prompt from file
+            prompt_path = ROOT.parent / "prompts" / "rag_semantic_chunking.md"
+            base_prompt = prompt_path.read_text().strip()
+            prompt = base_prompt.replace("{text_preview}", text_preview)
+        except Exception as e:
+            mcp_log("WARN", f"Failed to load prompt file: {e}")
+            # Fallback prompt
+            prompt = f"""You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
 
 Does the TEXT BLOCK below have 2+ distinct topics? Should these two chunks appear in the **same paragraph or flow of writing**? Even if the subject changes slightly (e.g., One person to another), treat them as related **if they belong to the same broader context or topic** (like cricket, AI, or real estate). Also consider cues like continuity words (e.g., "However", "But", "Also") or references that link the sentences.
 

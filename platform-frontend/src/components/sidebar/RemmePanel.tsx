@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import axios from 'axios';
+import { API_BASE } from '@/lib/api';
 
 export const RemmePanel: React.FC = () => {
     const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories } = useAppStore();
@@ -51,7 +53,24 @@ export const RemmePanel: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    <Sparkles className="w-4 h-4 text-neon-yellow/20" />
+                    <button
+                        onClick={async () => {
+                            if (confirm('Scan recent runs for new memories?')) {
+                                try {
+                                    // Use raw fetch for this one-off action
+                                    await axios.post(`${API_BASE}/remme/scan`);
+                                    fetchMemories(); // Refresh list immediately
+                                } catch (e) {
+                                    console.error("Scan failed", e);
+                                    alert("Scan failed. Check backend logs.");
+                                }
+                            }
+                        }}
+                        className="p-1 hover:bg-neon-yellow/10 rounded-full transition-colors cursor-pointer"
+                        title="Manually scan recent runs"
+                    >
+                        <Sparkles className="w-4 h-4 text-neon-yellow/60 hover:text-neon-yellow animate-pulse" />
+                    </button>
                 </div>
             </div>
 

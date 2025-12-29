@@ -155,6 +155,21 @@ class RemmeStore:
         """Return all memories."""
         return self.memories
 
+    def get_scanned_run_ids(self):
+        """Return a set of run IDs that have already been scanned."""
+        scanned_ids = set()
+        for m in self.memories:
+            source = m.get("source", "")
+            # Looking for patterns like "run_12345" or "manual_scan_12345"
+            # Split by comma if multiple sources
+            parts = source.split(", ")
+            for part in parts:
+                if part.startswith("run_"):
+                    scanned_ids.add(part.replace("run_", ""))
+                elif part.startswith("manual_scan_"):
+                    scanned_ids.add(part.replace("manual_scan_", ""))
+        return scanned_ids
+
     def delete(self, memory_id: str):
         """Delete a memory.
         Note: FAISS deletion is complex (requires IDMap or rebuild).

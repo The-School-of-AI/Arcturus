@@ -37,23 +37,17 @@ class RemmeExtractor:
             memories_str = "\n".join([f"ID: {m['id']} | Fact: {m['text']}" for m in existing_memories])
 
         # 2. Construct the extraction prompt
-        system_prompt = f"""You are a Contextual Memory Management AI.
-Your job is to update the "Memory Vault" based on the latest conversation.
+        try:
+            prompt_path = Path(__file__).parent.parent / "prompts" / "remme_extraction.md"
+            base_prompt = prompt_path.read_text().strip()
+        except:
+            # Fallback to defaults if file missing
+            base_prompt = settings["remme"]["extraction_prompt"]
+
+        system_prompt = f"""{base_prompt}
 
 EXISTING RELEVANT MEMORIES:
 {memories_str}
-
-RULES:
-1. ANTI-FRAGMENTATION: NEVER split related items into separate facts. If you find a list (e.g. benefits of X, features of Y, steps for Z), merge them into ONE rich, coherent memory entry.
-2. NO REDUNDANCY: If the info is already captured in EXISTING RELEVANT MEMORIES, do nothing unless you have NEW details to add (in which case, use "update").
-3. CONTEXTUAL HUBS: Prefer a single "Hub" memory (e.g. "Project X Overview: Uses React, Python, and uses a Postgres DB") over three separate atomic facts.
-4. NO NEGATIVE FACTS: NEVER store that information was "not found", "unavailable", or "missing". Memory is for what we KNOW, not what we don't.
-5. NO META-LOGS: Do not store internal reasoning, code errors (e.g. "NameError"), or agent execution traces (e.g. "ThinkerAgent was invoked").
-6. HIGH SALIENCE ONLY: Focus on project decisions, user preferences, complex results, and architectural details. Ignore transient status updates.
-7. ACTIONS:
-   - "add": For truly new, unrelated facts.
-   - "update": To expand or correct an existing memory ID.
-   - "delete": If a memory is now proven false or totally irrelevant.
 
 OUTPUT FORMAT:
 A JSON list of command objects:
@@ -64,6 +58,8 @@ A JSON list of command objects:
 ]
 """
 
+        print(f"[DEBUG] RemMe Target Model: {self.model}")
+        
         try:
             response = requests.post(
                 self.api_url,
@@ -82,7 +78,7 @@ A JSON list of command objects:
             response.raise_for_status()
             result = response.json()
             content = result.get("message", {}).get("content", "[]")
-            print(f"[DEBUG] Raw Extraction Output: {content}")
+            print(f"[DEBUG] Raw Extraction Output ({len(content)} chars): {content}")
             
             # Parse JSON
             try:
@@ -103,12 +99,15 @@ A JSON list of command objects:
                     elif "action" in parsed:
                         commands = [parsed]
                 
+                print(f"[DEBUG] Parsed {len(commands)} commands.")
                 return commands
-
             except json.JSONDecodeError:
-                print(f"Failed to parse extraction JSON: {content}")
+                print(f"[WARN] Failed to parse JSON from RemMe: {content}")
                 return []
-                
+
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] Ollama Request Failed: {e}")
+            return []
         except Exception as e:
-            print(f"Extraction failed: {e}")
+            print(f"[ERROR] RemMe Extraction Unexpected Error: {e}")
             return []

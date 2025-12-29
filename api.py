@@ -33,12 +33,16 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 API Starting up...")
     await multi_mcp.start()
+    
     # Check git
     try:
         subprocess.run(["git", "--version"], capture_output=True, check=True)
         print("✅ Git found.")
     except Exception:
         print("⚠️ Git NOT found. GitHub explorer features will fail.")
+    
+    # 🧠 Start Smart Sync in background
+    asyncio.create_task(background_smart_scan())
     
     yield
     
@@ -97,6 +101,7 @@ async def process_run(run_id: str, query: str):
         # Search for past relevant facts to injecting into this run
         memory_context = ""
         context = None # Initialize for safe access in finally block
+        results = []
         try:
             emb = get_embedding(query, task_type="search_query")
             results = remme_store.search(emb, query_text=query, k=10)
@@ -871,7 +876,13 @@ async def get_memories():
             sources = [s.strip() for s in source.split(",")]
             exists = False
             for s in sources:
-                run_id = s.replace("backfill_", "")
+                # Handle various prefixes
+                run_id = s
+                for prefix in ["backfill_", "run_", "manual_scan_"]:
+                    if run_id.startswith(prefix):
+                        run_id = run_id.replace(prefix, "")
+                        break
+                
                 if not run_id: continue
                 
                 # Brute force search for session file
@@ -1406,6 +1417,137 @@ async def refresh_mcp_server(server_name: str):
     if not success:
         raise HTTPException(status_code=404, detail=f"Server {server_name} not found or not connected")
     return {"status": "success", "message": f"Metadata for {server_name} refreshed and cached"}
+
+# --- RemMe Endpoints ---
+
+# --- Background Tasks ---
+async def background_smart_scan():
+    """Scan all past sessions that haven't been processed yet."""
+    print("🧠 RemMe: Starting Smart Sync...")
+    try:
+        # 1. Identify what we have
+        scanned_ids = remme_store.get_scanned_run_ids()
+        print(f"🧠 RemMe: Found {len(scanned_ids)} already scanned sessions.")
+        
+        # 2. Identify what exists on disk
+        summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+        all_sessions = list(summaries_dir.rglob("session_*.json"))
+        
+        # 3. Find the delta
+        to_scan = []
+        for sess_path in all_sessions:
+            rid = sess_path.stem.replace("session_", "")
+            if rid not in scanned_ids:
+                to_scan.append(sess_path)
+        
+        print(f"🧠 RemMe: Identified {len(to_scan)} pending sessions to scan.")
+        
+        # 4. Process matches (Newest First)
+        to_scan.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        
+        # Limit to avoid overloading on first boot if backlog is huge
+        # But user wants full sync so maybe higher limit?
+        # Let's do 10 at a time per invocation or loop?
+        # For now, let's try to do up to 20 recent ones.
+        BATCH_SIZE = 20
+        
+        from remme.extractor import RemmeExtractor
+        extractor = RemmeExtractor()
+        
+        processed_count = 0
+        
+        for sess_path in to_scan[:BATCH_SIZE]:
+            try:
+                run_id = sess_path.stem.replace("session_", "")
+                print(f"🧠 RemMe: Auto-Scanning Run {run_id}...")
+                
+                data = json.loads(sess_path.read_text())
+                # Fix: Query is deeply nested in graph attributes for NetworkX adjacency format
+                query = data.get("graph", {}).get("original_query", "")
+                if not query:
+                    # Fallback for older formats if any
+                    query = data.get("query", "")
+                
+                # Reconstruct output
+                nodes = data.get("nodes", [])
+                output = ""
+                for n in sorted(nodes, key=lambda x: x.get("id", "")):
+                     if n.get("output"):
+                         output = n.get("output")
+                         
+                if not query:
+                    print(f"⚠️ RemMe: Run {run_id} has no query, skipping.")
+                    continue
+
+                hist = [{"role": "user", "content": query}]
+                if output:
+                    hist.append({"role": "assistant", "content": output})
+                else:
+                    # If no output, maybe it failed or is in progress. 
+                    # We can still extract from query intent? No, usually need outcome.
+                    # But user might want to remember they *tried* to do X.
+                    pass
+
+                # Search Context
+                existing = []
+                try:
+                    existing = remme_store.search(query, limit=5)
+                except:
+                    pass
+                
+                # Extract
+                commands = await asyncio.to_thread(extractor.extract, query, hist, existing)
+                
+                # Apply
+                if commands:
+                    for cmd in commands:
+                        action = cmd.get("action")
+                        text = cmd.get("text")
+                        tid = cmd.get("id")
+                        
+                        try:
+                            if action == "add" and text:
+                                emb = get_embedding(text, task_type="search_document")
+                                # Mark source as the run_id so we don't scan again
+                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                processed_count += 1
+                            elif action == "update" and tid and text:
+                                emb = get_embedding(text, task_type="search_document")
+                                remme_store.update_text(tid, text, emb)
+                                processed_count += 1
+                        except Exception as e:
+                            print(f"❌ RemMe Action Failed: {e}")
+                
+                # If no commands generated, we still need to mark it as scanned?
+                # Currently tracking is based on checking memory `source`. 
+                # If we don't add a memory, we will keep rescanning it.
+                # TODO: We might need a separate "scanned_sessions.json" or add a "null" memory for tracking?
+                # For now, if no memory extracted, we risk rescanning. 
+                # OPTIMIZATION: We should probably just rely on `modified` time or add a lightweight index file.
+                # But constrained by current architecture, let's proceed.
+                
+            except Exception as e:
+                print(f"❌ Failed to scan session {sess_path}: {e}")
+                
+        return processed_count
+
+    except Exception as e:
+        print(f"❌ Smart Scan Crashed: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0
+
+@app.post("/remme/scan")
+async def manual_remme_scan(background_tasks: BackgroundTasks):
+    """Manually trigger RemMe Smart Sync."""
+    print("🔎 RemMe: Manual Smart Scan Triggered")
+    # We run this in background so UI returns immediately? 
+    # Or user wants immediate feedback? 
+    # API usually returns 200 and lets bg work.
+    
+    background_tasks.add_task(background_smart_scan)
+    
+    return {"status": "success", "message": "Smart Sync started in background. Check logs/UI updates."}
 
 # --- Explorer Endpoints ---
 @app.get("/explorer/scan")

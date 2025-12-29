@@ -398,67 +398,91 @@ export const SettingsPage: React.FC = () => {
         </div>
     );
 
-    const renderPromptsTab = () => (
-        <div className="flex gap-4 h-[calc(100vh-240px)]">
-            {/* Prompt List */}
-            <div className="w-48 border-r border-border pr-4 overflow-y-auto">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Agent Prompts</h3>
-                <div className="space-y-1">
-                    {prompts.map((p) => (
-                        <button
-                            key={p.name}
-                            onClick={() => { setSelectedPrompt(p); setPromptContent(p.content); setHasChanges(false); }}
-                            className={cn(
-                                "w-full text-left px-2 py-1.5 rounded text-sm transition-colors",
-                                selectedPrompt?.name === p.name
-                                    ? "bg-primary/10 text-primary border border-primary/20"
-                                    : "hover:bg-muted/50 text-muted-foreground"
-                            )}
-                        >
-                            {p.name}
-                            <span className="text-[10px] text-muted-foreground ml-1">({p.lines} lines)</span>
-                        </button>
-                    ))}
+    const renderPromptsTab = () => {
+        const agentPrompts = prompts.filter(p => !['remme_extraction', 'rag_semantic_chunking'].includes(p.name));
+        const otherPrompts = prompts.filter(p => ['remme_extraction', 'rag_semantic_chunking'].includes(p.name));
+
+        return (
+            <div className="flex gap-4 h-[calc(100vh-240px)]">
+                {/* Prompt List */}
+                <div className="w-56 border-r border-border pr-4 overflow-y-auto">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Agent Prompts</h3>
+                    <div className="space-y-1 mb-6">
+                        {agentPrompts.map((p) => (
+                            <button
+                                key={p.name}
+                                onClick={() => { setSelectedPrompt(p); setPromptContent(p.content); setHasChanges(false); }}
+                                className={cn(
+                                    "w-full text-left px-2 py-1.5 rounded text-sm transition-colors",
+                                    selectedPrompt?.name === p.name
+                                        ? "bg-primary/10 text-primary border border-primary/20"
+                                        : "hover:bg-muted/50 text-muted-foreground"
+                                )}
+                            >
+                                <span className="block truncate">{p.name}</span>
+                                <span className="text-[10px] text-muted-foreground opacity-70">({p.lines} lines)</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Other Prompts</h3>
+                    <div className="space-y-1">
+                        {otherPrompts.map((p) => (
+                            <button
+                                key={p.name}
+                                onClick={() => { setSelectedPrompt(p); setPromptContent(p.content); setHasChanges(false); }}
+                                className={cn(
+                                    "w-full text-left px-2 py-1.5 rounded text-sm transition-colors",
+                                    selectedPrompt?.name === p.name
+                                        ? "bg-primary/10 text-primary border border-primary/20"
+                                        : "hover:bg-muted/50 text-muted-foreground"
+                                )}
+                            >
+                                <span className="block truncate">{p.name.replace('_', ' ')}</span>
+                                <span className="text-[10px] text-muted-foreground opacity-70">({p.lines} lines)</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {/* Editor */}
+                <div className="flex-1 flex flex-col">
+                    {selectedPrompt ? (
+                        <>
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="font-medium text-foreground">{selectedPrompt.filename}</h3>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={resetPrompt}
+                                        disabled={!selectedPrompt.has_backup}
+                                        title={selectedPrompt.has_backup ? "Reset to original" : "No changes to reset"}
+                                    >
+                                        <RotateCcw className="w-3 h-3 mr-1" />
+                                        Reset to Default
+                                    </Button>
+                                    <Button size="sm" onClick={savePrompt} disabled={saving || !hasChanges}>
+                                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                                        Save Prompt
+                                    </Button>
+                                </div>
+                            </div>
+                            <textarea
+                                value={promptContent}
+                                onChange={(e) => { setPromptContent(e.target.value); setHasChanges(true); }}
+                                className="flex-1 w-full bg-background border border-border rounded-lg p-3 text-sm font-mono resize-none"
+                                placeholder="Prompt content..."
+                            />
+                        </>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                            Select a prompt to edit
+                        </div>
+                    )}
                 </div>
             </div>
-            {/* Editor */}
-            <div className="flex-1 flex flex-col">
-                {selectedPrompt ? (
-                    <>
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-medium text-foreground">{selectedPrompt.filename}</h3>
-                            <div className="flex gap-2">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={resetPrompt}
-                                    disabled={!selectedPrompt.has_backup}
-                                    title={selectedPrompt.has_backup ? "Reset to original" : "No changes to reset"}
-                                >
-                                    <RotateCcw className="w-3 h-3 mr-1" />
-                                    Reset
-                                </Button>
-                                <Button size="sm" onClick={savePrompt} disabled={saving || !hasChanges}>
-                                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
-                                    Save Prompt
-                                </Button>
-                            </div>
-                        </div>
-                        <textarea
-                            value={promptContent}
-                            onChange={(e) => { setPromptContent(e.target.value); setHasChanges(true); }}
-                            className="flex-1 w-full bg-background border border-border rounded-lg p-3 text-sm font-mono resize-none"
-                            placeholder="Prompt content..."
-                        />
-                    </>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                        Select a prompt to edit
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+        );
+    };
 
     const renderAdvancedTab = () => (
         <div className="space-y-6">
