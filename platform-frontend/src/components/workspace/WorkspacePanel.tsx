@@ -622,8 +622,8 @@ export const WorkspacePanel: React.FC = () => {
                                             </div>
 
                                             {/* DEBUG: Dump node data to see what we actually have */}
-                                            <div className="w-full text-left bg-black/50 p-4 rounded text-[10px] font-mono whitespace-pre overflow-auto max-h-96 border border-border">
-                                                <div className="font-bold text-red-400 mb-2">RAW DATA DUMP</div>
+                                            <div className="w-full text-left bg-muted p-4 rounded text-[10px] text-foreground font-mono whitespace-pre overflow-auto max-h-96 border border-border">
+                                                <div className="font-bold text-red-500 mb-2">RAW DATA DUMP</div>
                                                 {JSON.stringify({
                                                     iterations: selectedNode?.data?.iterations,
                                                     execution_result: selectedNode?.data?.execution_result,
@@ -867,24 +867,24 @@ export const WorkspacePanel: React.FC = () => {
                                     return (
                                         <div className="preview-content bg-muted p-6 rounded-lg border border-border select-text">
                                             <style>{`
-                                                .preview-content h1 { font-size: 1.75rem; font-weight: bold; color: #F6FF4D; margin-bottom: 1rem; }
-                                                .preview-content h2 { font-size: 1.5rem; font-weight: bold; color: #F6FF4D; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
-                                                .preview-content h3 { font-size: 1.25rem; font-weight: bold; color: #e0e0e0; margin-top: 1rem; margin-bottom: 0.5rem; }
-                                                .preview-content h4 { font-size: 1.1rem; font-weight: 600; color: #d0d0d0; margin-top: 0.75rem; margin-bottom: 0.5rem; }
-                                                .preview-content p { color: #c0c0c0; line-height: 1.6; margin-bottom: 0.75rem; }
-                                                .preview-content ul, .preview-content ol { color: #b0b0b0; padding-left: 1.5rem; margin-bottom: 1rem; }
+                                                .preview-content h1 { font-size: 1.75rem; font-weight: bold; color: hsl(var(--primary)); margin-bottom: 1rem; }
+                                                .preview-content h2 { font-size: 1.5rem; font-weight: bold; color: hsl(var(--primary)); margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.5rem; }
+                                                .preview-content h3 { font-size: 1.25rem; font-weight: bold; color: hsl(var(--foreground)); margin-top: 1rem; margin-bottom: 0.5rem; }
+                                                .preview-content h4 { font-size: 1.1rem; font-weight: 600; color: hsl(var(--muted-foreground)); margin-top: 0.75rem; margin-bottom: 0.5rem; }
+                                                .preview-content p { color: hsl(var(--muted-foreground)); line-height: 1.6; margin-bottom: 0.75rem; }
+                                                .preview-content ul, .preview-content ol { color: hsl(var(--muted-foreground)); padding-left: 1.5rem; margin-bottom: 1rem; }
                                                 .preview-content li { margin-bottom: 0.25rem; }
                                                 .preview-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-                                                .preview-content th { background: rgba(255,255,255,0.1); color: #F6FF4D; padding: 0.75rem; text-align: left; border: 1px solid rgba(255,255,255,0.2); font-weight: 600; }
-                                                .preview-content td { padding: 0.75rem; border: 1px solid rgba(255,255,255,0.1); color: #c0c0c0; }
-                                                .preview-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-                                                .preview-content strong, .preview-content b { color: #F6FF4D; font-weight: 600; }
-                                                .preview-content i, .preview-content em { color: #a0a0a0; font-style: italic; }
+                                                .preview-content th { background: hsl(var(--muted)); color: hsl(var(--primary)); padding: 0.75rem; text-align: left; border: 1px solid hsl(var(--border)); font-weight: 600; }
+                                                .preview-content td { padding: 0.75rem; border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+                                                .preview-content tr:nth-child(even) td { background: hsl(var(--background)); }
+                                                .preview-content strong, .preview-content b { color: hsl(var(--primary)); font-weight: 600; }
+                                                .preview-content i, .preview-content em { color: hsl(var(--muted-foreground)); font-style: italic; }
                                                 .preview-content a { color: #60a5fa; text-decoration: underline; }
-                                                .preview-content code { background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px; color: #4ade80; }
-                                                .preview-content pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x: auto; }
-                                                .preview-content blockquote { border-left: 3px solid #F6FF4D; padding-left: 1rem; color: #a0a0a0; font-style: italic; }
-                                                .preview-content .report { color: #e0e0e0; }
+                                                .preview-content code { background: hsl(var(--background)); padding: 0.2rem 0.4rem; border-radius: 4px; color: hsl(var(--primary)); border: 1px solid hsl(var(--border)); }
+                                                .preview-content pre { background: hsl(var(--background)); padding: 1rem; border-radius: 8px; overflow-x: auto; border: 1px solid hsl(var(--border)); }
+                                                .preview-content blockquote { border-left: 3px solid hsl(var(--primary)); padding-left: 1rem; color: hsl(var(--muted-foreground)); font-style: italic; }
+                                                .preview-content .report { color: hsl(var(--foreground)); }
                                             `}</style>
                                             {contentType === 'html' ? (
                                                 <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />

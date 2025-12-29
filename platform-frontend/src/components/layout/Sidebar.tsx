@@ -162,61 +162,71 @@ export const Sidebar: React.FC = () => {
 
                         {/* List - Matches Remme Style */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
-                            {filteredRuns.map((run) => (
-                                <div
-                                    key={run.id}
-                                    onClick={() => setCurrentRun(run.id)}
-                                    className={cn(
-                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                        "bg-gradient-to-br from-card to-muted/20",
-                                        "hover:shadow-md",
-                                        currentRun?.id === run.id
-                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60"
-                                            : "border-border/50 hover:border-white/20"
-                                    )}
-                                >
-                                    <div className="flex justify-between items-start gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <p className={cn(
-                                                "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
-                                                "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
-                                                currentRun?.id === run.id ? "text-neon-yellow" : "text-foreground"
-                                            )}>
-                                                {run.name}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-col gap-2 -mr-1">
-                                            <button
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (confirm('Delete this run?')) useAppStore.getState().deleteRun(run.id);
-                                                }}
-                                                title="Delete run"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    </div>
+                            {filteredRuns.map((run) => {
+                                const isStale = run.status === 'running' && (Date.now() - run.createdAt > 10 * 60 * 1000); // 10 mins timeout
+                                const displayStatus = isStale ? 'failed' : run.status;
+                                const isActive = currentRun?.id === run.id;
 
-                                    <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
-                                                <Clock className="w-3 h-3" />
-                                                {new Date(run.createdAt).toLocaleDateString()}
-                                            </span>
+                                return (
+                                    <div
+                                        key={run.id}
+                                        onClick={() => setCurrentRun(run.id)}
+                                        className={cn(
+                                            "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                            "bg-gradient-to-br from-card to-muted/20",
+                                            "hover:shadow-md",
+                                            isActive
+                                                ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                                : "border-border/50 hover:border-white/20 hover:bg-muted/30"
+                                        )}
+                                    >
+                                        <div className="flex justify-between items-start gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className={cn(
+                                                    "text-[13px] leading-relaxed font-medium transition-all duration-300",
+                                                    isActive
+                                                        ? "text-neon-yellow selection:bg-neon-yellow/30"
+                                                        : "text-foreground group-hover:text-foreground/80"
+                                                )}>
+                                                    {run.name}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col gap-2 -mr-1">
+                                                <button
+                                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm('Delete this run?')) useAppStore.getState().deleteRun(run.id);
+                                                    }}
+                                                    title="Delete run"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter",
-                                            run.status === 'completed' && "bg-green-500/10 text-green-400/80",
-                                            run.status === 'failed' && "bg-red-500/10 text-red-400/80",
-                                            run.status === 'running' && "bg-yellow-500/10 text-yellow-400/80 animate-pulse",
-                                        )}>
-                                            {run.status}
-                                        </span>
+
+                                        {/* Footer - Only visible when Active */}
+                                        {isActive && (
+                                            <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(run.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <span className={cn(
+                                                    "px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter",
+                                                    displayStatus === 'completed' && "bg-green-500/10 text-green-400/80",
+                                                    displayStatus === 'failed' && "bg-red-500/10 text-red-400/80",
+                                                    displayStatus === 'running' && "bg-orange-500/10 text-orange-400 animate-pulse",
+                                                )}>
+                                                    {displayStatus}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
