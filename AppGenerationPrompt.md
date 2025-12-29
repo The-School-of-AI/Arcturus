@@ -41,6 +41,7 @@ This is NON-NEGOTIABLE. If you place 3 metrics at y=2 and a chart at y=2, they M
 interface ui {
     id: string;       // kebab-case slug, e.g., "stock-analysis-dashboard"
     name: string;     // Human-readable title
+    description?: string; // Brief app description
     cards: AppCard[];
     layout: LayoutItem[];
 }
@@ -49,8 +50,9 @@ interface AppCard {
     id: string;       // Must match layout[].i exactly
     type: string;     // From component catalog below
     label: string;    // Display title
+    context: string;  // ⚠️ REQUIRED: Natural language description of what data this component needs (for AI refresh)
     config: object;   // Visual options (showTitle, centered, etc.)
-    data: object;     // Content data
+    data: object;     // Content data (can be placeholder for Phase 1)
     style: object;    // CSS overrides (usually leave empty for defaults)
 }
 
@@ -62,6 +64,20 @@ interface LayoutItem {
     h: number;        // Height in rows (use recommended defaults)
 }
 ```
+
+### context Field Examples
+
+The `context` field describes **what data this component should display**. It will be used by AI to populate real values later.
+
+| Component Type | Example context |
+|----------------|-----------------|
+| `metric` | "Bangalore's average monthly rent for a 2BHK apartment in 2026" |
+| `trend` | "Current share price of IndusInd Bank (NSE: INDUSINDBK)" |
+| `line_chart` | "NPA percentage trend for last 6 quarters (GNPA vs NNPA)" |
+| `table` | "Top 5 AI models by MMLU benchmark score with parameters and license" |
+| `feed` | "Latest AI/ML news from ArXiv and TechCrunch" |
+
+**For Phase 1 generation, you can use placeholder data** (e.g., `"---"`, `0`, sample values). The context will be used to fetch real data in Phase 2.
 
 ---
 
@@ -261,7 +277,7 @@ Before generating, verify:
 3. **No gaps** – Are all x positions adjacent (0 → 6 → 12 → 18)?
 4. **⚠️ SAME HEIGHT PER ROW** – Every component on the same y MUST have identical h values!
 5. **ID matching** – Does every card.id have a matching layout.i?
-6. **Rich content** – Is the data field populated with realistic/relevant content?
+6. **Context field** – Does every data-bearing component have a meaningful `context` description?
 7. **Y progression** – y increases only when moving to a new row (y += h of previous row)
 
 ---

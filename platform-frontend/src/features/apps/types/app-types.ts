@@ -218,6 +218,7 @@ export interface AppCard {
     id: string;
     type: AppCardType;
     label: string; // Internal name or default title
+    context?: string; // Natural language description of what data this component needs (for AI hydration)
     config: AppCardConfig;
     data?: AppCardData;
     style?: BaseAppCardStyle;
@@ -226,7 +227,9 @@ export interface AppCard {
 export interface SavedApp {
     id: string;
     name: string;
+    description?: string; // App description
     lastModified: number;
+    lastHydrated?: number; // Timestamp of last data refresh
     cards: AppCard[];
     layout: any[]; // layout-grid layout (can be typed strictly if we import RGL types)
 }

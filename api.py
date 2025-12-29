@@ -1298,6 +1298,7 @@ class SaveAppRequest(BaseModel):
     cards: List[dict]
     layout: List[dict]
     lastModified: int
+    lastHydrated: Optional[int] = None  # Timestamp of last AI data refresh
 
 @app.post("/apps/save")
 async def save_app_endpoint(request: SaveAppRequest):
@@ -1328,6 +1329,109 @@ async def delete_app(app_id: str):
             shutil.rmtree(app_folder)
         return {"status": "success", "id": app_id}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HydrateRequest(BaseModel):
+    model: Optional[str] = None  # Override model if needed
+
+
+@app.post("/apps/{app_id}/hydrate")
+async def hydrate_app(app_id: str, request: HydrateRequest = None):
+    """Use AI to populate data fields based on each card's context."""
+    import time
+    try:
+        print(f"[Hydrate] Starting hydration for app: {app_id}")
+        
+        # Load the app
+        app_folder = Path(__file__).parent / "apps" / app_id
+        ui_file = app_folder / "ui.json"
+        
+        if not ui_file.exists():
+            raise HTTPException(status_code=404, detail="App not found")
+        
+        app_data = json.loads(ui_file.read_text())
+        print(f"[Hydrate] Loaded app with {len(app_data.get('cards', []))} cards")
+        
+        # Load hydration prompt
+        prompt_file = Path(__file__).parent / "AppHydrationPrompt.md"
+        if not prompt_file.exists():
+            raise HTTPException(status_code=500, detail="Hydration prompt not found")
+        
+        hydration_prompt = prompt_file.read_text()
+        
+        # Add current date for context
+        from datetime import datetime
+        current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+        hydration_prompt = hydration_prompt.replace("{{CURRENT_DATE}}", current_date)
+        hydration_prompt = hydration_prompt.replace("{{JSON_CONTENT}}", json.dumps(app_data, indent=2))
+        print(f"[Hydrate] Prompt prepared with date {current_date}, length: {len(hydration_prompt)} chars")
+        
+        # Get model from settings (same as agents)
+        import yaml
+        config_dir = Path(__file__).parent / "config"
+        profile = yaml.safe_load((config_dir / "profiles.yaml").read_text())
+        models_config = json.loads((config_dir / "models.json").read_text())
+        
+        model_key = profile.get("llm", {}).get("text_generation", "gemini")
+        model_info = models_config.get("models", {}).get(model_key, {})
+        model = model_info.get("model", "gemini-2.0-flash")  # Fallback if not found
+        
+        # Allow request override
+        if request and hasattr(request, 'model') and request.model:
+            model = request.model
+        print(f"[Hydrate] Using model: {model} (from config key: {model_key})")
+        
+        # Call Gemini for hydration with Google Search enabled for real-time data
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+        # Enable Google Search grounding for real-time data
+        google_search_tool = types.Tool(google_search=types.GoogleSearch())
+        
+        print("[Hydrate] Calling Gemini with Google Search enabled...")
+        response = client.models.generate_content(
+            model=model,
+            contents=hydration_prompt,
+            config=types.GenerateContentConfig(
+                tools=[google_search_tool],
+                temperature=0.2  # Lower temperature for factual data
+            )
+        )
+        response_text = response.text.strip()
+        print(f"[Hydrate] Got response, length: {len(response_text)} chars")
+        
+        # Clean up response (remove markdown fences if present)
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            # Handle both ```json and ``` endings
+            start_idx = 1
+            end_idx = -1 if lines[-1].strip() in ("```", "") else len(lines)
+            response_text = "\n".join(lines[start_idx:end_idx]).strip()
+            print("[Hydrate] Cleaned markdown fences from response")
+        
+        # Parse the hydrated JSON
+        hydrated_data = json.loads(response_text)
+        print(f"[Hydrate] Parsed JSON successfully, {len(hydrated_data.get('cards', []))} cards")
+        
+        # Update lastHydrated timestamp
+        hydrated_data["lastHydrated"] = int(time.time() * 1000)
+        hydrated_data["lastModified"] = int(time.time() * 1000)
+        
+        # Save back
+        ui_file.write_text(json.dumps(hydrated_data, indent=2))
+        print(f"[Hydrate] Saved hydrated app to {ui_file}")
+        
+        return {"status": "success", "id": app_id, "data": hydrated_data}
+    except json.JSONDecodeError as e:
+        print(f"[Hydrate] JSON parse error: {e}")
+        print(f"[Hydrate] Response was: {response_text[:500] if 'response_text' in dir() else 'N/A'}...")
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response as JSON: {str(e)}")
+    except Exception as e:
+        print(f"[Hydrate] Error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/rag/images/{filename}")

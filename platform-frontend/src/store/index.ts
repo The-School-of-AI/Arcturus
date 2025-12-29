@@ -135,6 +135,7 @@ interface AppsSlice {
     updateAppCardStyle: (id: string, style: any) => void;
     updateAppCardData: (id: string, data: any) => void;
     updateAppCardLabel: (id: string, label: string) => void;
+    updateAppCardContext: (id: string, context: string) => void;
     setAppLayout: (layout: any[]) => void;
     selectAppCard: (id: string | null) => void;
     selectLibraryComponent: (component: any | null) => void;
@@ -144,6 +145,7 @@ interface AppsSlice {
     loadApp: (id: string, initialData?: SavedApp) => Promise<void>;
     revertAppChanges: () => void;
     deleteApp: (id: string) => Promise<void>;
+    hydrateApp: (id: string) => Promise<void>;
     loadShowcaseApp: () => Promise<void>;
     isAppViewMode: boolean;
     setIsAppViewMode: (isView: boolean) => void;
@@ -573,6 +575,9 @@ export const useAppStore = create<AppState>()(
             updateAppCardLabel: (id, label) => set((state) => ({
                 appCards: state.appCards.map(c => c.id === id ? { ...c, label } : c)
             })),
+            updateAppCardContext: (id, context) => set((state) => ({
+                appCards: state.appCards.map(c => c.id === id ? { ...c, context } : c)
+            })),
             setAppLayout: (appLayout) => set({ appLayout }),
             selectAppCard: (id) => set({ selectedAppCardId: id, selectedLibraryComponent: null }), // Clear lib selection when canvas card selected
             selectLibraryComponent: (component) => set({ selectedLibraryComponent: component, selectedAppCardId: null }), // Clear canvas selection when lib item selected
@@ -690,6 +695,24 @@ export const useAppStore = create<AppState>()(
                     }));
                 } catch (e) {
                     console.error("Failed to delete app", e);
+                }
+            },
+
+            hydrateApp: async (id) => {
+                try {
+                    const result = await api.hydrateApp(id);
+                    if (result.status === 'success' && result.data) {
+                        // Update local state with hydrated data
+                        set((state) => ({
+                            appCards: result.data.cards || state.appCards,
+                            appLayout: result.data.layout || state.appLayout
+                        }));
+                        // Refresh savedApps list
+                        await get().fetchApps();
+                    }
+                } catch (e) {
+                    console.error("Failed to hydrate app", e);
+                    throw e;
                 }
             },
 

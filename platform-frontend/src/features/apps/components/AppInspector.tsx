@@ -1186,7 +1186,8 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
         updateAppCardConfig,
         updateAppCardStyle,
         updateAppCardData,
-        updateAppCardLabel
+        updateAppCardLabel,
+        updateAppCardContext
     } = useAppStore();
 
     const selectedCard = appCards.find(c => c.id === selectedAppCardId);
@@ -1329,6 +1330,21 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         onChange={(e) => updateAppCardLabel(selectedCard.id, e.target.value)}
                                         className="bg-muted border-border text-xs h-8"
                                     />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">
+                                        Context <span className="text-primary ml-1 opacity-70">(for AI refresh)</span>
+                                    </label>
+                                    <textarea
+                                        value={selectedCard.context || ''}
+                                        onChange={(e) => updateAppCardContext(selectedCard.id, e.target.value)}
+                                        placeholder="e.g., Bangalore's average commute time in 2026..."
+                                        rows={2}
+                                        className="w-full bg-muted border border-border rounded text-xs p-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none placeholder:text-muted-foreground/50"
+                                    />
+                                    <div className="text-[9px] text-muted-foreground/60">
+                                        Describe what data this component needs. Used by AI to populate values.
+                                    </div>
                                 </div>
                             </div>
                         </CollapsibleSection>

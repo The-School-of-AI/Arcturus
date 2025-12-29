@@ -85,5 +85,10 @@ export const api = {
 
     deleteApp: async (appId: string): Promise<void> => {
         await axios.delete(`${API_BASE}/apps/${appId}`);
+    },
+
+    hydrateApp: async (appId: string): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/apps/${appId}/hydrate`);
+        return res.data;
     }
 };

@@ -1,0 +1,79 @@
+{
+  "id": "app-1767008558105",
+  "name": "Test",
+  "description": "",
+  "cards": [
+    {
+      "id": "metric-1767008565465",
+      "type": "metric",
+      "label": "Qt. Revenue",
+      "config": {},
+      "data": {
+        "value": "$102.3B",
+        "change": 15.95,
+        "trend": "up",
+        "label": "Revenue Q3"
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#eaff00",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      },
+      "context": "Alphabet's Revenue last quarter"
+    },
+    {
+      "id": "trend-1767008587887",
+      "type": "trend",
+      "label": "Trend Metric",
+      "config": {},
+      "data": {
+        "value": "$314.96",
+        "change": -0.22,
+        "trend": "down",
+        "label": "Stock Price"
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#eaff00",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      },
+      "context": "Alphabet's current stock price"
+    }
+  ],
+  "layout": [
+    {
+      "i": "metric-1767008565465",
+      "x": 1,
+      "y": 0,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "trend-1767008587887",
+      "x": 5,
+      "y": 0,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767010128960,
+  "lastHydrated": 1767010128960
+}

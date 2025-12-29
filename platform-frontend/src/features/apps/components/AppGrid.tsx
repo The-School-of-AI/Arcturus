@@ -5,7 +5,7 @@ import 'react-resizable/css/styles.css';
 
 // Cast to any to allow legacy props that types don't include
 const RGLResponsive = RGLResponsiveBase as any;
-import { Maximize2, Minimize2, Trash2, Save, Plus, RotateCcw, FileText, Eye, Edit } from 'lucide-react';
+import { Maximize2, Minimize2, Trash2, Save, Plus, RotateCcw, FileText, Eye, Edit, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { getDefaultData, getDefaultStyle } from '../utils/defaults';
@@ -122,7 +122,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         revertAppChanges,
         isAppViewMode,
         setIsAppViewMode,
-        updateAppCardData
+        updateAppCardData,
+        hydrateApp
     } = useAppStore();
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
@@ -515,6 +516,34 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         </>
                     )}
                 </button>
+
+                {/* Refresh Data Button - Only visible when editing a saved app */}
+                {activeApp && (
+                    <button
+                        onClick={async (e) => {
+                            e.stopPropagation();
+                            const btn = e.currentTarget;
+                            btn.disabled = true;
+                            btn.querySelector('.refresh-icon')?.classList.add('animate-spin');
+                            btn.querySelector('.refresh-text')!.textContent = 'REFRESHING...';
+                            try {
+                                await hydrateApp(activeApp.id);  // Use the ID from the loaded JSON
+                            } catch (err) {
+                                console.error('Hydration failed:', err);
+                                alert('Hydration failed. Check console for details.');
+                            } finally {
+                                btn.disabled = false;
+                                btn.querySelector('.refresh-icon')?.classList.remove('animate-spin');
+                                btn.querySelector('.refresh-text')!.textContent = 'REFRESH';
+                            }
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border shadow-lg transition-all bg-muted/80 backdrop-blur border-border text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-50"
+                        title="Refresh data using AI based on component contexts"
+                    >
+                        <RefreshCw className="w-4 h-4 refresh-icon" />
+                        <span className="text-xs font-bold refresh-text">REFRESH</span>
+                    </button>
+                )}
 
                 <div className="flex items-center bg-muted/80 backdrop-blur rounded-lg border border-border shadow-lg mr-2">
                     <button
