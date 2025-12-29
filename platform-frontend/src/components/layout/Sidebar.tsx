@@ -13,6 +13,7 @@ import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
 import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
+import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 
 export const Sidebar: React.FC = () => {
     const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
@@ -94,6 +95,7 @@ export const Sidebar: React.FC = () => {
 
             {/* Content Area */}
             <div className="flex-1 min-w-0 bg-card/40 backdrop-blur-sm flex flex-col overflow-hidden relative">
+                {sidebarTab === 'settings' && <SettingsPanel />}
                 {sidebarTab === 'runs' && (
                     <div className="flex flex-col h-full bg-card text-foreground">
                         {/* Header - Matches Remme Style */}

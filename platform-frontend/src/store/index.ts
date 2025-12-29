@@ -93,6 +93,8 @@ interface RagViewerSlice {
     clearSelectedContexts: () => void;
     selectedMcpServer: string | null;
     setSelectedMcpServer: (server: string | null) => void;
+    settingsActiveTab: 'models' | 'rag' | 'agent' | 'prompts' | 'advanced';
+    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'prompts' | 'advanced') => void;
 }
 
 interface RemmeSlice {
@@ -387,6 +389,8 @@ export const useAppStore = create<AppState>()(
             setActiveDocument: (docId) => set({ activeDocumentId: docId, viewMode: 'rag' }),
             sidebarTab: 'runs',
             setSidebarTab: (tab) => set({ sidebarTab: tab }),
+            settingsActiveTab: 'models',
+            setSettingsActiveTab: (tab) => set({ settingsActiveTab: tab }),
             ragSearchQuery: '',
             setRagSearchQuery: (query) => set({ ragSearchQuery: query }),
             ragSearchResults: [],

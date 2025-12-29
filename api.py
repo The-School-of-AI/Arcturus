@@ -1003,32 +1003,20 @@ async def reset_to_defaults():
 
 @app.post("/settings/restart")
 async def restart_server():
-    """Trigger a server restart by executing the restart script.
+    """Return instructions for manual restart.
     
-    This will restart both frontend and backend (npm run dev:all).
-    The response is sent before restart occurs.
+    Note: Automatic restart doesn't work reliably with npm run dev:all / concurrently.
+    The proper way is to manually Ctrl+C and restart.
     """
-    try:
-        import signal
-        import os
-        
-        # Find and execute restart script
-        restart_script = Path(__file__).parent / "restart.sh"
-        
-        if not restart_script.exists():
-            raise HTTPException(status_code=404, detail="restart.sh not found. Create it first.")
-        
-        # Execute restart in background (non-blocking)
-        subprocess.Popen(
-            ["bash", str(restart_script)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True
-        )
-        
-        return {"status": "success", "message": "Restart initiated. Server will restart shortly."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to restart: {str(e)}")
+    return {
+        "status": "manual_required",
+        "message": "Automatic restart is not supported. Please manually restart the server.",
+        "instructions": [
+            "1. Press Ctrl+C in the terminal running npm run dev:all",
+            "2. Run: npm run dev:all",
+            "3. Refresh the browser"
+        ]
+    }
 
 # === OLLAMA API ENDPOINTS ===
 
@@ -1052,20 +1040,32 @@ async def get_ollama_models():
             size_bytes = model.get("size", 0)
             size_gb = round(size_bytes / (1024**3), 2) if size_bytes else 0
             
-            # Infer capabilities from model name
-            capabilities = []
+            # Get family info from Ollama response
+            details = model.get("details", {})
+            families = details.get("families", [])
+            
+            # Infer capabilities from model name AND family
+            capabilities = set()
             name_lower = name.lower()
-            if "embed" in name_lower or "nomic" in name_lower:
-                capabilities.append("embedding")
-            if "vl" in name_lower or "vision" in name_lower or "llava" in name_lower or "moondream" in name_lower:
-                capabilities.extend(["text", "image"])
+            
+            # Embedding models
+            if "embed" in name_lower or "nomic" in name_lower or "nomic-bert" in families:
+                capabilities.add("embedding")
+            
+            # Vision/multimodal models - check for explicit vision families or name patterns
+            vision_families = ["clip", "qwen3vl", "llava"]
+            vision_names = ["vl", "vision", "llava", "moondream", "gemma3"]  # gemma3 supports vision
+            
+            if any(f in families for f in vision_families) or any(v in name_lower for v in vision_names):
+                capabilities.add("text")
+                capabilities.add("image")
             else:
-                capabilities.append("text")
+                capabilities.add("text")
             
             models.append({
                 "name": name,
                 "size_gb": size_gb,
-                "capabilities": capabilities,
+                "capabilities": list(capabilities),
                 "modified_at": model.get("modified_at", "")
             })
         
@@ -1118,6 +1118,7 @@ async def get_gemini_status():
 # === PROMPTS API ENDPOINTS ===
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+PROMPTS_BACKUP_DIR = Path(__file__).parent / "prompts" / ".backup"
 
 @app.get("/prompts")
 async def list_prompts():
@@ -1127,11 +1128,14 @@ async def list_prompts():
         if PROMPTS_DIR.exists():
             for f in PROMPTS_DIR.glob("*.md"):
                 content = f.read_text()
+                # Check if backup exists (means original can be restored)
+                backup_file = PROMPTS_BACKUP_DIR / f.name
                 prompts.append({
                     "name": f.stem,
                     "filename": f.name,
                     "content": content,
-                    "lines": len(content.splitlines())
+                    "lines": len(content.splitlines()),
+                    "has_backup": backup_file.exists()
                 })
         return {"status": "success", "prompts": sorted(prompts, key=lambda x: x["name"])}
     except Exception as e:
@@ -1142,14 +1146,43 @@ class UpdatePromptRequest(BaseModel):
 
 @app.put("/prompts/{prompt_name}")
 async def update_prompt(prompt_name: str, request: UpdatePromptRequest):
-    """Update a prompt file's content"""
+    """Update a prompt file's content. Creates backup on first edit."""
     try:
         prompt_file = PROMPTS_DIR / f"{prompt_name}.md"
         if not prompt_file.exists():
             raise HTTPException(status_code=404, detail=f"Prompt '{prompt_name}' not found")
         
+        # Create backup on first edit (if doesn't exist)
+        PROMPTS_BACKUP_DIR.mkdir(exist_ok=True)
+        backup_file = PROMPTS_BACKUP_DIR / f"{prompt_name}.md"
+        if not backup_file.exists():
+            backup_file.write_text(prompt_file.read_text())
+        
         prompt_file.write_text(request.content)
-        return {"status": "success", "message": f"Prompt '{prompt_name}' updated"}
+        return {"status": "success", "message": f"Prompt '{prompt_name}' updated", "has_backup": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/prompts/{prompt_name}/reset")
+async def reset_prompt(prompt_name: str):
+    """Reset a prompt to its original content from backup"""
+    try:
+        prompt_file = PROMPTS_DIR / f"{prompt_name}.md"
+        backup_file = PROMPTS_BACKUP_DIR / f"{prompt_name}.md"
+        
+        if not backup_file.exists():
+            raise HTTPException(status_code=404, detail=f"No backup found for '{prompt_name}'")
+        
+        # Restore from backup
+        original_content = backup_file.read_text()
+        prompt_file.write_text(original_content)
+        
+        # Remove backup after restore
+        backup_file.unlink()
+        
+        return {"status": "success", "message": f"Prompt '{prompt_name}' reset to original", "content": original_content}
     except HTTPException:
         raise
     except Exception as e:

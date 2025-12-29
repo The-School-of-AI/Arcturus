@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
     Settings, Cpu, FileText, Brain, Wrench, RotateCcw, Save, AlertTriangle,
-    ChevronRight, Loader2, RefreshCw, Download, Check, X, Terminal
+    Loader2, RefreshCw, Download, Check, X, Terminal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { API_BASE } from '@/lib/api';
+import { useAppStore } from '@/store';
 import axios from 'axios';
 
 // Gemini model names (December 2025)
@@ -31,6 +32,7 @@ interface Prompt {
     filename: string;
     content: string;
     lines: number;
+    has_backup?: boolean;
 }
 
 interface SettingsData {
@@ -71,7 +73,7 @@ const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[
 ];
 
 export const SettingsPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<TabId>('models');
+    const { settingsActiveTab: activeTab } = useAppStore();
     const [settings, setSettings] = useState<SettingsData | null>(null);
     const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -132,15 +134,35 @@ export const SettingsPage: React.FC = () => {
         if (!selectedPrompt) return;
         setSaving(true);
         try {
-            await axios.put(`${API_BASE}/prompts/${selectedPrompt.name}`, { content: promptContent });
-            // Refresh prompts
-            const res = await axios.get(`${API_BASE}/prompts`);
-            setPrompts(res.data.prompts || []);
+            const res = await axios.put(`${API_BASE}/prompts/${selectedPrompt.name}`, { content: promptContent });
+            // Refresh prompts and update selected
+            const promptsRes = await axios.get(`${API_BASE}/prompts`);
+            setPrompts(promptsRes.data.prompts || []);
+            // Update selectedPrompt to reflect has_backup
+            const updated = promptsRes.data.prompts.find((p: Prompt) => p.name === selectedPrompt.name);
+            if (updated) setSelectedPrompt(updated);
             setHasChanges(false);
         } catch (e: any) {
             setError(e.response?.data?.detail || 'Failed to save prompt');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const resetPrompt = async () => {
+        if (!selectedPrompt) return;
+        if (!confirm(`Reset "${selectedPrompt.name}" to original? This will undo all changes.`)) return;
+        try {
+            const res = await axios.post(`${API_BASE}/prompts/${selectedPrompt.name}/reset`);
+            setPromptContent(res.data.content);
+            // Refresh prompts
+            const promptsRes = await axios.get(`${API_BASE}/prompts`);
+            setPrompts(promptsRes.data.prompts || []);
+            const updated = promptsRes.data.prompts.find((p: Prompt) => p.name === selectedPrompt.name);
+            if (updated) setSelectedPrompt(updated);
+            setHasChanges(false);
+        } catch (e: any) {
+            setError(e.response?.data?.detail || 'Failed to reset prompt');
         }
     };
 
@@ -173,13 +195,12 @@ export const SettingsPage: React.FC = () => {
     };
 
     const restartServer = async () => {
-        if (!confirm('Restart server? This will temporarily disconnect all clients.')) return;
         try {
-            await axios.post(`${API_BASE}/settings/restart`);
-            alert('Server restart initiated. Page will reload in 5 seconds...');
-            setTimeout(() => window.location.reload(), 5000);
+            const res = await axios.post(`${API_BASE}/settings/restart`);
+            // Show manual restart instructions
+            alert(`${res.data.message}\n\n${res.data.instructions?.join('\n') || 'Please restart manually.'}`);
         } catch (e: any) {
-            setError(e.response?.data?.detail || 'Failed to restart');
+            setError(e.response?.data?.detail || 'Failed to get restart instructions');
         }
     };
 
@@ -406,10 +427,18 @@ export const SettingsPage: React.FC = () => {
                     <>
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-medium text-foreground">{selectedPrompt.filename}</h3>
-                            <Button size="sm" onClick={savePrompt} disabled={saving || !hasChanges}>
-                                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
-                                Save Prompt
-                            </Button>
+                            <div className="flex gap-2">
+                                {selectedPrompt.has_backup && (
+                                    <Button size="sm" variant="outline" onClick={resetPrompt}>
+                                        <RotateCcw className="w-3 h-3 mr-1" />
+                                        Reset to Original
+                                    </Button>
+                                )}
+                                <Button size="sm" onClick={savePrompt} disabled={saving || !hasChanges}>
+                                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                                    Save Prompt
+                                </Button>
+                            </div>
                         </div>
                         <textarea
                             value={promptContent}
@@ -464,61 +493,28 @@ export const SettingsPage: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex bg-background">
-            {/* Left Panel: Tabs */}
-            <div className="w-64 border-r border-border bg-card/50 flex flex-col">
-                <div className="p-4 border-b border-border">
-                    <div className="flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-primary" />
-                        <h1 className="font-bold text-foreground">Settings</h1>
-                    </div>
+        <div className="h-full flex flex-col bg-background overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-border flex items-center justify-between bg-card/30 shrink-0">
+                <div>
+                    <h2 className="font-bold text-foreground">{TABS.find(t => t.id === activeTab)?.label}</h2>
+                    <p className="text-xs text-muted-foreground">{TABS.find(t => t.id === activeTab)?.description}</p>
                 </div>
-                <nav className="flex-1 p-2 space-y-1">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={cn(
-                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left",
-                                activeTab === tab.id
-                                    ? "bg-primary/10 text-primary border border-primary/20"
-                                    : "text-muted-foreground hover:bg-muted/50"
-                            )}
-                        >
-                            <tab.icon className="w-4 h-4" />
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium">{tab.label}</div>
-                                <div className="text-[10px] opacity-60 truncate">{tab.description}</div>
-                            </div>
-                            <ChevronRight className={cn("w-4 h-4 transition-transform", activeTab === tab.id && "rotate-90")} />
-                        </button>
-                    ))}
-                </nav>
+                {activeTab !== 'prompts' && (
+                    <Button onClick={saveSettings} disabled={saving || !hasChanges}>
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                        Save Changes
+                    </Button>
+                )}
             </div>
-
-            {/* Right Panel: Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-border flex items-center justify-between bg-card/30">
-                    <div>
-                        <h2 className="font-bold text-foreground">{TABS.find(t => t.id === activeTab)?.label}</h2>
-                        <p className="text-xs text-muted-foreground">{TABS.find(t => t.id === activeTab)?.description}</p>
+            <div className="flex-1 overflow-y-auto p-6">
+                {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-sm">{error}</div>}
+                {warnings.length > 0 && (
+                    <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 space-y-1">
+                        {warnings.map((w, i) => <div key={i} className="flex items-start gap-2 text-yellow-500 text-xs"><AlertTriangle className="w-3 h-3 mt-0.5" />{w}</div>)}
                     </div>
-                    {activeTab !== 'prompts' && (
-                        <Button onClick={saveSettings} disabled={saving || !hasChanges}>
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-                            Save Changes
-                        </Button>
-                    )}
-                </div>
-                <div className="flex-1 overflow-y-auto p-6">
-                    {error && <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-sm">{error}</div>}
-                    {warnings.length > 0 && (
-                        <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 space-y-1">
-                            {warnings.map((w, i) => <div key={i} className="flex items-start gap-2 text-yellow-500 text-xs"><AlertTriangle className="w-3 h-3 mt-0.5" />{w}</div>)}
-                        </div>
-                    )}
-                    {renderTabContent()}
-                </div>
+                )}
+                {renderTabContent()}
             </div>
         </div>
     );

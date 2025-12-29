@@ -69,6 +69,8 @@ def reload_settings() -> dict:
 def get_ollama_url(endpoint: str = "generate") -> str:
     """Get full Ollama URL for a specific endpoint."""
     base = load_settings()["ollama"]["base_url"]
+    if endpoint == "base":
+        return base  # Just return base URL without path
     endpoints = {
         "generate": "/api/generate",
         "chat": "/api/chat",

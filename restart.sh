@@ -1,26 +1,29 @@
 #!/bin/bash
 # Restart script for ERAV2 Platform
-# Called by the /settings/restart API endpoint
+# NOTE: This script has known issues with MCP process cleanup.
+# It's recommended to manually restart by pressing Ctrl+C and running npm run dev:all
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "[Restart] Stopping current processes..."
+echo "[Restart] ⚠️  WARNING: Auto-restart may cause process cleanup errors"
+echo "[Restart] For cleanest restart, manually use: Ctrl+C then 'npm run dev:all'"
+echo ""
+echo "[Restart] Attempting graceful shutdown..."
 
-# Find and kill the current npm run dev:all process
-# This pattern matches the parent npm process running dev:all
-pkill -f "npm run dev:all" 2>/dev/null
-pkill -f "vite" 2>/dev/null
-pkill -f "uvicorn" 2>/dev/null
+# Send SIGTERM (graceful) instead of hard kill
+pkill -TERM -f "uvicorn" 2>/dev/null
+sleep 3
 
-# Wait for processes to terminate
+# Only kill vite after uvicorn has stopped
+pkill -TERM -f "vite" 2>/dev/null
 sleep 2
 
 echo "[Restart] Starting services..."
 
 # Change to the platform-frontend directory and restart
 cd "$SCRIPT_DIR/platform-frontend"
-nohup npm run dev:all > /dev/null 2>&1 &
+nohup npm run dev:all > "$SCRIPT_DIR/server.log" 2>&1 &
 
-echo "[Restart] Services restarting in background. PID: $!"
-echo "[Restart] Complete."
+echo "[Restart] Services starting in background. Check server.log for output"
+echo "[Restart] PID: $!"

@@ -86,8 +86,8 @@ export const AppLayout: React.FC = () => {
             <Header />
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR on Settings page */}
-                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && sidebarTab !== 'settings' && (
+                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode */}
+                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && (
                     <>
                         <div
                             className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"
@@ -102,9 +102,7 @@ export const AppLayout: React.FC = () => {
 
                 {/* Center Canvas or Document Viewer */}
                 <div className="flex-1 relative bg-grid-dots overflow-hidden">
-                    {sidebarTab === 'settings' ? (
-                        <SettingsPage />
-                    ) : sidebarTab === 'rag' ? (
+                    {sidebarTab === 'rag' ? (
                         <DocumentViewer />
                     ) : sidebarTab === 'explorer' ? (
                         <FlowWorkspace />
@@ -112,6 +110,8 @@ export const AppLayout: React.FC = () => {
                         <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
                     ) : sidebarTab === 'mcp' ? (
                         <McpBrowser />
+                    ) : sidebarTab === 'settings' ? (
+                        <SettingsPage />
                     ) : (
                         <>
                             <GraphCanvas />
