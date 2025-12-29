@@ -1,697 +1,690 @@
 {
-    "id": "cfo-psb-dashboard",
-    "name": "CFO Command Center - Indus National Bank",
-    "cards": [
-        {
-            "id": "header",
-            "type": "header",
-            "label": "Header",
-            "config": {
-                "centered": true,
-                "bold": true
-            },
-            "data": {
-                "text": "Executive Financial Dashboard (CFO View)"
-            },
-            "style": {}
-        },
-        {
-            "id": "share_trend",
-            "type": "trend",
-            "label": "Share Price (NSE)",
-            "config": {
-                "showSparkline": true
-            },
-            "data": {
-                "value": "₹245.80",
-                "change": 1.25,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "mcap",
-            "type": "metric",
-            "label": "Market Cap",
-            "config": {},
-            "data": {
-                "value": "₹1.45L Cr",
-                "change": 0.8,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "pe_ratio",
-            "type": "metric",
-            "label": "P/E Ratio",
-            "config": {},
-            "data": {
-                "value": "12.4x",
-                "change": -0.5,
-                "trend": "neutral"
-            },
-            "style": {}
-        },
-        {
-            "id": "book_val",
-            "type": "metric",
-            "label": "Book Value",
-            "config": {},
-            "data": {
-                "value": "₹180.20",
-                "change": 2.1,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "div_yield",
-            "type": "trend",
-            "label": "Dividend Yield",
-            "config": {
-                "showSparkline": false
-            },
-            "data": {
-                "value": "2.85%",
-                "change": 0.0,
-                "trend": "neutral"
-            },
-            "style": {}
-        },
-        {
-            "id": "crr",
-            "type": "metric",
-            "label": "CRR (RBI)",
-            "config": {},
-            "data": {
-                "value": "4.50%",
-                "change": 0,
-                "trend": "neutral"
-            },
-            "style": {}
-        },
-        {
-            "id": "slr",
-            "type": "metric",
-            "label": "SLR (RBI)",
-            "config": {},
-            "data": {
-                "value": "18.00%",
-                "change": 0,
-                "trend": "neutral"
-            },
-            "style": {}
-        },
-        {
-            "id": "repo",
-            "type": "metric",
-            "label": "Repo Rate",
-            "config": {},
-            "data": {
-                "value": "6.50%",
-                "change": 0,
-                "trend": "neutral"
-            },
-            "style": {}
-        },
-        {
-            "id": "base_rate",
-            "type": "metric",
-            "label": "Base Rate",
-            "config": {},
-            "data": {
-                "value": "8.95%",
-                "change": 0.1,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "mclr",
-            "type": "metric",
-            "label": "MCLR (1Y)",
-            "config": {},
-            "data": {
-                "value": "8.35%",
-                "change": 0.05,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "sav_rate",
-            "type": "metric",
-            "label": "SA Rate",
-            "config": {},
-            "data": {
-                "value": "2.70%",
-                "change": 0,
-                "trend": "neutral"
-            },
-            "style": {}
-        },
-        {
-            "id": "npa_chart",
-            "type": "line_chart",
-            "label": "Asset Quality Trends (GNPA vs NNPA)",
-            "config": {},
-            "data": {
-                "title": "NPA % Trend (Last 6 Quarters)",
-                "points": [
-                    {
-                        "x": "Q1",
-                        "y": 5.8
-                    },
-                    {
-                        "x": "Q2",
-                        "y": 5.5
-                    },
-                    {
-                        "x": "Q3",
-                        "y": 5.2
-                    },
-                    {
-                        "x": "Q4",
-                        "y": 4.8
-                    },
-                    {
-                        "x": "Q1",
-                        "y": 4.5
-                    },
-                    {
-                        "x": "Q2",
-                        "y": 4.2
-                    }
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "car_chart",
-            "type": "bar_chart",
-            "label": "Capital Adequacy (Basel III)",
-            "config": {},
-            "data": {
-                "title": "CRAR Breakdown (%)",
-                "points": [
-                    {
-                        "x": "CET1",
-                        "y": 11.2
-                    },
-                    {
-                        "x": "AT1",
-                        "y": 1.5
-                    },
-                    {
-                        "x": "Tier 2",
-                        "y": 2.8
-                    },
-                    {
-                        "x": "Total",
-                        "y": 15.5
-                    }
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "nim",
-            "type": "metric",
-            "label": "Net Interest Margin",
-            "config": {},
-            "data": {
-                "value": "3.42%",
-                "change": 0.12,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "cost_inc",
-            "type": "metric",
-            "label": "Cost-to-Income",
-            "config": {},
-            "data": {
-                "value": "48.5%",
-                "change": -1.2,
-                "trend": "down"
-            },
-            "style": {}
-        },
-        {
-            "id": "roa",
-            "type": "metric",
-            "label": "RoA (Annualized)",
-            "config": {},
-            "data": {
-                "value": "1.15%",
-                "change": 0.05,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "roe",
-            "type": "metric",
-            "label": "RoE (Annualized)",
-            "config": {},
-            "data": {
-                "value": "14.2%",
-                "change": 0.8,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "casa",
-            "type": "metric",
-            "label": "CASA Ratio",
-            "config": {},
-            "data": {
-                "value": "44.2%",
-                "change": 0.5,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "cd_ratio",
-            "type": "metric",
-            "label": "Credit-Deposit Ratio",
-            "config": {},
-            "data": {
-                "value": "72.8%",
-                "change": 1.5,
-                "trend": "up"
-            },
-            "style": {}
-        },
-        {
-            "id": "bal_sheet",
-            "type": "balance_sheet",
-            "label": "Balance Sheet Highlights",
-            "config": {},
-            "data": {
-                "assets": "₹12.5L Cr",
-                "liabilities": "₹11.2L Cr",
-                "equity": "₹1.3L Cr"
-            },
-            "style": {}
-        },
-        {
-            "id": "inc_stmt",
-            "type": "income_stmt",
-            "label": "Quarterly Income Stmt",
-            "config": {},
-            "data": {
-                "revenue": "₹28,450 Cr",
-                "netIncome": "₹4,210 Cr",
-                "expenses": "₹24,240 Cr"
-            },
-            "style": {}
-        },
-        {
-            "id": "yield_curve",
-            "type": "line_chart",
-            "label": "Treasury Yield Curve (G-Sec)",
-            "config": {},
-            "data": {
-                "title": "Yield vs Maturity",
-                "points": [
-                    {
-                        "x": "1Y",
-                        "y": 6.8
-                    },
-                    {
-                        "x": "3Y",
-                        "y": 7.1
-                    },
-                    {
-                        "x": "5Y",
-                        "y": 7.25
-                    },
-                    {
-                        "x": "10Y",
-                        "y": 7.35
-                    },
-                    {
-                        "x": "30Y",
-                        "y": 7.5
-                    }
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "peer_comp",
-            "type": "peer_table",
-            "label": "Peer Benchmarking (Public Sector)",
-            "config": {},
-            "data": {
-                "peers": [
-                    {
-                        "ticker": "SBI",
-                        "mcap": "5.4L Cr",
-                        "pe": 10.2
-                    },
-                    {
-                        "ticker": "PNB",
-                        "mcap": "0.9L Cr",
-                        "pe": 15.1
-                    },
-                    {
-                        "ticker": "BOB",
-                        "mcap": "1.1L Cr",
-                        "pe": 8.5
-                    },
-                    {
-                        "ticker": "CANBK",
-                        "mcap": "0.6L Cr",
-                        "pe": 6.8
-                    }
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "txn_mix",
-            "type": "pie_chart",
-            "label": "Transaction Channel Mix",
-            "config": {},
-            "data": {
-                "slices": [
-                    {
-                        "name": "Mobile/UPI",
-                        "value": 65
-                    },
-                    {
-                        "name": "Net Banking",
-                        "value": 15
-                    },
-                    {
-                        "name": "ATM",
-                        "value": 12
-                    },
-                    {
-                        "name": "Branch",
-                        "value": 8
-                    }
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "psl_stats",
-            "type": "usage_stats",
-            "label": "Priority Sector Lending (PSL)",
-            "config": {},
-            "data": {
-                "items": [
-                    {
-                        "name": "Agriculture",
-                        "percent": 18
-                    },
-                    {
-                        "name": "MSME",
-                        "percent": 12
-                    },
-                    {
-                        "name": "Education",
-                        "percent": 4
-                    },
-                    {
-                        "name": "Housing",
-                        "percent": 6
-                    }
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "ctrl_date",
-            "type": "date_picker",
-            "label": "Period",
-            "config": {},
-            "data": {
-                "startDate": "2024-04-01",
-                "endDate": "2025-03-31"
-            },
-            "style": {}
-        },
-        {
-            "id": "ctrl_zone",
-            "type": "select",
-            "label": "Zone/Circle",
-            "config": {},
-            "data": {
-                "label": "Zone",
-                "options": [
-                    "All India",
-                    "North Zone",
-                    "South Zone",
-                    "West Zone",
-                    "East Zone"
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "ctrl_type",
-            "type": "select",
-            "label": "Report Type",
-            "config": {},
-            "data": {
-                "label": "Format",
-                "options": [
-                    "Board Pack",
-                    "RBI Return",
-                    "Analyst Call"
-                ]
-            },
-            "style": {}
-        },
-        {
-            "id": "ctrl_btn",
-            "type": "button",
-            "label": "Export",
-            "config": {},
-            "data": {
-                "label": "Download PDF"
-            },
-            "style": {}
-        }
-    ],
-    "layout": [
-        {
-            "i": "header",
-            "x": 0,
-            "y": 0,
-            "w": 24,
-            "h": 2
-        },
-        {
-            "i": "share_trend",
-            "x": 0,
-            "y": 2,
-            "w": 6,
-            "h": 3
-        },
-        {
-            "i": "mcap",
-            "x": 6,
-            "y": 2,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "pe_ratio",
-            "x": 10,
-            "y": 2,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "book_val",
-            "x": 14,
-            "y": 2,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "div_yield",
-            "x": 18,
-            "y": 2,
-            "w": 6,
-            "h": 3
-        },
-        {
-            "i": "crr",
-            "x": 0,
-            "y": 5,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "slr",
-            "x": 4,
-            "y": 5,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "repo",
-            "x": 8,
-            "y": 5,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "base_rate",
-            "x": 12,
-            "y": 5,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "mclr",
-            "x": 16,
-            "y": 5,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "sav_rate",
-            "x": 20,
-            "y": 5,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "npa_chart",
-            "x": 0,
-            "y": 8,
-            "w": 12,
-            "h": 8
-        },
-        {
-            "i": "car_chart",
-            "x": 12,
-            "y": 8,
-            "w": 12,
-            "h": 8
-        },
-        {
-            "i": "nim",
-            "x": 0,
-            "y": 16,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "cost_inc",
-            "x": 4,
-            "y": 16,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "roa",
-            "x": 8,
-            "y": 16,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "roe",
-            "x": 12,
-            "y": 16,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "casa",
-            "x": 16,
-            "y": 16,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "cd_ratio",
-            "x": 20,
-            "y": 16,
-            "w": 4,
-            "h": 3
-        },
-        {
-            "i": "bal_sheet",
-            "x": 0,
-            "y": 19,
-            "w": 12,
-            "h": 5
-        },
-        {
-            "i": "inc_stmt",
-            "x": 12,
-            "y": 19,
-            "w": 12,
-            "h": 5
-        },
-        {
-            "i": "yield_curve",
-            "x": 0,
-            "y": 24,
-            "w": 12,
-            "h": 8
-        },
-        {
-            "i": "peer_comp",
-            "x": 12,
-            "y": 24,
-            "w": 12,
-            "h": 8
-        },
-        {
-            "i": "txn_mix",
-            "x": 0,
-            "y": 32,
-            "w": 12,
-            "h": 6
-        },
-        {
-            "i": "psl_stats",
-            "x": 12,
-            "y": 32,
-            "w": 12,
-            "h": 6
-        },
-        {
-            "i": "ctrl_date",
-            "x": 0,
-            "y": 38,
-            "w": 8,
-            "h": 2
-        },
-        {
-            "i": "ctrl_zone",
-            "x": 8,
-            "y": 38,
-            "w": 6,
-            "h": 2
-        },
-        {
-            "i": "ctrl_type",
-            "x": 14,
-            "y": 38,
-            "w": 6,
-            "h": 2
-        },
-        {
-            "i": "ctrl_btn",
-            "x": 20,
-            "y": 38,
-            "w": 4,
-            "h": 2
-        }
-    ]
+  "id": "cfo-landing",
+  "name": "CFO Command Center - IndusInd Bank",
+  "description": "Real-time financial executive dashboard for IndusInd Bank",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Header",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Executive Financial Dashboard - IndusInd Bank"
+      },
+      "style": {}
+    },
+    {
+      "id": "share_trend",
+      "type": "trend",
+      "label": "Share Price (NSE)",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "\u20b9849.85",
+        "change": -1.25,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "mcap",
+      "type": "metric",
+      "label": "Market Cap",
+      "config": {},
+      "data": {
+        "value": "\u20b966,144 Cr",
+        "change": -2.5,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "pe_ratio",
+      "type": "metric",
+      "label": "P/E Ratio",
+      "config": {},
+      "data": {
+        "value": "13.5x",
+        "change": -1.8,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "book_val",
+      "type": "metric",
+      "label": "Book Value",
+      "config": {},
+      "data": {
+        "value": "\u20b9833.00",
+        "change": 4.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "div_yield",
+      "type": "trend",
+      "label": "Dividend Yield",
+      "config": {
+        "showSparkline": false
+      },
+      "data": {
+        "value": "1.95%",
+        "change": 0.2,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "crr",
+      "type": "metric",
+      "label": "CRR (RBI)",
+      "config": {},
+      "data": {
+        "value": "3.00%",
+        "change": -0.5,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "slr",
+      "type": "metric",
+      "label": "SLR (RBI)",
+      "config": {},
+      "data": {
+        "value": "18.00%",
+        "change": 0,
+        "trend": "neutral"
+      },
+      "style": {}
+    },
+    {
+      "id": "repo",
+      "type": "metric",
+      "label": "Repo Rate",
+      "config": {},
+      "data": {
+        "value": "5.25%",
+        "change": -0.25,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "base_rate",
+      "type": "metric",
+      "label": "Base Rate",
+      "config": {},
+      "data": {
+        "value": "10.50%",
+        "change": 0.1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "mclr",
+      "type": "metric",
+      "label": "MCLR (1Y)",
+      "config": {},
+      "data": {
+        "value": "10.35%",
+        "change": 0.05,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "sav_rate",
+      "type": "metric",
+      "label": "SA Rate",
+      "config": {},
+      "data": {
+        "value": "4.50%",
+        "change": 0,
+        "trend": "neutral"
+      },
+      "style": {}
+    },
+    {
+      "id": "npa_chart",
+      "type": "line_chart",
+      "label": "Asset Quality Trends (GNPA vs NNPA)",
+      "config": {},
+      "data": {
+        "title": "NPA % Trend (Last 6 Quarters)",
+        "points": [
+          {
+            "x": "Q1 FY24",
+            "y": 1.94
+          },
+          {
+            "x": "Q2 FY24",
+            "y": 1.93
+          },
+          {
+            "x": "Q3 FY24",
+            "y": 1.92
+          },
+          {
+            "x": "Q4 FY24",
+            "y": 1.92
+          },
+          {
+            "x": "Q1 FY25",
+            "y": 2.02
+          },
+          {
+            "x": "Q2 FY25",
+            "y": 2.11
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "car_chart",
+      "type": "bar_chart",
+      "label": "Capital Adequacy (Basel III)",
+      "config": {},
+      "data": {
+        "title": "CRAR Breakdown (%)",
+        "points": [
+          {
+            "x": "CET1",
+            "y": 15.21
+          },
+          {
+            "x": "AT1",
+            "y": 0.0
+          },
+          {
+            "x": "Tier 2",
+            "y": 1.30
+          },
+          {
+            "x": "Total",
+            "y": 16.51
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "nim",
+      "type": "metric",
+      "label": "Net Interest Margin",
+      "config": {},
+      "data": {
+        "value": "4.08%",
+        "change": -0.21,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "cost_inc",
+      "type": "metric",
+      "label": "Cost-to-Income",
+      "config": {},
+      "data": {
+        "value": "48.2%",
+        "change": 0.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "roa",
+      "type": "metric",
+      "label": "RoA (Annualized)",
+      "config": {},
+      "data": {
+        "value": "0.85%",
+        "change": -0.4,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "roe",
+      "type": "metric",
+      "label": "RoE (Annualized)",
+      "config": {},
+      "data": {
+        "value": "10.9%",
+        "change": -3.5,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "casa",
+      "type": "metric",
+      "label": "CASA Ratio",
+      "config": {},
+      "data": {
+        "value": "35.87%",
+        "change": -1.1,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "cd_ratio",
+      "type": "metric",
+      "label": "Credit-Deposit Ratio",
+      "config": {},
+      "data": {
+        "value": "86.6%",
+        "change": -1.2,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "bal_sheet",
+      "type": "balance_sheet",
+      "label": "Balance Sheet Highlights",
+      "config": {},
+      "data": {
+        "assets": "\u20b95.25L Cr",
+        "liabilities": "\u20b94.62L Cr",
+        "equity": "\u20b90.63L Cr"
+      },
+      "style": {}
+    },
+    {
+      "id": "inc_stmt",
+      "type": "income_stmt",
+      "label": "Quarterly Income Stmt (Q2)",
+      "config": {},
+      "data": {
+        "revenue": "\u20b914,870 Cr",
+        "netIncome": "\u20b91,331 Cr",
+        "expenses": "\u20b913,539 Cr"
+      },
+      "style": {}
+    },
+    {
+      "id": "yield_curve",
+      "type": "line_chart",
+      "label": "Treasury Yield Curve (G-Sec)",
+      "config": {},
+      "data": {
+        "title": "Yield vs Maturity",
+        "points": [
+          {
+            "x": "1Y",
+            "y": 5.53
+          },
+          {
+            "x": "3Y",
+            "y": 6.10
+          },
+          {
+            "x": "5Y",
+            "y": 6.35
+          },
+          {
+            "x": "10Y",
+            "y": 6.56
+          },
+          {
+            "x": "30Y",
+            "y": 7.30
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "peer_comp",
+      "type": "peer_table",
+      "label": "Peer Benchmarking (Public Sector)",
+      "config": {},
+      "data": {
+        "peers": [
+          {
+            "ticker": "SBI",
+            "mcap": "8.92L Cr",
+            "pe": 11.35
+          },
+          {
+            "ticker": "PNB",
+            "mcap": "1.38L Cr",
+            "pe": 8.12
+          },
+          {
+            "ticker": "BOB",
+            "mcap": "1.49L Cr",
+            "pe": 7.75
+          },
+          {
+            "ticker": "CANBK",
+            "mcap": "1.36L Cr",
+            "pe": 7.11
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "txn_mix",
+      "type": "pie_chart",
+      "label": "Transaction Channel Mix",
+      "config": {},
+      "data": {
+        "slices": [
+          {
+            "name": "Mobile/UPI",
+            "value": 72
+          },
+          {
+            "name": "Net Banking",
+            "value": 12
+          },
+          {
+            "name": "ATM",
+            "value": 10
+          },
+          {
+            "name": "Branch",
+            "value": 6
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "psl_stats",
+      "type": "usage_stats",
+      "label": "Priority Sector Lending (PSL)",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "name": "Agriculture",
+            "percent": 19
+          },
+          {
+            "name": "MSME",
+            "percent": 14
+          },
+          {
+            "name": "Education",
+            "percent": 3
+          },
+          {
+            "name": "Housing",
+            "percent": 8
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "ctrl_date",
+      "type": "date_picker",
+      "label": "Period",
+      "config": {},
+      "data": {
+        "startDate": "2025-04-01",
+        "endDate": "2026-03-31"
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 20,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "share_trend",
+      "x": 0,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "mcap",
+      "x": 5,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "pe_ratio",
+      "x": 10,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "book_val",
+      "x": 15,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "div_yield",
+      "x": 12,
+      "y": 5,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "crr",
+      "x": 0,
+      "y": 5,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "slr",
+      "x": 4,
+      "y": 5,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "repo",
+      "x": 8,
+      "y": 5,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "base_rate",
+      "x": 12,
+      "y": 8,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "mclr",
+      "x": 16,
+      "y": 5,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "sav_rate",
+      "x": 16,
+      "y": 8,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "npa_chart",
+      "x": 0,
+      "y": 8,
+      "w": 12,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "car_chart",
+      "x": 0,
+      "y": 14,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "nim",
+      "x": 16,
+      "y": 11,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "cost_inc",
+      "x": 12,
+      "y": 11,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "roa",
+      "x": 12,
+      "y": 17,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "roe",
+      "x": 12,
+      "y": 14,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "casa",
+      "x": 16,
+      "y": 14,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "cd_ratio",
+      "x": 16,
+      "y": 17,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "bal_sheet",
+      "x": 0,
+      "y": 22,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "inc_stmt",
+      "x": 12,
+      "y": 20,
+      "w": 8,
+      "h": 7,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "yield_curve",
+      "x": 0,
+      "y": 27,
+      "w": 9,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "peer_comp",
+      "x": 9,
+      "y": 27,
+      "w": 11,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "txn_mix",
+      "x": 0,
+      "y": 35,
+      "w": 8,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "psl_stats",
+      "x": 8,
+      "y": 35,
+      "w": 12,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "ctrl_date",
+      "x": 0,
+      "y": 39,
+      "w": 8,
+      "h": 2,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767005370871
 }

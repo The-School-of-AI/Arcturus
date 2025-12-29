@@ -1,0 +1,578 @@
+{
+  "id": "ai-cto",
+  "name": "AI CTO Command Center",
+  "description": "",
+  "cards": [
+    {
+      "id": "header-main",
+      "type": "header",
+      "label": "Header",
+      "config": {
+        "centered": false,
+        "bold": true
+      },
+      "data": {
+        "text": "\ud83d\udee1\ufe0f CTO Command Center: AI Market Intelligence"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-sota",
+      "type": "metric",
+      "label": "SOTA Models Tracked",
+      "config": {},
+      "data": {
+        "value": "142",
+        "change": 12,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-papers",
+      "type": "metric",
+      "label": "ArXiv AI Papers (24h)",
+      "config": {},
+      "data": {
+        "value": "843",
+        "change": 5.4,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-gpu",
+      "type": "trend",
+      "label": "Market H100 Availability",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "Scarce",
+        "change": -2.1
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-sentiment",
+      "type": "trend",
+      "label": "Global AI Sentiment",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "Caution",
+        "change": -15.4
+      },
+      "style": {}
+    },
+    {
+      "id": "chart-benchmarks",
+      "type": "bar_chart",
+      "label": "MMLU & HumanEval Comparison (Top Models)",
+      "config": {},
+      "data": {
+        "title": "Benchmark Scores %",
+        "points": [
+          {
+            "x": "GPT-4o",
+            "y": 88.7
+          },
+          {
+            "x": "Claude 3.5",
+            "y": 89.2
+          },
+          {
+            "x": "Gemini 1.5",
+            "y": 87.1
+          },
+          {
+            "x": "Llama 3 405B",
+            "y": 86.5
+          },
+          {
+            "x": "Mistral Large",
+            "y": 84.3
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chart-elo",
+      "type": "line_chart",
+      "label": "LMSYS Chatbot Arena Elo History",
+      "config": {},
+      "data": {
+        "title": "Elo Rating (Last 6 Months)",
+        "points": [
+          {
+            "x": "Jan",
+            "y": 1250
+          },
+          {
+            "x": "Feb",
+            "y": 1280
+          },
+          {
+            "x": "Mar",
+            "y": 1310
+          },
+          {
+            "x": "Apr",
+            "y": 1345
+          },
+          {
+            "x": "May",
+            "y": 1360
+          },
+          {
+            "x": "Jun",
+            "y": 1375
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "table-leaderboard",
+      "type": "table",
+      "label": "Global LLM Leaderboard Standings",
+      "config": {},
+      "data": {
+        "headers": [
+          "Rank",
+          "Model",
+          "Org",
+          "Params",
+          "License",
+          "Context Win"
+        ],
+        "rows": [
+          [
+            "1",
+            "Claude 3.5 Sonnet",
+            "Anthropic",
+            "Unknown",
+            "Proprietary",
+            "200k"
+          ],
+          [
+            "2",
+            "GPT-4o",
+            "OpenAI",
+            "Unknown",
+            "Proprietary",
+            "128k"
+          ],
+          [
+            "3",
+            "Gemini 1.5 Pro",
+            "Google",
+            "MoE",
+            "Proprietary",
+            "2M"
+          ],
+          [
+            "4",
+            "Llama 3 70B",
+            "Meta",
+            "70B",
+            "Open Weight",
+            "8k"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "stats-risers",
+      "type": "stats_trending",
+      "label": "Fastest Rising Models (Weekly)",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "label": "Qwen 2.5",
+            "value": "+1400 Stars",
+            "change": "+12%"
+          },
+          {
+            "label": "DeepSeek Coder",
+            "value": "+850 Stars",
+            "change": "+8%"
+          },
+          {
+            "label": "Phi-4 Mini",
+            "value": "+600 Stars",
+            "change": "+5%"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed-launches",
+      "type": "feed",
+      "label": "\ud83d\udea8 Competitor Launch Radar",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Anthropic releases Claude 3.5 Opus",
+            "time": "2h ago",
+            "description": "Claims significant reasoning improvements over GPT-4."
+          },
+          {
+            "title": "Meta open-sources 'Chameleon' multi-modal model",
+            "time": "5h ago",
+            "description": "Native early-fusion architecture released for research."
+          },
+          {
+            "title": "OpenAI announces 'Voice Engine' limit preview",
+            "time": "12h ago",
+            "description": "Safety focused release, small group testing only."
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "heatmap-perf",
+      "type": "heatmap",
+      "label": "Model Capability Heatmap",
+      "config": {},
+      "data": {
+        "matrix": [
+          [
+            95,
+            80,
+            60,
+            90
+          ],
+          [
+            88,
+            92,
+            75,
+            85
+          ],
+          [
+            70,
+            65,
+            98,
+            60
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed-news",
+      "type": "feed",
+      "label": "\ud83d\uddde\ufe0f Market News & Regulation",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "EU AI Act enters final implementation phase",
+            "time": "Today"
+          },
+          {
+            "title": "NVIDIA announces Blackwell B200 shipping dates",
+            "time": "Yesterday"
+          },
+          {
+            "title": "FTC launches inquiry into AI partnerships",
+            "time": "2d ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed-social",
+      "type": "feed",
+      "label": "\ud83d\udc26 Social Sentiment & Top Tweets",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "@ylecun: 'LLMs are not the path to AGI...'",
+            "time": "4k Likes"
+          },
+          {
+            "title": "@karpathy: 'The new visualization tools for...'",
+            "time": "2.1k Likes"
+          },
+          {
+            "title": "Trending: #AIHype vs #AIReality debates",
+            "time": "High Volume"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "md-concerns",
+      "type": "markdown",
+      "label": "\u26a0\ufe0f Concerning Narratives",
+      "config": {},
+      "data": {
+        "content": "### Active FUD Vectors\n- Data Contamination: Rising discourse on evaluation datasets leaking into training data.\n- Copyright: New lawsuits filed by major publishers against OpenAI and Microsoft.\n- Energy Use: viral threads comparing AI query energy cost to crypto."
+      },
+      "style": {}
+    },
+    {
+      "id": "score-internal",
+      "type": "score_card",
+      "label": "Internal Benchmark Gap",
+      "config": {},
+      "data": {
+        "score": 92,
+        "subtext": "2% behind SOTA"
+      },
+      "style": {}
+    },
+    {
+      "id": "score-safety",
+      "type": "score_card",
+      "label": "Safety Audit Score",
+      "config": {},
+      "data": {
+        "score": 98,
+        "subtext": "Compliant"
+      },
+      "style": {}
+    },
+    {
+      "id": "trend-compute",
+      "type": "trend",
+      "label": "Compute Efficiency",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "45%",
+        "change": 5.2
+      },
+      "style": {}
+    },
+    {
+      "id": "trend-burn",
+      "type": "trend",
+      "label": "Training Burn Rate",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "$4.2M",
+        "change": -1.5
+      },
+      "style": {}
+    },
+    {
+      "id": "input-search",
+      "type": "input",
+      "label": "Deep Search Intel",
+      "config": {},
+      "data": {
+        "placeholder": "e.g., 'Gemini architecture details'...",
+        "label": "Search"
+      },
+      "style": {}
+    },
+    {
+      "id": "btn-report",
+      "type": "button",
+      "label": "Generate Exec Brief",
+      "config": {},
+      "data": {
+        "label": "Download Report PDF"
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header-main",
+      "x": 0,
+      "y": 0,
+      "w": 18,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "metric-sota",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "metric-papers",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "metric-gpu",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "metric-sentiment",
+      "x": 12,
+      "y": 5,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chart-benchmarks",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chart-elo",
+      "x": 12,
+      "y": 8,
+      "w": 6,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "table-leaderboard",
+      "x": 0,
+      "y": 13,
+      "w": 18,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "stats-risers",
+      "x": 10,
+      "y": 19,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "feed-launches",
+      "x": 0,
+      "y": 19,
+      "w": 10,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "heatmap-perf",
+      "x": 8,
+      "y": 25,
+      "w": 10,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "feed-news",
+      "x": 0,
+      "y": 25,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "feed-social",
+      "x": 8,
+      "y": 34,
+      "w": 10,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "md-concerns",
+      "x": 0,
+      "y": 34,
+      "w": 8,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "score-internal",
+      "x": 0,
+      "y": 31,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "score-safety",
+      "x": 4,
+      "y": 31,
+      "w": 4,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "trend-compute",
+      "x": 8,
+      "y": 31,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "trend-burn",
+      "x": 13,
+      "y": 31,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "input-search",
+      "x": 0,
+      "y": 42,
+      "w": 12,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "btn-report",
+      "x": 12,
+      "y": 42,
+      "w": 6,
+      "h": 2,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767005152515
+}
