@@ -498,15 +498,66 @@ NO: Reply "SINGLE"
                     continue
                 else:
                     final_chunks.append(chunk_text)
+                    position += WORD_LIMIT
             else:
-                # Single topic - keep whole chunk
-                final_chunks.append(chunk_text)
+                # Single topic - handle potentially large block
+                # Don't just hard cut at WORD_LIMIT; find the last sentence boundary
+                # Look for sentence endings in the last 15% of the chunk
+                lookback_chars = int(len(chunk_text) * 0.15) 
+                last_section = chunk_text[-lookback_chars:]
+                
+                # Regex for sentence ending: period/exclaim/question followed by space or newline
+                match = None
+                for m in re.finditer(r'[.!?]\s', last_section):
+                    match = m
+                
+                if match:
+                    # Cut at the sentence end
+                    sentence_end = len(chunk_text) - lookback_chars + match.end()
+                    safe_chunk = chunk_text[:sentence_end].strip()
+                    final_chunks.append(safe_chunk)
+                    
+                    # Recalculate position based on words consumed
+                    words_consumed = len(safe_chunk.split())
+                    position += words_consumed
+                else:
+                    # Backward search failed. Try FORWARD search (Look ahead 150 words)
+                    # to find the next sentence ending, rather than hard cutting.
+                    extended_found = False
+                    try:
+                        # Peek ahead
+                        next_block = words[position + WORD_LIMIT : position + WORD_LIMIT + 150]
+                        if next_block:
+                            next_text = " ".join(next_block)
+                            # Find first sentence terminator
+                            f_match = re.search(r'[.!?]\s', next_text)
+                            if f_match:
+                                # Found a terminator ahead! Extend the chunk.
+                                cutoff = f_match.end()
+                                extension = next_text[:cutoff]
+                                full_chunk = chunk_text + " " + extension
+                                final_chunks.append(full_chunk)
+                                
+                                # Advance strictly by what we consumed (Limit + Extension)
+                                position += WORD_LIMIT + len(extension.split())
+                                extended_found = True
+                    
+                    except Exception as e:
+                        mcp_log("WARN", f"Forward look error: {e}")
+
+                    if not extended_found:
+                        # Both Back and Forward failed (e.g. huge table).
+                        # Use Overlap Fallback.
+                        OVERLAP = 50
+                        final_chunks.append(chunk_text)
+                        
+                        # Advance less, creating overlap in next chunk
+                        position += (WORD_LIMIT - OVERLAP)
 
         except Exception as e:
             mcp_log("WARN", f"Semantic chunking LLM error: {e}")
             final_chunks.append(chunk_text)
-
-        position += WORD_LIMIT
+            position += WORD_LIMIT
 
     return [c for c in final_chunks if c.strip()]
 
@@ -752,7 +803,12 @@ async def reindex_documents(target_path: str = None) -> str:
                     
     # Run the blocking process_documents in a separate thread
     await asyncio.to_thread(process_documents, target_path)
-    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed successfully."
+    
+    # Trigger background image indexing (fire and forget)
+    mcp_log("INFO", "Triggering background image captioning...")
+    asyncio.create_task(index_images())
+    
+    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed successfully. Image analysis running in background."
 
 
 @mcp.tool()

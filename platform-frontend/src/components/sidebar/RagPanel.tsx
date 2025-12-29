@@ -151,7 +151,7 @@ export const RagPanel: React.FC = () => {
     const [files, setFiles] = useState<RagItem[]>([]);
     const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [loading, setLoading] = useState(false);
-    const [splitRatio, setSplitRatio] = useState(60);
+    const [splitRatio, setSplitRatio] = useState(50);
     const [panelMode, setPanelMode] = useState<'browse' | 'seek'>('browse');
     const [innerSearch, setInnerSearch] = useState("");
     const [seeking, setSeeking] = useState(false);
@@ -538,10 +538,6 @@ export const RagPanel: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <div className="h-20 flex flex-col items-center justify-center text-muted-foreground/30 italic text-[10px] border border-dashed border-border/50 rounded-lg text-center px-4">
-                            Select a document to manage its indexing state
-                        </div>
-
                         {!allFilesIndexed ? (
                             <div className="p-4 rounded-xl bg-neon-yellow/5 border border-neon-yellow/10 flex flex-col items-center gap-3 text-center">
                                 <div className="p-3 bg-neon-yellow/10 rounded-full text-neon-yellow">
