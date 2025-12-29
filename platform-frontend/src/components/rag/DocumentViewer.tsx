@@ -351,7 +351,7 @@ export const DocumentViewer: React.FC = () => {
                             key={doc.id}
                             onClick={() => setActiveDocument(doc.id)}
                             className={cn(
-                                "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[140px] max-w-[200px] border-x border-t border-transparent relative",
+                                "group flex items-center gap-0 px-2 h-10 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[50px] max-w-[150px] border-x border-t border-transparent relative",
                                 activeDocumentId === doc.id
                                     ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background"
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
@@ -376,7 +376,7 @@ export const DocumentViewer: React.FC = () => {
                     {openDocuments.length > 0 && (
                         <button
                             onClick={closeAllDocuments}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/20 border border-border/50"
+                            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/10 border border-border/50"
                         >
                             <X className="w-2.5 h-2.5" />
                             Clear
@@ -385,7 +385,7 @@ export const DocumentViewer: React.FC = () => {
 
                     {activeDoc && canPreview(activeDoc.type) && (
                         <>
-                            <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-border/50">
+                            <div className="flex items-center bg-black/10 rounded-lg p-0.5 border border-border/50">
                                 <TabButton
                                     label="Source"
                                     active={viewType === 'source'}

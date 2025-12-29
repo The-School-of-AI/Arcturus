@@ -25,6 +25,7 @@ import re
 import base64 # ollama needs base64-encoded-image
 import asyncio
 import concurrent.futures
+import threading
 
 
 
@@ -391,9 +392,11 @@ def replace_images_with_captions(markdown: str) -> str:
 #     downloaded = trafilatura.fetch_url(input.url)
 #     if not downloaded:
 #         return MarkdownOut@mcp.tool()
-def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
-    """Convert PDF to markdown. """
+# Global lock for PDF processing (PyMuPDF is not thread-safe in some contexts)
+pdf_lock = threading.Lock()
 
+def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
+    """Convert PDF to markdown (Thread-Safe). """
 
     if not os.path.exists(string):
         return MarkdownOutput(markdown=f"File not found: {string}")
@@ -402,12 +405,23 @@ def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
     global_image_dir = ROOT / "documents" / "images"
     global_image_dir.mkdir(parents=True, exist_ok=True)
 
-    # Actual markdown with relative image paths
-    markdown = pymupdf4llm.to_markdown(
-        string,
-        write_images=True,
-        image_path=str(global_image_dir)
-    )
+    # Acquire lock for PDF processing to prevent "not a textpage" concurrency errors
+    with pdf_lock:
+        try:
+            # Actual markdown with relative image paths
+            markdown = pymupdf4llm.to_markdown(
+                string,
+                write_images=True,
+                image_path=str(global_image_dir)
+            )
+        except Exception as e:
+            # Fallback: try without image extraction if that fails
+            mcp_log("WARN", f"PDF conversion with images failed: {e}, trying without images...")
+            try:
+                markdown = pymupdf4llm.to_markdown(string, write_images=False)
+            except Exception as e2:
+                mcp_log("ERROR", f"PDF conversion completely failed: {e2}")
+                return MarkdownOutput(markdown=f"Failed to extract text from PDF: {string}")
 
 
     # Re-point image links in the markdown
@@ -718,8 +732,24 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
 async def reindex_documents(target_path: str = None) -> str:
     """Trigger a manual re-index of the RAG documents. 
     Optionally provide a target_path (relative to data/ folder) to index a specific file.
+    If target_path is None, IT WIPES THE INDEX and performs a full fresh scan.
     """
     mcp_log("INFO", f"Re-indexing request received (target: {target_path})")
+    
+    if not target_path:
+        # Full Rescan: Wipe existing data to force clean processing
+        ROOT = Path(__file__).parent.resolve()
+        INDEX_CACHE = ROOT / "faiss_index"
+        mcp_log("INFO", "Use Trace: Force Rescan - Wiping existing index...")
+        
+        for f in ["index.bin", "metadata.json", "doc_index_cache.json"]:
+            path = INDEX_CACHE / f
+            if path.exists():
+                try:
+                    path.unlink()
+                except Exception as e:
+                    mcp_log("WARN", f"Failed to delete {f}: {e}")
+                    
     # Run the blocking process_documents in a separate thread
     await asyncio.to_thread(process_documents, target_path)
     return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed successfully."
