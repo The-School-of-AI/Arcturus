@@ -1639,7 +1639,37 @@ async def add_mcp_server(request: AddServerRequest):
     """Add a new MCP server dynamically"""
     try:
         await multi_mcp.add_server(request.name, request.config)
-        return {"status": "success", "message": f"Server {request.name} added and started"}
+        
+        # --- Auto-Assign to Agents ---
+        try:
+            import yaml
+            
+            AGENT_CONFIG_PATH = Path('config/agent_config.yaml')
+            if AGENT_CONFIG_PATH.exists():
+                with open(AGENT_CONFIG_PATH, 'r') as f:
+                    agent_config = yaml.safe_load(f)
+                
+                updated = False
+                # Add to RetrieverAgent and CoderAgent by default
+                targets = ['RetrieverAgent', 'CoderAgent']
+                
+                for agent_name in targets:
+                    if agent_name in agent_config['agents']:
+                        servers = agent_config['agents'][agent_name].get('mcp_servers', [])
+                        if request.name not in servers:
+                            servers.append(request.name)
+                            agent_config['agents'][agent_name]['mcp_servers'] = servers
+                            updated = True
+                            print(f"  🤖 Auto-assigned {request.name} to {agent_name}")
+                
+                if updated:
+                    with open(AGENT_CONFIG_PATH, 'w') as f:
+                        yaml.dump(agent_config, f, default_flow_style=False, sort_keys=False)
+        except Exception as e:
+            print(f"  ⚠️ Failed to auto-assign server to agents: {e}")
+            # Don't fail the whole request, just log warning
+
+        return {"status": "success", "message": f"Server {request.name} added and assigned to agents"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

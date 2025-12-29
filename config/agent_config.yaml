@@ -14,13 +14,13 @@ agents:
   CoderAgent:
     prompt_file: "prompts/coder.md"
     model: "gemini"
-    mcp_servers: ["sandbox", "browser", "rag"]
+    mcp_servers: ["sandbox", "browser", "rag", "yahoo_finance"]
     description: "Writes Python code to analyze data or solve problems."
 
   RetrieverAgent:
     prompt_file: "prompts/retriever.md"
     model: "gemini"
-    mcp_servers: ["rag", "browser"]
+    mcp_servers: ["rag", "browser", "yahoo_finance"]
     description: "Searches local documents and web."
 
   SummarizerAgent:

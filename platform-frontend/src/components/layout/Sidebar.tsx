@@ -163,7 +163,7 @@ export const Sidebar: React.FC = () => {
                         {/* List - Matches Remme Style */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
                             {filteredRuns.map((run) => {
-                                const isStale = run.status === 'running' && (Date.now() - run.createdAt > 10 * 60 * 1000); // 10 mins timeout
+                                const isStale = run.status === 'running' && (Date.now() - run.createdAt > 60 * 60 * 1000); // 1 hour timeout
                                 const displayStatus = isStale ? 'failed' : run.status;
                                 const isActive = currentRun?.id === run.id;
 
