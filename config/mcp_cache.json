@@ -3824,5 +3824,123 @@
         ]
       }
     }
+  ],
+  "yahoo_finance": [
+    {
+      "name": "get_stock_price",
+      "description": "Get the current stock price for a given symbol",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Stock symbol (e.g., AAPL, MSFT, GOOG)"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_historical_data",
+      "description": "Get historical stock data for a symbol",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Stock symbol (e.g., AAPL, MSFT, GOOG)"
+          },
+          "period": {
+            "type": "string",
+            "description": "Time period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ],
+            "default": "1mo"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_stock_metric",
+      "description": "Get a specific metric for a stock using yfinance field names.\n            Common requests and their exact field names:\n            \n            Stock Price & Trading Info:\n            - Current/Stock Price: currentPrice\n            - Opening Price: open\n            - Day's High: dayHigh\n            - Day's Low: dayLow\n            - Previous Close: previousClose\n            - 52 Week High: fiftyTwoWeekHigh\n            - 52 Week Low: fiftyTwoWeekLow\n            - 50 Day Average: fiftyDayAverage\n            - 200 Day Average: twoHundredDayAverage\n            - Trading Volume: volume\n            - Average Volume: averageVolume\n            - Average Daily Volume (10 day): averageDailyVolume10Day\n            - Market Cap/Capitalization: marketCap\n            - Beta: beta\n            - Bid Price: bid\n            - Ask Price: ask\n            - Bid Size: bidSize\n            - Ask Size: askSize\n            \n            Company Information:\n            - Company Name: longName\n            - Short Name: shortName\n            - Business Description/About/Summary: longBusinessSummary\n            - Industry: industry\n            - Sector: sector\n            - Website: website\n            - Number of Employees: fullTimeEmployees\n            - Country: country\n            - State: state\n            - City: city\n            - Address: address1\n            \n            Financial Metrics:\n            - PE Ratio: trailingPE\n            - Forward PE: forwardPE\n            - Price to Book: priceToBook\n            - Price to Sales: priceToSalesTrailing12Months\n            - Enterprise Value: enterpriseValue\n            - Enterprise to EBITDA: enterpriseToEbitda\n            - Enterprise to Revenue: enterpriseToRevenue\n            - Book Value: bookValue\n            \n            Earnings & Revenue:\n            - Revenue/Total Revenue: totalRevenue\n            - Revenue Growth: revenueGrowth\n            - Revenue Per Share: revenuePerShare\n            - EBITDA: ebitda\n            - EBITDA Margins: ebitdaMargins\n            - Net Income: netIncomeToCommon\n            - Earnings Growth: earningsGrowth\n            - Quarterly Earnings Growth: earningsQuarterlyGrowth\n            - Forward EPS: forwardEps\n            - Trailing EPS: trailingEps\n            \n            Margins & Returns:\n            - Profit Margin: profitMargins\n            - Operating Margin: operatingMargins\n            - Gross Margins: grossMargins\n            - Return on Equity/ROE: returnOnEquity\n            - Return on Assets/ROA: returnOnAssets\n            \n            Dividends:\n            - Dividend Yield: dividendYield\n            - Dividend Rate: dividendRate\n            - Dividend Date: lastDividendDate\n            - Ex-Dividend Date: exDividendDate\n            - Payout Ratio: payoutRatio\n            \n            Balance Sheet:\n            - Total Cash: totalCash\n            - Cash Per Share: totalCashPerShare\n            - Total Debt: totalDebt\n            - Debt to Equity: debtToEquity\n            - Current Ratio: currentRatio\n            - Quick Ratio: quickRatio\n            \n            Ownership:\n            - Institutional Ownership: heldPercentInstitutions\n            - Insider Ownership: heldPercentInsiders\n            - Float Shares: floatShares\n            - Shares Outstanding: sharesOutstanding\n            - Short Ratio: shortRatio\n            \n            Analyst Coverage:\n            - Analyst Recommendation: recommendationKey\n            - Number of Analysts: numberOfAnalystOpinions\n            - Price Target Mean: targetMeanPrice\n            - Price Target High: targetHighPrice\n            - Price Target Low: targetLowPrice\n            - Price Target Median: targetMedianPrice\n            \n            Risk Metrics:\n            - Overall Risk: overallRisk\n            - Audit Risk: auditRisk\n            - Board Risk: boardRisk\n            - Compensation Risk: compensationRisk\n            \n            Other:\n            - Currency: currency\n            - Exchange: exchange\n            - Year Change/52 Week Change: 52WeekChange\n            - S&P 500 Year Change: SandP52WeekChange",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Stock symbol (e.g., AAPL, MSFT, GOOG)"
+          },
+          "metric": {
+            "type": "string",
+            "description": "The metric to retrieve, use camelCase"
+          }
+        },
+        "required": [
+          "symbol",
+          "metric"
+        ]
+      }
+    },
+    {
+      "name": "compare_stocks",
+      "description": "Compare multiple stocks by a specific metric",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of stock symbols to compare"
+          },
+          "metric": {
+            "type": "string",
+            "description": "Metric to compare (e.g., currentPrice, marketCap)"
+          }
+        },
+        "required": [
+          "symbols",
+          "metric"
+        ]
+      }
+    },
+    {
+      "name": "search_stocks",
+      "description": "Search for stocks by company name or keyword",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query (company name or keyword)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results to return",
+            "default": 5
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
   ]
 }

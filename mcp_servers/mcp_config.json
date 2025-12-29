@@ -1,0 +1,43 @@
+{
+  "browser": {
+    "command": "uv",
+    "args": [
+      "run",
+      "server_browser.py"
+    ],
+    "type": "local-script"
+  },
+  "rag": {
+    "command": "uv",
+    "args": [
+      "run",
+      "server_rag.py"
+    ],
+    "type": "local-script"
+  },
+  "sandbox": {
+    "command": "uv",
+    "args": [
+      "run",
+      "server_sandbox.py"
+    ],
+    "type": "local-script"
+  },
+  "alphavantage": {
+    "command": "uvx",
+    "args": [
+      "av-mcp",
+      "VXLTQQFJYNCMMPZE"
+    ],
+    "type": "stdio-pypi"
+  },
+  "yahoo_finance": {
+    "type": "stdio-git",
+    "source": "https://github.com/dino65-dev/Finance_mcp-server",
+    "command": "uv",
+    "args": [
+      "run",
+      "src/server.py"
+    ]
+  }
+}

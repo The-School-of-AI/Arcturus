@@ -1607,6 +1607,70 @@ async def analyze_project(request: AnalyzeRequest):
         if is_temp and os.path.exists(target_path):
             shutil.rmtree(target_path)
 
+
+# --- MCP Server Management Endpoints ---
+
+class AddServerRequest(BaseModel):
+    name: str
+    config: dict
+
+@app.get("/mcp/servers")
+async def list_mcp_servers():
+    """List all configured MCP servers and their status"""
+    try:
+        # Get configured servers from config file
+        config = multi_mcp.server_configs
+        # Get connection status
+        connected = multi_mcp.get_connected_servers()
+        
+        servers = []
+        for name, cfg in config.items():
+            servers.append({
+                "name": name,
+                "config": cfg,
+                "status": "connected" if name in connected else "disconnected"
+            })
+        return {"servers": servers}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/mcp/servers")
+async def add_mcp_server(request: AddServerRequest):
+    """Add a new MCP server dynamically"""
+    try:
+        await multi_mcp.add_server(request.name, request.config)
+        return {"status": "success", "message": f"Server {request.name} added and started"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/mcp/servers/{name}")
+async def remove_mcp_server(name: str):
+    """Remove an MCP server"""
+    try:
+        success = await multi_mcp.remove_server(name)
+        if success:
+            return {"status": "success", "message": f"Server {name} removed"}
+        raise HTTPException(status_code=404, detail="Server not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/mcp/connected_tools")
+async def get_connected_tools():
+    """Get tools grouped by server (Optimized)"""
+    # Use cached tools from multi_mcp
+    return {"servers": multi_mcp.tools}
+
+@app.get("/mcp/readme/{name}")
+async def get_mcp_readme(name: str):
+    """Get the README content for a server"""
+    content = multi_mcp.get_server_readme(name)
+    if content:
+        return {"content": content}
+    # Return empty or specific message if not found, don't 404 to avoid frontend console spam
+    return {"content": f"# {name}\n\nNo documentation found."}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
