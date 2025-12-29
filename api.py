@@ -1692,6 +1692,17 @@ async def get_connected_tools():
     # Use cached tools from multi_mcp
     return {"servers": multi_mcp.tools}
 
+class ToolStateRequest(BaseModel):
+    server_name: str
+    tool_name: str
+    enabled: bool
+
+@app.post("/mcp/tool_state")
+async def set_tool_state(request: ToolStateRequest):
+    """Enable or disable a specific tool"""
+    multi_mcp.set_tool_state(request.server_name, request.tool_name, request.enabled)
+    return {"status": "success"}
+
 @app.get("/mcp/readme/{name}")
 async def get_mcp_readme(name: str):
     """Get the README content for a server"""

@@ -12,9 +12,8 @@ interface Tool {
 }
 
 export const McpInspector: React.FC = () => {
-    const { selectedMcpServer } = useAppStore();
+    const { selectedMcpServer, mcpToolStates, toggleMcpTool, setMcpToolStates } = useAppStore();
     const [tools, setTools] = useState<Tool[]>([]);
-    const [enabledTools, setEnabledTools] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -27,12 +26,20 @@ export const McpInspector: React.FC = () => {
                 const serverTools = res.data.servers[selectedMcpServer] || [];
                 setTools(serverTools);
 
-                // All enabled by default
-                const status: Record<string, boolean> = {};
-                serverTools.forEach((t: Tool) => {
-                    status[t.name] = true;
-                });
-                setEnabledTools(status);
+                // Initialize state if not present in store
+                const currentStates = mcpToolStates[selectedMcpServer] || {};
+                const missingKeys = serverTools.some((t: Tool) => currentStates[t.name] === undefined);
+
+                if (missingKeys || Object.keys(currentStates).length === 0) {
+                    const status: Record<string, boolean> = { ...currentStates };
+                    serverTools.forEach((t: Tool) => {
+                        if (status[t.name] === undefined) {
+                            status[t.name] = true; // Default to enabled
+                        }
+                    });
+                    setMcpToolStates(selectedMcpServer, status);
+                }
+
             } catch (e) {
                 console.error("Failed to fetch mcp tools", e);
             } finally {
@@ -41,7 +48,7 @@ export const McpInspector: React.FC = () => {
         };
 
         fetchTools();
-    }, [selectedMcpServer]);
+    }, [selectedMcpServer]); // Don't depend on toolStates to avoid loops
 
     if (!selectedMcpServer) {
         return (
@@ -54,11 +61,10 @@ export const McpInspector: React.FC = () => {
         );
     }
 
+    const enabledTools = mcpToolStates[selectedMcpServer] || {};
+
     const toggleTool = (name: string) => {
-        setEnabledTools(prev => ({
-            ...prev,
-            [name]: !prev[name]
-        }));
+        toggleMcpTool(selectedMcpServer, name);
     };
 
     const isAllEnabled = tools.length > 0 && tools.every(t => enabledTools[t.name]);
@@ -69,7 +75,7 @@ export const McpInspector: React.FC = () => {
         tools.forEach(t => {
             nextStatus[t.name] = newState;
         });
-        setEnabledTools(nextStatus);
+        setMcpToolStates(selectedMcpServer, nextStatus);
     };
 
     return (

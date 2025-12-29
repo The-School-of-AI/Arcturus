@@ -26,6 +26,11 @@ class MultiMCP:
         self._cached_metadata = self._load_cache()
         
         self.server_configs = self._load_config()
+        
+        # Disabled tools cache
+        self.disabled_tools = set() # { "server:tool" }
+        self.disabled_tools_path = self.base_dir.parent / "config" / "disabled_tools.json"
+        self._load_disabled_tools()
 
     def _load_config(self) -> dict:
         """Load server configuration from JSON"""
@@ -41,7 +46,28 @@ class MultiMCP:
         try:
             self.config_path.write_text(json.dumps(self.server_configs, indent=2))
         except Exception as e:
+        except Exception as e:
             print(f"⚠️ Failed to save MCP config: {e}")
+
+    def _load_disabled_tools(self):
+        if self.disabled_tools_path.exists():
+            try:
+                data = json.loads(self.disabled_tools_path.read_text())
+                self.disabled_tools = set(data)
+            except: pass
+
+    def _save_disabled_tools(self):
+        self.disabled_tools_path.write_text(json.dumps(list(self.disabled_tools)))
+        
+    def set_tool_state(self, server_name: str, tool_name: str, enabled: bool):
+        key = f"{server_name}:{tool_name}"
+        if enabled:
+            if key in self.disabled_tools:
+                self.disabled_tools.remove(key)
+                self._save_disabled_tools()
+        else:
+            self.disabled_tools.add(key)
+            self._save_disabled_tools()
 
     async def add_server(self, name: str, config: dict):
         """Dynamically add a new server"""
@@ -303,7 +329,11 @@ class MultiMCP:
         all_tools = []
         for name in server_names:
             if name in self.tools:
-                all_tools.extend(self.tools[name])
+                # Filter out disabled tools
+                for tool in self.tools[name]:
+                    key = f"{name}:{tool.name}"
+                    if key not in self.disabled_tools:
+                        all_tools.append(tool)
         return all_tools
 
     async def call_tool(self, server_name: str, tool_name: str, arguments: dict):

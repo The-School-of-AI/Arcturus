@@ -63,6 +63,9 @@ interface ReplaySlice {
 interface SettingsSlice {
     apiKey: string;
     setApiKey: (key: string) => void;
+    mcpToolStates: Record<string, Record<string, boolean>>; // { serverName: { toolName: boolean } }
+    toggleMcpTool: (serverName: string, toolName: string) => void;
+    setMcpToolStates: (serverName: string, states: Record<string, boolean>) => void;
     theme: 'dark' | 'light'; // although we force dark mostly
     localModel: string;
     setLocalModel: (model: string) => void;
@@ -271,10 +274,19 @@ export const useAppStore = create<AppState>()(
             // Polling Logic
             pollingInterval: null,
             startPolling: (runId) => {
+                // Clear existing first
+                if (get().pollingInterval) clearInterval(get().pollingInterval!);
+
                 const interval = setInterval(async () => {
                     await get().refreshCurrentRun();
-                    // Also refresh the sidebar list to update statuses
                     await get().fetchRuns();
+
+                    // Auto-stop if terminal state
+                    const run = get().runs.find(r => r.id === runId);
+                    if (run && (run.status === 'completed' || run.status === 'failed')) {
+                        console.log(`Run ${runId} finished with status ${run.status}. Stopping polling.`);
+                        get().stopPolling();
+                    }
                 }, 2000);
                 set({ pollingInterval: interval });
             },
@@ -348,6 +360,42 @@ export const useAppStore = create<AppState>()(
             // Settings
             apiKey: '',
             setApiKey: (key) => set({ apiKey: key }),
+            mcpToolStates: {},
+            toggleMcpTool: (server, tool) => {
+                const state = get();
+                const serverState = state.mcpToolStates[server] || {};
+                const newState = !serverState[tool];
+
+                // Optimistic update
+                set(state => ({
+                    mcpToolStates: {
+                        ...state.mcpToolStates,
+                        [server]: {
+                            ...serverState,
+                            [tool]: newState
+                        }
+                    }
+                }));
+
+                // Sync with backend
+                api.post(`${API_BASE}/mcp/tool_state`, {
+                    server_name: server,
+                    tool_name: tool,
+                    enabled: newState
+                }).catch(e => console.error("Failed to sync tool state", e));
+            },
+            setMcpToolStates: (server, states) => {
+                set(state => ({
+                    mcpToolStates: {
+                        ...state.mcpToolStates,
+                        [server]: states
+                    }
+                }));
+                // We probably shouldn't sync ALL states on load/init, only on user action
+                // but if we wanted to enforce "Enable All" from button:
+                // We can tackle that in the components if needed, or iterate here.
+                // For now, let's keep setMcpToolStates local for hydration.
+            },
             theme: 'dark',
             localModel: 'mistral:latest',
             setLocalModel: (model) => set({ localModel: model }),
@@ -695,6 +743,7 @@ export const useAppStore = create<AppState>()(
             partialize: (state) => ({
                 // Only persist user settings, not runs (which should come fresh from API)
                 apiKey: state.apiKey,
+                mcpToolStates: state.mcpToolStates,
                 localModel: state.localModel,
                 viewMode: state.viewMode,
                 sidebarTab: state.sidebarTab,
