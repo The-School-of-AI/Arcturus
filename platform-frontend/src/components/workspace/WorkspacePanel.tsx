@@ -133,6 +133,7 @@ export const WorkspacePanel: React.FC = () => {
 
     // Auto-switch to Compare tab when test mode activates with results
     React.useEffect(() => {
+        // console.log('TestMode Effect:', { active: testMode.active, loading: testMode.isLoading, hasOutput: !!testMode.testOutput, nodeId: testMode.nodeId, selected: selectedNode?.id });
         if (testMode.active && testMode.nodeId === selectedNode?.id && !testMode.isLoading && (testMode.testOutput || testMode.error)) {
             setActiveTab('compare');
         }
@@ -140,7 +141,7 @@ export const WorkspacePanel: React.FC = () => {
         if (!testMode.active && activeTab === 'compare') {
             setActiveTab('overview');
         }
-    }, [testMode.active, testMode.isLoading, testMode.testOutput, testMode.error, testMode.nodeId, selectedNode?.id]);
+    }, [testMode.active, testMode.isLoading, testMode.testOutput, testMode.error, testMode.executionResult, testMode.nodeId, selectedNode?.id, activeTab]);
 
     if (sidebarTab === 'rag') {
         return <DocumentAssistant />;

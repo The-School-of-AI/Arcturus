@@ -206,8 +206,7 @@ class ExecutionContextManager:
                     # This prevents the bug where "['url1', 'url2']" becomes a string
                     # instead of an actual list, causing iteration over characters
                     parsed_value = self._ensure_parsed_value(var_value)
-                    print(f"DEBUG INJECT: {var_name} -> Type: {type(parsed_value)} Value: {str(parsed_value)[:100]}...")
-
+                    
                     globals_injection += f'{var_name} = {repr(parsed_value)}\n'
                 
                 # 2. Inject agent's own output variables (with safe parsing)
