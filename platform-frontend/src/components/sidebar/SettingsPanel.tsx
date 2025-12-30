@@ -20,7 +20,9 @@ export const SettingsPanel: React.FC = () => {
         <div className="flex flex-col h-full bg-card text-foreground">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center gap-2 bg-card/50 sticky top-0 z-10">
-                <Settings className="w-5 h-5 text-primary" />
+                <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
+                    <Settings className="w-5 h-5 text-primary" />
+                </div>
                 <div>
                     <h1 className="font-bold text-foreground text-sm uppercase tracking-tight">Settings</h1>
                     <p className="text-[10px] text-muted-foreground">Configure application</p>
