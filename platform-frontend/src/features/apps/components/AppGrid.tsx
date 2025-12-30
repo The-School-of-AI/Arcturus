@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { AppCreationModal } from './AppCreationModal';
+import { AppGenerationModal } from './AppGenerationModal';
 import { ResponsiveGridLayout as RGLResponsiveBase } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -135,8 +137,12 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         isAppViewMode,
         setIsAppViewMode,
         updateAppCardData,
-        hydrateApp
+        hydrateApp,
+        generateApp
     } = useAppStore();
+
+    const [showCreationModal, setShowCreationModal] = useState(false);
+    const [showGenerationModal, setShowGenerationModal] = useState(false);
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
 
@@ -525,7 +531,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     {/* Actions */}
                     <div className="flex items-center bg-muted/80 backdrop-blur rounded-lg border border-border shadow-lg p-1 gap-1">
                         <button
-                            onClick={(e) => { e.stopPropagation(); createNewApp(); }}
+                            onClick={(e) => { e.stopPropagation(); setShowCreationModal(true); }}
                             className="p-1.5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors rounded"
                             title="New App (Clear Canvas)"
                         >
@@ -812,6 +818,24 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     </div>
                 )}
             </div>
+
+            {/* Modals */}
+            <AppCreationModal
+                isOpen={showCreationModal}
+                onClose={() => setShowCreationModal(false)}
+                onCreateBlank={() => {
+                    createNewApp();
+                }}
+                onGenerateWithAI={() => setShowGenerationModal(true)}
+            />
+
+            <AppGenerationModal
+                isOpen={showGenerationModal}
+                onClose={() => setShowGenerationModal(false)}
+                onGenerate={async (name, prompt) => {
+                    await generateApp(name, prompt);
+                }}
+            />
         </div>
     );
 };

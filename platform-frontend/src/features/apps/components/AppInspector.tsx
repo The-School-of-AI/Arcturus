@@ -628,7 +628,7 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Line Thickness', key: 'strokeWidth', default: false },
     ],
     pie_chart: [
-        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Title', key: 'showTitle', default: false },
         { name: 'Show Legend', key: 'showLegend', default: true },
         { name: 'Show Percentages', key: 'showPercent', default: true },
         { name: 'Donut Style', key: 'donut', default: true },

@@ -51,9 +51,10 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     }));
 
     // Feature toggles from config
+    const showTitle = config.showTitle === true; // Default false
     const showLegend = config.showLegend !== false;
     const showPercent = config.showPercent !== false;
-    const isDonut = config.donut === true;
+    const isDonut = config.donut !== false; // Default true
     const animate = config.animate !== false;
 
     // Calculate total for percentages
@@ -94,7 +95,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     let cumulativeOffset = 0;
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={showTitle ? title : undefined}>
             <div className="flex items-center h-full gap-4 pie-container relative">
                 {/* Tooltip */}
                 {tooltip.visible && (

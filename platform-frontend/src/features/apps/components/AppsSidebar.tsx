@@ -7,8 +7,7 @@ import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, Cand
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
-import { AppCreationModal } from './AppCreationModal';
-import { AppGenerationModal } from './AppGenerationModal';
+
 
 interface AppsSidebarProps {
     className?: string;
@@ -59,7 +58,7 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
+            <div className="flex-1 overflow-y-auto space-y-5 scrollbar-hide">
                 {activeTab === 'apps' ? (
                     <SavedAppsList />
                 ) : (
@@ -90,7 +89,7 @@ export const COMPONENT_CATEGORIES = [
             { type: 'line_chart', label: 'Line Chart', icon: LineChart, defaultW: 6, defaultH: 8 },
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
-            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 8 },
+            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 4, defaultH: 4 },
             { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 4, defaultH: 8 },
             { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
@@ -230,55 +229,59 @@ const ComponentLibrary = () => {
     const isSearching = search.length > 0;
 
     return (
-        <div className="space-y-2">
-            <div className="relative sticky top-0 z-10 bg-card pb-2">
-                <Search className="absolute left-2.5 top-3 w-3.5 h-3.5 text-muted-foreground" />
-                <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg text-xs pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 focus:border-neon-yellow/30 text-foreground placeholder:text-muted-foreground transition-all"
-                    placeholder="Search 60+ components..."
-                />
+        <div className="flex flex-col gap-4">
+            <div className="sticky top-0 px-4 pt-4 pb-2 z-20 bg-card border-b border-border/50">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all"
+                        placeholder="Search 60+ components..."
+                    />
+                </div>
             </div>
+            <div className="px-4 pb-4 space-y-4">
 
-            {filteredCategories.map(category => {
-                const isExpanded = isSearching || expandedCategories[category.name];
-                return (
-                    <div key={category.name} className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
-                        <button
-                            onClick={() => toggleCategory(category.name)}
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/5 transition-colors"
-                        >
-                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                                {category.name}
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground">{category.items.length}</span>
-                                <svg
-                                    className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-                        </button>
-                        {isExpanded && (
-                            <div className="grid grid-cols-2 gap-2 p-2 pt-0">
-                                {category.items.map(item => (
-                                    <ComponentPreviewCard
-                                        key={item.type}
-                                        type={item.type}
-                                        label={item.label}
-                                        icon={item.icon}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
+                {filteredCategories.map(category => {
+                    const isExpanded = isSearching || expandedCategories[category.name];
+                    return (
+                        <div key={category.name} className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
+                            <button
+                                onClick={() => toggleCategory(category.name)}
+                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/5 transition-colors"
+                            >
+                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                                    {category.name}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-muted-foreground">{category.items.length}</span>
+                                    <svg
+                                        className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </button>
+                            {isExpanded && (
+                                <div className="grid grid-cols-2 gap-2 p-2 pt-0">
+                                    {category.items.map(item => (
+                                        <ComponentPreviewCard
+                                            key={item.type}
+                                            type={item.type}
+                                            label={item.label}
+                                            icon={item.icon}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };
@@ -1237,87 +1240,33 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 };
 
 const SavedAppsList = () => {
-    const { savedApps, saveApp, loadApp, deleteApp, editingAppId, createNewApp, fetchApps, isAppViewMode, setIsAppViewMode, generateApp } = useAppStore();
-    const [name, setName] = useState('');
+    const { savedApps, loadApp, deleteApp, editingAppId, fetchApps } = useAppStore();
     const [searchQuery, setSearchQuery] = useState('');
-    const [showCreationModal, setShowCreationModal] = useState(false);
-    const [showGenerationModal, setShowGenerationModal] = useState(false);
 
     // Auto-refresh apps every 5 seconds (Pseudo Hot-Loading)
     useEffect(() => {
-        // Initial fetch
         fetchApps();
-
-        const interval = setInterval(() => {
-            fetchApps();
-        }, 5000);
+        const interval = setInterval(() => fetchApps(), 5000);
         return () => clearInterval(interval);
     }, [fetchApps]);
 
-    const activeApp = savedApps.find(a => a.id === editingAppId);
-
-    const handleSave = () => {
-        if (!name.trim()) return;
-        saveApp(name);
-        setName('');
-    };
-
     return (
-        <div className="space-y-6">
-            {/* Create New / Header */}
-            <div className="flex items-center justify-between px-1">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                    My Dashboards
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => fetchApps()}
-                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        title="Refresh List"
-                    >
-                        <RefreshCw className="w-3 h-3" />
-                    </button>
-                    <button
-                        onClick={() => setShowCreationModal(true)}
-                        className="flex items-center gap-1 text-[10px] font-bold text-neon-yellow hover:text-foreground transition-colors"
-                    >
-                        <Plus className="w-3 h-3" />
-                        NEW
-                    </button>
+        <div className="flex flex-col gap-4">
+            {/* Sticky Search Bar - Full width override over parent padding */}
+            <div className="sticky top-0 px-4 pt-4 pb-2 z-20 bg-card border-b border-border/50">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search apps..."
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all"
+                    />
                 </div>
             </div>
-
-            {/* Search Bar */}
-            <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <input
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search apps..."
-                    className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground"
-                />
-            </div>
-
-            {/* Modals */}
-            <AppCreationModal
-                isOpen={showCreationModal}
-                onClose={() => setShowCreationModal(false)}
-                onCreateBlank={() => {
-                    createNewApp();
-                }}
-                onGenerateWithAI={() => setShowGenerationModal(true)}
-            />
-
-            <AppGenerationModal
-                isOpen={showGenerationModal}
-                onClose={() => setShowGenerationModal(false)}
-                onGenerate={async (name, prompt) => {
-                    await generateApp(name, prompt);
-                }}
-            />
 
             {/* List */}
-            <div className="space-y-3">
+            <div className="space-y-3 px-4 pb-4">
                 {savedApps.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-center space-y-2 opacity-60">
                         <LayoutGrid className="w-8 h-8 opacity-20" />
