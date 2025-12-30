@@ -232,12 +232,12 @@ const ComponentLibrary = () => {
     return (
         <div className="space-y-2">
             <div className="relative sticky top-0 z-10 bg-card pb-2">
-                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-3 w-3.5 h-3.5 text-muted-foreground" />
                 <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-background border border-border rounded-lg text-xs pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 focus:border-neon-yellow/30 text-foreground placeholder:text-muted-foreground transition-all"
-                    placeholder="Search 40+ components..."
+                    placeholder="Search 60+ components..."
                 />
             </div>
 

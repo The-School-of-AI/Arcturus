@@ -204,7 +204,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     };
 
     const handleLayoutChange = (newLayout: any) => {
-        setAppLayout(newLayout);
+        // Deep compare to avoid unnecessary re-renders (which cause jumping)
+        if (JSON.stringify(newLayout) !== JSON.stringify(appLayout)) {
+            setAppLayout(newLayout);
+        }
     };
 
     const renderCardContent = (card: any) => {
@@ -499,6 +502,18 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         }
     };
 
+    // Memoize layouts to prevent RGL thrashing
+    const memoizedLayouts = React.useMemo(() => {
+        const currentLayout = appLayout.map(item => ({ ...item, static: isAppViewMode }));
+        return {
+            lg: currentLayout,
+            md: currentLayout,
+            sm: currentLayout,
+            xs: currentLayout,
+            xxs: currentLayout
+        };
+    }, [appLayout, isAppViewMode]);
+
     return (
         <div
             className={cn("h-full w-full flex flex-col bg-background relative overflow-hidden", className)}
@@ -620,7 +635,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             {/* Grid Area */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-16 custom-scrollbar"
+                className="flex-1 overflow-auto px-4 py-16 custom-scrollbar"
                 onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'copy';
@@ -680,7 +695,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         <RGLResponsive
                             className="layout min-h-[500px]"
                             width={CANVAS_WIDTH}
-                            layouts={{ lg: appLayout.map(item => ({ ...item, static: isAppViewMode })) }}
+                            layouts={memoizedLayouts}
                             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                             cols={{ lg: 24, md: 24, sm: 24, xs: 24, xxs: 24 }} // Force 24 cols at all breakpoints
                             rowHeight={40} // Reduced rowHeight for finer control (was 60)
@@ -714,8 +729,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                     <div
                                         key={card.id}
                                         className={cn(
-                                            // Match FlowStepNode styling exactly
-                                            "relative flex flex-col overflow-hidden group transition-all duration-500",
+                                            // Match FlowStepNode styling exactly, but avoid transition-all on RGL items
+                                            "relative flex flex-col overflow-hidden group transition-colors transition-shadow duration-200",
                                             // Shadow: always in view mode (except divider/spacer), or when border is visible in edit mode
                                             card.type !== 'divider' && card.type !== 'spacer' && (isAppViewMode ? "shadow-lg" : ((showBorder || isSelected) && "shadow-2xl")),
                                             // Selected state glow - only in edit mode
