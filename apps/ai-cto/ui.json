@@ -397,7 +397,7 @@
       "i": "header-main",
       "x": 0,
       "y": 0,
-      "w": 18,
+      "w": 24,
       "h": 2,
       "moved": false,
       "static": false
@@ -431,8 +431,8 @@
     },
     {
       "i": "metric-sentiment",
-      "x": 12,
-      "y": 5,
+      "x": 18,
+      "y": 2,
       "w": 6,
       "h": 3,
       "moved": false,
@@ -450,7 +450,7 @@
     {
       "i": "chart-elo",
       "x": 12,
-      "y": 8,
+      "y": 5,
       "w": 6,
       "h": 5,
       "moved": false,
@@ -574,5 +574,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767005152515
+  "lastModified": 1767089517100,
+  "lastHydrated": null
 }

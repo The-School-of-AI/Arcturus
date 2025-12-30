@@ -116,7 +116,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     // Container ref for width measurement
     const containerRef = useRef<HTMLDivElement>(null);
     const CANVAS_WIDTH = 1200; // Fixed large canvas width
-    const [zoomLevel, setZoomLevel] = useState(1);
+    const [zoomLevel, setZoomLevel] = useState(0.8); // Default 80% for edit mode
 
     // Connect to Store
     const {
@@ -139,6 +139,11 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     } = useAppStore();
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
+
+    // Auto-adjust zoom based on mode: 100% for preview, 80% for edit
+    useEffect(() => {
+        setZoomLevel(isAppViewMode ? 1 : 0.8);
+    }, [isAppViewMode]);
 
     // Handle keyboard delete
     useEffect(() => {
