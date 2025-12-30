@@ -602,6 +602,7 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         # 3. Update node output
         node_data["output"] = new_output
         node_data["last_tested"] = datetime.now().isoformat()
+        node_data["status"] = "completed"
         
         # 4. Update globals_schema with execution results if available
         # 4. Update globals_schema
@@ -639,6 +640,20 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
             if iterations:
                 # Update the last iteration with the new execution result
                 iterations[-1]["execution_result"] = execution_result
+
+        # 5.5. Cascading Invalidation: Mark downstream nodes as 'stale'
+        # This gives visual feedback (muted opacity) in the frontend that these nodes need re-running
+        try:
+             descendants = nx.descendants(G, node_id)
+             for desc_id in descendants:
+                 if desc_id in G.nodes:
+                     # Only mark as stale if they were previously completed or failed
+                     # If they are 'pending', they stay pending.
+                     current_status = G.nodes[desc_id].get('status')
+                     if current_status in ['completed', 'failed', 'running']:
+                        G.nodes[desc_id]['status'] = 'stale'
+        except Exception as e:
+             print(f"Warning: Failed to invalidate downstream nodes: {e}")
         
         # 6. Save back to file
         graph_data = nx.node_link_data(G)

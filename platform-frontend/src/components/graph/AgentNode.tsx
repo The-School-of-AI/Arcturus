@@ -27,12 +27,14 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             case 'running': return 'text-neon-yellow';
             case 'completed': return 'text-green-400';
             case 'failed': return 'text-red-400';
+            case 'stale': return 'text-muted-foreground/50';
             default: return 'text-muted-foreground';
         }
     };
 
     const statusColor = getStatusColor(data.status);
     const isRunning = data.status === 'running';
+    const isStale = data.status === 'stale';
 
     return (
         <div
@@ -41,7 +43,8 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                 selected
                     ? "border-neon-yellow shadow-[0_0_15px_rgba(246,255,77,0.3)] bg-card"
                     : "border-border hover:border-primary/50 bg-card/80 backdrop-blur-sm",
-                isRunning && "animate-pulse-subtle border-neon-yellow ring-2 ring-neon-yellow ring-offset-2 ring-offset-background shadow-[0_0_20px_rgba(246,255,77,0.5)] bg-card"
+                isRunning && "animate-pulse-subtle border-neon-yellow ring-2 ring-neon-yellow ring-offset-2 ring-offset-background shadow-[0_0_20px_rgba(246,255,77,0.5)] bg-card",
+                isStale && "opacity-90 grayscale border-border/50 bg-card/50 backdrop-blur-sm ring-2 ring-border/50"
             )}
             onClick={() => selectNode(id)}
         >

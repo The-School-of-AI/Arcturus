@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2 } from 'lucide-react';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
@@ -176,7 +176,8 @@ export const WorkspacePanel: React.FC = () => {
                             selectedNode?.data.status === 'completed' ? "bg-green-500" :
                                 selectedNode?.data.status === 'running' ? "bg-yellow-500 animate-pulse" :
                                     selectedNode?.data.status === 'waiting_input' ? "bg-yellow-400 animate-pulse" :
-                                        selectedNode?.data.status === 'failed' ? "bg-red-500" : "bg-white/20"
+                                        selectedNode?.data.status === 'failed' ? "bg-red-500" :
+                                            selectedNode?.data.status === 'stale' ? "bg-muted-foreground" : "bg-white/20"
                         )} />
                         <span className="font-mono font-bold text-sm tracking-wide uppercase text-foreground">
                             {selectedNode?.data.label || "Unknown Agent"}
@@ -185,8 +186,8 @@ export const WorkspacePanel: React.FC = () => {
                             {selectedNode?.id}
                         </span>
 
-                        {/* RUN AGAIN Button - Only for completed/failed nodes */}
-                        {selectedNode?.data.status && ['completed', 'failed'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
+                        {/* RUN AGAIN Button - Only for completed/failed/stale nodes */}
+                        {selectedNode?.data.status && ['completed', 'failed', 'stale'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
                             <button
                                 onClick={() => runAgentTest(currentRun.id, selectedNode.id)}
                                 disabled={testMode.isLoading}
@@ -221,6 +222,16 @@ export const WorkspacePanel: React.FC = () => {
                             <Maximize2 className="w-4 h-4" />
                         </button>
                     </div>
+
+                    {/* Stale Warning Banner */}
+                    {selectedNode.data.status === 'stale' && !testMode.active && (
+                        <div className="flex items-center gap-3 p-2 bg-muted/50 border border-muted-foreground/20 rounded-lg">
+                            <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                Stale Data: Upstream inputs have changed. Run again to update.
+                            </div>
+                        </div>
+                    )}
 
                     {/* Test Mode Banner */}
                     {testMode.active && testMode.nodeId === selectedNode?.id && (
