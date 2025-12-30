@@ -26,6 +26,7 @@ from shared.state import (
     get_remme_extractor,
     PROJECT_ROOT,
 )
+from routers.remme import background_smart_scan  # Needed for lifespan startup
 
 from contextlib import asynccontextmanager
 
@@ -75,7 +76,6 @@ from routers import apps as apps_router
 from routers import settings as settings_router
 from routers import explorer as explorer_router
 from routers import mcp as mcp_router
-from routers.remme import background_smart_scan  # Needed for lifespan startup
 app.include_router(runs_router.router)
 app.include_router(rag_router.router)
 app.include_router(remme_router.router)
@@ -85,51 +85,6 @@ app.include_router(explorer_router.router)
 app.include_router(mcp_router.router)
 from routers import prompts as prompts_router
 app.include_router(prompts_router.router)
-
-
-
-
-
-
-
-# Runs-related code has been moved to routers/runs.py
-
-
-# RAG-related code has been moved to routers/rag.py
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
-
-
-
-
-
-
-# RemMe endpoints have been moved to routers/remme.py
-
-
-# === SETTINGS API ENDPOINTS ===
-
-# Settings have been moved to routers/settings.py
 
 
 class PullModelRequest(BaseModel):
@@ -171,17 +126,6 @@ async def get_gemini_status():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# Prompts-related code has been moved to routers/prompts.py
-
-
-
-
-
-
-# rag/images endpoint has been moved to routers/rag.py
-
-
 
 
 if __name__ == "__main__":
