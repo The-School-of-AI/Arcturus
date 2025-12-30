@@ -153,5 +153,42 @@ async def get_ollama_models():
         
     except requests.exceptions.ConnectionError:
         raise HTTPException(status_code=503, detail="Ollama is not running. Please start Ollama.")
+
+class PullModelRequest(BaseModel):
+    name: str
+
+@router.post("/ollama/pull")
+async def pull_ollama_model(request: PullModelRequest):
+    """Pull a new model from Ollama registry (starts async download)"""
+    try:
+        ollama_url = get_ollama_url("base")
+        # Use streaming=False for now, just initiate the pull
+        response = requests.post(
+            f"{ollama_url}/api/pull",
+            json={"name": request.name, "stream": False},
+            timeout=600  # 10 min timeout for large models
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Failed to pull model: {response.text}")
+        
+        return {"status": "success", "message": f"Model '{request.name}' pulled successfully"}
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail="Model pull timed out - try from terminal")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gemini/status")
+async def get_gemini_status():
+    """Check if Gemini API key is configured via environment variable"""
+    try:
+        import os
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        return {
+            "status": "success",
+            "configured": bool(api_key),
+            "key_preview": f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else None
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
