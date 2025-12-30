@@ -24,8 +24,8 @@
         "showSparkline": true
       },
       "data": {
-        "value": "\u20b9849.85",
-        "change": -1.25,
+        "value": "\u20b9839.60",
+        "change": -0.55,
         "trend": "down"
       },
       "style": {}
@@ -36,8 +36,8 @@
       "label": "Market Cap",
       "config": {},
       "data": {
-        "value": "\u20b966,144 Cr",
-        "change": -2.5,
+        "value": "\u20b965,403 Cr",
+        "change": -14.55,
         "trend": "down"
       },
       "style": {}
@@ -48,8 +48,8 @@
       "label": "P/E Ratio",
       "config": {},
       "data": {
-        "value": "13.5x",
-        "change": -1.8,
+        "value": "-86.12x",
+        "change": -41969.04,
         "trend": "down"
       },
       "style": {}
@@ -61,8 +61,8 @@
       "config": {},
       "data": {
         "value": "\u20b9833.00",
-        "change": 4.5,
-        "trend": "up"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -74,9 +74,9 @@
         "showSparkline": false
       },
       "data": {
-        "value": "1.95%",
-        "change": 0.2,
-        "trend": "up"
+        "value": "0.00%",
+        "change": -100,
+        "trend": "down"
       },
       "style": {}
     },
@@ -87,8 +87,8 @@
       "config": {},
       "data": {
         "value": "3.00%",
-        "change": -0.5,
-        "trend": "down"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -111,8 +111,8 @@
       "config": {},
       "data": {
         "value": "5.25%",
-        "change": -0.25,
-        "trend": "down"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -135,8 +135,8 @@
       "config": {},
       "data": {
         "value": "10.35%",
-        "change": 0.05,
-        "trend": "up"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -146,7 +146,7 @@
       "label": "SA Rate",
       "config": {},
       "data": {
-        "value": "4.50%",
+        "value": "4.00%",
         "change": 0,
         "trend": "neutral"
       },
@@ -206,7 +206,7 @@
           },
           {
             "x": "Tier 2",
-            "y": 1.30
+            "y": 1.3
           },
           {
             "x": "Total",
@@ -222,8 +222,8 @@
       "label": "Net Interest Margin",
       "config": {},
       "data": {
-        "value": "4.08%",
-        "change": -0.21,
+        "value": "3.93%",
+        "change": -0.36,
         "trend": "down"
       },
       "style": {}
@@ -234,8 +234,8 @@
       "label": "Cost-to-Income",
       "config": {},
       "data": {
-        "value": "48.2%",
-        "change": 0.5,
+        "value": "60.15%",
+        "change": 11.95,
         "trend": "up"
       },
       "style": {}
@@ -246,8 +246,8 @@
       "label": "RoA (Annualized)",
       "config": {},
       "data": {
-        "value": "0.85%",
-        "change": -0.4,
+        "value": "-0.1%",
+        "change": -1.8,
         "trend": "down"
       },
       "style": {}
@@ -258,8 +258,8 @@
       "label": "RoE (Annualized)",
       "config": {},
       "data": {
-        "value": "10.9%",
-        "change": -3.5,
+        "value": "-1.16%",
+        "change": -15.37,
         "trend": "down"
       },
       "style": {}
@@ -270,8 +270,8 @@
       "label": "CASA Ratio",
       "config": {},
       "data": {
-        "value": "35.87%",
-        "change": -1.1,
+        "value": "32.84%",
+        "change": -5.16,
         "trend": "down"
       },
       "style": {}
@@ -282,9 +282,9 @@
       "label": "Credit-Deposit Ratio",
       "config": {},
       "data": {
-        "value": "86.6%",
-        "change": -1.2,
-        "trend": "down"
+        "value": "89.3x",
+        "change": 3,
+        "trend": "up"
       },
       "style": {}
     },
@@ -294,9 +294,9 @@
       "label": "Balance Sheet Highlights",
       "config": {},
       "data": {
-        "assets": "\u20b95.25L Cr",
+        "assets": "\u20b95.27L Cr",
         "liabilities": "\u20b94.62L Cr",
-        "equity": "\u20b90.63L Cr"
+        "equity": "\u20b90.65L Cr"
       },
       "style": {}
     },
@@ -306,9 +306,9 @@
       "label": "Quarterly Income Stmt (Q2)",
       "config": {},
       "data": {
-        "revenue": "\u20b914,870 Cr",
-        "netIncome": "\u20b91,331 Cr",
-        "expenses": "\u20b913,539 Cr"
+        "revenue": "\u20b913,260 Cr",
+        "netIncome": "-\u20b9437 Cr",
+        "expenses": "\u20b913,697 Cr"
       },
       "style": {}
     },
@@ -326,7 +326,7 @@
           },
           {
             "x": "3Y",
-            "y": 6.10
+            "y": 6.1
           },
           {
             "x": "5Y",
@@ -338,7 +338,7 @@
           },
           {
             "x": "30Y",
-            "y": 7.30
+            "y": 7.3
           }
         ]
       },
@@ -686,5 +686,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767005370871
+  "lastModified": 1767088491068,
+  "lastHydrated": 1767088491068
 }

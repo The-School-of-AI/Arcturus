@@ -200,16 +200,6 @@
       }
     },
     {
-      "id": "h_recs",
-      "type": "divider",
-      "label": "Divider",
-      "data": {},
-      "config": {},
-      "style": {
-        "marginTop": "20px"
-      }
-    },
-    {
       "id": "food_recs",
       "type": "simple_table",
       "label": "Food Recommendations",
@@ -239,37 +229,6 @@
       },
       "config": {},
       "style": {}
-    },
-    {
-      "id": "checklist",
-      "type": "usage_stats",
-      "label": "Preparation Status",
-      "data": {
-        "items": [
-          {
-            "name": "Flights Booked",
-            "percent": 100
-          },
-          {
-            "name": "Hotels Reserved",
-            "percent": 100
-          },
-          {
-            "name": "JR Pass Order",
-            "percent": 80
-          },
-          {
-            "name": "Pocket Wifi/eSIM",
-            "percent": 0
-          },
-          {
-            "name": "Visit Japan Web",
-            "percent": 0
-          }
-        ]
-      },
-      "config": {},
-      "style": {}
     }
   ],
   "layout": [
@@ -277,7 +236,7 @@
       "i": "h1",
       "x": 0,
       "y": 0,
-      "w": 12,
+      "w": 24,
       "h": 2,
       "moved": false,
       "static": false
@@ -286,16 +245,16 @@
       "i": "m1",
       "x": 0,
       "y": 2,
-      "w": 3,
+      "w": 6,
       "h": 3,
       "moved": false,
       "static": false
     },
     {
       "i": "m2",
-      "x": 3,
+      "x": 18,
       "y": 2,
-      "w": 3,
+      "w": 6,
       "h": 3,
       "moved": false,
       "static": false
@@ -304,16 +263,16 @@
       "i": "m3",
       "x": 6,
       "y": 2,
-      "w": 3,
+      "w": 6,
       "h": 3,
       "moved": false,
       "static": false
     },
     {
       "i": "m4",
-      "x": 9,
+      "x": 12,
       "y": 2,
-      "w": 3,
+      "w": 6,
       "h": 3,
       "moved": false,
       "static": false
@@ -323,7 +282,7 @@
       "x": 0,
       "y": 5,
       "w": 6,
-      "h": 6,
+      "h": 5,
       "moved": false,
       "static": false
     },
@@ -331,16 +290,16 @@
       "i": "table_bud",
       "x": 6,
       "y": 5,
-      "w": 6,
-      "h": 6,
+      "w": 10,
+      "h": 5,
       "moved": false,
       "static": false
     },
     {
       "i": "h_itin",
       "x": 0,
-      "y": 11,
-      "w": 12,
+      "y": 10,
+      "w": 16,
       "h": 2,
       "moved": false,
       "static": false
@@ -348,66 +307,49 @@
     {
       "i": "d1",
       "x": 0,
-      "y": 13,
-      "w": 6,
-      "h": 6,
-      "moved": false,
-      "static": false
-    },
-    {
-      "i": "d2",
-      "x": 6,
-      "y": 13,
-      "w": 6,
-      "h": 6,
-      "moved": false,
-      "static": false
-    },
-    {
-      "i": "d3",
-      "x": 0,
-      "y": 19,
-      "w": 6,
-      "h": 6,
-      "moved": false,
-      "static": false
-    },
-    {
-      "i": "d4",
-      "x": 6,
-      "y": 19,
-      "w": 6,
-      "h": 6,
-      "moved": false,
-      "static": false
-    },
-    {
-      "i": "h_recs",
-      "x": 0,
-      "y": 25,
-      "w": 12,
-      "h": 1,
-      "moved": false,
-      "static": false
-    },
-    {
-      "i": "food_recs",
-      "x": 0,
-      "y": 26,
+      "y": 12,
       "w": 6,
       "h": 7,
       "moved": false,
       "static": false
     },
     {
-      "i": "checklist",
+      "i": "d2",
       "x": 6,
-      "y": 26,
+      "y": 12,
       "w": 6,
-      "h": 6,
+      "h": 7,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "d3",
+      "x": 12,
+      "y": 12,
+      "w": 6,
+      "h": 7,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "d4",
+      "x": 18,
+      "y": 12,
+      "w": 6,
+      "h": 7,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "food_recs",
+      "x": 16,
+      "y": 5,
+      "w": 8,
+      "h": 7,
       "moved": false,
       "static": false
     }
   ],
-  "lastModified": 1766841218221
+  "lastModified": 1767089034334,
+  "lastHydrated": null
 }

@@ -84,7 +84,8 @@ export const AppLayout: React.FC = () => {
 
     return (
         <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans">
-            <Header />
+            {/* Hide header when in App View Mode */}
+            {!isAppViewMode && <Header />}
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
                 {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode */}
@@ -127,8 +128,10 @@ export const AppLayout: React.FC = () => {
 
                     {/* APP RUNTIME VIEW (When "View App" is clicked) */}
                     {isAppViewMode && (
-                        <div className="absolute inset-0 z-50 bg-background">
-                            <AppGrid isFullScreen={false} onToggleFullScreen={() => { }} />
+                        <div className="absolute inset-0 z-50 bg-background flex items-center justify-center">
+                            <div className="w-full max-w-7xl h-full">
+                                <AppGrid isFullScreen={true} onToggleFullScreen={() => { }} />
+                            </div>
                         </div>
                     )}
                 </div>
