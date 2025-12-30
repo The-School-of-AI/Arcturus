@@ -579,14 +579,14 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         title="Refresh data using AI based on component contexts"
                     >
                         <RefreshCw className="w-4 h-4 refresh-icon" />
-                        <span className="text-xs font-bold refresh-text">REFRESH</span>
+                        <span className="text-xs font-bold refresh-text">ReFETCH</span>
                     </button>
                 )}
 
                 <div className="flex items-center bg-muted/80 backdrop-blur rounded-lg border border-border shadow-lg mr-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(0.5, prev - 0.1)); }}
-                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors border-r border-border w-8 h-8 flex items-center justify-center font-bold"
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors border-r border-border w-6 h-4 flex items-center justify-center font-bold"
                         title="Zoom Out"
                     >
                         -
@@ -594,19 +594,22 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     <span className="px-2 text-[10px] font-bold text-muted-foreground min-w-[3rem] text-center uppercase tracking-tighter">{Math.round(zoomLevel * 100)}%</span>
                     <button
                         onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(1.5, prev + 0.1)); }}
-                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center font-bold"
+                        className="p-2 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors w-6 h-4 flex items-center border-l justify-center font-bold"
                         title="Zoom In"
                     >
                         +
                     </button>
                 </div>
-                <button
-                    onClick={(e) => { e.stopPropagation(); onToggleFullScreen(); }}
-                    className="p-2 bg-muted/80 backdrop-blur rounded-lg border border-border hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground shadow-lg"
-                    title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
-                >
-                    {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </button>
+                {/* Hide resize button in preview mode */}
+                {!isAppViewMode && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onToggleFullScreen(); }}
+                        className="p-2 bg-muted/80 backdrop-blur rounded-lg border border-border hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground shadow-lg"
+                        title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                    >
+                        {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </button>
+                )}
             </div>
 
             {/* Grid Area */}
