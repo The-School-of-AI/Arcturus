@@ -18,7 +18,11 @@ export type AppCardType =
     | 'textarea' | 'number_input' | 'color_picker' | 'slider' | 'rating' | 'time_picker'
     // Blocks.so / Dashboards
     | 'stats_trending' | 'stats_grid' | 'stats_status' | 'stats_links'
-    | 'simple_table' | 'stats_01' | 'usage_stats' | 'storage_card' | 'accordion_table';
+    | 'simple_table' | 'stats_01' | 'usage_stats' | 'storage_card' | 'accordion_table'
+    // New Blocks.so Components
+    | 'stats_row' | 'plan_overview' | 'trend_cards' | 'usage_gauge' | 'storage_donut'
+    | 'task_table' | 'inventory_table' | 'project_table'
+    | 'ai_chat' | 'share_dialog' | 'file_upload' | 'form_layout';
 
 export interface BaseAppCardConfig {
     // Common

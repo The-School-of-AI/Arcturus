@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight, Eye, Edit } from 'lucide-react';
+import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight, Eye, Edit, Upload, Share2, FormInput, Bot, ListTodo, Package, FolderKanban } from 'lucide-react';
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
@@ -127,6 +127,11 @@ export const COMPONENT_CATEGORIES = [
             { type: 'tags_input', label: 'Tags Input', icon: Type, defaultW: 4, defaultH: 2 },
             { type: 'color_picker', label: 'Color Picker', icon: Palette, defaultW: 3, defaultH: 2 },
             { type: 'rating', label: 'Rating', icon: Star, defaultW: 3, defaultH: 2 },
+            // New Blocks.so Components
+            { type: 'ai_chat', label: 'AI Chat', icon: Bot, defaultW: 6, defaultH: 8 },
+            { type: 'share_dialog', label: 'Share Dialog', icon: Share2, defaultW: 4, defaultH: 4 },
+            { type: 'file_upload', label: 'File Upload', icon: Upload, defaultW: 6, defaultH: 6 },
+            { type: 'form_layout', label: 'Form Layout', icon: FormInput, defaultW: 6, defaultH: 8 },
         ]
     },
     {
@@ -150,6 +155,15 @@ export const COMPONENT_CATEGORIES = [
             { type: 'usage_stats', label: 'Usage Stats', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'storage_card', label: 'Storage Card', icon: PieChart, defaultW: 4, defaultH: 4 },
             { type: 'accordion_table', label: 'Accordion Table', icon: Table2, defaultW: 6, defaultH: 8 },
+            // New Blocks.so Components
+            { type: 'stats_row', label: 'Stats Row', icon: TrendingUp, defaultW: 12, defaultH: 3 },
+            { type: 'plan_overview', label: 'Plan Overview', icon: Gauge, defaultW: 12, defaultH: 5 },
+            { type: 'trend_cards', label: 'Trend Cards', icon: LineChart, defaultW: 12, defaultH: 5 },
+            { type: 'usage_gauge', label: 'Usage Gauge', icon: Gauge, defaultW: 6, defaultH: 6 },
+            { type: 'storage_donut', label: 'Storage Donut', icon: PieChart, defaultW: 4, defaultH: 5 },
+            { type: 'task_table', label: 'Task Table', icon: ListTodo, defaultW: 12, defaultH: 8 },
+            { type: 'inventory_table', label: 'Inventory Table', icon: Package, defaultW: 12, defaultH: 8 },
+            { type: 'project_table', label: 'Project Table', icon: FolderKanban, defaultW: 12, defaultH: 8 },
         ]
     },
     {
@@ -1051,6 +1065,139 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                             <MessageSquare className="w-3 h-3" />
                             <span>Evaluating...</span>
                         </div>
+                    </div>
+                );
+
+            // New Blocks.so Component Previews
+            case 'stats_row':
+                return (
+                    <div className="w-full h-full grid grid-cols-4 gap-1 p-2">
+                        {[{ v: '$287K', c: '+8%' }, { v: '$9K', c: '-12%' }, { v: '$173K', c: '+3%' }, { v: '$52K', c: '-5%' }].map((s, i) => (
+                            <div key={i} className="flex flex-col items-center justify-center">
+                                <div className="text-[8px] font-bold text-foreground">{s.v}</div>
+                                <div className={`text-[6px] ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'plan_overview':
+                return (
+                    <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
+                        {['20%', '45%', '30%', '60%'].map((p, i) => (
+                            <div key={i} className="flex items-center gap-1">
+                                <svg viewBox="0 0 20 20" className="w-6 h-6">
+                                    <circle cx="10" cy="10" r="8" fill="none" stroke="#374151" strokeWidth="2" />
+                                    <circle cx="10" cy="10" r="8" fill="none" stroke="#eaff00" strokeWidth="2" strokeDasharray={`${parseInt(p) * 0.5} 50`} transform="rotate(-90 10 10)" />
+                                </svg>
+                                <span className="text-[6px] text-muted-foreground">{p}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'trend_cards':
+                return (
+                    <div className="w-full h-full grid grid-cols-3 gap-1 p-2">
+                        {['+10.4%', '+6.3%', '-7.1%'].map((c, i) => (
+                            <div key={i} className="flex flex-col items-center justify-center bg-muted/30 rounded p-1">
+                                <div className="text-[8px] font-bold text-foreground">$168</div>
+                                <div className={`text-[6px] ${c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{c}</div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'usage_gauge':
+                return (
+                    <div className="w-full h-full flex flex-col gap-1 p-2 justify-center">
+                        {[35, 30, 48].map((p, i) => (
+                            <div key={i} className="flex flex-col gap-0.5">
+                                <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${p}%` }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'storage_donut':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                        <svg viewBox="0 0 36 36" className="w-10 h-10">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="3" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#eaff00" strokeWidth="3" strokeDasharray="40 48" transform="rotate(-90 18 18)" />
+                        </svg>
+                        <div className="text-[6px] text-muted-foreground">55% used</div>
+                    </div>
+                );
+
+            case 'task_table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        {['🟢 Done', '🔵 Active', '🟡 Pending'].map((t, i) => (
+                            <div key={i} className="flex items-center gap-1 text-[6px] text-muted-foreground">
+                                <span>{t}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'inventory_table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        <div className="flex gap-1 text-[6px] text-muted-foreground border-b border-border pb-0.5">
+                            <span className="flex-1">SKU</span><span className="flex-1">Stock</span>
+                        </div>
+                        {[['8472', '245'], ['3391', '89']].map(([s, q], i) => (
+                            <div key={i} className="flex gap-1 text-[6px] text-muted-foreground">
+                                <span className="flex-1">{s}</span><span className="flex-1">{q}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'project_table':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-0.5">
+                        {[{ n: 'Alpha', a: '$2.5K' }, { n: 'Beta', a: '$1.2K' }].map((p, i) => (
+                            <div key={i} className="flex justify-between text-[6px]">
+                                <span className="text-muted-foreground">{p.n}</span>
+                                <span className="text-neon-yellow">{p.a}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+            case 'ai_chat':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1">
+                        <div className="self-end bg-neon-yellow/20 rounded-lg px-2 py-1 text-[6px] text-neon-yellow">Hello!</div>
+                        <div className="self-start bg-muted rounded-lg px-2 py-1 text-[6px] text-muted-foreground">Hi there...</div>
+                    </div>
+                );
+
+            case 'share_dialog':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
+                        <Share2 className="w-4 h-4 text-muted-foreground" />
+                        <div className="text-[6px] text-muted-foreground">Share & Collab</div>
+                    </div>
+                );
+
+            case 'file_upload':
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
+                        <Upload className="w-4 h-4 text-muted-foreground" />
+                        <div className="text-[6px] text-muted-foreground">Drop files</div>
+                    </div>
+                );
+
+            case 'form_layout':
+                return (
+                    <div className="w-full h-full flex flex-col p-2 gap-1 justify-center">
+                        <div className="h-4 bg-muted border border-border rounded text-[6px] px-1 flex items-center text-muted-foreground">Name...</div>
+                        <div className="h-4 bg-muted border border-border rounded text-[6px] px-1 flex items-center text-muted-foreground">Email...</div>
                     </div>
                 );
 

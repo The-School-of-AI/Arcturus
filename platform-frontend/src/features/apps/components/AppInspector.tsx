@@ -445,6 +445,120 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                 </div>
             );
 
+        // New Blocks.so Library Previews
+        case 'stats_row':
+            return (
+                <div className="p-4 grid grid-cols-4 gap-4">
+                    {[{ n: 'Profit', v: '$287K', c: '+8.3%' }, { n: 'Late', v: '$9.4K', c: '-12.6%' }, { n: 'Pending', v: '$173K', c: '+2.9%' }, { n: 'Costs', v: '$52K', c: '-5.7%' }].map((s, i) => (
+                        <div key={i} className="text-center">
+                            <div className="text-[10px] text-muted-foreground">{s.n}</div>
+                            <div className="text-sm font-bold text-foreground">{s.v}</div>
+                            <div className={`text-[10px] ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'plan_overview':
+            return (
+                <div className="p-4 grid grid-cols-2 gap-4">
+                    {[{ n: 'Workspaces', p: 20 }, { n: 'Dashboards', p: 10 }, { n: 'Widgets', p: 30 }, { n: 'Storage', p: 50 }].map((s, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                            <svg viewBox="0 0 36 36" className="w-12 h-12">
+                                <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                                <circle cx="18" cy="18" r="14" fill="none" stroke="#eaff00" strokeWidth="4" strokeDasharray={`${s.p * 0.88} 88`} transform="rotate(-90 18 18)" />
+                            </svg>
+                            <div>
+                                <div className="text-xs font-medium text-foreground">{s.n}</div>
+                                <div className="text-[10px] text-muted-foreground">{s.p}% used</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'trend_cards':
+            return (
+                <div className="p-4 grid grid-cols-3 gap-4">
+                    {[{ n: 'Alpha Corp', v: '$168.59', c: '+10.4%' }, { n: 'Beta Sol', v: '$78.54', c: '+6.3%' }, { n: 'Gamma Inc', v: '$75.68', c: '-7.1%' }].map((s, i) => (
+                        <div key={i} className="bg-muted/30 rounded-lg p-3">
+                            <div className="text-xs text-foreground">{s.n}</div>
+                            <div className={`text-lg font-bold ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.v}</div>
+                            <div className={`text-xs ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'usage_gauge':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    {[{ n: 'API Calls', p: 35 }, { n: 'Storage', p: 30 }, { n: 'Users', p: 48 }].map((u, i) => (
+                        <div key={i} className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">{u.n}</span>
+                                <span className="text-muted-foreground">{u.p}%</span>
+                            </div>
+                            <div className="h-2 bg-charcoal-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        case 'storage_donut':
+            return (
+                <div className="p-4 flex flex-col items-center gap-3">
+                    <svg viewBox="0 0 36 36" className="w-20 h-20">
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#3b82f6" strokeWidth="4" strokeDasharray="30 58" transform="rotate(-90 18 18)" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="20 68" strokeDashoffset="-30" transform="rotate(-90 18 18)" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4" strokeDasharray="15 73" strokeDashoffset="-50" transform="rotate(-90 18 18)" />
+                    </svg>
+                    <div className="text-sm text-muted-foreground">8.3 / 15 GB</div>
+                </div>
+            );
+        case 'task_table':
+        case 'inventory_table':
+        case 'project_table':
+            return (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                    Interactive table component. Add to canvas to configure.
+                </div>
+            );
+        case 'ai_chat':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="self-end bg-neon-yellow/20 rounded-lg px-3 py-2 text-sm text-neon-yellow">Hello, how can I help?</div>
+                    <div className="self-start bg-muted rounded-lg px-3 py-2 text-sm text-muted-foreground">AI assistant ready...</div>
+                </div>
+            );
+        case 'share_dialog':
+            return (
+                <div className="p-4 flex flex-col items-center justify-center gap-2">
+                    <div className="text-lg font-medium text-foreground">Share & Collaborate</div>
+                    <div className="text-sm text-muted-foreground">Share with your team</div>
+                </div>
+            );
+        case 'file_upload':
+            return (
+                <div className="p-4 flex flex-col items-center justify-center gap-2">
+                    <div className="w-full h-24 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center">
+                        <span className="text-sm text-muted-foreground">Drag & drop or click to upload</span>
+                    </div>
+                </div>
+            );
+        case 'form_layout':
+            return (
+                <div className="p-4 flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs text-muted-foreground">Name</label>
+                        <div className="h-8 bg-muted border border-border rounded px-2 flex items-center text-sm text-muted-foreground">Enter name...</div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs text-muted-foreground">Email</label>
+                        <div className="h-8 bg-muted border border-border rounded px-2 flex items-center text-sm text-muted-foreground">Enter email...</div>
+                    </div>
+                </div>
+            );
+
         default:
             return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Preview not available</div>;
     }
@@ -791,6 +905,58 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
     quiz_ai: [
         { name: 'Show Rubric', key: 'showRubric', default: true },
         { name: 'Required', key: 'required', default: true },
+    ],
+    // New Blocks.so Components
+    stats_row: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Change %', key: 'showChange', default: true },
+    ],
+    plan_overview: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Percentage', key: 'showPercent', default: true },
+    ],
+    trend_cards: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Sparkline', key: 'showSparkline', default: true },
+    ],
+    usage_gauge: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Labels', key: 'showLabels', default: true },
+    ],
+    storage_donut: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Legend', key: 'showLegend', default: true },
+    ],
+    task_table: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Striped Rows', key: 'striped', default: true },
+        { name: 'Show Actions', key: 'showActions', default: true },
+    ],
+    inventory_table: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Filter', key: 'showFilter', default: true },
+        { name: 'Striped Rows', key: 'striped', default: true },
+    ],
+    project_table: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Checkbox', key: 'showCheckbox', default: true },
+        { name: 'Show Pagination', key: 'showPagination', default: true },
+    ],
+    ai_chat: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show History', key: 'showHistory', default: true },
+    ],
+    share_dialog: [
+        { name: 'Show Comments Toggle', key: 'showComments', default: true },
+        { name: 'Show Preview', key: 'showPreview', default: true },
+    ],
+    file_upload: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Progress', key: 'showProgress', default: true },
+    ],
+    form_layout: [
+        { name: 'Show Title', key: 'showTitle', default: true },
+        { name: 'Show Labels', key: 'showLabels', default: true },
     ],
 };
 
