@@ -1,4 +1,4 @@
-
+//  USE THIS FILE TO SET DEFAULT DATA, COLORS AND FEATURE FOR CARDS
 // Default colors for cards
 export const DEFAULT_COLORS = {
     accent: '#eaff00',      // neon-yellow (keep fixed for now or make variable)
@@ -55,7 +55,8 @@ export const getDefaultData = (type: string): any => {
             return {
                 url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
                 alt: 'Abstract Design',
-                caption: 'Default Abstract Header'
+                caption: 'Caption for the image',
+                fill: true
             };
 
         // Finance cards
@@ -185,10 +186,28 @@ export const getDefaultData = (type: string): any => {
                 ]
             };
         case 'cash_flow':
+            return {
+                title: 'Cash Flow Statement',
+                data: [
+                    { label: 'Operating Cash Flow', value: 850 },
+                    { label: 'Investing Activities', value: -320 },
+                    { label: 'Financing Activities', value: -180 },
+                    { label: 'Net Cash Change', value: 350 }
+                ]
+            };
         case 'balance_sheet':
+            return {
+                title: 'Balance Sheet',
+                data: [
+                    { label: 'Total Assets', value: 5200 },
+                    { label: 'Total Liabilities', value: 2800 },
+                    { label: 'Shareholders Equity', value: 2400 },
+                    { label: 'Current Ratio', value: 1.85 }
+                ]
+            };
         case 'income_stmt':
             return {
-                title: 'Financial Statement',
+                title: 'Income Statement',
                 data: [
                     { label: 'Revenue', value: 1000 },
                     { label: 'Cost of Goods', value: 400 },

@@ -1,3 +1,5 @@
+// SET CARD DEFAULT WIDTH AND HEIGHT IN THIS FILE
+
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -151,19 +153,12 @@ export const COMPONENT_CATEGORIES = [
             { type: 'stats_status', label: 'Stats: Status', icon: LayoutGrid, defaultW: 8, defaultH: 5 },
             { type: 'stats_links', label: 'Stats: Links', icon: LayoutGrid, defaultW: 4, defaultH: 6 },
             { type: 'simple_table', label: 'Simple Table', icon: Table2, defaultW: 6, defaultH: 5 },
-            { type: 'stats_01', label: 'Stats 01', icon: TrendingUp, defaultW: 8, defaultH: 4 },
             { type: 'usage_stats', label: 'Usage Stats', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'storage_card', label: 'Storage Card', icon: PieChart, defaultW: 4, defaultH: 4 },
             { type: 'accordion_table', label: 'Accordion Table', icon: Table2, defaultW: 6, defaultH: 8 },
-            // New Blocks.so Components
             { type: 'stats_row', label: 'Stats Row', icon: TrendingUp, defaultW: 12, defaultH: 3 },
-            { type: 'plan_overview', label: 'Plan Overview', icon: Gauge, defaultW: 12, defaultH: 5 },
-            { type: 'trend_cards', label: 'Trend Cards', icon: LineChart, defaultW: 12, defaultH: 5 },
-            { type: 'usage_gauge', label: 'Usage Gauge', icon: Gauge, defaultW: 6, defaultH: 6 },
-            { type: 'storage_donut', label: 'Storage Donut', icon: PieChart, defaultW: 4, defaultH: 5 },
             { type: 'task_table', label: 'Task Table', icon: ListTodo, defaultW: 8, defaultH: 4 },
             { type: 'inventory_table', label: 'Inventory Table', icon: Package, defaultW: 8, defaultH: 4 },
-            { type: 'project_table', label: 'Project Table', icon: FolderKanban, defaultW: 12, defaultH: 8 },
         ]
     },
     {

@@ -233,7 +233,8 @@
         "fillArea": true
       },
       "data": {
-        "url": "https://www.indiatourismpackage.com/assets/images/backgrounds/best-time-to-visit-kasauli.webp"
+        "url": "https://www.indiatourismpackage.com/assets/images/backgrounds/best-time-to-visit-kasauli.webp",
+        "caption": "Kasauli!! The next frontier"
       },
       "style": {}
     },
@@ -501,6 +502,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767071369422,
-  "lastHydrated": 1767071369422
+  "lastModified": 1767083719837,
+  "lastHydrated": null
 }

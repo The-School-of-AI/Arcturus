@@ -27,7 +27,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
                             // Both modes use object-fit to ALWAYS preserve aspect ratio
                             // Fill mode: cover (crops to fill, centered)
                             // Contain mode: contain (fits inside, may have letterboxing)
-                            config.fillArea
+                            (config.fillArea || data.fill)
                                 ? "w-full h-full object-cover object-center"
                                 : "w-full h-full object-contain object-center"
                         )}

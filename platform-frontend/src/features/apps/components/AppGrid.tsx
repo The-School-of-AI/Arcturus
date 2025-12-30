@@ -225,8 +225,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'header':
                 if (config.showTitle === false) return null;
                 return (
-                    <div className="p-4" style={{ color: style.textColor }}>
-                        <h1 className={cn("text-2xl font-bold", config.centered && "text-center")} style={{ fontWeight: config.bold !== false ? 'bold' : 'normal' }}>
+                    <div className="p-4 h-full flex items-center" style={{ color: style.textColor }}>
+                        <h1 className={cn("text-2xl font-bold w-full", config.centered && "text-center")} style={{ fontWeight: config.bold !== false ? 'bold' : 'normal' }}>
                             {data.text || label}
                         </h1>
                     </div>
