@@ -640,12 +640,13 @@
     "source_exists": false
   },
   {
-    "id": "8c1f26dd-56f3-4ac8-964d-7c8507d05626",
-    "text": "I teach AI, LLMs and Agentic AI at The School of AI",
+    "id": "0be262e1-c9e5-4a87-82ec-d6f40db5a53c",
+    "text": "User teaches at The School of AI",
     "category": "general",
-    "created_at": "2025-12-30T17:48:40.221094",
-    "updated_at": "2025-12-30T17:48:40.221104",
+    "created_at": "2025-12-30T18:01:19.904399",
+    "updated_at": "2025-12-30T18:01:19.904409",
     "source": "manual",
-    "faiss_id": 66
+    "faiss_id": 68,
+    "source_exists": true
   }
 ]
