@@ -24,8 +24,8 @@
       "context": "Current temperature in Kasauli.",
       "config": {},
       "data": {
-        "value": "13\u00b0C",
-        "change": -8,
+        "value": "8\u00b0C",
+        "change": -5,
         "trend": "down"
       },
       "style": {}
@@ -37,8 +37,8 @@
       "context": "Current humidity level in Kasauli.",
       "config": {},
       "data": {
-        "value": "74%",
-        "change": 36,
+        "value": "53%",
+        "change": 15,
         "trend": "up"
       },
       "style": {}
@@ -50,8 +50,8 @@
       "context": "Current wind speed in Kasauli.",
       "config": {},
       "data": {
-        "value": "6 km/h",
-        "change": 1,
+        "value": "11 km/h",
+        "change": 2,
         "trend": "up"
       },
       "style": {}
@@ -171,8 +171,8 @@
       "config": {},
       "data": {
         "value": "21\u00b0C",
-        "change": 3,
-        "trend": "up"
+        "change": 0,
+        "trend": "stable"
       },
       "style": {}
     },
@@ -501,6 +501,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767056639129,
-  "lastHydrated": null
+  "lastModified": 1767071369422,
+  "lastHydrated": 1767071369422
 }

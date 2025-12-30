@@ -1,0 +1,659 @@
+{
+  "id": "app-1767071472122",
+  "name": "Builder Dashboard",
+  "description": "",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Construction Project Overview",
+      "context": "Main title for the construction monitoring dashboard.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Construction Project Overview"
+      },
+      "style": {}
+    },
+    {
+      "id": "project_status",
+      "type": "metric",
+      "label": "Project Status",
+      "context": "Overall project status (e.g., On Track, Delayed, At Risk).",
+      "config": {},
+      "data": {
+        "value": "On Track",
+        "change": 0,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "budget_variance",
+      "type": "metric",
+      "label": "Budget Variance",
+      "context": "Percentage or amount of budget variance (over or under budget).",
+      "config": {},
+      "data": {
+        "value": "0.5%",
+        "change": 0.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "schedule_adherence",
+      "type": "metric",
+      "label": "Schedule Adherence",
+      "context": "Percentage of tasks completed on schedule.",
+      "config": {},
+      "data": {
+        "value": "95%",
+        "change": 2,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "safety_incidents",
+      "type": "metric",
+      "label": "Safety Incidents",
+      "context": "Number of safety incidents reported this month.",
+      "config": {},
+      "data": {
+        "value": "0",
+        "change": 0,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "cost_breakdown_chart",
+      "type": "pie_chart",
+      "label": "Cost Breakdown",
+      "context": "Distribution of project costs across different categories (e.g., labor, materials, equipment).",
+      "config": {},
+      "data": {
+        "slices": [
+          {
+            "name": "Labor",
+            "value": 40
+          },
+          {
+            "name": "Materials",
+            "value": 30
+          },
+          {
+            "name": "Equipment",
+            "value": 20
+          },
+          {
+            "name": "Other",
+            "value": 10
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "schedule_timeline",
+      "type": "line_chart",
+      "label": "Schedule Timeline",
+      "context": "Project timeline showing planned vs. actual progress of key milestones.",
+      "config": {},
+      "data": {
+        "title": "Project Timeline",
+        "xLabel": "Date",
+        "yLabel": "Milestone",
+        "series": [
+          {
+            "name": "Planned",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "2026-01-01",
+                "y": 0
+              },
+              {
+                "x": "2026-02-01",
+                "y": 20
+              },
+              {
+                "x": "2026-03-01",
+                "y": 40
+              },
+              {
+                "x": "2026-04-01",
+                "y": 60
+              },
+              {
+                "x": "2026-05-01",
+                "y": 80
+              },
+              {
+                "x": "2026-06-01",
+                "y": 100
+              }
+            ]
+          },
+          {
+            "name": "Actual",
+            "color": "#ff6b6b",
+            "data": [
+              {
+                "x": "2026-01-01",
+                "y": 0
+              },
+              {
+                "x": "2026-02-01",
+                "y": 15
+              },
+              {
+                "x": "2026-03-01",
+                "y": 35
+              },
+              {
+                "x": "2026-04-01",
+                "y": 55
+              },
+              {
+                "x": "2026-05-01",
+                "y": 75
+              },
+              {
+                "x": "2026-06-01",
+                "y": 90
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "risk_register",
+      "type": "table",
+      "label": "Risk Register",
+      "context": "List of identified risks, their likelihood, impact, and mitigation plans.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Risk",
+          "Likelihood",
+          "Impact",
+          "Mitigation"
+        ],
+        "rows": [
+          [
+            "Material delays",
+            "Medium",
+            "High",
+            "Diversify suppliers"
+          ],
+          [
+            "Labor shortage",
+            "Low",
+            "Medium",
+            "Incentive program"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "site_activity_feed",
+      "type": "feed",
+      "label": "Site Activity Feed",
+      "context": "Real-time updates and notifications from the construction site (e.g., deliveries, inspections, incidents).",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Concrete delivery arrived",
+            "time": "1 hour ago"
+          },
+          {
+            "title": "Inspection passed",
+            "time": "2 hours ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "labor_productivity",
+      "type": "bar_chart",
+      "label": "Labor Productivity",
+      "context": "Track labor productivity by comparing planned vs. actual hours spent on tasks.",
+      "config": {},
+      "data": {
+        "title": "Labor Productivity",
+        "xLabel": "Task",
+        "yLabel": "Hours",
+        "points": [
+          {
+            "x": "Foundation",
+            "y": 45,
+            "color": "#eaff00"
+          },
+          {
+            "x": "Framing",
+            "y": 62,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Electrical",
+            "y": 58,
+            "color": "#ff6b6b"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "equipment_utilization",
+      "type": "bar_chart",
+      "label": "Equipment Utilization",
+      "context": "Track equipment utilization rates to optimize resource allocation.",
+      "config": {},
+      "data": {
+        "title": "Equipment Utilization",
+        "xLabel": "Equipment",
+        "yLabel": "Hours",
+        "points": [
+          {
+            "x": "Crane",
+            "y": 70,
+            "color": "#eaff00"
+          },
+          {
+            "x": "Excavator",
+            "y": 55,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Truck",
+            "y": 65,
+            "color": "#ff6b6b"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "material_inventory",
+      "type": "table",
+      "label": "Material Inventory",
+      "context": "Track material inventory levels to avoid shortages and overstocking.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Material",
+          "Quantity",
+          "Unit"
+        ],
+        "rows": [
+          [
+            "Concrete",
+            "150",
+            "Cubic meters"
+          ],
+          [
+            "Steel",
+            "20",
+            "Tons"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "change_orders",
+      "type": "table",
+      "label": "Change Orders",
+      "context": "List of approved and pending change orders.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Description",
+          "Status",
+          "Cost Impact"
+        ],
+        "rows": [
+          [
+            "Relocate electrical conduit",
+            "Approved",
+            "$5,000"
+          ],
+          [
+            "Add additional insulation",
+            "Pending",
+            "$2,000"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "quality_control",
+      "type": "table",
+      "label": "Quality Control Checks",
+      "context": "Results of quality control inspections.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Inspection",
+          "Date",
+          "Result"
+        ],
+        "rows": [
+          [
+            "Foundation inspection",
+            "2025-12-20",
+            "Passed"
+          ],
+          [
+            "Framing inspection",
+            "2025-12-27",
+            "Passed"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "weather_conditions",
+      "type": "text",
+      "label": "Weather Conditions",
+      "context": "Current weather conditions at the construction site.",
+      "config": {},
+      "data": {
+        "text": "Sunny, 25\u00b0C"
+      },
+      "style": {}
+    },
+    {
+      "id": "project_contacts",
+      "type": "text",
+      "label": "Project Contacts",
+      "context": "List of key project contacts and their contact information.",
+      "config": {},
+      "data": {
+        "text": "Project Manager: John Doe, john.doe@example.com"
+      },
+      "style": {}
+    },
+    {
+      "id": "notes",
+      "type": "textarea",
+      "label": "Notes",
+      "context": "Area for adding general notes and comments about the project.",
+      "config": {},
+      "data": {
+        "label": "Notes",
+        "placeholder": "Type here..."
+      },
+      "style": {}
+    },
+    {
+      "id": "alerts_switch",
+      "type": "switch",
+      "label": "Enable Alerts",
+      "context": "Toggle switch to enable or disable project alerts.",
+      "config": {},
+      "data": {
+        "label": "Enable alerts",
+        "checked": true
+      },
+      "style": {}
+    },
+    {
+      "id": "progress_slider",
+      "type": "slider",
+      "label": "Progress",
+      "context": "Slider to manually adjust the project progress.",
+      "config": {},
+      "data": {
+        "label": "Progress",
+        "min": 0,
+        "max": 100,
+        "value": 75
+      },
+      "style": {}
+    },
+    {
+      "id": "date_range",
+      "type": "date_picker",
+      "label": "Date Range",
+      "context": "Date range selector for filtering data.",
+      "config": {},
+      "data": {
+        "startDate": "2025-01-01",
+        "endDate": "2025-12-31"
+      },
+      "style": {}
+    },
+    {
+      "id": "divider_1",
+      "type": "divider",
+      "label": "Divider",
+      "context": "Horizontal line separator.",
+      "config": {},
+      "data": {},
+      "style": {}
+    },
+    {
+      "id": "divider_2",
+      "type": "divider",
+      "label": "Divider",
+      "context": "Horizontal line separator.",
+      "config": {},
+      "data": {},
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 20,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "project_status",
+      "x": 0,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "budget_variance",
+      "x": 5,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "schedule_adherence",
+      "x": 10,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "safety_incidents",
+      "x": 15,
+      "y": 2,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "cost_breakdown_chart",
+      "x": 0,
+      "y": 5,
+      "w": 10,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "schedule_timeline",
+      "x": 10,
+      "y": 5,
+      "w": 10,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "risk_register",
+      "x": 0,
+      "y": 11,
+      "w": 7,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "site_activity_feed",
+      "x": 7,
+      "y": 11,
+      "w": 13,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "labor_productivity",
+      "x": 0,
+      "y": 16,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "equipment_utilization",
+      "x": 8,
+      "y": 16,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "material_inventory",
+      "x": 0,
+      "y": 22,
+      "w": 7,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "change_orders",
+      "x": 14,
+      "y": 16,
+      "w": 6,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "quality_control",
+      "x": 7,
+      "y": 22,
+      "w": 7,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "weather_conditions",
+      "x": 0,
+      "y": 26,
+      "w": 6,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "project_contacts",
+      "x": 6,
+      "y": 32,
+      "w": 6,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "notes",
+      "x": 12,
+      "y": 26,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "alerts_switch",
+      "x": 14,
+      "y": 22,
+      "w": 6,
+      "h": 1,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "progress_slider",
+      "x": 14,
+      "y": 29,
+      "w": 6,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "date_range",
+      "x": 0,
+      "y": 30,
+      "w": 8,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "divider_1",
+      "x": 0,
+      "y": 36,
+      "w": 20,
+      "h": 1,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "divider_2",
+      "x": 0,
+      "y": 37,
+      "w": 20,
+      "h": 1,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767072302200,
+  "lastHydrated": null
+}
