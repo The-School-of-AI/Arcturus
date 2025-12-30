@@ -408,15 +408,24 @@ class MultiMCP:
         if config.get("type") == "stdio-git":
              repo_path = self.base_dir.parent / "data" / "mcp_repos" / server_name
         elif config.get("type") == "local-script":
-             # Try to find readme in the same dir as the script?
-             # Or just use the base dir
+             # Use the base dir
              repo_path = self.base_dir
         
         if repo_path:
-            # Try potential readme names
-            for name in ["README.md", "readme.md", "README.txt", "README"]:
+            # Try potential readme names, prioritizing server-specific ones
+            candidates = [
+                f"README_{server_name}.md",
+                f"docs/README_{server_name}.md",
+                "README.md", 
+                "readme.md", 
+                "README.txt", 
+                "README"
+            ]
+            
+            for name in candidates:
                 p = repo_path / name
                 if p.exists():
                     return p.read_text(encoding="utf-8", errors="replace")
         
         return None
+
