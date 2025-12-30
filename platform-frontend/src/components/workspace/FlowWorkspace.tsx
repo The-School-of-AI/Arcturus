@@ -242,7 +242,7 @@ const FlowWorkspaceInner: React.FC = () => {
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex gap-4 items-start pointer-events-none">
                 <div className="flex flex-col gap-4 items-center pointer-events-auto">
                     {/* Mode Toggle */}
-                    <div className="bg-card/80 backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1">
+                    <div className="bg-card/80 backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded p-1.5 flex gap-1">
                         <button
                             onClick={() => handleModeChange('READER')}
                             className={cn(
@@ -271,7 +271,7 @@ const FlowWorkspaceInner: React.FC = () => {
 
                     {/* Sequence Controls */}
                     {mode === 'SEQUENCE' && (
-                        <div className="bg-card/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded-2xl p-1.5 flex gap-1 animate-in slide-in-from-top-4">
+                        <div className="bg-card/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded p-1.5 flex gap-1 animate-in slide-in-from-top-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -322,7 +322,7 @@ const FlowWorkspaceInner: React.FC = () => {
             {/* Sequence Tooltip */}
             {mode === 'SEQUENCE' && (
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                    <div className="bg-card/90 backdrop-blur px-8 py-4 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-neon-yellow/20 flex items-center gap-4 animate-pulse shrink-0">
+                    <div className="bg-card backdrop-blur px-8 py-2 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-neon-yellow/20 flex items-center gap-4 animate-pulse shrink-0">
                         <span className="font-black text-xs uppercase tracking-widest text-neon-yellow">
                             {canGoNext ? "Click 'Next' or a node to follow the logic" : 'End of mapped sequence'}
                         </span>
