@@ -814,7 +814,7 @@ interface PlanOverviewCardProps {
 
 export const PlanOverviewCard: React.FC<PlanOverviewCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
     const items = data.items || [];
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     return (
         <div className="h-full p-4">
             <div className="text-sm text-muted-foreground mb-3">
@@ -879,7 +879,7 @@ interface UsageGaugeCardProps {
 
 export const UsageGaugeCard: React.FC<UsageGaugeCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
     const items = data.items || [];
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     return (
         <div className="h-full p-4 flex flex-col gap-3">
             {items.map((u, i) => {
@@ -1025,7 +1025,7 @@ interface ProjectTableCardProps {
 
 export const ProjectTableCard: React.FC<ProjectTableCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
     const projects = data.projects || [];
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     return (
         <div className="h-full p-4 overflow-auto">
             <table className="w-full text-sm">
@@ -1064,7 +1064,7 @@ interface AiChatCardProps {
 
 export const AiChatCard: React.FC<AiChatCardProps> = ({ title, data = {}, config = {}, style = {}, isInteractive = false }) => {
     const history = data.history || [];
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     return (
         <div className="h-full p-4 flex flex-col">
             <div className="flex-1 flex flex-col gap-3 overflow-auto">
@@ -1095,7 +1095,7 @@ interface ShareDialogCardProps {
 }
 
 export const ShareDialogCard: React.FC<ShareDialogCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     return (
         <div className="h-full p-6 flex flex-col gap-4">
             <div className="text-lg font-medium text-foreground">{data.title || 'Share & Collaborate'}</div>
@@ -1148,7 +1148,7 @@ interface FormLayoutCardProps {
 
 export const FormLayoutCard: React.FC<FormLayoutCardProps> = ({ title, data = {}, config = {}, style = {}, isInteractive = false }) => {
     const fields = data.fields || [];
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     return (
         <div className="h-full p-6 flex flex-col gap-4">
             <div className="text-lg font-medium text-foreground">{data.title || 'Form'}</div>

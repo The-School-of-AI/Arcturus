@@ -377,11 +377,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex items-end p-2 gap-0.5">
                         <svg viewBox="0 0 50 25" className="w-full h-full">
-                            <path d="M0 20 Q10 15 20 18 T35 8 T50 5" fill="none" stroke="#eaff00" strokeWidth="2" />
+                            <path d="M0 20 Q10 15 20 18 T35 8 T50 5" fill="none" stroke="#F5C542" strokeWidth="2" />
                             <path d="M0 20 Q10 15 20 18 T35 8 T50 5 V25 H0 Z" fill="url(#lineGrad)" opacity="0.2" />
                             <defs>
                                 <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#eaff00" />
+                                    <stop offset="0%" stopColor="#F5C542" />
                                     <stop offset="100%" stopColor="transparent" />
                                 </linearGradient>
                             </defs>
@@ -400,8 +400,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex items-end p-2">
                         <svg viewBox="0 0 50 25" className="w-full h-full">
-                            <path d="M0 25 L0 18 Q12 12 25 15 T50 8 V25 Z" fill="#eaff00" opacity="0.3" />
-                            <path d="M0 18 Q12 12 25 15 T50 8" fill="none" stroke="#eaff00" strokeWidth="1.5" />
+                            <path d="M0 25 L0 18 Q12 12 25 15 T50 8 V25 Z" fill="#F5C542" opacity="0.3" />
+                            <path d="M0 18 Q12 12 25 15 T50 8" fill="none" stroke="#F5C542" strokeWidth="1.5" />
                         </svg>
                     </div>
                 );
@@ -410,7 +410,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     <div className="w-full h-full flex items-center justify-center p-2">
                         <svg viewBox="0 0 32 32" className="w-10 h-10">
                             <circle cx="16" cy="16" r="14" fill="none" stroke="#374151" strokeWidth="4" />
-                            <circle cx="16" cy="16" r="14" fill="none" stroke="#eaff00" strokeWidth="4" strokeDasharray="44 88" transform="rotate(-90 16 16)" />
+                            <circle cx="16" cy="16" r="14" fill="none" stroke="#F5C542" strokeWidth="4" strokeDasharray="44 88" transform="rotate(-90 16 16)" />
                             <circle cx="16" cy="16" r="14" fill="none" stroke="#4ade80" strokeWidth="4" strokeDasharray="22 88" strokeDashoffset="-44" transform="rotate(-90 16 16)" />
                         </svg>
                     </div>
@@ -1083,7 +1083,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                             <div key={i} className="flex items-center gap-1">
                                 <svg viewBox="0 0 20 20" className="w-6 h-6">
                                     <circle cx="10" cy="10" r="8" fill="none" stroke="#374151" strokeWidth="2" />
-                                    <circle cx="10" cy="10" r="8" fill="none" stroke="#eaff00" strokeWidth="2" strokeDasharray={`${parseInt(p) * 0.5} 50`} transform="rotate(-90 10 10)" />
+                                    <circle cx="10" cy="10" r="8" fill="none" stroke="#F5C542" strokeWidth="2" strokeDasharray={`${parseInt(p) * 0.5} 50`} transform="rotate(-90 10 10)" />
                                 </svg>
                                 <span className="text-[6px] text-muted-foreground">{p}</span>
                             </div>
@@ -1121,7 +1121,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                     <div className="w-full h-full flex flex-col items-center justify-center p-2">
                         <svg viewBox="0 0 36 36" className="w-10 h-10">
                             <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="3" />
-                            <circle cx="18" cy="18" r="14" fill="none" stroke="#eaff00" strokeWidth="3" strokeDasharray="40 48" transform="rotate(-90 18 18)" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#F5C542" strokeWidth="3" strokeDasharray="40 48" transform="rotate(-90 18 18)" />
                         </svg>
                         <div className="text-[6px] text-muted-foreground">55% used</div>
                     </div>

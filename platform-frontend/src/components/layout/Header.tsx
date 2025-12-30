@@ -53,8 +53,8 @@ export const Header: React.FC = () => {
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight">
-                    <Box className="w-6 h-6 animate-pulse" />
-                    <span>ERAV2<span className="text-foreground">Platform</span></span>
+                    <Box className="w- h-6 animate-pulse" />
+                    <span>Arcturus<span className="text-foreground">Platform</span></span>
                 </div>
 
                 <div className="h-6 w-px bg-border mx-2" />

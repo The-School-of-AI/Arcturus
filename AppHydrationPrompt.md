@@ -49,7 +49,7 @@ You are a data analyst with access to real-time internet data. Given a dashboard
     "title": "Sales by Region",
     "xLabel": "Region",
     "yLabel": "Sales",
-    "points": [{ "x": "North", "y": 450, "color": "#eaff00" }, ...]
+    "points": [{ "x": "North", "y": 450, "color": "#F5C542" }, ...]
   }
 }
 ```

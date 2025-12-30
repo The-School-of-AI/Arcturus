@@ -58,7 +58,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
     const autoMultiColor = config.autoMultiColor !== false;
 
     // Style
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
 
     // Use default data if not provided
     const xLabels = data.xLabels?.length > 0 ? data.xLabels : DEFAULT_HEATMAP_DATA.xLabels;
@@ -81,9 +81,9 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
             if (normalized < 0.25) {
                 return interpolateColor('#1a1a2e', '#4ecdc4', normalized * 4);
             } else if (normalized < 0.5) {
-                return interpolateColor('#4ecdc4', '#eaff00', (normalized - 0.25) * 4);
+                return interpolateColor('#4ecdc4', '#F5C542', (normalized - 0.25) * 4);
             } else if (normalized < 0.75) {
-                return interpolateColor('#eaff00', '#ff6b6b', (normalized - 0.5) * 4);
+                return interpolateColor('#F5C542', '#ff6b6b', (normalized - 0.5) * 4);
             } else {
                 return interpolateColor('#ff6b6b', '#ff2e63', (normalized - 0.75) * 4);
             }
@@ -180,7 +180,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                                 <>
                                     <div className="flex-1 bg-[#1a1a2e]" />
                                     <div className="flex-1 bg-[#4ecdc4]" />
-                                    <div className="flex-1 bg-[#eaff00]" />
+                                    <div className="flex-1 bg-[#F5C542]" />
                                     <div className="flex-1 bg-[#ff6b6b]" />
                                     <div className="flex-1 bg-[#ff2e63]" />
                                 </>

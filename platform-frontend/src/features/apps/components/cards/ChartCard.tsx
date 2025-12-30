@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 const DEFAULT_CHART_COLORS = [
     '#4ecdc4', // Teal
     '#ff6b6b', // Coral
-    '#eaff00', // Neon Yellow
+    '#F5C542', // Neon Yellow
     '#a29bfe', // Lavender
     '#00cec9', // Cyan
     '#fd79a8', // Pink
@@ -56,7 +56,7 @@ const DEFAULT_LINE_DATA = {
 
 const DEFAULT_BAR_DATA = {
     points: [
-        { x: 'Q1', y: 45, color: '#eaff00' },
+        { x: 'Q1', y: 45, color: '#F5C542' },
         { x: 'Q2', y: 62, color: '#4ecdc4' },
         { x: 'Q3', y: 58, color: '#ff6b6b' },
         { x: 'Q4', y: 75, color: '#a29bfe' }
@@ -82,7 +82,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     const isThick = config.strokeWidth === true;
 
     // Style
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     const textColor = style.textColor || '#ffffff';
 
     // Data Parsing with defaults - title undefined means use data.title, empty string means no title

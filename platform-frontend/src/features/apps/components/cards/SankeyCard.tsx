@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 // Multi-color palette for auto-color mode
 const MULTI_COLOR_PALETTE = [
-    '#eaff00', // Neon Yellow
+    '#F5C542', // Neon Yellow
     '#ff6b6b', // Coral Red
     '#4ecdc4', // Teal
     '#45b7d1', // Sky Blue
@@ -88,7 +88,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
     const autoMultiColor = config.autoMultiColor !== false;
 
     // Style
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     const textColor = style.textColor || '#ffffff';
 
     // Use default data if not provided or empty

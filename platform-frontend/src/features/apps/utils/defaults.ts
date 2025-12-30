@@ -1,7 +1,7 @@
 //  USE THIS FILE TO SET DEFAULT DATA, COLORS AND FEATURE FOR CARDS
 // Default colors for cards
 export const DEFAULT_COLORS = {
-    accent: '#eaff00',      // neon-yellow (keep fixed for now or make variable)
+    accent: '#F5C542',      // neon-yellow (keep fixed for now or make variable)
     background: 'hsl(var(--card))',
     text: 'hsl(var(--foreground))',
     secondary: 'hsl(var(--muted-foreground))',
@@ -26,7 +26,7 @@ export const getDefaultStyle = () => ({
 });
 
 export const COLOR_PRESETS = [
-    { name: 'Neon Yellow', value: '#eaff00' },
+    { name: 'Neon Yellow', value: '#F5C542' },
     { name: 'Cyan', value: '#22d3ee' },
     { name: 'Green', value: '#4ade80' },
     { name: 'Purple', value: '#a855f7' },

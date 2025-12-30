@@ -23,7 +23,7 @@ export const GradeCard: React.FC<GradeCardProps> = ({
     config = {}
 }) => {
     const useGradeColors = config.useGradeColors !== false; // Default to true for backward compatibility
-    const accentColor = style.accentColor || '#eaff00';
+    const accentColor = style.accentColor || '#F5C542';
     const textColor = style.textColor || '#ffffff';
 
     // Helper to determine color based on grade

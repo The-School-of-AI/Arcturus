@@ -214,7 +214,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         const commonProps = {
             config,
             data,
-            style: { ...style, accentColor: style.accentColor || '#eaff00' },
+            style: { ...style, accentColor: style.accentColor || '#F5C542' },
             onUpdate,
             isInteractive: isAppViewMode
         };
@@ -719,7 +719,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                                             ...(showBorder || (isSelected && !isAppViewMode)) ? {
                                                 borderWidth: borderWidth,
                                                 borderStyle: 'solid',
-                                                borderColor: (isSelected && !isAppViewMode) ? '#eaff00' : borderColor,
+                                                borderColor: (isSelected && !isAppViewMode) ? '#F5C542' : borderColor,
                                             } : {
                                                 border: 'none',
                                             },

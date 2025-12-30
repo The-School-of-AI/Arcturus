@@ -18,7 +18,7 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
 
     if (!isVisible) return <div className="opacity-0 pointer-events-none" />;
 
-    const activeColor = '#eaff00'; // Neon Yellow
+    const activeColor = '#F5C542'; // Neon Yellow
 
     const handleClass = "w-2.5 h-2.5 bg-muted-foreground border-2 border-background transition-all duration-300 hover:scale-150 hover:border-neon-yellow";
 

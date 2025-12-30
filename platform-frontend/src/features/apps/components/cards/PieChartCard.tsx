@@ -13,7 +13,7 @@ export interface PieChartCardProps {
 const DEFAULT_CHART_COLORS = [
     '#4ecdc4', // Teal
     '#ff6b6b', // Coral
-    '#eaff00', // Neon Yellow
+    '#F5C542', // Neon Yellow
     '#a29bfe', // Lavender
     '#00cec9', // Cyan
     '#fd79a8', // Pink
@@ -28,7 +28,7 @@ const DEFAULT_CHART_COLORS = [
 const defaultSlices = [
     { label: 'Category A', value: 40, color: '#4ecdc4' },
     { label: 'Category B', value: 30, color: '#ff6b6b' },
-    { label: 'Category C', value: 20, color: '#eaff00' },
+    { label: 'Category C', value: 20, color: '#F5C542' },
     { label: 'Category D', value: 10, color: '#a29bfe' },
 ];
 

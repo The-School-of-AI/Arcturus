@@ -465,7 +465,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                         <div key={i} className="flex items-center gap-3">
                             <svg viewBox="0 0 36 36" className="w-12 h-12">
                                 <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
-                                <circle cx="18" cy="18" r="14" fill="none" stroke="#eaff00" strokeWidth="4" strokeDasharray={`${s.p * 0.88} 88`} transform="rotate(-90 18 18)" />
+                                <circle cx="18" cy="18" r="14" fill="none" stroke="#F5C542" strokeWidth="4" strokeDasharray={`${s.p * 0.88} 88`} transform="rotate(-90 18 18)" />
                             </svg>
                             <div>
                                 <div className="text-xs font-medium text-foreground">{s.n}</div>
@@ -1804,7 +1804,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                 presets={[
                                                     { name: 'Default', value: 'rgba(255,255,255,0.1)' },
                                                     { name: 'Light', value: 'rgba(255,255,255,0.2)' },
-                                                    { name: 'Accent', value: '#eaff00' },
+                                                    { name: 'Accent', value: '#F5C542' },
                                                     { name: 'None', value: 'transparent' },
                                                 ]}
                                             />
@@ -1927,7 +1927,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         presets={[
                                             { name: 'White', value: '#ffffff' },
                                             { name: 'Gray', value: '#9ca3af' },
-                                            { name: 'Accent', value: '#eaff00' },
+                                            { name: 'Accent', value: '#F5C542' },
                                             { name: 'Muted', value: '#6b7280' },
                                         ]}
                                     />
@@ -1941,7 +1941,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         presets={[
                                             { name: 'Green', value: '#4ade80' },
                                             { name: 'Cyan', value: '#22d3ee' },
-                                            { name: 'Accent', value: '#eaff00' },
+                                            { name: 'Accent', value: '#F5C542' },
                                         ]}
                                     />
                                 </div>

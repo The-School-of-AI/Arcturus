@@ -180,10 +180,10 @@ const FlowWorkspaceInner: React.FC = () => {
                 animated: mode === 'SEQUENCE' && isVisible,
                 markerEnd: {
                     type: MarkerType.ArrowClosed,
-                    color: isVisible ? '#eaff00' : '#1a1a1a'
+                    color: isVisible ? '#F5C542' : '#1a1a1a'
                 },
                 style: {
-                    stroke: isVisible ? '#eaff00' : '#1a1a1a',
+                    stroke: isVisible ? '#F5C542' : '#1a1a1a',
                     strokeWidth: 2,
                     opacity: isVisible ? 1 : 0.1
                 },

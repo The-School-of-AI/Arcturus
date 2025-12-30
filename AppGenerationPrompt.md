@@ -160,7 +160,7 @@ The `context` field describes **what data this component should display**. It wi
     "xLabel": "Quarter",
     "yLabel": "Revenue ($M)",
     "points": [
-      { "x": "Q1", "y": 45, "color": "#eaff00" },
+      { "x": "Q1", "y": 45, "color": "#F5C542" },
       { "x": "Q2", "y": 62, "color": "#4ecdc4" },
       { "x": "Q3", "y": 58, "color": "#ff6b6b" },
       { "x": "Q4", "y": 75, "color": "#a29bfe" }
@@ -169,7 +169,7 @@ The `context` field describes **what data this component should display**. It wi
 }
 ```
 
-**Colors to use:** `#4ecdc4` (teal), `#ff6b6b` (coral), `#eaff00` (yellow), `#a29bfe` (lavender), `#00cec9` (cyan), `#6c5ce7` (purple), `#00b894` (mint)
+**Colors to use:** `#4ecdc4` (teal), `#ff6b6b` (coral), `#F5C542` (yellow), `#a29bfe` (lavender), `#00cec9` (cyan), `#6c5ce7` (purple), `#00b894` (mint)
 
 ### Finance
 | Type | Label | W | H | data/config |
@@ -200,7 +200,7 @@ The `context` field describes **what data this component should display**. It wi
 | `date_picker` | Date Picker | 8 | 2 | data: { startDate: "2025-01-01", endDate: "2025-12-31" } |
 | `time_picker` | Time Picker | 6 | 2 | data: { value: "09:30" } |
 | `tags_input` | Tags Input | 8 | 2 | data: { tags: ["tech","growth"] } |
-| `color_picker` | Color Picker | 6 | 2 | data: { value: "#eaff00" } |
+| `color_picker` | Color Picker | 6 | 2 | data: { value: "#F5C542" } |
 | `rating` | Star Rating | 6 | 2 | data: { value: 4, max: 5 } |
 
 ### Dev & Feed
