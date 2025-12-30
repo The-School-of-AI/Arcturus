@@ -189,7 +189,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             // but for now let's keep dims relative to the column count or adjust them.
             // If we move to 24 cols, everything becomes half width if we keep same w.
             // So let's double the smart dimensions w for 24-col layout.
-            const adjustedDims = { ...dims, w: dims.w }; // Scale for 24 cols
+            const adjustedDims = { ...dims, w: dims.w * 2 }; // Scale for 24 cols
 
             addAppCard(newCard, { ...layoutItem, ...adjustedDims });
 
@@ -646,7 +646,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         const x = rect ? Math.max(0, Math.floor((e.clientX - rect.left - 32) / colWidth)) : 0;
                         const y = rect ? Math.max(0, Math.floor((e.clientY - rect.top - 32) / rowHeight)) : 0;
 
-                        const adjustedDims = { ...dims, w: dims.w };
+                        const adjustedDims = { ...dims, w: dims.w * 2 };
                         addAppCard(newCard, { x, y, ...adjustedDims });
                     } catch (err) {
                         console.error('Fallback drop error:', err);

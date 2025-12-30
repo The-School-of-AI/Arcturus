@@ -73,36 +73,36 @@ export const COMPONENT_CATEGORIES = [
         name: 'Basics',
         items: [
             { type: 'header', label: 'Header', icon: Type, defaultW: 12, defaultH: 2 },
-            { type: 'text', label: 'Text Block', icon: AlignLeft, defaultW: 4, defaultH: 4 },
-            { type: 'markdown', label: 'Markdown', icon: FileText, defaultW: 4, defaultH: 4 },
-            { type: 'image', label: 'Image', icon: Image, defaultW: 4, defaultH: 6 },
-            { type: 'spacer', label: 'Spacer', icon: Hash, defaultW: 12, defaultH: 2 },
+            { type: 'text', label: 'Text Block', icon: AlignLeft, defaultW: 6, defaultH: 4 },
+            { type: 'markdown', label: 'Markdown', icon: FileText, defaultW: 6, defaultH: 6 },
+            { type: 'image', label: 'Image', icon: Image, defaultW: 6, defaultH: 6 },
+            { type: 'spacer', label: 'Spacer', icon: Hash, defaultW: 12, defaultH: 1 },
             { type: 'divider', label: 'Divider', icon: Minus, defaultW: 12, defaultH: 1 },
         ]
     },
     {
         name: 'Charts & Data',
         items: [
-            { type: 'metric', label: 'Metric', icon: Hash, defaultW: 2, defaultH: 3 },
+            { type: 'metric', label: 'Metric', icon: Hash, defaultW: 3, defaultH: 3 },
             { type: 'trend', label: 'Trend Metric', icon: TrendingUp, defaultW: 3, defaultH: 3 },
             { type: 'line_chart', label: 'Line Chart', icon: LineChart, defaultW: 6, defaultH: 8 },
             { type: 'bar_chart', label: 'Bar Chart', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'area_chart', label: 'Area Chart', icon: LineChart, defaultW: 6, defaultH: 6 },
-            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 6 },
+            { type: 'pie_chart', label: 'Pie Chart', icon: PieChart, defaultW: 6, defaultH: 8 },
             { type: 'sankey', label: 'Sankey Chart', icon: ArrowRight, defaultW: 4, defaultH: 8 },
             { type: 'scatter', label: 'Scatter Plot', icon: BarChart3, defaultW: 6, defaultH: 6 },
             { type: 'heatmap', label: 'Heatmap', icon: LayoutGrid, defaultW: 6, defaultH: 6 },
-            { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 5 },
+            { type: 'table', label: 'Data Table', icon: Table2, defaultW: 6, defaultH: 6 },
         ]
     },
     {
         name: 'Finance',
         items: [
-            { type: 'profile', label: 'Profile', icon: User, defaultW: 4, defaultH: 4 }, // Adjusted based on common usage
+            { type: 'profile', label: 'Profile', icon: User, defaultW: 4, defaultH: 6 }, // Adjusted based on common usage
             { type: 'valuation', label: 'Valuation Gauge', icon: Gauge, defaultW: 6, defaultH: 4 },
             { type: 'score_card', label: 'Score Card', icon: Medal, defaultW: 3, defaultH: 3 },
             { type: 'grade_card', label: 'Grade Card', icon: Medal, defaultW: 3, defaultH: 3 },
-            { type: 'peer_table', label: 'Peer Table', icon: Table2, defaultW: 6, defaultH: 8 },
+            { type: 'peer_table', label: 'Peer Table', icon: Table2, defaultW: 6, defaultH: 5 },
             { type: 'ratios', label: 'Ratios Grid', icon: LayoutGrid, defaultW: 6, defaultH: 5 },
             { type: 'cash_flow', label: 'Cash Flow', icon: TrendingUp, defaultW: 6, defaultH: 5 },
             { type: 'balance_sheet', label: 'Balance Sheet', icon: Table2, defaultW: 6, defaultH: 5 },
@@ -161,8 +161,8 @@ export const COMPONENT_CATEGORIES = [
             { type: 'trend_cards', label: 'Trend Cards', icon: LineChart, defaultW: 12, defaultH: 5 },
             { type: 'usage_gauge', label: 'Usage Gauge', icon: Gauge, defaultW: 6, defaultH: 6 },
             { type: 'storage_donut', label: 'Storage Donut', icon: PieChart, defaultW: 4, defaultH: 5 },
-            { type: 'task_table', label: 'Task Table', icon: ListTodo, defaultW: 12, defaultH: 8 },
-            { type: 'inventory_table', label: 'Inventory Table', icon: Package, defaultW: 12, defaultH: 8 },
+            { type: 'task_table', label: 'Task Table', icon: ListTodo, defaultW: 8, defaultH: 4 },
+            { type: 'inventory_table', label: 'Inventory Table', icon: Package, defaultW: 8, defaultH: 4 },
             { type: 'project_table', label: 'Project Table', icon: FolderKanban, defaultW: 12, defaultH: 8 },
         ]
     },
