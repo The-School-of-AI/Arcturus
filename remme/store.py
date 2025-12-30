@@ -13,10 +13,12 @@ class RemmeStore:
         
         self.index_path = self.root / "index.bin"
         self.metadata_path = self.root / "memories.json"
+        self.scanned_runs_path = self.root / "scanned_runs.json"
         
         self.dimension = 768 # Default for nomic-embed-text
         self.index = None
         self.memories = []
+        self.scanned_run_ids = set()
         
         self.load()
 
@@ -40,12 +42,22 @@ class RemmeStore:
         else:
             self.memories = []
 
+        if self.scanned_runs_path.exists():
+            try:
+                self.scanned_run_ids = set(json.loads(self.scanned_runs_path.read_text()))
+            except Exception as e:
+                print(f"Failed to load scanned runs JSON: {e}", file=sys.stderr)
+                self.scanned_run_ids = set()
+        else:
+            self.scanned_run_ids = set()
+
     def save(self):
         """Save index and metadata to disk."""
         if self.index:
             faiss.write_index(self.index, str(self.index_path))
         
         self.metadata_path.write_text(json.dumps(self.memories, indent=2))
+        self.scanned_runs_path.write_text(json.dumps(list(self.scanned_run_ids), indent=2))
 
     def add(self, text: str, embedding: np.ndarray, category: str = "general", source: str = "manual"):
         """Add a new memory with deduplication."""
@@ -157,18 +169,25 @@ class RemmeStore:
 
     def get_scanned_run_ids(self):
         """Return a set of run IDs that have already been scanned."""
-        scanned_ids = set()
+        # 1. Start with dedicated tracking file (Best source)
+        ids = set(self.scanned_run_ids)
+        
+        # 2. Backfill from existing memories if not already there (Legacy support)
         for m in self.memories:
             source = m.get("source", "")
-            # Looking for patterns like "run_12345" or "manual_scan_12345"
-            # Split by comma if multiple sources
             parts = source.split(", ")
             for part in parts:
                 if part.startswith("run_"):
-                    scanned_ids.add(part.replace("run_", ""))
+                    ids.add(part.replace("run_", ""))
                 elif part.startswith("manual_scan_"):
-                    scanned_ids.add(part.replace("manual_scan_", ""))
-        return scanned_ids
+                    ids.add(part.replace("manual_scan_", ""))
+        return ids
+
+    def mark_run_scanned(self, run_id: str):
+        """Explicitly mark a run as scanned and persist."""
+        if run_id not in self.scanned_run_ids:
+            self.scanned_run_ids.add(run_id)
+            self.save()
 
     def delete(self, memory_id: str):
         """Delete a memory.

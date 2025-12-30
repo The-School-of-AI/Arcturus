@@ -229,9 +229,11 @@
       "type": "image",
       "label": "Kasauli Image",
       "context": "Representative image of Kasauli.",
-      "config": {},
+      "config": {
+        "fillArea": true
+      },
       "data": {
-        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Kasauli_aerial_view.jpg/1280px-Kasauli_aerial_view.jpg"
+        "url": "https://www.indiatourismpackage.com/assets/images/backgrounds/best-time-to-visit-kasauli.webp"
       },
       "style": {}
     },
@@ -499,6 +501,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767025594212,
+  "lastModified": 1767056639129,
   "lastHydrated": null
 }

@@ -1670,7 +1670,7 @@ async def background_smart_scan():
         # But user wants full sync so maybe higher limit?
         # Let's do 10 at a time per invocation or loop?
         # For now, let's try to do up to 20 recent ones.
-        BATCH_SIZE = 20
+        BATCH_SIZE = 100  # Process up to 100 sessions per sync
         
         from remme.extractor import RemmeExtractor
         extractor = RemmeExtractor()
@@ -1697,7 +1697,8 @@ async def background_smart_scan():
                          output = n.get("output")
                          
                 if not query:
-                    print(f"⚠️ RemMe: Run {run_id} has no query, skipping.")
+                    print(f"⚠️ RemMe: Run {run_id} has no query, marking as scanned and skipping.")
+                    remme_store.mark_run_scanned(run_id)
                     continue
 
                 hist = [{"role": "user", "content": query}]
@@ -1740,12 +1741,8 @@ async def background_smart_scan():
                             print(f"❌ RemMe Action Failed: {e}")
                 
                 # If no commands generated, we still need to mark it as scanned?
-                # Currently tracking is based on checking memory `source`. 
-                # If we don't add a memory, we will keep rescanning it.
-                # TODO: We might need a separate "scanned_sessions.json" or add a "null" memory for tracking?
-                # For now, if no memory extracted, we risk rescanning. 
-                # OPTIMIZATION: We should probably just rely on `modified` time or add a lightweight index file.
-                # But constrained by current architecture, let's proceed.
+                # YES - we now use an explicit tracking file.
+                remme_store.mark_run_scanned(run_id)
                 
             except Exception as e:
                 print(f"❌ Failed to scan session {sess_path}: {e}")
