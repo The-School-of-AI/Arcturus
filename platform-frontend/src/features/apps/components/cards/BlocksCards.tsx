@@ -772,3 +772,399 @@ export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
         </div>
     );
 };
+
+
+// ============================================================================
+// STATS ROW CARD (from stats-01)
+// ============================================================================
+
+interface StatsRowCardProps {
+    title?: string;
+    data?: { stats?: Array<{ name: string; value: string; change: string; changeType: 'positive' | 'negative' }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const StatsRowCard: React.FC<StatsRowCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const stats = data.stats || [];
+    return (
+        <div className="h-full p-4 grid grid-cols-4 gap-4">
+            {stats.map((s, i) => (
+                <div key={i} className="text-center">
+                    <div className="text-xs text-muted-foreground">{s.name}</div>
+                    <div className="text-lg font-bold text-foreground">{s.value}</div>
+                    <div className={`text-xs ${s.changeType === 'positive' ? 'text-green-400' : 'text-red-400'}`}>{s.change}</div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
+// ============================================================================
+// PLAN OVERVIEW CARD (from stats-07)
+// ============================================================================
+
+interface PlanOverviewCardProps {
+    title?: string;
+    data?: { plan?: string; items?: Array<{ name: string; current: number; allowed: number; percentage: number }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const PlanOverviewCard: React.FC<PlanOverviewCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const items = data.items || [];
+    const accentColor = style.accentColor || '#eaff00';
+    return (
+        <div className="h-full p-4">
+            <div className="text-sm text-muted-foreground mb-3">
+                You are on the <span className="font-medium text-foreground">{data.plan || 'Starter Plan'}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                {items.map((p, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <svg viewBox="0 0 36 36" className="w-12 h-12">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke={accentColor} strokeWidth="4" strokeDasharray={`${(p.percentage || 0) * 0.88} 88`} transform="rotate(-90 18 18)" />
+                        </svg>
+                        <div>
+                            <div className="text-xs font-medium text-foreground">{p.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{p.current} of {p.allowed} used</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// TREND CARDS (from stats-10)
+// ============================================================================
+
+interface TrendCardsCardProps {
+    title?: string;
+    data?: { items?: Array<{ name: string; ticker: string; value: string; change: string; percentChange: string; changeType: 'positive' | 'negative' }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const TrendCardsCard: React.FC<TrendCardsCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const items = data.items || [];
+    return (
+        <div className="h-full p-4 grid grid-cols-3 gap-4">
+            {items.map((t, i) => (
+                <div key={i} className="bg-muted/30 rounded-lg p-3">
+                    <div className="text-xs text-foreground">{t.name} <span className="text-muted-foreground">({t.ticker})</span></div>
+                    <div className={`text-xl font-bold ${t.changeType === 'positive' ? 'text-green-400' : 'text-red-400'}`}>{t.value}</div>
+                    <div className={`text-xs ${t.changeType === 'positive' ? 'text-green-400' : 'text-red-400'}`}>{t.change} ({t.percentChange})</div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
+// ============================================================================
+// USAGE GAUGE CARD (from stats-12)
+// ============================================================================
+
+interface UsageGaugeCardProps {
+    title?: string;
+    data?: { items?: Array<{ name: string; current: number; limit: number; unit: string }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const UsageGaugeCard: React.FC<UsageGaugeCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const items = data.items || [];
+    const accentColor = style.accentColor || '#eaff00';
+    return (
+        <div className="h-full p-4 flex flex-col gap-3">
+            {items.map((u, i) => {
+                const percent = Math.round((u.current / u.limit) * 100);
+                return (
+                    <div key={i} className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">{u.name}</span>
+                            <span className="text-muted-foreground">{u.current}{u.unit} / {u.limit}{u.unit}</span>
+                        </div>
+                        <div className="h-2 bg-charcoal-700 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: accentColor }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+
+// ============================================================================
+// STORAGE DONUT CARD (from stats-13)
+// ============================================================================
+
+interface StorageDonutCardProps {
+    title?: string;
+    data?: { used?: number; total?: number; unit?: string; segments?: Array<{ label: string; value: number; color: string }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const StorageDonutCard: React.FC<StorageDonutCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const segments = data.segments || [];
+    const totalUsed = segments.reduce((sum, s) => sum + s.value, 0);
+    return (
+        <div className="h-full p-4 flex flex-col items-center justify-center gap-3">
+            <svg viewBox="0 0 36 36" className="w-24 h-24">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" strokeWidth="4" />
+                {segments.reduce((acc: any[], seg, idx) => {
+                    const prevOffset = acc.length > 0 ? acc[acc.length - 1].offset : 0;
+                    const percent = (seg.value / (data.total || 15)) * 88;
+                    acc.push({ color: seg.color, percent, offset: prevOffset + percent });
+                    return acc;
+                }, []).map((seg: any, idx: number) => (
+                    <circle key={idx} cx="18" cy="18" r="14" fill="none" stroke={seg.color} strokeWidth="4"
+                        strokeDasharray={`${seg.percent} ${88 - seg.percent}`}
+                        strokeDashoffset={-seg.offset + seg.percent}
+                        transform="rotate(-90 18 18)" />
+                ))}
+            </svg>
+            <div className="text-sm text-muted-foreground">{data.used || totalUsed} / {data.total || 15} {data.unit || 'GB'}</div>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// TASK TABLE CARD (from table-02)
+// ============================================================================
+
+interface TaskTableCardProps {
+    title?: string;
+    data?: { tasks?: Array<{ id: string; title: string; assignee: string; status: string; priority: string; dueDate: string }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const TaskTableCard: React.FC<TaskTableCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const tasks = data.tasks || [];
+    return (
+        <div className="h-full p-4 overflow-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                        <th className="pb-2">Task</th><th className="pb-2">Assignee</th><th className="pb-2">Status</th><th className="pb-2">Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {tasks.map((t, i) => (
+                        <tr key={i} className="border-b border-border/50">
+                            <td className="py-2 text-foreground">{t.title}</td>
+                            <td className="py-2 text-muted-foreground">{t.assignee}</td>
+                            <td className="py-2"><Badge variant="outline" className={cn("border-0", t.status === 'completed' ? "bg-green-500/15 text-green-400" : t.status === 'in-progress' ? "bg-blue-500/15 text-blue-400" : t.status === 'pending' ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400")}>{t.status}</Badge></td>
+                            <td className="py-2 text-muted-foreground text-xs">{t.dueDate}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// INVENTORY TABLE CARD (from table-03)
+// ============================================================================
+
+interface InventoryTableCardProps {
+    title?: string;
+    data?: { products?: Array<{ sku: string; name: string; stock: number; category: string; status: string; price: string }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const InventoryTableCard: React.FC<InventoryTableCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const products = data.products || [];
+    return (
+        <div className="h-full p-4 overflow-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                        <th className="pb-2">SKU</th><th className="pb-2">Product</th><th className="pb-2">Stock</th><th className="pb-2">Price</th><th className="pb-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {products.map((p, i) => (
+                        <tr key={i} className="border-b border-border/50">
+                            <td className="py-2 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                            <td className="py-2 text-foreground">{p.name}</td>
+                            <td className="py-2 text-muted-foreground">{p.stock}</td>
+                            <td className="py-2 font-mono text-foreground">{p.price}</td>
+                            <td className="py-2"><Badge variant="outline" className={cn("border-0", p.status === 'active' ? "bg-green-500/15 text-green-400" : p.status === 'pending' ? "bg-amber-500/15 text-amber-400" : "bg-gray-500/15 text-gray-400")}>{p.status}</Badge></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// PROJECT TABLE CARD (from table-05)
+// ============================================================================
+
+interface ProjectTableCardProps {
+    title?: string;
+    data?: { projects?: Array<{ id: string; name: string; date: string; status: string; amount: string }> };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const ProjectTableCard: React.FC<ProjectTableCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const projects = data.projects || [];
+    const accentColor = style.accentColor || '#eaff00';
+    return (
+        <div className="h-full p-4 overflow-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                        <th className="pb-2">Name</th><th className="pb-2">Date</th><th className="pb-2">Status</th><th className="pb-2 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {projects.map((p, i) => (
+                        <tr key={i} className="border-b border-border/50">
+                            <td className="py-2 font-medium text-foreground">{p.name}</td>
+                            <td className="py-2 text-muted-foreground text-xs">{p.date}</td>
+                            <td className="py-2"><Badge variant="outline" className={cn("border-0", p.status === 'completed' ? "bg-green-500/15 text-green-400" : p.status === 'processing' ? "bg-blue-500/15 text-blue-400" : p.status === 'pending' ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400")}>{p.status}</Badge></td>
+                            <td className="py-2 font-mono font-semibold text-right" style={{ color: accentColor }}>{p.amount}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// AI CHAT CARD (from ai-03)
+// ============================================================================
+
+interface AiChatCardProps {
+    title?: string;
+    data?: { history?: Array<{ role: 'user' | 'assistant'; content: string }>; placeholder?: string };
+    config?: { showTitle?: boolean };
+    style?: any;
+    isInteractive?: boolean;
+}
+
+export const AiChatCard: React.FC<AiChatCardProps> = ({ title, data = {}, config = {}, style = {}, isInteractive = false }) => {
+    const history = data.history || [];
+    const accentColor = style.accentColor || '#eaff00';
+    return (
+        <div className="h-full p-4 flex flex-col">
+            <div className="flex-1 flex flex-col gap-3 overflow-auto">
+                {history.map((msg, i) => (
+                    <div key={i} className={`max-w-[80%] rounded-lg px-3 py-2 ${msg.role === 'user' ? 'self-end bg-primary/20 text-primary' : 'self-start bg-muted text-muted-foreground'}`}>
+                        {msg.content}
+                    </div>
+                ))}
+            </div>
+            <div className="mt-3 flex gap-2">
+                <input className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm" placeholder={data.placeholder || 'Ask me anything...'} disabled={!isInteractive} />
+                <button className="px-4 py-2 rounded font-medium text-sm" style={{ backgroundColor: accentColor, color: '#000' }}>Send</button>
+            </div>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// SHARE DIALOG CARD (from dialog-09)
+// ============================================================================
+
+interface ShareDialogCardProps {
+    title?: string;
+    data?: { title?: string; shareUrl?: string; message?: string };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const ShareDialogCard: React.FC<ShareDialogCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    const accentColor = style.accentColor || '#eaff00';
+    return (
+        <div className="h-full p-6 flex flex-col gap-4">
+            <div className="text-lg font-medium text-foreground">{data.title || 'Share & Collaborate'}</div>
+            <div className="text-sm text-muted-foreground">{data.message || 'Share with your team'}</div>
+            <div className="flex items-center gap-2">
+                <input className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm" value={data.shareUrl || ''} readOnly />
+                <button className="px-3 py-2 rounded font-medium text-sm" style={{ backgroundColor: accentColor, color: '#000' }}>Copy</button>
+            </div>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// FILE UPLOAD CARD (from file-upload-05)
+// ============================================================================
+
+interface FileUploadCardProps {
+    title?: string;
+    data?: { title?: string; message?: string; maxSize?: number; maxSizeUnit?: string; acceptedTypes?: string[] };
+    config?: { showTitle?: boolean };
+    style?: any;
+}
+
+export const FileUploadCard: React.FC<FileUploadCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
+    return (
+        <div className="h-full p-6 flex flex-col gap-4">
+            <div className="text-lg font-medium text-foreground">{data.title || 'File Upload'}</div>
+            <div className="flex-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2">
+                <span className="text-2xl">📁</span>
+                <span className="text-sm text-muted-foreground">{data.message || 'Drag and drop or choose file'}</span>
+                <span className="text-xs text-muted-foreground/50">Max {data.maxSize || 10} {data.maxSizeUnit || 'MB'} • {(data.acceptedTypes || []).join(', ').toUpperCase()}</span>
+            </div>
+        </div>
+    );
+};
+
+
+// ============================================================================
+// FORM LAYOUT CARD (from form-layout-03)
+// ============================================================================
+
+interface FormLayoutCardProps {
+    title?: string;
+    data?: { title?: string; fields?: Array<{ name: string; label: string; type: string; placeholder?: string; required?: boolean }>; submitLabel?: string };
+    config?: { showTitle?: boolean };
+    style?: any;
+    isInteractive?: boolean;
+}
+
+export const FormLayoutCard: React.FC<FormLayoutCardProps> = ({ title, data = {}, config = {}, style = {}, isInteractive = false }) => {
+    const fields = data.fields || [];
+    const accentColor = style.accentColor || '#eaff00';
+    return (
+        <div className="h-full p-6 flex flex-col gap-4">
+            <div className="text-lg font-medium text-foreground">{data.title || 'Form'}</div>
+            {fields.map((f, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">{f.label} {f.required && <span className="text-red-400">*</span>}</label>
+                    {f.type === 'textarea' ? (
+                        <textarea className="px-3 py-2 bg-muted border border-border rounded text-sm" placeholder={f.placeholder} disabled={!isInteractive} rows={3} />
+                    ) : (
+                        <input className="px-3 py-2 bg-muted border border-border rounded text-sm" type={f.type} placeholder={f.placeholder} disabled={!isInteractive} />
+                    )}
+                </div>
+            ))}
+            <button className="px-4 py-2 rounded font-medium text-sm mt-2" style={{ backgroundColor: accentColor, color: '#000' }}>
+                {data.submitLabel || 'Submit'}
+            </button>
+        </div>
+    );
+};

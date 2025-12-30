@@ -41,7 +41,19 @@ import {
     Stats01Card,
     UsageStatsCard,
     StorageCard,
-    AccordionTableCard
+    AccordionTableCard,
+    StatsRowCard,
+    PlanOverviewCard,
+    TrendCardsCard,
+    UsageGaugeCard,
+    StorageDonutCard,
+    TaskTableCard,
+    InventoryTableCard,
+    ProjectTableCard,
+    AiChatCard,
+    ShareDialogCard,
+    FileUploadCard,
+    FormLayoutCard
 } from './cards/BlocksCards';
 import {
     CheckboxCard,
@@ -177,7 +189,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             // but for now let's keep dims relative to the column count or adjust them.
             // If we move to 24 cols, everything becomes half width if we keep same w.
             // So let's double the smart dimensions w for 24-col layout.
-            const adjustedDims = { ...dims, w: dims.w * 2 }; // Scale for 24 cols
+            const adjustedDims = { ...dims, w: dims.w }; // Scale for 24 cols
 
             addAppCard(newCard, { ...layoutItem, ...adjustedDims });
 
@@ -445,6 +457,32 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'quiz_ai':
                 return <QuizAICard {...commonProps} />;
 
+            // New Blocks.so Components
+            case 'stats_row':
+                return <StatsRowCard {...commonProps} />;
+            case 'plan_overview':
+                return <PlanOverviewCard {...commonProps} />;
+            case 'trend_cards':
+                return <TrendCardsCard {...commonProps} />;
+            case 'usage_gauge':
+                return <UsageGaugeCard {...commonProps} />;
+            case 'storage_donut':
+                return <StorageDonutCard {...commonProps} />;
+            case 'task_table':
+                return <TaskTableCard {...commonProps} />;
+            case 'inventory_table':
+                return <InventoryTableCard {...commonProps} />;
+            case 'project_table':
+                return <ProjectTableCard {...commonProps} />;
+            case 'ai_chat':
+                return <AiChatCard {...commonProps} />;
+            case 'share_dialog':
+                return <ShareDialogCard {...commonProps} />;
+            case 'file_upload':
+                return <FileUploadCard {...commonProps} />;
+            case 'form_layout':
+                return <FormLayoutCard {...commonProps} />;
+
             default:
                 return (
                     <div className="flex-1 flex items-center justify-center p-4 text-xs text-muted-foreground/30">
@@ -608,7 +646,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         const x = rect ? Math.max(0, Math.floor((e.clientX - rect.left - 32) / colWidth)) : 0;
                         const y = rect ? Math.max(0, Math.floor((e.clientY - rect.top - 32) / rowHeight)) : 0;
 
-                        const adjustedDims = { ...dims, w: dims.w * 2 };
+                        const adjustedDims = { ...dims, w: dims.w };
                         addAppCard(newCard, { x, y, ...adjustedDims });
                     } catch (err) {
                         console.error('Fallback drop error:', err);
@@ -632,8 +670,10 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                             width={CANVAS_WIDTH}
                             layouts={{ lg: appLayout.map(item => ({ ...item, static: isAppViewMode })) }}
                             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                            cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }} // Double columns for finer granularity
+                            cols={{ lg: 24, md: 24, sm: 24, xs: 24, xxs: 24 }} // Force 24 cols at all breakpoints
                             rowHeight={40} // Reduced rowHeight for finer control (was 60)
+                            margin={[16, 16]} // No margin so columns = exactly 50px (1200/24)
+                            containerPadding={[0, 0]} // No internal padding
                             onLayoutChange={handleLayoutChange}
                             isDroppable={!isAppViewMode}
                             onDrop={onDrop}

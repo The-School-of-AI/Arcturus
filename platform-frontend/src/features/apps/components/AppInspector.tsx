@@ -1148,6 +1148,57 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
     accordion_table: [
         { name: 'Rows (JSON Array)', key: 'rows', type: 'json', options: ['[{"id":"001","name":"Project Alpha","category":"Dev","value":45000,"date":"2024-01-15"}]'] },
     ],
+    // New Blocks.so Data-Bound Components
+    stats_row: [
+        { name: 'Stats (JSON Array)', key: 'stats', type: 'json', options: ['[{"name":"Profit","value":"$287K","change":"+8%","changeType":"positive"}]'] },
+    ],
+    plan_overview: [
+        { name: 'Plan Name', key: 'plan', type: 'text' },
+        { name: 'Items (JSON Array)', key: 'items', type: 'json', options: ['[{"name":"Workspaces","current":1,"allowed":5,"percentage":20}]'] },
+    ],
+    trend_cards: [
+        { name: 'Items (JSON Array)', key: 'items', type: 'json', options: ['[{"name":"Alpha Corp","ticker":"ACP","value":"$168.59","change":"+15.86","percentChange":"+10.4%","changeType":"positive"}]'] },
+    ],
+    usage_gauge: [
+        { name: 'Items (JSON Array)', key: 'items', type: 'json', options: ['[{"name":"API Requests","current":358,"limit":1000,"unit":"K"}]'] },
+    ],
+    storage_donut: [
+        { name: 'Used', key: 'used', type: 'number' },
+        { name: 'Total', key: 'total', type: 'number' },
+        { name: 'Unit', key: 'unit', type: 'text' },
+        { name: 'Segments (JSON Array)', key: 'segments', type: 'json', options: ['[{"label":"Documents","value":2.4,"color":"#3b82f6"}]'] },
+    ],
+    task_table: [
+        { name: 'Tasks (JSON Array)', key: 'tasks', type: 'json', options: ['[{"id":"TASK-1","title":"User Auth","assignee":"Sarah K.","status":"completed","priority":"high","dueDate":"2024-03-20"}]'] },
+    ],
+    inventory_table: [
+        { name: 'Products (JSON Array)', key: 'products', type: 'json', options: ['[{"sku":"SKU-8472","name":"Wireless Mouse Pro","stock":245,"category":"Electronics","status":"active","price":"$24.99"}]'] },
+    ],
+    project_table: [
+        { name: 'Projects (JSON Array)', key: 'projects', type: 'json', options: ['[{"id":"1","name":"Project Alpha","date":"Jan 15, 2024","status":"completed","amount":"$2,500"}]'] },
+    ],
+    ai_chat: [
+        { name: 'Placeholder', key: 'placeholder', type: 'text' },
+        { name: 'Welcome Message', key: 'welcomeMessage', type: 'text' },
+        { name: 'History (JSON Array)', key: 'history', type: 'json', options: ['[{"role":"assistant","content":"Hello! How can I help?"}]'] },
+    ],
+    share_dialog: [
+        { name: 'Title', key: 'title', type: 'text' },
+        { name: 'Share URL', key: 'shareUrl', type: 'text' },
+        { name: 'Message', key: 'message', type: 'textarea' },
+    ],
+    file_upload: [
+        { name: 'Title', key: 'title', type: 'text' },
+        { name: 'Message', key: 'message', type: 'text' },
+        { name: 'Max Size (number)', key: 'maxSize', type: 'number' },
+        { name: 'Size Unit', key: 'maxSizeUnit', type: 'select', options: ['KB', 'MB', 'GB'] },
+        { name: 'Accepted Types (JSON)', key: 'acceptedTypes', type: 'json', options: ['["xlsx","csv","pdf"]'] },
+    ],
+    form_layout: [
+        { name: 'Title', key: 'title', type: 'text' },
+        { name: 'Submit Label', key: 'submitLabel', type: 'text' },
+        { name: 'Fields (JSON Array)', key: 'fields', type: 'json', options: ['[{"name":"email","label":"Email","type":"email","placeholder":"Enter email","required":true}]'] },
+    ],
     // New Building Block Fields
     checkbox: [
         { name: 'Label', key: 'label', type: 'text' },

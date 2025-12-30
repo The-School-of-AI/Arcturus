@@ -547,6 +547,126 @@ export const getDefaultData = (type: string): any => {
                 score: 10
             };
 
+        // New Blocks.so Components Default Data
+        case 'stats_row':
+            return {
+                stats: [
+                    { name: 'Profit', value: '$287,654', change: '+8.32%', changeType: 'positive' },
+                    { name: 'Late payments', value: '$9,435', change: '-12.64%', changeType: 'negative' },
+                    { name: 'Pending orders', value: '$173,229', change: '+2.87%', changeType: 'positive' },
+                    { name: 'Operating costs', value: '$52,891', change: '-5.73%', changeType: 'negative' },
+                ]
+            };
+        case 'plan_overview':
+            return {
+                title: 'Plan Overview',
+                plan: 'Starter Plan',
+                items: [
+                    { name: 'Workspaces', current: 1, allowed: 5, percentage: 20 },
+                    { name: 'Dashboards', current: 2, allowed: 20, percentage: 10 },
+                    { name: 'Chart Widgets', current: 15, allowed: 50, percentage: 30 },
+                    { name: 'Storage', current: 25, allowed: 100, percentage: 50 },
+                ]
+            };
+        case 'trend_cards':
+            return {
+                items: [
+                    { name: 'Alpha Corp', ticker: 'ACP', value: '$168.59', change: '+15.86', percentChange: '+10.4%', changeType: 'positive' },
+                    { name: 'Beta Solutions', ticker: 'BTS', value: '$78.54', change: '+4.65', percentChange: '+6.3%', changeType: 'positive' },
+                    { name: 'Gamma Industries', ticker: 'GMI', value: '$75.68', change: '-5.74', percentChange: '-7.1%', changeType: 'negative' },
+                ]
+            };
+        case 'usage_gauge':
+            return {
+                title: 'Resource Usage',
+                items: [
+                    { name: 'API Requests', current: 358, limit: 1000, unit: 'K' },
+                    { name: 'Storage', current: 3.07, limit: 10, unit: 'GB' },
+                    { name: 'Bandwidth', current: 4.98, limit: 100, unit: 'GB' },
+                    { name: 'Active Users', current: 24, limit: 50, unit: '' },
+                ],
+                subtitle: 'Last 30 days'
+            };
+        case 'storage_donut':
+            return {
+                title: 'Storage Breakdown',
+                used: 8.3,
+                total: 15,
+                unit: 'GB',
+                segments: [
+                    { label: 'Documents', value: 2.4, color: '#3b82f6' },
+                    { label: 'Photos', value: 1.8, color: '#10b981' },
+                    { label: 'Videos', value: 3.2, color: '#f59e0b' },
+                    { label: 'Music', value: 0.9, color: '#a855f7' },
+                ]
+            };
+        case 'task_table':
+            return {
+                title: 'Task Management',
+                tasks: [
+                    { id: 'TASK-1', title: 'User Authentication', assignee: 'Sarah K.', status: 'completed', priority: 'high', dueDate: '2024-03-20' },
+                    { id: 'TASK-2', title: 'Dashboard Layout', assignee: 'Mike R.', status: 'in-progress', priority: 'high', dueDate: '2024-03-22' },
+                    { id: 'TASK-3', title: 'API Integration', assignee: 'Alex T.', status: 'pending', priority: 'medium', dueDate: '2024-03-25' },
+                    { id: 'TASK-4', title: 'Unit Testing', assignee: 'Jordan M.', status: 'blocked', priority: 'low', dueDate: '2024-03-28' },
+                ]
+            };
+        case 'inventory_table':
+            return {
+                title: 'Product Inventory',
+                products: [
+                    { sku: 'SKU-8472', name: 'Wireless Mouse Pro', stock: 245, category: 'Electronics', status: 'active', price: '$24.99', lastRestocked: '2024-10-15' },
+                    { sku: 'SKU-3391', name: 'Ergonomic Keyboard', stock: 89, category: 'Electronics', status: 'active', price: '$79.99', lastRestocked: '2024-10-18' },
+                    { sku: 'SKU-7156', name: 'Office Chair Deluxe', stock: 12, category: 'Furniture', status: 'pending', price: '$299.99', lastRestocked: '2024-10-12' },
+                    { sku: 'SKU-9204', name: 'USB-C Hub Adapter', stock: 456, category: 'Accessories', status: 'active', price: '$34.50', lastRestocked: '2024-10-19' },
+                ]
+            };
+        case 'project_table':
+            return {
+                title: 'Projects',
+                projects: [
+                    { id: '1', name: 'Project Alpha', date: 'Jan 15, 2024', status: 'completed', amount: '$2,500' },
+                    { id: '2', name: 'Website Redesign', date: 'Feb 3, 2024', status: 'processing', amount: '$5,400' },
+                    { id: '3', name: 'Mobile App', date: 'Mar 12, 2024', status: 'pending', amount: '$8,200' },
+                    { id: '4', name: 'Database Migration', date: 'Apr 5, 2024', status: 'cancelled', amount: '$3,100' },
+                ]
+            };
+        case 'ai_chat':
+            return {
+                title: 'AI Assistant',
+                placeholder: 'Ask me anything...',
+                welcomeMessage: 'Hello! How can I help you today?',
+                model: 'gpt-4',
+                history: [
+                    { role: 'assistant', content: 'Hello! How can I help you today?' },
+                ]
+            };
+        case 'share_dialog':
+            return {
+                title: 'Share & Collaborate',
+                shareUrl: 'https://app.example.com/share/abc123',
+                enableComments: true,
+                message: 'Share this project with your team to collaborate on it.'
+            };
+        case 'file_upload':
+            return {
+                title: 'File Upload',
+                acceptedTypes: ['xlsx', 'xls', 'csv'],
+                maxSize: 10,
+                maxSizeUnit: 'MB',
+                message: 'Drag and drop or choose file to upload'
+            };
+        case 'form_layout':
+            return {
+                title: 'Contact Form',
+                fields: [
+                    { name: 'name', label: 'Full Name', type: 'text', placeholder: 'Enter your name', required: true },
+                    { name: 'email', label: 'Email', type: 'email', placeholder: 'Enter your email', required: true },
+                    { name: 'company', label: 'Company', type: 'text', placeholder: 'Your company name' },
+                    { name: 'message', label: 'Message', type: 'textarea', placeholder: 'How can we help?', required: true },
+                ],
+                submitLabel: 'Submit'
+            };
+
         default:
             return {};
 
@@ -614,6 +734,19 @@ export const COMPONENT_USAGE: Record<string, string> = {
     usage_stats: 'Usage meters with progress bars - quotas, limits, consumption.',
     storage_card: 'Storage usage donut chart with segment breakdown.',
     accordion_table: 'Expandable hierarchical data table - nested data, categories.',
+    // New Blocks.so Components
+    stats_row: 'Horizontal row of stats with change indicators - KPIs, financial metrics.',
+    plan_overview: 'Radial gauges showing plan usage - quotas, subscriptions, limits.',
+    trend_cards: 'Stock/asset cards with sparklines and trends - portfolio tracking.',
+    usage_gauge: 'Progress bar gauges for resource usage - API calls, storage, bandwidth.',
+    storage_donut: 'Donut chart showing storage breakdown by category.',
+    task_table: 'Task management table with status, priority, and actions.',
+    inventory_table: 'Product inventory with SKU, stock, and category filtering.',
+    project_table: 'Projects list with status, dates, and amounts - project management.',
+    ai_chat: 'AI chat interface for conversations with language models.',
+    share_dialog: 'Share and collaboration dialog with link copying.',
+    file_upload: 'File upload zone with drag-and-drop and progress.',
+    form_layout: 'Multi-field form with validation and submission.',
 
     // Quiz Blocks - Phase 1: Simple Selection
     quiz_mcq: 'Single-answer multiple choice question. Use for testing factual knowledge with one correct answer from several options.',
