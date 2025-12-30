@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 // Multi-color palette for auto-color mode
 const MULTI_COLOR_PALETTE = [
-    '#F5C542', // Neon Yellow
+    '#eaff00', // Neon Yellow
     '#ff6b6b', // Coral Red
     '#4ecdc4', // Teal
     '#45b7d1', // Sky Blue
@@ -250,11 +250,11 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
 
     return (
         <BaseCard title={title}>
-            <div className="w-full h-full flex flex-col relative p-2 sankey-container">
+            <div className="w-full h-full flex flex-col relative p-0 sankey-container">
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-[10px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-1 py-1.5 bg-popover text-popover-foreground text-[10px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}
@@ -309,7 +309,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                                     fill={n.color || accentColor}
                                     rx={2}
                                     className="hover:brightness-125 transition-all cursor-crosshair"
-                                    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                                    style={{ filter: 'drop-shadow(0 4px 4px rgba(132, 132, 132, 0.4))' }}
                                     onMouseEnter={(e) => showTooltip(e as any, `${n.name}: ${n.value}`)}
                                     onMouseMove={(e) => showTooltip(e as any, `${n.name}: ${n.value}`)}
                                     onMouseLeave={hideTooltip}
@@ -320,9 +320,9 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                                         y={n.y! + n.h! / 2}
                                         dy="0.35em"
                                         textAnchor={n.layer === 0 ? "start" : "end"}
-                                        className="text-[9px] font-semibold pointer-events-none uppercase tracking-wide"
+                                        className="text-[11px] font-semibold pointer-events-none uppercase tracking-wide"
                                         fill={textColor}
-                                        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
+                                        style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}
                                     >
                                         {n.name}
                                     </text>

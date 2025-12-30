@@ -103,31 +103,31 @@
       "data": {
         "stats": [
           {
-            "label": "Market Cap",
+            "name": "Market Cap",
             "value": "2.05T"
           },
           {
-            "label": "P/E (TTM)",
+            "name": "P/E (TTM)",
             "value": "23.4x"
           },
           {
-            "label": "Fwd P/E",
+            "name": "Fwd P/E",
             "value": "19.8x"
           },
           {
-            "label": "P/S",
+            "name": "P/S",
             "value": "6.2x"
           },
           {
-            "label": "P/FCF",
+            "name": "P/FCF",
             "value": "28.5x"
           },
           {
-            "label": "ROIC",
+            "name": "ROIC",
             "value": "31.5%"
           },
           {
-            "label": "WACC",
+            "name": "WACC",
             "value": "9.2%"
           }
         ]
@@ -145,18 +145,6 @@
         "netIncome": "40.2B",
         "liabilities": "120B",
         "equity": "282B"
-      },
-      "style": {}
-    },
-    {
-      "id": "fin_cf",
-      "type": "cash_flow",
-      "label": "Cash Flow",
-      "config": {},
-      "data": {
-        "operating": "101B",
-        "investing": "-24B",
-        "financing": "-3.1B"
       },
       "style": {}
     },
@@ -423,25 +411,25 @@
       "i": "h_main",
       "x": 0,
       "y": 0,
-      "w": 18,
+      "w": 24,
       "h": 2,
       "moved": false,
       "static": false
     },
     {
       "i": "m_price",
-      "x": 0,
+      "x": 9,
       "y": 2,
       "w": 4,
-      "h": 3,
+      "h": 4,
       "moved": false,
       "static": false
     },
     {
       "i": "chart_rev_seg",
-      "x": 9,
+      "x": 13,
       "y": 2,
-      "w": 9,
+      "w": 11,
       "h": 4,
       "moved": false,
       "static": false
@@ -449,8 +437,8 @@
     {
       "i": "div_2",
       "x": 0,
-      "y": 13,
-      "w": 18,
+      "y": 22,
+      "w": 24,
       "h": 1,
       "moved": false,
       "static": false
@@ -458,52 +446,43 @@
     {
       "i": "profile",
       "x": 0,
-      "y": 14,
-      "w": 6,
-      "h": 7,
+      "y": 2,
+      "w": 9,
+      "h": 6,
       "moved": false,
       "static": false
     },
     {
       "i": "stats_fund",
-      "x": 6,
-      "y": 14,
-      "w": 12,
+      "x": 0,
+      "y": 15,
+      "w": 9,
       "h": 7,
       "moved": false,
       "static": false
     },
     {
       "i": "fin_inc",
-      "x": 0,
-      "y": 21,
-      "w": 6,
-      "h": 5,
-      "moved": false,
-      "static": false
-    },
-    {
-      "i": "fin_cf",
-      "x": 6,
-      "y": 21,
-      "w": 6,
+      "x": 17,
+      "y": 6,
+      "w": 7,
       "h": 5,
       "moved": false,
       "static": false
     },
     {
       "i": "risk_log",
-      "x": 12,
-      "y": 21,
-      "w": 6,
-      "h": 5,
+      "x": 9,
+      "y": 23,
+      "w": 8,
+      "h": 6,
       "moved": false,
       "static": false
     },
     {
       "i": "news_feed",
       "x": 0,
-      "y": 26,
+      "y": 23,
       "w": 9,
       "h": 6,
       "moved": false,
@@ -511,40 +490,41 @@
     },
     {
       "i": "exec_sum",
-      "x": 9,
-      "y": 26,
-      "w": 9,
+      "x": 17,
+      "y": 23,
+      "w": 7,
       "h": 6,
       "moved": false,
       "static": false
     },
     {
       "i": "area_chart-1766896371511",
-      "x": 4,
-      "y": 2,
-      "w": 5,
-      "h": 4,
+      "x": 9,
+      "y": 6,
+      "w": 8,
+      "h": 5,
       "moved": false,
       "static": false
     },
     {
       "i": "line_chart-1766896516874",
       "x": 9,
-      "y": 6,
-      "w": 9,
-      "h": 7,
+      "y": 11,
+      "w": 15,
+      "h": 11,
       "moved": false,
       "static": false
     },
     {
       "i": "sankey-1766896613780",
       "x": 0,
-      "y": 6,
+      "y": 8,
       "w": 9,
       "h": 7,
       "moved": false,
       "static": false
     }
   ],
-  "lastModified": 1766896656476
+  "lastModified": 1767091264837,
+  "lastHydrated": null
 }

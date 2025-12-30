@@ -620,7 +620,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             {/* Grid Area */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-auto px-4 py-16 custom-scrollbar"
+                className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-16 custom-scrollbar"
                 onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'copy';
@@ -670,7 +670,11 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     </div>
                 ) : (
                     <div
-                        style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', width: `${CANVAS_WIDTH}px` }}
+                        style={{
+                            transform: `scale(${zoomLevel})`,
+                            transformOrigin: 'top left',
+                            width: `${CANVAS_WIDTH}px`
+                        }}
                         className={cn(!isAppViewMode && "bg-grid-lines")}
                     >
                         <RGLResponsive

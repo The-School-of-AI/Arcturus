@@ -631,7 +631,7 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
         { name: 'Show Title', key: 'showTitle', default: true },
         { name: 'Show Legend', key: 'showLegend', default: true },
         { name: 'Show Percentages', key: 'showPercent', default: true },
-        { name: 'Donut Style', key: 'donut', default: false },
+        { name: 'Donut Style', key: 'donut', default: true },
     ],
     sankey: [
         { name: 'Show Title', key: 'showTitle', default: true },
