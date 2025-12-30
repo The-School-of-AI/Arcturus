@@ -320,10 +320,10 @@ export const WorkspacePanel: React.FC = () => {
                         {/* Section: User Query (Global) */}
                         {!isExplorer && currentRun && (
                             <div className="space-y-2">
-                                <div className="text-xs uppercase tracking-widest text-white/50 font-bold flex items-center gap-2 select-none">
+                                <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2 select-none">
                                     <Terminal className="w-3 h-3" /> User Query
                                 </div>
-                                <div className="p-1 bg-white/5 rounded-md text-foreground/90 leading-relaxed text-lg border border-white/10 select-text font-sans">
+                                <div className="p-3 bg-muted/50 rounded-md text-foreground/90 leading-relaxed text-md border border-border/50 select-text font-sans">
                                     {currentRun.name}
                                 </div>
                             </div>
