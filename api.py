@@ -78,11 +78,13 @@ from routers import runs as runs_router
 from routers import rag as rag_router
 from routers import remme as remme_router
 from routers import apps as apps_router
+from routers import settings as settings_router
 from routers.remme import background_smart_scan  # Needed for lifespan startup
 app.include_router(runs_router.router)
 app.include_router(rag_router.router)
 app.include_router(remme_router.router)
 app.include_router(apps_router.router)
+app.include_router(settings_router.router)
 
 
 # --- Explorer Classes ---
@@ -137,141 +139,8 @@ ExplorerNode.update_forward_refs()
 
 # === SETTINGS API ENDPOINTS ===
 
-@app.get("/settings")
-async def get_settings():
-    """Get all current settings from config/settings.json"""
-    try:
-        # Force reload to get latest from disk
-        current_settings = reload_settings()
-        return {"status": "success", "settings": current_settings}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load settings: {str(e)}")
+# Settings have been moved to routers/settings.py
 
-class UpdateSettingsRequest(BaseModel):
-    settings: dict
-
-@app.put("/settings")
-async def update_settings(request: UpdateSettingsRequest):
-    """Update settings and save to config/settings.json
-    
-    Note: Some settings require re-indexing (chunk_size, chunk_overlap, etc.)
-    or server restart to take effect.
-    """
-    try:
-        global settings
-        # Deep merge incoming settings with existing
-        def deep_merge(base: dict, update: dict) -> dict:
-            for key, value in update.items():
-                if key in base and isinstance(base[key], dict) and isinstance(value, dict):
-                    deep_merge(base[key], value)
-                else:
-                    base[key] = value
-            return base
-        
-        deep_merge(settings, request.settings)
-        save_settings()
-        
-        # Identify settings that require action
-        warnings = []
-        rag_keys = ["chunk_size", "chunk_overlap", "max_chunk_length", "semantic_word_limit"]
-        if "rag" in request.settings:
-            for key in rag_keys:
-                if key in request.settings["rag"]:
-                    warnings.append(f"Changed '{key}' - requires re-indexing documents to take effect")
-        
-        if "models" in request.settings:
-            warnings.append("Model changes take effect on next document processing or server restart")
-        
-        return {
-            "status": "success",
-            "message": "Settings saved successfully",
-            "warnings": warnings if warnings else None
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save settings: {str(e)}")
-
-@app.post("/settings/reset")
-async def reset_to_defaults():
-    """Reset all settings to default values from config/settings.defaults.json"""
-    try:
-        reset_settings()
-        return {"status": "success", "message": "Settings reset to defaults"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to reset settings: {str(e)}")
-
-@app.post("/settings/restart")
-async def restart_server():
-    """Return instructions for manual restart.
-    
-    Note: Automatic restart doesn't work reliably with npm run dev:all / concurrently.
-    The proper way is to manually Ctrl+C and restart.
-    """
-    return {
-        "status": "manual_required",
-        "message": "Automatic restart is not supported. Please manually restart the server.",
-        "instructions": [
-            "1. Press Ctrl+C in the terminal running npm run dev:all",
-            "2. Run: npm run dev:all",
-            "3. Refresh the browser"
-        ]
-    }
-
-# === OLLAMA API ENDPOINTS ===
-
-@app.get("/ollama/models")
-async def get_ollama_models():
-    """Get list of available Ollama models from local instance"""
-    try:
-        import requests
-        from config.settings_loader import get_ollama_url
-        
-        ollama_url = get_ollama_url("base")
-        response = requests.get(f"{ollama_url}/api/tags", timeout=10)
-        
-        if response.status_code != 200:
-            raise HTTPException(status_code=502, detail="Failed to connect to Ollama")
-        
-        data = response.json()
-        models = []
-        for model in data.get("models", []):
-            name = model.get("name", "")
-            size_bytes = model.get("size", 0)
-            size_gb = round(size_bytes / (1024**3), 2) if size_bytes else 0
-            
-            # Get family info from Ollama response
-            details = model.get("details", {})
-            families = details.get("families", [])
-            
-            # Infer capabilities from model name AND family
-            capabilities = set()
-            name_lower = name.lower()
-            
-            # Embedding models
-            if "embed" in name_lower or "nomic" in name_lower or "nomic-bert" in families:
-                capabilities.add("embedding")
-            
-            # Vision/multimodal models - check for explicit vision families or name patterns
-            vision_families = ["clip", "qwen3vl", "llava"]
-            vision_names = ["vl", "vision", "llava", "moondream", "gemma3"]  # gemma3 supports vision
-            
-            if any(f in families for f in vision_families) or any(v in name_lower for v in vision_names):
-                capabilities.add("text")
-                capabilities.add("image")
-            else:
-                capabilities.add("text")
-            
-            models.append({
-                "name": name,
-                "size_gb": size_gb,
-                "capabilities": list(capabilities),
-                "modified_at": model.get("modified_at", "")
-            })
-        
-        return {"status": "success", "models": models}
-    except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=503, detail="Ollama server not running")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 class PullModelRequest(BaseModel):
     name: str

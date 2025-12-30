@@ -44,3 +44,6 @@ def get_remme_extractor():
         from remme.extractor import RemmeExtractor
         _remme_extractor = RemmeExtractor()
     return _remme_extractor
+
+# Global settings state
+settings = {}
