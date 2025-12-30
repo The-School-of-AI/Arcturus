@@ -50,7 +50,7 @@ export function AppGenerationModal({ isOpen, onClose, onGenerate }: AppGeneratio
                     <div className="p-2 rounded-lg bg-primary/20">
                         <Sparkles className="w-6 h-6 text-primary" />
                     </div>
-                    <h2 className="text-xl font-bold">Generate Dashboard with AI</h2>
+                    <h2 className="text-xl font-semibold">Design with AI</h2>
                 </div>
 
                 <div className="space-y-4">
@@ -64,7 +64,7 @@ export function AppGenerationModal({ isOpen, onClose, onGenerate }: AppGeneratio
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder='e.g., "CFO Dashboard" or "Sales Analytics"'
-                            className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                             disabled={isGenerating}
                         />
                     </div>
@@ -79,7 +79,7 @@ export function AppGenerationModal({ isOpen, onClose, onGenerate }: AppGeneratio
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder="Describe what you want your dashboard to show. Be specific about metrics, charts, and data you want to track. For example: &quot;A financial dashboard for tracking revenue, costs, profit margins, and cash flow with trend charts and key metrics&quot;"
                             rows={6}
-                            className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                            className="w-full px-4 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                             disabled={isGenerating}
                         />
                         <div className="text-xs text-muted-foreground mt-1">
@@ -99,7 +99,7 @@ export function AppGenerationModal({ isOpen, onClose, onGenerate }: AppGeneratio
                 <div className="flex gap-3 mt-6">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-2 px-4 rounded-lg border border-border hover:bg-muted transition-colors"
+                        className="flex-1 py-2 px-4 rounded-lg border border-border hover:border-destructive hover:bg-destructive/10 transition-colors"
                         disabled={isGenerating}
                     >
                         Cancel
