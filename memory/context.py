@@ -176,7 +176,7 @@ class ExecutionContextManager:
         # It's just a regular string
         return value
     
-    async def _auto_execute_code(self, step_id, output):
+    async def _auto_execute_code(self, step_id, output, input_overrides=None):
         """Execute code with COMPLETE variable injection"""
         code_to_execute = self._extract_executable_code(output)
         
@@ -188,7 +188,11 @@ class ExecutionContextManager:
         reads = node_data.get("reads", [])
         
         # Get globals_schema for injection
-        globals_schema = self.plan_graph.graph['globals_schema']
+        globals_schema = self.plan_graph.graph['globals_schema'].copy()
+        
+        # Merge input_overrides if provided (for API test loops)
+        if input_overrides:
+            globals_schema.update(input_overrides)
         
         last_failure = None
         for code_key, code in code_to_execute.items():
@@ -202,6 +206,8 @@ class ExecutionContextManager:
                     # This prevents the bug where "['url1', 'url2']" becomes a string
                     # instead of an actual list, causing iteration over characters
                     parsed_value = self._ensure_parsed_value(var_value)
+                    print(f"DEBUG INJECT: {var_name} -> Type: {type(parsed_value)} Value: {str(parsed_value)[:100]}...")
+
                     globals_injection += f'{var_name} = {repr(parsed_value)}\n'
                 
                 # 2. Inject agent's own output variables (with safe parsing)

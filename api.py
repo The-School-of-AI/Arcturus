@@ -408,59 +408,153 @@ async def test_agent(run_id: str, node_id: str):
         reads = node_data.get("reads", [])
         inputs = {key: globals_schema.get(key) for key in reads if key in globals_schema}
         
-        # 5. Build the input payload (same format as loop.py _execute_step)
-        input_payload = {
-            "step_id": node_id,
-            "agent_prompt": node_data.get("agent_prompt", node_data.get("description", "")),
-            "reads": reads,
-            "writes": node_data.get("writes", []),
-            "inputs": inputs,
-            "original_query": G.graph.get("original_query", ""),
-            "session_context": {
-                "session_id": run_id,
-                "created_at": G.graph.get("created_at", ""),
-                "file_manifest": G.graph.get("file_manifest", []),
+        # 5. Build the input payload helper
+        def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
+            payload = {
+                "step_id": node_id,
+                "agent_prompt": instruction or node_data.get("agent_prompt", node_data.get("description", "")),
+                "reads": reads,
+                "writes": node_data.get("writes", []),
+                "inputs": inputs,
+                "original_query": G.graph.get("original_query", ""),
+                "session_context": {
+                    "session_id": run_id,
+                    "created_at": G.graph.get("created_at", ""),
+                    "file_manifest": G.graph.get("file_manifest", []),
+                },
+                **({"previous_output": previous_output} if previous_output else {}),
+                **({"iteration_context": iteration_context} if iteration_context else {})
             }
-        }
-        
-        # 6. Run the agent
+             # Formatter-specific additions
+            if agent_type == "FormatterAgent":
+                payload["all_globals_schema"] = G.graph.get('globals_schema', {}).copy()
+            return payload
+
+        # 6. Execute with ReAct Loop (Max 15 turns)
         from agents.base_agent import AgentRunner
-        agent_runner = AgentRunner(multi_mcp)
-        result = await agent_runner.run_agent(agent_type, input_payload)
-        
-        if not result["success"]:
-            return {
-                "status": "error",
-                "error": result.get("error", "Agent execution failed"),
-                "node_id": node_id,
-                "agent_type": agent_type
-            }
-        
-        new_output = result["output"]
-        
-        # 7. If the agent produced code_variants, execute them in sandbox
         from memory.context import ExecutionContextManager
+        
+        agent_runner = AgentRunner(multi_mcp)
         temp_context = ExecutionContextManager.__new__(ExecutionContextManager)
         temp_context.plan_graph = G
         temp_context.multi_mcp = multi_mcp
-        
-        execution_result = None
-        if temp_context._has_executable_code(new_output):
-            execution_result = await temp_context._auto_execute_code(node_id, new_output)
-            if execution_result:
-                new_output = temp_context._merge_execution_results(new_output, execution_result)
+
+        max_turns = 15
+        current_input = build_agent_input()
+        iterations_data = []
+        final_output = {}
+        final_execution_result = None
+
+        for turn in range(1, max_turns + 1):
+            print(f"🔄 Test Mode: {agent_type} Iteration {turn}/{max_turns}")
+            
+            # Run Agent
+            result = await agent_runner.run_agent(agent_type, current_input)
+            
+            if not result["success"]:
+                return {
+                    "status": "error",
+                    "error": result.get("error", "Agent execution failed"),
+                    "node_id": node_id,
+                    "agent_type": agent_type
+                }
+            
+            output = result["output"]
+            final_output = output # Update final output
+            iterations_data.append({"iteration": turn, "output": output})
+            
+            # 1. Check for 'call_tool' (ReAct)
+            if output.get("call_tool"):
+                tool_call = output["call_tool"]
+                tool_name = tool_call.get("name")
+                tool_args = tool_call.get("arguments", {})
+                
+                print(f"🛠️ Test Mode: Executing Tool: {tool_name}")
+                
+                try:
+                    # Execute tool via MultiMCP
+                    tool_result = await multi_mcp.route_tool_call(tool_name, tool_args)
+                    
+                    # Serialize result content
+                    if isinstance(tool_result.content, list):
+                        result_str = "\n".join([str(item.text) for item in tool_result.content if hasattr(item, "text")])
+                    else:
+                        result_str = str(tool_result.content)
+
+                    # Save result to history
+                    iterations_data[-1]["tool_result"] = result_str
+                    
+                    # Prepare input for next iteration
+                    instruction = output.get("thought", "Use the tool result to generate the final output.")
+                    if turn == max_turns - 1:
+                         instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
+
+                    current_input = build_agent_input(
+                        instruction=instruction,
+                        previous_output=output,
+                        iteration_context={"tool_result": result_str}
+                    )
+                    continue # Loop to next turn
+
+                except Exception as e:
+                    print(f"Test Mode: Tool Execution Failed: {e}")
+                    current_input = build_agent_input(
+                        instruction="The tool execution failed. Try a different approach or tool.",
+                        previous_output=output,
+                        iteration_context={"tool_result": f"Error: {str(e)}"}
+                    )
+                    continue
+
+            # 2. Check for call_self (Legacy/Advanced recursion)
+            elif output.get("call_self"):
+                # Handle code execution if needed
+                if temp_context._has_executable_code(output):
+                     # Pass 'inputs' as overrides so variables from prev iterations (like ipl_urls_1A) are available
+                    execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
+                    final_execution_result = execution_result
+                    
+                    # Save result to history
+                    iterations_data[-1]["execution_result"] = execution_result
+
+                    if execution_result.get("status") == "success":
+                        execution_data = execution_result.get("result", {})
+                        inputs = {**inputs, **execution_data}  # Update inputs for next iteration
+                
+                # Prepare input for next iteration
+                current_input = build_agent_input(
+                    instruction=output.get("next_instruction", "Continue the task"),
+                    previous_output=output,
+                    iteration_context=output.get("iteration_context", {})
+                )
+                continue
+
+            # 3. Success (No tool call, just output)
+            else:
+                 # Execute code if present (Final Iteration)
+                if temp_context._has_executable_code(output):
+                     # Pass 'inputs' as overrides here too
+                    final_execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
+                    iterations_data[-1]["execution_result"] = final_execution_result
+                    if final_execution_result:
+                         final_output = temp_context._merge_execution_results(output, final_execution_result)
+                break # Exit loop
         
         # 8. Get the original output for comparison
         original_output = node_data.get("output", {})
         
+        # Ensure final_execution_result is passed even if loop broke early
+        if not final_execution_result and iterations_data:
+             final_execution_result = iterations_data[-1].get("execution_result")
+
         return {
             "status": "success",
             "node_id": node_id,
             "agent_type": agent_type,
             "original_output": original_output,
-            "test_output": new_output,
-            "execution_result": execution_result,
-            "inputs_used": inputs
+            "test_output": final_output,
+            "execution_result": final_execution_result,
+            "inputs_used": inputs,
+            "iterations": iterations_data # Optional: Pass full iterations if needed by UI
         }
         
     except HTTPException:
@@ -510,21 +604,31 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         node_data["last_tested"] = datetime.now().isoformat()
         
         # 4. Update globals_schema with execution results if available
+        # 4. Update globals_schema
+        # CRITICAL FIX: Prioritize the 'merged' output (new_output) which contains the actual results
+        # Execution result is less reliable as it might be raw or unmerged
+        
         globals_schema = G.graph.get("globals_schema", {})
         
-        # Extract writes from new output
+        # 1. Try extracting from new_output (which is test_output from frontend = merged result)
         if isinstance(new_output, dict):
-            # Check execution_result first
-            exec_result = new_output.get("execution_result", {})
-            if isinstance(exec_result, dict):
-                for key in writes:
-                    if key in exec_result:
-                        globals_schema[key] = exec_result[key]
-            
-            # Then check direct keys
-            for key in writes:
+             for key in writes:
                 if key in new_output:
-                    globals_schema[key] = new_output[key]
+                     # Validate it's not just an empty placeholder if possible, but trust the save
+                     val = new_output[key]
+                     # If it's a list and not empty, or dict and not empty, update
+                     if val or val == 0 or val is False: 
+                         globals_schema[key] = val
+                         
+        # 2. Fallback to execution_result only if new_output didn't have it
+        exec_result = body.get("execution_result")
+        if exec_result and isinstance(exec_result, dict):
+             result_data = exec_result.get("result", exec_result) # Handle {status:..., result:...} or direct
+             
+             for key in writes:
+                 if key not in globals_schema or not globals_schema[key]: # Only if missing/empty
+                     if isinstance(result_data, dict) and key in result_data:
+                         globals_schema[key] = result_data[key]
         
         G.graph["globals_schema"] = globals_schema
         
