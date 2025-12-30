@@ -362,6 +362,198 @@ async def delete_run(run_id: str):
 
     return {"id": run_id, "status": "deleted"}
 
+# === AGENT TESTING ENDPOINT ===
+
+class AgentTestRequest(BaseModel):
+    """Optional request body for agent testing"""
+    pass
+
+@app.post("/runs/{run_id}/agent/{node_id}/test")
+async def test_agent(run_id: str, node_id: str):
+    """
+    Re-run a single agent in TEST MODE (sandbox).
+    - Loads the session
+    - Extracts the node's inputs from globals_schema
+    - Runs the agent with those inputs
+    - Returns the NEW output WITHOUT saving to session
+    """
+    try:
+        # 1. Find the session file
+        summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+        found_file = None
+        for path in summaries_dir.rglob(f"session_{run_id}.json"):
+            found_file = path
+            break
+        
+        if not found_file:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # 2. Load session data
+        import networkx as nx
+        session_data = json.loads(found_file.read_text())
+        G = nx.node_link_graph(session_data, edges="links")
+        
+        # 3. Find the node
+        if node_id not in G.nodes:
+            raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
+        
+        node_data = G.nodes[node_id]
+        agent_type = node_data.get("agent")
+        
+        if not agent_type:
+            raise HTTPException(status_code=400, detail="Node has no agent type")
+        
+        # 4. Collect inputs from globals_schema based on 'reads'
+        globals_schema = G.graph.get("globals_schema", {})
+        reads = node_data.get("reads", [])
+        inputs = {key: globals_schema.get(key) for key in reads if key in globals_schema}
+        
+        # 5. Build the input payload (same format as loop.py _execute_step)
+        input_payload = {
+            "step_id": node_id,
+            "agent_prompt": node_data.get("agent_prompt", node_data.get("description", "")),
+            "reads": reads,
+            "writes": node_data.get("writes", []),
+            "inputs": inputs,
+            "original_query": G.graph.get("original_query", ""),
+            "session_context": {
+                "session_id": run_id,
+                "created_at": G.graph.get("created_at", ""),
+                "file_manifest": G.graph.get("file_manifest", []),
+            }
+        }
+        
+        # 6. Run the agent
+        from agents.base_agent import AgentRunner
+        agent_runner = AgentRunner(multi_mcp)
+        result = await agent_runner.run_agent(agent_type, input_payload)
+        
+        if not result["success"]:
+            return {
+                "status": "error",
+                "error": result.get("error", "Agent execution failed"),
+                "node_id": node_id,
+                "agent_type": agent_type
+            }
+        
+        new_output = result["output"]
+        
+        # 7. If the agent produced code_variants, execute them in sandbox
+        from memory.context import ExecutionContextManager
+        temp_context = ExecutionContextManager.__new__(ExecutionContextManager)
+        temp_context.plan_graph = G
+        temp_context.multi_mcp = multi_mcp
+        
+        execution_result = None
+        if temp_context._has_executable_code(new_output):
+            execution_result = await temp_context._auto_execute_code(node_id, new_output)
+            if execution_result:
+                new_output = temp_context._merge_execution_results(new_output, execution_result)
+        
+        # 8. Get the original output for comparison
+        original_output = node_data.get("output", {})
+        
+        return {
+            "status": "success",
+            "node_id": node_id,
+            "agent_type": agent_type,
+            "original_output": original_output,
+            "test_output": new_output,
+            "execution_result": execution_result,
+            "inputs_used": inputs
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/runs/{run_id}/agent/{node_id}/save")
+async def save_agent_test(run_id: str, node_id: str, request: Request):
+    """
+    Save test results back to the session file.
+    - Updates the node's output
+    - Updates globals_schema with new writes
+    """
+    try:
+        body = await request.json()
+        new_output = body.get("output")
+        
+        if not new_output:
+            raise HTTPException(status_code=400, detail="Missing 'output' in request body")
+        
+        # 1. Find the session file
+        summaries_dir = Path(__file__).parent / "memory" / "session_summaries_index"
+        found_file = None
+        for path in summaries_dir.rglob(f"session_{run_id}.json"):
+            found_file = path
+            break
+        
+        if not found_file:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # 2. Load and update session
+        import networkx as nx
+        session_data = json.loads(found_file.read_text())
+        G = nx.node_link_graph(session_data, edges="links")
+        
+        if node_id not in G.nodes:
+            raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
+        
+        node_data = G.nodes[node_id]
+        writes = node_data.get("writes", [])
+        
+        # 3. Update node output
+        node_data["output"] = new_output
+        node_data["last_tested"] = datetime.now().isoformat()
+        
+        # 4. Update globals_schema with execution results if available
+        globals_schema = G.graph.get("globals_schema", {})
+        
+        # Extract writes from new output
+        if isinstance(new_output, dict):
+            # Check execution_result first
+            exec_result = new_output.get("execution_result", {})
+            if isinstance(exec_result, dict):
+                for key in writes:
+                    if key in exec_result:
+                        globals_schema[key] = exec_result[key]
+            
+            # Then check direct keys
+            for key in writes:
+                if key in new_output:
+                    globals_schema[key] = new_output[key]
+        
+        G.graph["globals_schema"] = globals_schema
+        
+        # 5. Update iterations array with execution_result if provided
+        execution_result = body.get("execution_result")
+        if execution_result and node_data.get("iterations"):
+            iterations = node_data["iterations"]
+            if iterations:
+                # Update the last iteration with the new execution result
+                iterations[-1]["execution_result"] = execution_result
+        
+        # 6. Save back to file
+        graph_data = nx.node_link_data(G)
+        with open(found_file, 'w', encoding='utf-8') as f:
+            json.dump(graph_data, f, indent=2, default=str, ensure_ascii=False)
+        
+        return {
+            "status": "success",
+            "node_id": node_id,
+            "message": "Test results saved to session"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/rag/documents")
 async def get_rag_documents():
     """List documents in a recursive tree structure with RAG status"""

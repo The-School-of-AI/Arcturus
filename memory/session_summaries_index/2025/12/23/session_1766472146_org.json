@@ -185,67 +185,50 @@
       "output": {
         "ipl_annual_revenue_data_T001": [],
         "call_self": true,
-        "next_instruction": "Gather detailed revenue data for the Indian Premier League (IPL) from 2008 to 2024, extracting specific figures and sources for each year.",
+        "next_instruction": "Gather annual revenue data for the IPL from 2008 to 2024 by iteratively querying the web. Then proceed to scrape data from the relevant URLs discovered.",
         "iteration_context": {
-          "current_step": "search_phase",
-          "next_step": "extraction_phase",
-          "data_range": "2008-2024"
+          "current_step": "search_for_revenue_data",
+          "next_step": "extract_revenue_details"
         },
         "code_variants": {
-          "CODE_1A": "results = json.loads(search_web_with_text_content('Indian Premier League IPL annual revenue 2008 to 2024', 8))\nreturn {'ipl_annual_revenue_data_T001': results}",
-          "CODE_1B": "urls = json.loads(fetch_search_urls('IPL revenue by year 2008 2024', 10))\nreturn {'ipl_annual_revenue_data_T001': urls}"
+          "CODE_1A": "urls = json.loads(fetch_search_urls('Indian Premier League IPL annual revenue 2008 to 2024', 10))\nreturn {'ipl_revenue_urls_1A': urls}",
+          "CODE_1B": "data = json.loads(search_web_with_text_content('IPL Indian Premier League revenue by year', 8))\nreturn {'ipl_annual_revenue_data_T001': data}"
         },
-        "cost": 4.600000000000001e-05,
+        "cost": 4.7600000000000005e-05,
         "input_tokens": 88,
-        "output_tokens": 93,
-        "total_tokens": 181,
+        "output_tokens": 97,
+        "total_tokens": 185,
         "execution_result": {
-          "ipl_annual_revenue_data_T001": {
-            "content": [
-              {
-                "type": "text",
-                "text": [
-                  {
-                    "url": "https://breakingglobe.com/index.php/2025/04/10/ipl-year-wise-revenue-growth-2008-2/",
-                    "content": "The Meteoric Rise of IPL: Year-Wise Revenue Growth (20082025) - BreakingGlobe Skip to content Tuesday, December 23, 2025 Responsive Menu About Us Disclaimer Privacy Policy Contact Us BreakingGlobe Search Search News Sports Entertainment Technology Home 2025 April 10 The Meteoric Rise of IPL: Year-Wise Revenue Growth (20082025) Sports The Meteoric Rise of IPL: Year-Wise Revenue Growth (20082025) 10 April 2025 breakingglobe.com When the Indian Premier League (IPL) was launched in 2008 by the Board of Control for Cricket in India (BCCI), few could have imagined the financial juggernaut it would become. What began as a bold experiment in franchise-based T20 cricket has evolved into one of the most profitable sporting leagues in the worldrivaling the likes of the NFL, NBA, and Premier League in terms of viewership, brand value, and revenue generation. Over nearly two decades, IPL has seen exponential growth in terms of broadcasting rights, sponsorship deals, franchise valuations, and digital monetization. Heres a comprehensive, year-wise journey through the leagues financial transformation from 2008 to 2025. 20082012: Humble Beginnings and Early Success 2008 The Launch Gross Revenue: 645 crore Net Profit: 51 crore Title Sponsor: DLF (40 crore/year) Broadcaster: Sony-WSG (10-year deal worth $1.026 billion) The inaugural season was a blockbuster success. The IPL immediately captured public imagination, thanks to its glamorous appeal, franchise culture, and star-studded matches. The revenue modelcomprising broadcasting rights, sponsorships, ticket sales, and merchandiseset a robust foundation. 20092012 Building Consistency Despite challenges like the 2009 season moving to South Africa due to elections, revenues held steady. The league maintained strong ad sales and increased franchise participation. Brand IPL began to attract global attention, especially with international players taking part. 20132015: Transition and Turbulence 2013 New Sponsorship & Growth Title Sponsor: PepsiCo (79.4 crore/year) PepsiCo signed a five-year deal, showing the IPLs growing appeal. However, 2013 also marked the start of controversies around spot-fixing, leading to a temporary dent in credibility. 20142015 Split Season & Sponsor Exit Part of the 2014 season was hosted in the UAE, again due to Indian general elections. Despite this, viewership and revenues remained stable. Pepsi eventually exited the sponsorship deal in 2015, cutting it short due to the ongoing controversies. 20162017: Commercial Reboot and Media Rights Evolution 2016 Vivo Steps In Title Sponsor: Vivo (100 crore/year) Chinese brand Vivo signed on as the title sponsor, signifying IPLs resilience and commercial trust. The league was recovering well and growing in confidence. 2017 Media Rights on the Horizon This year set the stage for a major shake-up in the IPLs commercial ecosystem. With digital consumption on the rise, interest in media rights surged. 20182022: Billion-Dollar League 2018 Star India Era Begins Media Rights (20182022): 16,347 crore Average Annual Media Revenue: ~3,270 crore Title Sponsor: Vivo (renewed for 439.8 crore/year) Star India acquired broadcasting rights, including TV and digital, for five years. This was a landmark moment, catapulting IPL into the billion-dollar league club. 20192021 COVID and Resilience Despite the pandemic disruptions in 2020 and 2021, IPL displayed extraordinary resilience. The tournament was held in the UAE and India under strict protocols. Digital viewership soared, compensating for ticket sale losses. 2021 Brand Value: ~$4.7 billion Rise of fantasy platforms and OTT consumption added new revenue streams. 20232025: Dominance, Digital Expansion, and Record Revenue 2023 Media Rights Skyrocket Media Rights (20232027): 48,390 crore (~$6.2 billion) TV Rights (Star): 23,575 crore Digital Rights (Viacom18): 20,500 crore Per Match Value: 118 crore (~$14.5 million) With each IPL match now valued higher than even some NFL and Premier League g",
-                    "images": [],
-                    "rank": 1
-                  },
-                  {
-                    "url": "https://www.statista.com/topics/4543/indian-premier-league-ipl/",
-                    "content": "Indian Premier League - statistics & facts | Statista Skip to main content Statistics All Industries Go to All Industries Consumer Goods & FMCG Go to Consumer Goods & FMCG E-Commerce Go to E-Commerce Economy & Politics Go to Economy & Politics Energy & Environment Go to Energy & Environment Internet Go to Internet Technology & Telecommunications Go to Technology & Telecommunications Transportation & Logistics Go to Transportation & Logistics Travel, Tourism & Hospitality Go to Travel, Tourism & Hospitality Most viewed Statistics Recent Statistics Popular Statistics Most used social networks 2024, by number of users Big Mac index worldwide 2024 Global retail e-commerce sales 2014-2027 Car brand market share worldwide 2023 Quarterly Netflix subscribers count worldwide 2013-2024 Topics More Topics E-commerce worldwide - statistics & facts Social media - Statistics & Facts Top Report View Report Industry Overview Most viewed statistics Recent Statistics Popular Statistics Global sales of the top performance apparel, accessories, and footwear companies 2023 Nike's global revenue 2005-2024 Value of the secondhand apparel market worldwide from 2021 to 2028 Brand value of the most valuable soft drink brands worldwide 2023 Revenue of the leading 10 beauty manufacturers worldwide 2023 Topics Topic overview Global apparel market - statistics & facts Cosmetics industry - statistics & facts Top Report View Report Most viewed statistics Recent Statistics Popular Statistics E-commerce as share of total retail sales worldwide 2021-2027 Biggest online retailers in the U.S. 2023, by market share Revenue of the e-commerce industry in the U.S. 2019-2029 Fastest-growing retail e-commerce countries 2023 Retail e-commerce sales growth worldwide 2017-2027 Topics Topic overview Amazon - statistics & facts E-commerce in the United Kingdom (UK) - statistics & facts Top Report View Report Most viewed statistics Recent Statistics Popular Statistics Biggest companies in the world by market value 2023 Largest armies in the world by active military personnel 2024 U.S. border patrol apprehensions and expulsions FY 1990-2023 Gross domestic product (GDP) in India 2029 Countries with the highest military spending 2023 Topics Topic overview Inflation worldwide - statistics & facts Global GDP - statistics & facts Top Report View Report Most viewed statistics Recent Statistics Popular Statistics Global household electricity prices 2023, by select country Annual global emissions of carbon dioxide 1940-2023 Monthly electricity prices in selected EU countries 2020-2024 EU-ETS allowance prices in the European Union 2022-2024 Renewable energy capacity 2023 by country Topics Topic overview Global waste generation - statistics & facts Global climate change - statistics & facts Top Report View Report Most viewed statistics Recent Statistics Popular Statistics Worldwide digital population 2024 Average daily time spent on social media worldwide 2012-2024 Facebook: quarterly number of MAU (monthly active users) worldwide 2008-2023 Social media: global penetration rate 2024, by region Instagram accounts with the most followers worldwide 2024 Topics Topic overview TikTok - statistics & facts Social media usage in the United Kingdom (UK) - statistics & facts Top Report View Report Most viewed statistics Recent Statistics Popular Statistics Quarterly smartphone market share worldwide by vendor 2009-2023 Apple's revenue worldwide 2004-2023 Global IT spending forecast 2012-2024, by segment Semiconductor market revenue worldwide 1987-2025 Digital transformation spending worldwide 2017-2027 Topics Topic overview Artificial intelligence (AI) worldwide - statistics & facts Smartphones - statistics & facts Top Report View Report Most viewed statistics Recent Statistics Popular Statistics Annual car sales worldwide 2010-2023, with a forecast for 2024 Monthly container freight rate index worldwide 2023-2024 Automotive manufacturers' estimated market share in the U.S. 2023 Global air traff",
-                    "images": [],
-                    "rank": 2
-                  },
-                  {
-                    "url": "https://www.reuters.com/graphics/CRICKET-IPL/mypmjbzrgvr/",
-                    "content": "Crickets mammoth Indian Premier League Skip to main content World Business Legal Markets Breakingviews More The chart shows the valuation of the Indian Premier League in 2009 using squares. Each square represents $10 million. It rose to $3.3 billion in 2013. The chart shows the valuation of the Indian Premier League in 2009 and 2013 using squares. Each square represents $10 million. It crossed $5 billion in 2018. The chart shows the valuation of the Indian Premier League in 2009, 2013 and 2018 using squares. Each square represents $10 million. Its valuation more than doubled in six years and touched $12 billion in 2024. The chart shows the valuation of the Indian Premier League in 2009, 2013, 2018 and 2024 using squares. Each square represents $10 million. Graphics Crickets mammoth Indian Premier League By Sumanta Sen Published March 28, 202512:30 PM GMT+5:30 The months of April and May mean only one thing for Indias army of cricket fans: the Indian Premier League (IPL). Now in its 18th season, the IPL was crickets first franchise style league officially run by a cricket board. A franchise sports league is a tournament where teams are run like a business and can be privately owned. Leagues like soccers Premier League in England and basketballs National Basketball Association in the United States are domestic tournaments. Across all major sports played in the world, including soccer, American football, baseball and basketball, franchise-style leagues have long been almost as popular as international events. Not in cricket though. The sport is primarily played at international level among a handful of countries, most of them former colonies of Britain. The international governing body of cricket, the International Cricket Council (ICC), has 12 permanent members. It also has more than 90 associate member nations where the game is in various stages of development and popularity. While smaller than soccer, cricket is followed by over a billion people, the vast majority of them in south Asia. Fans in India account for more than 80% of crickets following globally. The graphic is a world map showing the full and associate members of the ICC. Full members are coloured in dark blue while associate members are coloured in light blue. With such massive popularity in India, it is not hard to understand that the sport is financially lucrative in the country. The Board of Control for Cricket in India (BCCI) wields the most influence in the sport. According to the ICCs revenue model agreed in 2023, the BCCI will take home nearly 40% of the ICCs annual net earnings from 2024 to 2027. All other boards receive a share less than 10%. The BCCIs earnings have also been substantially higher than its rivals. Its profit for the financial year ended March 2023, the latest year for which filings are available, was the highest at $160 million. In comparison, the South African cricket board recorded a profit of $45 million in the May 2023 to April 2024 period, a distant second. The graphic is a bar chart showing the latest available profits of various cricket boards. A report by the World Cricketers Association (WCA), an independent global players body in cricket, released on March 26, 2025called for an equitable revenue distribution system across cricket boards. Global crickets finances and distribution models are heavily imbalanced, self perpetuating, and do not effectively support global growth or competitive balance,\" it said. How it all started One of the reasons for the BCCIs riches is the IPL. Indias cricket board announced the Indian Premier League in 2007 around the time the inaugural edition of the Twenty20 (T20) Cricket World Cup was taking place. T20 was the newest format of the game, fast paced and played over three hours as opposed to the other two formats which take a whole day or five days. The first season was played in the Indian summer in 2008 over 44 days featuring eight Indian city-based franchises owned by some of the countrys riches",
-                    "images": [],
-                    "rank": 3
-                  },
-                  {
-                    "url": "https://www.business-standard.com/cricket/ipl/ipl-franchises-revenue-more-than-double-bcci-surplus-jumps-to-rs-5-120-cr-124090600893_1.html",
-                    "content": "Access Denied Access Denied You don't have permission to access \"http://www.business-standard.com/cricket/ipl/ipl-franchises-revenue-more-than-double-bcci-surplus-jumps-to-rs-5-120-cr-124090600893_1.html\" on this server. Reference #18.8ed70b17.1767063554.bffa912a https://errors.edgesuite.net/18.8ed70b17.1767063554.bffa912a",
-                    "images": [],
-                    "rank": 4
-                  },
-                  {
-                    "url": "https://economictimes.indiatimes.com/news/sports/ipl-a-bigger-hit-revenues-surge/articleshow/116114612.cms",
-                    "content": "IPL a bigger hit, revenues surge - The Economic Times Remove Ads SHARE THIS NEWS Close Font Size Abc Small Abc Normal Abc Large Close Welcome User Sign in Download ET App Download ETMarkets App Home ETPrime Tech Markets Auto + Aviation Corporate Governance VIEW MORE + Economy Pharma Energy Infra Fintech + BFSI Environment Telecom + OTT Consumer Prime Decoder Collections PRIMESHOTS Prime Vantage Markets Market Stats Stocks News Live Blog Stock Live Blog Earnings Podcast Market Classroom Dons of Dalal Street Recos Stock Reports Plus My Screener Candlestick Screener Stock Screener Stock Watch Market Calendar Stock Price Quotes Bonds Corner Cryptocurrency VIEW MORE + Options IPOs/FPOs Expert Views Investment Ideas Commodities Views News Forex Forex News Currency Converter Live Stream! AIF PMS US Stocks US Markets Academy Crypto Crypto News Crypto TV Crypto Prices Bonds Digital Real Estate Realty News Technicals Technical Chart Mind Over Money Web Stories Markets Data The Golden Thumb Rule Unlisted Companies Market Moguls Webinars Definitions Budget AI Spotlight IIT Programs listed on ET ET SME Regional Summit Engineering Leadership Forum Niva Bupa Insurance Academy VIEW MORE + India's most trusted winds - Suzlon Digital Real Estate MSME Awards 2025 Soonicorns Summit ET Snapchat Gen Z Index IMexI 2025 Motilal Oswal AMC: The Growth Managers Raksha Summit 2025 Today's Paper Market Data Stock Dashboard Top Gainer Top Loser Most Active Volume Most Active Value New 52 Week High New 52 Week Low Technical Signals Golden Cross Death Cross Above SMA 20 RSI Below 20 RSI Above 80 Stock Reports Plus Top Score Companies High Upside Most Buys Score Upgrade Market Mood VIEW MORE + Stock Recos New Recos High Upside Recos High Downside BigBull Portfolio All Investors Top Picks Rakesh Jhunjhunwala RK Damani Stock Screener ET Learn Courses Stock Markets Mutual Funds Investment Strategies Insurance & Wealth Management Indices Nifty 50 Nifty 500 BSE Sensex Bank Nifty Sectors IPO News India WPL IPL 2026 Economy Economy Dashboard Agriculture Finance Foreign Trade Indicators Infrastructure Policy VIEW MORE + Politics Newsblogs Elections Assembly Elections Sports Science Defence International US News Global Trends Trump Action Tracker Canada News UK News Australia New Zealand Saudi Arabia UAE Singapore Hong Kong Business World News ET Explains Company Corporate Trends Industry Trending Entertainment Decoded Morning Brief Podcast ET Evoke Bengaluru News Pune News Mumbai News Environment Videos Latest News Most Read Most Shared Most Commented Industry Auto Auto News Cars & UVs Two wheelers & three wheelers LCV & HCV Auto Components Tyres Banking/Finance Banking Finance Insure Cons. Products Durables Electronics Fashion / Cosmetics / Jewellery FMCG Food Garments / Textiles Liquor Paints Tobacco Energy Power Oil & Gas VIEW MORE + Renewables Solar Energy Wind Energy Policy and regulations People Hybrid Power Electric vehicles Ind'l Goods/Svs Construction Engineering Cement Chem / Fertilisers Metals & Mining Packaging Paper / Wood / Glass/ Plastic/ Marbles Petrochem Steel Healthcare/Biotech Biotech Healthcare Pharmaceuticals Services Advertising Consultancy / Audit Education Hotels / Restaurants Property / C'struction Retail Travel Media/Entertainment Entertainment Media Transportation Railways Airlines / Aviation Shipping / Transport Roadways Tech ITES Tech & Internet Startups Funding Tech Bytes Telecom Telecom News Telecom Policy Miscellaneous CSR Initiatives Policy Environment SME Sustainability SME Sector Policy Trade Exports Pre-Exports Process Logistics Post-Exports Insights VIEW MORE + Entrepreneurship Money IT Technology Security Legal GST Marketing Branding Marketing SME Summits MSME Awards HR Leadership People Resources ET Rise Dialogue GST Invoice Generator Startup Handbook Live, Work & Play in Dubai Politics Wealth Tax How to file ITR Tax Saving ITR Forms Income Tax Refund Tax Exemption Limit Income Tax Slabs New Income Tax Bill Save Invest VIEW MORE",
-                    "images": [],
-                    "rank": 5
-                  }
-                ],
-                "annotations": null
-              }
-            ]
-          }
+          "ipl_revenue_urls_1A": [
+            "https://breakingglobe.com/index.php/2025/04/10/ipl-year-wise-revenue-growth-2008-2/",
+            "https://www.statista.com/topics/4543/indian-premier-league-ipl/",
+            "https://www.reuters.com/graphics/CRICKET-IPL/mypmjbzrgvr/",
+            "https://www.business-standard.com/cricket/ipl/ipl-franchises-revenue-more-than-double-bcci-surplus-jumps-to-rs-5-120-cr-124090600893_1.html",
+            "https://www.firstpost.com/firstcricket/bcci-ipl-revenue-fy24-earnings-report-13908185.html",
+            "https://economictimes.indiatimes.com/news/sports/ipl-a-bigger-hit-revenues-surge/articleshow/116114612.cms",
+            "https://blog.privatecircle.co/the-business-behind-the-ipl-sponsorships-revenues-and-the-rise-of-cricket-economics-fy24-deep-dive/",
+            "https://medium.com/@theunitedindian500/ipl-revenue-per-year-4d740fa8a77e",
+            "https://finvests.in/ipl-winners-2008-to-2025-titles-captains-earnings/",
+            "https://www.timesnownews.com/business-economy/industry/how-ipl-makes-money-breaking-down-multi-billion-dollar-indian-premier-league-cricket-business-article-110461871"
+          ]
         },
         "execution_status": "success",
         "execution_error": null,
-        "execution_time": "2025-12-30 08:29:08",
+        "execution_time": "2025-12-30 08:54:37",
         "executed_variant": "CODE_1A",
-        "execution_logs": ""
+        "execution_logs": "",
+        "ipl_revenue_urls_1A": [
+          "https://breakingglobe.com/index.php/2025/04/10/ipl-year-wise-revenue-growth-2008-2/",
+          "https://www.statista.com/topics/4543/indian-premier-league-ipl/",
+          "https://www.reuters.com/graphics/CRICKET-IPL/mypmjbzrgvr/",
+          "https://www.business-standard.com/cricket/ipl/ipl-franchises-revenue-more-than-double-bcci-surplus-jumps-to-rs-5-120-cr-124090600893_1.html",
+          "https://www.firstpost.com/firstcricket/bcci-ipl-revenue-fy24-earnings-report-13908185.html",
+          "https://economictimes.indiatimes.com/news/sports/ipl-a-bigger-hit-revenues-surge/articleshow/116114612.cms",
+          "https://blog.privatecircle.co/the-business-behind-the-ipl-sponsorships-revenues-and-the-rise-of-cricket-economics-fy24-deep-dive/",
+          "https://medium.com/@theunitedindian500/ipl-revenue-per-year-4d740fa8a77e",
+          "https://finvests.in/ipl-winners-2008-to-2025-titles-captains-earnings/",
+          "https://www.timesnownews.com/business-economy/industry/how-ipl-makes-money-breaking-down-multi-billion-dollar-indian-premier-league-cricket-business-article-110461871"
+        ]
       },
       "error": null,
       "cost": 4.210000000000001e-05,
@@ -299,13 +282,48 @@
             "input_tokens": 153,
             "output_tokens": 67,
             "total_tokens": 220
+          },
+          "execution_result": {
+            "status": "success",
+            "result": {
+              "ipl_revenue_urls_1A": [
+                "https://breakingglobe.com/index.php/2025/04/10/ipl-year-wise-revenue-growth-2008-2/",
+                "https://www.statista.com/topics/4543/indian-premier-league-ipl/",
+                "https://www.reuters.com/graphics/CRICKET-IPL/mypmjbzrgvr/",
+                "https://www.business-standard.com/cricket/ipl/ipl-franchises-revenue-more-than-double-bcci-surplus-jumps-to-rs-5-120-cr-124090600893_1.html",
+                "https://www.firstpost.com/firstcricket/bcci-ipl-revenue-fy24-earnings-report-13908185.html",
+                "https://economictimes.indiatimes.com/news/sports/ipl-a-bigger-hit-revenues-surge/articleshow/116114612.cms",
+                "https://blog.privatecircle.co/the-business-behind-the-ipl-sponsorships-revenues-and-the-rise-of-cricket-economics-fy24-deep-dive/",
+                "https://medium.com/@theunitedindian500/ipl-revenue-per-year-4d740fa8a77e",
+                "https://finvests.in/ipl-winners-2008-to-2025-titles-captains-earnings/",
+                "https://www.timesnownews.com/business-economy/industry/how-ipl-makes-money-breaking-down-multi-billion-dollar-indian-premier-league-cricket-business-article-110461871"
+              ]
+            },
+            "raw": {
+              "ipl_revenue_urls_1A": [
+                "https://breakingglobe.com/index.php/2025/04/10/ipl-year-wise-revenue-growth-2008-2/",
+                "https://www.statista.com/topics/4543/indian-premier-league-ipl/",
+                "https://www.reuters.com/graphics/CRICKET-IPL/mypmjbzrgvr/",
+                "https://www.business-standard.com/cricket/ipl/ipl-franchises-revenue-more-than-double-bcci-surplus-jumps-to-rs-5-120-cr-124090600893_1.html",
+                "https://www.firstpost.com/firstcricket/bcci-ipl-revenue-fy24-earnings-report-13908185.html",
+                "https://economictimes.indiatimes.com/news/sports/ipl-a-bigger-hit-revenues-surge/articleshow/116114612.cms",
+                "https://blog.privatecircle.co/the-business-behind-the-ipl-sponsorships-revenues-and-the-rise-of-cricket-economics-fy24-deep-dive/",
+                "https://medium.com/@theunitedindian500/ipl-revenue-per-year-4d740fa8a77e",
+                "https://finvests.in/ipl-winners-2008-to-2025-titles-captains-earnings/",
+                "https://www.timesnownews.com/business-economy/industry/how-ipl-makes-money-breaking-down-multi-billion-dollar-indian-premier-league-cricket-business-article-110461871"
+              ]
+            },
+            "logs": "",
+            "execution_time": "2025-12-30 08:54:37",
+            "total_time": "1.092",
+            "executed_variant": "CODE_1A"
           }
         }
       ],
       "input_tokens": 153,
       "output_tokens": 67,
       "total_tokens": 220,
-      "last_tested": "2025-12-30T08:30:37.761779",
+      "last_tested": "2025-12-30T08:55:34.688477",
       "id": "T001"
     },
     {

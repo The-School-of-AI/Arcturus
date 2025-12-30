@@ -169,9 +169,25 @@ interface ExplorerSlice {
     updateHistoryItem: (path: string, data: Partial<AnalysisHistoryItem>) => void;
 }
 
+// --- Agent Test Mode Slice ---
+interface AgentTestSlice {
+    testMode: {
+        active: boolean;
+        nodeId: string | null;
+        originalOutput: any;
+        testOutput: any;
+        executionResult: any; // Added executionResult
+        isLoading: boolean;
+        error: string | null;
+    };
+    runAgentTest: (runId: string, nodeId: string) => Promise<void>;
+    saveTestResult: (runId: string, nodeId: string) => Promise<void>;
+    discardTestResult: () => void;
+}
+
 // --- Store Creation ---
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -775,6 +791,125 @@ export const useAppStore = create<AppState>()(
                 } catch (e) {
                     console.error("Failed to generate showcase", e);
                 }
+            },
+
+            // --- Agent Test Slice ---
+            testMode: {
+                active: false,
+                nodeId: null,
+                originalOutput: null,
+                testOutput: null,
+                executionResult: null,
+                isLoading: false,
+                error: null
+            },
+
+            runAgentTest: async (runId: string, nodeId: string) => {
+                set({
+                    testMode: {
+                        active: true,
+                        nodeId,
+                        originalOutput: null,
+                        testOutput: null,
+                        executionResult: null,
+                        isLoading: true,
+                        error: null
+                    }
+                });
+
+                try {
+                    const response = await api.post(`${API_BASE}/runs/${runId}/agent/${nodeId}/test`);
+                    const data = response.data;
+
+                    if (data.status === 'success') {
+                        set({
+                            testMode: {
+                                active: true,
+                                nodeId,
+                                originalOutput: data.original_output,
+                                testOutput: data.test_output,
+                                executionResult: data.execution_result,
+                                isLoading: false,
+                                error: null
+                            }
+                        });
+                    } else {
+                        set({
+                            testMode: {
+                                active: true,
+                                nodeId,
+                                originalOutput: null,
+                                testOutput: null,
+                                executionResult: null,
+                                isLoading: false,
+                                error: data.error || 'Agent test failed'
+                            }
+                        });
+                    }
+                } catch (e: any) {
+                    console.error("Agent test failed:", e);
+                    set({
+                        testMode: {
+                            active: true,
+                            nodeId,
+                            originalOutput: null,
+                            testOutput: null,
+                            executionResult: null,
+                            isLoading: false,
+                            error: e.response?.data?.detail || e.message || 'Unknown error'
+                        }
+                    });
+                }
+            },
+
+            saveTestResult: async (runId: string, nodeId: string) => {
+                const { testMode } = get();
+                if (!testMode.testOutput) return;
+
+                try {
+                    await api.post(`${API_BASE}/runs/${runId}/agent/${nodeId}/save`, {
+                        output: testMode.testOutput,
+                        execution_result: testMode.executionResult
+                    });
+
+                    // Refresh the current run to show updated data
+                    await get().refreshCurrentRun();
+
+                    // Exit test mode
+                    set({
+                        testMode: {
+                            active: false,
+                            nodeId: null,
+                            originalOutput: null,
+                            testOutput: null,
+                            executionResult: null,
+                            isLoading: false,
+                            error: null
+                        }
+                    });
+                } catch (e: any) {
+                    console.error("Failed to save test result:", e);
+                    set(state => ({
+                        testMode: {
+                            ...state.testMode,
+                            error: e.response?.data?.detail || 'Failed to save'
+                        }
+                    }));
+                }
+            },
+
+            discardTestResult: () => {
+                set({
+                    testMode: {
+                        active: false,
+                        nodeId: null,
+                        originalOutput: null,
+                        testOutput: null,
+                        executionResult: null,
+                        isLoading: false,
+                        error: null
+                    }
+                });
             },
         }),
         {

@@ -380,8 +380,12 @@ class AgentLoop4:
                 )
                 continue
 
-            # 3. Success (No tool call, just output)
+            # 3. Success (No tool call, just output) - Execute code for final iteration
             else:
+                # Execute code if present and save to iterations_data (same as call_self path)
+                if context._has_executable_code(output):
+                    execution_result = await context._auto_execute_code(step_id, output)
+                    iterations_data[-1]["execution_result"] = execution_result
                 return result
         
         # If loop finishes without returning (max turns reached): Return PARTIAL SUCCESS to allow graph continuation

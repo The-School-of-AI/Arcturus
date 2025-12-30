@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2 } from 'lucide-react';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
@@ -94,9 +94,10 @@ import { DocumentAssistant } from '../rag/DocumentAssistant';
 export const WorkspacePanel: React.FC = () => {
     const {
         codeContent, webUrl, logs, selectedNodeId, nodes, sidebarTab,
-        flowData, selectedExplorerNodeId, currentRun
+        flowData, selectedExplorerNodeId, currentRun,
+        testMode, runAgentTest, saveTestResult, discardTestResult
     } = useAppStore();
-    const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output'>('overview');
+    const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output' | 'compare'>('overview');
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
     const [activeIframeUrl, setActiveIframeUrl] = React.useState<string | null>(null);
     const [isZenMode, setIsZenMode] = React.useState(false);
@@ -129,6 +130,17 @@ export const WorkspacePanel: React.FC = () => {
             setActiveTab('overview');
         }
     }, [selectedNodeId, selectedNode?.data.type, selectedNode?.data.label]);
+
+    // Auto-switch to Compare tab when test mode activates with results
+    React.useEffect(() => {
+        if (testMode.active && testMode.nodeId === selectedNode?.id && !testMode.isLoading && (testMode.testOutput || testMode.error)) {
+            setActiveTab('compare');
+        }
+        // If test mode is deactivated, switch back to overview
+        if (!testMode.active && activeTab === 'compare') {
+            setActiveTab('overview');
+        }
+    }, [testMode.active, testMode.isLoading, testMode.testOutput, testMode.error, testMode.nodeId, selectedNode?.id]);
 
     if (sidebarTab === 'rag') {
         return <DocumentAssistant />;
@@ -172,6 +184,33 @@ export const WorkspacePanel: React.FC = () => {
                             {selectedNode?.id}
                         </span>
 
+                        {/* RUN AGAIN Button - Only for completed/failed nodes */}
+                        {selectedNode?.data.status && ['completed', 'failed'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
+                            <button
+                                onClick={() => runAgentTest(currentRun.id, selectedNode.id)}
+                                disabled={testMode.isLoading}
+                                className={cn(
+                                    "flex items-center ml-2 gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
+                                    testMode.isLoading
+                                        ? "bg-muted text-muted-foreground cursor-wait"
+                                        : "bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50"
+                                )}
+                                title="Re-run this agent with current inputs (test mode)"
+                            >
+                                {testMode.isLoading && testMode.nodeId === selectedNode.id ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        Testing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Play className="w-3.5 h-3.5" />
+                                        RUN AGAIN
+                                    </>
+                                )}
+                            </button>
+                        )}
+
                         {/* Zen Mode Toggle */}
                         <button
                             onClick={() => setIsZenMode(!isZenMode)}
@@ -181,6 +220,40 @@ export const WorkspacePanel: React.FC = () => {
                             <Maximize2 className="w-4 h-4" />
                         </button>
                     </div>
+
+                    {/* Test Mode Banner */}
+                    {testMode.active && testMode.nodeId === selectedNode?.id && (
+                        <div className="flex items-center gap-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                            <div className="flex items-center gap-2 text-yellow-400 text-xs font-bold uppercase tracking-wider">
+                                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                                TEST MODE - Changes Not Saved
+                            </div>
+                            <div className="ml-auto flex items-center gap-2">
+                                <button
+                                    onClick={() => currentRun?.id && saveTestResult(currentRun.id, selectedNode.id)}
+                                    disabled={!testMode.testOutput}
+                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <Save className="w-3 h-3" />
+                                    Save to Session
+                                </button>
+                                <button
+                                    onClick={discardTestResult}
+                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-colors"
+                                >
+                                    <X className="w-3 h-3" />
+                                    Discard
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Test Mode Error */}
+                    {testMode.error && testMode.nodeId === selectedNode?.id && (
+                        <div className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                            ⚠️ {testMode.error}
+                        </div>
+                    )}
 
                     {/* Truncated Prompt Header */}
                     <div className="text-xs text-muted-foreground line-clamp-2 font-medium border-l-2 border-primary/20 pl-2">
@@ -197,6 +270,22 @@ export const WorkspacePanel: React.FC = () => {
                     <PanelTab label="Web" active={activeTab === 'web'} onClick={() => setActiveTab('web')} icon={<Globe className="w-3 h-3" />} />
                     <PanelTab label="Preview" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Eye className="w-3 h-3" />} />
                     <PanelTab label="Stats" active={activeTab === 'output'} onClick={() => setActiveTab('output')} icon={<Terminal className="w-3 h-3" />} />
+
+                    {/* Compare Tab - Only visible when in test mode */}
+                    {testMode.active && testMode.nodeId === selectedNode?.id && (
+                        <button
+                            onClick={() => setActiveTab('compare')}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all ml-auto",
+                                activeTab === 'compare'
+                                    ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
+                                    : "border-transparent text-yellow-400/70 hover:text-yellow-400 hover:bg-yellow-400/5 animate-pulse"
+                            )}
+                        >
+                            <Play className="w-3 h-3" />
+                            COMPARE
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -378,6 +467,52 @@ export const WorkspacePanel: React.FC = () => {
                                 } catch { return null; }
                             })()}
                         </div>
+
+                        {/* TEST MODE COMPARISON PANEL */}
+                        {testMode.active && testMode.nodeId === selectedNode?.id && (
+                            <div className="space-y-4 mt-4 p-4 border-2 border-yellow-500/30 rounded-xl bg-yellow-500/5">
+                                <div className="text-sm uppercase tracking-widest text-yellow-400 font-bold flex items-center gap-2">
+                                    <Play className="w-4 h-4" />
+                                    Test Result Comparison
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Original Output */}
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                            Original Output
+                                        </div>
+                                        <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-lg max-h-[300px] overflow-y-auto">
+                                            <pre className="text-[10px] text-foreground/80 whitespace-pre-wrap break-all">
+                                                {JSON.stringify(testMode.originalOutput, null, 2) || "No original output"}
+                                            </pre>
+                                        </div>
+                                    </div>
+
+                                    {/* New Test Output */}
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-semibold text-green-400 uppercase tracking-wider flex items-center gap-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                                            New Test Output
+                                        </div>
+                                        <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-lg max-h-[300px] overflow-y-auto">
+                                            <pre className="text-[10px] text-foreground/80 whitespace-pre-wrap break-all">
+                                                {JSON.stringify(testMode.testOutput, null, 2) || "No test output yet"}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Key Changes Summary */}
+                                {testMode.testOutput && testMode.originalOutput && (
+                                    <div className="text-xs text-muted-foreground border-t border-yellow-500/20 pt-3">
+                                        <span className="font-semibold text-yellow-400">Hint:</span> Review the differences above.
+                                        Click "Save to Session" to persist the new output, or "Discard" to keep the original.
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
                 {activeTab === 'code' && (
@@ -675,6 +810,86 @@ export const WorkspacePanel: React.FC = () => {
                         </div>
                     )
                 }
+
+                {/* COMPARE TAB - Test Mode Comparison View */}
+                {activeTab === 'compare' && testMode.active && testMode.nodeId === selectedNode?.id && (
+                    <div className="h-full overflow-y-auto p-4 space-y-4">
+                        <div className="flex items-center gap-2 text-yellow-400 font-bold text-sm uppercase tracking-wider">
+                            <Play className="w-4 h-4" />
+                            Test Result Comparison
+                            <span className="ml-auto text-xs font-normal text-muted-foreground">
+                                Node: {testMode.nodeId}
+                            </span>
+                        </div>
+
+                        {testMode.isLoading && (
+                            <div className="flex items-center justify-center p-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+                                <span className="ml-3 text-muted-foreground">Running agent test...</span>
+                            </div>
+                        )}
+
+                        {testMode.error && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+                                <div className="font-bold mb-1">⚠️ Test Error</div>
+                                <div className="text-sm">{testMode.error}</div>
+                            </div>
+                        )}
+
+                        {!testMode.isLoading && !testMode.error && (
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Original Output */}
+                                <div className="space-y-2">
+                                    <div className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-2 sticky top-0 bg-card py-2">
+                                        <div className="w-2 h-2 rounded-full bg-red-400" />
+                                        Original Output
+                                    </div>
+                                    <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-lg max-h-[500px] overflow-y-auto">
+                                        <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap break-all font-mono">
+                                            {JSON.stringify(testMode.originalOutput, null, 2) || "No original output"}
+                                        </pre>
+                                    </div>
+                                </div>
+
+                                {/* New Test Output */}
+                                <div className="space-y-2">
+                                    <div className="text-xs font-bold text-green-400 uppercase tracking-wider flex items-center gap-2 sticky top-0 bg-card py-2">
+                                        <div className="w-2 h-2 rounded-full bg-green-400" />
+                                        New Test Output
+                                    </div>
+                                    <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-lg max-h-[500px] overflow-y-auto">
+                                        <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap break-all font-mono">
+                                            {JSON.stringify(testMode.testOutput, null, 2) || "No test output yet"}
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        {testMode.testOutput && (
+                            <div className="flex items-center gap-3 pt-4 border-t border-border mt-4">
+                                <button
+                                    onClick={() => currentRun?.id && saveTestResult(currentRun.id, selectedNode?.id || '')}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 transition-colors"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    Save to Session
+                                </button>
+                                <button
+                                    onClick={discardTestResult}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                    Discard
+                                </button>
+                                <div className="ml-auto text-xs text-muted-foreground">
+                                    💡 Save to persist changes, or Discard to keep original.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {
                     activeTab === 'web' && (
