@@ -136,7 +136,8 @@ async def generate_app(request: GenerateAppRequest):
         print(f"[Generate] User prompt: {request.prompt[:100]}...")
         
         # Load generation prompt
-        prompt_file = PROJECT_ROOT / "AppGenerationPrompt.md"
+        prompt_file = PROJECT_ROOT / "prompts" / "AppGenerationPrompt.md"
+
         if not prompt_file.exists():
             raise HTTPException(status_code=500, detail="App generation prompt not found")
         
@@ -245,7 +246,8 @@ async def hydrate_app(app_id: str, request: HydrateRequest = None):
         print(f"[Hydrate] Loaded app with {len(app_data.get('cards', []))} cards")
         
         # Load hydration prompt
-        prompt_file = PROJECT_ROOT / "AppHydrationPrompt.md"
+        prompt_file = PROJECT_ROOT / "prompts" / "AppHydrationPrompt.md"
+
         if not prompt_file.exists():
             raise HTTPException(status_code=500, detail="Hydration prompt not found")
         

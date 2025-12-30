@@ -83,6 +83,9 @@ app.include_router(apps_router.router)
 app.include_router(settings_router.router)
 app.include_router(explorer_router.router)
 app.include_router(mcp_router.router)
+from routers import prompts as prompts_router
+app.include_router(prompts_router.router)
+
 
 
 
@@ -169,106 +172,8 @@ async def get_gemini_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# === PROMPTS API ENDPOINTS ===
+# Prompts-related code has been moved to routers/prompts.py
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
-PROMPTS_BACKUP_DIR = Path(__file__).parent / "prompts" / ".backup"
-
-@app.get("/prompts")
-async def list_prompts():
-    """List all prompt files with their content"""
-    try:
-        prompts = []
-        if PROMPTS_DIR.exists():
-            for f in PROMPTS_DIR.glob("*.md"):
-                content = f.read_text()
-                # Check if backup exists (means original can be restored)
-                backup_file = PROMPTS_BACKUP_DIR / f.name
-                prompts.append({
-                    "name": f.stem,
-                    "filename": f.name,
-                    "content": content,
-                    "lines": len(content.splitlines()),
-                    "has_backup": backup_file.exists()
-                })
-        return {"status": "success", "prompts": sorted(prompts, key=lambda x: x["name"])}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-class UpdatePromptRequest(BaseModel):
-    content: str
-
-@app.put("/prompts/{prompt_name}")
-async def update_prompt(prompt_name: str, request: UpdatePromptRequest):
-    """Update a prompt file's content. Creates backup on first edit."""
-    try:
-        prompt_file = PROMPTS_DIR / f"{prompt_name}.md"
-        if not prompt_file.exists():
-            raise HTTPException(status_code=404, detail=f"Prompt '{prompt_name}' not found")
-        
-        # Create backup on first edit (if doesn't exist)
-        PROMPTS_BACKUP_DIR.mkdir(exist_ok=True)
-        backup_file = PROMPTS_BACKUP_DIR / f"{prompt_name}.md"
-        if not backup_file.exists():
-            backup_file.write_text(prompt_file.read_text())
-        
-        prompt_file.write_text(request.content)
-        return {"status": "success", "message": f"Prompt '{prompt_name}' updated", "has_backup": True}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/prompts/{prompt_name}/reset")
-async def reset_prompt(prompt_name: str):
-    """Reset a prompt to its original content from backup"""
-    try:
-        prompt_file = PROMPTS_DIR / f"{prompt_name}.md"
-        backup_file = PROMPTS_BACKUP_DIR / f"{prompt_name}.md"
-        
-        if not backup_file.exists():
-            raise HTTPException(status_code=404, detail=f"No backup found for '{prompt_name}'")
-        
-        # Restore from backup
-        original_content = backup_file.read_text()
-        prompt_file.write_text(original_content)
-        
-        # Remove backup after restore
-        backup_file.unlink()
-        
-        return {"status": "success", "message": f"Prompt '{prompt_name}' reset to original", "content": original_content}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Apps endpoints have been moved to routers/apps.py
-
-
-
-
-
-
-
-
-
-
-        apps_dir = Path(__file__).parent / "apps"
-        apps_dir.mkdir(exist_ok=True)
-        
-        app_folder = apps_dir / request.id
-        app_folder.mkdir(exist_ok=True)
-        
-        ui_file = app_folder / "ui.json"
-        data = request.dict()
-        
-        # Check if exists to preserve creation time if we tracked it? 
-        # Current schema only has lastModified.
-        
-        ui_file.write_text(json.dumps(data, indent=2))
-        return {"status": "success", "id": request.id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 
