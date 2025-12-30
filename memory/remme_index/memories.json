@@ -7,7 +7,7 @@
     "updated_at": "2025-12-25T07:06:56.593320",
     "source": "backfill_66401990",
     "faiss_id": 0,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "5f86ca0d-9853-4e60-85dc-7d59b3ee300b",
@@ -17,7 +17,7 @@
     "updated_at": "2025-12-25T07:07:05.628220",
     "source": "backfill_66402002",
     "faiss_id": 1,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "e60e04eb-ae64-43a8-bd65-0bcf802f41a4",
@@ -27,7 +27,7 @@
     "updated_at": "2025-12-25T07:07:30.745903",
     "source": "backfill_66401968",
     "faiss_id": 2,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "4eabd311-0e87-404d-b484-9bfd4bb754ee",
@@ -37,7 +37,7 @@
     "updated_at": "2025-12-25T07:07:37.348898",
     "source": "backfill_66401994",
     "faiss_id": 3,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "723c6fbd-dbba-479d-ab90-2017d7f18c08",
@@ -47,7 +47,7 @@
     "updated_at": "2025-12-25T07:07:49.724819",
     "source": "backfill_66402074",
     "faiss_id": 4,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "170e6541-0877-4a04-b6ab-992d40990cff",
@@ -57,7 +57,7 @@
     "updated_at": "2025-12-29T15:34:33.219696",
     "source": "backfill_66402070, run_1766402778",
     "faiss_id": 5,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "ae7e20fa-0e9a-4a36-abe3-43c3eedc09b0",
@@ -67,7 +67,7 @@
     "updated_at": "2025-12-25T07:08:31.655378",
     "source": "backfill_1766402162",
     "faiss_id": 6,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "7c244fce-29b9-4f62-989e-d4788a31b28c",
@@ -77,7 +77,7 @@
     "updated_at": "2025-12-25T07:08:40.751018",
     "source": "backfill_1766402163",
     "faiss_id": 7,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "f52cf03b-3a1f-40b9-8d13-32d8ae4769f3",
@@ -87,7 +87,7 @@
     "updated_at": "2025-12-25T07:08:50.388203",
     "source": "backfill_1766402229",
     "faiss_id": 8,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "cefc5e4d-b589-4de6-a5d2-64ef63175f26",
@@ -97,7 +97,7 @@
     "updated_at": "2025-12-25T07:09:01.383333",
     "source": "backfill_1766402230",
     "faiss_id": 9,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "38610c9b-d503-4040-bc85-435f8dbab1eb",
@@ -107,7 +107,7 @@
     "updated_at": "2025-12-29T15:39:59.252164",
     "source": "backfill_1766402289, run_66401968",
     "faiss_id": 10,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "cb51dda6-b9f0-4378-84b8-e2632866883a",
@@ -137,7 +137,7 @@
     "updated_at": "2025-12-29T15:34:43.569970",
     "source": "backfill_1766402605, run_1766402605",
     "faiss_id": 13,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "fcbe44c9-a464-441c-ad38-f4ab68474409",
@@ -147,7 +147,7 @@
     "updated_at": "2025-12-25T07:10:00.464640",
     "source": "backfill_1766402778",
     "faiss_id": 14,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "f003e815-37b6-4c59-8167-c115be81e2f6",
@@ -157,7 +157,7 @@
     "updated_at": "2025-12-25T07:10:11.359249",
     "source": "backfill_1766402948",
     "faiss_id": 15,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "7bf264d0-d94c-48f8-b3cd-ebccdd66b332",
@@ -167,7 +167,7 @@
     "updated_at": "2025-12-25T07:10:25.085818",
     "source": "backfill_1766403332",
     "faiss_id": 16,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "96b61450-72ed-4e63-a6dd-55c11bba9253",
@@ -177,7 +177,7 @@
     "updated_at": "2025-12-25T07:10:34.873395",
     "source": "backfill_1766403536",
     "faiss_id": 17,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "8a731c84-6db2-4ea1-b8a1-7eb9505785a8",
@@ -187,7 +187,7 @@
     "updated_at": "2025-12-25T07:10:47.659904",
     "source": "backfill_1766408629",
     "faiss_id": 18,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "74e1614c-2671-4f53-90d0-2c144f80b444",
@@ -197,7 +197,7 @@
     "updated_at": "2025-12-25T07:10:51.777728",
     "source": "backfill_1766458236",
     "faiss_id": 19,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "09e8f644-587b-45a3-9a3a-67d6df7a00d9",
@@ -207,7 +207,7 @@
     "updated_at": "2025-12-25T07:10:57.570283",
     "source": "backfill_1766459244",
     "faiss_id": 20,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "16c79489-15ec-4924-9ae4-910cdee71180",
@@ -217,7 +217,7 @@
     "updated_at": "2025-12-25T07:11:06.576340",
     "source": "backfill_1766460143",
     "faiss_id": 21,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "3c5c09ad-341b-4a17-83f7-9ecaf9059054",
@@ -227,7 +227,7 @@
     "updated_at": "2025-12-25T07:11:52.465902",
     "source": "backfill_1766460673",
     "faiss_id": 22,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "22b3d662-6c02-4ad1-8ade-ebb29cca6bc4",
@@ -237,7 +237,7 @@
     "updated_at": "2025-12-25T07:11:57.408422",
     "source": "backfill_1766461645",
     "faiss_id": 23,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "b6d897bf-b674-4eae-a060-a44fec16f529",
@@ -247,7 +247,7 @@
     "updated_at": "2025-12-25T07:12:02.538981",
     "source": "backfill_1766463060",
     "faiss_id": 24,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "83a123e2-d50a-485b-9aba-4bbb6a33e4c9",
@@ -287,7 +287,7 @@
     "updated_at": "2025-12-25T07:12:53.353287",
     "source": "backfill_1766468206",
     "faiss_id": 28,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "317cde43-e831-4899-bc24-9a4c8ef80794",
@@ -497,7 +497,7 @@
     "updated_at": "2025-12-29T14:49:01.719457",
     "source": "run_1766468206",
     "faiss_id": 51,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "4373013e-b5b6-4724-8f20-69591efc1419",
@@ -507,7 +507,7 @@
     "updated_at": "2025-12-29T14:49:13.113727",
     "source": "run_1766467447",
     "faiss_id": 52,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "441aea89-1a9d-42aa-bdc2-79e0135b8850",
@@ -527,7 +527,7 @@
     "updated_at": "2025-12-29T14:49:24.105809",
     "source": "run_1766461645",
     "faiss_id": 54,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "6cf8d7ee-8f95-45e4-bb80-b549a58c46b3",
@@ -547,7 +547,7 @@
     "updated_at": "2025-12-29T14:49:31.140833",
     "source": "run_1766460143",
     "faiss_id": 56,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "41397ee1-d01e-4e2b-b1e1-a261a34baf8c",
@@ -557,7 +557,7 @@
     "updated_at": "2025-12-29T14:49:36.855103",
     "source": "run_1766458236",
     "faiss_id": 57,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "6dad5db1-b499-41f1-8020-2294df58ea73",
@@ -567,7 +567,7 @@
     "updated_at": "2025-12-29T14:49:42.956563",
     "source": "run_1766403536",
     "faiss_id": 58,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "ff3dabba-0744-46f4-98b0-d56b5d6f937f",
@@ -577,7 +577,7 @@
     "updated_at": "2025-12-29T15:37:43.354735",
     "source": "run_1766402230",
     "faiss_id": 59,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "bdcbcf9e-8e43-4f84-a110-d2f2560caa8c",
@@ -587,7 +587,7 @@
     "updated_at": "2025-12-29T16:27:05.536575",
     "source": "run_1766402229, run_66401990",
     "faiss_id": 60,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "eea75ea2-e371-440e-90df-e55474b867df",
@@ -597,7 +597,7 @@
     "updated_at": "2025-12-29T15:37:50.711692",
     "source": "run_1766402163",
     "faiss_id": 61,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "f7111d94-bb6d-4770-8a25-b2b45b504124",
@@ -607,7 +607,7 @@
     "updated_at": "2025-12-29T15:37:52.484641",
     "source": "run_1766402162",
     "faiss_id": 62,
-    "source_exists": true
+    "source_exists": false
   },
   {
     "id": "bf52d956-f25f-4a14-9bf9-021e577a9551",
@@ -616,7 +616,8 @@
     "created_at": "2025-12-29T15:39:46.548861",
     "updated_at": "2025-12-29T15:39:46.548868",
     "source": "run_66402074",
-    "faiss_id": 63
+    "faiss_id": 63,
+    "source_exists": false
   },
   {
     "id": "f999965c-f367-477e-93ca-e7fe87481a53",
@@ -625,7 +626,8 @@
     "created_at": "2025-12-29T15:39:51.974390",
     "updated_at": "2025-12-29T15:39:51.974397",
     "source": "run_66401994",
-    "faiss_id": 64
+    "faiss_id": 64,
+    "source_exists": false
   },
   {
     "id": "b4bb0e56-9826-4b63-98d8-25367afdfa3d",
@@ -634,6 +636,16 @@
     "created_at": "2025-12-29T15:40:01.835185",
     "updated_at": "2025-12-29T15:40:01.835192",
     "source": "run_66402002",
-    "faiss_id": 65
+    "faiss_id": 65,
+    "source_exists": false
+  },
+  {
+    "id": "8c1f26dd-56f3-4ac8-964d-7c8507d05626",
+    "text": "I teach AI, LLMs and Agentic AI at The School of AI",
+    "category": "general",
+    "created_at": "2025-12-30T17:48:40.221094",
+    "updated_at": "2025-12-30T17:48:40.221104",
+    "source": "manual",
+    "faiss_id": 66
   }
 ]

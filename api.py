@@ -14,11 +14,8 @@ from typing import List, Optional
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.loop import AgentLoop4
-from mcp_servers.multi_mcp import MultiMCP
 from core.graph_adapter import nx_to_reactflow
 from memory.context import ExecutionContextManager
-from remme.store import RemmeStore
-from remme.extractor import RemmeExtractor
 from remme.utils import get_embedding
 import tempfile
 import subprocess
@@ -27,7 +24,21 @@ from core.explorer_utils import CodeSkeletonExtractor
 from core.model_manager import ModelManager
 from config.settings_loader import settings, save_settings, reset_settings, reload_settings
 
+# Import shared state
+from shared.state import (
+    active_loops,
+    get_multi_mcp,
+    get_remme_store,
+    get_remme_extractor,
+    PROJECT_ROOT,
+)
+
 from contextlib import asynccontextmanager
+
+# Get shared instances
+multi_mcp = get_multi_mcp()
+remme_store = get_remme_store()
+remme_extractor = get_remme_extractor()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,11 +70,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global State (Simplified for now)
-# In production, use database or persistent store
-active_loops = {}
-multi_mcp = MultiMCP()
-remme_store = RemmeStore()  # Initialize memory store
+# Global State is now managed in shared/state.py
+# active_loops, multi_mcp, remme_store, remme_extractor are imported from there
 
 # --- Explorer Classes ---
 class AnalyzeRequest(BaseModel):
