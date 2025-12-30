@@ -23,8 +23,9 @@ This is the **final user-facing artifact**.
 3. **Execution**: Return pure HTML in a specific structure.
 
 ## ✅ CRITICAL GUIDELINES
-- **Specific Subjects in Titles**: The report MUST have a main title (H1) that explicitly includes the **specific subject name** (e.g., "Dhurandhar Box Office Revenue", "NVIDIA Q3 Earnings") instead of generic titles like "Worldwide Revenue".
-- **Data Integrity**: Use `all_globals_schema` to find hidden details. verification steps, and specific numbers.
+- **Specific Subjects in Titles**: The report MUST have a main title (H1) that explicitly includes the **specific subject name** based on the data.
+- **Data Integrity**: Use `all_globals_schema` as your **ONLY source of truth**.
+    - 🚨 **ANTI-HALLUCINATION RULE**: If the `all_globals_schema` does NOT contain data relevant to the user's query, you MUST return a report stating "No Data Available". **DO NOT** make up numbers, companies, or scenarios (e.g., do not invent "NVIDIA" or "Dune" reports).
 - **Tone**: Professional, actionable, high-trust.
 
 ## ✅ VISUAL FORMAT

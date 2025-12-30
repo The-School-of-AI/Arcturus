@@ -427,7 +427,13 @@ async def test_agent(run_id: str, node_id: str):
             }
              # Formatter-specific additions
             if agent_type == "FormatterAgent":
-                payload["all_globals_schema"] = G.graph.get('globals_schema', {}).copy()
+                global_data = G.graph.get('globals_schema', {}).copy()
+                print(f"🕵️‍♂️ DEBUG FORMATTER: run_id={run_id}")
+                print(f"🕵️‍♂️ DEBUG FORMATTER: file={found_file}")
+                print(f"🕵️‍♂️ DEBUG FORMATTER: globals_keys={list(global_data.keys())}")
+                if 'formatted_report_T010' in global_data:
+                    print(f"🕵️‍♂️ DEBUG FORMATTER: FOUND STALE KEY 'formatted_report_T010'!")
+                payload["all_globals_schema"] = global_data
             return payload
 
         # 6. Execute with ReAct Loop (Max 15 turns)
