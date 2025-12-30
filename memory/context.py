@@ -2,6 +2,7 @@
 
 import networkx as nx
 import json
+import ast
 import time
 from datetime import datetime
 from pathlib import Path
@@ -135,6 +136,46 @@ class ExecutionContextManager:
         
         return code_to_execute
     
+    def _ensure_parsed_value(self, value):
+        """
+        Ensure that string representations of Python lists/dicts are parsed into actual objects.
+        
+        This fixes a critical bug where MCP tools return string representations like:
+        "['url1', 'url2']" instead of actual lists ['url1', 'url2']
+        
+        When such strings are used in iteration 2, code like `for url in urls[:5]`
+        would iterate over characters instead of list items.
+        """
+        if not isinstance(value, str):
+            # If it's already a proper type, recursively process containers
+            if isinstance(value, list):
+                return [self._ensure_parsed_value(item) for item in value]
+            if isinstance(value, dict):
+                return {k: self._ensure_parsed_value(v) for k, v in value.items()}
+            return value
+        
+        stripped = value.strip()
+        
+        # Check if it looks like a Python/JSON list or dict
+        if (stripped.startswith('[') and stripped.endswith(']')) or \
+           (stripped.startswith('{') and stripped.endswith('}')):
+            # Try JSON first
+            try:
+                parsed = json.loads(stripped)
+                return self._ensure_parsed_value(parsed)  # Recursively process
+            except (json.JSONDecodeError, TypeError):
+                pass
+            
+            # Try Python literal (handles single quotes, True/False/None)
+            try:
+                parsed = ast.literal_eval(stripped)
+                return self._ensure_parsed_value(parsed)  # Recursively process
+            except (ValueError, SyntaxError):
+                pass
+        
+        # It's just a regular string
+        return value
+    
     async def _auto_execute_code(self, step_id, output):
         """Execute code with COMPLETE variable injection"""
         code_to_execute = self._extract_executable_code(output)
@@ -155,20 +196,25 @@ class ExecutionContextManager:
                 # INJECT ALL AVAILABLE VARIABLES
                 globals_injection = ""
                 
-                # 1. Inject ALL globals_schema variables
+                # 1. Inject ALL globals_schema variables (with safe parsing)
                 for var_name, var_value in globals_schema.items():
-                    globals_injection += f'{var_name} = {repr(var_value)}\n'
+                    # 🔧 CRITICAL FIX: Parse string representations of lists/dicts
+                    # This prevents the bug where "['url1', 'url2']" becomes a string
+                    # instead of an actual list, causing iteration over characters
+                    parsed_value = self._ensure_parsed_value(var_value)
+                    globals_injection += f'{var_name} = {repr(parsed_value)}\n'
                 
-                # 2. Inject agent's own output variables
+                # 2. Inject agent's own output variables (with safe parsing)
                 for var_name, var_value in output.items():
                     if var_name not in ['code_variants', 'call_self', 'cost', 'input_tokens', 'output_tokens', 'execution_result', 'execution_status', 'execution_error', 'execution_time', 'executed_variant']:
-                        globals_injection += f'{var_name} = {repr(var_value)}\n'
+                        parsed_value = self._ensure_parsed_value(var_value)
+                        globals_injection += f'{var_name} = {repr(parsed_value)}\n'
                 
-                # 3. Create convenience variables for reads
+                # 3. Create convenience variables for reads (with safe parsing)
                 reads_data = {}
                 for read_key in reads:
                     if read_key in globals_schema:
-                        reads_data[read_key] = globals_schema[read_key]
+                        reads_data[read_key] = self._ensure_parsed_value(globals_schema[read_key])
                 
                 globals_injection += f'reads_data = {repr(reads_data)}\n'
                 

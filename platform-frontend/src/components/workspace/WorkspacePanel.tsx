@@ -381,76 +381,259 @@ export const WorkspacePanel: React.FC = () => {
                     </div>
                 )}
                 {activeTab === 'code' && (
-                    <Editor
-                        height="100%"
-                        defaultLanguage="python"
-                        theme="vs-dark"
-                        value={(() => {
-                            try {
-                                // Smart Code Extraction:
-                                // The node output may be a Python dict string (single quotes) not JSON
-                                // We need to extract the actual Python code from code_variants
-                                const raw = codeContent; // This is node.data.output (stringified)
-                                if (!raw) return "# No output";
+                    <div className="h-full overflow-y-auto p-4 space-y-6">
+                        {(() => {
+                            const iterations = selectedNode?.data?.iterations;
 
-                                // Try to parse as JSON first
-                                let parsed;
-                                try {
-                                    parsed = JSON.parse(raw);
-                                } catch {
-                                    // If JSON parse fails, try to convert Python dict format to JSON
-                                    // Python uses single quotes, True/False/None vs true/false/null
-                                    const jsonified = raw
-                                        .replace(/'/g, '"')
-                                        .replace(/\bTrue\b/g, 'true')
-                                        .replace(/\bFalse\b/g, 'false')
-                                        .replace(/\bNone\b/g, 'null');
-                                    try {
-                                        parsed = JSON.parse(jsonified);
-                                    } catch {
-                                        // If still fails, try regex extraction for code_variants
-                                        const codeMatch = raw.match(/['"]CODE_\w+['"]\s*:\s*['"]([^]*?)['"]\s*[,}]/);
-                                        if (codeMatch) {
-                                            // Unescape the code string
-                                            return codeMatch[1]
-                                                .replace(/\\n/g, '\n')
-                                                .replace(/\\t/g, '\t')
-                                                .replace(/\\'/g, "'")
-                                                .replace(/\\"/g, '"');
-                                        }
-                                        return raw; // Return raw if all parsing fails
-                                    }
-                                }
-
-                                // 1. Check for Code Variants (Common in Agents)
-                                if (parsed.code_variants && typeof parsed.code_variants === 'object') {
-                                    const firstKey = Object.keys(parsed.code_variants)[0];
-                                    const code = parsed.code_variants[firstKey];
-                                    if (typeof code === 'string' && code.trim()) {
-                                        return code;
-                                    }
-                                }
-
-                                // 2. Check for Execution Result
-                                if (parsed.execution_result) {
-                                    return JSON.stringify(parsed.execution_result, null, 2);
-                                }
-
-                                // 3. Return formatted JSON if no code found
-                                return JSON.stringify(parsed, null, 2);
-                            } catch {
-                                return codeContent || '# No code available';
+                            if (!iterations || !Array.isArray(iterations) || iterations.length === 0) {
+                                // Fallback: Show the codeContent if no iterations
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-widest mb-2">
+                                            No Iterations Available
+                                        </div>
+                                        <Editor
+                                            height="400px"
+                                            defaultLanguage="python"
+                                            theme="vs-dark"
+                                            value={codeContent || '# No code available'}
+                                            options={{
+                                                minimap: { enabled: false },
+                                                fontSize: 12,
+                                                fontFamily: 'JetBrains Mono, Menlo, monospace',
+                                                scrollBeyondLastLine: false,
+                                                padding: { top: 8 },
+                                                wordWrap: 'on',
+                                                readOnly: true
+                                            }}
+                                        />
+                                    </div>
+                                );
                             }
+
+                            return iterations.map((iter: any, idx: number) => {
+                                const iterNum = iter.iteration || (idx + 1);
+                                const output = iter.output || {};
+                                const isLastIteration = idx === iterations.length - 1;
+
+                                // For the final iteration, execution result might be stored at node level, not iteration level
+                                // This is a backend data structure quirk we need to handle
+                                let executionResult = iter.execution_result;
+                                if (!executionResult && isLastIteration && selectedNode?.data?.output) {
+                                    const nodeOutput = selectedNode.data.output;
+                                    if (nodeOutput.execution_status || nodeOutput.execution_result) {
+                                        executionResult = {
+                                            status: nodeOutput.execution_status,
+                                            result: nodeOutput.execution_result,
+                                            execution_time: nodeOutput.execution_time,
+                                            executed_variant: nodeOutput.executed_variant,
+                                            logs: nodeOutput.execution_logs
+                                        };
+                                    }
+                                }
+
+                                const codeVariants = output.code_variants || {};
+                                const callSelf = output.call_self;
+                                const nextInstruction = output.next_instruction;
+                                const iterationContext = output.iteration_context;
+                                const executedVariant = executionResult?.executed_variant || output.executed_variant;
+
+                                // Get the first code variant to display
+                                const codeKeys = Object.keys(codeVariants);
+                                const primaryCodeKey = executedVariant || codeKeys[0];
+                                const primaryCode = codeVariants[primaryCodeKey] || '';
+
+                                return (
+                                    <div key={idx} className="border border-border rounded-lg overflow-hidden bg-muted/30">
+                                        {/* Iteration Header */}
+                                        <div className="px-4 py-3 bg-primary/10 border-b border-border flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-bold text-primary uppercase tracking-wider">
+                                                    Iteration {iterNum}
+                                                </span>
+                                                {callSelf !== undefined && (
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                                                        callSelf
+                                                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                                                            : "bg-green-500/20 text-green-400 border border-green-500/30"
+                                                    )}>
+                                                        {callSelf ? "Continues →" : "Final"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {executedVariant && (
+                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                    Executed: {executedVariant}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Code Variants Section */}
+                                        {codeKeys.length > 0 && (
+                                            <div className="p-4 space-y-3">
+                                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2">
+                                                    <Code2 className="w-3 h-3" />
+                                                    Code Variants ({codeKeys.length})
+                                                </div>
+
+                                                {codeKeys.map((key) => (
+                                                    <div key={key} className={cn(
+                                                        "rounded-lg overflow-hidden border",
+                                                        key === executedVariant
+                                                            ? "border-primary/50 bg-primary/5"
+                                                            : "border-border/50 bg-background/50"
+                                                    )}>
+                                                        <div className="px-3 py-1.5 bg-muted/50 border-b border-border/50 flex items-center justify-between">
+                                                            <span className={cn(
+                                                                "text-[10px] font-mono font-bold",
+                                                                key === executedVariant ? "text-primary" : "text-muted-foreground"
+                                                            )}>
+                                                                {key}
+                                                            </span>
+                                                            {key === executedVariant && (
+                                                                <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+                                                                    EXECUTED
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <pre className="p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                                                            {codeVariants[key]}
+                                                        </pre>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Next Instruction (if call_self is true) */}
+                                        {callSelf && nextInstruction && (
+                                            <div className="px-4 pb-4">
+                                                <div className="text-[10px] uppercase text-yellow-400/70 font-bold tracking-widest mb-2 flex items-center gap-2">
+                                                    <Brain className="w-3 h-3" />
+                                                    Next Instruction
+                                                </div>
+                                                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-xs text-foreground/90 leading-relaxed">
+                                                    {nextInstruction}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Iteration Context */}
+                                        {iterationContext && (
+                                            <div className="px-4 pb-4">
+                                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-2">
+                                                    Context
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {iterationContext.current_step && (
+                                                        <span className="px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-[10px] font-medium">
+                                                            Current: {iterationContext.current_step}
+                                                        </span>
+                                                    )}
+                                                    {iterationContext.next_step && (
+                                                        <span className="px-2 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded text-[10px] font-medium">
+                                                            Next: {iterationContext.next_step}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Execution Result */}
+                                        {executionResult && (
+                                            <div className="px-4 pb-4">
+                                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-2 flex items-center gap-2">
+                                                    <Terminal className="w-3 h-3" />
+                                                    Execution Result
+                                                </div>
+                                                <div className={cn(
+                                                    "p-3 rounded-lg border text-xs",
+                                                    executionResult.status === 'success'
+                                                        ? "bg-green-500/10 border-green-500/20"
+                                                        : "bg-red-500/10 border-red-500/20"
+                                                )}>
+                                                    {/* Status */}
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                                                            executionResult.status === 'success'
+                                                                ? "bg-green-500/20 text-green-400"
+                                                                : "bg-red-500/20 text-red-400"
+                                                        )}>
+                                                            {executionResult.status || 'Unknown'}
+                                                        </span>
+                                                        {executionResult.execution_time && (
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                {executionResult.execution_time}
+                                                            </span>
+                                                        )}
+                                                        {executionResult.total_time && (
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                ({executionResult.total_time}s)
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Result Data */}
+                                                    {executionResult.result && (
+                                                        <div className="mt-2">
+                                                            <div className="text-[9px] uppercase text-muted-foreground mb-1">Result:</div>
+                                                            {(() => {
+                                                                const result = executionResult.result;
+                                                                // Check if result contains URLs (for Web tab reference)
+                                                                const hasUrls = Object.values(result).some((v: any) =>
+                                                                    typeof v === 'string' && v.includes('http')
+                                                                );
+
+                                                                if (hasUrls) {
+                                                                    return (
+                                                                        <div className="text-xs text-blue-400 italic">
+                                                                            → URLs extracted. See "Web" tab for details.
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                return (
+                                                                    <pre className="text-[10px] font-mono text-foreground/80 overflow-x-auto whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                                        {JSON.stringify(result, null, 2)}
+                                                                    </pre>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Logs */}
+                                                    {executionResult.logs && (
+                                                        <div className="mt-2">
+                                                            <div className="text-[9px] uppercase text-muted-foreground mb-1">Logs:</div>
+                                                            <pre className="text-[10px] font-mono text-foreground/70 whitespace-pre-wrap">
+                                                                {executionResult.logs || '(empty)'}
+                                                            </pre>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Token Stats */}
+                                        {(output.input_tokens || output.output_tokens || output.cost) && (
+                                            <div className="px-4 pb-3 flex items-center gap-4 text-[10px] text-muted-foreground">
+                                                {output.input_tokens && (
+                                                    <span>Input: {output.input_tokens} tokens</span>
+                                                )}
+                                                {output.output_tokens && (
+                                                    <span>Output: {output.output_tokens} tokens</span>
+                                                )}
+                                                {output.cost && (
+                                                    <span className="text-green-400">${output.cost.toFixed(6)}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            });
                         })()}
-                        options={{
-                            minimap: { enabled: false },
-                            fontSize: 13,
-                            fontFamily: 'JetBrains Mono, Menlo, monospace',
-                            scrollBeyondLastLine: false,
-                            padding: { top: 16 },
-                            wordWrap: 'on'
-                        }}
-                    />
+                    </div>
                 )}
 
                 {

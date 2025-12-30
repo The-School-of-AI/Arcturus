@@ -258,26 +258,81 @@ async def run_user_code(code: str, multi_mcp, session_id: str = "default_session
         
 
         def serialize_result(v):
-            if isinstance(v, (str, int, float, bool, type(None), list, dict)):
+            """Serialize a value to JSON-compatible format.
+            
+            CRITICAL: Handles MCP tool results that may return:
+            - Raw JSON-serializable values
+            - Objects with .content attribute (MCP responses)
+            - String representations of Python lists/dicts
+            
+            The last case caused a bug where urls were stored as strings like "['url1', 'url2']"
+            and then iterated character-by-character in the next iteration.
+            """
+            # Already JSON-compatible primitives
+            if isinstance(v, (int, float, bool, type(None))):
                 return v
-            elif hasattr(v, "success") and hasattr(v, "content") and hasattr(v, "error"):
-                # Handle ActionResultOutput from MCP tools
+            
+            # Lists and dicts - recursively serialize contents
+            if isinstance(v, list):
+                return [serialize_result(item) for item in v]
+            if isinstance(v, dict):
+                return {k: serialize_result(val) for k, val in v.items()}
+            
+            # Strings - check if they're actually serialized lists/dicts
+            if isinstance(v, str):
+                stripped = v.strip()
+                # Check if it looks like a Python/JSON list or dict
+                if (stripped.startswith('[') and stripped.endswith(']')) or \
+                   (stripped.startswith('{') and stripped.endswith('}')):
+                    # Try JSON first
+                    try:
+                        parsed = json.loads(stripped)
+                        return serialize_result(parsed)  # Recursively process
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                    
+                    # Try Python literal (handles single quotes, True/False/None)
+                    try:
+                        parsed = ast.literal_eval(stripped)
+                        return serialize_result(parsed)  # Recursively process
+                    except (ValueError, SyntaxError):
+                        pass
+                
+                # It's just a regular string
+                return v
+            
+            # MCP ActionResultOutput with success/content/error attributes
+            if hasattr(v, "success") and hasattr(v, "content") and hasattr(v, "error"):
                 if not v.success:
                     return f"Error executing tool: {v.error}"
-                return v.content if v.content else "Success"
-            elif hasattr(v, "content") and isinstance(v.content, list):
+                return serialize_result(v.content) if v.content else "Success"
+            
+            # MCP response with .content list (common pattern)
+            if hasattr(v, "content") and isinstance(v.content, list):
                 text_content = "\n".join(x.text for x in v.content if hasattr(x, "text"))
-                # Try to parse JSON if it looks like a structure (list/dict) to return actual objects
-                try:
-                    stripped = text_content.strip()
-                    if (stripped.startswith('[') and stripped.endswith(']')) or \
-                       (stripped.startswith('{') and stripped.endswith('}')):
-                        return json.loads(text_content)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                
+                # Try to parse as structured data
+                stripped = text_content.strip()
+                if (stripped.startswith('[') and stripped.endswith(']')) or \
+                   (stripped.startswith('{') and stripped.endswith('}')):
+                    # Try JSON first
+                    try:
+                        parsed = json.loads(stripped)
+                        return serialize_result(parsed)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                    
+                    # Try Python literal
+                    try:
+                        parsed = ast.literal_eval(stripped)
+                        return serialize_result(parsed)
+                    except (ValueError, SyntaxError):
+                        pass
+                
                 return text_content
-            else:
-                return str(v)
+            
+            # Fallback: convert to string
+            return str(v)
 
         if isinstance(returned, dict) and list(returned.keys()) == ["result"]:
             result_value = {"result": serialize_result(returned["result"])}

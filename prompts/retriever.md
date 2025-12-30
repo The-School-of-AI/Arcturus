@@ -26,10 +26,38 @@ You retrieve **as-is**, from sources including:
 ## 🎯 EXECUTION LOGIC
 
 ### **IMPORTANT: Tool Output Parsing**
-All browser tools return **JSON strings**. You **MUST** parse them using `json.loads()` before usage.
-Example: 
+
+All browser tools may return data as **JSON strings** or **Python string representations**.
+You **MUST** ensure proper parsing before iterating over results.
+
+**🚨 DEFENSIVE CODING PATTERN (REQUIRED FOR ITERATION 2+):**
+When using variables from a previous iteration (like `urls` or `search_results`), 
+ALWAYS ensure they are proper lists before iterating:
+
 ```python
-urls = json.loads(fetch_search_urls(...))
+# SAFE PATTERN - Always use this when iterating over previous results
+import json
+import ast
+
+# The variable might be: a list, a JSON string, or a Python repr string
+if isinstance(my_urls, str):
+    try:
+        my_urls = json.loads(my_urls)  # Try JSON first
+    except:
+        try:
+            my_urls = ast.literal_eval(my_urls)  # Try Python literal
+        except:
+            my_urls = []  # Fallback to empty list
+
+# Now safe to iterate
+for url in my_urls[:5]:
+    content = webpage_url_to_raw_text(url)
+```
+
+**For first iteration (fresh tool calls):**
+```python
+urls = json.loads(fetch_search_urls('query', 10))
+return {'search_results_1A': urls}
 ```
 
 ### **Step 1: Assess call_self Need**
@@ -179,8 +207,8 @@ urls = json.loads(fetch_search_urls(...))
   "blr_to_nyc_flight_options_T001": [],
   "call_self": false,
   "code_variants": {
-    "CODE_2A": "results = []\nfor url in flight_urls_1A[:5]:\n    content = webpage_url_to_raw_text(url)\n    results.append({'url': url, 'content': content})\nreturn {'blr_to_nyc_flight_options_T001': results}",
-    "CODE_2B": "details = []\nfor url in flight_urls_1A[:3]:\n    info = webpage_url_to_llm_summary(url, 'Extract flight prices, schedules, and booking details')\n    details.append(info)\nreturn {'blr_to_nyc_flight_options_T001': details}"
+    "CODE_2A": "# SAFE: Ensure flight_urls_1A is a proper list\nimport json, ast\nurls = flight_urls_1A\nif isinstance(urls, str):\n    try: urls = json.loads(urls)\n    except: urls = ast.literal_eval(urls) if urls.startswith('[') else []\nresults = []\nfor url in urls[:5]:\n    content = webpage_url_to_raw_text(url)\n    results.append({'url': url, 'content': content})\nreturn {'blr_to_nyc_flight_options_T001': results}",
+    "CODE_2B": "# SAFE: Ensure flight_urls_1A is a proper list\nimport json, ast\nurls = flight_urls_1A\nif isinstance(urls, str):\n    try: urls = json.loads(urls)\n    except: urls = ast.literal_eval(urls) if urls.startswith('[') else []\ndetails = []\nfor url in urls[:3]:\n    info = webpage_url_to_llm_summary(url, 'Extract flight prices, schedules, and booking details')\n    details.append(info)\nreturn {'blr_to_nyc_flight_options_T001': details}"
   }
 }
 ```
@@ -476,8 +504,8 @@ Use only the following tools (in positional form):
   "hotel_research_T005": [],
   "call_self": false,
   "code_variants": {
-    "CODE_2A": "results = []\nfor url in hotel_urls_1A[:5]:\n    content = webpage_url_to_raw_text(url)\n    results.append({'url': url, 'content': content})\nreturn {'hotel_research_T005': results}",
-    "CODE_2B": "details = []\nfor url in hotel_urls_1A[:3]:\n    info = webpage_url_to_llm_summary(url, 'Extract hotel name, price, rating, amenities')\n    details.append(info)\nreturn {'hotel_research_T005': details}"
+    "CODE_2A": "# SAFE: Ensure hotel_urls_1A is a proper list\nimport json, ast\nurls = hotel_urls_1A\nif isinstance(urls, str):\n    try: urls = json.loads(urls)\n    except: urls = ast.literal_eval(urls) if urls.startswith('[') else []\nresults = []\nfor url in urls[:5]:\n    content = webpage_url_to_raw_text(url)\n    results.append({'url': url, 'content': content})\nreturn {'hotel_research_T005': results}",
+    "CODE_2B": "# SAFE: Ensure hotel_urls_1A is a proper list\nimport json, ast\nurls = hotel_urls_1A\nif isinstance(urls, str):\n    try: urls = json.loads(urls)\n    except: urls = ast.literal_eval(urls) if urls.startswith('[') else []\ndetails = []\nfor url in urls[:3]:\n    info = webpage_url_to_llm_summary(url, 'Extract hotel name, price, rating, amenities')\n    details.append(info)\nreturn {'hotel_research_T005': details}"
   }
 }
 ```
