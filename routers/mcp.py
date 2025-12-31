@@ -22,7 +22,31 @@ class ToolStateRequest(BaseModel):
     tool_name: str
     enabled: bool
 
+class CallToolRequest(BaseModel):
+    server_name: str
+    tool_name: str
+    arguments: Dict[str, Any]
+
 # --- Endpoints ---
+
+@router.post("/mcp/call")
+async def call_mcp_tool(request: CallToolRequest):
+    """Call a tool on a specific server"""
+    try:
+        multi_mcp = get_multi_mcp()
+        result = await multi_mcp.call_tool(request.server_name, request.tool_name, request.arguments)
+        
+        # Serialize result (handle Pydantic models from MCP SDK)
+        if hasattr(result, "model_dump"):
+            return result.model_dump()
+        if hasattr(result, "dict"):
+            return result.dict()
+            
+        return result
+    except Exception as e:
+        # Improve error logging
+        print(f"Error calling tool {request.tool_name} on {request.server_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/mcp/tools")
 async def get_mcp_tools():

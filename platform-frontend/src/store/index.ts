@@ -213,6 +213,8 @@ interface NewsSlice {
     saveArticle: (title: string, url: string) => void;
     deleteSavedArticle: (id: string) => void;
     setShowNewsChatPanel: (show: boolean) => void;
+    searchResults: any[];
+    setSearchResults: (results: any[]) => void;
 }
 
 interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
@@ -955,6 +957,8 @@ export const useAppStore = create<AppState>()(
             isNewsLoading: false,
             showNewsChatPanel: false,
             setShowNewsChatPanel: (show) => set({ showNewsChatPanel: show }),
+            searchResults: [],
+            setSearchResults: (results) => set({ searchResults: results }),
 
             fetchNewsSources: async () => {
                 try {

@@ -448,22 +448,7 @@ export const NewsArticleViewer: React.FC = () => {
                     </div>
                     <h3 className="text-foreground font-bold mb-2">Start Browsing</h3>
                     <p className="text-sm text-muted-foreground mb-4">Select an article from the left panel or open a new tab</p>
-                    <div className="flex items-center gap-2 w-full max-w-md">
-                        <input
-                            type="text"
-                            value={urlInput}
-                            onChange={(e) => setUrlInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Search or enter URL..."
-                            className="flex-1 bg-muted/50 border border-border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
-                        <button
-                            onClick={() => handleNavigate(urlInput)}
-                            className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90"
-                        >
-                            Go
-                        </button>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Select an article from the left panel or use the sidebar search.</p>
                 </div>
             </div>
         );
