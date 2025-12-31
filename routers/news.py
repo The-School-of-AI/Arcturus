@@ -14,7 +14,7 @@ router = APIRouter(prefix="/news", tags=["news"])
 # Default News Sources
 DEFAULT_SOURCES = [
     {"id": "hn", "name": "Hacker News", "url": "https://news.ycombinator.com", "type": "api", "enabled": True},
-    {"id": "arxiv", "name": "arXiv CS.AI", "url": "https://arxiv.org/list/cs.AI/recent", "type": "rss", "feed_url": "https://rss.arxiv.org/rss/cs.AI", "enabled": True},
+    {"id": "arxiv", "name": "arXiv CS.AI", "url": "https://arxiv.org/list/cs.AI/recent", "type": "rss", "feed_url": "http://export.arxiv.org/rss/cs.AI", "enabled": True},
     {"id": "karpathy", "name": "Andrej Karpathy", "url": "https://twitter.com/karpathy", "type": "rss", "feed_url": "https://nitter.net/karpathy/rss", "enabled": True},
     {"id": "willison", "name": "Simon Willison", "url": "https://simonwillison.net/", "type": "rss", "feed_url": "https://simonwillison.net/atom/entries/", "enabled": True},
 ]
@@ -23,6 +23,19 @@ def get_news_settings():
     if "news" not in settings:
         settings["news"] = {"sources": DEFAULT_SOURCES}
         save_settings()
+    
+    # Migration: Fix broken Arxiv URL
+    sources = settings["news"]["sources"]
+    dirty = False
+    for s in sources:
+        if s["id"] == "arxiv" and s["feed_url"] == "https://rss.arxiv.org/rss/cs.AI":
+            s["feed_url"] = "http://export.arxiv.org/rss/cs.AI"
+            dirty = True
+    
+    if dirty:
+        print("  🔧 Automatically fixed broken Arxiv URL")
+        save_settings()
+
     return settings["news"]
 
 class NewsSource(BaseModel):
