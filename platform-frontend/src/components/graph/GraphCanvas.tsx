@@ -17,7 +17,7 @@ const AutoFitter = ({ nodeCount }: { nodeCount: number }) => {
     React.useEffect(() => {
         if (nodeCount > 0) {
             const timer = setTimeout(() => {
-                fitView({ padding: 0.2, duration: 800 });
+                fitView({ padding: 0.2, duration: 800, maxZoom: 1.0 });
             }, 100);
             return () => clearTimeout(timer);
         }
