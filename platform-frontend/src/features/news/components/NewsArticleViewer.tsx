@@ -238,16 +238,22 @@ export const NewsArticleViewer: React.FC = () => {
                     const injectedScript = `
                         <script>
                             // Text selection handling
-                            document.addEventListener('mouseup', function() {
+                            document.addEventListener('mouseup', function(e) {
                                 const selection = window.getSelection();
                                 const text = selection ? selection.toString().trim() : '';
                                 if (text && text.length > 0) {
-                                    const range = selection.getRangeAt(0);
-                                    const rect = range.getBoundingClientRect();
+                                    // Use mouse coordinates for better positioning
+                                    const x = e.clientX;
+                                    const y = e.clientY;
+                                    
                                     window.parent.postMessage({
                                         type: 'TEXT_SELECTED',
                                         text: text,
-                                        x: rect.left + rect.width / 2,
+                                        x: x,
+                                        y: y
+                                    }, '*');
+                                }
+                            });
                                         y: rect.top + window.scrollY
                                     }, '*');
                                 }
@@ -617,7 +623,7 @@ export const NewsArticleViewer: React.FC = () => {
                             isGithubReadme
                                 ? "markdown-body"
                                 : "prose prose-slate dark:prose-invert prose-sm"
-                        )} style={isGithubReadme ? { backgroundColor: 'transparent' } : undefined}>
+                        )} style={isGithubReadme ? { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem' } : undefined}>
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {readerContent}
                             </ReactMarkdown>
