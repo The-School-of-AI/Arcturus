@@ -64,12 +64,11 @@ export const Header: React.FC = () => {
                     {TAB_LABELS[sidebarTab] || sidebarTab}
                 </span>
 
-                {/* Show run status when a run is active */}
-                {currentRun && (
+                {/* Show run status segment ONLY in Runs tab or when running in background (without name) */}
+                {currentRun && (sidebarTab === 'runs' || currentRun.status === 'running') && (
                     <>
                         <div className="h-4 w-px bg-border mx-1" />
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span className="font-medium text-foreground">{currentRun.name}</span>
                             <span className={cn(
                                 "px-2 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider",
                                 currentRun.status === 'running' && "bg-yellow-500/20 text-yellow-500 animate-pulse",
