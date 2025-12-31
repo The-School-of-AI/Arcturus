@@ -224,6 +224,43 @@ async def get_feed(source_id: Optional[str] = None):
 async def get_article_content(url: str):
     """Fetch and render a full webpage using Playwright, returning the complete HTML."""
     try:
+        # Detect PDF: Check extension, specific domains, or Head request
+        is_pdf = url.lower().endswith('.pdf') or "arxiv.org/pdf/" in url
+        
+        if not is_pdf:
+            # Fallback: Quick HEAD request to check Content-Type (with short timeout)
+            try:
+                head = requests.head(url, allow_redirects=True, timeout=2)
+                if 'application/pdf' in head.headers.get('Content-Type', '').lower():
+                    is_pdf = True
+            except:
+                pass # Ignore network errors during check
+
+        if is_pdf:
+            try:
+                import io
+                import pymupdf  # Ensure pymupdf is available
+                
+                # Fetch content
+                response = requests.get(url, timeout=15)
+                doc = pymupdf.open(stream=response.content, filetype="pdf")
+                
+                html_content = "<div style='padding: 20px; font-family: sans-serif;'>"
+                # Render only first 10 pages to prevent massive load times for large docs
+                for i, page in enumerate(doc):
+                    if i >= 10:
+                        html_content += "<p><em>... (Display limited to first 10 pages) ...</em></p>"
+                        break
+                    # Get HTML representation of the page
+                    html_content += page.get_text("html")
+                    html_content += "<hr style='margin: 20px 0; border: 0; border-top: 1px solid #ccc;'/>"
+                
+                html_content += "</div>"
+                return {"status": "success", "html": html_content, "url": url}
+            except Exception as e:
+                print(f"PDF processing error for {url}: {e}")
+                # Fallback to playwright if PDF processing fails (might still fail there)
+
         from playwright.async_api import async_playwright
         
         async with async_playwright() as p:
@@ -262,6 +299,33 @@ async def get_article_content(url: str):
 async def get_reader_content(url: str):
     """Extract the main article content as markdown for reader mode."""
     try:
+        # Detect PDF
+        is_pdf = url.lower().endswith('.pdf') or "arxiv.org/pdf/" in url
+        if not is_pdf:
+             try:
+                head = requests.head(url, allow_redirects=True, timeout=2)
+                if 'application/pdf' in head.headers.get('Content-Type', '').lower():
+                    is_pdf = True
+             except: pass
+
+        if is_pdf:
+            try:
+                import functools
+                import pymupdf4llm
+                import requests
+                import pymupdf
+                
+                # Fetch PDF content
+                response = requests.get(url, timeout=15)
+                
+                doc = pymupdf.open(stream=response.content, filetype="pdf")
+                md_text = pymupdf4llm.to_markdown(doc)
+                
+                return {"status": "success", "content": md_text, "url": url}
+            except Exception as e:
+                print(f"PDF Reader error for {url}: {e}")
+                # Fallthrough to trafilatura if custom handling fails
+
         import trafilatura
         
         # Download the web page
