@@ -352,3 +352,31 @@ async def get_reader_content(url: str):
     except Exception as e:
         print(f"Reader extraction error for {url}: {e}")
         return {"status": "error", "error": str(e)}
+
+@router.get("/proxy")
+async def proxy_content(url: str):
+    """Proxy content to avoid CORS issues, specifically for PDFs."""
+    try:
+        # Validate URL
+        if not url.startswith(('http://', 'https://')):
+            raise HTTPException(status_code=400, detail="Invalid URL")
+            
+        # Stream response
+        r = requests.get(url, stream=True, timeout=30)
+        
+        def iterfile():
+            try:
+                for chunk in r.iter_content(chunk_size=8192):
+                    yield chunk
+            except Exception as e:
+                print(f"Stream error: {e}")
+
+        # Forward content type
+        content_type = r.headers.get("Content-Type", "application/octet-stream")
+        
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(iterfile(), media_type=content_type)
+        
+    except Exception as e:
+        print(f"Proxy error for {url}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

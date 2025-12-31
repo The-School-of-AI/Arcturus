@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { X, ExternalLink, Lock, ShieldCheck, Loader2, PlusCircle, FileText, Plus, Search } from 'lucide-react';
+import { Search, RotateCw, ChevronLeft, ChevronRight, Maximize2, Minimize2, ExternalLink, Lock, Plus, X, Globe, FileText, Share2, Type, ArrowLeft, Loader2, PlusCircle } from 'lucide-react';
+import { useTheme } from '@/components/theme';
+import { PDFViewer } from '@/components/common/PDFViewer';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
@@ -111,6 +113,8 @@ export const NewsArticleViewer: React.FC = () => {
         setShowNewsChatPanel
     } = useAppStore();
 
+    const { theme } = useTheme();
+
     const [htmlContent, setHtmlContent] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -118,6 +122,12 @@ export const NewsArticleViewer: React.FC = () => {
     const [readerMode, setReaderMode] = useState(false);
     const [readerContent, setReaderContent] = useState<string | null>(null);
     const [loadingReader, setLoadingReader] = useState(false);
+
+    const isPdfUrl = (url: string) => {
+        if (!url) return false;
+        const lower = url.toLowerCase();
+        return lower.endsWith('.pdf') || lower.includes('arxiv.org/pdf/');
+    };
     const [isGithubReadme, setIsGithubReadme] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(100);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -522,6 +532,12 @@ export const NewsArticleViewer: React.FC = () => {
                         <button
                             onClick={async () => {
                                 if (!readerMode && activeUrl) {
+                                    // If PDF, just switch mode, no need to fetch markdown
+                                    if (isPdfUrl(activeUrl)) {
+                                        setReaderMode(true);
+                                        return;
+                                    }
+
                                     setLoadingReader(true);
                                     try {
                                         const res = await axios.get(`${API_BASE}/news/reader`, {
@@ -608,7 +624,7 @@ export const NewsArticleViewer: React.FC = () => {
             </div>
 
             {/* Content Area - Iframe with rendered HTML */}
-            <div className="flex-1 overflow-hidden bg-white relative">
+            <div className="flex-1 relative bg-white">
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-10 space-y-4">
                         <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-2xl">
@@ -637,59 +653,82 @@ export const NewsArticleViewer: React.FC = () => {
                     </div>
                 )}
 
-                {/* Reader Mode - Markdown Content */}
-                {readerMode && readerContent && !loading && (
-                    <div
-                        className="w-full h-full overflow-y-auto bg-background p-8"
-                        onMouseUp={(e) => {
-                            const selection = window.getSelection();
-                            const text = selection ? selection.toString().trim() : '';
-                            if (text && text.length > 0) {
-                                const range = selection!.getRangeAt(0);
-                                const rect = range.getBoundingClientRect();
-                                // Simulate the same message as iframe
-                                window.postMessage({
-                                    type: 'TEXT_SELECTED',
-                                    text: text,
-                                    x: rect.left + rect.width / 2,
-                                    y: rect.top,
-                                    source: 'reader'
-                                }, '*');
-                            }
-                        }}
-                        onMouseDown={() => {
-                            window.postMessage({ type: 'SELECTION_CLEARED' }, '*');
-                        }}
-                    >
-                        {/* Use GitHub markdown styling for GitHub READMEs */}
-                        {/* Use GitHub markdown styling for GitHub READMEs */}
-                        <div className={cn(
-                            "max-w-3xl mx-auto",
-                            isGithubReadme
-                                ? "markdown-body"
-                                : "prose prose-slate dark:prose-invert prose-sm"
-                        )} style={{
-                            ...(isGithubReadme ? { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem' } : undefined),
-                            transform: `scale(${zoomLevel / 100})`,
-                            transformOrigin: 'top center'
-                        }}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {readerContent}
-                            </ReactMarkdown>
+                {/* Reader Mode */}
+                {readerMode ? (
+                    isPdfUrl(activeUrl || '') ? (
+                        <div className="absolute inset-0 z-10 bg-background">
+                            <div className="absolute top-4 left-4 z-20">
+                                <button
+                                    onClick={() => setReaderMode(false)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur border border-border rounded-md text-xs font-medium shadow-sm hover:bg-muted transition-colors"
+                                >
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                    Exit PDF Reader
+                                </button>
+                            </div>
+                            <PDFViewer
+                                url={`${API_BASE}/news/proxy?url=${encodeURIComponent(activeUrl || '')}`}
+                                theme={theme === 'dark' ? 'dark' : 'light'}
+                            />
                         </div>
-                    </div>
-                )}
+                    ) : (readerContent && (
+                        <div
+                            className="w-full h-full overflow-y-auto bg-background p-8"
+                            onMouseUp={(e) => {
+                                const selection = window.getSelection();
+                                const text = selection ? selection.toString().trim() : '';
+                                if (text && text.length > 0) {
+                                    const range = selection!.getRangeAt(0);
+                                    const rect = range.getBoundingClientRect();
+                                    window.postMessage({
+                                        type: 'TEXT_SELECTED',
+                                        text: text,
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top,
+                                        source: 'reader'
+                                    }, '*');
+                                }
+                            }}
+                            onMouseDown={() => {
+                                window.postMessage({ type: 'SELECTION_CLEARED' }, '*');
+                            }}
+                        >
+                            <button
+                                onClick={() => setReaderMode(false)}
+                                className="mb-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                Back to original
+                            </button>
 
-                {/* Web Mode - Iframe */}
-                {!readerMode && htmlContent && !loading && (
-                    <iframe
-                        ref={iframeRef}
-                        srcDoc={htmlContent}
-                        className="w-full h-full border-0"
-                        style={{ zoom: zoomLevel / 100 }}
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-                        title="Article Content"
-                    />
+                            <div className={cn(
+                                "max-w-3xl mx-auto",
+                                isGithubReadme
+                                    ? "markdown-body"
+                                    : "prose prose-slate dark:prose-invert prose-sm"
+                            )} style={{
+                                ...(isGithubReadme ? { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem' } : undefined),
+                                transform: `scale(${zoomLevel / 100})`,
+                                transformOrigin: 'top center'
+                            }}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {readerContent}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    /* Web Mode - Iframe */
+                    !loading && htmlContent && (
+                        <iframe
+                            ref={iframeRef}
+                            srcDoc={htmlContent}
+                            className="w-full h-full border-0"
+                            style={{ zoom: zoomLevel / 100 }}
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                            title="Article Content"
+                        />
+                    )
                 )}
 
                 {/* Selection Menu - floats above iframe */}
@@ -700,6 +739,6 @@ export const NewsArticleViewer: React.FC = () => {
                     iframeRef={iframeRef}
                 />
             </div>
-        </div>
+        </div >
     );
 };
