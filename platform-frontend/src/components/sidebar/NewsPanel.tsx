@@ -212,7 +212,7 @@ export const NewsPanel: React.FC = () => {
                                             )}
                                             onClick={() => openNewsTab(item.url)}
                                         >
-                                            <div className="flex flex-col gap-1">
+                                            <div className="flex flex-col gap-1 w-full">
                                                 <h4 className={cn(
                                                     "text-xs font-medium line-clamp-2",
                                                     activeNewsTab === item.url ? "text-cyan-400" : "text-foreground"
@@ -223,7 +223,27 @@ export const NewsPanel: React.FC = () => {
                                                     <span className="text-[10px] text-muted-foreground/60 font-mono truncate max-w-[150px]">
                                                         {new URL(item.url).hostname.replace('www.', '')}
                                                     </span>
-                                                    <ExternalLink className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100" />
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (!isArticleSaved(item.url)) {
+                                                                saveArticle(item.title, item.url);
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            "p-1 rounded-md transition-all shrink-0",
+                                                            isArticleSaved(item.url)
+                                                                ? "text-amber-400"
+                                                                : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:bg-amber-500/10"
+                                                        )}
+                                                        title={isArticleSaved(item.url) ? "Saved" : "Save article"}
+                                                    >
+                                                        {isArticleSaved(item.url) ? (
+                                                            <BookmarkCheck className="w-3 h-3" />
+                                                        ) : (
+                                                            <Bookmark className="w-3 h-3" />
+                                                        )}
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
