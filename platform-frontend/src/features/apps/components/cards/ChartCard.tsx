@@ -180,16 +180,28 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         <BaseCard title={chartTitle}>
             <div className="w-full h-full flex flex-col relative p-4 chart-container">
                 {/* Legend */}
-                {showLegend && series.length > 1 && (type === 'line' || type === 'area') && (
-                    <div className="flex flex-wrap gap-4 mb-2">
-                        {series.map((s, i) => (
-                            <div key={i} className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color || accentColor }} />
-                                <span className="text-[10px] text-muted-foreground font-medium">{s.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                {showLegend && (
+                    ((type === 'line' || type === 'area') && series.length > 1) ||
+                    (type === 'bar' && barPoints.length > 1)
+                ) && (
+                        <div className="flex flex-wrap gap-4 mb-2">
+                            {type === 'bar' ? (
+                                barPoints.map((p: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || accentColor }} />
+                                        <span className="text-[10px] text-muted-foreground font-medium">{p.x}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                series.map((s: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color || accentColor }} />
+                                        <span className="text-[10px] text-muted-foreground font-medium">{s.name}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
 
                 {/* Tooltip */}
                 {tooltip.visible && (
