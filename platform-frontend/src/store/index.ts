@@ -185,9 +185,17 @@ interface AgentTestSlice {
     discardTestResult: () => void;
 }
 
+interface SavedArticle {
+    id: string;
+    title: string;
+    url: string;
+    savedAt: string;
+}
+
 interface NewsSlice {
     newsItems: any[];
     newsSources: any[];
+    savedArticles: SavedArticle[];
     selectedNewsSourceId: string | null;
     newsTabs: string[];
     activeNewsTab: string | null;
@@ -201,6 +209,8 @@ interface NewsSlice {
     closeNewsTab: (url: string) => void;
     closeAllNewsTabs: () => void;
     setActiveNewsTab: (url: string | null) => void;
+    saveArticle: (title: string, url: string) => void;
+    deleteSavedArticle: (id: string) => void;
 }
 
 interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
@@ -1001,6 +1011,22 @@ export const useAppStore = create<AppState>()(
 
             closeAllNewsTabs: () => set({ newsTabs: [], activeNewsTab: null }),
             setActiveNewsTab: (url) => set({ activeNewsTab: url }),
+
+            // Saved articles
+            savedArticles: [],
+            saveArticle: (title, url) => {
+                const id = `saved_${Date.now()}`;
+                const article: SavedArticle = {
+                    id,
+                    title,
+                    url,
+                    savedAt: new Date().toISOString()
+                };
+                set({ savedArticles: [...get().savedArticles, article] });
+            },
+            deleteSavedArticle: (id) => {
+                set({ savedArticles: get().savedArticles.filter(a => a.id !== id) });
+            },
         }),
         {
             name: 'agent-platform-storage',
@@ -1023,6 +1049,7 @@ export const useAppStore = create<AppState>()(
                 isAppViewMode: state.isAppViewMode,
                 newsSources: state.newsSources,
                 newsItems: state.newsItems, // PERSIST NEWS ITEMS for faster reload
+                savedArticles: state.savedArticles, // PERSIST SAVED ARTICLES
             }),
         }
     )

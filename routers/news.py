@@ -244,3 +244,34 @@ async def get_article_content(url: str):
     except Exception as e:
         print(f"Playwright rendering error for {url}: {e}")
         return {"status": "error", "error": str(e)}
+
+@router.get("/reader")
+async def get_reader_content(url: str):
+    """Extract the main article content as markdown for reader mode."""
+    try:
+        import trafilatura
+        
+        # Download the web page
+        downloaded = trafilatura.fetch_url(url)
+        if not downloaded:
+            return {"status": "error", "error": "Failed to fetch the URL"}
+        
+        # Extract the main content as markdown
+        content = trafilatura.extract(
+            downloaded,
+            include_comments=False,
+            include_tables=True,
+            output_format='markdown'
+        )
+        
+        if not content:
+            # Fallback to plain text
+            content = trafilatura.extract(downloaded, include_comments=False)
+        
+        if not content:
+            return {"status": "error", "error": "Could not extract article content"}
+        
+        return {"status": "success", "content": content, "url": url}
+    except Exception as e:
+        print(f"Reader extraction error for {url}: {e}")
+        return {"status": "error", "error": str(e)}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Newspaper, Plus, Trash2, Globe, RefreshCw, Rss, ChevronLeft, Loader2 } from 'lucide-react';
+import { Newspaper, Plus, Trash2, Globe, RefreshCw, Rss, ChevronLeft, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
@@ -24,13 +24,16 @@ export const NewsPanel: React.FC = () => {
         newsItems,
         isNewsLoading,
         openNewsTab,
-        activeNewsTab
+        activeNewsTab,
+        savedArticles,
+        saveArticle,
+        deleteSavedArticle
     } = useAppStore();
 
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [newName, setNewName] = React.useState("");
     const [newUrl, setNewUrl] = React.useState("");
-    const [viewMode, setViewMode] = React.useState<'sources' | 'articles'>('sources');
+    const [viewMode, setViewMode] = React.useState<'sources' | 'articles' | 'saved'>('sources');
 
     React.useEffect(() => {
         fetchNewsSources();
@@ -54,12 +57,15 @@ export const NewsPanel: React.FC = () => {
 
     const selectedSource = newsSources.find(s => s.id === selectedNewsSourceId);
 
+    // Check if an article is already saved
+    const isArticleSaved = (url: string) => savedArticles.some(a => a.url === url);
+
     return (
         <div className="flex flex-col h-full bg-card text-foreground">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                    {viewMode === 'articles' && (
+                    {(viewMode === 'articles' || viewMode === 'saved') && (
                         <button
                             onClick={() => setViewMode('sources')}
                             className="p-1 hover:bg-muted rounded-md mr-1"
@@ -68,14 +74,18 @@ export const NewsPanel: React.FC = () => {
                         </button>
                     )}
                     <div className="p-1.5 bg-cyan-500/10 rounded-lg">
-                        <Newspaper className="w-5 h-5 text-cyan-400" />
+                        {viewMode === 'saved' ? (
+                            <Bookmark className="w-5 h-5 text-cyan-400" />
+                        ) : (
+                            <Newspaper className="w-5 h-5 text-cyan-400" />
+                        )}
                     </div>
                     <div>
                         <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">
-                            {viewMode === 'articles' && selectedSource ? selectedSource.name : 'News Sources'}
+                            {viewMode === 'saved' ? 'Saved Articles' : viewMode === 'articles' && selectedSource ? selectedSource.name : 'News Sources'}
                         </h2>
                         <p className="text-[10px] text-cyan-400/80 font-mono tracking-widest">
-                            {viewMode === 'articles' ? `${newsItems.length} ARTICLES` : `${newsSources.length} SOURCES`}
+                            {viewMode === 'saved' ? `${savedArticles.length} SAVED` : viewMode === 'articles' ? `${newsItems.length} ARTICLES` : `${newsSources.length} SOURCES`}
                         </p>
                     </div>
                 </div>
@@ -133,6 +143,24 @@ export const NewsPanel: React.FC = () => {
 
                     {/* Source List */}
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
+                        {/* Saved Articles Section */}
+                        {savedArticles.length > 0 && (
+                            <div
+                                onClick={() => setViewMode('saved')}
+                                className="group p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all cursor-pointer flex items-center justify-between"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-1.5 rounded-lg bg-amber-500/20">
+                                        <Bookmark className="w-4 h-4 text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <span className="text-sm font-medium text-amber-400">Saved Articles</span>
+                                        <p className="text-[10px] text-muted-foreground">{savedArticles.length} items</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Global / All Feed */}
                         <div
                             onClick={() => handleSelectSource(null)}
@@ -201,9 +229,8 @@ export const NewsPanel: React.FC = () => {
                             {newsItems.map((item, index) => (
                                 <div
                                     key={item.id}
-                                    onClick={() => openNewsTab(item.url)}
                                     className={cn(
-                                        "p-3 rounded-lg cursor-pointer transition-all border",
+                                        "group p-3 rounded-lg transition-all border",
                                         activeNewsTab === item.url
                                             ? "bg-cyan-500/10 border-cyan-500/30"
                                             : "border-transparent hover:bg-muted/50 hover:border-border/50"
@@ -213,7 +240,10 @@ export const NewsPanel: React.FC = () => {
                                         <span className="text-[10px] font-mono text-muted-foreground/50 mt-0.5">
                                             {(index + 1).toString().padStart(2, '0')}
                                         </span>
-                                        <div className="flex-1 min-w-0">
+                                        <div
+                                            className="flex-1 min-w-0 cursor-pointer"
+                                            onClick={() => openNewsTab(item.url)}
+                                        >
                                             <h4 className={cn(
                                                 "text-xs font-medium line-clamp-2 leading-relaxed",
                                                 activeNewsTab === item.url ? "text-cyan-400" : "text-foreground"
@@ -226,6 +256,84 @@ export const NewsPanel: React.FC = () => {
                                                 </p>
                                             )}
                                         </div>
+                                        {/* Save Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!isArticleSaved(item.url)) {
+                                                    saveArticle(item.title, item.url);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "p-1.5 rounded-md transition-all shrink-0",
+                                                isArticleSaved(item.url)
+                                                    ? "text-amber-400"
+                                                    : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:bg-amber-500/10"
+                                            )}
+                                            title={isArticleSaved(item.url) ? "Saved" : "Save article"}
+                                        >
+                                            {isArticleSaved(item.url) ? (
+                                                <BookmarkCheck className="w-3.5 h-3.5" />
+                                            ) : (
+                                                <Bookmark className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Saved Articles View */}
+            {viewMode === 'saved' && (
+                <div className="flex-1 overflow-y-auto scrollbar-hide">
+                    {savedArticles.length === 0 ? (
+                        <div className="py-10 text-center text-muted-foreground text-sm">
+                            No saved articles
+                        </div>
+                    ) : (
+                        <div className="p-2 space-y-1">
+                            {savedArticles.map((item, index) => (
+                                <div
+                                    key={item.id}
+                                    className={cn(
+                                        "group p-3 rounded-lg transition-all border",
+                                        activeNewsTab === item.url
+                                            ? "bg-cyan-500/10 border-cyan-500/30"
+                                            : "border-transparent hover:bg-muted/50 hover:border-border/50"
+                                    )}
+                                >
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-[10px] font-mono text-muted-foreground/50 mt-0.5">
+                                            {(index + 1).toString().padStart(2, '0')}
+                                        </span>
+                                        <div
+                                            className="flex-1 min-w-0 cursor-pointer"
+                                            onClick={() => openNewsTab(item.url)}
+                                        >
+                                            <h4 className={cn(
+                                                "text-xs font-medium line-clamp-2 leading-relaxed",
+                                                activeNewsTab === item.url ? "text-cyan-400" : "text-foreground"
+                                            )}>
+                                                {item.title}
+                                            </h4>
+                                            <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                                Saved {new Date(item.savedAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        {/* Delete Button for Saved Items */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteSavedArticle(item.id);
+                                            }}
+                                            className="p-1.5 rounded-md text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                                            title="Delete saved article"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
                                 </div>
                             ))}

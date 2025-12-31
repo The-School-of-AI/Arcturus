@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { X, ExternalLink, Lock, ShieldCheck, Loader2, PlusCircle, FileText, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Selection Menu Component for adding text to context
 interface SelectionMenuProps {
@@ -91,6 +93,9 @@ export const NewsArticleViewer: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [urlInput, setUrlInput] = useState('');
+    const [readerMode, setReaderMode] = useState(false);
+    const [readerContent, setReaderContent] = useState<string | null>(null);
+    const [loadingReader, setLoadingReader] = useState(false);
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     const activeUrl = activeNewsTab || newsTabs[0];
@@ -356,12 +361,41 @@ export const NewsArticleViewer: React.FC = () => {
                     />
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono shrink-0">
-                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-500/60" />
-                    <span className="uppercase tracking-widest hidden sm:block">Rendered</span>
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Reader Mode Toggle */}
+                    <button
+                        onClick={async () => {
+                            if (!readerMode && activeUrl) {
+                                setLoadingReader(true);
+                                try {
+                                    const res = await axios.get(`${API_BASE}/news/reader`, {
+                                        params: { url: activeUrl }
+                                    });
+                                    if (res.data.status === 'success') {
+                                        setReaderContent(res.data.content);
+                                        setReaderMode(true);
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to fetch reader content', e);
+                                }
+                                setLoadingReader(false);
+                            } else {
+                                setReaderMode(false);
+                            }
+                        }}
+                        className={cn(
+                            "px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-colors",
+                            readerMode
+                                ? "bg-cyan-500 text-white"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        )}
+                        disabled={loadingReader}
+                    >
+                        {loadingReader ? 'Loading...' : 'Reader'}
+                    </button>
                     <button
                         onClick={() => window.open(activeUrl, '_blank')}
-                        className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                        className="p-1.5 hover:bg-muted rounded-md transition-colors text-muted-foreground"
                         title="Open in browser"
                     >
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -399,7 +433,19 @@ export const NewsArticleViewer: React.FC = () => {
                     </div>
                 )}
 
-                {htmlContent && !loading && (
+                {/* Reader Mode - Markdown Content */}
+                {readerMode && readerContent && !loading && (
+                    <div className="w-full h-full overflow-y-auto bg-background p-8">
+                        <div className="max-w-3xl mx-auto prose prose-slate dark:prose-invert prose-sm">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {readerContent}
+                            </ReactMarkdown>
+                        </div>
+                    </div>
+                )}
+
+                {/* Web Mode - Iframe */}
+                {!readerMode && htmlContent && !loading && (
                     <iframe
                         ref={iframeRef}
                         srcDoc={htmlContent}
