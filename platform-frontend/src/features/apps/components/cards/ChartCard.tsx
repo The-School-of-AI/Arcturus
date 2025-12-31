@@ -83,7 +83,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
 
     // Style
     const accentColor = style.accentColor || '#F5C542';
-    const textColor = style.textColor || '#ffffff';
+    // Use theme-aware colors by default, only override if explicitly provided and NOT white (which is often a placeholder/default)
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
 
     // Data Parsing with defaults - title undefined means use data.title, empty string means no title
     const chartTitle = title !== undefined ? title : (data.title || '');
@@ -181,8 +182,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
             <div className="w-full h-full flex flex-col relative p-4 chart-container">
                 {/* Legend */}
                 {showLegend && (
-                    ((type === 'line' || type === 'area') && series.length > 1) ||
-                    (type === 'bar' && barPoints.length > 1)
+                    ((type === 'line' || type === 'area') && series.length >= 1) ||
+                    (type === 'bar' && barPoints.length >= 1)
                 ) && (
                         <div className="flex flex-wrap gap-4 mb-2">
                             {type === 'bar' ? (
@@ -228,7 +229,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                     {showAxis && (type === 'line' || type === 'area') && (
                         <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[8px] text-muted-foreground pointer-events-none translate-y-1.5">
                             {[maxVal, (maxVal + minVal) * 0.75, (maxVal + minVal) * 0.5, (maxVal + minVal) * 0.25, minVal].map((val, i) => (
-                                <span key={i} style={{ color: textColor, opacity: 0.5 }}>{Math.round(val)}</span>
+                                <span key={i} className={cn(!textColor && "text-muted-foreground")} style={textColor ? { color: textColor, opacity: 0.5 } : { opacity: 0.5 }}>{Math.round(val)}</span>
                             ))}
                         </div>
                     )}
@@ -314,7 +315,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                                                 onMouseLeave={hideTooltip}
                                             >
                                                 {showValues && (
-                                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold" style={{ color: textColor }}>
+                                                    <div className={cn("absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold", !textColor && "text-foreground")} style={textColor ? { color: textColor } : {}}>
                                                         {point.y}
                                                     </div>
                                                 )}
@@ -331,7 +332,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                         <div className="absolute bottom-0 left-6 right-0 flex justify-between text-[8px] text-muted-foreground mt-1">
                             {(type === 'bar' ? barPoints : series?.[0]?.data)?.map((p: any, i: number, arr: any[]) => (
                                 (type === 'bar' || i === 0 || i === arr.length - 1 || i === Math.floor(arr.length / 2)) && (
-                                    <span key={i} className={cn(type === 'bar' && "truncate text-center w-full")} style={{ color: textColor, opacity: 0.5 }}>{p.x}</span>
+                                    <span key={i} className={cn(type === 'bar' && "truncate text-center w-full", !textColor && "text-muted-foreground")} style={textColor ? { color: textColor, opacity: 0.5 } : { opacity: 0.5 }}>{p.x}</span>
                                 )
                             ))}
                         </div>
