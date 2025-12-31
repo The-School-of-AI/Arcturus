@@ -35,10 +35,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     const showTitle = config.showTitle !== false;
     const showTrend = config.showTrend !== false;
     const showPercent = config.showPercent !== false;
+    const isUp = (displayChange || 0) >= 0;
 
     const successColor = style.successColor || '#4ade80';
-    const dangerColor = style.dangerColor || '#f87171';
-    const textColor = style.textColor || undefined;
+    const dangerColor = style.dangerColor || '#fb7185';
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
     const accentColor = style.accentColor || DEFAULT_COLORS.accent;
 
     const getTrendColor = () => {
@@ -48,7 +49,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     };
 
     return (
-        <BaseCard title={showTitle ? title : undefined}>
+        <BaseCard title={showTitle ? title : undefined} textColor={textColor}>
             <div className="flex flex-col justify-center h-full">
                 <div className="text-3xl font-bold tracking-tight" style={{ color: textColor }}>{displayValue}</div>
                 {(showPercent && displayChange !== undefined) || displaySubtext ? (

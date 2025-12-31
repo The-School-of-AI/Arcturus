@@ -31,10 +31,10 @@ export const TrendMetric: React.FC<TrendMetricProps> = ({
     const isUp = (displayChange || 0) >= 0;
     const successColor = style.successColor || '#4ade80';
     const dangerColor = style.dangerColor || '#fb7185';
-    const textColor = style.textColor || undefined;
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
 
     return (
-        <BaseCard title={displayLabel}>
+        <BaseCard title={displayLabel} textColor={textColor}>
             <div className="flex items-center justify-between h-full">
                 <div className="space-y-1">
                     <div className="text-2xl font-bold tracking-tight" style={{ color: textColor }}>{displayValue}</div>

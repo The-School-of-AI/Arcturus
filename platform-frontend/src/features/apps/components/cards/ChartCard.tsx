@@ -178,7 +178,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
 
     return (
-        <BaseCard title={chartTitle}>
+        <BaseCard title={chartTitle} textColor={textColor}>
             <div className="w-full h-full flex flex-col relative p-4 chart-container">
                 {/* Legend */}
                 {showLegend && (

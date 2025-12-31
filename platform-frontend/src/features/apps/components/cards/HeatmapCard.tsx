@@ -59,11 +59,12 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
 
     // Style
     const accentColor = style.accentColor || '#F5C542';
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
 
     // Use default data if not provided
-    const xLabels = data.xLabels?.length > 0 ? data.xLabels : DEFAULT_HEATMAP_DATA.xLabels;
-    const yLabels = data.yLabels?.length > 0 ? data.yLabels : DEFAULT_HEATMAP_DATA.yLabels;
-    const values = data.values?.length > 0 ? data.values : DEFAULT_HEATMAP_DATA.values;
+    const xLabels = data.xLabels || DEFAULT_HEATMAP_DATA.xLabels;
+    const yLabels = data.yLabels || DEFAULT_HEATMAP_DATA.yLabels;
+    const values = data.values || DEFAULT_HEATMAP_DATA.values;
 
     const { maxValue, minValue } = useMemo(() => {
         const flat = values.flat();
@@ -116,7 +117,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
     const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={title} textColor={textColor}>
             <div className="w-full h-full flex flex-col p-4 overflow-hidden select-none heatmap-container relative">
                 {/* Tooltip */}
                 {tooltip.visible && (

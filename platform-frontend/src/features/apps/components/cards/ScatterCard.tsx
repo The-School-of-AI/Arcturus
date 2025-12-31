@@ -64,6 +64,8 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
 
     // Style
     const accentColor = style.accentColor || '#F5C542';
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
+
 
     // Use default data if not provided
     const points = data.points?.length > 0 ? data.points : DEFAULT_SCATTER_DATA.points;
@@ -121,7 +123,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
     const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={title} textColor={textColor}>
             <div className="w-full h-full flex flex-col p-4 relative select-none scatter-container">
                 {/* Tooltip */}
                 {tooltip.visible && (

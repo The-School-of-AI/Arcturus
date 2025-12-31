@@ -250,7 +250,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
     const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={title} textColor={textColor}>
             <div className="w-full h-full flex flex-col relative p-0 sankey-container">
                 {/* Tooltip */}
                 {tooltip.visible && (

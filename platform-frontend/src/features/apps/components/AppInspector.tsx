@@ -28,6 +28,7 @@ import { FeedCard } from './cards/FeedCard';
 import { LogStreamCard } from './cards/LogStreamCard';
 import { CodeBlockCard } from './cards/CodeBlockCard';
 import { JSONViewerCard } from './cards/JSONViewerCard';
+import { SummaryGrid } from './cards/SummaryGrid';
 
 // Helper to render a preview component with default data
 const renderPreviewComponent = (type: string, data: any, style: any) => {
@@ -56,6 +57,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return <HeatmapCard title="" {...commonProps} />;
         case 'table':
             return <TableCard title="" {...commonProps} />;
+        case 'summary':
+            return <SummaryGrid title="" {...commonProps} />;
 
         // Finance
         case 'profile':
@@ -964,6 +967,45 @@ const CARD_FEATURES: Record<string, { name: string; key: string; default: boolea
 
 
 // Data field definitions for each card type
+const CARD_COLORS: Record<string, { name: string; key: string; default: string }[]> = {
+    metric: [
+        { name: 'Success Color', key: 'successColor', default: '#4ade80' },
+        { name: 'Danger Color', key: 'dangerColor', default: '#f87171' },
+    ],
+    summary: [
+        { name: 'Pass Color', key: 'passColor', default: '#4ade80' },
+        { name: 'Warn Color', key: 'warnColor', default: '#F5C542' },
+        { name: 'Info Color', key: 'infoColor', default: '#3b82f6' },
+    ],
+    trend: [
+        { name: 'Up Color', key: 'successColor', default: '#4ade80' },
+        { name: 'Down Color', key: 'dangerColor', default: '#f87171' },
+    ],
+    score_card: [
+        { name: 'Success Color', key: 'successColor', default: '#4ade80' },
+        { name: 'Warn Color', key: 'warnColor', default: '#F5C542' },
+        { name: 'Danger Color', key: 'dangerColor', default: '#f87171' },
+    ],
+    grade_card: [
+        { name: 'Grade A Color', key: 'gradeA', default: '#22c55e' },
+        { name: 'Grade B Color', key: 'gradeB', default: '#4ade80' },
+        { name: 'Grade C Color', key: 'gradeC', default: '#eab308' },
+        { name: 'Grade D Color', key: 'gradeD', default: '#f97316' },
+        { name: 'Grade F Color', key: 'gradeF', default: '#ef4444' },
+    ],
+    valuation: [
+        { name: 'Undervalued Color', key: 'successColor', default: '#4ade80' },
+        { name: 'Overvalued Color', key: 'dangerColor', default: '#f87171' },
+    ],
+    line_chart: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+    bar_chart: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+    area_chart: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+    pie_chart: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+    sankey: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+    scatter: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+    heatmap: [{ name: 'Accent Color', key: 'accentColor', default: '#F5C542' }],
+};
+
 const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text' | 'number' | 'textarea' | 'json' | 'select' | 'image_upload'; options?: string[] }[]> = {
     metric: [
         { name: 'Value', key: 'value', type: 'text' },
@@ -1933,31 +1975,45 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     />
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Success Color</label>
-                                    <ColorPicker
-                                        value={cardStyle.successColor || '#4ade80'}
-                                        onChange={(c) => updateAppCardStyle(selectedCard.id, { successColor: c })}
-                                        presets={[
-                                            { name: 'Green', value: '#4ade80' },
-                                            { name: 'Cyan', value: '#22d3ee' },
-                                            { name: 'Accent', value: '#F5C542' },
-                                        ]}
-                                    />
-                                </div>
+                                {CARD_COLORS[selectedCard.type]?.map(colorOpt => (
+                                    <div key={colorOpt.key} className="space-y-1.5">
+                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">{colorOpt.name}</label>
+                                        <ColorPicker
+                                            value={cardStyle[colorOpt.key] || colorOpt.default}
+                                            onChange={(c) => updateAppCardStyle(selectedCard.id, { [colorOpt.key]: c })}
+                                            presets={COLOR_PRESETS}
+                                        />
+                                    </div>
+                                ))}
+                                {!CARD_COLORS[selectedCard.type] && (
+                                    <>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] text-muted-foreground font-bold uppercase">Success Color</label>
+                                            <ColorPicker
+                                                value={cardStyle.successColor || '#4ade80'}
+                                                onChange={(c) => updateAppCardStyle(selectedCard.id, { successColor: c })}
+                                                presets={[
+                                                    { name: 'Green', value: '#4ade80' },
+                                                    { name: 'Cyan', value: '#22d3ee' },
+                                                    { name: 'Accent', value: '#F5C542' },
+                                                ]}
+                                            />
+                                        </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Danger Color</label>
-                                    <ColorPicker
-                                        value={cardStyle.dangerColor || '#f87171'}
-                                        onChange={(c) => updateAppCardStyle(selectedCard.id, { dangerColor: c })}
-                                        presets={[
-                                            { name: 'Red', value: '#f87171' },
-                                            { name: 'Orange', value: '#fb923c' },
-                                            { name: 'Pink', value: '#ec4899' },
-                                        ]}
-                                    />
-                                </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] text-muted-foreground font-bold uppercase">Danger Color</label>
+                                            <ColorPicker
+                                                value={cardStyle.dangerColor || '#f87171'}
+                                                onChange={(c) => updateAppCardStyle(selectedCard.id, { dangerColor: c })}
+                                                presets={[
+                                                    { name: 'Red', value: '#f87171' },
+                                                    { name: 'Orange', value: '#fb923c' },
+                                                    { name: 'Pink', value: '#ec4899' },
+                                                ]}
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </CollapsibleSection>
 

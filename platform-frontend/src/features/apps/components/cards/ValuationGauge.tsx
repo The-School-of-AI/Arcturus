@@ -39,7 +39,7 @@ export const ValuationGauge: React.FC<ValuationGaugeProps> = ({
     const position = Math.max(0, Math.min(100, ((marketPrice - rangeMin) / (rangeMax - rangeMin)) * 100));
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={title} textColor={textColor}>
             <div className="flex flex-col gap-4">
                 {showPrices && (
                     <div className="flex justify-between items-end">

@@ -29,9 +29,10 @@ export const TableCard: React.FC<TableCardProps> = ({
     const striped = config.striped !== false;
     const hoverHighlight = config.hoverHighlight !== false;
     const showBorders = config.showBorders !== false;
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
 
     return (
-        <BaseCard title={tableTitle}>
+        <BaseCard title={tableTitle} textColor={textColor}>
             <div className={cn(
                 "w-full text-xs text-left text-muted-foreground min-w-[200px]",
                 showBorders && "border border-border rounded"
@@ -41,7 +42,7 @@ export const TableCard: React.FC<TableCardProps> = ({
                     <div className={cn(
                         "flex pb-2 mb-2 font-bold text-foreground",
                         showBorders ? "border-b border-border px-2 pt-2" : "border-b border-border"
-                    )}>
+                    )} style={textColor ? { color: textColor, borderColor: `${textColor}30` } : {}}>
                         {tableHeaders.map((h: string, i: number) => (
                             <div key={i} className="flex-1 px-1">{h}</div>
                         ))}
@@ -58,6 +59,7 @@ export const TableCard: React.FC<TableCardProps> = ({
                                 striped && idx % 2 === 1 && "bg-muted/50",
                                 hoverHighlight && "hover:bg-muted"
                             )}
+                            style={textColor ? { color: textColor } : {}}
                         >
                             {row.map((cell: string, cellIdx: number) => (
                                 <div key={cellIdx} className="flex-1 px-1 truncate">{cell}</div>

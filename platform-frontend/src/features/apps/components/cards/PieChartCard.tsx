@@ -98,7 +98,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     let cumulativeOffset = 0;
 
     return (
-        <BaseCard title={showTitle ? title : undefined}>
+        <BaseCard title={showTitle ? title : undefined} textColor={textColor}>
             <div className="flex items-center h-full gap-4 pie-container relative">
                 {/* Tooltip */}
                 {tooltip.visible && (

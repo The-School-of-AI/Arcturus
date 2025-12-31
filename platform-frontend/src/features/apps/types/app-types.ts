@@ -46,6 +46,15 @@ export interface BaseAppCardStyle {
     textColor?: string;
     successColor?: string;
     dangerColor?: string;
+    passColor?: string;
+    warnColor?: string;
+    infoColor?: string;
+    gradeA?: string;
+    gradeB?: string;
+    gradeC?: string;
+    gradeD?: string;
+    gradeF?: string;
+    [key: string]: any; // Allow dynamic indexing for color overrides
 }
 
 // --- Specific Data & Config Types ---
