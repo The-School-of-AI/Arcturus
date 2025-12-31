@@ -13,9 +13,10 @@ interface SelectionMenuProps {
     onAdd: (text: string) => void;
     onShowChat: () => void;
     activeUrl: string | null;
+    iframeRef: React.RefObject<HTMLIFrameElement | null>;
 }
 
-const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, activeUrl }) => {
+const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, activeUrl, iframeRef }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [currentText, setCurrentText] = useState("");
@@ -31,9 +32,19 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, active
         const handleMessage = (event: MessageEvent) => {
             // Listen for selection events from iframe
             if (event.data?.type === 'TEXT_SELECTED') {
-                const { text, x, y } = event.data;
+                const { text, x, y, source } = event.data;
                 if (text && text.length > 0) {
-                    setPosition({ x, y: y - 30 });
+                    let finalX = x;
+                    let finalY = y;
+
+                    // If simple coordinates from iframe (clientX/Y), add iframe offset
+                    if (source === 'iframe' && iframeRef.current) {
+                        const iframeRect = iframeRef.current.getBoundingClientRect();
+                        finalX += iframeRect.left;
+                        finalY += iframeRect.top;
+                    }
+
+                    setPosition({ x: finalX, y: finalY - 30 });
                     setCurrentText(text);
                     setIsVisible(true);
                 }
@@ -108,7 +119,10 @@ export const NewsArticleViewer: React.FC = () => {
     const [readerContent, setReaderContent] = useState<string | null>(null);
     const [loadingReader, setLoadingReader] = useState(false);
     const [isGithubReadme, setIsGithubReadme] = useState(false);
+    const [zoomLevel, setZoomLevel] = useState(100);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const activeUrl = activeNewsTab || newsTabs[0];
 
@@ -250,11 +264,8 @@ export const NewsArticleViewer: React.FC = () => {
                                         type: 'TEXT_SELECTED',
                                         text: text,
                                         x: x,
-                                        y: y
-                                    }, '*');
-                                }
-                            });
-                                        y: rect.top + window.scrollY
+                                        y: y,
+                                        source: 'iframe'
                                     }, '*');
                                 }
                             });
@@ -459,7 +470,7 @@ export const NewsArticleViewer: React.FC = () => {
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-background overflow-hidden">
+        <div ref={containerRef} className="flex-1 flex flex-col bg-background overflow-hidden">
             {/* Tab Bar */}
             <div className="h-10 bg-muted/40 flex items-center px-2 gap-1 overflow-x-auto scrollbar-hide border-b border-border/50 shrink-0">
                 {newsTabs.map((url) => (
@@ -561,6 +572,53 @@ export const NewsArticleViewer: React.FC = () => {
                     >
                         <ExternalLink className="w-3.5 h-3.5" />
                     </button>
+
+                    <div className="w-px h-4 bg-border/50 mx-1" />
+
+                    {/* Zoom Controls */}
+                    <div className="flex items-center bg-muted/50 rounded-md border border-border/50">
+                        <button
+                            onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
+                            className="p-1 hover:bg-background rounded-l-md transition-colors text-muted-foreground"
+                            title="Zoom Out"
+                        >
+                            <span className="text-[10px] font-bold px-1">-</span>
+                        </button>
+                        <span className="text-[10px] px-1 min-w-[3ch] text-center font-mono">{zoomLevel}%</span>
+                        <button
+                            onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
+                            className="p-1 hover:bg-background rounded-r-md transition-colors text-muted-foreground"
+                            title="Zoom In"
+                        >
+                            <Plus className="w-3 h-3" />
+                        </button>
+                    </div>
+
+                    {/* Fullscreen Toggle */}
+                    <button
+                        onClick={() => {
+                            if (!document.fullscreenElement) {
+                                containerRef.current?.requestFullscreen();
+                                setIsFullscreen(true);
+                            } else {
+                                document.exitFullscreen();
+                                setIsFullscreen(false);
+                            }
+                        }}
+                        className={cn(
+                            "p-1.5 rounded-md transition-colors",
+                            isFullscreen
+                                ? "bg-primary text-primary-foreground"
+                                : "hover:bg-muted text-muted-foreground"
+                        )}
+                        title="Toggle Fullscreen"
+                    >
+                        {isFullscreen ? (
+                            <X className="w-3.5 h-3.5" /> // Using X for exit fullscreen
+                        ) : (
+                            <div className="w-3.5 h-3.5 border-2 border-current rounded-[1px]" /> // Simple box icon
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -609,7 +667,8 @@ export const NewsArticleViewer: React.FC = () => {
                                     type: 'TEXT_SELECTED',
                                     text: text,
                                     x: rect.left + rect.width / 2,
-                                    y: rect.top
+                                    y: rect.top,
+                                    source: 'reader'
                                 }, '*');
                             }
                         }}
@@ -618,12 +677,17 @@ export const NewsArticleViewer: React.FC = () => {
                         }}
                     >
                         {/* Use GitHub markdown styling for GitHub READMEs */}
+                        {/* Use GitHub markdown styling for GitHub READMEs */}
                         <div className={cn(
                             "max-w-3xl mx-auto",
                             isGithubReadme
                                 ? "markdown-body"
                                 : "prose prose-slate dark:prose-invert prose-sm"
-                        )} style={isGithubReadme ? { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem' } : undefined}>
+                        )} style={{
+                            ...(isGithubReadme ? { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem' } : undefined),
+                            transform: `scale(${zoomLevel / 100})`,
+                            transformOrigin: 'top center'
+                        }}>
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {readerContent}
                             </ReactMarkdown>
@@ -637,6 +701,7 @@ export const NewsArticleViewer: React.FC = () => {
                         ref={iframeRef}
                         srcDoc={htmlContent}
                         className="w-full h-full border-0"
+                        style={{ zoom: zoomLevel / 100 }}
                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                         title="Article Content"
                     />
@@ -647,6 +712,7 @@ export const NewsArticleViewer: React.FC = () => {
                     onAdd={(text) => addSelectedContext(text)}
                     onShowChat={() => setShowNewsChatPanel(true)}
                     activeUrl={activeUrl ?? null}
+                    iframeRef={iframeRef}
                 />
             </div>
         </div>
