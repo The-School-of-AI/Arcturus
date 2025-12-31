@@ -69,7 +69,8 @@ export const NewsInspector: React.FC = () => {
         newsTabs,
         selectedContexts,
         removeSelectedContext,
-        clearSelectedContexts
+        clearSelectedContexts,
+        setShowNewsChatPanel
     } = useAppStore();
 
     const [inputValue, setInputValue] = useState('');
@@ -212,6 +213,12 @@ export const NewsInspector: React.FC = () => {
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{activeTitle}</p>
                 </div>
+                <button
+                    onClick={() => setShowNewsChatPanel(false)}
+                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                >
+                    Exit
+                </button>
             </div>
 
             {/* Chat History */}

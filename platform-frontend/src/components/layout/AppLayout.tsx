@@ -35,7 +35,7 @@ import { NewsArticleViewer } from '@/features/news/components/NewsArticleViewer'
 import { NewsInspector } from '@/features/news/components/NewsInspector';
 
 export const AppLayout: React.FC = () => {
-    const { viewMode, sidebarTab, isAppViewMode, newsTabs } = useAppStore();
+    const { viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel } = useAppStore();
     const [leftWidth, setLeftWidth] = useState(400); // w-64 = 256px
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -91,8 +91,8 @@ export const AppLayout: React.FC = () => {
             {!isAppViewMode && <Header />}
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode */}
-                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && (
+                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown */}
+                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && (
                     <>
                         <div
                             className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"
@@ -141,7 +141,8 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp' || sidebarTab === 'news') && !isFullScreen && !isAppViewMode && (
+                {/* Right panel - for news tab, only show when chat panel is active */}
+                {((sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp') || (sidebarTab === 'news' && showNewsChatPanel)) && !isFullScreen && !isAppViewMode && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 

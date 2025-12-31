@@ -10,9 +10,10 @@ import remarkGfm from 'remark-gfm';
 // Selection Menu Component for adding text to context
 interface SelectionMenuProps {
     onAdd: (text: string) => void;
+    onShowChat: () => void;
 }
 
-const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
+const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [currentText, setCurrentText] = useState("");
@@ -44,6 +45,7 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
         e.preventDefault();
         if (currentText) {
             onAdd(currentText);
+            onShowChat(); // Show the chat panel when adding context
             setIsAdded(true);
             setTimeout(() => {
                 setIsVisible(false);
@@ -86,7 +88,8 @@ export const NewsArticleViewer: React.FC = () => {
         closeNewsTab,
         closeAllNewsTabs,
         openNewsTab,
-        addSelectedContext
+        addSelectedContext,
+        setShowNewsChatPanel
     } = useAppStore();
 
     const [htmlContent, setHtmlContent] = useState<string | null>(null);
@@ -206,6 +209,69 @@ export const NewsArticleViewer: React.FC = () => {
                                     }, '*');
                                 }
                             }, true);
+                            
+                            // Auto-dismiss cookie banners
+                            setTimeout(function() {
+                                // Common cookie consent button selectors
+                                const cookieSelectors = [
+                                    // Accept buttons
+                                    'button[id*="accept"]',
+                                    'button[id*="Accept"]',
+                                    'button[class*="accept"]',
+                                    'button[class*="Accept"]',
+                                    'button[aria-label*="Accept"]',
+                                    'button[aria-label*="accept"]',
+                                    'button[data-testid*="accept"]',
+                                    // Reject buttons
+                                    'button[id*="reject"]',
+                                    'button[class*="reject"]',
+                                    'button[aria-label*="Reject"]',
+                                    // Close buttons on modals
+                                    '[class*="cookie"] button',
+                                    '[id*="cookie"] button',
+                                    '[class*="consent"] button',
+                                    '[id*="consent"] button',
+                                    '[class*="gdpr"] button',
+                                    // Specific sites
+                                    '.cc-dismiss',
+                                    '.cc-btn-accept',
+                                    '#onetrust-accept-btn-handler',
+                                    '.accept-cookies',
+                                    '.cookie-accept',
+                                    '#cookie-accept',
+                                    '.js-accept-cookies'
+                                ];
+                                
+                                for (const selector of cookieSelectors) {
+                                    const buttons = document.querySelectorAll(selector);
+                                    buttons.forEach(function(btn) {
+                                        const text = btn.textContent?.toLowerCase() || '';
+                                        if (text.includes('accept') || text.includes('agree') || text.includes('ok') || text.includes('got it') || text.includes('reject') || text.includes('close')) {
+                                            btn.click();
+                                        }
+                                    });
+                                }
+                                
+                                // Also try to hide common cookie banner containers
+                                const bannerSelectors = [
+                                    '[class*="cookie-banner"]',
+                                    '[class*="cookie-notice"]',
+                                    '[class*="cookie-consent"]',
+                                    '[id*="cookie-banner"]',
+                                    '[id*="cookie-notice"]',
+                                    '[class*="cookieBanner"]',
+                                    '[class*="gdpr"]',
+                                    '.cc-window',
+                                    '#onetrust-banner-sdk'
+                                ];
+                                
+                                bannerSelectors.forEach(function(sel) {
+                                    const els = document.querySelectorAll(sel);
+                                    els.forEach(function(el) {
+                                        el.style.display = 'none';
+                                    });
+                                });
+                            }, 1000);
                         </script>
                     `;
                     const modifiedHtml = res.data.html.replace('</body>', injectedScript + '</body>');
@@ -435,7 +501,27 @@ export const NewsArticleViewer: React.FC = () => {
 
                 {/* Reader Mode - Markdown Content */}
                 {readerMode && readerContent && !loading && (
-                    <div className="w-full h-full overflow-y-auto bg-background p-8">
+                    <div
+                        className="w-full h-full overflow-y-auto bg-background p-8"
+                        onMouseUp={(e) => {
+                            const selection = window.getSelection();
+                            const text = selection ? selection.toString().trim() : '';
+                            if (text && text.length > 0) {
+                                const range = selection!.getRangeAt(0);
+                                const rect = range.getBoundingClientRect();
+                                // Simulate the same message as iframe
+                                window.postMessage({
+                                    type: 'TEXT_SELECTED',
+                                    text: text,
+                                    x: rect.left + rect.width / 2,
+                                    y: rect.top
+                                }, '*');
+                            }
+                        }}
+                        onMouseDown={() => {
+                            window.postMessage({ type: 'SELECTION_CLEARED' }, '*');
+                        }}
+                    >
                         <div className="max-w-3xl mx-auto prose prose-slate dark:prose-invert prose-sm">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {readerContent}
@@ -456,7 +542,10 @@ export const NewsArticleViewer: React.FC = () => {
                 )}
 
                 {/* Selection Menu - floats above iframe */}
-                <SelectionMenu onAdd={(text) => addSelectedContext(text)} />
+                <SelectionMenu
+                    onAdd={(text) => addSelectedContext(text)}
+                    onShowChat={() => setShowNewsChatPanel(true)}
+                />
             </div>
         </div>
     );
