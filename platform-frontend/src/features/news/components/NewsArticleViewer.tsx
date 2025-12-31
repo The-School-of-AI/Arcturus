@@ -6,18 +6,26 @@ import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import 'github-markdown-css/github-markdown.css';
 
 // Selection Menu Component for adding text to context
 interface SelectionMenuProps {
     onAdd: (text: string) => void;
     onShowChat: () => void;
+    activeUrl: string | null;
 }
 
-const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat }) => {
+const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, activeUrl }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [currentText, setCurrentText] = useState("");
     const [isAdded, setIsAdded] = useState(false);
+
+    // Clear visibility when active URL changes (switching tabs)
+    useEffect(() => {
+        setIsVisible(false);
+        setCurrentText("");
+    }, [activeUrl]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -99,6 +107,7 @@ export const NewsArticleViewer: React.FC = () => {
     const [readerMode, setReaderMode] = useState(false);
     const [readerContent, setReaderContent] = useState<string | null>(null);
     const [loadingReader, setLoadingReader] = useState(false);
+    const [isGithubReadme, setIsGithubReadme] = useState(false);
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     const activeUrl = activeNewsTab || newsTabs[0];
@@ -134,16 +143,72 @@ export const NewsArticleViewer: React.FC = () => {
         return () => window.removeEventListener('message', handleMessage);
     }, [activeUrl, openNewsTab]);
 
-    // Fetch rendered HTML when tab changes
+    // Content cache with 30-minute TTL
+    const contentCacheRef = useRef<Map<string, { html: string; timestamp: number }>>(new Map());
+    const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+    // Fetch rendered HTML when tab changes (with caching)
     useEffect(() => {
         if (!activeUrl) {
             setHtmlContent(null);
             return;
         }
 
+        // Reset reader mode when changing tabs
+        setReaderMode(false);
+        setReaderContent(null);
+        setIsGithubReadme(false);
+
+        // Check cache first
+        const cached = contentCacheRef.current.get(activeUrl);
+        const now = Date.now();
+        if (cached && (now - cached.timestamp) < CACHE_TTL) {
+            setHtmlContent(cached.html);
+            setError(null);
+            return;
+        }
+
         const fetchContent = async () => {
             setLoading(true);
             setError(null);
+
+            // Special handling for GitHub URLs - try to fetch README
+            const githubMatch = activeUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+            if (githubMatch) {
+                const [, owner, repo] = githubMatch;
+                const cleanRepo = repo.replace(/\?.*$/, '').replace(/#.*$/, ''); // Remove query/hash
+                try {
+                    // Try to fetch README.md from raw.githubusercontent.com
+                    const readmeUrls = [
+                        `https://raw.githubusercontent.com/${owner}/${cleanRepo}/main/README.md`,
+                        `https://raw.githubusercontent.com/${owner}/${cleanRepo}/master/README.md`,
+                    ];
+
+                    for (const readmeUrl of readmeUrls) {
+                        try {
+                            const readmeRes = await axios.get(readmeUrl, { timeout: 5000 });
+                            if (readmeRes.status === 200 && typeof readmeRes.data === 'string') {
+                                // Got README, auto-activate reader mode with this content
+                                setReaderContent(readmeRes.data);
+                                setReaderMode(true);
+                                setIsGithubReadme(true);
+                                setLoading(false);
+                                // Cache a placeholder HTML
+                                contentCacheRef.current.set(activeUrl, {
+                                    html: '<div>GitHub README - Using Reader Mode</div>',
+                                    timestamp: Date.now()
+                                });
+                                return;
+                            }
+                        } catch (e) {
+                            // README not found at this path, try next
+                        }
+                    }
+                } catch (e) {
+                    // Fall through to regular fetch
+                }
+            }
+
             try {
                 const res = await axios.get(`${API_BASE}/news/article`, {
                     params: { url: activeUrl }
@@ -276,6 +341,8 @@ export const NewsArticleViewer: React.FC = () => {
                     `;
                     const modifiedHtml = res.data.html.replace('</body>', injectedScript + '</body>');
                     setHtmlContent(modifiedHtml);
+                    // Cache the content
+                    contentCacheRef.current.set(activeUrl, { html: modifiedHtml, timestamp: Date.now() });
                 } else {
                     setError(res.data.error || 'Failed to load page');
                 }
@@ -428,37 +495,39 @@ export const NewsArticleViewer: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                    {/* Reader Mode Toggle */}
-                    <button
-                        onClick={async () => {
-                            if (!readerMode && activeUrl) {
-                                setLoadingReader(true);
-                                try {
-                                    const res = await axios.get(`${API_BASE}/news/reader`, {
-                                        params: { url: activeUrl }
-                                    });
-                                    if (res.data.status === 'success') {
-                                        setReaderContent(res.data.content);
-                                        setReaderMode(true);
+                    {/* Reader Mode Toggle - hidden for GitHub READMEs */}
+                    {!isGithubReadme && (
+                        <button
+                            onClick={async () => {
+                                if (!readerMode && activeUrl) {
+                                    setLoadingReader(true);
+                                    try {
+                                        const res = await axios.get(`${API_BASE}/news/reader`, {
+                                            params: { url: activeUrl }
+                                        });
+                                        if (res.data.status === 'success') {
+                                            setReaderContent(res.data.content);
+                                            setReaderMode(true);
+                                        }
+                                    } catch (e) {
+                                        console.error('Failed to fetch reader content', e);
                                     }
-                                } catch (e) {
-                                    console.error('Failed to fetch reader content', e);
+                                    setLoadingReader(false);
+                                } else {
+                                    setReaderMode(false);
                                 }
-                                setLoadingReader(false);
-                            } else {
-                                setReaderMode(false);
-                            }
-                        }}
-                        className={cn(
-                            "px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-colors",
-                            readerMode
-                                ? "bg-cyan-500 text-white"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                        )}
-                        disabled={loadingReader}
-                    >
-                        {loadingReader ? 'Loading...' : 'Reader'}
-                    </button>
+                            }}
+                            className={cn(
+                                "px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-colors",
+                                readerMode
+                                    ? "bg-cyan-500 text-white"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            )}
+                            disabled={loadingReader}
+                        >
+                            {loadingReader ? 'Loading...' : 'Reader'}
+                        </button>
+                    )}
                     <button
                         onClick={() => window.open(activeUrl, '_blank')}
                         className="p-1.5 hover:bg-muted rounded-md transition-colors text-muted-foreground"
@@ -522,7 +591,13 @@ export const NewsArticleViewer: React.FC = () => {
                             window.postMessage({ type: 'SELECTION_CLEARED' }, '*');
                         }}
                     >
-                        <div className="max-w-3xl mx-auto prose prose-slate dark:prose-invert prose-sm">
+                        {/* Use GitHub markdown styling for GitHub READMEs */}
+                        <div className={cn(
+                            "max-w-3xl mx-auto",
+                            isGithubReadme
+                                ? "markdown-body"
+                                : "prose prose-slate dark:prose-invert prose-sm"
+                        )} style={isGithubReadme ? { backgroundColor: 'transparent' } : undefined}>
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {readerContent}
                             </ReactMarkdown>
@@ -545,6 +620,7 @@ export const NewsArticleViewer: React.FC = () => {
                 <SelectionMenu
                     onAdd={(text) => addSelectedContext(text)}
                     onShowChat={() => setShowNewsChatPanel(true)}
+                    activeUrl={activeUrl ?? null}
                 />
             </div>
         </div>

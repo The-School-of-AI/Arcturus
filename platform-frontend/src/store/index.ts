@@ -515,10 +515,16 @@ export const useAppStore = create<AppState>()(
             addSelectedContext: (text) => set((state) => ({
                 selectedContexts: [...state.selectedContexts, text]
             })),
-            removeSelectedContext: (index) => set((state) => ({
-                selectedContexts: state.selectedContexts.filter((_, i) => i !== index)
-            })),
-            clearSelectedContexts: () => set({ selectedContexts: [] }),
+            removeSelectedContext: (index) => {
+                const newContexts = get().selectedContexts.filter((_, i) => i !== index);
+                // Close chat panel when all contexts are removed
+                if (newContexts.length === 0) {
+                    set({ selectedContexts: newContexts, showNewsChatPanel: false });
+                } else {
+                    set({ selectedContexts: newContexts });
+                }
+            },
+            clearSelectedContexts: () => set({ selectedContexts: [], showNewsChatPanel: false }),
             selectedMcpServer: null,
             setSelectedMcpServer: (server) => set({ selectedMcpServer: server, sidebarTab: 'mcp' }),
 
@@ -1010,10 +1016,11 @@ export const useAppStore = create<AppState>()(
                 if (active === url) {
                     active = tabs.length > 0 ? tabs[tabs.length - 1] : null;
                 }
-                set({ newsTabs: tabs, activeNewsTab: active });
+                // Also clear selected contexts when closing a tab
+                set({ newsTabs: tabs, activeNewsTab: active, selectedContexts: [] });
             },
 
-            closeAllNewsTabs: () => set({ newsTabs: [], activeNewsTab: null }),
+            closeAllNewsTabs: () => set({ newsTabs: [], activeNewsTab: null, selectedContexts: [] }),
             setActiveNewsTab: (url) => set({ activeNewsTab: url }),
 
             // Saved articles
