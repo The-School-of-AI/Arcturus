@@ -185,7 +185,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                     ((type === 'line' || type === 'area') && series.length >= 1) ||
                     (type === 'bar' && barPoints.length >= 1)
                 ) && (
-                        <div className="flex flex-wrap gap-4 mb-2">
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 mb-6">
                             {type === 'bar' ? (
                                 barPoints.map((p: any, i: number) => (
                                     <div key={i} className="flex items-center gap-1.5">
@@ -306,7 +306,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                                         <div key={i} className="relative flex-1 h-full flex items-end group">
                                             <div
                                                 className={cn(
-                                                    "w-full rounded-t-sm transition-all duration-300 cursor-crosshair hover:brightness-125",
+                                                    "w-full rounded-t-sm transition-all duration-300 cursor-crosshair hover:brightness-125 relative",
                                                     animate && "origin-bottom animate-in slide-in-from-bottom-2"
                                                 )}
                                                 style={{ height: `${heightPercent}%`, backgroundColor: point.color || accentColor, opacity: 0.85 }}
@@ -315,7 +315,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                                                 onMouseLeave={hideTooltip}
                                             >
                                                 {showValues && (
-                                                    <div className={cn("absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold", !textColor && "text-foreground")} style={textColor ? { color: textColor } : {}}>
+                                                    <div className={cn("absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-extrabold", !textColor && "text-foreground")} style={textColor ? { color: textColor } : {}}>
                                                         {point.y}
                                                     </div>
                                                 )}

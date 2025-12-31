@@ -133,15 +133,15 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                     </div>
                 )}
 
-                <div className="flex-1 relative border-l border-b border-white/20 mb-5 ml-6">
+                <div className="flex-1 relative border-l border-b border-border mb-5 ml-6">
                     {/* Grid lines */}
                     {showGrid && (
                         <>
                             <div className="absolute inset-0 flex flex-col justify-between opacity-10 pointer-events-none">
-                                {[0, 1, 2, 3, 4].map(i => <div key={i} className="w-full border-t border-white" />)}
+                                {[0, 1, 2, 3, 4].map(i => <div key={i} className="w-full border-t border-foreground" />)}
                             </div>
                             <div className="absolute inset-0 flex justify-between opacity-10 pointer-events-none">
-                                {[0, 1, 2, 3, 4].map(i => <div key={i} className="h-full border-r border-white" />)}
+                                {[0, 1, 2, 3, 4].map(i => <div key={i} className="h-full border-r border-foreground" />)}
                             </div>
                         </>
                     )}

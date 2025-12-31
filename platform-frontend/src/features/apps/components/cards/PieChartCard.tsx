@@ -41,6 +41,9 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
 
+    // Use theme-aware colors by default
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
+
     // Support both data.slices (from inspector) and direct array (legacy)
     const rawSlices = Array.isArray(data) ? data : (data.slices || defaultSlices);
 
@@ -155,7 +158,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
                     {isDonut && (
                         <div className="absolute inset-0 flex items-center justify-center">
                             <div className="text-center">
-                                <div className="text-lg font-bold" style={{ color: style.textColor || '#fff' }}>{total}</div>
+                                <div className="text-lg font-bold" style={textColor ? { color: textColor } : {}}>{total}</div>
                                 <div className="text-[8px] text-muted-foreground">Total</div>
                             </div>
                         </div>

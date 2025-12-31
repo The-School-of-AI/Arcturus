@@ -89,7 +89,8 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
 
     // Style
     const accentColor = style.accentColor || '#F5C542';
-    const textColor = style.textColor || '#ffffff';
+    // Use theme-aware colors by default, only override if explicitly provided and NOT white
+    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
 
     // Use default data if not provided or empty
     const inputData = (data?.nodes?.length && data?.links?.length) ? data : DEFAULT_SANKEY_DATA;
@@ -265,7 +266,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                     {showGrid && (
                         <div className="absolute inset-0 opacity-10 pointer-events-none">
                             <div className="w-full h-full" style={{
-                                backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)',
+                                backgroundImage: 'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
                                 backgroundSize: '40px 40px'
                             }} />
                         </div>
@@ -321,7 +322,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                                         dy="0.35em"
                                         textAnchor={n.layer === 0 ? "start" : "end"}
                                         className="text-[11px] font-semibold pointer-events-none uppercase tracking-wide"
-                                        fill={textColor}
+                                        fill={textColor || "currentColor"}
                                         style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}
                                     >
                                         {n.name}
@@ -332,7 +333,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                     </svg>
                 </div>
 
-                {showLegend && nodes.length > 0 && (
+                {showLegend && nodes.length >= 1 && (
                     <div className="flex flex-wrap gap-2 mt-1 justify-center border-t border-border/50 pt-2">
                         {nodes.map((n, i) => (
                             <div key={i} className="flex items-center gap-1.5">
