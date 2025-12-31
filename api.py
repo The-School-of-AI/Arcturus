@@ -84,7 +84,9 @@ app.include_router(settings_router.router)
 app.include_router(explorer_router.router)
 app.include_router(mcp_router.router)
 from routers import prompts as prompts_router
+from routers import news as news_router
 app.include_router(prompts_router.router)
+app.include_router(news_router.router)
 
 
 

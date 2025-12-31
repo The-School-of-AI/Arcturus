@@ -30,9 +30,12 @@ import { McpBrowser } from '../mcp/McpBrowser';
 import { McpInspector } from '../mcp/McpInspector';
 import { SettingsPage } from '../settings/SettingsPage';
 import { RemMeProfileView } from '../remme/RemmeProfileView';
+import { NewsList } from '@/features/news/components/NewsList';
+import { NewsArticleViewer } from '@/features/news/components/NewsArticleViewer';
+import { NewsInspector } from '@/features/news/components/NewsInspector';
 
 export const AppLayout: React.FC = () => {
-    const { viewMode, sidebarTab, isAppViewMode } = useAppStore();
+    const { viewMode, sidebarTab, isAppViewMode, newsTabs } = useAppStore();
     const [leftWidth, setLeftWidth] = useState(400); // w-64 = 256px
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -118,6 +121,8 @@ export const AppLayout: React.FC = () => {
                             <RemMeProfileView />
                         ) : sidebarTab === 'explorer' ? (
                             <FlowWorkspace />
+                        ) : sidebarTab === 'news' ? (
+                            newsTabs.length > 0 ? <NewsArticleViewer /> : <NewsList />
                         ) : (
                             <>
                                 <GraphCanvas />
@@ -136,7 +141,7 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp') && !isFullScreen && !isAppViewMode && (
+                {(sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp' || sidebarTab === 'news') && !isFullScreen && !isAppViewMode && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 
@@ -145,7 +150,7 @@ export const AppLayout: React.FC = () => {
                             className="h-full border-l border-border bg-card/50 backdrop-blur-sm flex-shrink-0 flex flex-col"
                             style={{ width: rightWidth }}
                         >
-                            {sidebarTab === 'apps' ? <AppInspector /> : sidebarTab === 'mcp' ? <McpInspector /> : <WorkspacePanel />}
+                            {sidebarTab === 'apps' ? <AppInspector /> : sidebarTab === 'mcp' ? <McpInspector /> : sidebarTab === 'news' ? <NewsInspector /> : <WorkspacePanel />}
                         </div>
                     </>
                 )}

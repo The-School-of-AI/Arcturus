@@ -14,6 +14,7 @@ import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
 import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
+import { NewsPanel } from '@/components/sidebar/NewsPanel';
 
 export const Sidebar: React.FC = () => {
     const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
@@ -243,11 +244,11 @@ export const Sidebar: React.FC = () => {
                 {sidebarTab === 'remme' && <RemmePanel />}
                 {sidebarTab === 'explorer' && <ExplorerPanel />}
                 {sidebarTab === 'apps' && <AppsSidebar />}
-                {['news', 'learn'].includes(sidebarTab) && (
+                {sidebarTab === 'news' && <NewsPanel />}
+                {sidebarTab === 'learn' && (
                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
                         <div className="p-6 bg-muted/50 rounded-full ring-1 ring-white/10">
-                            {sidebarTab === 'news' && <Newspaper className="w-12 h-12" />}
-                            {sidebarTab === 'learn' && <GraduationCap className="w-12 h-12" />}
+                            <GraduationCap className="w-12 h-12" />
                         </div>
                         <div className="space-y-1">
                             <h2 className="text-xl font-bold text-foreground uppercase tracking-tighter">Under Construction</h2>

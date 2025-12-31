@@ -185,9 +185,25 @@ interface AgentTestSlice {
     discardTestResult: () => void;
 }
 
-// --- Store Creation ---
+interface NewsSlice {
+    newsItems: any[];
+    newsSources: any[];
+    selectedNewsSourceId: string | null;
+    newsTabs: string[];
+    activeNewsTab: string | null;
+    isNewsLoading: boolean;
+    fetchNewsSources: () => Promise<void>;
+    fetchNewsFeed: (sourceId?: string) => Promise<void>;
+    setSelectedNewsSourceId: (id: string | null) => void;
+    addNewsSource: (name: string, url: string) => Promise<void>;
+    deleteNewsSource: (id: string) => Promise<void>;
+    openNewsTab: (url: string) => void;
+    closeNewsTab: (url: string) => void;
+    closeAllNewsTabs: () => void;
+    setActiveNewsTab: (url: string | null) => void;
+}
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -911,6 +927,80 @@ export const useAppStore = create<AppState>()(
                     }
                 });
             },
+
+            // --- News Slice ---
+            newsItems: [],
+            newsSources: [],
+            selectedNewsSourceId: null,
+            newsTabs: [],
+            activeNewsTab: null,
+            isNewsLoading: false,
+
+            fetchNewsSources: async () => {
+                try {
+                    const res = await api.get(`${API_BASE}/news/sources`);
+                    set({ newsSources: res.data.sources });
+                } catch (e) {
+                    console.error("Failed to fetch news sources", e);
+                }
+            },
+
+            fetchNewsFeed: async (sourceId) => {
+                set({ isNewsLoading: true });
+                try {
+                    const url = sourceId ? `${API_BASE}/news/feed?source_id=${sourceId}` : `${API_BASE}/news/feed`;
+                    const res = await api.get(url);
+                    set({ newsItems: res.data.items });
+                } catch (e) {
+                    console.error("Failed to fetch news feed", e);
+                } finally {
+                    set({ isNewsLoading: false });
+                }
+            },
+
+            setSelectedNewsSourceId: (id) => {
+                set({ selectedNewsSourceId: id });
+                get().fetchNewsFeed(id || undefined);
+            },
+
+            addNewsSource: async (name, url) => {
+                try {
+                    await api.post(`${API_BASE}/news/sources`, { name, url });
+                    get().fetchNewsSources();
+                } catch (e) {
+                    console.error("Failed to add news source", e);
+                }
+            },
+
+            deleteNewsSource: async (id) => {
+                try {
+                    await api.delete(`${API_BASE}/news/sources/${id}`);
+                    get().fetchNewsSources();
+                } catch (e) {
+                    console.error("Failed to delete news source", e);
+                }
+            },
+
+            openNewsTab: (url) => {
+                const tabs = get().newsTabs;
+                if (!tabs.includes(url)) {
+                    set({ newsTabs: [...tabs, url], activeNewsTab: url });
+                } else {
+                    set({ activeNewsTab: url });
+                }
+            },
+
+            closeNewsTab: (url) => {
+                const tabs = get().newsTabs.filter(t => t !== url);
+                let active = get().activeNewsTab;
+                if (active === url) {
+                    active = tabs.length > 0 ? tabs[tabs.length - 1] : null;
+                }
+                set({ newsTabs: tabs, activeNewsTab: active });
+            },
+
+            closeAllNewsTabs: () => set({ newsTabs: [], activeNewsTab: null }),
+            setActiveNewsTab: (url) => set({ activeNewsTab: url }),
         }),
         {
             name: 'agent-platform-storage',
@@ -930,7 +1020,9 @@ export const useAppStore = create<AppState>()(
                 savedApps: state.savedApps,
                 editingAppId: state.editingAppId,
                 lastSavedState: state.lastSavedState,
-                isAppViewMode: state.isAppViewMode
+                isAppViewMode: state.isAppViewMode,
+                newsSources: state.newsSources,
+                newsItems: state.newsItems, // PERSIST NEWS ITEMS for faster reload
             }),
         }
     )
