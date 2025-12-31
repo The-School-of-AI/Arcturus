@@ -653,11 +653,10 @@ export const NewsArticleViewer: React.FC = () => {
                     </div>
                 )}
 
-                {/* Reader Mode */}
                 {readerMode ? (
                     readerContent && (
                         <div
-                            className="w-full h-full overflow-y-auto bg-background p-8"
+                            className="absolute inset-0 w-full h-full overflow-y-auto bg-background p-8 z-10"
                             onMouseUp={(e) => {
                                 const selection = window.getSelection();
                                 const text = selection ? selection.toString().trim() : '';
@@ -704,7 +703,27 @@ export const NewsArticleViewer: React.FC = () => {
                 ) : (
                     /* Web Mode */
                     isPdfUrl(activeUrl || '') ? (
-                        <div className="absolute inset-0 z-0 bg-background">
+                        <div
+                            className="absolute inset-0 z-0 bg-background"
+                            onMouseUp={(e) => {
+                                const selection = window.getSelection();
+                                const text = selection ? selection.toString().trim() : '';
+                                if (text && text.length > 0) {
+                                    const range = selection!.getRangeAt(0);
+                                    const rect = range.getBoundingClientRect();
+                                    window.postMessage({
+                                        type: 'TEXT_SELECTED',
+                                        text: text,
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top,
+                                        source: 'pdf_viewer'
+                                    }, '*');
+                                }
+                            }}
+                            onMouseDown={() => {
+                                window.postMessage({ type: 'SELECTION_CLEARED' }, '*');
+                            }}
+                        >
                             <PDFViewer
                                 url={`${API_BASE}/news/proxy?url=${encodeURIComponent(activeUrl || '')}`}
                                 theme={theme === 'dark' ? 'dark' : 'light'}

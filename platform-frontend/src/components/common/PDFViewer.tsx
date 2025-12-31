@@ -24,6 +24,12 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ url, theme = 'light', clas
 
     return (
         <div className={`h-full w-full overflow-hidden ${className}`}>
+            <style>{`
+                .rpv-core__text-layer-text::selection,
+                .rpv-core__text-layer-text ::selection {
+                    background-color: rgba(255, 221, 0, 0.9) !important;
+                }
+            `}</style>
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
                 <div style={{ height: '100%', width: '100%' }}>
                     <Viewer
