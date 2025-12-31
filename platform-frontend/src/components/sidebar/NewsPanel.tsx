@@ -1,5 +1,5 @@
 import React from 'react';
-import { Newspaper, Plus, Trash2, Globe, RefreshCw, Rss, ChevronLeft, FileText, Loader2 } from 'lucide-react';
+import { Newspaper, Plus, Trash2, Globe, RefreshCw, Rss, ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
@@ -18,6 +18,7 @@ export const NewsPanel: React.FC = () => {
         selectedNewsSourceId,
         setSelectedNewsSourceId,
         fetchNewsSources,
+        fetchNewsFeed,
         addNewsSource,
         deleteNewsSource,
         newsItems,
@@ -29,10 +30,19 @@ export const NewsPanel: React.FC = () => {
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [newName, setNewName] = React.useState("");
     const [newUrl, setNewUrl] = React.useState("");
+    const [viewMode, setViewMode] = React.useState<'sources' | 'articles'>('sources');
 
     React.useEffect(() => {
         fetchNewsSources();
     }, []);
+
+    // When a source is selected, switch to articles view
+    const handleSelectSource = (sourceId: string | null) => {
+        setSelectedNewsSourceId(sourceId);
+        if (sourceId !== null) {
+            setViewMode('articles');
+        }
+    };
 
     const handleAddSource = async () => {
         if (!newName.trim() || !newUrl.trim()) return;
@@ -42,17 +52,16 @@ export const NewsPanel: React.FC = () => {
         setIsAddOpen(false);
     };
 
-    // When a source is selected, show its articles in the sidebar
-    const showArticleList = selectedNewsSourceId !== null;
+    const selectedSource = newsSources.find(s => s.id === selectedNewsSourceId);
 
     return (
         <div className="flex flex-col h-full bg-card text-foreground">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                    {showArticleList && (
+                    {viewMode === 'articles' && (
                         <button
-                            onClick={() => setSelectedNewsSourceId(null)}
+                            onClick={() => setViewMode('sources')}
                             className="p-1 hover:bg-muted rounded-md mr-1"
                         >
                             <ChevronLeft className="w-4 h-4" />
@@ -63,23 +72,23 @@ export const NewsPanel: React.FC = () => {
                     </div>
                     <div>
                         <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">
-                            {showArticleList ? newsSources.find(s => s.id === selectedNewsSourceId)?.name || 'Feed' : 'News Sources'}
+                            {viewMode === 'articles' && selectedSource ? selectedSource.name : 'News Sources'}
                         </h2>
                         <p className="text-[10px] text-cyan-400/80 font-mono tracking-widest">
-                            {showArticleList ? `${newsItems.length} ARTICLES` : `${newsSources.length} SOURCES`}
+                            {viewMode === 'articles' ? `${newsItems.length} ARTICLES` : `${newsSources.length} SOURCES`}
                         </p>
                     </div>
                 </div>
                 <button
-                    onClick={() => fetchNewsSources()}
+                    onClick={() => viewMode === 'sources' ? fetchNewsSources() : fetchNewsFeed(selectedNewsSourceId || undefined)}
                     className={cn("p-1.5 hover:bg-muted rounded-md transition-colors", isNewsLoading && "animate-spin")}
                 >
                     <RefreshCw className="w-4 h-4 text-muted-foreground" />
                 </button>
             </div>
 
-            {/* Content - Show either sources or articles */}
-            {!showArticleList ? (
+            {/* Sources View */}
+            {viewMode === 'sources' && (
                 <>
                     {/* Add Source */}
                     <div className="p-3 border-b border-border/50 bg-muted/20">
@@ -126,16 +135,11 @@ export const NewsPanel: React.FC = () => {
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
                         {/* Global / All Feed */}
                         <div
-                            onClick={() => setSelectedNewsSourceId(null)}
-                            className={cn(
-                                "group p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between",
-                                selectedNewsSourceId === null
-                                    ? "border-cyan-500/40 bg-cyan-500/5 text-cyan-400"
-                                    : "border-border/50 hover:border-white/20 hover:bg-muted/30 text-muted-foreground hover:text-foreground"
-                            )}
+                            onClick={() => handleSelectSource(null)}
+                            className="group p-3 rounded-xl border border-border/50 hover:border-white/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between text-muted-foreground hover:text-foreground"
                         >
                             <div className="flex items-center gap-3">
-                                <div className={cn("p-1.5 rounded-lg", selectedNewsSourceId === null ? "bg-cyan-500/20" : "bg-muted")}>
+                                <div className="p-1.5 rounded-lg bg-muted">
                                     <Globe className="w-4 h-4" />
                                 </div>
                                 <span className="text-sm font-medium">Global Feed</span>
@@ -148,20 +152,12 @@ export const NewsPanel: React.FC = () => {
                         {newsSources.map((source) => (
                             <div
                                 key={source.id}
-                                onClick={() => setSelectedNewsSourceId(source.id)}
-                                className={cn(
-                                    "group p-3 rounded-xl border transition-all cursor-pointer",
-                                    selectedNewsSourceId === source.id
-                                        ? "border-cyan-500/40 bg-cyan-500/5"
-                                        : "border-border/50 hover:border-white/20 hover:bg-muted/30"
-                                )}
+                                onClick={() => handleSelectSource(source.id)}
+                                className="group p-3 rounded-xl border border-border/50 hover:border-white/20 hover:bg-muted/30 transition-all cursor-pointer"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "p-1.5 rounded-lg flex items-center justify-center",
-                                            selectedNewsSourceId === source.id ? "bg-cyan-500/20 text-cyan-400" : "bg-muted text-muted-foreground"
-                                        )}>
+                                        <div className="p-1.5 rounded-lg bg-muted text-muted-foreground">
                                             {source.type === 'rss' ? (
                                                 <Rss className="w-4 h-4" />
                                             ) : (
@@ -169,10 +165,7 @@ export const NewsPanel: React.FC = () => {
                                             )}
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <span className={cn(
-                                                "text-sm font-medium truncate",
-                                                selectedNewsSourceId === source.id ? "text-cyan-400" : "text-foreground"
-                                            )}>{source.name}</span>
+                                            <span className="text-sm font-medium text-foreground truncate">{source.name}</span>
                                             <span className="text-[10px] text-muted-foreground truncate opacity-60 font-mono">{new URL(source.url).hostname}</span>
                                         </div>
                                     </div>
@@ -190,8 +183,10 @@ export const NewsPanel: React.FC = () => {
                         ))}
                     </div>
                 </>
-            ) : (
-                /* Article List for Selected Source */
+            )}
+
+            {/* Articles View */}
+            {viewMode === 'articles' && (
                 <div className="flex-1 overflow-y-auto scrollbar-hide">
                     {isNewsLoading && newsItems.length === 0 ? (
                         <div className="flex items-center justify-center py-10">

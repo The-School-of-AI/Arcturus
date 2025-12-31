@@ -122,7 +122,7 @@ export const AppLayout: React.FC = () => {
                         ) : sidebarTab === 'explorer' ? (
                             <FlowWorkspace />
                         ) : sidebarTab === 'news' ? (
-                            newsTabs.length > 0 ? <NewsArticleViewer /> : <NewsList />
+                            <NewsArticleViewer />
                         ) : (
                             <>
                                 <GraphCanvas />

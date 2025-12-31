@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { X, ExternalLink, Lock, ShieldCheck, Loader2, PlusCircle, FileText } from 'lucide-react';
+import { X, ExternalLink, Lock, ShieldCheck, Loader2, PlusCircle, FileText, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 
@@ -83,15 +83,48 @@ export const NewsArticleViewer: React.FC = () => {
         setActiveNewsTab,
         closeNewsTab,
         closeAllNewsTabs,
+        openNewsTab,
         addSelectedContext
     } = useAppStore();
 
     const [htmlContent, setHtmlContent] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [urlInput, setUrlInput] = useState('');
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     const activeUrl = activeNewsTab || newsTabs[0];
+
+    // Sync URL input with active tab
+    useEffect(() => {
+        if (activeUrl) {
+            setUrlInput(activeUrl);
+        }
+    }, [activeUrl]);
+
+    // Listen for navigation events from iframe
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'NAVIGATE' && event.data.url) {
+                // Navigate to the new URL by updating the current tab
+                const newUrl = event.data.url;
+                // Update the current tab's URL instead of opening a new tab
+                const tabs = useAppStore.getState().newsTabs;
+                const currentIdx = tabs.indexOf(activeUrl || '');
+                if (currentIdx >= 0) {
+                    // Replace current tab
+                    const newTabs = [...tabs];
+                    newTabs[currentIdx] = newUrl;
+                    useAppStore.setState({ newsTabs: newTabs, activeNewsTab: newUrl });
+                } else {
+                    openNewsTab(newUrl);
+                }
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [activeUrl, openNewsTab]);
 
     // Fetch rendered HTML when tab changes
     useEffect(() => {
@@ -108,9 +141,10 @@ export const NewsArticleViewer: React.FC = () => {
                     params: { url: activeUrl }
                 });
                 if (res.data.status === 'success') {
-                    // Inject a script to communicate text selection back to parent
-                    const selectionScript = `
+                    // Inject a script to communicate text selection and link clicks back to parent
+                    const injectedScript = `
                         <script>
+                            // Text selection handling
                             document.addEventListener('mouseup', function() {
                                 const selection = window.getSelection();
                                 const text = selection ? selection.toString().trim() : '';
@@ -128,9 +162,48 @@ export const NewsArticleViewer: React.FC = () => {
                             document.addEventListener('mousedown', function() {
                                 window.parent.postMessage({ type: 'SELECTION_CLEARED' }, '*');
                             });
+                            
+                            // Intercept all link clicks for navigation
+                            document.addEventListener('click', function(e) {
+                                const link = e.target.closest('a');
+                                if (link && link.href) {
+                                    const href = link.href;
+                                    // Skip javascript: and # links
+                                    if (href.startsWith('javascript:') || href === '#' || href.endsWith('#')) {
+                                        return;
+                                    }
+                                    // Skip anchor links on same page
+                                    if (href.includes('#') && href.split('#')[0] === window.location.href.split('#')[0]) {
+                                        return;
+                                    }
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.parent.postMessage({
+                                        type: 'NAVIGATE',
+                                        url: href
+                                    }, '*');
+                                }
+                            }, true);
+                            
+                            // Intercept form submissions
+                            document.addEventListener('submit', function(e) {
+                                const form = e.target;
+                                if (form && form.action) {
+                                    e.preventDefault();
+                                    const formData = new FormData(form);
+                                    const params = new URLSearchParams(formData).toString();
+                                    const url = form.method.toLowerCase() === 'get' 
+                                        ? form.action + '?' + params 
+                                        : form.action;
+                                    window.parent.postMessage({
+                                        type: 'NAVIGATE',
+                                        url: url
+                                    }, '*');
+                                }
+                            }, true);
                         </script>
                     `;
-                    const modifiedHtml = res.data.html.replace('</body>', selectionScript + '</body>');
+                    const modifiedHtml = res.data.html.replace('</body>', injectedScript + '</body>');
                     setHtmlContent(modifiedHtml);
                 } else {
                     setError(res.data.error || 'Failed to load page');
@@ -146,7 +219,80 @@ export const NewsArticleViewer: React.FC = () => {
         fetchContent();
     }, [activeUrl]);
 
-    if (newsTabs.length === 0) return null;
+    // Handle URL navigation
+    const handleNavigate = (input: string) => {
+        if (!input.trim()) return;
+
+        let url = input.trim();
+
+        // If it's not a URL, search via DuckDuckGo
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            if (url.includes('.') && !url.includes(' ')) {
+                // Looks like a domain
+                url = 'https://' + url;
+            } else {
+                // Search query
+                url = `https://duckduckgo.com/?q=${encodeURIComponent(url)}`;
+            }
+        }
+
+        openNewsTab(url);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleNavigate(urlInput);
+        }
+    };
+
+    // Handle new tab
+    const handleNewTab = () => {
+        // Open DuckDuckGo as default new tab
+        openNewsTab('https://duckduckgo.com/');
+    };
+
+    // Show empty state if no tabs
+    if (newsTabs.length === 0) {
+        return (
+            <div className="flex-1 flex flex-col bg-background overflow-hidden">
+                {/* Empty Browser Toolbar */}
+                <div className="h-10 bg-muted/40 flex items-center px-2 gap-1 border-b border-border/50 shrink-0">
+                    <button
+                        onClick={handleNewTab}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-cyan-400 hover:bg-cyan-500/10 rounded-md transition-colors"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Tab
+                    </button>
+                </div>
+
+                {/* Empty State */}
+                <div className="flex-1 flex flex-col items-center justify-center bg-background">
+                    <div className="p-4 bg-muted rounded-full mb-4">
+                        <Search className="w-8 h-8 text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-foreground font-bold mb-2">Start Browsing</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Select an article from the left panel or open a new tab</p>
+                    <div className="flex items-center gap-2 w-full max-w-md">
+                        <input
+                            type="text"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Search or enter URL..."
+                            className="flex-1 bg-muted/50 border border-border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <button
+                            onClick={() => handleNavigate(urlInput)}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90"
+                        >
+                            Go
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -156,7 +302,7 @@ export const NewsArticleViewer: React.FC = () => {
                     <div
                         key={url}
                         className={cn(
-                            "group flex items-center gap-2 px-3 py-1.5 rounded-t-lg text-[11px] font-medium transition-all max-w-[200px] shrink-0 cursor-pointer",
+                            "group flex items-center gap-2 px-3 py-1.5 rounded-t-lg text-[11px] font-medium transition-all max-w-[180px] shrink-0 cursor-pointer",
                             activeNewsTab === url
                                 ? "bg-card text-foreground shadow-sm border-t border-x border-border/50"
                                 : "text-muted-foreground hover:bg-muted/60"
@@ -177,6 +323,15 @@ export const NewsArticleViewer: React.FC = () => {
                     </div>
                 ))}
 
+                {/* New Tab Button */}
+                <button
+                    onClick={handleNewTab}
+                    className="p-1.5 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                    title="New Tab"
+                >
+                    <Plus className="w-4 h-4" />
+                </button>
+
                 <div className="flex-1" />
 
                 <button
@@ -187,14 +342,21 @@ export const NewsArticleViewer: React.FC = () => {
                 </button>
             </div>
 
-            {/* Browser-like Toolbar */}
+            {/* Browser-like Toolbar with Editable URL */}
             <div className="h-10 bg-card border-b border-border/50 flex items-center px-4 gap-3 shrink-0">
-                <div className="flex-1 flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
-                    <Lock className="w-3 h-3 text-green-500/60" />
-                    <span className="text-[11px] text-muted-foreground truncate font-mono">{activeUrl}</span>
+                <div className="flex-1 flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/50">
+                    <Lock className="w-3 h-3 text-green-500/60 shrink-0" />
+                    <input
+                        type="text"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Enter URL or search..."
+                        className="flex-1 bg-transparent text-[11px] text-foreground font-mono focus:outline-none"
+                    />
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5 text-cyan-500/60" />
                     <span className="uppercase tracking-widest hidden sm:block">Rendered</span>
                     <button
@@ -242,7 +404,7 @@ export const NewsArticleViewer: React.FC = () => {
                         ref={iframeRef}
                         srcDoc={htmlContent}
                         className="w-full h-full border-0"
-                        sandbox="allow-scripts allow-same-origin"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                         title="Article Content"
                     />
                 )}

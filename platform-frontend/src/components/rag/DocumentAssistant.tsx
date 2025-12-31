@@ -360,9 +360,6 @@ export const DocumentAssistant: React.FC = () => {
                         <Send className="w-4 h-4" />
                     </button>
                 </div>
-                <div className="mt-2 text-[10px] text-muted-foreground text-center">
-                    AI can make mistakes. Review generated responses.
-                </div>
             </div>
         </div>
     );
