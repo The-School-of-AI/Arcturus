@@ -33,7 +33,7 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, active
             if (event.data?.type === 'TEXT_SELECTED') {
                 const { text, x, y } = event.data;
                 if (text && text.length > 0) {
-                    setPosition({ x, y: y - 40 });
+                    setPosition({ x, y: y - 30 });
                     setCurrentText(text);
                     setIsVisible(true);
                 }
@@ -144,7 +144,14 @@ export const NewsArticleViewer: React.FC = () => {
     }, [activeUrl, openNewsTab]);
 
     // Content cache with 30-minute TTL
-    const contentCacheRef = useRef<Map<string, { html: string; timestamp: number }>>(new Map());
+    // Content cache with 30-minute TTL
+    const contentCacheRef = useRef<Map<string, {
+        html: string;
+        timestamp: number;
+        readerMode?: boolean;
+        readerContent?: string | null;
+        isGithubReadme?: boolean;
+    }>>(new Map());
     const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
     // Fetch rendered HTML when tab changes (with caching)
@@ -154,19 +161,29 @@ export const NewsArticleViewer: React.FC = () => {
             return;
         }
 
-        // Reset reader mode when changing tabs
-        setReaderMode(false);
-        setReaderContent(null);
-        setIsGithubReadme(false);
-
         // Check cache first
         const cached = contentCacheRef.current.get(activeUrl);
         const now = Date.now();
         if (cached && (now - cached.timestamp) < CACHE_TTL) {
             setHtmlContent(cached.html);
+            // Restore extended state if available
+            if (cached.readerMode !== undefined) setReaderMode(cached.readerMode);
+            else setReaderMode(false);
+
+            if (cached.readerContent !== undefined) setReaderContent(cached.readerContent);
+            else setReaderContent(null);
+
+            if (cached.isGithubReadme !== undefined) setIsGithubReadme(cached.isGithubReadme);
+            else setIsGithubReadme(false);
+
             setError(null);
             return;
         }
+
+        // Reset state if not in cache
+        setReaderMode(false);
+        setReaderContent(null);
+        setIsGithubReadme(false);
 
         const fetchContent = async () => {
             setLoading(true);
@@ -193,10 +210,13 @@ export const NewsArticleViewer: React.FC = () => {
                                 setReaderMode(true);
                                 setIsGithubReadme(true);
                                 setLoading(false);
-                                // Cache a placeholder HTML
+                                // Cache the content with extended state
                                 contentCacheRef.current.set(activeUrl, {
                                     html: '<div>GitHub README - Using Reader Mode</div>',
-                                    timestamp: Date.now()
+                                    timestamp: Date.now(),
+                                    readerMode: true,
+                                    readerContent: readmeRes.data,
+                                    isGithubReadme: true
                                 });
                                 return;
                             }
