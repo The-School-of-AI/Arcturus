@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle, RefreshCw, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
@@ -95,7 +95,8 @@ export const WorkspacePanel: React.FC = () => {
     const {
         codeContent, webUrl, logs, selectedNodeId, nodes, sidebarTab,
         flowData, selectedExplorerNodeId, currentRun,
-        testMode, runAgentTest, saveTestResult, discardTestResult
+        testMode, runAgentTest, saveTestResult, discardTestResult,
+        generateAppFromReport
     } = useAppStore();
     const [activeTab, setActiveTab] = React.useState<'overview' | 'code' | 'web' | 'preview' | 'output' | 'compare'>('overview');
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
@@ -143,6 +144,12 @@ export const WorkspacePanel: React.FC = () => {
         }
     }, [testMode.active, testMode.isLoading, testMode.testOutput, testMode.error, testMode.executionResult, testMode.nodeId, selectedNode?.id, activeTab]);
 
+    const handleRerunFormatter = () => {
+        if (currentRun?.id && selectedNode?.id) {
+            runAgentTest(currentRun.id, selectedNode.id);
+        }
+    };
+
     if (sidebarTab === 'rag') {
         return <DocumentAssistant />;
     }
@@ -185,6 +192,32 @@ export const WorkspacePanel: React.FC = () => {
                         <span className="ml-auto text-[10px] text-muted-foreground font-mono">
                             {selectedNode?.id}
                         </span>
+
+                        {/* Build App Icon - Next to Agent Title */}
+                        {!isExplorer && currentRun?.id && selectedNode?.id && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const { isGeneratingApp, generateAppFromReport } = useAppStore.getState();
+                                    if (isGeneratingApp) return;
+                                    generateAppFromReport(currentRun.id, selectedNode.id);
+                                }}
+                                disabled={useAppStore.getState().isGeneratingApp}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-all",
+                                    useAppStore.getState().isGeneratingApp
+                                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                        : "hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow"
+                                )}
+                                title="Build App from this Node"
+                            >
+                                {useAppStore.getState().isGeneratingApp ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <LayoutGrid className="w-3.5 h-3.5" />
+                                )}
+                            </button>
+                        )}
 
                         {/* RUN AGAIN Button - Only for completed/failed/stale nodes */}
                         {selectedNode?.data.status && ['completed', 'failed', 'stale'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
@@ -1138,6 +1171,26 @@ export const WorkspacePanel: React.FC = () => {
                                                                 <div className="flex flex-col gap-2">
                                                                     <div className="flex items-center justify-between mb-1">
                                                                         <span className="text-xs text-muted-foreground font-medium">Web Preview (50% Zoom)</span>
+                                                                        <button
+                                                                            onClick={handleRerunFormatter}
+                                                                            className="p-1 hover:bg-white/10 rounded text-xs text-blue-400 flex items-center gap-1"
+                                                                            title="Run Again"
+                                                                        >
+                                                                            <RefreshCw size={14} />
+                                                                            <span>RUN AGAIN</span>
+                                                                        </button>
+
+                                                                        {/* Create App Button */}
+                                                                        {selectedNode.data?.status === 'completed' && (
+                                                                            <button
+                                                                                onClick={() => generateAppFromReport(currentRun?.id || "", selectedNode.id)}
+                                                                                className="p-1 hover:bg-white/10 rounded text-xs text-yellow-400 flex items-center gap-1"
+                                                                                title="Create App from Report"
+                                                                            >
+                                                                                <LayoutGrid size={14} />
+                                                                                <span>CREATE APP</span>
+                                                                            </button>
+                                                                        )}
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();

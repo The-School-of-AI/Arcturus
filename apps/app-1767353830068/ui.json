@@ -1,0 +1,174 @@
+{
+  "name": "Air Purifier Market Analysis Dashboard",
+  "description": "Generated from report",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Header",
+      "config": {
+        "centered": true
+      },
+      "data": {
+        "text": "Demand Analysis and Competitive Benchmark for Air Purifiers in India's Metro Cities (2027-2029)"
+      },
+      "style": {}
+    },
+    {
+      "id": "summary",
+      "type": "summary",
+      "label": "Executive Summary",
+      "data": {
+        "text": "The India air purifier market is experiencing robust growth, fueled by increasing air pollution, greater health awareness, and supportive government initiatives. This report provides a comprehensive analysis of the market demand, competitive landscape, key drivers and inhibitors, and competitive benchmarking for air purifiers in India's metro cities, focusing on the period from 2027 to 2029."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_market_size_fy19",
+      "type": "metric",
+      "label": "Market Size FY19",
+      "data": {
+        "value": "\u20b9189 crore"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_market_size_fy24",
+      "type": "metric",
+      "label": "Market Size FY24",
+      "data": {
+        "value": "\u20b9248 crore"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_market_size_fy29",
+      "type": "metric",
+      "label": "Projected Market Size FY29",
+      "data": {
+        "value": "\u20b9564 crore"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_cagr",
+      "type": "metric",
+      "label": "Projected CAGR (FY19-FY29)",
+      "data": {
+        "value": "17.9%"
+      },
+      "style": {}
+    },
+    {
+      "id": "demand_forecast",
+      "type": "markdown",
+      "label": "Demand Forecast (2027-2029)",
+      "data": {
+        "content": "The market is projected to experience substantial growth in the coming years. Forecasts indicate a strong CAGR, driven by increasing health consciousness and worsening air quality in metropolitan areas. MarkSpark Solutions projects a CAGR of 20.9% to reach 4.23 million units by 2032 (T002). Another report indicates a CAGR of 6.1% during 2025-2031 (6W Research, T001)."
+      },
+      "style": {}
+    },
+    {
+      "id": "growth_drivers",
+      "type": "markdown",
+      "label": "Key Growth Drivers",
+      "data": {
+        "content": "<ul><li><b>Rising Urban Air Pollution:</b> Alarmingly high AQI levels in major cities drive the need for indoor air purification.</li><li><b>Increased Health Awareness:</b> Growing awareness of respiratory illnesses and allergies increases demand for air purifiers.</li><li><b>Government Initiatives:</b> Programs like the National Clean Air Program (NCAP) create opportunities for market growth.</li><li><b>Technological Upgrades:</b> Smart air purifiers with IoT-enabled controls and real-time monitoring are gaining popularity.</li><li><b>Rising Disposable Incomes:</b> Increased purchasing power allows more households to invest in air purifiers.</li></ul>"
+      },
+      "style": {}
+    },
+    {
+      "id": "demand_inhibitors",
+      "type": "markdown",
+      "label": "Demand Inhibitors",
+      "data": {
+        "content": "<ul><li><b>Affordability:</b> The high cost of air purifiers remains a barrier for many consumers.</li><li><b>Limited Awareness:</b> Lack of awareness about the effectiveness of air purifiers hinders growth.</li><li><b>Ozone Emission Concerns:</b> Concerns about ozone emissions from some purifiers deter some buyers.</li><li><b>Competition from Alternatives:</b> Cheaper alternatives, such as indoor plants, provide competition.</li></ul>"
+      },
+      "style": {}
+    },
+    {
+      "id": "competitive_landscape",
+      "type": "markdown",
+      "label": "Competitive Landscape",
+      "data": {
+        "content": "The India air purifier market is characterized by a mix of domestic and international players. Key players include Xiaomi, Philips, Dyson, Daikin, Honeywell, and Eureka Forbes.\n\nXiaomi and Philips have gained traction through affordable pricing and brand recognition. Dyson and Daikin target the premium segment with high-performance models (Mordor Intelligence, T003). Eureka Forbes has a strong domestic presence and service network (Info1India, T003)."
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "summary",
+      "x": 0,
+      "y": 2,
+      "w": 24,
+      "h": 5
+    },
+    {
+      "i": "metric_market_size_fy19",
+      "x": 0,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_market_size_fy24",
+      "x": 6,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_market_size_fy29",
+      "x": 12,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_cagr",
+      "x": 18,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "demand_forecast",
+      "x": 0,
+      "y": 10,
+      "w": 24,
+      "h": 6
+    },
+    {
+      "i": "growth_drivers",
+      "x": 0,
+      "y": 16,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "demand_inhibitors",
+      "x": 12,
+      "y": 16,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "competitive_landscape",
+      "x": 0,
+      "y": 22,
+      "w": 24,
+      "h": 6
+    }
+  ],
+  "id": "app-1767353830068",
+  "lastModified": 1767353830068,
+  "lastHydrated": 1767353830068
+}

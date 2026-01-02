@@ -228,9 +228,116 @@ async def generate_app(request: GenerateAppRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class GenerateFromReportRequest(BaseModel):
+    report_content: str
+    globals_json: Optional[dict] = {}
+    model: Optional[str] = None
+
+
+@router.post("/generate_from_report")
+async def generate_from_report(request: GenerateFromReportRequest):
+    """Generate a new app using AI based on a structured report."""
+    import yaml
+    try:
+        print(f"[GenerateFromReport] Starting app generation from report...")
+        print(f"[GenerateFromReport] Report length: {len(request.report_content)} chars")
+        
+        # Load generation prompt
+        prompt_file = PROJECT_ROOT / "prompts" / "ReportToAppPrompt.md"
+
+        if not prompt_file.exists():
+            raise HTTPException(status_code=500, detail="Report-to-App prompt not found")
+        
+        generation_prompt = prompt_file.read_text()
+        generation_prompt = generation_prompt.replace("{{REPORT_CONTENT}}", request.report_content)
+        
+        # Prepare globals context (limit size if too large)
+        globals_str = json.dumps(request.globals_json, indent=2)
+        if len(globals_str) > 100000:
+             print("[GenerateFromReport] Globals too large, truncating...")
+             globals_str = globals_str[:100000] + "...(truncated)"
+             
+        generation_prompt = generation_prompt.replace("{{GLOBALS_CONTENT}}", globals_str)
+        print(f"[GenerateFromReport] Prompt prepared, length: {len(generation_prompt)} chars")
+        
+        # Get model from settings
+        config_dir = PROJECT_ROOT / "config"
+        profile = yaml.safe_load((config_dir / "profiles.yaml").read_text())
+        models_config = json.loads((config_dir / "models.json").read_text())
+        
+        model_key = profile.get("llm", {}).get("text_generation", "gemini")
+        model_info = models_config.get("models", {}).get(model_key, {})
+        model = model_info.get("model", "gemini-2.0-flash")
+        
+        # Allow request override
+        if request.model:
+            model = request.model
+        print(f"[GenerateFromReport] Using model: {model} (from config key: {model_key})")
+        
+        # Call Gemini
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+        # No Google Search needed - we have the report
+        print("[GenerateFromReport] Calling Gemini...")
+        response = client.models.generate_content(
+            model=model,
+            contents=generation_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3
+            )
+        )
+        response_text = response.text.strip()
+        print(f"[GenerateFromReport] Got response, length: {len(response_text)} chars")
+        
+        # Clean up response
+        json_match = re.search(r'```(?:json)?\s*\n(.*?)\n```', response_text, re.DOTALL)
+        if json_match:
+            response_text = json_match.group(1).strip()
+        else:
+            json_start = response_text.find('{')
+            if json_start > 0:
+                response_text = response_text[json_start:].strip()
+        
+        # Parse JSON
+        generated_data = json.loads(response_text)
+        print(f"[GenerateFromReport] Parsed JSON successfully, {len(generated_data.get('cards', []))} cards")
+        
+        # Create app ID and folder
+        app_id = f"app-{int(time.time() * 1000)}"
+        apps_dir = PROJECT_ROOT / "apps"
+        apps_dir.mkdir(exist_ok=True)
+        
+        app_folder = apps_dir / app_id
+        app_folder.mkdir(exist_ok=True)
+        
+        # Add metadata
+        generated_data["id"] = app_id
+        if "name" not in generated_data:
+            generated_data["name"] = "Report Dashboard"
+        generated_data["description"] = "Generated from report"
+        generated_data["lastModified"] = int(time.time() * 1000)
+        generated_data["lastHydrated"] = int(time.time() * 1000)
+        
+        # Save to file
+        ui_file = app_folder / "ui.json"
+        ui_file.write_text(json.dumps(generated_data, indent=2))
+        print(f"[GenerateFromReport] Saved generated app to {ui_file}")
+        
+        return {"status": "success", "id": app_id, "data": generated_data}
+    except json.JSONDecodeError as e:
+        print(f"[GenerateFromReport] JSON parse error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response as JSON: {str(e)}")
+    except Exception as e:
+        print(f"[GenerateFromReport] Error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/{app_id}/hydrate")
 async def hydrate_app(app_id: str, request: HydrateRequest = None):
-    """Use AI to populate data fields based on each card's context."""
     import yaml
     try:
         print(f"[Hydrate] Starting hydration for app: {app_id}")

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
-    LayoutGrid, Newspaper, GraduationCap, Settings, Code2
+    LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -194,18 +194,29 @@ export const Sidebar: React.FC = () => {
                                                     {run.name}
                                                 </p>
                                             </div>
-                                            <div className="flex flex-col gap-2 -mr-1">
-                                                <button
-                                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm('Delete this run?')) useAppStore.getState().deleteRun(run.id);
-                                                    }}
-                                                    title="Delete run"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
+                                            {/* Build App Button - Top Right */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const { isGeneratingApp, generateAppFromReport } = useAppStore.getState();
+                                                    if (isGeneratingApp) return;
+                                                    generateAppFromReport(run.id);
+                                                }}
+                                                disabled={useAppStore.getState().isGeneratingApp}
+                                                className={cn(
+                                                    "opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all duration-200",
+                                                    useAppStore.getState().isGeneratingApp
+                                                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                                        : "hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow"
+                                                )}
+                                                title="Build App from this Run"
+                                            >
+                                                {useAppStore.getState().isGeneratingApp ? (
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                    <LayoutGrid className="w-3.5 h-3.5" />
+                                                )}
+                                            </button>
                                         </div>
 
                                         {/* Footer - Only visible when Active */}
@@ -216,11 +227,24 @@ export const Sidebar: React.FC = () => {
                                                         <Clock className="w-3 h-3" />
                                                         {new Date(run.createdAt).toLocaleDateString()}
                                                     </span>
+
                                                     {run.total_tokens !== undefined && (
                                                         <span className="text-[9px] text-muted-foreground font-mono opacity-70">
                                                             • {run.total_tokens.toLocaleString()} tks
                                                         </span>
                                                     )}
+
+                                                    {/* Delete Button - Moved to Footer */}
+                                                    <button
+                                                        className="p-1 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-400 transition-all duration-200"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm('Delete this run?')) useAppStore.getState().deleteRun(run.id);
+                                                        }}
+                                                        title="Delete run"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
 
                                                 </div>
                                                 <span className={cn(

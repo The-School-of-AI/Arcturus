@@ -45,11 +45,14 @@ export const api = {
     },
 
     // Get specific run graph
-    getRunGraph: async (runId: string): Promise<{ nodes: PlatformNode[], edges: PlatformEdge[] }> => {
+    // Get specific run graph
+    getRunGraph: async (runId: string): Promise<{ nodes: PlatformNode[], edges: PlatformEdge[], graph: any }> => {
         const res = await axios.get<API_RunDetail>(`${API_BASE}/runs/${runId}`);
         return {
             nodes: res.data.graph.nodes,
-            edges: res.data.graph.edges
+            edges: res.data.graph.edges,
+            // Pass the whole graph object (minus nodes/edges if desired, or duplicate) to access globals
+            graph: res.data.graph
         };
     },
 

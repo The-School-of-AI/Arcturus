@@ -1242,6 +1242,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 const SavedAppsList = () => {
     const { savedApps, loadApp, deleteApp, editingAppId, fetchApps } = useAppStore();
     const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'name' | 'time'>('time');
 
     // Auto-refresh apps every 5 seconds (Pseudo Hot-Loading)
     useEffect(() => {
@@ -1250,9 +1251,19 @@ const SavedAppsList = () => {
         return () => clearInterval(interval);
     }, [fetchApps]);
 
+    const sortedApps = savedApps
+        .filter(app => app.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .sort((a, b) => {
+            if (sortBy === 'name') {
+                return a.name.localeCompare(b.name);
+            } else {
+                return (b.lastModified || 0) - (a.lastModified || 0); // Newest first
+            }
+        });
+
     return (
         <div className="flex flex-col gap-4">
-            {/* Sticky Search Bar - Full width override over parent padding */}
+            {/* Sticky Search Bar + Sort */}
             <div className="sticky top-0 px-4 pt-4 pb-2 z-20 bg-card border-b border-border/50">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -1262,6 +1273,32 @@ const SavedAppsList = () => {
                         placeholder="Search apps..."
                         className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all"
                     />
+                </div>
+                {/* Minimal Sort Toggle */}
+                <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Sort:</span>
+                    <button
+                        onClick={() => setSortBy('time')}
+                        className={cn(
+                            "text-[9px] uppercase tracking-wider px-2 py-0.5 rounded transition-colors",
+                            sortBy === 'time'
+                                ? "text-neon-yellow bg-neon-yellow/10"
+                                : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        Time
+                    </button>
+                    <button
+                        onClick={() => setSortBy('name')}
+                        className={cn(
+                            "text-[9px] uppercase tracking-wider px-2 py-0.5 rounded transition-colors",
+                            sortBy === 'name'
+                                ? "text-neon-yellow bg-neon-yellow/10"
+                                : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        Name
+                    </button>
                 </div>
             </div>
 
@@ -1274,56 +1311,53 @@ const SavedAppsList = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {savedApps
-                            .filter(app => app.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(app => {
-                                const isActive = app.id === editingAppId;
-                                return (
-                                    <div
-                                        key={app.id}
-                                        className={cn(
-                                            "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                            "bg-gradient-to-br from-card to-muted/20",
-                                            "hover:shadow-md",
-                                            isActive
-                                                ? "border-neon-yellow/40 hover:border-neon-yellow/60"
-                                                : "border-border/50 hover:border-white/20"
-                                        )}
-                                        onClick={() => loadApp(app.id)}
-                                    >
-                                        <div className="flex justify-between items-start gap-0">
-                                            <div className="flex-1 min-w-0">
-                                                <p className={cn(
-                                                    "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
-                                                    "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
-                                                    isActive ? "text-neon-yellow" : "text-foreground"
-                                                )}>
-                                                    {app.name}
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
-                                                title="Delete App"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                        {sortedApps.map(app => {
+                            const isActive = app.id === editingAppId;
+                            return (
+                                <div
+                                    key={app.id}
+                                    className={cn(
+                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                        "bg-gradient-to-br from-card to-muted/20",
+                                        "hover:shadow-md",
+                                        isActive
+                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60"
+                                            : "border-border/50 hover:border-white/20"
+                                    )}
+                                    onClick={() => loadApp(app.id)}
+                                >
+                                    <div className="flex justify-between items-start gap-0">
+                                        <div className="flex-1 min-w-0">
+                                            <p className={cn(
+                                                "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
+                                                "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
+                                                isActive ? "text-neon-yellow" : "text-foreground"
+                                            )}>
+                                                {app.name}
+                                            </p>
                                         </div>
-
-                                        <div className="mt-0 pt-0 border-t border-border/50 flex items-center justify-between">
-                                            <span className="text-[9px] text-muted-foreground font-mono">
-                                                {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
-                                            </span>
-                                            {isActive && (
-                                                <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter bg-neon-yellow/10 text-neon-yellow">
-                                                    ACTIVE
-                                                </span>
-                                            )}
-                                        </div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
+                                            className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-400 transition-all duration-200"
+                                            title="Delete App"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
-                                );
-                            })}
+
+                                    <div className="mt-0 pt-0 border-t border-border/50 flex items-center justify-between">
+                                        <span className="text-[9px] text-muted-foreground font-mono">
+                                            {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
+                                        </span>
+                                        {isActive && (
+                                            <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter bg-neon-yellow/10 text-neon-yellow">
+                                                ACTIVE
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

@@ -84,8 +84,8 @@ interface RagViewerSlice {
     setActiveDocument: (docId: string) => void;
     ragSearchQuery: string;
     setRagSearchQuery: (query: string) => void;
-    ragSearchResults: any[];
-    setRagSearchResults: (results: any[]) => void;
+    ragSearchResults: unknown[];
+    setRagSearchResults: (results: unknown[]) => void;
     ragKeywordMatches: string[];
     setRagKeywordMatches: (matches: string[]) => void;
     addMessageToDocChat: (docId: string, message: ChatMessage) => void;
@@ -115,28 +115,42 @@ interface AnalysisHistoryItem {
     path: string;
     timestamp: number;
     type: 'local' | 'github';
-    flowData?: any;
+    flowData?: unknown;
 }
 
 import type { AppCard, SavedApp } from '../features/apps/types/app-types';
 
+interface LayoutItem {
+    i: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    minW?: number;
+    maxW?: number;
+    minH?: number;
+    maxH?: number;
+    static?: boolean;
+    [key: string]: unknown; // Allow additional properties from react-grid-layout
+}
+
 interface AppsSlice {
     appCards: AppCard[];
-    appLayout: any[];
+    appLayout: LayoutItem[];
     selectedAppCardId: string | null;
-    selectedLibraryComponent: any | null; // For sidebar preview
+    selectedLibraryComponent: unknown | null; // For sidebar preview
     savedApps: SavedApp[];
     editingAppId: string | null;
-    lastSavedState: { cards: AppCard[], layout: any[] } | null;
+    lastSavedState: { cards: AppCard[], layout: LayoutItem[] } | null;
     setAppCards: (cards: AppCard[]) => void;
-    addAppCard: (card: AppCard, layoutItem: any) => void;
+    addAppCard: (card: AppCard, layoutItem: LayoutItem) => void;
     removeAppCard: (id: string) => void;
     updateAppCardConfig: (id: string, config: any) => void;
     updateAppCardStyle: (id: string, style: any) => void;
     updateAppCardData: (id: string, data: any) => void;
     updateAppCardLabel: (id: string, label: string) => void;
     updateAppCardContext: (id: string, context: string) => void;
-    setAppLayout: (layout: any[]) => void;
+    setAppLayout: (layout: LayoutItem[]) => void;
     selectAppCard: (id: string | null) => void;
     selectLibraryComponent: (component: any | null) => void;
     fetchApps: () => Promise<void>;
@@ -147,6 +161,8 @@ interface AppsSlice {
     deleteApp: (id: string) => Promise<void>;
     hydrateApp: (id: string) => Promise<void>;
     generateApp: (name: string, prompt: string) => Promise<void>;
+    isGeneratingApp: boolean;
+    generateAppFromReport: (runId: string, nodeId?: string) => Promise<void>;
     loadShowcaseApp: () => Promise<void>;
     isAppViewMode: boolean;
     setIsAppViewMode: (isView: boolean) => void;
@@ -769,18 +785,136 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            generateApp: async (name, prompt) => {
+            generateApp: async (prompt) => {
                 try {
-                    const result = await api.generateApp(name, prompt);
+                    // Create a pseudo-run for app generation tracking if needed, 
+                    // or just call the API directly.
+                    // For now, simple direct call as per previous implementation logic
+                    // Pass a default name based on prompt or generic
+                    const appName = "Generated App " + new Date().toLocaleTimeString();
+                    const result = await api.generateApp(appName, prompt);
+
                     if (result.status === 'success' && result.data) {
-                        // Refresh apps list to include the new generated app
-                        await get().fetchApps();
-                        // Load the newly generated app
                         await get().loadApp(result.id, result.data);
                     }
                 } catch (e) {
                     console.error("Failed to generate app", e);
                     throw e;
+                }
+            },
+
+            isGeneratingApp: false,
+
+            generateAppFromReport: async (runId, nodeId) => {
+                if (get().isGeneratingApp) return;
+                set({ isGeneratingApp: true });
+
+                try {
+                    const currentRunId = runId || get().currentRun?.id;
+                    if (!currentRunId) {
+                        alert("No active run found.");
+                        set({ isGeneratingApp: false });
+                        return;
+                    }
+
+                    // Show progress alert
+                    console.log("[BuildApp] Starting app generation...");
+
+                    // 1. Fetch Node Output (Report) + Globals
+                    const graphData = await api.getRunGraph(currentRunId);
+
+                    // Locate Formatter Node - check both type and label
+                    let targetNodeId = nodeId;
+                    if (!targetNodeId) {
+                        const formatterNode = graphData.nodes.find((n: any) => {
+                            const isFormatter = n.data?.type === 'FormatterAgent' ||
+                                n.data?.label?.toLowerCase().includes('formatter');
+                            const isCompleted = n.data?.status === 'completed';
+                            console.log(`[BuildApp] Checking node ${n.id}: type=${n.data?.type}, label=${n.data?.label}, status=${n.data?.status}, isFormatter=${isFormatter}, isCompleted=${isCompleted}`);
+                            return isFormatter && isCompleted;
+                        });
+                        targetNodeId = formatterNode?.id;
+
+                        if (formatterNode) {
+                            console.log(`[BuildApp] Found formatter node: ${targetNodeId}`);
+                        }
+                    }
+
+                    if (!targetNodeId) {
+                        const types = graphData.nodes.map((n: any) => `${n.id}: type=${n.data?.type}, label=${n.data?.label}, status=${n.data?.status}`).join('\n');
+                        console.error("[BuildApp] Available nodes:\n" + types);
+                        alert("No completed Formatter Agent found in this run to generate from.");
+                        set({ isGeneratingApp: false });
+                        return;
+                    }
+
+                    const node = graphData.nodes.find((n: any) => n.id === targetNodeId);
+
+                    if (!node || !node.data.output) {
+                        alert("Report data not found.");
+                        set({ isGeneratingApp: false });
+                        return;
+                    }
+
+                    // Extract report content
+                    const output = node.data.output;
+                    let reportContent = "";
+
+                    if (typeof output === 'string') {
+                        try {
+                            const parsed = JSON.parse(output);
+                            const reportKey = Object.keys(parsed).find(k => k.startsWith("formatted_report"));
+                            if (reportKey) reportContent = parsed[reportKey];
+                            else if (parsed.report) reportContent = parsed.report;
+                            else reportContent = output;
+                        } catch {
+                            reportContent = output;
+                        }
+                    } else {
+                        const reportKey = Object.keys(output).find(k => k.startsWith("formatted_report"));
+                        if (reportKey) {
+                            reportContent = (output as any)[reportKey];
+                        } else if ((output as any).report) {
+                            reportContent = (output as any).report;
+                        } else {
+                            reportContent = JSON.stringify(output);
+                        }
+                    }
+
+                    console.log(`[BuildApp] Report content length: ${reportContent.length} chars`);
+
+                    // Fetch Globals
+                    let globalsJson = {};
+                    if (graphData.graph && graphData.graph.globals_schema) {
+                        globalsJson = graphData.graph.globals_schema;
+                    }
+
+                    const payload = {
+                        report_content: reportContent,
+                        globals_json: globalsJson
+                    };
+
+                    // Trigger Generation
+                    console.log("[BuildApp] Calling backend to generate app...");
+                    const res = await api.post(`${API_BASE}/apps/generate_from_report`, payload);
+
+                    if (res.data.status === 'success') {
+                        console.log(`[BuildApp] App generated successfully: ${res.data.id}`);
+                        await get().fetchApps();
+                        // Show success message briefly
+                        alert(`App generated successfully! Redirecting...`);
+                        // Switch to apps tab and load the app
+                        get().setSidebarTab('apps');
+                        setTimeout(() => {
+                            get().loadApp(res.data.id, res.data.data);
+                        }, 100);
+                    }
+
+                } catch (e) {
+                    console.error("[BuildApp] Generate App Failed", e);
+                    alert("Failed to generate app: " + (e as any).message);
+                } finally {
+                    set({ isGeneratingApp: false });
                 }
             },
 
@@ -923,14 +1057,8 @@ export const useAppStore = create<AppState>()(
                             error: null
                         }
                     });
-                } catch (e: any) {
-                    console.error("Failed to save test result:", e);
-                    set(state => ({
-                        testMode: {
-                            ...state.testMode,
-                            error: e.response?.data?.detail || 'Failed to save'
-                        }
-                    }));
+                } catch (e) {
+                    console.error("Failed to save test result", e);
                 }
             },
 
@@ -956,14 +1084,12 @@ export const useAppStore = create<AppState>()(
             activeNewsTab: null,
             isNewsLoading: false,
             showNewsChatPanel: false,
-            setShowNewsChatPanel: (show) => set({ showNewsChatPanel: show }),
             searchResults: [],
-            setSearchResults: (results) => set({ searchResults: results }),
 
             fetchNewsSources: async () => {
                 try {
                     const res = await api.get(`${API_BASE}/news/sources`);
-                    set({ newsSources: res.data.sources });
+                    set({ newsSources: res.data.sources || [] });
                 } catch (e) {
                     console.error("Failed to fetch news sources", e);
                 }
@@ -972,20 +1098,18 @@ export const useAppStore = create<AppState>()(
             fetchNewsFeed: async (sourceId) => {
                 set({ isNewsLoading: true });
                 try {
-                    const url = sourceId ? `${API_BASE}/news/feed?source_id=${sourceId}` : `${API_BASE}/news/feed`;
-                    const res = await api.get(url);
-                    set({ newsItems: res.data.items });
+                    const endpoint = sourceId
+                        ? `${API_BASE}/news/feed?source_id=${sourceId}`
+                        : `${API_BASE}/news/feed`;
+                    const res = await api.get(endpoint);
+                    set({ newsItems: res.data.items || [], isNewsLoading: false });
                 } catch (e) {
                     console.error("Failed to fetch news feed", e);
-                } finally {
                     set({ isNewsLoading: false });
                 }
             },
 
-            setSelectedNewsSourceId: (id) => {
-                set({ selectedNewsSourceId: id });
-                get().fetchNewsFeed(id || undefined);
-            },
+            setSelectedNewsSourceId: (id) => set({ selectedNewsSourceId: id }),
 
             addNewsSource: async (name, url) => {
                 try {
@@ -995,6 +1119,10 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to add news source", e);
                 }
             },
+
+            setShowNewsChatPanel: (show) => set({ showNewsChatPanel: show }),
+
+            setSearchResults: (results) => set({ searchResults: results }),
 
             deleteNewsSource: async (id) => {
                 try {
