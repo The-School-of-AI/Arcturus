@@ -256,23 +256,8 @@ export const NewsPanel: React.FC = () => {
                     {/* Sources List */}
                     {viewMode === 'sources' && (
                         <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
-                            {/* Saved Articles Section */}
-                            {savedArticles.length > 0 && (
-                                <div
-                                    onClick={() => setViewMode('saved')}
-                                    className="group p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all cursor-pointer flex items-center justify-between"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-1.5 rounded-lg bg-amber-500/20">
-                                            <Bookmark className="w-4 h-4 text-amber-400" />
-                                        </div>
-                                        <div>
-                                            <span className="text-sm font-medium text-amber-400">Saved Articles</span>
-                                            <p className="text-[10px] text-muted-foreground">{savedArticles.length} items</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <div className="h-4" />
+                            <p className="text-[10px] font-bold text-muted-foreground px-1 uppercase tracking-widest">Available Sources</p>
 
                             {/* Global Feed */}
                             <div
@@ -283,12 +268,9 @@ export const NewsPanel: React.FC = () => {
                                     <div className="p-1.5 rounded-lg bg-muted">
                                         <Globe className="w-4 h-4" />
                                     </div>
-                                    <span className="text-sm font-medium">Global Feed</span>
+                                    <span className="text-sm font-medium text-black">AI Feed</span>
                                 </div>
                             </div>
-
-                            <div className="h-4" />
-                            <p className="text-[10px] font-bold text-muted-foreground px-1 uppercase tracking-widest">Available Sources</p>
 
                             {newsSources.map((source) => (
                                 <div
@@ -322,6 +304,24 @@ export const NewsPanel: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+
+                            {/* Saved Articles Section - REORDERED: Now after sources */}
+                            {savedArticles.length > 0 && (
+                                <div
+                                    onClick={() => setViewMode('saved')}
+                                    className="group p-3 mt-4 mb-2 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all cursor-pointer flex items-center justify-between"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-1.5 rounded-lg bg-amber-500/20">
+                                            <Bookmark className="w-4 h-4 text-amber-400" />
+                                        </div>
+                                        <div>
+                                            <span className="text-sm font-medium text-amber-400">Saved Articles</span>
+                                            <p className="text-[10px] text-muted-foreground">{savedArticles.length} items</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Add Source - MOVED TO BOTTOM of the list */}
                             <div className="pt-4 pb-2">
