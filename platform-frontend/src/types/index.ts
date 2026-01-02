@@ -20,6 +20,7 @@ export interface AgentNodeData {
     status: 'pending' | 'running' | 'completed' | 'failed' | 'waiting_input' | 'stale';
     description?: string;
     prompt?: string;
+    agent_prompt?: string; // Explicit field from backend
     reads?: string[];
     writes?: string[];
     cost?: number;
