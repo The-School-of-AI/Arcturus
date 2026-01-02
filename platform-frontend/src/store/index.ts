@@ -159,7 +159,7 @@ interface AppsSlice {
     loadApp: (id: string, initialData?: SavedApp) => Promise<void>;
     revertAppChanges: () => void;
     deleteApp: (id: string) => Promise<void>;
-    hydrateApp: (id: string) => Promise<void>;
+    hydrateApp: (id: string, userPrompt?: string) => Promise<void>;
     generateApp: (name: string, prompt: string) => Promise<void>;
     isGeneratingApp: boolean;
     generateAppFromReport: (runId: string, nodeId?: string) => Promise<void>;
@@ -767,9 +767,9 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            hydrateApp: async (id) => {
+            hydrateApp: async (id, userPrompt) => {
                 try {
-                    const result = await api.hydrateApp(id);
+                    const result = await api.hydrateApp(id, userPrompt);
                     if (result.status === 'success' && result.data) {
                         // Update local state with hydrated data
                         set((state) => ({

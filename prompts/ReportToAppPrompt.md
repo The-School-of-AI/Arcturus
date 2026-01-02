@@ -25,6 +25,7 @@ You must:
     -   **Comparisons** -> `bar_chart` or `peer_table`.
     -   **Trends** -> `line_chart` or `trend`.
 3.  **Use Globals**: If `GLOBALS_CONTENT` contains raw data (e.g., JSON lists of competitors, stock prices), PREFER using that to populate charts over converting static text.
+4. **Design**: You must keep the dashboard component heavy and interactive. Use charts, tables, and metrics to visualize the data. Do not use static text to visualize data. Less text, more charts.
 
 ## 🚨 LAYOUT RULES (CRITICAL)
 1.  **Grid Width: 24 COLUMNS** – Every row must total exactly 24 width.

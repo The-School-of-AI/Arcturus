@@ -43,6 +43,7 @@ class GenerateAppRequest(BaseModel):
 
 class HydrateRequest(BaseModel):
     model: Optional[str] = None  # Override model if needed
+    user_prompt: Optional[str] = None  # User's preferences/instructions for data refresh
 
 
 # === Endpoints ===
@@ -364,6 +365,14 @@ async def hydrate_app(app_id: str, request: HydrateRequest = None):
         current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
         hydration_prompt = hydration_prompt.replace("{{CURRENT_DATE}}", current_date)
         hydration_prompt = hydration_prompt.replace("{{JSON_CONTENT}}", json.dumps(app_data, indent=2))
+        
+        # Add user preferences if provided
+        user_prompt = ""
+        if request and hasattr(request, 'user_prompt') and request.user_prompt:
+            user_prompt = request.user_prompt
+            print(f"[Hydrate] User preferences: {user_prompt[:100]}...")
+        hydration_prompt = hydration_prompt.replace("{{USER_PROMPT}}", user_prompt)
+        
         print(f"[Hydrate] Prompt prepared with date {current_date}, length: {len(hydration_prompt)} chars")
         
         # Get model from settings (same as agents)

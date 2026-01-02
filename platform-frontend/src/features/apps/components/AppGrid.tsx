@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { AppCreationModal } from './AppCreationModal';
 import { AppGenerationModal } from './AppGenerationModal';
+import { RefetchModal } from './RefetchModal';
 import { ResponsiveGridLayout as RGLResponsiveBase } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -143,6 +144,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
     const [showCreationModal, setShowCreationModal] = useState(false);
     const [showGenerationModal, setShowGenerationModal] = useState(false);
+    const [showRefetchModal, setShowRefetchModal] = useState(false);
 
     const activeApp = savedApps.find(a => a.id === editingAppId);
 
@@ -584,28 +586,15 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 {/* Refresh Data Button - Only visible when editing a saved app */}
                 {activeApp && (
                     <button
-                        onClick={async (e) => {
+                        onClick={(e) => {
                             e.stopPropagation();
-                            const btn = e.currentTarget;
-                            btn.disabled = true;
-                            btn.querySelector('.refresh-icon')?.classList.add('animate-spin');
-                            btn.querySelector('.refresh-text')!.textContent = 'REFRESHING...';
-                            try {
-                                await hydrateApp(activeApp.id);  // Use the ID from the loaded JSON
-                            } catch (err) {
-                                console.error('Hydration failed:', err);
-                                alert('Hydration failed. Check console for details.');
-                            } finally {
-                                btn.disabled = false;
-                                btn.querySelector('.refresh-icon')?.classList.remove('animate-spin');
-                                btn.querySelector('.refresh-text')!.textContent = 'REFRESH';
-                            }
+                            setShowRefetchModal(true);
                         }}
                         className="flex items-center gap-2 px-3 py-2 rounded-lg border shadow-lg transition-all bg-muted/80 backdrop-blur border-border text-muted-foreground hover:text-foreground hover:border-primary disabled:opacity-50"
                         title="Refresh data using AI based on component contexts"
                     >
-                        <RefreshCw className="w-4 h-4 refresh-icon" />
-                        <span className="text-xs font-bold refresh-text">ReFETCH</span>
+                        <RefreshCw className="w-4 h-4" />
+                        <span className="text-xs font-bold">ReFETCH</span>
                     </button>
                 )}
 
@@ -834,6 +823,16 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 onClose={() => setShowGenerationModal(false)}
                 onGenerate={async (name, prompt) => {
                     await generateApp(name, prompt);
+                }}
+            />
+
+            <RefetchModal
+                isOpen={showRefetchModal}
+                onClose={() => setShowRefetchModal(false)}
+                onRefetch={async (userPrompt) => {
+                    if (activeApp) {
+                        await hydrateApp(activeApp.id, userPrompt);
+                    }
                 }}
             />
         </div>

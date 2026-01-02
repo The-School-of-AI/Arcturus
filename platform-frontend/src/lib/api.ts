@@ -90,8 +90,8 @@ export const api = {
         await axios.delete(`${API_BASE}/apps/${appId}`);
     },
 
-    hydrateApp: async (appId: string): Promise<any> => {
-        const res = await axios.post(`${API_BASE}/apps/${appId}/hydrate`);
+    hydrateApp: async (appId: string, userPrompt?: string): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/apps/${appId}/hydrate`, { user_prompt: userPrompt });
         return res.data;
     },
 

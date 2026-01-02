@@ -33,7 +33,7 @@
       "type": "metric",
       "label": "Market Size (2024)",
       "data": {
-        "value": "USD 1.1 Billion"
+        "value": "\u20b965.55 Billion"
       },
       "style": {}
     },
@@ -42,7 +42,7 @@
       "type": "metric",
       "label": "Projected Market Size (2033)",
       "data": {
-        "value": "USD 1.81 Billion"
+        "value": "\u20b9163.25 Billion"
       },
       "style": {}
     },
@@ -51,7 +51,7 @@
       "type": "metric",
       "label": "Projected CAGR (2025-2033)",
       "data": {
-        "value": "8.3% - 20.9%"
+        "value": "7.47% - 16.30%"
       },
       "style": {}
     },
@@ -206,6 +206,6 @@
     }
   ],
   "id": "app-1767353729581",
-  "lastModified": 1767353729581,
-  "lastHydrated": 1767353729581
+  "lastModified": 1767354311218,
+  "lastHydrated": 1767354311218
 }
