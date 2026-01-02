@@ -1,7 +1,7 @@
 {
   "id": "cfo-landing",
   "name": "CFO Command Center - IndusInd Bank",
-  "description": "Real-time financial executive dashboard for IndusInd Bank",
+  "description": "",
   "cards": [
     {
       "id": "header",
@@ -24,9 +24,9 @@
         "showSparkline": true
       },
       "data": {
-        "value": "\u20b9839.60",
-        "change": -0.55,
-        "trend": "down"
+        "value": "\u20b9908.70",
+        "change": 2.08,
+        "trend": "up"
       },
       "style": {}
     },
@@ -36,9 +36,9 @@
       "label": "Market Cap",
       "config": {},
       "data": {
-        "value": "\u20b965,403 Cr",
-        "change": -14.55,
-        "trend": "down"
+        "value": "\u20b970,642.71 Cr",
+        "change": 1.8,
+        "trend": "up"
       },
       "style": {}
     },
@@ -48,9 +48,9 @@
       "label": "P/E Ratio",
       "config": {},
       "data": {
-        "value": "-86.12x",
-        "change": -41969.04,
-        "trend": "down"
+        "value": "-91.34x",
+        "change": 5.22,
+        "trend": "up"
       },
       "style": {}
     },
@@ -60,9 +60,9 @@
       "label": "Book Value",
       "config": {},
       "data": {
-        "value": "\u20b9833.00",
-        "change": 0,
-        "trend": "neutral"
+        "value": "\u20b9835.07",
+        "change": 0.25,
+        "trend": "up"
       },
       "style": {}
     },
@@ -75,8 +75,8 @@
       },
       "data": {
         "value": "0.00%",
-        "change": -100,
-        "trend": "down"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -202,7 +202,7 @@
           },
           {
             "x": "AT1",
-            "y": 0.0
+            "y": 0
           },
           {
             "x": "Tier 2",
@@ -222,8 +222,8 @@
       "label": "Net Interest Margin",
       "config": {},
       "data": {
-        "value": "3.93%",
-        "change": -0.36,
+        "value": "4.6%",
+        "change": -0.01,
         "trend": "down"
       },
       "style": {}
@@ -235,8 +235,8 @@
       "config": {},
       "data": {
         "value": "60.15%",
-        "change": 11.95,
-        "trend": "up"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -246,9 +246,9 @@
       "label": "RoA (Annualized)",
       "config": {},
       "data": {
-        "value": "-0.1%",
-        "change": -1.8,
-        "trend": "down"
+        "value": "-0.33%",
+        "change": 0.1,
+        "trend": "up"
       },
       "style": {}
     },
@@ -259,8 +259,8 @@
       "config": {},
       "data": {
         "value": "-1.16%",
-        "change": -15.37,
-        "trend": "down"
+        "change": 0,
+        "trend": "neutral"
       },
       "style": {}
     },
@@ -686,6 +686,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767088491068,
-  "lastHydrated": 1767088491068
+  "lastModified": 1767347286599,
+  "lastHydrated": null
 }

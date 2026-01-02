@@ -1,115 +1,5 @@
 [
   {
-    "id": "c32bd73f-28f3-4c12-a9e1-b840262173c8",
-    "text": "The 10th Fibonacci number is calculated using Python and returns 55.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:06:56.593312",
-    "updated_at": "2025-12-25T07:06:56.593320",
-    "source": "backfill_66401990",
-    "faiss_id": 0,
-    "source_exists": false
-  },
-  {
-    "id": "5f86ca0d-9853-4e60-85dc-7d59b3ee300b",
-    "text": "Benefits of NetworkX:\n1. Provides a powerful tool for creating complex networks.\n2. Offers advanced graph algorithms and data structures.\n3. Facilitates the analysis and visualization of large datasets.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:07:05.628206",
-    "updated_at": "2025-12-25T07:07:05.628220",
-    "source": "backfill_66402002",
-    "faiss_id": 1,
-    "source_exists": false
-  },
-  {
-    "id": "e60e04eb-ae64-43a8-bd65-0bcf802f41a4",
-    "text": "NetworkX offers a multitude of benefits, making it a valuable tool for network analysis:\n\n* Ease of Use: Pythonic interface allows for rapid prototyping and development.\n* Flexibility: Supports various graph types (directed, undirected, multigraphs) and data formats.\n* Rich Functionality: Provides a vast library of graph algorithms, measures, and network analysis tools.\n* Visualization: Offers basic visualization capabilities and integrates well with other visualization libraries like Matplotlib and Graphviz.\n* Community Support: Large and active community contributing to its continuous development and providing ample resources.\n* Open Source: Free to use and modify, reducing software costs.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:07:30.745889",
-    "updated_at": "2025-12-25T07:07:30.745903",
-    "source": "backfill_66401968",
-    "faiss_id": 2,
-    "source_exists": false
-  },
-  {
-    "id": "4eabd311-0e87-404d-b484-9bfd4bb754ee",
-    "text": "Mem0 is a comprehensive tool providing a detailed overview of its functionalities, potential applications, and key considerations for effective utilization.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:07:37.348883",
-    "updated_at": "2025-12-25T07:07:37.348898",
-    "source": "backfill_66401994",
-    "faiss_id": 3,
-    "source_exists": false
-  },
-  {
-    "id": "723c6fbd-dbba-479d-ab90-2017d7f18c08",
-    "text": "NetworkX is a Python library for creating, manipulating, and studying complex networks. It provides a versatile and efficient platform for graph analysis, suitable for a wide range of applications.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:07:49.724807",
-    "updated_at": "2025-12-25T07:07:49.724819",
-    "source": "backfill_66402074",
-    "faiss_id": 4,
-    "source_exists": false
-  },
-  {
-    "id": "170e6541-0877-4a04-b6ab-992d40990cff",
-    "text": "NetworkX is a powerful Python library for the creation, manipulation, and study of complex networks. It offers a wide range of advantages for network analysis, including flexibility, ease of use, comprehensive algorithms, visualization, and open-source availability.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:08:01.684446",
-    "updated_at": "2025-12-29T15:34:33.219696",
-    "source": "backfill_66402070, run_1766402778",
-    "faiss_id": 5,
-    "source_exists": false
-  },
-  {
-    "id": "ae7e20fa-0e9a-4a36-abe3-43c3eedc09b0",
-    "text": "The Fibonacci sequence is a series of numbers where each number is the sum of the two preceding ones, usually starting with 0 and 1. The nth Fibonacci number can be calculated using an iterative approach.\n\nIn Python, this can be implemented as follows:\n\ndef fibonacci_iterative(n):\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    else:\n        a = 0\n        b = 1\n        for _ in range(2, n + 1):\n            a, b = b, a + b\n        return b\n\ndef fibonacci_recursive(n):\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    else:\n        return fibonacci_recursive(n-1) + fibonacci_recursive(n-2)",
-    "category": "historical",
-    "created_at": "2025-12-25T07:08:31.655354",
-    "updated_at": "2025-12-25T07:08:31.655378",
-    "source": "backfill_1766402162",
-    "faiss_id": 6,
-    "source_exists": false
-  },
-  {
-    "id": "7c244fce-29b9-4f62-989e-d4788a31b28c",
-    "text": "NetworkX Benefits Analysis\nBased on the available data, no specific benefits of NetworkX were identified. A more detailed analysis or further information is required to populate this report.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:08:40.751002",
-    "updated_at": "2025-12-25T07:08:40.751018",
-    "source": "backfill_1766402163",
-    "faiss_id": 7,
-    "source_exists": false
-  },
-  {
-    "id": "f52cf03b-3a1f-40b9-8d13-32d8ae4769f3",
-    "text": "Project T002 Overview: Uses Python, calculates Fibonacci sequence for a given input, and returns the result. The first variant of the code uses a traditional recursive approach with memoization, while the second variant uses a loop-based iterative approach.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:08:50.388189",
-    "updated_at": "2025-12-25T07:08:50.388203",
-    "source": "backfill_1766402229",
-    "faiss_id": 8,
-    "source_exists": false
-  },
-  {
-    "id": "cefc5e4d-b589-4de6-a5d2-64ef63175f26",
-    "text": "NetworkX Benefits Analysis\nNetworkX provides powerful tools for creating, manipulating, and analyzing graph structures, making it an invaluable resource for a wide range of applications.\nKey Benefits:\nGraph Creation and Manipulation\nAdvanced Graph Analysis Algorithms\nVisualization Capabilities",
-    "category": "historical",
-    "created_at": "2025-12-25T07:09:01.383318",
-    "updated_at": "2025-12-25T07:09:01.383333",
-    "source": "backfill_1766402230",
-    "faiss_id": 9,
-    "source_exists": false
-  },
-  {
-    "id": "38610c9b-d503-4040-bc85-435f8dbab1eb",
-    "text": "NetworkX is a Python package for the creation, manipulation, and study of complex networks. It provides tools for working with graphs and networks, making it useful for various applications in fields like social sciences, biology, and computer science.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:09:12.370841",
-    "updated_at": "2025-12-29T15:39:59.252164",
-    "source": "backfill_1766402289, run_66401968",
-    "faiss_id": 10,
-    "source_exists": false
-  },
-  {
     "id": "cb51dda6-b9f0-4378-84b8-e2632866883a",
     "text": "NetworkX is a Python package for creating, manipulating, and studying complex networks. Its key advantages include versatile data structures for representing relationships, efficient graph algorithms, an extensive library of functions, visualization capabilities, and ease of learning and use.",
     "category": "historical",
@@ -118,136 +8,6 @@
     "source": "backfill_1766402327",
     "faiss_id": 11,
     "source_exists": true
-  },
-  {
-    "id": "9042e38d-d184-424d-b08b-0bfb7f7f0ccf",
-    "text": "NetworkX is a Python package for the creation, manipulation, and study of the structure, dynamics, and functions of complex networks. It provides tools for working with graphs and networks in a simple and intuitive manner, making it suitable for a wide range of applications, from social network analysis to biological network modeling.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:09:39.521336",
-    "updated_at": "2025-12-29T15:34:56.047652",
-    "source": "backfill_1766402582, run_1766402582, run_1766402327",
-    "faiss_id": 12,
-    "source_exists": true
-  },
-  {
-    "id": "1f7365dd-8cd2-45ad-9bd1-16b81c77ea8c",
-    "text": "NetworkX is a Python library for the creation, manipulation, and study of complex networks. It offers a wide range of algorithms for analyzing graph structures, including centrality measures, pathfinding, and community detection.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:09:50.686804",
-    "updated_at": "2025-12-29T15:34:43.569970",
-    "source": "backfill_1766402605, run_1766402605",
-    "faiss_id": 13,
-    "source_exists": false
-  },
-  {
-    "id": "fcbe44c9-a464-441c-ad38-f4ab68474409",
-    "text": "NetworkX is a powerful Python library for the creation, manipulation, and study of complex networks. It provides a range of benefits including scalability, ease of use, and a rich set of algorithms.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:00.464609",
-    "updated_at": "2025-12-25T07:10:00.464640",
-    "source": "backfill_1766402778",
-    "faiss_id": 14,
-    "source_exists": false
-  },
-  {
-    "id": "f003e815-37b6-4c59-8167-c115be81e2f6",
-    "text": "NetworkX is a Python package for the creation, manipulation, and study of complex networks. It provides a robust framework for modeling relationships and interactions between entities, making it an invaluable tool for a wide range of applications.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:11.359229",
-    "updated_at": "2025-12-25T07:10:11.359249",
-    "source": "backfill_1766402948",
-    "faiss_id": 15,
-    "source_exists": false
-  },
-  {
-    "id": "7bf264d0-d94c-48f8-b3cd-ebccdd66b332",
-    "text": "The calculation of e^0.67 involves the exponential function with input 0.67, resulting in a value of 1.9542373206359396. The calculation of cos(45) involves taking the cosine of 45 degrees, resulting in a value that is currently unknown due to an error in the code execution process.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:25.085793",
-    "updated_at": "2025-12-25T07:10:25.085818",
-    "source": "backfill_1766403332",
-    "faiss_id": 16,
-    "source_exists": false
-  },
-  {
-    "id": "96b61450-72ed-4e63-a6dd-55c11bba9253",
-    "text": "Bombay Stock Exchange (BSE) performance analysis provided a comprehensive overview of key events, price fluctuations, and market sentiment. The report aimed to provide actionable insights for stakeholders and investors.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:34.873387",
-    "updated_at": "2025-12-25T07:10:34.873395",
-    "source": "backfill_1766403536",
-    "faiss_id": 17,
-    "source_exists": false
-  },
-  {
-    "id": "8a731c84-6db2-4ea1-b8a1-7eb9505785a8",
-    "text": "The final BSE Sensex value for December 22, 2025, could not be determined due to data retrieval issues. The system reported 'Unable to extract final BSE Sensex value for 2025-12-22. No search results provided.' and no source URL could be identified.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:47.659888",
-    "updated_at": "2025-12-25T07:10:47.659904",
-    "source": "backfill_1766408629",
-    "faiss_id": 18,
-    "source_exists": false
-  },
-  {
-    "id": "74e1614c-2671-4f53-90d0-2c144f80b444",
-    "text": "Indian National Holidays for 2026: []",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:51.777712",
-    "updated_at": "2025-12-25T07:10:51.777728",
-    "source": "backfill_1766458236",
-    "faiss_id": 19,
-    "source_exists": false
-  },
-  {
-    "id": "09e8f644-587b-45a3-9a3a-67d6df7a00d9",
-    "text": "ThinkerAgent was prematurely invoked without preceding data or context, preventing meaningful analysis.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:10:57.570270",
-    "updated_at": "2025-12-25T07:10:57.570283",
-    "source": "backfill_1766459244",
-    "faiss_id": 20,
-    "source_exists": false
-  },
-  {
-    "id": "16c79489-15ec-4924-9ae4-910cdee71180",
-    "text": "The holiday data extraction process was unsuccessful due to a NameError caused by an undefined variable. The process aims to extract holidays from raw holiday data but encounters issues with date parsing.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:11:06.576333",
-    "updated_at": "2025-12-25T07:11:06.576340",
-    "source": "backfill_1766460143",
-    "faiss_id": 21,
-    "source_exists": false
-  },
-  {
-    "id": "3c5c09ad-341b-4a17-83f7-9ecaf9059054",
-    "text": "Macbook Pro M5 16-inch Launch Date Report\n\nThe expected launch date for the Macbook Pro M5 16-inch version is detailed below, based on available information.\n\n1. Launch Date Overview\n\nBased on the available data, the anticipated launch timeframe for the Macbook Pro M5 16-inch is as follows:\n\n1.1. Expected Launch Timeline\n\n* Launch Date: Q4 2026\n\n2. Data Sources\n\nThe information presented in this report is derived from the following sources:\n\n* Analyst reports (as specified in macbook_pro_m5_16inch_launch_date_T002)\n\n3. Disclaimers\n\nThe launch date is subject to change and is based on current expectations and analyst predictions. Official announcements from Apple should be considered the definitive source of launch information.\n\n4. Additional Considerations\n\nIt's important to note that product launch dates can be influenced by various factors including supply chain constraints, technological advancements, and market conditions. Therefore, this report serves as an estimate based on the data available as of December 23, 2025.\n\n5. Summary Table\n\n| Feature | Details |\n| --- | --- |\n| Product | Macbook Pro M5 16-inch |\n| Expected Launch | Q4 2026 |\n| Information Source | Analyst Reports |\n",
-    "category": "historical",
-    "created_at": "2025-12-25T07:11:52.465869",
-    "updated_at": "2025-12-25T07:11:52.465902",
-    "source": "backfill_1766460673",
-    "faiss_id": 22,
-    "source_exists": false
-  },
-  {
-    "id": "22b3d662-6c02-4ad1-8ade-ebb29cca6bc4",
-    "text": "Delhi AQI on 22 December 2025: No data available",
-    "category": "historical",
-    "created_at": "2025-12-25T07:11:57.408415",
-    "updated_at": "2025-12-25T07:11:57.408422",
-    "source": "backfill_1766461645",
-    "faiss_id": 23,
-    "source_exists": false
-  },
-  {
-    "id": "b6d897bf-b674-4eae-a060-a44fec16f529",
-    "text": "Bangalore AQI on 2025-12-22: No data available",
-    "category": "historical",
-    "created_at": "2025-12-25T07:12:02.538976",
-    "updated_at": "2025-12-25T07:12:02.538981",
-    "source": "backfill_1766463060",
-    "faiss_id": 24,
-    "source_exists": false
   },
   {
     "id": "83a123e2-d50a-485b-9aba-4bbb6a33e4c9",
@@ -278,16 +38,6 @@
     "source": "backfill_1766467612",
     "faiss_id": 27,
     "source_exists": true
-  },
-  {
-    "id": "da7b8580-ec04-4486-b4f6-38f1d1cc5840",
-    "text": "Project Overview: The PlannerAgent is tasked with determining the Air Quality Index (AQI) for Kolkata on 2025-12-22. It involves four steps: Clarifying the data source, retrieving AQI data from the specified source, extracting the AQI value, and presenting the AQI report.",
-    "category": "historical",
-    "created_at": "2025-12-25T07:12:53.353272",
-    "updated_at": "2025-12-25T07:12:53.353287",
-    "source": "backfill_1766468206",
-    "faiss_id": 28,
-    "source_exists": false
   },
   {
     "id": "317cde43-e831-4899-bc24-9a4c8ef80794",
@@ -374,19 +124,9 @@
     "text": "DLF has one holding company, Rajdhani Investments & Agencies Private Limited, which holds 61.53% of shares and follows the company's policies on Code of Conduct, Corporate Governance and principles of BRSR.\n\nDLF has numerous subsidiaries, including DLF Aspinwal Hotels Private Limited, DLF Cochin Hotels Private Limited, DLF Property Developers Limited, DLF Home Developers Limited, DLF Homes Goa Private Limited, DLF Info Park (Pune) Limited, DLF Luxury Homes Limited, DLF Projects Limited, DLF Recreational Foundation Limited, DLF Residential Partners Limited, DLF Southern Towns Private Limited, DLF Universal Limited, DLF Utilities Limited, Domus Real Estate Private Limited, Edward Keventer (Successors) Private Limited, Galleria Property Management Services Private Limited, Isabel Builders & Developers Private Limited, Lodhi Property Company Limited, and many more.\n\nDLF Recreational Foundation Limited and DLF Office Developers Private Limited have 85% shareholding by DLF.\n\nKolkata International Convention Centre Limited and DLF Homes Panchkula Private Limited have 99.90% and 99.94% shareholding by DLF respectively.\n\nMost subsidiaries have 100% shareholding by DLF.\n\nThe document reviewed is the DLF Annual Report 2022-23 Business Responsibility and Sustainability Report (BRSR).",
     "category": "historical",
     "created_at": "2025-12-25T07:15:51.364533",
-    "updated_at": "2025-12-25T07:15:51.364547",
-    "source": "backfill_1766550691",
+    "updated_at": "2026-01-02T15:31:59.988232",
+    "source": "backfill_1766550691, run_1766550691",
     "faiss_id": 37,
-    "source_exists": true
-  },
-  {
-    "id": "d0254024-2974-468e-b25f-a88950ab8819",
-    "text": "Project X Overview: Uses React for frontend, Python for backend, and Postgres DB. Features include real-time data sync, user authentication, and admin dashboard. Benefits include scalability, security, and ease of maintenance.",
-    "category": "derived",
-    "created_at": "2025-12-25T07:33:04.173417",
-    "updated_at": "2025-12-25T07:33:04.173431",
-    "source": "run_1766628070",
-    "faiss_id": 38,
     "source_exists": true
   },
   {
@@ -400,246 +140,6 @@
     "source_exists": true
   },
   {
-    "id": "a8f8d7c9-6302-4ed3-8688-af9076dc4c15",
-    "text": "User requested the latest stock price for NVDA. The assistant provided an HTML report detailing the current stock price of NVDA as $190.53, including an executive summary and disclaimer.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:39:19.588065",
-    "updated_at": "2025-12-29T14:39:19.588073",
-    "source": "run_1766994371",
-    "faiss_id": 41,
-    "source_exists": true
-  },
-  {
-    "id": "ad96b2bb-ffe4-4954-981c-eb0d8c76108c",
-    "text": "As of December 29, 2025, the BSE Sensex is experiencing a slight downturn, currently at 84,765.58 points, a decrease of 0.32% from the previous session. Over the past month, the index has declined by 1.02%. Thin trading and persistent foreign outflows are major factors contributing to the current market conditions. Foreign portfolio investors have been net sellers. The Sensex remains 8.33% higher than a year ago, reaching an all-time high of 86,159.02 in December 2025. Gains are seen in metals and manufacturing sectors, while declines are in financial services and banking. Trading Economics forecasts the BSE SENSEX to trade at 84,968.13 points by the end of the current quarter, with a decline to 78,629.33 estimated in 12 months. Key companies with gains include Tata Steel and JSW Steel, while Adani Ports and Power Grid have experienced declines. The S&P 500 closed at 6,929.94 on December 26, 2025. The BSE Sensex historical data (past week) shows the following: December 29, 2025: Open 85,004.75, High 85,250.00, Low 84,754.88, Close 84,773.41; December 26, 2025: Open 85,225.28, High 85,378.51, Low 84,937.82, Close 85,041.45; December 24, 2025: Open 85,533.11, High 85,738.18, Low 85,342.19, Close 85,408.70; December 23, 2025: Open 85,690.10, High 85,704.93, Low 85,342.99, Close 85,524.84; December 22, 2025: Open 85,145.90, High 85,601.33, Low 85,145.86, Close 85,567.48.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:39:53.306969",
-    "updated_at": "2025-12-29T14:39:53.306982",
-    "source": "run_1766988669",
-    "faiss_id": 42,
-    "source_exists": true
-  },
-  {
-    "id": "f2731239-dc5a-4f60-841d-50516444c559",
-    "text": "On December 25th, 2025, Bangalore's AQI was Unhealthy (230) at 07:59am. The AQI was measured by a.in, aqicn.org, ewstropmet.res.in, air-quality.com, and news18.com. The AQI level of 230 falls into the 'Unhealthy' category, posing potential health risks. Individuals, especially sensitive groups, should limit prolonged outdoor exertion and consider using air purifiers indoors.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:40:18.100992",
-    "updated_at": "2025-12-29T14:40:18.100999",
-    "source": "run_1766630156",
-    "faiss_id": 43,
-    "source_exists": true
-  },
-  {
-    "id": "281b3321-a2d7-41a8-91f5-7f7fa5646b4c",
-    "text": "The user's location is likely in [City, State, Country] with a confidence score of 65. The location determination process utilizes IP address lookup, location services, and user-provided information. Data prioritization favors GPS coordinates, user-provided address, and IP address. Conflict resolution involves cross-referencing data, analyzing recency and reliability, and geocoding the user-provided address when discrepancies arise. A discrepancy exists between the user-provided address ([address]) and the IP address location ([city, state]). The confidence score is justified by this conflict, and recommendations include obtaining more specific address information and accessing additional corroborating data points.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:40:28.058432",
-    "updated_at": "2025-12-29T14:40:28.058461",
-    "source": "run_1766628890",
-    "faiss_id": 44,
-    "source_exists": true
-  },
-  {
-    "id": "d3bd61b4-6ec6-4643-bc58-ea9cdbc2ff62",
-    "text": "The user is asking for recommendations for places to stay in India.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:40:39.346056",
-    "updated_at": "2025-12-29T14:40:39.346073",
-    "source": "run_1766628651",
-    "faiss_id": 45,
-    "source_exists": true
-  },
-  {
-    "id": "675480b1-da86-4c58-87f8-abf0bfdc684d",
-    "text": "DLF's organizational structure is characterized by a strong holding company (Rajdhani Investments & Agencies Private Limited) and a comprehensive network of subsidiaries. Key findings from the 2022-23 BRSR include: Rajdhani Investments & Agencies Private Limited holds 61.53% of DLF shares and adheres to DLF's policies. DLF has a large number of subsidiaries, many with 100% shareholding (e.g., DLF Aspinwal Hotels Private Limited, DLF Cochin Hotels Private Limited, DLF Property Developers Limited, DLF Info Park (Pune) Limited, DLF Luxury Homes Limited, DLF Projects Limited, DLF Residential Partners Limited, DLF Southern Towns Private Limited, DLF Universal Limited, Domus Real Estate Private Limited, Isabel Builders & Developers Private Limited, Lodhi Property Company Limited, Shivaji Marg Maintenance Services Limited, DLF Info City Hyderabad Limited, Ananti Builders & Construction Private Limited, Atherol Builders & Developers Private Limited, Blanca Builders & Developers Private Limited, Cadence Builders & Constructions Private Limited, Damalis Builders & Developers Private Limited, Demarco Developers and Constructions Private Limited, Garv Developers Private Limited, Karida Real Estates Private Limited, Kokolath Builders & Developers Private Limited, Milda Buildwell Private Limited, Mohak Real Estate Private Limited, Mufallah Builders & Developers Private Limited, Naja Estates Developers Private Limited, Nadish Real Estate Private Limited, Raeks Estates Developers Private Limited, Skyrise Home Developers Private Limited, Talvi Builders & Developers Private Limited, Uncial Builders & Constructions Private Limited, Verano Builders & Developers Private Limited, Zima Builders & Developers Private Limited, Cyrano Builders & Developers Private Limited, Hathor Realtors Private Limited, Hesper Builders & Developers Private Limited, Ken Buildcon Private Limited, Baal Realtors Private Limited, Gaynor Builders & Developers Private Limited, Hurley Builders & Developers Private Limited, Muriel Builders & Developers Private Limited, Rujula Builders & Developers Private Limited, Senymour Builders & Constructions Private Limited, Adana Builders & Developers Private Limited, Ati Sunder Estates Developers Private Limited, Ethan Estates Developers Private Limited, First India Estates and Services Private Limited, Musetta Builders & Developers Private Limited, Niabi Builders & Developers Private Limited, Pegeen Builders & Developers Private Limited, Sugreeva Builders & Developers Private Limited, Tatharaj Estates Private Limited, Zebina Real Estates Private Limited). DLF Recreational Foundation Limited and DLF Office Developers Private Limited have 85% DLF shareholding, and Kolkata International Convention Centre Limited and DLF Homes Panchkula Private Limited have 99.90% and 99.94% shareholding respectively. DLF consistently applies its Code of Conduct, Corporate Governance policies, and BRSR principles across the company and its subsidiaries.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:41:02.899327",
-    "updated_at": "2025-12-29T14:41:02.899351",
-    "source": "run_1766550691",
-    "faiss_id": 46,
-    "source_exists": true
-  },
-  {
-    "id": "7394b0c8-1b93-4618-9431-909aeb076036",
-    "text": "The AQI of Kolkata on December 22, 2025, could not be reliably extracted due to data retrieval issues. Multiple attempts to obtain the AQI value failed, and the specific value (`kolkata_aqi_20251222_retry_T009F1`) was missing. The initial data retrieval also faced similar issues (refer to `kolkata_aqi_20251222_T002`). The QA verdict for the initial attempt was `needs_revision` (as indicated by `qa_verdict_T003`). The QA verdict for the retry is likely negative, although the specific `qa_verdict_retry_T008F1` value is also missing. Several factors may contribute to the unavailability of the AQI data: Data Reporting Delays, Website or API Issues, Data Inconsistencies, and Network Errors. Referencing multiple sources, including the CPCB, Aqi.in, EWS, Breathe (UChicago), and IQAir, did not yield a reliable AQI value.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:41:44.605086",
-    "updated_at": "2025-12-29T14:41:44.605094",
-    "source": "run_1766469751",
-    "faiss_id": 47,
-    "source_exists": true
-  },
-  {
-    "id": "e74773f6-e965-4919-b81f-76925999168e",
-    "text": "The user requested the AQI of Kolkata on December 22nd, 2025. The system responded that AQI data for that date is unavailable, indicating a critical issue with data retrieval or availability. The report highlights the need for improved data handling and alternative data sources, such as historical averages, and suggests the underlying tool needs to be able to access the necessary data.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:41:49.873109",
-    "updated_at": "2025-12-29T14:41:49.873116",
-    "source": "run_1766469446",
-    "faiss_id": 48,
-    "source_exists": true
-  },
-  {
-    "id": "3345e400-a803-4fe7-a86c-f50c73fbd0d1",
-    "text": "The assistant provided an HTML report detailing the Air Quality Index (AQI) in Kolkata on December 22nd, 2025. The report includes a data summary, methodology, disclaimer, and placeholders for data values. The AQI value, timestamp, data availability, and user preference are all initially set to 'Data Unavailable' or 'Timestamp Unavailable' due to missing data. The report indicates the AQI data was obtained from a reliable source and explains the AQI's purpose and focus on health effects.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:42:01.269051",
-    "updated_at": "2025-12-29T14:42:01.269075",
-    "source": "run_1766468612",
-    "faiss_id": 49,
-    "source_exists": true
-  },
-  {
-    "id": "bd86eb2f-ba29-4ca8-91fe-e2066f233b13",
-    "text": "User requested the AQI in Kolkata on 22nd December 2025. The assistant initiated a plan to retrieve this information, starting with clarifying the data source for AQI data.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:01.719446",
-    "updated_at": "2025-12-29T14:49:01.719457",
-    "source": "run_1766468206",
-    "faiss_id": 51,
-    "source_exists": false
-  },
-  {
-    "id": "4373013e-b5b6-4724-8f20-69591efc1419",
-    "text": "The AQI of Kolkata on December 22, 2025, was a key query from the user.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:13.113712",
-    "updated_at": "2025-12-29T14:49:13.113727",
-    "source": "run_1766467447",
-    "faiss_id": 52,
-    "source_exists": false
-  },
-  {
-    "id": "441aea89-1a9d-42aa-bdc2-79e0135b8850",
-    "text": "On 2025-12-22, there was no AQI data available for Bangalore. Possible reasons include data collection errors, sensor malfunction, or temporary unavailability of reporting stations. The report provides recommendations to check again later or consult alternative data sources.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:19.923122",
-    "updated_at": "2025-12-29T14:49:19.923129",
-    "source": "run_1766463423",
-    "faiss_id": 53,
-    "source_exists": true
-  },
-  {
-    "id": "e0b6b74c-6fff-4da1-aaec-0288c6eecec5",
-    "text": "The user requested the AQI in Delhi on December 22, 2025. The assistant responded with a summary unavailable status, cost, input tokens, output tokens, and total tokens.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:24.105796",
-    "updated_at": "2025-12-29T14:49:24.105809",
-    "source": "run_1766461645",
-    "faiss_id": 54,
-    "source_exists": false
-  },
-  {
-    "id": "6cf8d7ee-8f95-45e4-bb80-b549a58c46b3",
-    "text": "The Macbook Pro M5 16-inch is expected to launch in Q4 2026, according to analyst reports.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:27.099631",
-    "updated_at": "2025-12-29T15:33:18.056079",
-    "source": "run_1766460673, run_1767000223",
-    "faiss_id": 55,
-    "source_exists": true
-  },
-  {
-    "id": "f67a42f4-3e47-498d-bd03-c7bc262731dc",
-    "text": "User requested a list of holidays in 2026 for the USA. The assistant responded with a report stating that no holiday data was extracted for 2026 in the USA, resulting in a report detailing the lack of data and an inability to generate a holiday list.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:31.140827",
-    "updated_at": "2025-12-29T14:49:31.140833",
-    "source": "run_1766460143",
-    "faiss_id": 56,
-    "source_exists": false
-  },
-  {
-    "id": "41397ee1-d01e-4e2b-b1e1-a261a34baf8c",
-    "text": "User requested a list of Indian National Holidays for 2026.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:36.855090",
-    "updated_at": "2025-12-29T14:49:36.855103",
-    "source": "run_1766458236",
-    "faiss_id": 57,
-    "source_exists": false
-  },
-  {
-    "id": "6dad5db1-b499-41f1-8020-2294df58ea73",
-    "text": "The Bombay Stock Exchange experienced issues today, specifically related to placeholder entries in a report. The report contains multiple 'Placeholder' entries, indicating missing or incomplete data, which significantly impacts the accuracy and completeness of the report. The recommendation is to replace all placeholder data with actual market data and verify the data sources and update the report accordingly.",
-    "category": "derived",
-    "created_at": "2025-12-29T14:49:42.956540",
-    "updated_at": "2025-12-29T14:49:42.956563",
-    "source": "run_1766403536",
-    "faiss_id": 58,
-    "source_exists": false
-  },
-  {
-    "id": "ff3dabba-0744-46f4-98b0-d56b5d6f937f",
-    "text": "The user is requesting a list of 3 benefits of the networkx library.",
-    "category": "derived",
-    "created_at": "2025-12-29T15:37:43.354722",
-    "updated_at": "2025-12-29T15:37:43.354735",
-    "source": "run_1766402230",
-    "faiss_id": 59,
-    "source_exists": false
-  },
-  {
-    "id": "bdcbcf9e-8e43-4f84-a110-d2f2560caa8c",
-    "text": "User requested calculation of the 10th Fibonacci number using Python. The assistant provided Python code to calculate the Fibonacci sequence, specifically the nth Fibonacci number, using an iterative approach. The code initializes variables a and b to 0 and 1, respectively, and then iterates from 2 to n+1, updating a and b in each iteration. The function returns the value of b, which represents the nth Fibonacci number. The assistant executed the code and returned the result 55.",
-    "category": "derived",
-    "created_at": "2025-12-29T15:37:47.888034",
-    "updated_at": "2025-12-29T16:27:05.536575",
-    "source": "run_1766402229, run_66401990",
-    "faiss_id": 60,
-    "source_exists": false
-  },
-  {
-    "id": "eea75ea2-e371-440e-90df-e55474b867df",
-    "text": "User requested a list of 3 benefits of NetworkX. The assistant responded with a report stating that no specific benefits were identified due to a lack of available data, providing a detailed HTML report outlining this conclusion.",
-    "category": "derived",
-    "created_at": "2025-12-29T15:37:50.711685",
-    "updated_at": "2025-12-29T15:37:50.711692",
-    "source": "run_1766402163",
-    "faiss_id": 61,
-    "source_exists": false
-  },
-  {
-    "id": "f7111d94-bb6d-4770-8a25-b2b45b504124",
-    "text": "User requested calculation of the 10th Fibonacci number using Python.",
-    "category": "derived",
-    "created_at": "2025-12-29T15:37:52.484633",
-    "updated_at": "2025-12-29T15:37:52.484641",
-    "source": "run_1766402162",
-    "faiss_id": 62,
-    "source_exists": false
-  },
-  {
-    "id": "bf52d956-f25f-4a14-9bf9-021e577a9551",
-    "text": "NetworkX simplifies graph analysis with a high-level Python interface and pre-built algorithms, reducing development overhead. It supports versatile network modeling through directed, undirected, and multigraph data structures, enabling precise representation of complex relationships. It offers a comprehensive suite of algorithms for pathfinding, centrality measures, and community detection, accelerating analysis and providing deeper insights. It integrates seamlessly with Python and its scientific computing ecosystem, facilitating rapid prototyping and collaboration. It provides robust tools for structural analysis, including degree distribution and clustering coefficients, to understand network properties. It enhances visualization capabilities with Matplotlib integration, improving understanding and communication of findings. It benefits from strong open-source community support, providing resources, tutorials, and collaborative development opportunities. It streamlines algorithm implementation for graph problems, eliminating the need to write algorithms from scratch.",
-    "category": "derived",
-    "created_at": "2025-12-29T15:39:46.548861",
-    "updated_at": "2025-12-29T15:39:46.548868",
-    "source": "run_66402074",
-    "faiss_id": 63,
-    "source_exists": false
-  },
-  {
-    "id": "f999965c-f367-477e-93ca-e7fe87481a53",
-    "text": "Mem0 is a comprehensive report detailing its functionalities, potential applications, and key considerations for effective utilization. The report includes sections on executive summary, key highlights (functionality, applications, considerations), detailed overview (functionality breakdown, potential applications, implementation considerations, limitations, best practices, dependencies, technical specifications, security considerations, conclusion, appendix).",
-    "category": "derived",
-    "created_at": "2025-12-29T15:39:51.974390",
-    "updated_at": "2025-12-29T15:39:51.974397",
-    "source": "run_66401994",
-    "faiss_id": 64,
-    "source_exists": false
-  },
-  {
-    "id": "b4bb0e56-9826-4b63-98d8-25367afdfa3d",
-    "text": "No description provided",
-    "category": "derived",
-    "created_at": "2025-12-29T15:40:01.835185",
-    "updated_at": "2025-12-29T15:40:01.835192",
-    "source": "run_66402002",
-    "faiss_id": 65,
-    "source_exists": false
-  },
-  {
     "id": "0be262e1-c9e5-4a87-82ec-d6f40db5a53c",
     "text": "User teaches at The School of AI",
     "category": "general",
@@ -648,5 +148,132 @@
     "source": "manual",
     "faiss_id": 68,
     "source_exists": true
+  },
+  {
+    "id": "bf344227-855e-4d4a-8f9d-7f504ccc2252",
+    "text": "The user is a pure vegetarian, likes north indian food, loves cricket and teaching.",
+    "category": "general",
+    "created_at": "2026-01-02T14:58:35.885404",
+    "updated_at": "2026-01-02T14:59:38.485329",
+    "source": "manual",
+    "faiss_id": 71,
+    "source_exists": true
+  },
+  {
+    "id": "6e7356e7-b234-4209-b3cb-08e6ac571d4c",
+    "text": "The air purifier market in India's metro cities is experiencing significant growth driven by rising air pollution, increased health awareness, and government initiatives. The market is projected to grow at a CAGR of around 6.1% to 20.9% between 2025 and 2032, with demand concentrated in major cities but expanding to tier-2 cities. Key players include Xiaomi, Philips, Dyson, and Daikin. Online channels are gaining prominence in distribution. Affordability is a major challenge, and concerns exist regarding ozone emissions and competition from alternatives like indoor plants.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:30:58.862047",
+    "updated_at": "2026-01-02T15:30:58.862054",
+    "source": "run_1767347752",
+    "faiss_id": 72
+  },
+  {
+    "id": "4f794880-48da-47ee-9dfe-5a9c1c8f6431",
+    "text": "Privi Speciality Chemicals stock price has tanked on the NSE in the last few days. The user wants an analysis of the reasons for the decline and whether a bounce-back is likely, and whether they should be concerned.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:03.033217",
+    "updated_at": "2026-01-02T15:31:03.033223",
+    "source": "run_1767346377",
+    "faiss_id": 73
+  },
+  {
+    "id": "57c85951-1e53-4348-91d5-c96b860672cc",
+    "text": "The Macbook Pro M5 16-inch is expected to launch in Q4 2026, according to analyst reports. This information is based on current expectations and is subject to change due to factors like supply chain constraints, technological advancements, and market conditions. The confidence level in this launch date is low (0.02-0.03).",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:11.537185",
+    "updated_at": "2026-01-02T15:31:11.537195",
+    "source": "run_1767000223",
+    "faiss_id": 74
+  },
+  {
+    "id": "d5302cb3-1b0c-47ea-9a33-dbe7d6683ba0",
+    "text": "User requested the latest stock price for NVDA. The assistant provided an HTML report detailing the current stock price of NVDA as $190.53, including an executive summary and disclaimer.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:13.853175",
+    "updated_at": "2026-01-02T15:31:13.853182",
+    "source": "run_1766994371",
+    "faiss_id": 75
+  },
+  {
+    "id": "17fae530-46fa-49d7-887d-4301c80d44b8",
+    "text": "As of December 29, 2025, the BSE Sensex is experiencing a slight downturn, currently at 84,765.58 points, a decrease of 0.32% from the previous session. Over the past month, the index has declined by 1.02%. Thin trading and persistent foreign outflows are major factors contributing to the current market conditions. Foreign portfolio investors have been net sellers. The Sensex remains 8.33% higher than a year ago, reaching an all-time high of 86,159.02 in December 2025. Gains are seen in metals and manufacturing sectors, while declines are in financial services and banking. Trading Economics forecasts the BSE SENSEX to trade at 84,968.13 points by the end of the current quarter, with an estimated decline to 78,629.33 in 12 months. Key companies with gains include Tata Steel and JSW Steel, while Adani Ports and Power Grid have experienced declines. The S&P 500 closed at 6,929.94 on December 26, 2025. The BSE Sensex historical data (past week) shows the following: December 29, 2025 - 84,773.41; December 26, 2025 - 85,041.45; December 24, 2025 - 85,408.70; December 23, 2025 - 85,524.84; December 22, 2025 - 85,567.48. Analysts suggest a robust market benefiting from tax bills and rate cuts. The market anticipates a potential Santa Claus rally. Actionable insights include caution due to foreign outflows, sectoral diversification, monitoring industrial and manufacturing data, and reviewing individual stock performances.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:25.472927",
+    "updated_at": "2026-01-02T15:31:25.472933",
+    "source": "run_1766988669",
+    "faiss_id": 76
+  },
+  {
+    "id": "2859d5d3-81bc-47f3-8655-c94693879475",
+    "text": "Bangalore's AQI on December 25th, 2025 was Unhealthy (230) at 07:59am.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:29.159614",
+    "updated_at": "2026-01-02T15:31:29.159621",
+    "source": "run_1766630156",
+    "faiss_id": 77
+  },
+  {
+    "id": "29630f98-39ba-4d05-b95f-428a0fdc3e96",
+    "text": "The user's location is likely in [City, State, Country] with a confidence score of 65. The location determination process utilizes IP address lookup, location services, and user-provided information. Data prioritization favors GPS coordinates, user-provided address, and IP address. Conflict resolution involves cross-referencing data, analyzing recency and reliability, and geocoding the user-provided address when discrepancies arise. A discrepancy exists between the user-provided address ([address]) and the IP address location ([city, state]). The confidence score is justified by this conflict, and recommendations include obtaining more specific address information and accessing additional corroborating data points.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:34.571157",
+    "updated_at": "2026-01-02T15:31:34.571164",
+    "source": "run_1766628890",
+    "faiss_id": 78
+  },
+  {
+    "id": "21de75cd-f2b1-4fe4-a6ef-1b4b9c7d2b86",
+    "text": "The user is asking for recommendations for places to stay in India.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:43.396385",
+    "updated_at": "2026-01-02T15:31:43.396393",
+    "source": "run_1766628651",
+    "faiss_id": 79
+  },
+  {
+    "id": "1b2ef9f2-9277-4e47-a6d8-a480e3f180ff",
+    "text": "Accommodation Options: KAYAK compares hotel deals from hundreds of sites including Singapore, Ooty, Dubai, Mumbai, Paris, and London. Airbnb provides various accommodation options in Bengaluru: Hotel rooms, Apartments, Condos, and Homes, particularly top-rated near IIMB, Koramangala, Whitefield, and Indiranagar. The Abroad Log is a guide comparing hotels vs. Airbnb, considering factors like cost, convenience, amenities, and personalization.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:31:49.268591",
+    "updated_at": "2026-01-02T15:31:49.268598",
+    "source": "run_1766628070",
+    "faiss_id": 80
+  },
+  {
+    "id": "5213c5a1-f564-41b4-afe3-6bc232a3dc54",
+    "text": "The AQI of Kolkata on December 22, 2025, could not be reliably extracted due to data retrieval issues. Multiple attempts to obtain the AQI value failed, and the specific value (`kolkata_aqi_20251222_retry_T009F1`) was missing. The initial data retrieval also faced similar issues (refer to `kolkata_aqi_20251222_T002`). The QA verdict for the initial attempt was `needs_revision` (as indicated by `qa_verdict_T003`). The QA verdict for the retry is likely negative, although the specific `qa_verdict_retry_T008F1` value is also missing. Several factors may contribute to the unavailability of the AQI data: Data Reporting Delays, Website or API Issues, Data Inconsistencies, and Network Errors. Referencing multiple sources, including the CPCB, Aqi.in, EWS, Breathe (UChicago), and IQAir, did not yield a reliable AQI value.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:32:11.036572",
+    "updated_at": "2026-01-02T15:32:11.036579",
+    "source": "run_1766469751",
+    "faiss_id": 81
+  },
+  {
+    "id": "9fd06795-f1fa-429d-a03a-a3b67a8f362c",
+    "text": "The user requested the AQI of Kolkata on December 22nd, 2025. The system responded that AQI data for that date is unavailable, indicating a critical issue with data retrieval or availability. The report highlights the need for improved data handling and alternative data sources, such as historical averages, and suggests the underlying tool needs to access the necessary data.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:32:15.613058",
+    "updated_at": "2026-01-02T15:32:15.613064",
+    "source": "run_1766469446",
+    "faiss_id": 82
+  },
+  {
+    "id": "3164fe46-d652-4fb4-8517-5eeb9df10cd5",
+    "text": "The assistant provided an HTML report detailing the Air Quality Index (AQI) in Kolkata on December 22nd, 2025. The report includes a data summary, methodology, disclaimer, and placeholders for data values. The AQI value, timestamp, data availability, and user preference are all initially set to 'Data Unavailable' or 'Timestamp Unavailable' due to missing data. The report indicates the AQI data was obtained from a reliable source and explains the AQI's purpose and focus on health effects.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:32:22.015125",
+    "updated_at": "2026-01-02T15:32:22.015132",
+    "source": "run_1766468612",
+    "faiss_id": 83
+  },
+  {
+    "id": "e7c2c131-8d5c-4747-9ff1-f1ed963cebf6",
+    "text": "NetworkX is a Python package for the creation, manipulation, and study of complex networks. It examines network structure, dynamics, and functions across general usage, social network analysis, biological network analysis, and transportation network analysis.",
+    "category": "derived",
+    "created_at": "2026-01-02T15:32:29.018672",
+    "updated_at": "2026-01-02T15:32:29.018678",
+    "source": "run_1766402327",
+    "faiss_id": 84
   }
 ]

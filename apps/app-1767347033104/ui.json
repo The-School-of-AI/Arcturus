@@ -1,0 +1,575 @@
+{
+  "id": "app-1767347033104",
+  "name": "Option Trading Company CFO",
+  "description": "Design a Dashboard for the CFO of an Indian Option Trading Company. What would he be concerned about, and would like to know? Use real company names, and details. ",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "CFO Dashboard - XYZ Options Trading",
+      "context": "Title of the dashboard, company name is XYZ Options Trading",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "CFO Dashboard - XYZ Options Trading"
+      },
+      "style": {}
+    },
+    {
+      "id": "cash_position",
+      "type": "metric",
+      "label": "Cash Position",
+      "context": "Current cash balance of XYZ Options Trading in INR",
+      "config": {},
+      "data": {
+        "value": "\u20b912.5 Cr",
+        "change": 3.2,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "open_positions",
+      "type": "metric",
+      "label": "Open Positions",
+      "context": "Total number of open options trading positions at XYZ Options Trading",
+      "config": {},
+      "data": {
+        "value": "2,457",
+        "change": -1.5,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "daily_pnl",
+      "type": "metric",
+      "label": "Daily P&L",
+      "context": "Daily profit and loss for XYZ Options Trading in INR",
+      "config": {},
+      "data": {
+        "value": "\u20b935.2 Lakhs",
+        "change": 8.7,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "margin_utilization",
+      "type": "metric",
+      "label": "Margin Utilization",
+      "context": "Percentage of margin utilized by XYZ Options Trading",
+      "config": {},
+      "data": {
+        "value": "68.4%",
+        "change": 2.1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "pnl_trend",
+      "type": "line_chart",
+      "label": "P&L Trend (Last 30 Days)",
+      "context": "Daily P&L trend for XYZ Options Trading over the last 30 days in INR",
+      "config": {},
+      "data": {
+        "title": "P&L Trend (Last 30 Days)",
+        "xLabel": "Date",
+        "yLabel": "P&L (\u20b9 Lakhs)",
+        "series": [
+          {
+            "name": "P&L",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Day 1",
+                "y": 25
+              },
+              {
+                "x": "Day 7",
+                "y": 30
+              },
+              {
+                "x": "Day 14",
+                "y": 38
+              },
+              {
+                "x": "Day 21",
+                "y": 32
+              },
+              {
+                "x": "Day 28",
+                "y": 40
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "risk_exposure",
+      "type": "bar_chart",
+      "label": "Risk Exposure by Asset Class",
+      "context": "Risk exposure of XYZ Options Trading across different asset classes (e.g., Stocks, Indices, Commodities)",
+      "config": {},
+      "data": {
+        "title": "Risk Exposure by Asset Class",
+        "xLabel": "Asset Class",
+        "yLabel": "Exposure (\u20b9 Lakhs)",
+        "points": [
+          {
+            "x": "Stocks",
+            "y": 150,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Indices",
+            "y": 200,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Commodities",
+            "y": 100,
+            "color": "#ff6b6b"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "regulatory_compliance",
+      "type": "table",
+      "label": "Regulatory Compliance Status",
+      "context": "Status of compliance with key regulatory requirements for XYZ Options Trading (e.g., SEBI guidelines)",
+      "config": {},
+      "data": {
+        "headers": [
+          "Regulation",
+          "Status",
+          "Last Updated"
+        ],
+        "rows": [
+          [
+            "SEBI Margin Requirements",
+            "Compliant",
+            "2026-01-01"
+          ],
+          [
+            "Position Limits",
+            "Compliant",
+            "2026-01-01"
+          ],
+          [
+            "KYC Norms",
+            "Compliant",
+            "2026-01-01"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "brokerage_fees",
+      "type": "metric",
+      "label": "Brokerage Fees",
+      "context": "Total brokerage fees paid by XYZ Options Trading in the current month in INR",
+      "config": {},
+      "data": {
+        "value": "\u20b95.8 Lakhs",
+        "change": 4.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "tax_liability",
+      "type": "metric",
+      "label": "Estimated Tax Liability",
+      "context": "Estimated tax liability for XYZ Options Trading for the current financial year in INR",
+      "config": {},
+      "data": {
+        "value": "\u20b91.2 Cr",
+        "change": 1.8,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "funding_sources",
+      "type": "pie_chart",
+      "label": "Funding Sources",
+      "context": "Breakdown of funding sources for XYZ Options Trading (e.g., Equity, Debt, Retained Earnings)",
+      "config": {},
+      "data": {
+        "slices": [
+          {
+            "name": "Equity",
+            "value": 60
+          },
+          {
+            "name": "Debt",
+            "value": 30
+          },
+          {
+            "name": "Retained Earnings",
+            "value": 10
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "operational_expenses",
+      "type": "bar_chart",
+      "label": "Operational Expenses",
+      "context": "Breakdown of operational expenses for XYZ Options Trading (e.g., Salaries, Rent, Technology)",
+      "config": {},
+      "data": {
+        "title": "Operational Expenses",
+        "xLabel": "Expense Category",
+        "yLabel": "Amount (\u20b9 Lakhs)",
+        "points": [
+          {
+            "x": "Salaries",
+            "y": 80,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Rent",
+            "y": 20,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Technology",
+            "y": 30,
+            "color": "#ff6b6b"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "key_ratios",
+      "type": "ratios",
+      "label": "Key Financial Ratios",
+      "context": "Key financial ratios for XYZ Options Trading (e.g., Sharpe Ratio, Sortino Ratio, Treynor Ratio)",
+      "config": {},
+      "data": {
+        "ratios": [
+          {
+            "name": "Sharpe Ratio",
+            "value": "1.2",
+            "status": "good"
+          },
+          {
+            "name": "Sortino Ratio",
+            "value": "1.5",
+            "status": "good"
+          },
+          {
+            "name": "Treynor Ratio",
+            "value": "0.8",
+            "status": "fair"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "balance_sheet_summary",
+      "type": "balance_sheet",
+      "label": "Balance Sheet Summary",
+      "context": "Summary of XYZ Options Trading's balance sheet (Assets, Liabilities, Equity)",
+      "config": {},
+      "data": {
+        "assets": "\u20b925 Cr",
+        "liabilities": "\u20b910 Cr"
+      },
+      "style": {}
+    },
+    {
+      "id": "income_statement_summary",
+      "type": "income_stmt",
+      "label": "Income Statement Summary",
+      "context": "Summary of XYZ Options Trading's income statement (Revenue, Net Income)",
+      "config": {},
+      "data": {
+        "revenue": "\u20b915 Cr",
+        "netIncome": "\u20b93 Cr"
+      },
+      "style": {}
+    },
+    {
+      "id": "cash_flow_summary",
+      "type": "cash_flow",
+      "label": "Cash Flow Summary",
+      "context": "Summary of XYZ Options Trading's cash flow (Operating, Investing, Financing)",
+      "config": {},
+      "data": {
+        "operating": "+\u20b92 Cr",
+        "investing": "-\u20b950 Lakhs"
+      },
+      "style": {}
+    },
+    {
+      "id": "risk_dashboard_link",
+      "type": "button",
+      "label": "Go to Risk Dashboard",
+      "context": "Link to the risk management dashboard for detailed risk analysis",
+      "config": {},
+      "data": {
+        "label": "Go to Risk Dashboard"
+      },
+      "style": {}
+    },
+    {
+      "id": "audit_trail",
+      "type": "log",
+      "label": "Audit Trail",
+      "context": "Log of key actions and changes within the system for audit purposes",
+      "config": {},
+      "data": {
+        "logs": [
+          {
+            "level": "info",
+            "message": "User logged in"
+          },
+          {
+            "level": "warning",
+            "message": "Margin call triggered"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "market_news",
+      "type": "feed",
+      "label": "Market News",
+      "context": "Latest market news and updates relevant to options trading in India",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "RBI Policy Announcement",
+            "time": "1h ago"
+          },
+          {
+            "title": "Nifty Volatility Index Update",
+            "time": "2h ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "cfo_notes",
+      "type": "textarea",
+      "label": "CFO Notes",
+      "context": "Area for the CFO to add notes and comments",
+      "config": {},
+      "data": {
+        "label": "CFO Notes",
+        "placeholder": "Enter your notes here..."
+      },
+      "style": {}
+    },
+    {
+      "id": "stress_test_button",
+      "type": "button",
+      "label": "Run Stress Test",
+      "context": "Button to initiate a stress test on the portfolio",
+      "config": {},
+      "data": {
+        "label": "Run Stress Test"
+      },
+      "style": {}
+    },
+    {
+      "id": "scenario_analysis",
+      "type": "table",
+      "label": "Scenario Analysis",
+      "context": "Table showing the impact of different market scenarios on the portfolio",
+      "config": {},
+      "data": {
+        "headers": [
+          "Scenario",
+          "Impact"
+        ],
+        "rows": [
+          [
+            "Market Crash",
+            "-15%"
+          ],
+          [
+            "Interest Rate Hike",
+            "-5%"
+          ]
+        ]
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "cash_position",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "open_positions",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "daily_pnl",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "margin_utilization",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "pnl_trend",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "risk_exposure",
+      "x": 12,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "regulatory_compliance",
+      "x": 0,
+      "y": 13,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "brokerage_fees",
+      "x": 0,
+      "y": 18,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "tax_liability",
+      "x": 6,
+      "y": 18,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "funding_sources",
+      "x": 12,
+      "y": 13,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "operational_expenses",
+      "x": 0,
+      "y": 21,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "key_ratios",
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "balance_sheet_summary",
+      "x": 0,
+      "y": 27,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "i": "income_statement_summary",
+      "x": 8,
+      "y": 27,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "i": "cash_flow_summary",
+      "x": 16,
+      "y": 27,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "i": "risk_dashboard_link",
+      "x": 0,
+      "y": 31,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "audit_trail",
+      "x": 6,
+      "y": 31,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "market_news",
+      "x": 18,
+      "y": 31,
+      "w": 6,
+      "h": 6
+    },
+    {
+      "i": "cfo_notes",
+      "x": 0,
+      "y": 33,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "stress_test_button",
+      "x": 18,
+      "y": 37,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "scenario_analysis",
+      "x": 0,
+      "y": 36,
+      "w": 6,
+      "h": 5
+    }
+  ],
+  "lastModified": 1767347033104,
+  "lastHydrated": 1767347033104
+}

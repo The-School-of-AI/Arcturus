@@ -197,8 +197,9 @@ Simulate layered planning like a real team:
 * **FormatterAgent**: Beautifies final outputs into human-readable formats such as Markdown, HTML, tables, or annotated text.  
   - You must ensure that you  **pass as much upstream content as possible** into the Formatter step (e.g., summaries, refined itineraries, structured costs, recommendations, travel notes, highlights).  
   - FormatterAgent can **merge multiple inputs** and display them as a cohesive presentation (e.g., trip plan, comparison table, interactive prompt).  
-  - Output should be rich, well-structured, and visually organized — not just a flat summary.  
-  - Examples of ideal outputs include:
+  -   Output should be rich, well-structured, and visually organized — not just a flat summary.  
+  -   **CRITICAL**: For complex research/data tasks, **ALWAYS instruct the Formatter to produce a DETAILED, COMPREHENSIVE REPORT** (aiming for 5000+ words). Do NOT ask for a "concise summary" unless the user explicitly requested a brief overview or answer really could be reported in 15-20 words.
+  -   Examples of ideal outputs include:
     - **Markdown checklists or cards**
     - **Cost tables with subtotals**
     - **Day-by-day itinerary tables**

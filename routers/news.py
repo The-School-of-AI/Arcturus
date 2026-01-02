@@ -14,7 +14,7 @@ router = APIRouter(prefix="/news", tags=["news"])
 # Default News Sources
 DEFAULT_SOURCES = [
     {"id": "hn", "name": "Hacker News", "url": "https://news.ycombinator.com", "type": "api", "enabled": True},
-    {"id": "arxiv", "name": "arXiv CS.AI", "url": "https://arxiv.org/list/cs.AI/recent", "type": "rss", "feed_url": "http://export.arxiv.org/rss/cs.AI", "enabled": True},
+    {"id": "arxiv", "name": "arXiv CS.AI", "url": "https://arxiv.org/list/cs.AI/recent", "type": "rss", "feed_url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=30", "enabled": True},
     {"id": "karpathy", "name": "Andrej Karpathy", "url": "https://twitter.com/karpathy", "type": "rss", "feed_url": "https://nitter.net/karpathy/rss", "enabled": True},
     {"id": "willison", "name": "Simon Willison", "url": "https://simonwillison.net/", "type": "rss", "feed_url": "https://simonwillison.net/atom/entries/", "enabled": True},
 ]
@@ -28,8 +28,13 @@ def get_news_settings():
     sources = settings["news"]["sources"]
     dirty = False
     for s in sources:
-        if s["id"] == "arxiv" and s["feed_url"] == "https://rss.arxiv.org/rss/cs.AI":
-            s["feed_url"] = "http://export.arxiv.org/rss/cs.AI"
+        # Check for old RSS, new RSS mirror, or old export URL
+        if s["id"] == "arxiv" and (
+            s["feed_url"] == "https://rss.arxiv.org/rss/cs.AI" or 
+            s["feed_url"] == "http://export.arxiv.org/rss/cs.AI" or
+            "rss.arxiv.org" in s.get("feed_url", "")
+        ):
+            s["feed_url"] = "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=30"
             dirty = True
     
     if dirty:
@@ -168,7 +173,26 @@ async def fetch_hn():
 
 async def fetch_rss(source):
     try:
-        feed = feedparser.parse(source["feed_url"])
+        # Fetch with User-Agent to avoid blocking (e.g. Arxiv)
+        import requests
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+        
+        # Use a timeout of 10s
+        response = requests.get(source["feed_url"], headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            print(f"RSS fetch failed for {source['name']}: Status {response.status_code}")
+            return []
+            
+        # Parse the content
+        feed = feedparser.parse(response.content)
+        
+        if hasattr(feed, 'bozo_exception') and feed.bozo_exception:
+            print(f"RSS Parse Warning for {source['name']}: {feed.bozo_exception}")
+
         items = []
         for entry in feed.entries[:30]:
             # Try to get timestamp
@@ -328,10 +352,21 @@ async def get_reader_content(url: str):
 
         import trafilatura
         
-        # Download the web page
-        downloaded = trafilatura.fetch_url(url)
+        # Download the web page using requests (better headers support)
+        import requests
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        }
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            downloaded = resp.text
+        except Exception as e:
+            print(f"Reader fetch failed for {url}: {e}")
+            return {"status": "error", "error": f"Failed to fetch content: {str(e)}"}
+
         if not downloaded:
-            return {"status": "error", "error": "Failed to fetch the URL"}
+            return {"status": "error", "error": "Empty content returned"}
         
         # Extract the main content as markdown
         content = trafilatura.extract(

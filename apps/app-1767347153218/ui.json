@@ -1,0 +1,556 @@
+{
+  "id": "app-1767347153218",
+  "name": "IIT JEE Crash Course",
+  "description": "",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "JEE Practice Quiz",
+      "context": "Title of the quiz",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "JEE Practice Quiz"
+      },
+      "style": {}
+    },
+    {
+      "id": "quiz_section_1",
+      "type": "quiz_section",
+      "label": "Section 1: Physics",
+      "context": "Section header for Physics questions",
+      "config": {},
+      "data": {},
+      "style": {}
+    },
+    {
+      "id": "physics_q1",
+      "type": "quiz_mcq",
+      "label": "Physics Question 1",
+      "context": "A common JEE physics question on mechanics",
+      "config": {},
+      "data": {
+        "question": "A body is projected vertically upwards with a velocity u. It passes a certain point at height h above the ground at time t1 and t2 respectively. The value of t1 + t2 is:",
+        "options": [
+          "u/g",
+          "2u/g",
+          "u^2/g",
+          "u/2g"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "physics_q2",
+      "type": "quiz_mcq",
+      "label": "Physics Question 2",
+      "context": "A common JEE physics question on thermodynamics",
+      "config": {},
+      "data": {
+        "question": "A Carnot engine whose sink is at 300 K has an efficiency of 40%. By how much should the temperature of the source be increased so as to increase its efficiency by 50% of its original efficiency?",
+        "options": [
+          "275 K",
+          "325 K",
+          "250 K",
+          "380 K"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "physics_q3",
+      "type": "quiz_mcq",
+      "label": "Physics Question 3",
+      "context": "A common JEE physics question on optics",
+      "config": {},
+      "data": {
+        "question": "The angle of incidence for a ray of light at a refracting surface of a prism is 45\u00b0. The angle of prism is 60\u00b0. If the ray suffers minimum deviation through the prism, the angle of deviation and refractive index of the material of the prism respectively, are:",
+        "options": [
+          "30\u00b0, 1.414",
+          "45\u00b0, 1.414",
+          "30\u00b0, 1.732",
+          "45\u00b0, 1.732"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "physics_q4",
+      "type": "quiz_mcq",
+      "label": "Physics Question 4",
+      "context": "A common JEE physics question on electricity",
+      "config": {},
+      "data": {
+        "question": "In a meter bridge, the null point is found to be at a distance of l from the end A when resistor Y is used in the right gap. If the value of the resistance is doubled, the null point is found to be at a distance of l' from A. The relation between l and l' is:",
+        "options": [
+          "l' = l",
+          "l' < l",
+          "l' > l",
+          "l' = 2l"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "quiz_section_2",
+      "type": "quiz_section",
+      "label": "Section 2: Chemistry",
+      "context": "Section header for Chemistry questions",
+      "config": {},
+      "data": {},
+      "style": {}
+    },
+    {
+      "id": "chemistry_q1",
+      "type": "quiz_mcq",
+      "label": "Chemistry Question 1",
+      "context": "A common JEE chemistry question on organic chemistry",
+      "config": {},
+      "data": {
+        "question": "Which of the following compounds will exhibit geometrical isomerism?",
+        "options": [
+          "1-phenyl-2-butene",
+          "2-methyl-2-butene",
+          "2-butene",
+          "1-butene"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chemistry_q2",
+      "type": "quiz_mcq",
+      "label": "Chemistry Question 2",
+      "context": "A common JEE chemistry question on inorganic chemistry",
+      "config": {},
+      "data": {
+        "question": "The correct order of ionic radii among the following species is:",
+        "options": [
+          "N3- > O2- > F- > Na+",
+          "Na+ > F- > O2- > N3-",
+          "F- > O2- > N3+",
+          "O2- > F- > Na+ > N3-"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chemistry_q3",
+      "type": "quiz_mcq",
+      "label": "Chemistry Question 3",
+      "context": "A common JEE chemistry question on physical chemistry",
+      "config": {},
+      "data": {
+        "question": "The molarity of a solution obtained by mixing 750 mL of 0.5 M HCl with 250 mL of 2 M HCl will be:",
+        "options": [
+          "0.875 M",
+          "1.00 M",
+          "1.75 M",
+          "0.50 M"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chemistry_q4",
+      "type": "quiz_mcq",
+      "label": "Chemistry Question 4",
+      "context": "A common JEE chemistry question on chemical kinetics",
+      "config": {},
+      "data": {
+        "question": "For a first order reaction, the time required for 99.9% completion is nearly:",
+        "options": [
+          "10 times the half-life",
+          "100 times the half-life",
+          "1000 times the half-life",
+          "10000 times the half-life"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "quiz_section_3",
+      "type": "quiz_section",
+      "label": "Section 3: Mathematics",
+      "context": "Section header for Mathematics questions",
+      "config": {},
+      "data": {},
+      "style": {}
+    },
+    {
+      "id": "math_q1",
+      "type": "quiz_mcq",
+      "label": "Math Question 1",
+      "context": "A common JEE math question on calculus",
+      "config": {},
+      "data": {
+        "question": "The value of \u222b(0 to \u03c0/2) (sin x)/(sin x + cos x) dx is:",
+        "options": [
+          "\u03c0/4",
+          "\u03c0/2",
+          "\u03c0",
+          "2\u03c0"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "math_q2",
+      "type": "quiz_mcq",
+      "label": "Math Question 2",
+      "context": "A common JEE math question on coordinate geometry",
+      "config": {},
+      "data": {
+        "question": "The equation of the circle passing through the point (1, 1) and cutting the circles x^2 + y^2 + 4x - 2y - 3 = 0 and x^2 + y^2 - 2x + 4y - 3 = 0 orthogonally is:",
+        "options": [
+          "x^2 + y^2 - 2x - 2y - 3 = 0",
+          "x^2 + y^2 - 2x - 2y + 3 = 0",
+          "x^2 + y^2 + 2x + 2y - 3 = 0",
+          "x^2 + y^2 + 2x + 2y + 3 = 0"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "math_q3",
+      "type": "quiz_mcq",
+      "label": "Math Question 3",
+      "context": "A common JEE math question on algebra",
+      "config": {},
+      "data": {
+        "question": "If \u03b1 and \u03b2 are the roots of the equation x^2 - 2x + 4 = 0, then the value of \u03b1^n + \u03b2^n is:",
+        "options": [
+          "2^(n+1) cos(n\u03c0/3)",
+          "2^(n+1) sin(n\u03c0/3)",
+          "2^n cos(n\u03c0/3)",
+          "2^n sin(n\u03c0/3)"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "math_q4",
+      "type": "quiz_mcq",
+      "label": "Math Question 4",
+      "context": "A common JEE math question on trigonometry",
+      "config": {},
+      "data": {
+        "question": "The value of sin^2(\u03c0/8) + sin^2(3\u03c0/8) + sin^2(5\u03c0/8) + sin^2(7\u03c0/8) is equal to:",
+        "options": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "physics_q5",
+      "type": "quiz_mcq",
+      "label": "Physics Question 5",
+      "context": "A common JEE physics question on modern physics",
+      "config": {},
+      "data": {
+        "question": "The de Broglie wavelength of an electron accelerated by a potential difference of V is:",
+        "options": [
+          "1.227/sqrt(V) nm",
+          "1.227/V nm",
+          "1.227*sqrt(V) nm",
+          "1.227*V nm"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chemistry_q5",
+      "type": "quiz_mcq",
+      "label": "Chemistry Question 5",
+      "context": "A common JEE chemistry question on coordination compounds",
+      "config": {},
+      "data": {
+        "question": "The number of geometrical isomers possible for [Co(en)2Cl2]+ are:",
+        "options": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "math_q5",
+      "type": "quiz_mcq",
+      "label": "Math Question 5",
+      "context": "A common JEE math question on probability",
+      "config": {},
+      "data": {
+        "question": "A bag contains 4 red and 6 black balls. A ball is drawn at random from the bag, its colour is observed and this ball along with two additional balls of the same colour are returned to the bag. If now a ball is drawn at random from the bag, then the probability that this drawn ball is red, is:",
+        "options": [
+          "2/5",
+          "1/5",
+          "3/5",
+          "4/5"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "physics_q6",
+      "type": "quiz_mcq",
+      "label": "Physics Question 6",
+      "context": "A common JEE physics question on waves",
+      "config": {},
+      "data": {
+        "question": "Two waves are represented by the equations y1 = a sin(\u03c9t) and y2 = a cos(\u03c9t). The phase difference between them is:",
+        "options": [
+          "0",
+          "\u03c0/4",
+          "\u03c0/2",
+          "\u03c0"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chemistry_q6",
+      "type": "quiz_mcq",
+      "label": "Chemistry Question 6",
+      "context": "A common JEE chemistry question on chemical equilibrium",
+      "config": {},
+      "data": {
+        "question": "For the reaction N2(g) + 3H2(g) \u21cc 2NH3(g), the equilibrium constant Kp changes with:",
+        "options": [
+          "Total pressure",
+          "Catalyst",
+          "Temperature",
+          "Initial amount of N2 and H2"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "math_q6",
+      "type": "quiz_mcq",
+      "label": "Math Question 6",
+      "context": "A common JEE math question on differential equations",
+      "config": {},
+      "data": {
+        "question": "The solution of the differential equation dy/dx + y/x = x^2 is:",
+        "options": [
+          "y = x^3/4 + c/x",
+          "y = x^3/4 + cx",
+          "y = x^3/4 + c",
+          "y = x^3/4"
+        ]
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "quiz_section_1",
+      "x": 0,
+      "y": 2,
+      "w": 24,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "physics_q1",
+      "x": 0,
+      "y": 4,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "physics_q2",
+      "x": 12,
+      "y": 4,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "physics_q3",
+      "x": 0,
+      "y": 9,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "physics_q4",
+      "x": 12,
+      "y": 9,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "quiz_section_2",
+      "x": 0,
+      "y": 19,
+      "w": 24,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chemistry_q1",
+      "x": 0,
+      "y": 21,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chemistry_q2",
+      "x": 12,
+      "y": 21,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chemistry_q3",
+      "x": 0,
+      "y": 26,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chemistry_q4",
+      "x": 12,
+      "y": 26,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "quiz_section_3",
+      "x": 0,
+      "y": 36,
+      "w": 24,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "math_q1",
+      "x": 0,
+      "y": 38,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "math_q2",
+      "x": 12,
+      "y": 38,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "math_q3",
+      "x": 0,
+      "y": 43,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "math_q4",
+      "x": 12,
+      "y": 43,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "physics_q5",
+      "x": 0,
+      "y": 14,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chemistry_q5",
+      "x": 0,
+      "y": 31,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "math_q5",
+      "x": 0,
+      "y": 48,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "physics_q6",
+      "x": 12,
+      "y": 14,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chemistry_q6",
+      "x": 12,
+      "y": 31,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "math_q6",
+      "x": 12,
+      "y": 48,
+      "w": 12,
+      "h": 5,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767347217496,
+  "lastHydrated": null
+}

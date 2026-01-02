@@ -44,7 +44,7 @@
         "name": "arXiv CS.AI",
         "url": "https://arxiv.org/list/cs.AI/recent",
         "type": "rss",
-        "feed_url": "http://export.arxiv.org/rss/cs.AI",
+        "feed_url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=30",
         "enabled": true
       },
       {
