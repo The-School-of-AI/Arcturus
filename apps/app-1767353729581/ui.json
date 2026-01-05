@@ -1,6 +1,7 @@
 {
+  "id": "app-1767353729581",
   "name": "Air Purifier Demand Analysis in India's Metro Cities",
-  "description": "Generated from report",
+  "description": "",
   "cards": [
     {
       "id": "header",
@@ -125,87 +126,110 @@
       "x": 0,
       "y": 0,
       "w": 24,
-      "h": 2
+      "h": 2,
+      "moved": false,
+      "static": false
     },
     {
       "i": "summary",
-      "x": 0,
-      "y": 2,
-      "w": 24,
-      "h": 5
+      "x": 16,
+      "y": 5,
+      "w": 8,
+      "h": 5,
+      "moved": false,
+      "static": false
     },
     {
       "i": "market-size-2024",
       "x": 0,
-      "y": 7,
+      "y": 2,
       "w": 8,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "market-size-2033",
       "x": 8,
-      "y": 7,
+      "y": 2,
       "w": 8,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "cagr",
       "x": 16,
-      "y": 7,
+      "y": 2,
       "w": 8,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "metro-city-segmentation",
       "x": 0,
-      "y": 10,
-      "w": 24,
-      "h": 6
+      "y": 5,
+      "w": 16,
+      "h": 12,
+      "moved": false,
+      "static": false
     },
     {
       "i": "competitive-landscape",
       "x": 0,
-      "y": 16,
+      "y": 17,
       "w": 24,
-      "h": 6
+      "h": 10,
+      "moved": false,
+      "static": false
     },
     {
       "i": "market-drivers",
       "x": 0,
-      "y": 22,
+      "y": 27,
       "w": 12,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     },
     {
       "i": "market-challenges",
-      "x": 12,
-      "y": 22,
-      "w": 12,
-      "h": 6
+      "x": 16,
+      "y": 10,
+      "w": 8,
+      "h": 7,
+      "moved": false,
+      "static": false
     },
     {
       "i": "future-outlook",
-      "x": 0,
-      "y": 28,
+      "x": 12,
+      "y": 33,
       "w": 12,
-      "h": 6
+      "h": 7,
+      "moved": false,
+      "static": false
     },
     {
       "i": "opportunities",
       "x": 12,
-      "y": 28,
+      "y": 27,
       "w": 12,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     },
     {
       "i": "forecast",
       "x": 0,
-      "y": 34,
-      "w": 24,
-      "h": 6
+      "y": 33,
+      "w": 12,
+      "h": 7,
+      "moved": false,
+      "static": false
     }
   ],
-  "id": "app-1767353729581",
-  "lastModified": 1767354311218,
-  "lastHydrated": 1767354311218
+  "lastModified": 1767354492541,
+  "lastHydrated": null
 }

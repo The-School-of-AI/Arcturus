@@ -11,7 +11,7 @@ try:
     log_path = get_log_folder("test_session")
     print(f"Log Path: {log_path}")
     
-    expected_part = "16_NetworkX/memory/session_logs"
+    expected_part = "Arcturus/memory/session_logs"
     if expected_part in str(log_path):
         print("✅ SUCCESS: Path contains expected package structure")
     else:

@@ -42,6 +42,9 @@ export const GraphCanvas: React.FC = () => {
     // Connect to Store
     const { nodes, edges, onNodesChange, onEdgesChange, selectNode, selectedNodeId } = useAppStore();
 
+    const nodeTypes = useMemo(() => NODE_TYPES, []);
+    const edgeTypes = useMemo(() => EDGE_TYPES, []);
+
     // Auto-follow running nodes
     React.useEffect(() => {
         const runningNode = nodes.find(n => n.data.status === 'running');
@@ -61,8 +64,8 @@ export const GraphCanvas: React.FC = () => {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={(_: React.MouseEvent, node: Node) => useAppStore.getState().selectNode(node.id)}
-                nodeTypes={NODE_TYPES}
-                edgeTypes={EDGE_TYPES}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
                 className="bg-background"

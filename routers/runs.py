@@ -260,7 +260,7 @@ async def get_run(run_id: str):
         data = json.loads(found_file.read_text())
         # Reconstruct Graph to use adapter
         import networkx as nx
-        G = nx.node_link_graph(data)
+        G = nx.node_link_graph(data, edges="links")
         react_flow = nx_to_reactflow(G)
         
         # Determine status: Running if in memory, else use file status

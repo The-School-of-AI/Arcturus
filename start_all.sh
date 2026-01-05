@@ -11,7 +11,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-echo "🚀 Starting 16_NetworkX Unified System..."
+echo "🚀 Starting Arcturus Unified System..."
 
 # Start Backend
 echo "📡 Starting Backend (api.py)..."

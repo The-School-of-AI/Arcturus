@@ -2,7 +2,7 @@ cd platform-frontend
 npm run dev
 npm run dev:all for frontend and backend
 
-uv run 16_NetworkX/app.py
+uv run Arcturus/app.py
 
 to run RAG (index files)
-uv run 16_NetworkX/mcp_servers/server_rag.py
+uv run Arcturus/mcp_servers/server_rag.py

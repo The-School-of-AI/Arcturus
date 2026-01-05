@@ -20,14 +20,16 @@ export function RefetchModal({ isOpen, onClose, onRefetch }: RefetchModalProps) 
         setIsRefetching(true);
 
         try {
+            console.log('[RefetchModal] Starting hydration...');
             await onRefetch(prompt);
-            // Reset form
+            console.log('[RefetchModal] Hydration complete, closing modal...');
+            // Reset form and close immediately
             setPrompt('');
+            setIsRefetching(false);
             onClose();
         } catch (err) {
-            console.error(err);
+            console.error('[RefetchModal] Error:', err);
             setError('Failed to refresh data. Please try again.');
-        } finally {
             setIsRefetching(false);
         }
     };

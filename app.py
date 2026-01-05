@@ -7,7 +7,7 @@ from rich import print
 from rich.console import Console
 from rich.panel import Panel
 
-# Add 16_NetworkX to python path
+# Add Arcturus to python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.loop import AgentLoop4

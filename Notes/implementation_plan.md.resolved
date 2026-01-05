@@ -7,7 +7,7 @@
 
 ## Proposed Changes
 
-### 1. Visualization ([core/loop.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/core/loop.py))
+### 1. Visualization ([core/loop.py](file:///Users/rohanshravan/TSAI/Arcturus/core/loop.py))
 -   **Revert Phase 0 Bootstrap**: DO NOT add a "running" Planner/Query node initially if it causes duplication.
 -   **Alternative**: Create the bootstrap graph with a `ROOT` node only, or a phantom "Planning..." state that isn't a node.
 -   **User Preference**: "First node is not Planner Agent... make the first one Query".
@@ -16,14 +16,14 @@
     -   When `PlannerAgent` returns the `plan_graph`, **inspect it**.
     -   If the `plan_graph` starts with a node that performs the next step (e.g. `T001_SEARCH`), we link `Query` -> `T001`.
     -   If the `plan_graph` includes the planner itself (rare), we de-duplicate.
-    -   **Critical**: The current issue is likely that [_merge_plan_into_context](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/core/loop.py#122-157) *adds* new nodes but doesn't reconcile them with the bootstrap node.
-    -   **Fix**: Update [_merge_plan_into_context](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/core/loop.py#122-157) to handle the transition from `Query` node to the rest of the graph.
+    -   **Critical**: The current issue is likely that [_merge_plan_into_context](file:///Users/rohanshravan/TSAI/Arcturus/core/loop.py#122-157) *adds* new nodes but doesn't reconcile them with the bootstrap node.
+    -   **Fix**: Update [_merge_plan_into_context](file:///Users/rohanshravan/TSAI/Arcturus/core/loop.py#122-157) to handle the transition from `Query` node to the rest of the graph.
 
-### 2. Async User Input ([memory/context.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/memory/context.py))
+### 2. Async User Input ([memory/context.py](file:///Users/rohanshravan/TSAI/Arcturus/memory/context.py))
 -   **Add Async Input Support**:
-    -   Add `self.user_input_event = asyncio.Event()` to [ExecutionContextManager](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/memory/context.py#15-585).
+    -   Add `self.user_input_event = asyncio.Event()` to [ExecutionContextManager](file:///Users/rohanshravan/TSAI/Arcturus/memory/context.py#15-585).
     -   Add `self.user_input_value = None`.
-    -   Add [provide_user_input(value)](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/memory/context.py#79-83) method.
+    -   Add [provide_user_input(value)](file:///Users/rohanshravan/TSAI/Arcturus/memory/context.py#79-83) method.
 -   **Refactor `_handle_user_interaction_rich`**:
     -   Rename/Split into `_handle_user_interaction_async`.
     -   If `self.api_mode` (new flag) is True:
@@ -33,7 +33,7 @@
         -   Check `self.stop_requested`.
         -   Return `self.user_input_value`.
 
-### 3. API Endpoints ([api.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/api.py))
+### 3. API Endpoints ([api.py](file:///Users/rohanshravan/TSAI/Arcturus/api.py))
 -   **Add Input Endpoint**:
     -   `POST /runs/{run_id}/input`: Accepts user feedback.
     -   Finds context, calls `context.provide_user_input(text)`.
@@ -54,21 +54,21 @@ Implement "Real-Time" Indexing and Robust Search for the RAG system. This allows
 
 ## Proposed Changes
 
-### Backend: [mcp_servers/server_rag.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py)
-#### [MODIFY] [server_rag.py](file:///Users/rohanshravan/TSAI/S15 Share/16_NetworkX/mcp_servers/server_rag.py)
+### Backend: [mcp_servers/server_rag.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py)
+#### [MODIFY] [server_rag.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py)
 1.  **Cache Key Strategy**: Change caching to use `relative_path` instead of `file.name` to avoid collisions and partial updates.
 2.  **Runtime Filtering**: In [search_stored_documents_rag](file:///Users/rohanshravan/TSAI/S15%20Share/mcp_servers/mcp_server_2.py#101-120), verify that the file for a retrieved chunk still exists on disk before returning it.
-3.  **Re-Indexing**: Ensure [process_documents](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py#319-407) can be called multiple times safely.
+3.  **Re-Indexing**: Ensure [process_documents](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py#319-407) can be called multiple times safely.
 
-### Backend: [api.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/api.py)
-#### [MODIFY] [api.py](file:///Users/rohanshravan/TSAI/S15 Share/16_NetworkX/api.py)
+### Backend: [api.py](file:///Users/rohanshravan/TSAI/Arcturus/api.py)
+#### [MODIFY] [api.py](file:///Users/rohanshravan/TSAI/Arcturus/api.py)
 1.  **New Endpoint**: Add `POST /rag/reindex`.
-2.  **Logic**: This endpoint will trigger the [process_documents](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py#319-407) function in the running RAG server (via MCP call or internal method if running in same process - *Correction*: RAG server runs as a subprocess. We likely need to send a signal or use the MCP connection.
-    *   *Refinement*: Since [api.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/api.py) speaks to [server_rag.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py) via MCP (or just launches it), triggering a re-index might require an MCP tool call `trigger_reindex()` OR [server_rag.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py) should expose a tool for this.
-    *   *Decision*: Add a `reindex_documents` tool to [server_rag.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_rag.py) so [api.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/api.py) (and agents) can call it.
+2.  **Logic**: This endpoint will trigger the [process_documents](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py#319-407) function in the running RAG server (via MCP call or internal method if running in same process - *Correction*: RAG server runs as a subprocess. We likely need to send a signal or use the MCP connection.
+    *   *Refinement*: Since [api.py](file:///Users/rohanshravan/TSAI/Arcturus/api.py) speaks to [server_rag.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py) via MCP (or just launches it), triggering a re-index might require an MCP tool call `trigger_reindex()` OR [server_rag.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py) should expose a tool for this.
+    *   *Decision*: Add a `reindex_documents` tool to [server_rag.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py) so [api.py](file:///Users/rohanshravan/TSAI/Arcturus/api.py) (and agents) can call it.
 
 ### Frontend
-#### [MODIFY] [SettingsModal.tsx](file:///Users/rohanshravan/TSAI/S15 Share/16_NetworkX/platform-frontend/src/features/settings/SettingsModal.tsx)
+#### [MODIFY] [SettingsModal.tsx](file:///Users/rohanshravan/TSAI/Arcturus/platform-frontend/src/features/settings/SettingsModal.tsx)
 1.  **UI**: Add a "Re-Index Documents" button in the RAG/Data section.
 2.  **Action**: Calls `POST /rag/reindex`.
 
@@ -79,18 +79,18 @@ Implement "Real-Time" Indexing and Robust Search for the RAG system. This allows
 2.  **Search (Fail)**: Verify it's not found initially (if not auto-indexed).
 3.  **Click Re-Index**: Trigger the new endpoint.
 4.  **Search (Pass)**: Verify the new file is found.
-5.  **Delete File**: Delete the file from [data/](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/memory/context.py#450-453).
+5.  **Delete File**: Delete the file from [data/](file:///Users/rohanshravan/TSAI/Arcturus/memory/context.py#450-453).
 6.  **Search (Filtered)**: Verify the result is gone (via Runtime filtering).
 
 ## Fix Stringified URLs in Retriever
-The `RetrieverAgent` currently receives a string representation of a list (e.g., `"['url1', 'url2']"`) from [server_browser.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_browser.py) instead of a real list. This causes character-by-character iteration.
+The `RetrieverAgent` currently receives a string representation of a list (e.g., `"['url1', 'url2']"`) from [server_browser.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_browser.py) instead of a real list. This causes character-by-character iteration.
 
-### Server Side ([mcp_servers/server_browser.py](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_browser.py))
+### Server Side ([mcp_servers/server_browser.py](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_browser.py))
 - Change [fetch_search_urls](file:///Users/rohanshravan/TSAI/S15%20Share/S16%20Share/mcp_servers/mcp_server_3.py#110-120) to return `json.dumps(urls)` (valid JSON string).
-- Change [search_web_with_text_content](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_browser.py#66-124) to return `json.dumps(results)`.
-- Ensure [web_search](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/mcp_servers/server_browser.py#42-50) also returns JSON.
+- Change [search_web_with_text_content](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_browser.py#66-124) to return `json.dumps(results)`.
+- Ensure [web_search](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_browser.py#42-50) also returns JSON.
 
-### Prompt Side ([prompts/retriever.md](file:///Users/rohanshravan/TSAI/S15%20Share/16_NetworkX/prompts/retriever.md))
+### Prompt Side ([prompts/retriever.md](file:///Users/rohanshravan/TSAI/Arcturus/prompts/retriever.md))
 - Update prompt to explicitly instruct the agent to use `json.loads()` when processing tool outputs.
 - Example: `urls = json.loads(fetch_search_urls(...))`
 
