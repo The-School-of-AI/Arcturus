@@ -2,20 +2,18 @@ import React, { useMemo, useState } from 'react';
 import { BaseCard } from './BaseCard';
 import { cn } from '@/lib/utils';
 
-// Multi-color palette for auto-color mode
+// Multi-color palette for auto-color mode - UPDATED for Cyber Theme
 const MULTI_COLOR_PALETTE = [
-    '#eaff00', // Neon Yellow
-    '#ff6b6b', // Coral Red
-    '#4ecdc4', // Teal
-    '#45b7d1', // Sky Blue
-    '#96ceb4', // Sage Green
-    '#ffeaa7', // Light Yellow
-    '#dfe6e9', // Light Gray
-    '#fd79a8', // Pink
-    '#a29bfe', // Lavender
-    '#00b894', // Mint
-    '#e17055', // Burnt Orange
-    '#74b9ff', // Soft Blue
+    '#22d3ee', // Cyan
+    '#3b82f6', // Blue
+    '#8b5cf6', // Violet
+    '#d946ef', // Fuchsia
+    '#f472b6', // Pink
+    '#34d399', // Emerald
+    '#facc15', // Yellow (keep for contrast)
+    '#a78bfa', // Soft Purple
+    '#60a5fa', // Soft Blue
+    '#fb7185', // Rose
 ];
 
 interface SankeyNode {
@@ -45,7 +43,7 @@ interface SankeyCardProps {
         links: SankeyLink[];
     };
     config?: any;
-    style?: any;
+    className?: string;
 }
 
 // Default sample data
@@ -76,7 +74,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
     title,
     data,
     config = {},
-    style = {}
+    className
 }) => {
     const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
 
@@ -87,10 +85,8 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
     const animate = config.animate !== false;
     const autoMultiColor = config.autoMultiColor !== false;
 
-    // Style
-    const accentColor = style.accentColor || '#F5C542';
-    // Use theme-aware colors by default, only override if explicitly provided and NOT white
-    const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
+    // Style - Default to Primary Blue (from CSS var if possible, but here using a fallback hex that matches)
+    const accentColor = '#3b82f6'; // Blue-500 matches our new primary
 
     // Use default data if not provided or empty
     const inputData = (data?.nodes?.length && data?.links?.length) ? data : DEFAULT_SANKEY_DATA;
@@ -250,12 +246,12 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
     const hideTooltip = () => setTooltip(prev => ({ ...prev, visible: false }));
 
     return (
-        <BaseCard title={title} textColor={textColor}>
+        <BaseCard title={title}>
             <div className="w-full h-full flex flex-col relative p-0 sankey-container">
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-1 py-1.5 bg-popover text-popover-foreground text-[10px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1 bg-popover text-popover-foreground text-[10px] rounded shadow-lg border border-border pointer-events-none whitespace-nowrap backdrop-blur-sm"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}
@@ -263,15 +259,6 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                 )}
 
                 <div className="flex-1 relative overflow-hidden">
-                    {showGrid && (
-                        <div className="absolute inset-0 opacity-10 pointer-events-none">
-                            <div className="w-full h-full" style={{
-                                backgroundImage: 'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
-                                backgroundSize: '40px 40px'
-                            }} />
-                        </div>
-                    )}
-
                     <svg
                         className={cn("w-full h-full", animate && "animate-in fade-in duration-700")}
                         viewBox={`0 0 ${cardWidth} ${cardHeight}`}
@@ -309,8 +296,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                                     height={n.h}
                                     fill={n.color || accentColor}
                                     rx={2}
-                                    className="hover:brightness-125 transition-all cursor-crosshair"
-                                    style={{ filter: 'drop-shadow(0 4px 4px rgba(132, 132, 132, 0.4))' }}
+                                    className="hover:brightness-125 transition-all cursor-crosshair drop-shadow-sm"
                                     onMouseEnter={(e) => showTooltip(e as any, `${n.name}: ${n.value}`)}
                                     onMouseMove={(e) => showTooltip(e as any, `${n.name}: ${n.value}`)}
                                     onMouseLeave={hideTooltip}
@@ -321,9 +307,7 @@ export const SankeyCard: React.FC<SankeyCardProps> = ({
                                         y={n.y! + n.h! / 2}
                                         dy="0.35em"
                                         textAnchor={n.layer === 0 ? "start" : "end"}
-                                        className="text-[11px] font-semibold pointer-events-none uppercase tracking-wide"
-                                        fill={textColor || "currentColor"}
-                                        style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}
+                                        className="text-[11px] font-semibold pointer-events-none uppercase tracking-wide fill-muted-foreground shadow-black drop-shadow-sm"
                                     >
                                         {n.name}
                                     </text>

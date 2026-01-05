@@ -51,6 +51,9 @@ export const AppLayout: React.FC = () => {
         startWidthRef.current = side === 'left' ? leftWidth : rightWidth;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
+
+        // Add a class to body to indicate resizing state if needed
+        document.body.classList.add('is-resizing');
     }, [leftWidth, rightWidth]);
 
     useEffect(() => {
@@ -60,11 +63,11 @@ export const AppLayout: React.FC = () => {
             const delta = e.clientX - startXRef.current;
 
             if (isDraggingRef.current === 'left') {
-                const newWidth = Math.max(150, Math.min(400, startWidthRef.current + delta));
+                const newWidth = Math.max(150, Math.min(600, startWidthRef.current + delta));
                 setLeftWidth(newWidth);
             } else {
                 // For right panel, dragging left increases width
-                const newWidth = Math.max(250, Math.min(700, startWidthRef.current - delta));
+                const newWidth = Math.max(250, Math.min(800, startWidthRef.current - delta));
                 setRightWidth(newWidth);
             }
         };
@@ -73,6 +76,7 @@ export const AppLayout: React.FC = () => {
             isDraggingRef.current = null;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            document.body.classList.remove('is-resizing');
         };
 
         document.addEventListener('mousemove', handleMouseMove);
@@ -86,16 +90,16 @@ export const AppLayout: React.FC = () => {
 
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans">
+        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg">
             {/* Hide header when in App View Mode */}
             {!isAppViewMode && <Header />}
 
-            <div ref={containerRef} className="flex-1 flex overflow-hidden">
+            <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3">
                 {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown */}
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && (
                     <>
                         <div
-                            className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex-shrink-0"
+                            className="h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out"
                             style={{ width: leftWidth }}
                         >
                             <Sidebar />
@@ -105,8 +109,8 @@ export const AppLayout: React.FC = () => {
                     </>
                 )}
 
-                {/* Center Canvas or Document Viewer */}
-                <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative overflow-hidden">
+                {/* Center Canvas or Document Viewer - Main visual area */}
+                <div className="flex-1 flex flex-col min-w-0 glass rounded-2xl relative overflow-hidden shadow-2xl transition-all duration-300">
                     {/* Content Logic */}
                     {!isAppViewMode && (
                         sidebarTab === 'apps' ? (
@@ -133,8 +137,8 @@ export const AppLayout: React.FC = () => {
 
                     {/* APP RUNTIME VIEW (When "View App" is clicked) */}
                     {isAppViewMode && (
-                        <div className="absolute inset-0 z-50 bg-background flex items-center justify-center">
-                            <div className="w-full max-w-7xl h-full">
+                        <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center">
+                            <div className="w-full h-full p-4">
                                 <AppGrid isFullScreen={true} onToggleFullScreen={() => { }} />
                             </div>
                         </div>
@@ -146,9 +150,9 @@ export const AppLayout: React.FC = () => {
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 
-                        {/* Right Workspace Panel */}
+                        {/* Right Workspace Panel - Floating Glass */}
                         <div
-                            className="h-full border-l border-border bg-card/50 backdrop-blur-sm flex-shrink-0 flex flex-col"
+                            className="h-full glass-panel rounded-2xl flex-shrink-0 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ease-out"
                             style={{ width: rightWidth }}
                         >
                             {sidebarTab === 'apps' ? <AppInspector /> : sidebarTab === 'mcp' ? <McpInspector /> : sidebarTab === 'news' ? <NewsInspector /> : <WorkspacePanel />}

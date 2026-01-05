@@ -5,70 +5,73 @@
 
 @layer base {
   :root {
-    --background: 220 14% 96%;
-    --foreground: 240 10% 3.9%;
+    /* Modern Light Mode - Crisp, Airy, Tech Blue */
+    --background: 210 40% 98%; /* Very light cool blue-grey */
+    --foreground: 222 47% 11%; /* Deep navy text */
+    
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 47% 11%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 45 100% 42%;
-    /* Gold/Yellow for Light Mode - darker for visibility */
-    --primary-foreground: 0 0% 100%;
-    /* White text on gold */
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 222 47% 11%;
+    
+    --primary: 221 83% 53%; /* Bright Tech Blue */
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11.2%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11.2%;
+    
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 45 100% 42%;
-    --radius: 0.5rem;
-    --neon-yellow: 45 100% 42%;
-    /* Same gold for Light Mode consistency */
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+    
+    --radius: 0.75rem; /* Softer corners */
+    
+    --neon-blue: 217 91% 60%;
+    --neon-cyan: 189 94% 43%;
   }
 
-  /* Defaulting to Dark Mode values for this app */
-  /* Converting #F6FF4D (Neon Yellow) to HSL: 63, 100%, 65% approx */
-  /* Converting #0F1115 (Charcoal) to HSL: 220, 16%, 7% approx */
-
+  /* Dark Mode - Deep Space, Cyberpunk, Glass */
   .dark {
-    --background: 220 16% 7%;
-    /* Dark Charcoal */
-    --foreground: 0 0% 98%;
+    --background: 222 47% 11%; /* Deep Navy/Black */
+    --foreground: 210 40% 98%;
 
-    --card: 220 16% 10%;
-    /* Slightly lighter charcoal */
-    --card-foreground: 0 0% 98%;
+    --card: 217 33% 17%; /* Lighter navy for cards */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 220 16% 7%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 63 100% 65%;
-    /* Neon Yellow */
-    --primary-foreground: 220 16% 7%;
-    /* Dark text on neon */
+    --primary: 217 91% 60%; /* Electric Blue */
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 220 16% 14%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 33% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 220 16% 14%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 217 33% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 220 16% 14%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 217 33% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 16% 14%;
-    --input: 220 16% 14%;
-    --ring: 63 100% 65%;
-    --neon-yellow: 63 100% 65%;
-    /* Original Neon Yellow */
+    --border: 217 33% 17.5%;
+    --input: 217 33% 17.5%;
+    --ring: 224 76% 48%;
+    
+    --neon-blue: 217 91% 60%;
+    --neon-cyan: 190 100% 50%; /* Bright Cyan for accents */
   }
 }
 
@@ -76,141 +79,80 @@
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-cyan-500/30 selection:text-cyan-100;
   }
 }
 
-/* Custom Grid Background - Subtle grid lines showing snap guides */
-/* Grid matches AppGrid: 24 cols on 1200px = exactly 50px/col, rowHeight 40px, no margins */
+/* --- UTILITIES --- */
+
+/* Glassmorphism */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm;
+  }
+  
+  .glass-panel {
+    @apply bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+  }
+  
+  .border-glow {
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  }
+}
+
+/* Background Animation */
+@keyframes gradient-xy {
+  0%, 100% {
+    background-size: 400% 400%;
+    background-position: 0% 0%;
+  }
+  50% {
+    background-size: 400% 400%;
+    background-position: 100% 100%;
+  }
+}
+
+.animate-gradient-bg {
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #172554); /* Deep blues/navys */
+  background-size: 400% 400%;
+  animation: gradient-xy 15s ease infinite;
+}
+
+/* Custom Grid Background - Updated for blue theme */
 .bg-grid-lines {
-  background-color: hsl(var(--background));
   background-size: 50px 40px;
-  /* 1200/24 = 50px cols, rowHeight 40 + 4px gap = 44px */
   background-image:
-    linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    linear-gradient(to right, hsl(var(--border) / 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.3) 1px, transparent 1px);
 }
 
-/* Hide attribution, but enable when release in public TODO */
-.react-flow__attribution {
-  display: none !important;
-}
-
-
-/* ReactFlow Controls Dark Theme (RunTimeline Style) */
+/* ReactFlow Controls - Modernized */
 .react-flow__controls {
-  display: flex !important;
-  flex-direction: column !important;
-  /* Match RunTimeline: bg-card/90 backdrop-blur */
-  background: hsl(var(--card) / 0.9) !important;
-  backdrop-filter: blur(8px) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  /* border-border */
-  border-radius: 0.35rem !important;
-  /* rounded-xl */
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
-  /* shadow-2xl */
-  padding: 1px !important;
-  gap: 1px !important;
-  margin: 0 !important;
-  top: 12px !important;
-  left: 12px !important;
-  bottom: auto !important;
+  @apply flex flex-col glass-panel p-1 gap-1 m-0 rounded-lg top-3 left-3 bottom-auto !important;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5) !important;
 }
 
 .react-flow__controls-button {
-  background: transparent !important;
-  border: none !important;
-  border-bottom: none !important;
-  /* Reset default */
-  color: hsl(var(--muted-foreground)) !important;
-  /* muted-foreground */
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 0.5rem !important;
-  /* rounded-lg */
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.2s ease !important;
+  @apply bg-transparent border-none text-muted-foreground w-7 h-7 rounded flex items-center justify-center transition-all duration-200 !important;
 }
 
 .react-flow__controls-button:hover {
-  background: hsl(63 100% 65% / 0.1) !important;
-  /* hover:bg-neon-yellow/10 */
-  color: hsl(63 100% 65%) !important;
-  /* hover:text-neon-yellow */
-  border: 1px solid hsl(63 100% 65% / 0.3) !important;
-  /* Optional: border-neon-yellow/30 */
+  @apply bg-primary/10 text-primary border border-primary/20 !important;
 }
 
 .react-flow__controls-button svg {
-  fill: currentColor !important;
-  width: 16px !important;
-  height: 16px !important;
-}
-
-/* Simple Prose Styles for Document Viewer */
-.prose {
-  line-height: 1.6;
-}
-
-.prose h1 {
-  @apply text-2xl font-bold mb-4 text-primary;
-}
-
-.prose h2 {
-  @apply text-xl font-bold mb-3 mt-6 text-primary;
-}
-
-.prose h3 {
-  @apply text-lg font-bold mb-2 mt-4 text-primary;
-}
-
-.prose p {
-  @apply mb-4;
-}
-
-.prose ul {
-  @apply list-disc ml-6 mb-4;
-}
-
-.prose ol {
-  @apply list-decimal ml-6 mb-4;
-}
-
-.prose li {
-  @apply mb-1;
-}
-
-.prose strong {
-  @apply text-foreground font-bold;
-}
-
-.prose blockquote {
-  @apply border-l-4 border-primary/30 pl-4 italic my-4;
-}
-
-.prose code {
-  @apply bg-muted px-1.5 py-0.5 rounded font-mono text-xs text-primary;
-}
-
-.prose pre {
-  @apply bg-muted p-4 rounded-xl border border-border my-4 overflow-x-auto;
-}
-
-.prose pre code {
-  @apply p-0 bg-transparent text-foreground;
+  @apply fill-current w-4 h-4 !important;
 }
 
 /* Document Viewer & Browser Tabs */
 .active-tabs-container::-webkit-scrollbar {
   display: none;
 }
-
 .active-tabs-container {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -218,8 +160,7 @@
 
 .docx-viewer {
   scroll-behavior: smooth;
-  background-color: hsl(var(--background)) !important;
-  /* charcoal-950 */
+  @apply bg-background !important;
 }
 
 .docx-viewer .docx-wrapper {
@@ -231,46 +172,25 @@
 }
 
 .docx-viewer .docx {
-  background-color: white !important;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.8) !important;
-  margin-top: 2rem !important;
-  margin-bottom: 2rem !important;
-  border-radius: 2px !important;
+  @apply bg-white dark:bg-slate-900 shadow-2xl mt-8 mb-8 rounded-sm !important;
 }
 
-/* Fix for Syntax Highlighter padding */
+/* Syntax Highlighter Correction */
 .syntax-highlighter pre {
   margin: 0 !important;
 }
 
-/* Text Selection Utilities */
-.select-text {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  cursor: text;
-}
-
-::selection {
-  background: rgba(246, 255, 77, 0.2) !important;
-  /* primary color with opacity */
-  color: inherit;
-}
-
-/* React Grid Layout Resize Handle - Theme Aware */
+/* React Grid Layout Resize Handle */
 .react-resizable-handle {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
-
 .react-resizable:hover .react-resizable-handle {
   opacity: 1;
 }
-
 .react-resizable-handle::after {
-  border-color: hsl(var(--muted-foreground)) !important;
+  @apply border-muted-foreground !important;
 }
-
-/* Make resize handle more visible */
 .react-resizable-handle-se {
   bottom: 4px !important;
   right: 4px !important;

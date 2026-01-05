@@ -5,7 +5,8 @@ import { CheckCircle2, AlertTriangle, HelpCircle } from 'lucide-react';
 export interface SummaryGridProps {
     title?: string;
     data?: any;
-    style?: any;
+    // Removing generic style prop requirement, preferring strict props or classNames
+    className?: string;
 }
 
 const DEFAULT_FINDINGS = [
@@ -18,28 +19,26 @@ const DEFAULT_FINDINGS = [
 export const SummaryGrid: React.FC<SummaryGridProps> = ({
     title = "Executive Summary",
     data = {},
-    style = {}
 }) => {
     const findings = data.findings || DEFAULT_FINDINGS;
 
-    const passColor = style.passColor || '#4ade80';
-    const warnColor = style.warnColor || '#F5C542';
-    const infoColor = style.infoColor || '#3b82f6';
-    const textColor = style.textColor;
-
     return (
-        <BaseCard title={title} textColor={textColor}>
+        <BaseCard title={title}>
             <div className="grid grid-cols-1 gap-3">
                 {findings.map((f: any) => (
-                    <div key={f.label} className="flex gap-3 items-start">
-                        <div className="mt-0.5">
-                            {f.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: passColor }} />}
-                            {f.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5" style={{ color: warnColor }} />}
-                            {f.status === 'info' && <HelpCircle className="w-3.5 h-3.5" style={{ color: infoColor }} />}
+                    <div key={f.label} className="flex gap-3 items-start group">
+                        <div className="mt-0.5 transition-transform duration-200 group-hover:scale-110">
+                            {f.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500 dark:text-green-400" />}
+                            {f.status === 'warn' && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 dark:text-yellow-400" />}
+                            {f.status === 'info' && <HelpCircle className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />}
                         </div>
                         <div className="space-y-0.5 min-w-0">
-                            <div className="text-[10px] font-bold text-foreground leading-none" style={textColor ? { color: textColor } : {}}>{f.label}</div>
-                            <div className="text-[10px] text-muted-foreground leading-tight" style={textColor ? { color: textColor, opacity: 0.7 } : {}}>{f.text}</div>
+                            <div className="text-[10px] font-bold text-foreground leading-none tracking-tight">
+                                {f.label}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground leading-tight opacity-90">
+                                {f.text}
+                            </div>
                         </div>
                     </div>
                 ))}
