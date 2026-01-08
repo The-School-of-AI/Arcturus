@@ -54,4 +54,5 @@ mcp_servers/documents/*.gz
 
 # Gemini/Brain
 .gemini/
+.env
 
