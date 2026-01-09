@@ -203,25 +203,27 @@ export const DocumentAssistant: React.FC = () => {
 
     if (!activeDoc) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-background">
-                <ScrollText className="w-12 h-12 mb-4 opacity-20" />
-                <h3 className="font-semibold text-foreground mb-2">Document Assistant</h3>
-                <p className="text-sm">Select a document from the library to start an interactive deep-dive.</p>
+            <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-card text-center space-y-4">
+                <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
+                    <ScrollText className="w-8 h-8 text-muted-foreground opacity-20" />
+                </div>
+                <div className="space-y-1">
+                    <h3 className="font-bold text-foreground">Document Assistant</h3>
+                    <p className="text-xs text-muted-foreground">Select a document from the library to start an interactive deep-dive.</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full flex flex-col bg-background">
+        <div className="h-full flex flex-col bg-white dark:bg-card">
             {/* Header */}
-            <div className="p-4 border-b border-border bg-card/95 sticky top-0 z-10 flex items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Sparkles className="w-4 h-4 text-purple-400" />
-                        <h3 className="font-bold text-xs uppercase tracking-widest text-foreground">Insights</h3>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{activeDoc.title}</p>
+            <div className="p-4 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                    <Sparkles className="w-3 h-3 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Document Insights</span>
                 </div>
+                <p className="text-[10px] text-muted-foreground truncate opacity-70 ml-5">{activeDoc.title}</p>
             </div>
 
             {/* Chat History */}
@@ -305,7 +307,7 @@ export const DocumentAssistant: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-card border-t border-border">
+            <div className="p-4 bg-slate-50 dark:bg-card border-t border-border">
                 {/* Image Preview */}
                 {pastedImage && (
                     <div className="relative mb-2 inline-block">

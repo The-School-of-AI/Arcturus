@@ -7,84 +7,68 @@ import Editor from "@monaco-editor/react";
 import ReactMarkdown from 'react-markdown';
 import DOMPurify from 'dompurify';
 import { API_BASE } from '@/lib/api';
+import axios from 'axios';
+import { Button } from '@/components/ui/button';
 
 // Helper component for tabs (assuming it's a simple button for now)
 const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; icon: React.ReactNode }> = ({ label, active, onClick, icon }) => (
     <button
         onClick={onClick}
         className={cn(
-            "flex items-center gap-2 px-4 py-3 text-xs font-medium border-b-2 transition-all hover:bg-accent/50",
-            active
-                ? "border-primary text-primary bg-primary/5"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+            "flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-tighter transition-all relative border-b border-border/50",
+            active ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
         )}
     >
         {icon}
         {label}
+        {active && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
     </button>
 );
 
 // Sub-component for User Input to avoid Hook errors in conditional rendering
-const ClarificationInput: React.FC<{ selectedNode: any; codeContent: string }> = ({ selectedNode, codeContent }) => {
-    let message = "This agent requires your input to proceed.";
-    try {
-        const parsed = JSON.parse(codeContent);
-        if (parsed.clarificationMessage) {
-            message = parsed.clarificationMessage;
-        }
-    } catch { }
-
-    const [inputValue, setInputValue] = React.useState('');
+const ClarificationInput: React.FC<{ nodeId: string; runId: string; onSubmitted: () => void }> = ({ nodeId, runId, onSubmitted }) => {
+    const [input, setInput] = React.useState('');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const handleSubmit = async () => {
-        if (!inputValue.trim()) return;
+        if (!input.trim()) return;
         setIsSubmitting(true);
         try {
-            const runId = useAppStore.getState().currentRun?.id;
-            if (runId) {
-                await fetch(`${API_BASE}/runs/${runId}/input`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ input: inputValue })
-                });
-                setInputValue('');
-            }
-        } catch (e) {
-            console.error("Failed to submit input:", e);
-            alert("Failed to submit input: " + e);
+            await axios.post(`${API_BASE}/runs/${runId}/input`, { // Changed API_BASE_URL to API_BASE
+                node_id: nodeId,
+                response: input
+            });
+            setInput('');
+            onSubmitted();
+        } catch (error) {
+            console.error('Clarification error:', error);
+            alert("Failed to submit input: " + error); // Added alert for user feedback
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg space-y-3 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2 text-yellow-400 font-bold text-xs uppercase tracking-wider">
-                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                User Input Required
+        <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                <Brain className="w-3 h-3" /> Clarification Required
             </div>
-            <div className="text-sm text-foreground/90 leading-relaxed font-medium">
-                {message}
-            </div>
-            <div className="flex gap-2">
-                <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !isSubmitting && handleSubmit()}
-                    placeholder="Type your response here..."
-                    className="flex-1 bg-background border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-yellow-500/50 transition-colors"
-                    disabled={isSubmitting}
-                />
-                <button
-                    onClick={handleSubmit}
-                    disabled={!inputValue.trim() || isSubmitting}
-                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
-                >
-                    {isSubmitting ? 'Sending...' : 'Send'}
-                </button>
-            </div>
+            <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !isSubmitting && handleSubmit()} // Added onKeyDown for Enter key submission
+                placeholder="Agent needs more input..."
+                className="w-full min-h-[60px] p-2 text-xs bg-white dark:bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none text-foreground"
+                disabled={isSubmitting}
+            />
+            <Button
+                size="sm"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !input.trim()} // Disabled if input is empty
+                className="h-8 text-[10px] font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white"
+            >
+                {isSubmitting ? "Submitting..." : "Send Response"}
+            </Button>
         </div>
     );
 };
@@ -150,6 +134,11 @@ export const WorkspacePanel: React.FC = () => {
         }
     };
 
+    const handleClarificationSubmitted = () => {
+        // Optionally refresh node status or logs after clarification
+        // For now, just let the backend update the run status
+    };
+
     if (sidebarTab === 'rag') {
         return <DocumentAssistant />;
     }
@@ -158,37 +147,41 @@ export const WorkspacePanel: React.FC = () => {
 
     if (!effectiveSelectedNodeId) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-                    <Terminal className="w-8 h-8 opacity-50" />
+            <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-card text-center space-y-4">
+                <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
+                    <Terminal className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">Agent Inspector</h3>
-                <p className="text-sm max-w-[200px] text-foreground/90">Select a node in the graph to view its runtime details, code, and output.</p>
+                <div className="space-y-1">
+                    <h3 className="font-bold text-foreground">Agent Inspector</h3>
+                    <p className="text-xs text-muted-foreground max-w-[200px]">Select a node in the graph to view its runtime details, code, and output.</p>
+                </div>
             </div>
         );
     }
 
     const panelContent = (
         <div className={cn(
-            "h-full flex flex-col bg-card border-l border-border transition-all duration-300",
+            "h-full flex flex-col bg-white dark:bg-card border-l border-border transition-all duration-300",
             isZenMode ? "fixed inset-0 z-[9999] w-screen h-screen" : ""
         )}>
             {/* Sticky Header - Hidden in Zen Mode */}
             {!isZenMode && (
-                <div className="p-4 border-b border-border bg-card/95 backdrop-blur z-10 flex flex-col gap-2">
+                <div className="p-4 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex flex-col gap-2">
                     <div className="flex items-center gap-2">
-                        {/* ... status dot ... */}
                         <div className={cn(
                             "w-2 h-2 rounded-full",
-                            selectedNode?.data.status === 'completed' ? "bg-green-500" :
-                                selectedNode?.data.status === 'running' ? "bg-yellow-500 animate-pulse" :
-                                    selectedNode?.data.status === 'waiting_input' ? "bg-yellow-400 animate-pulse" :
-                                        selectedNode?.data.status === 'failed' ? "bg-red-500" :
-                                            selectedNode?.data.status === 'stale' ? "bg-muted-foreground" : "bg-white/20"
+                            selectedNode?.data.status === 'completed' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                                selectedNode?.data.status === 'failed' ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" :
+                                    "bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.4)]"
                         )} />
-                        <span className="font-mono font-bold text-sm tracking-wide uppercase text-foreground">
-                            {selectedNode?.data.label || "Unknown Agent"}
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground leading-none">
+                                {selectedNode?.data.label || "Agent Instance"}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest mt-1 opacity-70">
+                                {isExplorer ? "Architecture Template" : (selectedNode?.data.status || "Idle")}
+                            </span>
+                        </div>
                         <span className="ml-auto text-[10px] text-muted-foreground font-mono">
                             {selectedNode?.id}
                         </span>
@@ -353,10 +346,11 @@ export const WorkspacePanel: React.FC = () => {
                         {/* Section: User Query (Global) */}
                         {!isExplorer && currentRun && (
                             <div className="space-y-2">
-                                <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2 select-none">
-                                    <Terminal className="w-3 h-3" /> User Query
+                                <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                                    <Terminal className="w-3 h-3 text-primary" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">User Query</span>
                                 </div>
-                                <div className="p-3 bg-muted/50 rounded-md text-foreground/90 leading-relaxed text-md border border-border/50 select-text font-sans">
+                                <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-sm border border-border/50 select-text font-sans">
                                     {currentRun.name}
                                 </div>
                             </div>
@@ -364,29 +358,34 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* Section: Agent Role (System Prompt) */}
                         <div className="space-y-2">
-                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold flex items-center gap-2 select-none">
-                                <Brain className="w-3 h-3" /> Agent Goal
+                            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                                <Brain className="w-3 h-3 text-primary" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Agent Goal</span>
                             </div>
-                            <div className="p-3 bg-muted/50 rounded-md text-foreground/90 leading-relaxed text-xs border border-border/50 select-text">
+                            <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-[11px] border border-border/50 select-text">
                                 {selectedNode?.data.prompt || "N/A"}
                             </div>
                         </div>
 
-                        {/* Section: User Input (Clarification) */}
-                        {selectedNode?.data.status === 'waiting_input' && (
-                            <ClarificationInput selectedNode={selectedNode} codeContent={codeContent} />
+                        {/* Clarification Input for active runs */}
+                        {selectedNode?.data.status === 'waiting_input' && !isExplorer && currentRun && (
+                            <ClarificationInput
+                                nodeId={selectedNode.id}
+                                runId={currentRun.id}
+                                onSubmitted={handleClarificationSubmitted}
+                            />
                         )}
-
                         {/* Logic Steps (for Explorer) */}
                         {isExplorer && selectedNode?.data && (
                             <div className="space-y-6">
                                 {/* Description */}
                                 {selectedNode.data.description && (
-                                    <div className="space-y-1">
-                                        <div className="text-[10px] uppercase text-neon-yellow/60 font-bold tracking-widest">
-                                            Component Mission
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                                            <Brain className="w-3 h-3 text-primary" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Component Mission</span>
                                         </div>
-                                        <div className="text-sm text-foreground leading-relaxed bg-muted/50 p-3 rounded-lg border border-border/50">
+                                        <div className="text-sm text-foreground leading-relaxed bg-slate-50 dark:bg-muted/50 p-3 rounded-lg border border-border/50">
                                             {selectedNode.data.description}
                                         </div>
                                     </div>
@@ -394,13 +393,14 @@ export const WorkspacePanel: React.FC = () => {
 
                                 {/* Attributes */}
                                 {selectedNode.data.attributes && selectedNode.data.attributes.length > 0 && (
-                                    <div className="space-y-2">
-                                        <div className="text-[10px] uppercase text-neon-yellow/60 font-bold tracking-widest">
-                                            Technical Attributes
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                                            <Code2 className="w-3 h-3 text-primary" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Technical Attributes</span>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             {selectedNode.data.attributes.map((attr: string, idx: number) => (
-                                                <span key={idx} className="px-2 py-0.5 bg-neon-yellow/10 border border-neon-yellow/20 text-neon-yellow text-[10px] rounded font-bold uppercase tracking-tighter">
+                                                <span key={idx} className="px-2 py-0.5 bg-primary/5 border border-primary/20 text-primary text-[10px] rounded font-bold uppercase tracking-tighter">
                                                     {attr}
                                                 </span>
                                             ))}
@@ -410,15 +410,15 @@ export const WorkspacePanel: React.FC = () => {
 
                                 {/* Details */}
                                 {selectedNode.data.details && (
-                                    <div className="space-y-2">
-                                        <div className="text-[10px] uppercase text-neon-yellow font-bold tracking-widest pb-1 border-b border-neon-yellow/20 flex items-center justify-between">
-                                            Implementation Details
-                                            <span className="text-[9px] text-muted-foreground font-normal">Internal Logic</span>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                                            <Terminal className="w-3 h-3 text-primary" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Implementation Details</span>
                                         </div>
                                         <ul className="space-y-2 pl-1 select-text">
                                             {selectedNode.data.details.map((detail: string, idx: number) => (
                                                 <li key={idx} className="flex gap-2 items-start group">
-                                                    <div className="mt-1.5 h-1 w-1 rounded-full bg-neon-yellow opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                    <div className="mt-1.5 h-1 w-1 rounded-full bg-primary opacity-40 group-hover:opacity-100 transition-opacity" />
                                                     <span className="text-[11px] leading-relaxed text-muted-foreground group-hover:text-foreground transition-colors">
                                                         {detail}
                                                     </span>
@@ -434,20 +434,20 @@ export const WorkspacePanel: React.FC = () => {
                         {!isExplorer && (
                             <div className="grid grid-cols-2 gap-2 select-none">
                                 <div className="space-y-1">
-                                    <div className="text-[10px] uppercase text-muted-foreground font-semibold">Inputs (Reads)</div>
+                                    <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-1 italic opacity-70">Inputs (Reads)</div>
                                     <div className="flex flex-wrap gap-1">
                                         {selectedNode?.data.reads?.length ? selectedNode?.data.reads.map((r: string) => (
-                                            <span key={r} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded select-text">
+                                            <span key={r} className="text-[9px] px-1.5 py-0.5 bg-blue-500/5 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded font-bold uppercase select-text">
                                                 {r}
                                             </span>
                                         )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <div className="text-[10px] uppercase text-muted-foreground font-semibold">Outputs (Writes)</div>
+                                    <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-1 italic opacity-70">Outputs (Writes)</div>
                                     <div className="flex flex-wrap gap-1">
                                         {selectedNode?.data.writes?.length ? selectedNode?.data.writes.map((w: string) => (
-                                            <span key={w} className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded select-text">
+                                            <span key={w} className="text-[9px] px-1.5 py-0.5 bg-green-500/5 text-green-600 dark:text-green-400 border border-green-500/20 rounded font-bold uppercase select-text">
                                                 {w}
                                             </span>
                                         )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
@@ -458,19 +458,19 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* Section: Performance */}
                         {!isExplorer && (
-                            <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between border border-border/50 select-none">
+                            <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg flex items-center justify-between border border-border/50 select-none">
                                 <div className="flex items-center gap-2">
-                                    <Clock className="w-3 h-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">Duration:</span>
-                                    <span className="text-xs text-foreground font-mono">
+                                    <Clock className="w-3.5 h-3.5 text-primary" />
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Duration</span>
+                                    <span className="text-xs text-foreground font-mono font-bold">
                                         {typeof selectedNode?.data.execution_time === 'number'
                                             ? `${selectedNode.data.execution_time.toFixed(2)}s`
                                             : selectedNode?.data.execution_time || "0s"}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">Cost:</span>
-                                    <span className="text-xs text-green-400 font-mono">
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Cost</span>
+                                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-bold">
                                         ${selectedNode?.data.cost?.toFixed(6) || "0.000000"}
                                     </span>
                                 </div>
@@ -479,8 +479,9 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* Section: Logs/Output Snippet */}
                         <div className="space-y-2">
-                            <div className="text-xs uppercase tracking-widest text-primary/70 font-bold border-b border-border pb-1 select-none">
-                                Execution Output
+                            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                                <Terminal className="w-3 h-3 text-primary" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Execution Output</span>
                             </div>
                             {logs.map((log, i) => (
                                 <div key={i} className="flex flex-col gap-1 pl-2 border-l border-border select-text">
