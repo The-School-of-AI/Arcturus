@@ -30,6 +30,7 @@ import { TableCard } from './cards/TableCard';
 import { MarkdownCard } from './cards/MarkdownCard';
 import { ImageCard } from './cards/ImageCard';
 import { TextCard } from './cards/TextCard';
+import { AutoHeightWrapper } from './cards/AutoHeightWrapper';
 import { DividerCard } from './cards/DividerCard';
 import { FeedCard } from './cards/FeedCard';
 import { InputCard, ActionButtonCard, SelectCard, DateRangeCard } from './cards/ControlCards';
@@ -244,13 +245,22 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             // Basics
             case 'header':
                 if (config.showTitle === false) return null;
-                return (
+                const headerContent = (
                     <div className="p-4 h-full flex items-center" style={{ color: style.textColor }}>
                         <h1 className={cn("text-2xl font-bold w-full", config.centered && "text-center")} style={{ fontWeight: config.bold !== false ? 'bold' : 'normal' }}>
                             {data.text || label}
                         </h1>
                     </div>
                 );
+
+                if (commonProps.autoFit) {
+                    return (
+                        <AutoHeightWrapper cardId={id} enabled={commonProps.autoFit}>
+                            {headerContent}
+                        </AutoHeightWrapper>
+                    );
+                }
+                return headerContent;
             case 'text':
                 return (
                     <TextCard

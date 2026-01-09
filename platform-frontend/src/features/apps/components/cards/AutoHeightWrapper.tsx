@@ -18,89 +18,86 @@ export const AutoHeightWrapper: React.FC<AutoHeightWrapperProps> = ({
     enabled = true,
     rowHeight = 40
 }) => {
-    const measuringRef = useRef<HTMLDivElement>(null);
-    const [lastUpdatedH, setLastUpdatedH] = useState<number>(0);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [hasUpdated, setHasUpdated] = useState(false);
     const { appLayout, setAppLayout } = useAppStore();
 
     const updateHeight = useCallback(() => {
-        if (!enabled || !measuringRef.current) return;
+        if (!enabled || !wrapperRef.current || !contentRef.current) return;
 
-        // Use the measuring div which has auto height to get true content height
-        const contentHeight = measuringRef.current.scrollHeight;
+        const contentEl = contentRef.current;
+        const contentScrollHeight = contentEl.scrollHeight;
 
-        // Calculate required grid units (h)
-        // Formula: (contentHeight + header ~44px + padding ~16px) / rowHeight, rounded up
-        const headerAndPadding = 60; // Approximate header + padding
-        const minH = 2; // Minimum height of 2 units
-        const requiredH = Math.max(minH, Math.ceil((contentHeight + headerAndPadding) / rowHeight));
+        // Also measure all direct children to handle cases where scrollHeight might be misleading
+        // if consistent CSS overflow handling isn't perfect
+        let totalChildHeight = 0;
+        Array.from(contentEl.children).forEach((child) => {
+            const childRect = child.getBoundingClientRect();
+            totalChildHeight += childRect.height;
+        });
 
         // Find current layout item
         const currentItem = appLayout.find((item: any) => item.i === cardId);
         if (!currentItem) return;
 
-        // Update if height differs (both expand AND collapse)
-        if (requiredH !== currentItem.h && requiredH !== lastUpdatedH) {
-            console.log(`AutoHeight: ${cardId} adjusting h from ${currentItem.h} to ${requiredH}`);
-            setLastUpdatedH(requiredH);
+        // The actual content height we want is the scrollHeight of the content div
+        const actualContentHeight = Math.max(contentScrollHeight, totalChildHeight);
 
-            // Update layout with new height
+        // Calculate required grid units (h)
+        // using formula: pixels = h * (rowHeight + margin) - margin
+        // h = (pixels + margin) / (rowHeight + margin)
+
+        // Match constants from AppGrid.tsx
+        const RGL_MARGIN = 16;
+
+        // We add a tiny buffer (4px) to avoid precision issues where it effectively fits 
+        // but floats point math pushes it slightly over
+        const buffer = 4;
+
+        const requiredH = Math.max(2, Math.ceil((actualContentHeight + RGL_MARGIN + buffer) / (rowHeight + RGL_MARGIN)));
+
+        // Update if height differs
+        if (requiredH !== currentItem.h && !hasUpdated) {
+            setHasUpdated(true);
+
             const newLayout = appLayout.map((item: any) =>
                 item.i === cardId ? { ...item, h: requiredH } : item
             );
             setAppLayout(newLayout);
         }
-    }, [enabled, cardId, appLayout, setAppLayout, rowHeight, lastUpdatedH]);
+    }, [enabled, cardId, appLayout, setAppLayout, rowHeight, hasUpdated]);
 
-    // Reset and recalculate when enabled changes (user toggled autoFit)
+    // Reset when enabled changes
     useEffect(() => {
         if (enabled) {
-            // Reset the cached height so it will recalculate
-            setLastUpdatedH(0);
-            // Small delay to ensure content is rendered, then trigger update
-            const timer = setTimeout(() => {
-                updateHeight();
-            }, 50);
-            return () => clearTimeout(timer);
+            setHasUpdated(false);
         }
-    }, [enabled]);
+    }, [enabled, cardId]);
 
+    // Measure after mount
     useEffect(() => {
-        if (!enabled) return;
+        if (!enabled || hasUpdated) return;
 
-        // Small delay to ensure content is rendered
-        const timer = setTimeout(() => {
-            updateHeight();
-        }, 150);
+        const timers = [
+            setTimeout(() => updateHeight(), 100),
+            setTimeout(() => updateHeight(), 300),
+            setTimeout(() => updateHeight(), 500),
+        ];
 
-        return () => clearTimeout(timer);
-    }, [enabled, updateHeight]);
-
-    // Also observe for content changes using ResizeObserver
-    useEffect(() => {
-        if (!enabled || !measuringRef.current) return;
-
-        const resizeObserver = new ResizeObserver(() => {
-            // Debounce
-            requestAnimationFrame(updateHeight);
-        });
-
-        resizeObserver.observe(measuringRef.current);
-
-        return () => resizeObserver.disconnect();
-    }, [enabled, updateHeight]);
+        return () => timers.forEach(t => clearTimeout(t));
+    }, [enabled, hasUpdated, updateHeight, cardId]);
 
     return (
-        <div className="w-full h-full overflow-hidden relative flex-1">
-            {/* Hidden measuring div to get true content height */}
+        <div
+            ref={wrapperRef}
+            className="w-full h-full overflow-hidden"
+        >
             <div
-                ref={measuringRef}
-                className="absolute top-0 left-0 w-full pointer-events-none"
-                style={{ height: 'auto', visibility: 'hidden', zIndex: -1 }}
+                ref={contentRef}
+                className="w-full"
+                style={{ height: 'auto', minHeight: 0 }}
             >
-                {children}
-            </div>
-            {/* Visible content */}
-            <div className="w-full h-full overflow-auto">
                 {children}
             </div>
         </div>

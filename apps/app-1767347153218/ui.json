@@ -10,19 +10,24 @@
       "context": "Title of the quiz",
       "config": {
         "centered": true,
-        "bold": true
+        "bold": true,
+        "autoFit": true
       },
       "data": {
         "text": "JEE Practice Quiz"
       },
-      "style": {}
+      "style": {
+        "borderColor": "#f58a8a"
+      }
     },
     {
       "id": "quiz_section_1",
       "type": "quiz_section",
       "label": "Section 1: Physics",
       "context": "Section header for Physics questions",
-      "config": {},
+      "config": {
+        "autoFit": true
+      },
       "data": {},
       "style": {}
     },
@@ -176,7 +181,9 @@
       "type": "quiz_section",
       "label": "Section 3: Mathematics",
       "context": "Section header for Mathematics questions",
-      "config": {},
+      "config": {
+        "autoFit": true
+      },
       "data": {},
       "style": {}
     },
@@ -357,23 +364,23 @@
       "x": 0,
       "y": 0,
       "w": 24,
-      "h": 2,
+      "h": 7,
       "moved": false,
       "static": false
     },
     {
       "i": "quiz_section_1",
       "x": 0,
-      "y": 2,
+      "y": 7,
       "w": 24,
-      "h": 2,
+      "h": 14,
       "moved": false,
       "static": false
     },
     {
       "i": "physics_q1",
       "x": 0,
-      "y": 4,
+      "y": 21,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -382,7 +389,7 @@
     {
       "i": "physics_q2",
       "x": 12,
-      "y": 4,
+      "y": 21,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -391,7 +398,7 @@
     {
       "i": "physics_q3",
       "x": 0,
-      "y": 10,
+      "y": 27,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -400,7 +407,7 @@
     {
       "i": "physics_q4",
       "x": 12,
-      "y": 9,
+      "y": 27,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -409,16 +416,16 @@
     {
       "i": "quiz_section_2",
       "x": 0,
-      "y": 20,
+      "y": 39,
       "w": 24,
-      "h": 2,
+      "h": 14,
       "moved": false,
       "static": false
     },
     {
       "i": "chemistry_q1",
       "x": 0,
-      "y": 22,
+      "y": 53,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -427,7 +434,7 @@
     {
       "i": "chemistry_q2",
       "x": 12,
-      "y": 22,
+      "y": 53,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -436,7 +443,7 @@
     {
       "i": "chemistry_q3",
       "x": 0,
-      "y": 27,
+      "y": 59,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -445,7 +452,7 @@
     {
       "i": "chemistry_q4",
       "x": 12,
-      "y": 27,
+      "y": 59,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -454,16 +461,16 @@
     {
       "i": "quiz_section_3",
       "x": 0,
-      "y": 37,
+      "y": 71,
       "w": 24,
-      "h": 2,
+      "h": 14,
       "moved": false,
       "static": false
     },
     {
       "i": "math_q1",
       "x": 0,
-      "y": 39,
+      "y": 85,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -472,7 +479,7 @@
     {
       "i": "math_q2",
       "x": 12,
-      "y": 39,
+      "y": 85,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -481,7 +488,7 @@
     {
       "i": "math_q3",
       "x": 0,
-      "y": 44,
+      "y": 91,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -490,7 +497,7 @@
     {
       "i": "math_q4",
       "x": 12,
-      "y": 44,
+      "y": 91,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -499,7 +506,7 @@
     {
       "i": "physics_q5",
       "x": 0,
-      "y": 15,
+      "y": 33,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -508,7 +515,7 @@
     {
       "i": "chemistry_q5",
       "x": 0,
-      "y": 32,
+      "y": 65,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -517,7 +524,7 @@
     {
       "i": "math_q5",
       "x": 0,
-      "y": 49,
+      "y": 97,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -526,7 +533,7 @@
     {
       "i": "physics_q6",
       "x": 12,
-      "y": 14,
+      "y": 33,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -535,7 +542,7 @@
     {
       "i": "chemistry_q6",
       "x": 12,
-      "y": 32,
+      "y": 65,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -544,13 +551,13 @@
     {
       "i": "math_q6",
       "x": 12,
-      "y": 49,
+      "y": 97,
       "w": 12,
       "h": 6,
       "moved": false,
       "static": false
     }
   ],
-  "lastModified": 1767936194892,
+  "lastModified": 1767944816515,
   "lastHydrated": null
 }

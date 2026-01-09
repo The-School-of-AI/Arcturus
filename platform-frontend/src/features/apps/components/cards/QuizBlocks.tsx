@@ -13,6 +13,8 @@ interface QuizBlockProps {
     style?: any;
     onUpdate?: (data: any) => void;
     isInteractive?: boolean;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
 // =============================================================
@@ -1010,10 +1012,10 @@ export const QuizTextCard: React.FC<QuizBlockProps> = ({ data = {} }) => {
 };
 
 // 20. Section Header
-export const QuizSectionCard: React.FC<QuizBlockProps> = ({ data = {} }) => {
+export const QuizSectionCard: React.FC<QuizBlockProps> = ({ data = {}, cardId, autoFit = true }) => {
     const { title = 'Section 1: Multiple Choice', description = 'Answer all questions in this section. Each question is worth 1 point.' } = data;
     return (
-        <BaseCard>
+        <BaseCard cardId={cardId} autoFit={autoFit}>
             <div className="p-4 border-l-4 border-neon-yellow w-full">
                 <h3 className="text-lg font-bold text-foreground text-left">{title}</h3>
                 {description && <p className="text-xs text-muted-foreground mt-1 text-left">{description}</p>}
