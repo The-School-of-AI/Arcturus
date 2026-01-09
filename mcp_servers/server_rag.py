@@ -70,20 +70,112 @@ def mcp_log(level: str, message: str) -> None:
     sys.stderr.write(f"{level}: {message}\n")
     sys.stderr.flush()
 
+def find_sentence_end(text: str, target_pos: int, direction: str = 'back', window: int = 150) -> int:
+    """Finds the nearest sentence boundary (.!? followed by space or newline).
+    
+    Args:
+        text: The text to search in.
+        target_pos: The desired split point (index).
+        direction: 'back' to look before target_pos, 'forward' to look after.
+        window: How many characters to look in either direction.
+    
+    Returns:
+        The index of the end of the sentence (including punctuation and trailing space),
+        or target_pos if no boundary is found within the window.
+    """
+    if direction == 'back':
+        start = max(0, target_pos - window)
+        search_area = text[start:target_pos]
+        # Find all sentence endings in the search area
+        matches = list(re.finditer(r'[.!?](\s+|$)', search_area))
+        if matches:
+            # Take the last one (closest to target_pos)
+            return start + matches[-1].end()
+    else:
+        end = min(len(text), target_pos + window)
+        search_area = text[target_pos:end]
+        match = re.search(r'[.!?](\s+|$)', search_area)
+        if match:
+            return target_pos + match.end()
+            
+    return target_pos
+
 def get_safe_chunks(text: str, max_words=512, overlap=50) -> list[str]:
-    """Sub-splits a large semantic chunk technically to fit embedding context limits."""
+    """Sub-splits a large semantic chunk technically to fit embedding context limits.
+    Now more sentence-aware to prevent mid-sentence cropping.
+    """
     words = text.split()
     if len(words) <= max_words:
         return [text]
     
-    sub_chunks = []
-    for i in range(0, len(words), max_words - overlap):
-        chunk = " ".join(words[i : i + max_words])
-        if chunk.strip():
-            sub_chunks.append(chunk)
-        if i + max_words >= len(words):
+    # We use a character-based approach for more precision with sentence boundaries
+    chunks = []
+    start_char = 0
+    total_len = len(text)
+    
+    # Approx characters per word (rough estimate)
+    avg_chars_per_word = 6
+    target_chunk_len = max_words * avg_chars_per_word
+    
+    while start_char < total_len:
+        # If remaining text is small enough, just take it all
+        remaining = text[start_char:]
+        if not remaining.strip():
             break
-    return sub_chunks
+            
+        if len(remaining.split()) <= max_words:
+            chunks.append(remaining.strip())
+            break
+            
+        # 1. Start with target length
+        end_pos = min(start_char + target_chunk_len, total_len)
+        
+        # 2. Look BACK for a sentence end
+        # Look back up to 30% of the target length
+        lookback_window = int(target_chunk_len * 0.3)
+        new_end = find_sentence_end(text, end_pos, direction='back', window=lookback_window)
+        
+        if new_end == end_pos:
+            # 3. Look FORWARD if back look failed
+            lookforward_window = int(target_chunk_len * 0.2)
+            new_end = find_sentence_end(text, end_pos, direction='forward', window=lookforward_window)
+            
+        # 4. Final fallback: find nearest space to avoid cutting words
+        if new_end == end_pos:
+            space_match = re.search(r'\s', text[end_pos:])
+            if space_match:
+                new_end = end_pos + space_match.start() + 1
+            else:
+                new_end = total_len # Take the rest
+        
+        chunk = text[start_char:new_end].strip()
+        if chunk:
+            chunks.append(chunk)
+            
+        # Advance with overlap
+        # Calculate overlap in characters (rough estimate)
+        overlap_chars = overlap * avg_chars_per_word
+        
+        # CRITICAL: Always advance start_char significantly to avoid infinite loops or micro-steps
+        next_start_target = new_end - overlap_chars
+        start_char = max(start_char + (target_chunk_len // 2), next_start_target)
+        
+        # Safety: Ensure start_char never moves backward and always moves at least 1
+        if start_char <= (new_end - target_chunk_len + 1):
+             start_char = new_end - overlap_chars
+        
+        if start_char >= total_len:
+            break
+
+        # Ensure we find a space to start the next chunk cleanly
+        next_space = text.find(' ', start_char)
+        if next_space != -1 and next_space < (new_end + target_chunk_len):
+            start_char = next_space + 1
+        else:
+            # If no space found soon, just use start_char as is
+            pass
+            
+    return chunks
 
 
 @mcp.tool()
@@ -496,11 +588,15 @@ TEXT BLOCK: {text_preview}
                 # LLM found split point - find it in original text
                 split_idx = chunk_text.find(reply[:40])
                 if split_idx > 50:  # Meaningful split
-                    first_part = chunk_text[:split_idx].strip()
+                    # ADJUST SPLIT: Find nearest sentence end to the LLM suggestion
+                    # LLM points to start of second topic; we want to end first topic at a sentence closure.
+                    adjusted_split = find_sentence_end(chunk_text, split_idx, direction='back', window=150)
+                    
+                    first_part = chunk_text[:adjusted_split].strip()
                     final_chunks.append(first_part)
                     
                     # Feed remainder back for next iteration
-                    remainder = chunk_text[split_idx:]
+                    remainder = chunk_text[adjusted_split:].strip()
                     words = words[:position] + remainder.split() + words[position + WORD_LIMIT:]
                     # Don't advance position - process remainder
                     continue
@@ -509,58 +605,36 @@ TEXT BLOCK: {text_preview}
                     position += WORD_LIMIT
             else:
                 # Single topic - handle potentially large block
-                # Don't just hard cut at WORD_LIMIT; find the last sentence boundary
-                # Look for sentence endings in the last 15% of the chunk
-                lookback_chars = int(len(chunk_text) * 0.15) 
-                last_section = chunk_text[-lookback_chars:]
+                # Use sentence-aware boundary detection
+                end_pos = len(chunk_text)
+                # Look back from the end of the block for the last closure
+                lookback_window = int(len(chunk_text) * 0.2)
+                safe_split = find_sentence_end(chunk_text, end_pos, direction='back', window=lookback_window)
                 
-                # Regex for sentence ending: period/exclaim/question followed by space or newline
-                match = None
-                for m in re.finditer(r'[.!?]\s', last_section):
-                    match = m
-                
-                if match:
-                    # Cut at the sentence end
-                    sentence_end = len(chunk_text) - lookback_chars + match.end()
-                    safe_chunk = chunk_text[:sentence_end].strip()
+                if safe_split < end_pos:
+                    safe_chunk = chunk_text[:safe_split].strip()
                     final_chunks.append(safe_chunk)
-                    
-                    # Recalculate position based on words consumed
-                    words_consumed = len(safe_chunk.split())
-                    position += words_consumed
+                    # Advance by words consumed
+                    position += len(safe_chunk.split())
                 else:
-                    # Backward search failed. Try FORWARD search (Look ahead 150 words)
-                    # to find the next sentence ending, rather than hard cutting.
-                    extended_found = False
+                    # Look ahead for a closure if back look failed
                     try:
-                        # Peek ahead
-                        next_block = words[position + WORD_LIMIT : position + WORD_LIMIT + 150]
+                        next_block = words[position + WORD_LIMIT : position + WORD_LIMIT + 200]
                         if next_block:
                             next_text = " ".join(next_block)
-                            # Find first sentence terminator
-                            f_match = re.search(r'[.!?]\s', next_text)
-                            if f_match:
-                                # Found a terminator ahead! Extend the chunk.
-                                cutoff = f_match.end()
-                                extension = next_text[:cutoff]
-                                full_chunk = chunk_text + " " + extension
+                            f_split = find_sentence_end(next_text, 0, direction='forward', window=len(next_text))
+                            if f_split > 0:
+                                extension = next_text[:f_split]
+                                full_chunk = (chunk_text + " " + extension).strip()
                                 final_chunks.append(full_chunk)
-                                
-                                # Advance strictly by what we consumed (Limit + Extension)
-                                position += WORD_LIMIT + len(extension.split())
-                                extended_found = True
-                    
+                                position += len(full_chunk.split())
+                                continue
                     except Exception as e:
                         mcp_log("WARN", f"Forward look error: {e}")
 
-                    if not extended_found:
-                        # Both Back and Forward failed (e.g. huge table).
-                        # Use Overlap Fallback.
-                        OVERLAP = 50
-                        final_chunks.append(chunk_text)
-                        
-                        # Advance less, creating overlap in next chunk
-                        position += (WORD_LIMIT - OVERLAP)
+                    # Fallback if both failed
+                    final_chunks.append(chunk_text)
+                    position += (WORD_LIMIT - 50) # Use small overlap fallback
 
         except Exception as e:
             mcp_log("WARN", f"Semantic chunking LLM error: {e}")
