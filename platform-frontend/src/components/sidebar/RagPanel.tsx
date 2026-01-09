@@ -337,12 +337,12 @@ export const RagPanel: React.FC = () => {
             </div>
 
             {/* Search & Mode Toggle Merged */}
-            <div className="p-2 border-b border-border/50 bg-muted/10 shrink-0">
+            <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50 shrink-0">
                 <div className="flex items-center gap-2">
-                    <form onSubmit={handleSearchSubmit} className="relative flex-1 group">
-                        <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-neon-yellow transition-colors" />
+                    <form onSubmit={handleSearchSubmit} className="relative flex-1">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                         <Input
-                            className="pl-8 pr-2 bg-card/30 border-border/30 text-xs focus:ring-1 focus:ring-neon-yellow/20 placeholder:text-muted-foreground/50 h-7.5 transition-all w-full"
+                            className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                             placeholder={panelMode === 'browse' ? "Filter..." : "Ask..."}
                             value={innerSearch}
                             onChange={(e) => setInnerSearch(e.target.value)}

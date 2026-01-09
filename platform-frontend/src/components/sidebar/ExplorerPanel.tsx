@@ -324,9 +324,9 @@ export const ExplorerPanel: React.FC = () => {
                                         value={connectInput}
                                         onChange={(e) => setConnectInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                                        className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-neon-yellow/50 transition-all placeholder:text-muted-foreground"
+                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                                     />
-                                    <Globe className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+                                    <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                 </div>
                                 <Button
                                     onClick={handleConnect}

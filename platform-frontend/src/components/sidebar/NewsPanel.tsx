@@ -134,20 +134,20 @@ export const NewsPanel: React.FC = () => {
                 (viewMode === 'sources' || viewMode === 'search') && (
                     <>
                         {/* Search Bar */}
-                        <div className="p-3 border-b border-border/50 bg-muted/20">
+                        <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50">
                             <form onSubmit={handleSearch} className="relative flex items-center">
-                                <Search className="absolute left-3 w-3.5 h-3.5 text-muted-foreground" />
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                 <Input
                                     placeholder="Search Web"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9 h-9 text-xs bg-card border-border/50 focus:border-cyan-500/50"
+                                    className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                                 />
                                 {searchQuery && (
                                     <button
                                         type="button"
                                         onClick={clearSearch}
-                                        className="absolute right-3 text-muted-foreground hover:text-foreground"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     >
                                         <X className="w-3.5 h-3.5" />
                                     </button>

@@ -181,12 +181,12 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                 </Dialog>
                             </div>
 
-                            {/* Search - Matches Remme Style */}
-                            <div className="p-3 border-b border-border/50 bg-muted/20">
-                                <div className="relative group">
-                                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground group-focus-within:text-neon-yellow transition-colors" />
+                            {/* Search */}
+                            <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                     <Input
-                                        className="pl-9 bg-card/50 border-border/50 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-muted-foreground h-9 transition-all"
+                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                                         placeholder="Search runs..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
