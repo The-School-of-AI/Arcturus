@@ -24,7 +24,7 @@ except ImportError:
 load_dotenv()
 
 # Initialize FastMCP server
-mcp = FastMCP("hybrid-browser", timeout=60)
+mcp = FastMCP("hybrid-browser")
 
 # --- Tool 1: Fast Text Search (DuckDuckGo + Extraction) ---
 

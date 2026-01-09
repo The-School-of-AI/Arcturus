@@ -358,7 +358,7 @@ export const RagPanel: React.FC = () => {
                                 panelMode === 'browse' ? "bg-neon-yellow text-neutral-950" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            Browse
+                            SEARCH
                         </button>
                         <button
                             onClick={() => setPanelMode('seek')}
@@ -367,7 +367,7 @@ export const RagPanel: React.FC = () => {
                                 panelMode === 'seek' ? "bg-neon-yellow text-neutral-950" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            Seek
+                            RAG
                         </button>
                     </div>
                 </div>

@@ -66,6 +66,13 @@ export const NewsPanel: React.FC = () => {
 
     const selectedSource = newsSources.find(s => s.id === selectedNewsSourceId);
 
+    // Refresh news when source changes
+    React.useEffect(() => {
+        if (viewMode === 'articles') {
+            fetchNewsFeed(selectedNewsSourceId);
+        }
+    }, [selectedNewsSourceId, fetchNewsFeed, viewMode]);
+
     // Check if an article is already saved
     const isArticleSaved = (url: string) => savedArticles.some(a => a.url === url);
 
@@ -377,7 +384,7 @@ export const NewsPanel: React.FC = () => {
                                 <ChevronLeft className="w-4 h-4" />
                             </Button>
                             <span className="text-sm font-medium truncate flex-1 leading-none">
-                                {newsItems.length > 0 ? new URL(newsItems[0].url).hostname.replace('www.', '') : 'Articles'}
+                                {selectedSource ? selectedSource.name : (newsItems.length > 0 ? new URL(newsItems[0].url).hostname.replace('www.', '') : 'Articles')}
                             </span>
                         </div>
 
