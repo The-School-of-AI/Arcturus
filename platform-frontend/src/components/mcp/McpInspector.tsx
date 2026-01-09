@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/store';
-import { Settings2, CheckCircle2, ChevronRight, Info } from 'lucide-react';
+import { Settings2, CheckCircle2, ChevronRight, Info, X } from 'lucide-react';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
@@ -90,22 +90,31 @@ export const McpInspector: React.FC = () => {
                 </div>
 
                 {tools.length > 0 && (
-                    <div
-                        onClick={toggleAll}
-                        className="flex items-center gap-2 px-2 py-1 rounded bg-muted/50 border border-border hover:bg-muted cursor-pointer transition-colors"
-                    >
-                        <span className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground">
-                            {isAllEnabled ? 'Disable All' : 'Enable All'}
-                        </span>
-                        <div className={cn(
-                            "w-6 h-3 rounded-full relative transition-colors",
-                            isAllEnabled ? "bg-primary" : "bg-white/20"
-                        )}>
+                    <div className="flex items-center gap-2">
+                        <div
+                            onClick={toggleAll}
+                            className="flex items-center gap-2 px-2 py-1 rounded bg-muted/50 border border-border hover:bg-muted cursor-pointer transition-colors"
+                        >
+                            <span className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground">
+                                {isAllEnabled ? 'Disable All' : 'Enable All'}
+                            </span>
                             <div className={cn(
-                                "absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all",
-                                isAllEnabled ? "right-0.5" : "left-0.5"
-                            )} />
+                                "w-6 h-3 rounded-full relative transition-colors",
+                                isAllEnabled ? "bg-primary" : "bg-white/20"
+                            )}>
+                                <div className={cn(
+                                    "absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all",
+                                    isAllEnabled ? "right-0.5" : "left-0.5"
+                                )} />
+                            </div>
                         </div>
+                        <button
+                            onClick={() => useAppStore.getState().clearSelection()}
+                            className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded transition-colors"
+                            title="Hide Panel"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
                 )}
             </div>

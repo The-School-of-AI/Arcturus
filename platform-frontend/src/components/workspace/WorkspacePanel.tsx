@@ -242,10 +242,19 @@ export const WorkspacePanel: React.FC = () => {
                         {/* Zen Mode Toggle */}
                         <button
                             onClick={() => setIsZenMode(!isZenMode)}
-                            className="ml-2 p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                            className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
                             title="Enter Zen Mode"
                         >
                             <Maximize2 className="w-4 h-4" />
+                        </button>
+
+                        {/* Hide Panel Button */}
+                        <button
+                            onClick={() => useAppStore.getState().clearSelection()}
+                            className="p-1.5 hover:bg-red-500/10 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                            title="Hide Panel"
+                        >
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
 

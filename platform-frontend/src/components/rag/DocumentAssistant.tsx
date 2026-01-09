@@ -218,12 +218,22 @@ export const DocumentAssistant: React.FC = () => {
     return (
         <div className="h-full flex flex-col bg-white dark:bg-card">
             {/* Header */}
-            <div className="p-4 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                    <Sparkles className="w-3 h-3 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Document Insights</span>
+            <div className="p-4 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Document Insights</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate opacity-70 ml-5">{activeDoc.title}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground truncate opacity-70 ml-5">{activeDoc.title}</p>
+
+                <button
+                    onClick={() => useAppStore.getState().clearSelection()}
+                    className="p-1.5 hover:bg-red-500/10 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                    title="Hide Panel"
+                >
+                    <X className="w-4 h-4" />
+                </button>
             </div>
 
             {/* Chat History */}

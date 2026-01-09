@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, View, Component, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
+import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, View, Component, EyeOff, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1554,12 +1554,22 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                         <div className="text-[10px] text-muted-foreground  opacity-50">{selectedCard.id}</div>
                     </div>
                 </div>
-                <button
-                    onClick={() => removeAppCard(selectedCard.id)}
-                    className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded transition-colors"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => useAppStore.getState().clearSelection()}
+                        className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded transition-colors"
+                        title="Hide Panel"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => removeAppCard(selectedCard.id)}
+                        className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded transition-colors"
+                        title="Delete Component"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Tabs */}

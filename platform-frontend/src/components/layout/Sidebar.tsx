@@ -23,9 +23,36 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     active: boolean,
     onClick: () => void
 }) => {
+    const clearSelection = useAppStore(state => state.clearSelection);
+    const sidebarTab = useAppStore(state => state.sidebarTab);
+    const selectedNodeId = useAppStore(state => state.selectedNodeId);
+    const selectedAppCardId = useAppStore(state => state.selectedAppCardId);
+    const selectedExplorerNodeId = useAppStore(state => state.selectedExplorerNodeId);
+    const activeDocumentId = useAppStore(state => state.activeDocumentId);
+    const selectedMcpServer = useAppStore(state => state.selectedMcpServer);
+    const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
+
+    const isInspectorOpen = React.useMemo(() => {
+        if (sidebarTab === 'apps' && selectedAppCardId) return true;
+        if (sidebarTab === 'runs' && selectedNodeId) return true;
+        if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
+        if (sidebarTab === 'rag' && activeDocumentId) return true;
+        if (sidebarTab === 'mcp' && selectedMcpServer) return true;
+        if (sidebarTab === 'news' && showNewsChatPanel) return true;
+        return false;
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId, selectedMcpServer, showNewsChatPanel]);
+
+    const handleIconClick = () => {
+        if (active && isInspectorOpen) {
+            clearSelection();
+        } else {
+            onClick();
+        }
+    };
+
     return (
         <button
-            onClick={onClick}
+            onClick={handleIconClick}
             className={cn(
                 "w-12 h-12 flex flex-col items-center justify-center gap-0.5 transition-all rounded-xl group relative mx-auto",
                 active
