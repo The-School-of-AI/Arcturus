@@ -275,5 +275,14 @@
     "updated_at": "2026-01-02T15:32:29.018678",
     "source": "run_1766402327",
     "faiss_id": 84
+  },
+  {
+    "id": "75eea711-eac7-4d62-9ee0-250e6991e1bb",
+    "text": "US President Trump has approved the \u2018Sanctioning Russia Act of 2025,\u2019 a bill that could impose tariffs of up to 500% on countries importing petroleum products from Russia. This legislation is designed to penalize nations that continue to purchase Russian oil, potentially impacting India\u2019s energy imports and straining trade relations between the US and India. Senator Lindsey Graham, a sponsor of the bill, stated that it seeks to punish nations buying cheap Russian oil. India\u2019s ambassador to the US, Vinay Mohan Kwatra, has reportedly sought relief from existing tariffs, highlighting India\u2019s reduced purchases of Russian oil. The bill targets countries that \u2018knowingly engage\u2019 in the exchange of Russian-origin uranium and petroleum products. The definition of \u2018knowingly engage\u2019 is not clearly defined in the bill. The implementation of the 500% tariff could significantly affect India\u2019s energy sector. India has emerged as a major importer of Russian oil, particularly after the outbreak of the Russia-Ukraine conflict. If the bill is enacted and India is not granted an exemption, the following impacts could be observed: Increased Import Costs, Strained US-India Relations, Pressure to Diversify Energy Sources.",
+    "category": "derived",
+    "created_at": "2026-01-09T16:40:44.987822",
+    "updated_at": "2026-01-09T16:40:44.987829",
+    "source": "run_1767956953",
+    "faiss_id": 85
   }
 ]

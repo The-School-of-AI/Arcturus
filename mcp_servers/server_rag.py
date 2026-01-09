@@ -57,6 +57,9 @@ MAX_CHUNK_LENGTH = settings["rag"]["max_chunk_length"]
 TOP_K = settings["rag"]["top_k"]
 OLLAMA_TIMEOUT = get_timeout()
 ROOT = Path(__file__).parent.resolve()
+BASE_DATA_DIR = ROOT.parent / "data"
+MEMORY_SUMMARIES_DIR = ROOT.parent / "memory" / "session_summaries_index"
+SYNC_TARGET_DIR = BASE_DATA_DIR / "conversation_history"
 
 # Global indexing status for progress tracking
 INDEXING_STATUS = {
@@ -65,6 +68,8 @@ INDEXING_STATUS = {
     "completed": 0,
     "currentFile": ""
 }
+INDEXING_LOCK = threading.Lock()
+REINDEX_BUSY_LOCK = threading.Lock()
 
 
 def get_embedding(text: str) -> np.ndarray:
@@ -889,11 +894,23 @@ ANSWER (number or NONE):"""
 def file_hash(path):
     return hashlib.md5(Path(path).read_bytes()).hexdigest()
 
+def log_debug(msg):
+    try:
+        debug_log = Path(__file__).parent / "rag_debug.log"
+        with open(debug_log, "a") as f:
+            f.write(f"{msg}\n")
+    except:
+        pass
+
 def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
     """Worker function to process a single file: Extract -> Chunk -> Embed."""
     try:
         rel_path = file.relative_to(doc_path_root).as_posix()
-        fhash = file_hash(file)
+        try:
+            fhash = file_hash(file)
+        except Exception as e:
+            log_debug(f"HASH FAIL {rel_path}: {e}")
+            raise e
         
         # Cache Check
         if rel_path in cache_meta:
@@ -917,6 +934,50 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
         elif ext == ".py":
             text = file.read_text()
             markdown = f"```python\n{text}\n```"
+        elif ext == ".json":
+            try:
+                data = json.loads(file.read_text())
+                # Specific Handling: Session Summaries (Arcturus format)
+                if "graph" in data and "nodes" in data:
+                    summary_parts = []
+                    summary_parts.append(f"# Session Summary: {data['graph'].get('session_id', 'Unknown')}")
+                    summary_parts.append(f"**Original Query:** {data['graph'].get('original_query', 'N/A')}")
+                    if "created_at" in data["graph"]:
+                        summary_parts.append(f"*Date: {data['graph']['created_at']}*")
+                    
+                    for node in data.get("nodes", []):
+                        agent = node.get("agent", "Unknown Agent")
+                        desc = node.get("description", "Unnamed Step")
+                        output = node.get("output", {})
+                        
+                        summary_parts.append(f"---")
+                        summary_parts.append(f"### Step: {desc} (by {agent})")
+                        
+                        if isinstance(output, dict):
+                            # Try to find meaningful text output
+                            text_val = output.get("fallback_markdown") or output.get("summary") or output.get("answer")
+                            if not text_val:
+                                # Look into nested keys
+                                for k, v in output.items():
+                                    if isinstance(v, str) and len(v) > 20: # Long string likely contains info
+                                        text_val = v
+                                        break
+                            
+                            if text_val:
+                                summary_parts.append(text_val)
+                            else:
+                                # Final fallback for dict output
+                                summary_parts.append(f"```json\n{json.dumps(output, indent=2)}\n```")
+                        elif output:
+                            summary_parts.append(str(output))
+                            
+                    markdown = "\n\n".join(summary_parts)
+                else:
+                    # Fallback for generic JSON: wrap in code block for literal search
+                    markdown = f"```json\n{json.dumps(data, indent=2)}\n```"
+            except Exception as e:
+                mcp_log("WARN", f"JSON parse failed for {rel_path}: {e}")
+                markdown = f"```json\n{file.read_text()}\n```"
         else:
             # Fallback
             converter = MarkItDown()
@@ -1050,6 +1111,7 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
         }
 
     except Exception as e:
+        log_debug(f"CRITICAL FAIL {file}: {e}")
         return {"status": "ERROR", "rel_path": str(file), "message": str(e)}
 
 
@@ -1082,23 +1144,29 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
             mcp_log("ERROR", f"Target path not found: {target_path}")
             return
     else:
-        # Glob first, filter images
-        all_files = DOC_PATH.rglob("*.*")
-        files_to_process = [f for f in all_files if f.suffix.lower() not in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg']]
+        # Improved file discovery: walk and filter
+        files_to_process = []
+        skip_dirs = {'.git', '.github', 'node_modules', '__pycache__', 'mcp_repos', 'faiss_index'}
+        skip_exts = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.mp4', '.mov', '.wav', '.mp3', '.bin', '.exe', '.pyc'}
+        
+        for root, dirs, filenames in os.walk(DOC_PATH):
+            # Skip junk directories in-place
+            dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith('.')]
+            
+            for f in filenames:
+                if f.startswith('.'): continue
+                if Path(f).suffix.lower() in skip_exts: continue
+                
+                files_to_process.append(Path(root) / f)
 
     # PARALLEL EXECUTION
     # Max workers = 2 (reduced from 4 to prevent Ollama timeouts)
     MAX_WORKERS = 2
     mcp_log("INFO", f"Starting parallel ingestion with {MAX_WORKERS} workers on {len(files_to_process)} files")
     
-    # Initialize progress tracking
-    global INDEXING_STATUS
-    INDEXING_STATUS = {
-        "active": True,
-        "total": len(files_to_process),
-        "completed": 0,
-        "currentFile": ""
-    }
+    with INDEXING_LOCK:
+        INDEXING_STATUS["total"] = len(files_to_process)
+        INDEXING_STATUS["currentFile"] = "Checking cache..."
     
     param_cache_meta = CACHE_META.copy() # Read-only for threads
     
@@ -1118,7 +1186,7 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
             
             if status == "SKIP":
                 # Increment progress for skipped files too
-                with index_lock:
+                with INDEXING_LOCK:
                     INDEXING_STATUS["completed"] += 1
                 # mcp_log("SKIP", f"Skipping {rel_path}")
                 pass
@@ -1155,48 +1223,79 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
                         mcp_log("DONE", f"Indexed {rel_path} ({len(new_embs)} chunks)")
                         
                         # Update progress
-                        INDEXING_STATUS["completed"] += 1
-                        INDEXING_STATUS["currentFile"] = Path(rel_path).name
+                        with INDEXING_LOCK:
+                            INDEXING_STATUS["completed"] += 1
+                            INDEXING_STATUS["currentFile"] = Path(rel_path).name
             
             elif status == "WARN":
                 mcp_log("WARN", f"{rel_path}: {result.get('message')}")
+                with INDEXING_LOCK:
+                    INDEXING_STATUS["completed"] += 1
                 
             elif status == "ERROR":
                 mcp_log("ERROR", f"Failed {rel_path}: {result.get('message')}")
+                with INDEXING_LOCK:
+                    INDEXING_STATUS["completed"] += 1
 
     # Reset indexing status
-    INDEXING_STATUS["active"] = False
-    INDEXING_STATUS["currentFile"] = ""
+    with INDEXING_LOCK:
+        INDEXING_STATUS["active"] = False
+        INDEXING_STATUS["currentFile"] = ""
+    
+    # Release re-indexing busy lock if held
+    try:
+        REINDEX_BUSY_LOCK.release()
+    except:
+        pass
+        
     mcp_log("INFO", "READY")
 
 
 @mcp.tool()
-async def reindex_documents(target_path: str = None) -> str:
+async def reindex_documents(target_path: str = None, force: bool = False) -> str:
     """Trigger a manual re-index of the RAG documents. 
     Optionally provide a target_path (relative to data/ folder) to index a specific file.
-    If target_path is None, IT WIPES THE INDEX and performs a full fresh scan.
+    If force is True, it wipes the index and performs a full fresh scan.
     """
-    mcp_log("INFO", f"Re-indexing request received (target: {target_path})")
+    if not REINDEX_BUSY_LOCK.acquire(blocking=False):
+        mcp_log("WARN", "Re-indexing already in progress, skipping new request.")
+        return "Indexing already in progress."
     
-    if not target_path:
-        # Full Rescan: Wipe existing data to force clean processing
-        ROOT = Path(__file__).parent.resolve()
-        INDEX_CACHE = ROOT / "faiss_index"
-        mcp_log("INFO", "Use Trace: Force Rescan - Wiping existing index...")
-        
-        for f in ["index.bin", "metadata.json", "doc_index_cache.json"]:
-            path = INDEX_CACHE / f
-            if path.exists():
-                try:
-                    path.unlink()
-                except Exception as e:
-                    mcp_log("WARN", f"Failed to delete {f}: {e}")
-                    
-    # Run the blocking process_documents in a separate thread
-    # NOTE: Images are now captioned INLINE during processing (caption-first pipeline)
-    await asyncio.to_thread(process_documents, target_path)
-    
-    return f"Re-indexing {'for ' + target_path if target_path else 'all documents'} completed. Images captioned inline."
+    # Initialize status IMMEDIATELY so polling sees it active
+    with INDEXING_LOCK:
+        INDEXING_STATUS["active"] = True
+        INDEXING_STATUS["completed"] = 0
+        INDEXING_STATUS["total"] = 0 # Will be updated by process_documents
+        INDEXING_STATUS["currentFile"] = "Initializing scan..."
+
+    try:
+        if force and not target_path:
+            # Full Rescan: Wipe existing data ONLY if force is True
+            ROOT = Path(__file__).parent.resolve()
+            INDEX_CACHE = ROOT / "faiss_index"
+            mcp_log("INFO", "Force Rescan - Wiping existing index...")
+            
+            for f in ["index.bin", "metadata.json", "doc_index_cache.json"]:
+                path = INDEX_CACHE / f
+                if path.exists():
+                    try:
+                        path.unlink()
+                    except Exception as e:
+                        mcp_log("WARN", f"Failed to delete {f}: {e}")
+                        
+        # Run the blocking process_documents in a separate thread (Fire and forget from tool perspective)
+        # The progressive status is tracked via INDEXING_STATUS which is polled by another tool
+        threading.Thread(target=process_documents, args=(target_path,), daemon=True).start()
+        return f"Re-indexing started {'for ' + target_path if target_path else 'for all documents'}."
+    except Exception as e:
+        # If thread failed to start, reset status and release lock
+        with INDEXING_LOCK:
+            INDEXING_STATUS["active"] = False
+        try:
+            REINDEX_BUSY_LOCK.release()
+        except:
+            pass
+        return f"Error starting indexing: {str(e)}"
 
 
 @mcp.tool()
@@ -1301,6 +1400,90 @@ def ensure_faiss_ready():
         mcp_log("INFO", "Index already exists. Skipping regeneration.")
 
 
+# =============================================================================
+# SESSION SUMMARY SYNC SERVICE
+# =============================================================================
+
+class SessionSummarySyncService:
+    """Service to mirror session summaries into the RAG data directory."""
+    
+    def __init__(self, source_dir: Path, target_dir: Path):
+        self.source_dir = source_dir
+        self.target_dir = target_dir
+        self.stop_event = threading.Event()
+        
+    def get_file_hash(self, path: Path) -> str:
+        """Calculate MD5 hash of a file."""
+        hasher = hashlib.md5()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    def sync(self):
+        """Mirror files from source to target if changed."""
+        if not self.source_dir.exists():
+            return
+
+        self.target_dir.mkdir(parents=True, exist_ok=True)
+        changes_detected = False
+
+        # Recursive sync
+        for src_path in self.source_dir.rglob("*.json"):
+            if not src_path.is_file():
+                continue
+            
+            # Create relative target path
+            rel_path = src_path.relative_to(self.source_dir)
+            dest_path = self.target_dir / rel_path
+            
+            # Check if sync is needed
+            should_copy = False
+            if not dest_path.exists():
+                should_copy = True
+            else:
+                # Compare hashes if file exists
+                if self.get_file_hash(src_path) != self.get_file_hash(dest_path):
+                    should_copy = True
+            
+            if should_copy:
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                import shutil
+                shutil.copy2(src_path, dest_path)
+                mcp_log("SYNC", f"Mirrored {rel_path} to RAG")
+                changes_detected = True
+        
+        return changes_detected
+
+    def run_forever(self, interval_sec: int = 60):
+        """Background loop for syncing."""
+        mcp_log("INFO", f"🚀 Session Summary Sync Service started (monitoring {self.source_dir})")
+        while not self.stop_event.is_set():
+            try:
+                self.sync()
+            except Exception as e:
+                mcp_log("ERROR", f"Sync failed: {e}")
+            
+            # Wait for next interval
+            self.stop_event.wait(interval_sec)
+
+def start_background_services():
+    """Initialize and start background threads."""
+    sync_service = SessionSummarySyncService(MEMORY_SUMMARIES_DIR, SYNC_TARGET_DIR)
+    
+    # Start sync thread
+    sync_thread = threading.Thread(
+        target=sync_service.run_forever, 
+        args=(60,), # Check every minute
+        daemon=True,
+        name="SessionSyncThread"
+    )
+    sync_thread.start()
+
+
 if __name__ == "__main__":
     mcp_log("INFO", "🚀 Starting RAG MCP Server...")
+    # Start background tasks
+    start_background_services()
+    # Run server
     mcp.run()

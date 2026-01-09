@@ -30,17 +30,18 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     const selectedExplorerNodeId = useAppStore(state => state.selectedExplorerNodeId);
     const activeDocumentId = useAppStore(state => state.activeDocumentId);
     const selectedMcpServer = useAppStore(state => state.selectedMcpServer);
+    const selectedRagFile = useAppStore(state => state.selectedRagFile);
     const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
 
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
-        if (sidebarTab === 'rag' && activeDocumentId) return true;
+        if (sidebarTab === 'rag' && (activeDocumentId || selectedRagFile)) return true;
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId, selectedMcpServer, showNewsChatPanel]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel]);
 
     const handleIconClick = () => {
         if (active && isInspectorOpen) {

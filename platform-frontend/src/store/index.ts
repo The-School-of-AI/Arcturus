@@ -121,6 +121,8 @@ interface RagViewerSlice {
     isRagLoading: boolean;
     setIsRagLoading: (loading: boolean) => void;
     fetchRagFiles: () => Promise<void>;
+    selectedRagFile: any | null;
+    setSelectedRagFile: (file: any | null) => void;
 
     // --- MCP UI States ---
     isMcpAddOpen: boolean;
@@ -614,7 +616,9 @@ export const useAppStore = create<AppState>()(
             ragPollingInterval: null,
             startRagPolling: () => {
                 if (get().ragPollingInterval) clearInterval(get().ragPollingInterval!);
+                let attempts = 0;
                 const interval = setInterval(async () => {
+                    attempts++;
                     try {
                         const res = await api.get(`${API_BASE}/rag/indexing_status`);
                         const status = res.data;
@@ -628,7 +632,8 @@ export const useAppStore = create<AppState>()(
                                 }
                             });
                         } else {
-                            if (get().isRagIndexing) {
+                            // If we just started, give it a few seconds to actually reflect 'active' on backend
+                            if (get().isRagIndexing && attempts > 3) {
                                 // Just finished
                                 set({ isRagIndexing: false, ragIndexingProgress: null });
                                 get().fetchRagFiles();
@@ -637,6 +642,8 @@ export const useAppStore = create<AppState>()(
                         }
                     } catch (e) {
                         console.error("RAG polling failed", e);
+                        // Stop polling on repeated failures
+                        if (attempts > 10) get().stopRagPolling();
                     }
                 }, 1000);
                 set({ ragPollingInterval: interval });
@@ -661,6 +668,8 @@ export const useAppStore = create<AppState>()(
                     set({ isRagLoading: false });
                 }
             },
+            selectedRagFile: null,
+            setSelectedRagFile: (file) => set({ selectedRagFile: file }),
 
             // --- MCP UI States ---
             isMcpAddOpen: false,
@@ -1298,6 +1307,7 @@ export const useAppStore = create<AppState>()(
                 selectedMcpServer: null,
                 selectedLibraryComponent: null,
                 showRagInsights: false,
+                selectedRagFile: null,
             }),
 
             deleteNewsSource: async (id) => {

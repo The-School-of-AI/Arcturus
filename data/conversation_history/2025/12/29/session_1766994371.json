@@ -1,0 +1,205 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1766994371",
+    "original_query": "Get the latest stock price for NVDA. ",
+    "file_manifest": [],
+    "created_at": "2025-12-29T07:46:11.819638",
+    "status": "completed",
+    "globals_schema": {
+      "nvda_stock_price_T001": "The current price of NVDA is $190.53",
+      "formatted_nvda_stock_price_T002": "<div class='report'>\n  <h1>NVIDIA (NVDA) Stock Price Analysis</h1>\n\n  <h2>Executive Summary</h2>\n  <p>This report provides a snapshot of the current stock price for NVIDIA (NVDA) as of December 29, 2025.</p>\n\n  <h2>Current Stock Price</h2>\n  <p>The current price of NVDA is <b>$190.53</b>.</p>\n\n  <h2>Disclaimer</h2>\n  <p>This information is for informational purposes only and should not be considered financial advice.  Consult with a qualified financial advisor before making any investment decisions.</p>\n</div>"
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Get the latest stock price for NVDA.",
+              "agent": "RetrieverAgent",
+              "agent_prompt": "Get the latest stock price for NVDA.",
+              "reads": [],
+              "writes": [
+                "nvda_stock_price_T001"
+              ]
+            },
+            {
+              "id": "T002",
+              "description": "Present the latest stock price for NVDA.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Present the latest stock price for NVDA based on the data: `nvda_stock_price_T001`.",
+              "reads": [
+                "nvda_stock_price_T001"
+              ],
+              "writes": [
+                "formatted_nvda_stock_price_T002"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            },
+            {
+              "source": "T001",
+              "target": "T002"
+            }
+          ]
+        },
+        "next_step_id": "T003",
+        "cost": 9.870000000000001e-05,
+        "input_tokens": 591,
+        "output_tokens": 99,
+        "total_tokens": 690
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2025-12-29T07:46:14.509631",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Get the latest stock price for NVDA.",
+      "agent": "RetrieverAgent",
+      "agent_prompt": "Get the latest stock price for NVDA.",
+      "reads": [],
+      "writes": [
+        "nvda_stock_price_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "nvda_stock_price_T001": [],
+        "call_self": false,
+        "code_variants": {
+          "CODE_1A": "price = get_stock_price('NVDA')\nreturn {'nvda_stock_price_T001': price}",
+          "CODE_1B": "price = get_stock_metric('NVDA', 'currentPrice')\nreturn {'nvda_stock_price_T001': price}"
+        },
+        "cost": 7.210000000000002e-05,
+        "input_tokens": 613,
+        "output_tokens": 27,
+        "total_tokens": 640,
+        "execution_result": {
+          "nvda_stock_price_T001": "The current price of NVDA is $190.53"
+        },
+        "execution_status": "success",
+        "execution_error": null,
+        "execution_time": "2025-12-29 13:16:18",
+        "executed_variant": "CODE_1A",
+        "execution_logs": ""
+      },
+      "error": null,
+      "cost": 7.210000000000002e-05,
+      "start_time": "2025-12-29T07:46:14.512649",
+      "end_time": "2025-12-29T07:46:19.201264",
+      "execution_time": 4.688615,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "nvda_stock_price_T001": [],
+            "call_self": false,
+            "code_variants": {
+              "CODE_1A": "price = get_stock_price('NVDA')\nreturn {'nvda_stock_price_T001': price}",
+              "CODE_1B": "price = get_stock_metric('NVDA', 'currentPrice')\nreturn {'nvda_stock_price_T001': price}"
+            },
+            "cost": 7.210000000000002e-05,
+            "input_tokens": 613,
+            "output_tokens": 27,
+            "total_tokens": 640
+          }
+        }
+      ],
+      "input_tokens": 613,
+      "output_tokens": 27,
+      "total_tokens": 640
+    },
+    {
+      "id": "T002",
+      "description": "Present the latest stock price for NVDA.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Present the latest stock price for NVDA based on the data: `nvda_stock_price_T001`.",
+      "reads": [
+        "nvda_stock_price_T001"
+      ],
+      "writes": [
+        "formatted_nvda_stock_price_T002"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "## NVIDIA Stock Price Report\n\nThe current price of NVDA is $190.53.",
+        "formatted_nvda_stock_price_T002": "<div class='report'>\n  <h1>NVIDIA (NVDA) Stock Price Analysis</h1>\n\n  <h2>Executive Summary</h2>\n  <p>This report provides a snapshot of the current stock price for NVIDIA (NVDA) as of December 29, 2025.</p>\n\n  <h2>Current Stock Price</h2>\n  <p>The current price of NVDA is <b>$190.53</b>.</p>\n\n  <h2>Disclaimer</h2>\n  <p>This information is for informational purposes only and should not be considered financial advice.  Consult with a qualified financial advisor before making any investment decisions.</p>\n</div>",
+        "call_self": false,
+        "cost": 0.0001125,
+        "input_tokens": 645,
+        "output_tokens": 120,
+        "total_tokens": 765
+      },
+      "error": null,
+      "cost": 0.0001125,
+      "start_time": "2025-12-29T07:46:19.204451",
+      "end_time": "2025-12-29T07:46:22.720052",
+      "execution_time": 3.515601,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "## NVIDIA Stock Price Report\n\nThe current price of NVDA is $190.53.",
+            "formatted_nvda_stock_price_T002": "<div class='report'>\n  <h1>NVIDIA (NVDA) Stock Price Analysis</h1>\n\n  <h2>Executive Summary</h2>\n  <p>This report provides a snapshot of the current stock price for NVIDIA (NVDA) as of December 29, 2025.</p>\n\n  <h2>Current Stock Price</h2>\n  <p>The current price of NVDA is <b>$190.53</b>.</p>\n\n  <h2>Disclaimer</h2>\n  <p>This information is for informational purposes only and should not be considered financial advice.  Consult with a qualified financial advisor before making any investment decisions.</p>\n</div>",
+            "call_self": false,
+            "cost": 0.0001125,
+            "input_tokens": 645,
+            "output_tokens": 120,
+            "total_tokens": 765
+          }
+        }
+      ],
+      "input_tokens": 645,
+      "output_tokens": 120,
+      "total_tokens": 765
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    },
+    {
+      "source": "T001",
+      "target": "T002"
+    }
+  ]
+}

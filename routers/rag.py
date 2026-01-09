@@ -34,7 +34,7 @@ async def get_rag_documents():
             items = []
             # Sort: directories first, then files
             for p in sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
-                if p.name.startswith('.') or p.name == "__pycache__":
+                if p.name.startswith('.') or p.name in ["__pycache__", "mcp_repos", "faiss_index"]:
                     continue
                 
                 rel_p = p.relative_to(doc_path).as_posix()
@@ -109,11 +109,11 @@ async def upload_rag_file(
 # === Indexing Endpoints ===
 
 @router.post("/reindex")
-async def reindex_rag_documents(path: str = None):
+async def reindex_rag_documents(path: str = None, force: bool = False):
     """Trigger re-indexing of documents via RAG MCP tool"""
     try:
         # Pass the path to the tool if provided
-        args = {"target_path": path} if path else {}
+        args = {"target_path": path, "force": force}
         result = await multi_mcp.call_tool("rag", "reindex_documents", args)
         return {"status": "success", "result": result}
     except Exception as e:

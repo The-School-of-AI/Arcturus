@@ -91,10 +91,10 @@ const FileTree: React.FC<{
         <div>
             <div
                 className={cn(
-                    "group relative flex items-center gap-1.5 py-2 px-3 rounded-lg border transition-all duration-300 cursor-pointer select-none mb-1",
+                    "group relative flex items-center gap-1.5 py-1.5 px-3 transition-all duration-200 cursor-pointer select-none",
                     selectedPath === item.path
-                        ? "border-neon-yellow/40 bg-neon-yellow/5 text-neon-yellow"
-                        : "border-border/30 hover:border-primary/30 hover:bg-accent/30 text-muted-foreground hover:text-foreground",
+                        ? "bg-neon-yellow/10 text-neon-yellow shadow-[inset_2px_0_0_0_rgba(255,255,0,0.8)]"
+                        : "hover:bg-accent/30 text-muted-foreground hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
@@ -163,9 +163,10 @@ export const RagPanel: React.FC = () => {
         stopRagPolling,
         ragIndexStatus: indexStatus,
         setRagIndexStatus: setIndexStatus,
+        selectedRagFile: selectedFile,
+        setSelectedRagFile: setSelectedFile
     } = useAppStore();
 
-    const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [splitRatio, setSplitRatio] = useState(50);
     const [panelMode, setPanelMode] = useState<'browse' | 'seek'>('browse');
     const [innerSearch, setInnerSearch] = useState("");
@@ -176,6 +177,17 @@ export const RagPanel: React.FC = () => {
 
     // Upload State
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Global ESC listener for deselection
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setSelectedFile(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Debounced Keyword Search for Browse mode
     useEffect(() => {
@@ -240,10 +252,8 @@ export const RagPanel: React.FC = () => {
         } catch (e) {
             setIndexStatus("Failed");
             setTimeout(() => setIndexStatus(null), 2000);
-        } finally {
             setIndexing(false);
             setIndexingPath(null);
-            // Note: stopRagPolling is called by the polling logic itself when status.active is false
         }
     };
 
@@ -304,6 +314,8 @@ export const RagPanel: React.FC = () => {
 
         const scan = (items: RagItem[]) => {
             for (const item of items) {
+                if (item.path.includes('mcp_repos') || item.path.includes('faiss_index')) continue;
+
                 if (item.type !== 'folder') {
                     if (unindexable.includes(item.type.toLowerCase())) continue;
                     total++;
@@ -371,7 +383,10 @@ export const RagPanel: React.FC = () => {
             {/* Main Content Area */}
             <div style={{ height: selectedFile ? `${splitRatio}%` : '100%' }} className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {panelMode === 'browse' ? (
-                    <div className="flex-1 overflow-y-auto py-1 custom-scrollbar">
+                    <div
+                        className="flex-1 overflow-y-auto py-1 custom-scrollbar"
+                        onClick={() => setSelectedFile(null)}
+                    >
                         {files.map((file) => (
                             <FileTree
                                 key={file.path}
@@ -411,9 +426,10 @@ export const RagPanel: React.FC = () => {
                                 <div
                                     key={i}
                                     className={cn(
-                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                        "bg-gradient-to-br from-card to-muted/20",
-                                        "hover:shadow-md border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                        "group relative p-3 transition-all duration-200 cursor-pointer",
+                                        "bg-gradient-to-br from-card to-muted/10",
+                                        "hover:bg-accent/30 text-foreground/80 hover:text-foreground",
+                                        "border-b border-border/10"
                                     )}
                                     onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
@@ -454,7 +470,7 @@ export const RagPanel: React.FC = () => {
             )}
 
             {/* Footer Area: Detailed Sync Status */}
-            <div className={cn("bg-card/30 shrink-0", selectedFile ? "h-[30%] overflow-y-auto" : "p-3 border-t border-border/30")}>
+            <div className={cn("bg-card/30 shrink-0", selectedFile ? "h-[20%] overflow-y-auto" : "p-3 border-t border-border/30")}>
                 {selectedFile ? (
                     <div className="p-3 space-y-3">
                         <div className="flex items-center justify-between border-b border-border/30 pb-1.5">

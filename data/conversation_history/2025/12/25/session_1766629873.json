@@ -1,0 +1,191 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1766629873",
+    "original_query": "where is the user located?",
+    "file_manifest": [],
+    "created_at": "2025-12-25T02:31:13.746589",
+    "status": "completed",
+    "globals_schema": {
+      "user_location_T001": "Unknown",
+      "formatted_location_T002": "<div class='report'><h1>User Location Report</h1><p>Based on the available information, the user's location could not be determined from memory.</p></div>"
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Determine if user location is available in memory.",
+              "agent": "ThinkerAgent",
+              "agent_prompt": "Based on the provided `memory_context`, determine if the user's location is explicitly stated. If the location is mentioned, extract the location information. If the `memory_context` is empty or does not contain the user's location, indicate that the location is unknown.",
+              "reads": [
+                "memory_context"
+              ],
+              "writes": [
+                "user_location_T001"
+              ]
+            },
+            {
+              "id": "T002",
+              "description": "Format the user location for presentation.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Based on the `user_location_T001`, format a concise statement indicating the user's location. If `user_location_T001` indicates the location is unknown, state that the user's location could not be determined from memory.",
+              "reads": [
+                "user_location_T001"
+              ],
+              "writes": [
+                "formatted_location_T002"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            },
+            {
+              "source": "T001",
+              "target": "T002"
+            }
+          ]
+        },
+        "next_step_id": "T002",
+        "cost": 7.240000000000001e-05,
+        "input_tokens": 24,
+        "output_tokens": 175,
+        "total_tokens": 199
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2025-12-25T02:31:16.991672",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Determine if user location is available in memory.",
+      "agent": "ThinkerAgent",
+      "agent_prompt": "Based on the provided `memory_context`, determine if the user's location is explicitly stated. If the location is mentioned, extract the location information. If the `memory_context` is empty or does not contain the user's location, indicate that the location is unknown.",
+      "reads": [
+        "memory_context"
+      ],
+      "writes": [
+        "user_location_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "user_location_T001": "Unknown",
+        "cost": 8.5e-06,
+        "input_tokens": 73,
+        "output_tokens": 3,
+        "total_tokens": 76
+      },
+      "error": null,
+      "cost": 8.5e-06,
+      "start_time": "2025-12-25T02:31:16.994936",
+      "end_time": "2025-12-25T02:31:19.391973",
+      "execution_time": 2.397037,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "user_location_T001": "Unknown",
+            "cost": 8.5e-06,
+            "input_tokens": 73,
+            "output_tokens": 3,
+            "total_tokens": 76
+          }
+        }
+      ],
+      "input_tokens": 73,
+      "output_tokens": 3,
+      "total_tokens": 76
+    },
+    {
+      "id": "T002",
+      "description": "Format the user location for presentation.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Based on the `user_location_T001`, format a concise statement indicating the user's location. If `user_location_T001` indicates the location is unknown, state that the user's location could not be determined from memory.",
+      "reads": [
+        "user_location_T001"
+      ],
+      "writes": [
+        "formatted_location_T002"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "The user's location could not be determined from memory.",
+        "formatted_location_T002": "<div class='report'><h1>User Location Report</h1><p>Based on the available information, the user's location could not be determined from memory.</p></div>",
+        "call_self": false,
+        "cost": 2.79e-05,
+        "input_tokens": 87,
+        "output_tokens": 48,
+        "total_tokens": 135
+      },
+      "error": null,
+      "cost": 2.79e-05,
+      "start_time": "2025-12-25T02:31:19.395329",
+      "end_time": "2025-12-25T02:31:24.310048",
+      "execution_time": 4.914719,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "The user's location could not be determined from memory.",
+            "formatted_location_T002": "<div class='report'><h1>User Location Report</h1><p>Based on the available information, the user's location could not be determined from memory.</p></div>",
+            "call_self": false,
+            "cost": 2.79e-05,
+            "input_tokens": 87,
+            "output_tokens": 48,
+            "total_tokens": 135
+          }
+        }
+      ],
+      "input_tokens": 87,
+      "output_tokens": 48,
+      "total_tokens": 135
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    },
+    {
+      "source": "T001",
+      "target": "T002"
+    }
+  ]
+}
