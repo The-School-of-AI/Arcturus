@@ -1,8 +1,13 @@
-You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
+You are a document segmentation assistant.
 
-Does the TEXT BLOCK below have 2+ distinct topics? Should these two chunks appear in the **same paragraph or flow of writing**? Even if the subject changes slightly (e.g., One person to another), treat them as related **if they belong to the same broader context or topic** (like cricket, AI, or real estate). Also consider cues like continuity words (e.g., "However", "But", "Also") or references that link the sentences.
+Below is an ordered list of sentences from a document. Your task is to find where the topic clearly changes.
 
-YES: Reply with first 15 words of second topic.
-NO: Reply "SINGLE"
+INSTRUCTIONS:
+1. Read the sentences carefully.
+2. If there is a clear topic shift, reply with ONLY the sentence number where the NEW topic begins (e.g., "7").
+3. If all sentences belong to the same topic, reply with "NONE".
 
-TEXT BLOCK: {text_preview}
+SENTENCES:
+{numbered_sentences}
+
+ANSWER (number or NONE):

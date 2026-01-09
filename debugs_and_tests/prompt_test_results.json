@@ -1,0 +1,242 @@
+{
+  "timestamp": "2026-01-09 07:49:29",
+  "pdf": "/Users/rohanshravan/TSAI/Arcturus/data/pdfs/1706.03762v7.pdf",
+  "chunking_results": {
+    "V1_ORIGINAL": {
+      "responses": [
+        "YES: Dot-product attention",
+        "YES: Dot-product attention",
+        "YES: Dot-product attention"
+      ],
+      "avg_time": 0.44528841972351074,
+      "prompt_length": 1854,
+      "sample_response": "YES: Dot-product attention",
+      "valid_format": false
+    },
+    "V2_BOUNDARY_DETECTION": {
+      "responses": [
+        "9",
+        "9",
+        "9"
+      ],
+      "avg_time": 0.4528714021046956,
+      "prompt_length": 2994,
+      "sample_response": "9",
+      "valid_format": true
+    },
+    "V3_BINARY_SPLIT": {
+      "responses": [
+        "YES",
+        "YES",
+        "YES"
+      ],
+      "avg_time": 0.3247382640838623,
+      "prompt_length": 1564,
+      "sample_response": "YES",
+      "valid_format": true
+    },
+    "V4_EXTRACTIVE_BOUNDARY": {
+      "responses": [
+        "In terms of computational complexity",
+        "In terms of computational complexity",
+        "In terms of computational complexity"
+      ],
+      "avg_time": 0.3883829911549886,
+      "prompt_length": 1684,
+      "sample_response": "In terms of computational complexity",
+      "valid_format": true
+    }
+  },
+  "image_results": {
+    "V1_ORIGINAL": {
+      "images_tested": 2,
+      "avg_time": 4.556537747383118,
+      "avg_response_length": 527.5,
+      "prompt_length": 209,
+      "details": [
+        {
+          "image": "1706.03762v7.pdf-14-0.png",
+          "response": "Here's a description of the image:\n\nThe image is a red graph with a complex, branching structure. It appears to represent the attention heads of a neural network. The graph is densely packed with lines, creating a tangled, interwoven appearance. The lines are red, and the overall impression is of a highly interconnected and potentially computationally intensive network.",
+          "time": 3.8154377937316895,
+          "response_length": 372
+        },
+        {
+          "image": "1706.03762v7.pdf-2-0.png",
+          "response": "Here's a description of the image as an alt-text:\n\nThe image shows a diagram of a transformer block, a key component of transformer models. The block is composed of several layers stacked vertically. The bottom layer contains an \"Input Embedding\" node. Above that is a \"Positional Encoding\" node. The next layer contains an \"Add & Norm\" node, followed by a \"Feed Forward\" node. The next layer contains another \"Add & Norm\" node, followed by a \"Masked Multi-Head Attention\" node. Finally, the top layer contains an \"Add & Norm\" node and an \"Output Embedding\" node. The diagram is colored with a pink/magenta color scheme. The diagram is labeled with \"Inputs\" and \"Outputs\" at the top.",
+          "time": 5.297637701034546,
+          "response_length": 683
+        }
+      ]
+    },
+    "V2_RAG_OPTIMIZED": {
+      "images_tested": 2,
+      "avg_time": 5.162493944168091,
+      "avg_response_length": 724.5,
+      "prompt_length": 650,
+      "details": [
+        {
+          "image": "1706.03762v7.pdf-14-0.png",
+          "response": "Here's a caption for the image, incorporating the requested elements:\n\n**\"Figure 5: The Transformer architecture using stacked self-attention and fully connected layers for the encoder (left) and decoder (right). This diagram illustrates the core components of the model, showcasing the self-attention mechanism and point-wise layers within each part.\"**\n\nHere's a breakdown of how this caption meets the requirements:\n\n1.  **Text Labels/Titles/Annotations:**  Includes \"Figure 5,\" \"The Transformer,\" \"stacked self-attention,\" \"fully connected layers,\" \"encoder,\" \"decoder,\" \"left,\" \"right,\" and \"This diagram.\"\n2.  **Visual Type:**  Clearly identifies it as a \"diagram.\"\n3.  **Information Conveyed:**  Explains that the diagram shows the architecture of the Transformer model, specifically highlighting the self-attention and fully connected layers.",
+          "time": 5.8646399974823,
+          "response_length": 850
+        },
+        {
+          "image": "1706.03762v7.pdf-2-0.png",
+          "response": "Here's a caption for the image, incorporating all the requested elements:\n\n**Caption:**\n\n\"Diagram illustrating the architecture of a Transformer model, specifically focusing on the encoder component. The image depicts a layered structure with stacked self-attention and fully connected layers, representing the core elements of the model's processing.  It showcases the encoder's design, highlighting the use of attention mechanisms and linear transformations for encoding input data. This diagram is commonly used to explain the inner workings of Transformer models in Natural Language Processing.\"",
+          "time": 4.460347890853882,
+          "response_length": 599
+        }
+      ]
+    },
+    "V3_STRUCTURED_EXTRACTION": {
+      "images_tested": 2,
+      "avg_time": 5.314602971076965,
+      "avg_response_length": 657.0,
+      "prompt_length": 311,
+      "details": [
+        {
+          "image": "1706.03762v7.pdf-14-0.png",
+          "response": "Here's an analysis of the image in the requested format:\n\nTYPE: Diagram\nVISIBLE_TEXT: Many; of; the; two; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to",
+          "time": 5.992398023605347,
+          "response_length": 711
+        },
+        {
+          "image": "1706.03762v7.pdf-2-0.png",
+          "response": "Here's an analysis of the image in the requested format:\n\nTYPE: Diagram\nVISIBLE_TEXT: Add & Norm; Feed Forward; Multi-Head Attention; Positional Encoding; Embedding;\nDESCRIPTION: The image depicts a simplified transformer block, a fundamental component of transformer models, showcasing the sequential processing of input data through linear transformations, normalization, and multi-head attention mechanisms.\nKEY_CONCEPTS: Transformer, Transformer Block, Self-Attention, Multi-Head Attention, Positional Encoding, Feed Forward Network, Add & Norm, Embedding, Deep Learning, Natural Language Processing",
+          "time": 4.636807918548584,
+          "response_length": 603
+        }
+      ]
+    },
+    "V4_CONTEXT_AWARE": {
+      "images_tested": 2,
+      "avg_time": 4.091633200645447,
+      "avg_response_length": 442.5,
+      "prompt_length": 552,
+      "details": [
+        {
+          "image": "1706.03762v7.pdf-14-0.png",
+          "response": "Here\u2019s a description of the image based on the provided context:\n\nThe image depicts a diagram illustrating the architecture of a Transformer model, specifically the encoder and decoder components. It shows stacked self-attention layers and fully connected layers, aligning with the surrounding text\u2019s description of the model\u2019s structure. Keywords to retrieve this image would include \u201cTransformer,\u201d \u201cself-attention,\u201d and \u201cencoder-decoder.\u201d",
+          "time": 4.099031209945679,
+          "response_length": 440
+        },
+        {
+          "image": "1706.03762v7.pdf-2-0.png",
+          "response": "Here's a description of the image based on the provided context:\n\nThe image depicts a simplified Transformer block, likely representing a core component of the model. It showcases the key elements of self-attention, including layers for feedforward networks and normalization, aligning with the Transformer's architecture described in the surrounding text. Key terms for searching would be \"Transformer,\" \"self-attention,\" and \"encoder/decoder.\"",
+          "time": 4.084235191345215,
+          "response_length": 445
+        }
+      ]
+    }
+  },
+  "analysis": {
+    "chunking": {
+      "V1_ORIGINAL": {
+        "score": 5,
+        "avg_time": 0.44528841972351074,
+        "valid_format": false,
+        "consistent": true,
+        "sample_response": "YES: Dot-product attention"
+      },
+      "V2_BOUNDARY_DETECTION": {
+        "score": 7,
+        "avg_time": 0.4528714021046956,
+        "valid_format": true,
+        "consistent": true,
+        "sample_response": "9"
+      },
+      "V3_BINARY_SPLIT": {
+        "score": 7,
+        "avg_time": 0.3247382640838623,
+        "valid_format": true,
+        "consistent": true,
+        "sample_response": "YES"
+      },
+      "V4_EXTRACTIVE_BOUNDARY": {
+        "score": 7,
+        "avg_time": 0.3883829911549886,
+        "valid_format": true,
+        "consistent": true,
+        "sample_response": "In terms of computational complexity"
+      }
+    },
+    "captioning": {
+      "V1_ORIGINAL": {
+        "score": 7,
+        "avg_time": 4.556537747383118,
+        "avg_response_length": 527.5,
+        "details": [
+          {
+            "image": "1706.03762v7.pdf-14-0.png",
+            "response": "Here's a description of the image:\n\nThe image is a red graph with a complex, branching structure. It appears to represent the attention heads of a neural network. The graph is densely packed with lines, creating a tangled, interwoven appearance. The lines are red, and the overall impression is of a highly interconnected and potentially computationally intensive network.",
+            "time": 3.8154377937316895,
+            "response_length": 372
+          },
+          {
+            "image": "1706.03762v7.pdf-2-0.png",
+            "response": "Here's a description of the image as an alt-text:\n\nThe image shows a diagram of a transformer block, a key component of transformer models. The block is composed of several layers stacked vertically. The bottom layer contains an \"Input Embedding\" node. Above that is a \"Positional Encoding\" node. The next layer contains an \"Add & Norm\" node, followed by a \"Feed Forward\" node. The next layer contains another \"Add & Norm\" node, followed by a \"Masked Multi-Head Attention\" node. Finally, the top layer contains an \"Add & Norm\" node and an \"Output Embedding\" node. The diagram is colored with a pink/magenta color scheme. The diagram is labeled with \"Inputs\" and \"Outputs\" at the top.",
+            "time": 5.297637701034546,
+            "response_length": 683
+          }
+        ]
+      },
+      "V2_RAG_OPTIMIZED": {
+        "score": 4,
+        "avg_time": 5.162493944168091,
+        "avg_response_length": 724.5,
+        "details": [
+          {
+            "image": "1706.03762v7.pdf-14-0.png",
+            "response": "Here's a caption for the image, incorporating the requested elements:\n\n**\"Figure 5: The Transformer architecture using stacked self-attention and fully connected layers for the encoder (left) and decoder (right). This diagram illustrates the core components of the model, showcasing the self-attention mechanism and point-wise layers within each part.\"**\n\nHere's a breakdown of how this caption meets the requirements:\n\n1.  **Text Labels/Titles/Annotations:**  Includes \"Figure 5,\" \"The Transformer,\" \"stacked self-attention,\" \"fully connected layers,\" \"encoder,\" \"decoder,\" \"left,\" \"right,\" and \"This diagram.\"\n2.  **Visual Type:**  Clearly identifies it as a \"diagram.\"\n3.  **Information Conveyed:**  Explains that the diagram shows the architecture of the Transformer model, specifically highlighting the self-attention and fully connected layers.",
+            "time": 5.8646399974823,
+            "response_length": 850
+          },
+          {
+            "image": "1706.03762v7.pdf-2-0.png",
+            "response": "Here's a caption for the image, incorporating all the requested elements:\n\n**Caption:**\n\n\"Diagram illustrating the architecture of a Transformer model, specifically focusing on the encoder component. The image depicts a layered structure with stacked self-attention and fully connected layers, representing the core elements of the model's processing.  It showcases the encoder's design, highlighting the use of attention mechanisms and linear transformations for encoding input data. This diagram is commonly used to explain the inner workings of Transformer models in Natural Language Processing.\"",
+            "time": 4.460347890853882,
+            "response_length": 599
+          }
+        ]
+      },
+      "V3_STRUCTURED_EXTRACTION": {
+        "score": 5,
+        "avg_time": 5.314602971076965,
+        "avg_response_length": 657.0,
+        "details": [
+          {
+            "image": "1706.03762v7.pdf-14-0.png",
+            "response": "Here's an analysis of the image in the requested format:\n\nTYPE: Diagram\nVISIBLE_TEXT: Many; of; the; two; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to; be; related; to; the; structure; of; attention; heads; exhibit; behaviour; that; seems; to",
+            "time": 5.992398023605347,
+            "response_length": 711
+          },
+          {
+            "image": "1706.03762v7.pdf-2-0.png",
+            "response": "Here's an analysis of the image in the requested format:\n\nTYPE: Diagram\nVISIBLE_TEXT: Add & Norm; Feed Forward; Multi-Head Attention; Positional Encoding; Embedding;\nDESCRIPTION: The image depicts a simplified transformer block, a fundamental component of transformer models, showcasing the sequential processing of input data through linear transformations, normalization, and multi-head attention mechanisms.\nKEY_CONCEPTS: Transformer, Transformer Block, Self-Attention, Multi-Head Attention, Positional Encoding, Feed Forward Network, Add & Norm, Embedding, Deep Learning, Natural Language Processing",
+            "time": 4.636807918548584,
+            "response_length": 603
+          }
+        ]
+      },
+      "V4_CONTEXT_AWARE": {
+        "score": 5,
+        "avg_time": 4.091633200645447,
+        "avg_response_length": 442.5,
+        "details": [
+          {
+            "image": "1706.03762v7.pdf-14-0.png",
+            "response": "Here\u2019s a description of the image based on the provided context:\n\nThe image depicts a diagram illustrating the architecture of a Transformer model, specifically the encoder and decoder components. It shows stacked self-attention layers and fully connected layers, aligning with the surrounding text\u2019s description of the model\u2019s structure. Keywords to retrieve this image would include \u201cTransformer,\u201d \u201cself-attention,\u201d and \u201cencoder-decoder.\u201d",
+            "time": 4.099031209945679,
+            "response_length": 440
+          },
+          {
+            "image": "1706.03762v7.pdf-2-0.png",
+            "response": "Here's a description of the image based on the provided context:\n\nThe image depicts a simplified Transformer block, likely representing a core component of the model. It showcases the key elements of self-attention, including layers for feedforward networks and normalization, aligning with the Transformer's architecture described in the surrounding text. Key terms for searching would be \"Transformer,\" \"self-attention,\" and \"encoder/decoder.\"",
+            "time": 4.084235191345215,
+            "response_length": 445
+          }
+        ]
+      }
+    }
+  }
+}

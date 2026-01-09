@@ -417,10 +417,18 @@ def caption_image(img_url_or_path: str) -> str:
 
 
     try:
+        # V4 CONTEXT AWARE PROMPT - Fast and produces searchable keywords
+        caption_prompt = """Describe what this image shows. Focus on:
+1. Any text or labels visible in the image.
+2. The type of visual (diagram, chart, photo, table, code).
+3. Key terms that would help retrieve this image in a search.
+
+Keep your response concise (2-3 sentences max)."""
+        
         # Set stream=True to get the full generator-style output
         with requests.post(OLLAMA_URL, json={
                 "model": VISION_MODEL,
-                "prompt": "Look only at the attached image. If it's code, output it exactly as text. If it's a visual scene, describe it as you would for an image alt-text. Never generate new code. Return only the contents of the image.",
+                "prompt": caption_prompt,
                 "images": [encoded_image],
                 "stream": True
             }, stream=True, timeout=OLLAMA_TIMEOUT) as result:
@@ -526,13 +534,17 @@ def caption_images(img_url_or_path: str) -> str:
     return "The contents of this image are: " + caption
 
 
+def get_numbered_sentences(text: str, max_sentences: int = 15) -> str:
+    """Convert text to numbered sentences for V2 boundary detection prompt."""
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 10][:max_sentences]
+    return "\n".join([f"{i+1}. {s}" for i, s in enumerate(sentences)])
+
 def semantic_merge(text: str) -> list[str]:
-    """OPTIMIZED semantic chunking: 3.4x faster with identical quality.
+    """V2 BOUNDARY DETECTION semantic chunking.
     
-    Optimizations:
-    - Shortened input: 600+300 chars instead of full 1024 words
-    - 50 token output limit
-    - Iterative: feeds remainder back for continuous splitting
+    Uses numbered sentences and asks LLM to identify split point by sentence number.
+    Faster and more reliable than the old text_preview approach.
     """
     WORD_LIMIT = 1024
     words = text.split()
@@ -549,92 +561,96 @@ def semantic_merge(text: str) -> list[str]:
                 final_chunks.append(chunk_text)
             break
         
-        # OPTIMIZED: Shortened input (word-aware slicing around 600+300 char boundaries)
-        prefix_end = chunk_text.rfind(' ', 0, 600)
-        suffix_start = chunk_text.find(' ', len(chunk_text) - 300)
-        
-        preview_prefix = chunk_text[:prefix_end] if prefix_end > 0 else chunk_text[:600]
-        preview_suffix = chunk_text[suffix_start:] if suffix_start > 0 else chunk_text[-300:]
-        text_preview = f"{preview_prefix}\n...[MIDDLE]...\n{preview_suffix}"
+        # V2: Create numbered sentences for the prompt
+        numbered_sentences = get_numbered_sentences(chunk_text)
         
         try:
             # Try to load prompt from file
             prompt_path = ROOT.parent / "prompts" / "rag_semantic_chunking.md"
             base_prompt = prompt_path.read_text().strip()
-            prompt = base_prompt.replace("{text_preview}", text_preview)
+            prompt = base_prompt.replace("{numbered_sentences}", numbered_sentences)
         except Exception as e:
             mcp_log("WARN", f"Failed to load prompt file: {e}")
-            # Fallback prompt
-            prompt = f"""You are helping to segment a document into topic-based chunks. Unfortunately, the sentences are mixed up in this text block.
+            # Fallback prompt (V2 style)
+            prompt = f"""You are a document segmentation assistant.
 
-Does the TEXT BLOCK below have 2+ distinct topics? Should these two chunks appear in the **same paragraph or flow of writing**? Even if the subject changes slightly (e.g., One person to another), treat them as related **if they belong to the same broader context or topic** (like cricket, AI, or real estate). Also consider cues like continuity words (e.g., "However", "But", "Also") or references that link the sentences.
+Below is an ordered list of sentences from a document. Your task is to find where the topic clearly changes.
 
-YES: Reply with first 15 words of second topic.
-NO: Reply "SINGLE"
+INSTRUCTIONS:
+1. Read the sentences carefully.
+2. If there is a clear topic shift, reply with ONLY the sentence number where the NEW topic begins (e.g., "7").
+3. If all sentences belong to the same topic, reply with "NONE".
 
-TEXT BLOCK: {text_preview}
-"""
+SENTENCES:
+{numbered_sentences}
+
+ANSWER (number or NONE):"""
 
         try:
             result = requests.post(OLLAMA_CHAT_URL, json={
                 "model": RAG_LLM_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
-                "options": {"temperature": 0, "num_predict": 50}  # Limited output
+                "options": {"temperature": 0, "num_predict": 20}  # V2: Very short output expected
             }, timeout=OLLAMA_TIMEOUT)
             reply = result.json().get("message", {}).get("content", "").strip()
 
-            if reply.upper() != "SINGLE" and len(reply) > 10:
-                # LLM found split point - find it in original text
-                split_idx = chunk_text.find(reply[:40])
-                if split_idx > 50:  # Meaningful split
-                    # ADJUST SPLIT: Find nearest sentence end to the LLM suggestion
-                    # LLM points to start of second topic; we want to end first topic at a sentence closure.
-                    adjusted_split = find_sentence_end(chunk_text, split_idx, direction='back', window=150)
-                    
-                    first_part = chunk_text[:adjusted_split].strip()
-                    final_chunks.append(first_part)
-                    
-                    # Feed remainder back for next iteration
-                    remainder = chunk_text[adjusted_split:].strip()
-                    words = words[:position] + remainder.split() + words[position + WORD_LIMIT:]
-                    # Don't advance position - process remainder
-                    continue
-                else:
-                    final_chunks.append(chunk_text)
-                    position += WORD_LIMIT
-            else:
-                # Single topic - handle potentially large block
-                # Use sentence-aware boundary detection
+            # V2: Parse sentence number response
+            # Clean the reply (remove any non-numeric prefix like "Answer: ")
+            clean_reply = re.sub(r'^[^0-9]*', '', reply).strip()
+            
+            if clean_reply.upper() == "NONE" or reply.upper() == "NONE":
+                # No split needed - single topic
+                # Use sentence-aware boundary detection for clean ending
                 end_pos = len(chunk_text)
-                # Look back from the end of the block for the last closure
                 lookback_window = int(len(chunk_text) * 0.2)
                 safe_split = find_sentence_end(chunk_text, end_pos, direction='back', window=lookback_window)
                 
                 if safe_split < end_pos:
                     safe_chunk = chunk_text[:safe_split].strip()
                     final_chunks.append(safe_chunk)
-                    # Advance by words consumed
                     position += len(safe_chunk.split())
                 else:
-                    # Look ahead for a closure if back look failed
-                    try:
-                        next_block = words[position + WORD_LIMIT : position + WORD_LIMIT + 200]
-                        if next_block:
-                            next_text = " ".join(next_block)
-                            f_split = find_sentence_end(next_text, 0, direction='forward', window=len(next_text))
-                            if f_split > 0:
-                                extension = next_text[:f_split]
-                                full_chunk = (chunk_text + " " + extension).strip()
-                                final_chunks.append(full_chunk)
-                                position += len(full_chunk.split())
-                                continue
-                    except Exception as e:
-                        mcp_log("WARN", f"Forward look error: {e}")
-
-                    # Fallback if both failed
                     final_chunks.append(chunk_text)
-                    position += (WORD_LIMIT - 50) # Use small overlap fallback
+                    position += WORD_LIMIT
+                    
+            elif clean_reply.isdigit():
+                # LLM found a split point at sentence N
+                split_sentence_num = int(clean_reply)
+                
+                # Find the character position of sentence N in the original text
+                sentences = re.split(r'(?<=[.!?])\s+', chunk_text.strip())
+                sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 10]
+                
+                if 1 <= split_sentence_num <= len(sentences):
+                    # Calculate character offset for sentences 1 to (N-1)
+                    first_part_sentences = sentences[:split_sentence_num - 1]
+                    first_part = " ".join(first_part_sentences).strip()
+                    
+                    if first_part:
+                        # Ensure clean sentence ending
+                        adjusted_split = find_sentence_end(first_part, len(first_part), direction='back', window=100)
+                        first_part = first_part[:adjusted_split].strip() if adjusted_split < len(first_part) else first_part
+                        
+                        final_chunks.append(first_part)
+                        
+                        # Feed remainder for next iteration
+                        remainder = " ".join(sentences[split_sentence_num - 1:]).strip()
+                        words = words[:position] + remainder.split() + words[position + WORD_LIMIT:]
+                        continue
+                    else:
+                        # Split at sentence 1 means no first part, just continue
+                        final_chunks.append(chunk_text)
+                        position += WORD_LIMIT
+                else:
+                    # Invalid sentence number, fallback
+                    final_chunks.append(chunk_text)
+                    position += WORD_LIMIT
+            else:
+                # Unexpected response format, fallback
+                mcp_log("WARN", f"Unexpected chunking response: {reply}")
+                final_chunks.append(chunk_text)
+                position += WORD_LIMIT
 
         except Exception as e:
             mcp_log("WARN", f"Semantic chunking LLM error: {e}")
