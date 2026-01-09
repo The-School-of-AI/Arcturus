@@ -43,6 +43,7 @@ export const NewsPanel: React.FC = () => {
     const [newName, setNewName] = React.useState("");
     const [newUrl, setNewUrl] = React.useState("");
     const [isSearching, setIsSearching] = React.useState(false);
+    const [isAutoSearch, setIsAutoSearch] = React.useState(false);
 
     React.useEffect(() => {
         fetchNewsSources();
@@ -50,6 +51,17 @@ export const NewsPanel: React.FC = () => {
 
     // When a source is selected, switch to articles view
     const handleSelectSource = (sourceId: string | null) => {
+        const source = newsSources.find(s => s.id === sourceId);
+
+        // Check for Andrej Karpathy
+        if (source && source.name.toLowerCase().includes("andrej karpathy")) {
+            setIsAutoSearch(true);
+            setSearchQuery("Andrej Karpathy news");
+            performSearch("Andrej Karpathy news", 20);
+            return;
+        }
+
+        setIsAutoSearch(false);
         setSelectedNewsSourceId(sourceId);
         if (sourceId !== null) {
             setViewMode('articles');
@@ -69,7 +81,7 @@ export const NewsPanel: React.FC = () => {
     // Refresh news when source changes
     React.useEffect(() => {
         if (viewMode === 'articles') {
-            fetchNewsFeed(selectedNewsSourceId);
+            fetchNewsFeed(selectedNewsSourceId || undefined);
         }
     }, [selectedNewsSourceId, fetchNewsFeed, viewMode]);
 
@@ -77,9 +89,8 @@ export const NewsPanel: React.FC = () => {
     const isArticleSaved = (url: string) => savedArticles.some(a => a.url === url);
 
     // --- Search Logic ---
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!searchQuery.trim()) return;
+    const performSearch = async (query: string, limit: number = 10) => {
+        if (!query.trim()) return;
 
         setIsSearching(true);
         setViewMode('search');
@@ -89,7 +100,7 @@ export const NewsPanel: React.FC = () => {
             const res = await axios.post(`${API_BASE}/mcp/call`, {
                 server_name: "browser",
                 tool_name: "web_search",
-                arguments: { string: searchQuery, integer: 10 }
+                arguments: { string: query, integer: limit }
             });
 
             let results: any[] = [];
@@ -127,10 +138,17 @@ export const NewsPanel: React.FC = () => {
         }
     };
 
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsAutoSearch(false);
+        performSearch(searchQuery);
+    };
+
     const clearSearch = () => {
         setSearchQuery("");
         setViewMode('sources');
         setSearchResults([]);
+        setIsAutoSearch(false);
     };
 
     return (
@@ -140,26 +158,42 @@ export const NewsPanel: React.FC = () => {
             {
                 (viewMode === 'sources' || viewMode === 'search') && (
                     <>
-                        {/* Search Bar */}
+                        {/* Search Bar / Header */}
                         <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50">
-                            <form onSubmit={handleSearch} className="relative flex items-center">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search Web"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                                />
-                                {searchQuery && (
-                                    <button
-                                        type="button"
+                            {isAutoSearch ? (
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
                                         onClick={clearSearch}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        className="h-8 w-8 p-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
                                     >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </form>
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </Button>
+                                    <span className="text-sm font-medium truncate flex-1 leading-none uppercase tracking-widest text-muted-foreground">
+                                        Andrej Karpathy News
+                                    </span>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSearch} className="relative flex items-center">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search Web"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={clearSearch}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </form>
+                            )}
                         </div>
 
                         {/* Search Results List */}
