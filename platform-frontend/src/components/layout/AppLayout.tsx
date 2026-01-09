@@ -8,6 +8,7 @@ import { RunTimeline } from '@/features/replay/RunTimeline';
 import { GripVertical } from 'lucide-react';
 import { DocumentViewer } from '../rag/DocumentViewer';
 import { useAppStore } from '@/store';
+import { cn } from '@/lib/utils';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -35,8 +36,25 @@ import { NewsArticleViewer } from '@/features/news/components/NewsArticleViewer'
 import { NewsInspector } from '@/features/news/components/NewsInspector';
 
 export const AppLayout: React.FC = () => {
-    const { viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel } = useAppStore();
-    const [leftWidth, setLeftWidth] = useState(400); // w-64 = 256px
+    const {
+        viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
+        selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId,
+        selectedMcpServer, selectedLibraryComponent, clearSelection
+    } = useAppStore();
+
+    const isInspectorOpen = React.useMemo(() => {
+        if (sidebarTab === 'apps' && (selectedAppCardId || selectedLibraryComponent)) return true;
+        if (sidebarTab === 'runs' && selectedNodeId) return true;
+        if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
+        if (sidebarTab === 'rag' && activeDocumentId) return true;
+        if (sidebarTab === 'mcp' && selectedMcpServer) return true;
+        if (sidebarTab === 'news' && showNewsChatPanel) return true;
+        return false;
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
+
+    const hideSidebarSubPanel = isInspectorOpen;
+
+    const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
     const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +73,17 @@ export const AppLayout: React.FC = () => {
         // Add a class to body to indicate resizing state if needed
         document.body.classList.add('is-resizing');
     }, [leftWidth, rightWidth]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                clearSelection();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [clearSelection]);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -99,13 +128,16 @@ export const AppLayout: React.FC = () => {
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && (
                     <>
                         <div
-                            className="h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out"
-                            style={{ width: leftWidth }}
+                            className={cn(
+                                "h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out",
+                                hideSidebarSubPanel ? "w-16" : ""
+                            )}
+                            style={{ width: hideSidebarSubPanel ? 64 : leftWidth }}
                         >
-                            <Sidebar />
+                            <Sidebar hideSubPanel={hideSidebarSubPanel} />
                         </div>
 
-                        <ResizeHandle onMouseDown={handleMouseDown('left')} />
+                        {!hideSidebarSubPanel && <ResizeHandle onMouseDown={handleMouseDown('left')} />}
                     </>
                 )}
 
@@ -145,8 +177,8 @@ export const AppLayout: React.FC = () => {
                     )}
                 </div>
 
-                {/* Right panel - for news tab, only show when chat panel is active */}
-                {((sidebarTab === 'runs' || sidebarTab === 'rag' || sidebarTab === 'explorer' || sidebarTab === 'apps' || sidebarTab === 'mcp') || (sidebarTab === 'news' && showNewsChatPanel)) && !isFullScreen && !isAppViewMode && (
+                {/* Right panel - only show when something is selected or chat is active */}
+                {isInspectorOpen && !isFullScreen && !isAppViewMode && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
 

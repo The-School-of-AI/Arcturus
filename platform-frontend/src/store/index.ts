@@ -231,6 +231,7 @@ interface NewsSlice {
     setShowNewsChatPanel: (show: boolean) => void;
     searchResults: any[];
     setSearchResults: (results: any[]) => void;
+    clearSelection: () => void;
 }
 
 interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
@@ -1123,6 +1124,15 @@ export const useAppStore = create<AppState>()(
             setShowNewsChatPanel: (show) => set({ showNewsChatPanel: show }),
 
             setSearchResults: (results) => set({ searchResults: results }),
+
+            clearSelection: () => set({
+                selectedNodeId: null,
+                selectedAppCardId: null,
+                selectedExplorerNodeId: null,
+                activeDocumentId: null,
+                selectedMcpServer: null,
+                selectedLibraryComponent: null
+            }),
 
             deleteNewsSource: async (id) => {
                 try {
