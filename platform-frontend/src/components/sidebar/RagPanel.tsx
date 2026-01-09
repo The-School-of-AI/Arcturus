@@ -536,12 +536,9 @@ export const RagPanel: React.FC = () => {
                         </Button>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {!allFilesIndexed ? (
                             <div className="p-4 rounded-xl bg-neon-yellow/5 border border-neon-yellow/10 flex flex-col items-center gap-3 text-center">
-                                <div className="p-3 bg-neon-yellow/10 rounded-full text-neon-yellow">
-                                    <Zap className={cn("w-6 h-6", indexing && "animate-pulse")} />
-                                </div>
                                 <div className="space-y-1">
                                     <h5 className="text-xs font-bold text-neon-yellow uppercase">Unindexed Content Found</h5>
                                     <p className="text-[10px] text-muted-foreground leading-tight">
