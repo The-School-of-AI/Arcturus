@@ -163,7 +163,7 @@ export const WorkspacePanel: React.FC = () => {
                     <Terminal className="w-8 h-8 opacity-50" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Agent Inspector</h3>
-                <p className="text-sm max-w-[200px]">Select a node in the graph to view its runtime details, code, and output.</p>
+                <p className="text-sm max-w-[200px] text-foreground/90">Select a node in the graph to view its runtime details, code, and output.</p>
             </div>
         );
     }

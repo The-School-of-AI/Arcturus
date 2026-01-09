@@ -27,15 +27,20 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
         <button
             onClick={onClick}
             className={cn(
-                "w-12 h-12 flex flex-col items-center justify-center gap-1 transition-all rounded-xl group relative mx-auto",
+                "w-12 h-12 flex flex-col items-center justify-center gap-0.5 transition-all rounded-xl group relative mx-auto",
                 active
-                    ? "text-neon-yellow bg-card shadow-[4px_4px_10px_rgba(0,0,0,0.3),-1px_-1px_1px_rgba(255,255,255,0.05)] scale-110 z-10"
-                    : "text-muted-foreground hover:text-foreground grayscale hover:grayscale-0 opacity-60 hover:opacity-100"
+                    ? "text-foreground bg-white dark:bg-slate-200 shadow-[0_4px_12px_rgba(0,0,0,0.01)] ring-1 ring-black/10 z-10"
+                    : "text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 hover:bg-muted/30"
             )}
             title={label}
         >
-            <Icon className={cn("w-5 h-5 transition-transform", active && "drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]")} />
-            {active && <span className="text-[8px] font-bold uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-1 duration-200">{label}</span>}
+            <Icon className={cn("w-5 h-5 transition-colors", active ? "text-neutral-900" : "group-hover:text-foreground")} />
+            <span className={cn(
+                "text-[7px] font-black uppercase tracking-tighter transition-all duration-200",
+                active ? "text-neutral-800 opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+            )}>
+                {label}
+            </span>
         </button>
     );
 };
