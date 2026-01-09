@@ -27,6 +27,11 @@ export const McpPanel: React.FC = () => {
         setIsMcpAddOpen: setIsAddOpen
     } = useAppStore();
 
+    // Fetch servers on mount
+    useEffect(() => {
+        fetchServers();
+    }, [fetchServers]);
+
     const [loading, setLoading] = useState(false);
 
     // Add Server State
