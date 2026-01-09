@@ -526,7 +526,9 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
             if not chunk_text:
                 continue
             
-            results.append(f"{chunk_text}\n[Source: {doc_rel_path}]")
+            # Include page if available
+            page = data.get('page', 1)
+            results.append(f"{chunk_text}\n[Source: {doc_rel_path} p{page}]")
             seen_docs.add(doc_rel_path)
             
             if len(results) >= TOP_K:
@@ -698,7 +700,7 @@ def replace_images_with_captions(markdown: str) -> str:
 pdf_lock = threading.Lock()
 
 def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
-    """Convert PDF to markdown (Thread-Safe). """
+    """Convert PDF to markdown (Thread-Safe) with page markers. """
 
     if not os.path.exists(string):
         return MarkdownOutput(markdown=f"File not found: {string}")
@@ -707,24 +709,34 @@ def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
     global_image_dir = ROOT / "documents" / "images"
     global_image_dir.mkdir(parents=True, exist_ok=True)
 
-    # Acquire lock for PDF processing to prevent "not a textpage" concurrency errors
+    # Acquire lock for PDF processing
     with pdf_lock:
         try:
-            # Actual markdown with relative image paths
-            markdown = pymupdf4llm.to_markdown(
-                string,
-                write_images=True,
-                image_path=str(global_image_dir)
-            )
+            import pymupdf
+            doc = pymupdf.open(string)
+            full_markdown = ""
+            
+            for i in range(len(doc)):
+                page_num = i + 1
+                try:
+                    # Extract markdown for a single page
+                    page_md = pymupdf4llm.to_markdown(
+                        doc,
+                        pages=[i],
+                        write_images=True,
+                        image_path=str(global_image_dir)
+                    )
+                    # Inject page markers
+                    full_markdown += f"\n\n<!-- PAGE_START: {page_num} -->\n{page_md}\n<!-- PAGE_END: {page_num} -->\n\n"
+                except Exception as page_e:
+                    mcp_log("WARN", f"Failed to convert page {page_num}: {page_e}")
+                    full_markdown += f"\n\n<!-- PAGE_START: {page_num} -->\n[Extraction Failed for Page {page_num}]\n<!-- PAGE_END: {page_num} -->\n\n"
+            
+            doc.close()
+            markdown = full_markdown
         except Exception as e:
-            # Fallback: try without image extraction if that fails
-            mcp_log("WARN", f"PDF conversion with images failed: {e}, trying without images...")
-            try:
-                markdown = pymupdf4llm.to_markdown(string, write_images=False)
-            except Exception as e2:
-                mcp_log("ERROR", f"PDF conversion completely failed: {e2}")
-                return MarkdownOutput(markdown=f"Failed to extract text from PDF: {string}")
-
+            mcp_log("ERROR", f"PDF conversion completely failed: {e}")
+            return MarkdownOutput(markdown=f"Failed to extract text from PDF: {string}")
 
     # Re-point image links in the markdown
     markdown = re.sub(
@@ -733,9 +745,7 @@ def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
         markdown.replace("\\", "/")
     )
 
-    # DEFERRED VISION: Disable inline captioning to speed up ingestion
-    # markdown = replace_images_with_captions(markdown)
-    mcp_log("INFO", f"Skipped inline captioning for {string}. Images are saved.")
+    mcp_log("INFO", f"Preserved page marks for {string}. Images are saved.")
     return MarkdownOutput(markdown=markdown)
 
 
@@ -959,30 +969,56 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
             markdown = image_pattern.sub(caption_replacer, markdown)
         # === END CAPTION-FIRST ===
 
-        # Semantic Chunking
-        try:
-            if len(markdown.split()) < 50:
-                chunks = [markdown.strip()]
-            else:
-                chunks = semantic_merge(markdown)
-        except Exception as e:
-            chunks = list(chunk_text(markdown))
+        # Semantic Chunking per Page
+        final_safe_chunks_with_pages = []
+        if "<!-- PAGE_START:" in markdown:
+            # re.split with capturing group returns the group matches too
+            parts = re.split(r'<!-- PAGE_START: (\d+) -->', markdown)
+            # parts: [prefix, page_1_num, page_1_body, page_2_num, page_2_body, ...]
+            for i in range(1, len(parts), 2):
+                page_num = int(parts[i])
+                page_text = parts[i+1].split("<!-- PAGE_END:")[0].strip()
+                if not page_text:
+                    continue
+                
+                # Chunk this page
+                try:
+                    if len(page_text.split()) < 50:
+                        page_chunks = [page_text]
+                    else:
+                        page_chunks = semantic_merge(page_text)
+                except:
+                    page_chunks = list(chunk_text(page_text))
+                
+                for pc in page_chunks:
+                    for sc in get_safe_chunks(pc):
+                        final_safe_chunks_with_pages.append((sc, page_num))
+        else:
+            # Fallback for non-PDF or failed marker injection
+            try:
+                if len(markdown.split()) < 50:
+                    chunks = [markdown.strip()]
+                else:
+                    chunks = semantic_merge(markdown)
+            except:
+                chunks = list(chunk_text(markdown))
+            
+            for c in chunks:
+                for sc in get_safe_chunks(c):
+                    final_safe_chunks_with_pages.append((sc, 1))
 
         embeddings_for_file = []
         new_metadata_entries = []
         
-        final_safe_chunks = []
-        for c in chunks:
-            final_safe_chunks.extend(get_safe_chunks(c))
-
         # Batch Embedding (Local)
         BATCH_SIZE = 32
         
-        # Process in batches
-        for i in range(0, len(final_safe_chunks), BATCH_SIZE):
-            batch = final_safe_chunks[i : i + BATCH_SIZE]
+        # Extract just text for batching
+        batch_texts = [item[0] for item in final_safe_chunks_with_pages]
+        
+        for i in range(0, len(batch_texts), BATCH_SIZE):
+            batch = batch_texts[i : i + BATCH_SIZE]
             
-            # Call batch API
             try:
                 batch_url = EMBED_URL.replace("/api/embeddings", "/api/embed")
                 res = requests.post(batch_url, json={
@@ -992,18 +1028,17 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
                 res.raise_for_status()
                 embeddings_list = [np.array(e, dtype=np.float32) for e in res.json()["embeddings"]]
             except Exception as e:
-                # Fallback
                 embeddings_list = [get_embedding(t) for t in batch]
 
-            # Add to results
             for j, embedding in enumerate(embeddings_list):
                 real_idx = i + j
-                chunk = batch[j]
+                chunk_text_val, page_num = final_safe_chunks_with_pages[real_idx]
                 embeddings_for_file.append(embedding)
                 new_metadata_entries.append({
                     "doc": rel_path,
-                    "chunk": chunk,
-                    "chunk_id": f"{rel_path}_{real_idx}"
+                    "chunk": chunk_text_val,
+                    "chunk_id": f"{rel_path}_{real_idx}",
+                    "page": page_num
                 })
         
         return {

@@ -207,15 +207,16 @@ async def rag_search(query: str):
         # Parse results - page navigation handled by frontend search
         structured_results = []
         for r in raw_results:
-            # Parse "[Source: path]" format
-            match = re.search(r'\[Source:\s*(.+?)\]$', r)
+            # Parse "[Source: path p123]" format
+            match = re.search(r'\[Source:\s*(.+?)(?:\s+p(\d+))?\]$', r)
             if match:
                 source = match.group(1)
+                page_str = match.group(2)
                 content = r[:match.start()].strip()
                 structured_results.append({
                     "content": content,
                     "source": source,
-                    "page": 1  # Frontend PDF search will navigate to correct location
+                    "page": int(page_str) if page_str else 1
                 })
             else:
                 structured_results.append({

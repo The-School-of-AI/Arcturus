@@ -169,23 +169,40 @@ export const DocumentViewer: React.FC = () => {
 
     // Auto-search for chunk text when PDF loads from SEEK result
     useEffect(() => {
-        if (activeDoc?.searchText && pdfUrl) {
-            // Delay to ensure PDF is fully loaded
+        if (pdfUrl && activeDoc) {
+            // Give the viewer a moment to initialize
             const timer = setTimeout(() => {
-                // Clean the search text and trigger search
-                const cleanText = activeDoc.searchText!.slice(0, 50).replace(/[*#\[\]()!\n]/g, ' ').trim();
-                if (cleanText.length > 10) {
-                    console.log('Auto-searching for:', cleanText);
-                    highlightRef.current(cleanText);
-                    // Jump to first match after a brief delay for search to complete
-                    setTimeout(() => {
-                        jumpToNextMatchRef.current();
-                    }, 500);
+                // 1. Jump to page if specified (guaranteed page number)
+                if (activeDoc.targetPage && activeDoc.targetPage > 0) {
+                    console.log('Jumping to page:', activeDoc.targetPage);
+                    jumpToPage(activeDoc.targetPage - 1); // 0-indexed
                 }
-            }, 1000);
+
+                // 2. Search and Highlight if text provided
+                if (activeDoc.searchText) {
+                    // Clean the search text: remove markdown symbols, captions, and newlines
+                    const cleaned = activeDoc.searchText
+                        .replace(/\*\*\[Image Caption\]:\*\*/gi, '') // Remove caption label
+                        .replace(/[#*\[\]()!]/g, ' ')               // Remove MD symbols
+                        .replace(/\s+/g, ' ')                        // Collapse spaces
+                        .trim();
+
+                    // Take a smaller identifying slice to avoid mismatches on long strings
+                    const searchStr = cleaned.slice(0, 45);
+
+                    if (searchStr.length > 5) {
+                        console.log('Auto-searching for:', searchStr);
+                        highlightRef.current(searchStr);
+                        // Jump to first match after a brief delay for search to complete
+                        setTimeout(() => {
+                            jumpToNextMatchRef.current();
+                        }, 500);
+                    }
+                }
+            }, 1200); // 1.2s delay for PDF worker stability
             return () => clearTimeout(timer);
         }
-    }, [activeDoc?.searchText, pdfUrl]);
+    }, [activeDoc?.id, activeDoc?.targetPage, activeDoc?.searchText, pdfUrl]);
 
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => {
@@ -441,18 +458,7 @@ export const DocumentViewer: React.FC = () => {
                                 plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance, searchPluginInstance]}
                                 theme={theme}
                                 onDocumentLoad={() => {
-                                    // Trigger search if searchText is provided (from SEEK result)
-                                    if (activeDoc?.searchText) {
-                                        setTimeout(() => {
-                                            const cleanText = activeDoc.searchText!.slice(0, 40).replace(/[*#\[\]()!\n]/g, ' ').trim();
-                                            if (cleanText.length > 5) {
-                                                console.log('Auto-searching for:', cleanText);
-                                                highlight(cleanText);
-                                                // Jump to first match after search completes
-                                                setTimeout(() => jumpToNextMatchRef.current(), 500);
-                                            }
-                                        }, 300);
-                                    }
+                                    // Initial load logic if needed
                                 }}
                             />
                         </Worker>
