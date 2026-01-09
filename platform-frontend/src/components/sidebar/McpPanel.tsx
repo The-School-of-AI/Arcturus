@@ -17,33 +17,25 @@ interface McpServer {
 }
 
 export const McpPanel: React.FC = () => {
-    const { selectedMcpServer, setSelectedMcpServer } = useAppStore();
-    const [servers, setServers] = useState<McpServer[]>([]);
+    const {
+        selectedMcpServer,
+        setSelectedMcpServer,
+        mcpServers: servers,
+        setMcpServers: setServers,
+        fetchMcpServers: fetchServers,
+        isMcpAddOpen: isAddOpen,
+        setIsMcpAddOpen: setIsAddOpen
+    } = useAppStore();
+
     const [loading, setLoading] = useState(false);
 
     // Add Server State
-    const [isAddOpen, setIsAddOpen] = useState(false);
     const [newServerName, setNewServerName] = useState("");
     const [newServerType, setNewServerType] = useState("stdio-pypi");
     const [newServerSource, setNewServerSource] = useState("");
     const [newServerEntry, setNewServerEntry] = useState("src/server.py");
     const [adding, setAdding] = useState(false);
 
-    const fetchServers = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.get(`${API_BASE}/mcp/servers`);
-            setServers(res.data.servers);
-        } catch (e) {
-            console.error("Failed to fetch MCP servers", e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchServers();
-    }, []);
 
     const handleAddServer = async () => {
         if (!newServerName || !newServerSource) return;
@@ -92,24 +84,9 @@ export const McpPanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-card text-foreground">
-            {/* Header */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
-                        <Box className="w-5 h-5 text-neon-yellow" />
-                    </div>
-                    <div>
-                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">MCP Servers</h2>
-                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{servers.length} CONNECTED</p>
-                    </div>
-                </div>
-
+            {/* Header Content moved to Top Bar */}
+            <div className="hidden">
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                            <Plus className="w-4 h-4" />
-                        </Button>
-                    </DialogTrigger>
                     <DialogContent className="bg-card border-border sm:max-w-md text-foreground">
                         <DialogHeader>
                             <DialogTitle className="text-foreground">Add New MCP Server</DialogTitle>

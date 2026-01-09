@@ -31,14 +31,17 @@ export const NewsPanel: React.FC = () => {
         saveArticle,
         deleteSavedArticle,
         searchResults,
-        setSearchResults
+        setSearchResults,
+        newsViewMode: viewMode,
+        setNewsViewMode: setViewMode,
+        newsSearchQuery: searchQuery,
+        setNewsSearchQuery: setSearchQuery,
+        isNewsAddOpen: isAddOpen,
+        setIsNewsAddOpen: setIsAddOpen
     } = useAppStore();
 
-    const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [newName, setNewName] = React.useState("");
     const [newUrl, setNewUrl] = React.useState("");
-    const [viewMode, setViewMode] = React.useState<'sources' | 'articles' | 'saved' | 'search'>('sources');
-    const [searchQuery, setSearchQuery] = React.useState("");
     const [isSearching, setIsSearching] = React.useState(false);
 
     React.useEffect(() => {

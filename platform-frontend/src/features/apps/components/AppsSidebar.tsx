@@ -15,23 +15,12 @@ interface AppsSidebarProps {
 }
 
 export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
-    const [activeTab, setActiveTab] = useState<'components' | 'apps'>('apps');
-    const { savedApps } = useAppStore();
+    const { savedApps, appsSidebarTab, setAppsSidebarTab } = useAppStore();
+    const activeTab = appsSidebarTab;
+    const setActiveTab = setAppsSidebarTab;
 
     return (
         <div className={cn("h-full flex flex-col bg-card text-foreground", className)}>
-            {/* Header - Matches Remme Style */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
-                        <LayoutGrid className="w-5 h-5 text-neon-yellow" />
-                    </div>
-                    <div>
-                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">App Builder</h2>
-                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{savedApps.length} DASHBOARDS</p>
-                    </div>
-                </div>
-            </div>
 
             {/* Tabs */}
             <div className="flex items-center border-b border-border/50 bg-muted/20">

@@ -9,9 +9,8 @@ import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 
 export const RemmePanel: React.FC = () => {
-    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories } = useAppStore();
+    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen } = useAppStore();
     const [searchQuery, setSearchQuery] = useState("");
-    const [isAddOpen, setIsAddOpen] = useState(false);
     const [newMemoryText, setNewMemoryText] = useState("");
 
     useEffect(() => {
@@ -41,38 +40,6 @@ export const RemmePanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-card text-foreground">
-            {/* Header */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
-                        <Brain className="w-5 h-5 text-neon-yellow animate-pulse" />
-                    </div>
-                    <div>
-                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">Memory Vault</h2>
-                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{memories.length} PERSISTENT FACTS</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={async () => {
-                            if (confirm('Scan recent runs for new memories?')) {
-                                try {
-                                    // Use raw fetch for this one-off action
-                                    await axios.post(`${API_BASE}/remme/scan`);
-                                    fetchMemories(); // Refresh list immediately
-                                } catch (e) {
-                                    console.error("Scan failed", e);
-                                    alert("Scan failed. Check backend logs.");
-                                }
-                            }
-                        }}
-                        className="p-1 hover:bg-neon-yellow/10 rounded-full transition-colors cursor-pointer"
-                        title="Manually scan recent runs"
-                    >
-                        <Sparkles className="w-4 h-4 text-neon-yellow/60 hover:text-neon-yellow animate-pulse" />
-                    </button>
-                </div>
-            </div>
 
             {/* Search */}
             <div className="p-3 border-b border-border/50 bg-muted/20">

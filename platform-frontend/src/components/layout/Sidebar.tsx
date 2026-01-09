@@ -92,7 +92,8 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         fetchRuns();
     }, [fetchRuns]);
 
-    const [isNewRunOpen, setIsNewRunOpen] = React.useState(false);
+    const isNewRunOpen = useAppStore(state => state.isNewRunOpen);
+    const setIsNewRunOpen = useAppStore(state => state.setIsNewRunOpen);
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -143,18 +144,6 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'settings' && <SettingsPanel />}
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-card text-foreground">
-                            {/* Header - Matches Remme Style */}
-                            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
-                                        <PlayCircle className="w-5 h-5 text-neon-yellow" />
-                                    </div>
-                                    <div>
-                                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">Agent Runs</h2>
-                                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{runs.length} SESSIONS</p>
-                                    </div>
-                                </div>
-                            </div>
 
                             {/* New Run Button */}
                             <div className="p-3 border-b border-border/50 bg-muted/20">

@@ -101,6 +101,44 @@ interface RagViewerSlice {
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;
+
+    // --- RAG UI States ---
+    isRagNewFolderOpen: boolean;
+    setIsRagNewFolderOpen: (open: boolean) => void;
+    ragIndexingPath: string | null;
+    setRagIndexingPath: (path: string | null) => void;
+    ragIndexStatus: string | null;
+    setRagIndexStatus: (status: string | null) => void;
+    isRagIndexing: boolean;
+    setIsRagIndexing: (indexing: boolean) => void;
+    ragFiles: any[];
+    setRagFiles: (files: any[]) => void;
+    isRagLoading: boolean;
+    setIsRagLoading: (loading: boolean) => void;
+    fetchRagFiles: () => Promise<void>;
+
+    // --- MCP UI States ---
+    isMcpAddOpen: boolean;
+    setIsMcpAddOpen: (open: boolean) => void;
+    mcpServers: any[];
+    setMcpServers: (servers: any[]) => void;
+    fetchMcpServers: () => Promise<void>;
+
+    // --- Remme UI States ---
+    isRemmeAddOpen: boolean;
+    setIsRemmeAddOpen: (open: boolean) => void;
+
+    // --- News UI States ---
+    isNewsAddOpen: boolean;
+    setIsNewsAddOpen: (open: boolean) => void;
+    newsViewMode: 'sources' | 'articles' | 'saved' | 'search';
+    setNewsViewMode: (mode: 'sources' | 'articles' | 'saved' | 'search') => void;
+    newsSearchQuery: string;
+    setNewsSearchQuery: (query: string) => void;
+
+    // --- Runs UI States ---
+    isNewRunOpen: boolean;
+    setIsNewRunOpen: (open: boolean) => void;
 }
 
 interface RemmeSlice {
@@ -143,6 +181,8 @@ interface AppsSlice {
     appLayout: LayoutItem[];
     selectedAppCardId: string | null;
     selectedLibraryComponent: unknown | null; // For sidebar preview
+    appsSidebarTab: 'apps' | 'components';
+    setAppsSidebarTab: (tab: 'apps' | 'components') => void;
     savedApps: SavedApp[];
     editingAppId: string | null;
     lastSavedState: { cards: AppCard[], layout: LayoutItem[] } | null;
@@ -555,6 +595,61 @@ export const useAppStore = create<AppState>()(
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
 
+            // --- RAG UI States ---
+            isRagNewFolderOpen: false,
+            setIsRagNewFolderOpen: (open: boolean) => set({ isRagNewFolderOpen: open }),
+            ragIndexingPath: null,
+            setRagIndexingPath: (path: string | null) => set({ ragIndexingPath: path }),
+            ragIndexStatus: null,
+            setRagIndexStatus: (status: string | null) => set({ ragIndexStatus: status }),
+            isRagIndexing: false,
+            setIsRagIndexing: (indexing: boolean) => set({ isRagIndexing: indexing }),
+            ragFiles: [],
+            setRagFiles: (files: any[]) => set({ ragFiles: files }),
+            isRagLoading: false,
+            setIsRagLoading: (loading: boolean) => set({ isRagLoading: loading }),
+            fetchRagFiles: async () => {
+                set({ isRagLoading: true });
+                try {
+                    const res = await api.get(`${API_BASE}/rag/documents`);
+                    set({ ragFiles: res.data.files });
+                } catch (e) {
+                    console.error("Failed to fetch RAG docs", e);
+                } finally {
+                    set({ isRagLoading: false });
+                }
+            },
+
+            // --- MCP UI States ---
+            isMcpAddOpen: false,
+            setIsMcpAddOpen: (open: boolean) => set({ isMcpAddOpen: open }),
+            mcpServers: [],
+            setMcpServers: (servers: any[]) => set({ mcpServers: servers }),
+            fetchMcpServers: async () => {
+                try {
+                    const res = await api.get(`${API_BASE}/mcp/servers`);
+                    set({ mcpServers: res.data.servers });
+                } catch (e) {
+                    console.error("Failed to fetch MCP servers", e);
+                }
+            },
+
+            // --- Remme UI States ---
+            isRemmeAddOpen: false,
+            setIsRemmeAddOpen: (open: boolean) => set({ isRemmeAddOpen: open }),
+
+            // --- News UI States ---
+            isNewsAddOpen: false,
+            setIsNewsAddOpen: (open: boolean) => set({ isNewsAddOpen: open }),
+            newsViewMode: 'sources',
+            setNewsViewMode: (mode) => set({ newsViewMode: mode }),
+            newsSearchQuery: '',
+            setNewsSearchQuery: (query) => set({ newsSearchQuery: query }),
+
+            // --- Runs UI States ---
+            isNewRunOpen: false,
+            setIsNewRunOpen: (open: boolean) => set({ isNewRunOpen: open }),
+
             // --- Remme Slice ---
             memories: [],
             setMemories: (memories) => set({ memories }),
@@ -627,6 +722,8 @@ export const useAppStore = create<AppState>()(
             appLayout: [],
             selectedAppCardId: null,
             selectedLibraryComponent: null,
+            appsSidebarTab: 'apps',
+            setAppsSidebarTab: (tab) => set({ appsSidebarTab: tab }),
             savedApps: [],
             editingAppId: null,
             lastSavedState: null,
