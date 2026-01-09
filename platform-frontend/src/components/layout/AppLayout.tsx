@@ -121,6 +121,22 @@ export const AppLayout: React.FC = () => {
         };
     }, []);
 
+    // Initial RAG indexing status check
+    useEffect(() => {
+        const checkRagStatus = async () => {
+            try {
+                const { api, API_BASE } = await import('@/lib/api');
+                const res = await api.get(`${API_BASE}/rag/indexing_status`);
+                if (res.data.active) {
+                    useAppStore.getState().startRagPolling();
+                }
+            } catch (e) {
+                console.error("Failed initial RAG status check", e);
+            }
+        };
+        checkRagStatus();
+    }, []);
+
 
     return (
         <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg">

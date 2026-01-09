@@ -111,6 +111,11 @@ interface RagViewerSlice {
     setRagIndexStatus: (status: string | null) => void;
     isRagIndexing: boolean;
     setIsRagIndexing: (indexing: boolean) => void;
+    ragIndexingProgress: { completed: number; total: number; currentFile: string } | null;
+    setRagIndexingProgress: (progress: { completed: number; total: number; currentFile: string } | null) => void;
+    ragPollingInterval: ReturnType<typeof setInterval> | null;
+    startRagPolling: () => void;
+    stopRagPolling: () => void;
     ragFiles: any[];
     setRagFiles: (files: any[]) => void;
     isRagLoading: boolean;
@@ -604,6 +609,43 @@ export const useAppStore = create<AppState>()(
             setRagIndexStatus: (status: string | null) => set({ ragIndexStatus: status }),
             isRagIndexing: false,
             setIsRagIndexing: (indexing: boolean) => set({ isRagIndexing: indexing }),
+            ragIndexingProgress: null,
+            setRagIndexingProgress: (progress) => set({ ragIndexingProgress: progress }),
+            ragPollingInterval: null,
+            startRagPolling: () => {
+                if (get().ragPollingInterval) clearInterval(get().ragPollingInterval!);
+                const interval = setInterval(async () => {
+                    try {
+                        const res = await api.get(`${API_BASE}/rag/indexing_status`);
+                        const status = res.data;
+                        if (status.active) {
+                            set({
+                                isRagIndexing: true,
+                                ragIndexingProgress: {
+                                    completed: status.completed,
+                                    total: status.total,
+                                    currentFile: status.currentFile || "..."
+                                }
+                            });
+                        } else {
+                            if (get().isRagIndexing) {
+                                // Just finished
+                                set({ isRagIndexing: false, ragIndexingProgress: null });
+                                get().fetchRagFiles();
+                                get().stopRagPolling();
+                            }
+                        }
+                    } catch (e) {
+                        console.error("RAG polling failed", e);
+                    }
+                }, 1000);
+                set({ ragPollingInterval: interval });
+            },
+            stopRagPolling: () => {
+                const interval = get().ragPollingInterval;
+                if (interval) clearInterval(interval);
+                set({ ragPollingInterval: null });
+            },
             ragFiles: [],
             setRagFiles: (files: any[]) => set({ ragFiles: files }),
             isRagLoading: false,

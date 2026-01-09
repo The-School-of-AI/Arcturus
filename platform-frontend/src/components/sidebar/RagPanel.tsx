@@ -156,13 +156,14 @@ export const RagPanel: React.FC = () => {
         setIsRagIndexing: setIndexing,
         ragIndexingPath: indexingPath,
         setRagIndexingPath: setIndexingPath,
+        isRagNewFolderOpen: isNewFolderOpen,
+        setIsRagNewFolderOpen: setIsNewFolderOpen,
+        ragIndexingProgress,
+        startRagPolling,
+        stopRagPolling,
         ragIndexStatus: indexStatus,
         setRagIndexStatus: setIndexStatus,
-        isRagNewFolderOpen: isNewFolderOpen,
-        setIsRagNewFolderOpen: setIsNewFolderOpen
     } = useAppStore();
-
-    const [indexingProgress, setIndexingProgress] = useState<{ completed: number; total: number; currentFile: string } | null>(null);
 
     const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [splitRatio, setSplitRatio] = useState(50);
@@ -222,52 +223,27 @@ export const RagPanel: React.FC = () => {
         else setIndexing(true);
 
         setIndexStatus(path ? `Indexing...` : "Starting scan...");
-        setIndexingProgress(null);
 
-        // Start polling for status
-        const pollInterval = setInterval(async () => {
-            try {
-                const statusRes = await axios.get(`${API_BASE}/rag/indexing_status`);
-                const status = statusRes.data;
-                if (status.active) {
-                    setIndexingProgress({
-                        completed: status.completed,
-                        total: status.total,
-                        currentFile: status.currentFile || "..."
-                    });
-                } else if (status.completed > 0 && status.total > 0 && status.completed === status.total) {
-                    setIndexingProgress({
-                        completed: status.completed,
-                        total: status.total,
-                        currentFile: "Finalizing..."
-                    });
-                }
-            } catch (e) {
-                // Ignore polling errors
-            }
-        }, 1000);
+        // Start global polling
+        startRagPolling();
 
         try {
             const res = await axios.post(`${API_BASE}/rag/reindex`, null, {
                 params: path ? { path } : {}
             });
 
-            clearInterval(pollInterval);
-
             if (res.data.status === 'success') {
                 setIndexStatus("Done!");
-                setIndexingProgress(null);
                 fetchFiles();
                 setTimeout(() => setIndexStatus(null), 2000);
             }
         } catch (e) {
-            clearInterval(pollInterval);
-            setIndexingProgress(null);
             setIndexStatus("Failed");
             setTimeout(() => setIndexStatus(null), 2000);
         } finally {
             setIndexing(false);
             setIndexingPath(null);
+            // Note: stopRagPolling is called by the polling logic itself when status.active is false
         }
     };
 
@@ -504,18 +480,18 @@ export const RagPanel: React.FC = () => {
                     </div>
                 ) : (
                     <div className="px-1">
-                        {indexing || indexingProgress ? (
+                        {indexing || ragIndexingProgress ? (
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <RefreshCw className="w-3 h-3 text-neon-yellow animate-spin" />
                                         <span className="text-[9px] font-black text-neon-yellow uppercase tracking-tight">
-                                            Indexing {indexingProgress ? `${indexingProgress.completed}/${indexingProgress.total}` : ''}
+                                            Indexing {ragIndexingProgress ? `${ragIndexingProgress.completed}/${ragIndexingProgress.total}` : ''}
                                         </span>
                                     </div>
-                                    {indexingProgress && (
+                                    {ragIndexingProgress && (
                                         <span className="text-[9px] font-mono text-neon-yellow/60">
-                                            {Math.round((indexingProgress.completed / indexingProgress.total) * 100)}%
+                                            {Math.round((ragIndexingProgress.completed / ragIndexingProgress.total) * 100)}%
                                         </span>
                                     )}
                                 </div>
@@ -524,15 +500,15 @@ export const RagPanel: React.FC = () => {
                                 <div className="h-1 w-full bg-neon-yellow/10 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-neon-yellow transition-all duration-500 ease-out shadow-[0_0_8px_rgba(255,255,0,0.5)]"
-                                        style={{ width: `${indexingProgress ? (indexingProgress.completed / indexingProgress.total) * 100 : 0}%` }}
+                                        style={{ width: `${ragIndexingProgress ? (ragIndexingProgress.completed / ragIndexingProgress.total) * 100 : 0}%` }}
                                     />
                                 </div>
 
-                                {indexingProgress?.currentFile && (
+                                {ragIndexingProgress?.currentFile && (
                                     <div className="flex items-center gap-1.5">
                                         <File className="w-2.5 h-2.5 text-muted-foreground" />
                                         <span className="text-[8px] text-muted-foreground truncate italic">
-                                            {indexingProgress.currentFile}
+                                            {ragIndexingProgress.currentFile}
                                         </span>
                                     </div>
                                 )}
