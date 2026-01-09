@@ -260,13 +260,16 @@ async def get_run(run_id: str):
         data = json.loads(found_file.read_text())
         # Reconstruct Graph to use adapter
         import networkx as nx
-        if "links" in data:
-            G = nx.node_link_graph(data, edges="links")
-        elif "edges" in data:
+        if "edges" in data:
             G = nx.node_link_graph(data, edges="edges")
-        else:
-            data["links"] = []
+        elif "links" in data:
             G = nx.node_link_graph(data, edges="links")
+        elif "link" in data:
+            # networkx default uses 'link' (singular)
+            G = nx.node_link_graph(data, edges="link")
+        else:
+            data["edges"] = []
+            G = nx.node_link_graph(data, edges="edges")
         react_flow = nx_to_reactflow(G)
         
         # Determine status: Running if in memory, else use file status
@@ -364,9 +367,15 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
         # 2. Load session data
         import networkx as nx
         session_data = json.loads(found_file.read_text())
-        if "links" not in session_data:
-            session_data["links"] = []
-        G = nx.node_link_graph(session_data, edges="links")
+        if "edges" in session_data:
+            G = nx.node_link_graph(session_data, edges="edges")
+        elif "links" in session_data:
+            G = nx.node_link_graph(session_data, edges="links")
+        elif "link" in session_data:
+            G = nx.node_link_graph(session_data, edges="link")
+        else:
+            session_data["edges"] = []
+            G = nx.node_link_graph(session_data, edges="edges")
         
         # 3. Find the node
         if node_id not in G.nodes:
@@ -585,9 +594,15 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         # 2. Load and update session
         import networkx as nx
         session_data = json.loads(found_file.read_text())
-        if "links" not in session_data:
-            session_data["links"] = []
-        G = nx.node_link_graph(session_data, edges="links")
+        if "edges" in session_data:
+            G = nx.node_link_graph(session_data, edges="edges")
+        elif "links" in session_data:
+            G = nx.node_link_graph(session_data, edges="links")
+        elif "link" in session_data:
+            G = nx.node_link_graph(session_data, edges="link")
+        else:
+            session_data["edges"] = []
+            G = nx.node_link_graph(session_data, edges="edges")
         
         if node_id not in G.nodes:
             raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
@@ -717,7 +732,8 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
              print(f"Warning: Failed to invalidate downstream nodes: {e}")
         
         # 6. Save back to file
-        graph_data = nx.node_link_data(G)
+        # Use edges="edges" to match our expected format (not default "link")
+        graph_data = nx.node_link_data(G, edges="edges")
         with open(found_file, 'w', encoding='utf-8') as f:
             json.dump(graph_data, f, indent=2, default=str, ensure_ascii=False)
         
