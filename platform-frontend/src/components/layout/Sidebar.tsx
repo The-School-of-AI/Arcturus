@@ -55,16 +55,15 @@ export const Sidebar: React.FC = () => {
             <button
                 onClick={onClick || (() => tab && setSidebarTab(tab))}
                 className={cn(
-                    "w-full aspect-square flex flex-col items-center justify-center gap-1 transition-all rounded-lg group relative",
+                    "w-12 h-12 flex flex-col items-center justify-center gap-1 transition-all rounded-xl group relative mx-auto",
                     active
-                        ? "text-neon-yellow bg-neon-yellow/10"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        ? "text-neon-yellow bg-card shadow-[4px_4px_10px_rgba(0,0,0,0.3),-1px_-1px_1px_rgba(255,255,255,0.05)] scale-110 z-10"
+                        : "text-muted-foreground hover:text-foreground grayscale hover:grayscale-0 opacity-60 hover:opacity-100"
                 )}
                 title={label}
             >
-                <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", active && "drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]")} />
-                <span className="text-[10px] font-medium opacity-60 group-hover:opacity-100">{label}</span>
-                {active && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r-full shadow-[0_0_8px_rgba(255,255,0,0.6)]" />}
+                <Icon className={cn("w-5 h-5 transition-transform", active && "drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]")} />
+                {active && <span className="text-[8px] font-bold uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-1 duration-200">{label}</span>}
             </button>
         );
     };
