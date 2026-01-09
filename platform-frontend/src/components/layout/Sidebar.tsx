@@ -16,13 +16,46 @@ import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 import { NewsPanel } from '@/components/sidebar/NewsPanel';
 
+const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
+    icon: any,
+    label: string,
+    tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings',
+    active: boolean,
+    onClick: () => void
+}) => {
+    return (
+        <button
+            onClick={onClick}
+            className={cn(
+                "w-12 h-12 flex flex-col items-center justify-center gap-1 transition-all rounded-xl group relative mx-auto",
+                active
+                    ? "text-neon-yellow bg-card shadow-[4px_4px_10px_rgba(0,0,0,0.3),-1px_-1px_1px_rgba(255,255,255,0.05)] scale-110 z-10"
+                    : "text-muted-foreground hover:text-foreground grayscale hover:grayscale-0 opacity-60 hover:opacity-100"
+            )}
+            title={label}
+        >
+            <Icon className={cn("w-5 h-5 transition-transform", active && "drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]")} />
+            {active && <span className="text-[8px] font-bold uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-1 duration-200">{label}</span>}
+        </button>
+    );
+};
+
 export const Sidebar: React.FC = () => {
-    const { runs, currentRun, setCurrentRun, fetchRuns, createNewRun, sidebarTab, setSidebarTab } = useAppStore();
+    const runs = useAppStore(state => state.runs);
+    const currentRun = useAppStore(state => state.currentRun);
+    const setCurrentRun = useAppStore(state => state.setCurrentRun);
+    const fetchRuns = useAppStore(state => state.fetchRuns);
+    const createNewRun = useAppStore(state => state.createNewRun);
+    const sidebarTab = useAppStore(state => state.sidebarTab);
+    const setSidebarTab = useAppStore(state => state.setSidebarTab);
+    const deleteRun = useAppStore(state => state.deleteRun);
+    const generateAppFromReport = useAppStore(state => state.generateAppFromReport);
+    const isGeneratingApp = useAppStore(state => state.isGeneratingApp);
 
     // Fetch runs on mount
     React.useEffect(() => {
         fetchRuns();
-    }, []);
+    }, [fetchRuns]);
 
     const [isNewRunOpen, setIsNewRunOpen] = React.useState(false);
     const [newQuery, setNewQuery] = React.useState("");
@@ -40,32 +73,8 @@ export const Sidebar: React.FC = () => {
     const handleStartRun = async () => {
         if (!newQuery.trim()) return;
         setIsNewRunOpen(false);
-        await createNewRun(newQuery);  // Backend uses settings default model
+        await createNewRun(newQuery);
         setNewQuery("");
-    };
-
-    const NavIcon = ({ icon: Icon, label, tab, onClick }: {
-        icon: any,
-        label: string,
-        tab?: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings',
-        onClick?: () => void
-    }) => {
-        const active = sidebarTab === tab;
-        return (
-            <button
-                onClick={onClick || (() => tab && setSidebarTab(tab))}
-                className={cn(
-                    "w-12 h-12 flex flex-col items-center justify-center gap-1 transition-all rounded-xl group relative mx-auto",
-                    active
-                        ? "text-neon-yellow bg-card shadow-[4px_4px_10px_rgba(0,0,0,0.3),-1px_-1px_1px_rgba(255,255,255,0.05)] scale-110 z-10"
-                        : "text-muted-foreground hover:text-foreground grayscale hover:grayscale-0 opacity-60 hover:opacity-100"
-                )}
-                title={label}
-            >
-                <Icon className={cn("w-5 h-5 transition-transform", active && "drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]")} />
-                {active && <span className="text-[8px] font-bold uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-1 duration-200">{label}</span>}
-            </button>
-        );
     };
 
     return (
@@ -74,22 +83,22 @@ export const Sidebar: React.FC = () => {
             <div className="w-16 border-r border-border bg-background flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools */}
                 <div className="flex-1 w-full px-2 space-y-2">
-                    <NavIcon icon={PlayCircle} label="Runs" tab="runs" />
-                    <NavIcon icon={Database} label="RAG" tab="rag" />
-                    <NavIcon icon={Box} label="MCP" tab="mcp" />
-                    <NavIcon icon={Brain} label="RemMe" tab="remme" />
-                    <NavIcon icon={Code2} label="Explorer" tab="explorer" />
+                    <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
+                    <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} />
+                    <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} />
+                    <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
+                    <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
-                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" />
-                    <NavIcon icon={Newspaper} label="News" tab="news" />
-                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" />
+                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" active={sidebarTab === 'apps'} onClick={() => setSidebarTab('apps')} />
+                    <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
+                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
                 </div>
 
                 {/* Bottom Tools */}
                 <div className="w-full px-2">
-                    <NavIcon icon={Settings} label="Settings" tab="settings" />
+                    <NavIcon icon={Settings} label="Settings" tab="settings" active={sidebarTab === 'settings'} onClick={() => setSidebarTab('settings')} />
                 </div>
             </div>
 

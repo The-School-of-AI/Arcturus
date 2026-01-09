@@ -329,7 +329,7 @@ export const RagPanel: React.FC = () => {
     return (
         <div id="rag-panel-container" className="flex flex-col h-full bg-card text-foreground">
             {/* Header - Matches Remme Style */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10 shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
                         <FileText className="w-5 h-5 text-neon-yellow" />
@@ -338,6 +338,35 @@ export const RagPanel: React.FC = () => {
                         <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">RAG Documents</h2>
                         <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{files.length} SOURCES</p>
                     </div>
+                </div>
+
+                {/* Actions moved to Header */}
+                <div className="flex items-center gap-1">
+                    <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
+                        <DialogTrigger asChild>
+                            <button className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="New Folder">
+                                <FolderPlus className="w-4 h-4" />
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-card border-border sm:max-w-xs text-foreground">
+                            <DialogHeader><DialogTitle className="text-foreground text-sm">New Folder</DialogTitle></DialogHeader>
+                            <Input placeholder="Folder Name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="bg-muted border-input text-foreground h-8 text-xs my-2" />
+                            <DialogFooter><Button size="sm" onClick={handleCreateFolder}>Create</Button></DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <button onClick={() => fileInputRef.current?.click()} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="Upload File">
+                        <UploadCloud className="w-4 h-4" />
+                    </button>
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+
+                    <button onClick={() => handleReindex()} className={cn("p-1.5 hover:bg-muted/50 rounded-md transition-all text-muted-foreground hover:text-neon-yellow", indexing && "animate-pulse")} title="Index All">
+                        <Zap className="w-4 h-4" />
+                    </button>
+
+                    <button onClick={fetchFiles} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="Refresh Library">
+                        <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                    </button>
                 </div>
             </div>
 
@@ -367,47 +396,17 @@ export const RagPanel: React.FC = () => {
                 </div>
             </div>
 
-            {/* Search & Actions */}
+            {/* Search */}
             <div className="p-3 border-b border-border/50 bg-muted/20 shrink-0">
-                <div className="flex items-center justify-between">
-                    <form onSubmit={handleSearchSubmit} className="relative flex-1">
-                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            className="pl-9 bg-card/50 border-border/50 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-muted-foreground h-9 transition-all"
-                            placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
-                            value={innerSearch}
-                            onChange={(e) => setInnerSearch(e.target.value)}
-                        />
-                    </form>
-
-                    <div className="flex items-center gap-1 pl-2">
-                        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
-                            <DialogTrigger asChild>
-                                <button className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="New Folder">
-                                    <FolderPlus className="w-3.5 h-3.5" />
-                                </button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-card border-border sm:max-w-xs text-foreground">
-                                <DialogHeader><DialogTitle className="text-foreground text-sm">New Folder</DialogTitle></DialogHeader>
-                                <Input placeholder="Folder Name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="bg-muted border-input text-foreground h-8 text-xs my-2" />
-                                <DialogFooter><Button size="sm" onClick={handleCreateFolder}>Create</Button></DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="Upload File">
-                            <UploadCloud className="w-3.5 h-3.5" />
-                        </button>
-                        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-
-                        <button onClick={() => handleReindex()} className={cn("p-1.5 hover:bg-muted/50 rounded-md transition-all text-muted-foreground hover:text-neon-yellow", indexing && "animate-pulse")} title="Index All">
-                            <Zap className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button onClick={fetchFiles} className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="Refresh Library">
-                            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-                        </button>
-                    </div>
-                </div>
+                <form onSubmit={handleSearchSubmit} className="relative w-full">
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Input
+                        className="pl-9 bg-card/50 border-border/50 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-muted-foreground h-9 transition-all w-full"
+                        placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
+                        value={innerSearch}
+                        onChange={(e) => setInnerSearch(e.target.value)}
+                    />
+                </form>
             </div>
 
             {/* Main Content Area */}
