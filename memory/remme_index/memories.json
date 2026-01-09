@@ -74,8 +74,8 @@
     "text": "The movie \"dhurandhar\" has a worldwide gross revenue of $21,877,727,399 as of December 23, 2025.",
     "category": "historical",
     "created_at": "2025-12-25T07:14:02.459996",
-    "updated_at": "2025-12-29T14:41:33.879894",
-    "source": "backfill_1766470384, run_1766470384",
+    "updated_at": "2026-01-09T11:51:41.438259",
+    "source": "backfill_1766470384, run_1766470384, run_1767939679",
     "faiss_id": 32,
     "source_exists": true
   },

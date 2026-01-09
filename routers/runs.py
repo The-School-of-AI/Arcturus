@@ -260,7 +260,13 @@ async def get_run(run_id: str):
         data = json.loads(found_file.read_text())
         # Reconstruct Graph to use adapter
         import networkx as nx
-        G = nx.node_link_graph(data, edges="links")
+        if "links" in data:
+            G = nx.node_link_graph(data, edges="links")
+        elif "edges" in data:
+            G = nx.node_link_graph(data, edges="edges")
+        else:
+            data["links"] = []
+            G = nx.node_link_graph(data, edges="links")
         react_flow = nx_to_reactflow(G)
         
         # Determine status: Running if in memory, else use file status
@@ -355,6 +361,8 @@ async def test_agent(run_id: str, node_id: str):
         # 2. Load session data
         import networkx as nx
         session_data = json.loads(found_file.read_text())
+        if "links" not in session_data:
+            session_data["links"] = []
         G = nx.node_link_graph(session_data, edges="links")
         
         # 3. Find the node
@@ -562,6 +570,8 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         # 2. Load and update session
         import networkx as nx
         session_data = json.loads(found_file.read_text())
+        if "links" not in session_data:
+            session_data["links"] = []
         G = nx.node_link_graph(session_data, edges="links")
         
         if node_id not in G.nodes:
