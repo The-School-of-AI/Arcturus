@@ -145,4 +145,10 @@ DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-applypatch.sample (1 chunks
 Indexing:  90%|████████▉ | 35/39 [06:20<00:05,  1.35s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/update.sample
 PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/update.sample
 DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-push.sample (1 chunks)
-Indexing:  92%|█████████▏| 36/39 [06:21<00:03,  1.22s/it]
+Indexing:  92%|█████████▏| 36/39 [06:21<00:03,  1.22s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/push-to-checkout.sample
+PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/push-to-checkout.sample
+DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/update.sample (2 chunks)
+Indexing:  95%|█████████▍| 37/39 [06:24<00:03,  1.74s/it]DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/push-to-checkout.sample (3 chunks)
+Indexing:  97%|█████████▋| 38/39 [06:27<00:01,  1.99s/it]DONE: Indexed pdfs/1706.03762v7.pdf (52 chunks)
+Indexing: 100%|██████████| 39/39 [06:29<00:00,  1.90s/it]Indexing: 100%|██████████| 39/39 [06:29<00:00,  9.98s/it]
+INFO: READY

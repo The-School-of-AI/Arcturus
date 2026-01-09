@@ -1,0 +1,87 @@
+✓ rank_bm25 imported successfully
+============================================================
+HYBRID SEARCH SANDBOX
+============================================================
+
+============================================================
+TEST: Query Analyzer
+============================================================
+✓ Query: '"Anmol Singh"'
+   Expected: LEXICAL_REQUIRED, Got: LEXICAL_REQUIRED
+   Entities: ['Anmol Singh']
+✓ Query: 'find docs containing "exact phrase"'
+   Expected: LEXICAL_REQUIRED, Got: LEXICAL_REQUIRED
+   Entities: ['exact phrase']
+✓ Query: 'email test@example.com'
+   Expected: LEXICAL_REQUIRED, Got: LEXICAL_REQUIRED
+   Entities: ['test@example.com']
+✓ Query: 'invoice INVG67564'
+   Expected: LEXICAL_REQUIRED, Got: LEXICAL_REQUIRED
+   Entities: ['INVG67564']
+✓ Query: 'Anmol Singh'
+   Expected: LEXICAL_PREFERRED, Got: LEXICAL_PREFERRED
+   Entities: ['Anmol Singh']
+✓ Query: 'find documents about Delhi Real Estate'
+   Expected: LEXICAL_PREFERRED, Got: LEXICAL_PREFERRED
+   Entities: ['Delhi Real Estate']
+✗ Query: 'documents that mention BSE Limited'
+   Expected: LEXICAL_REQUIRED, Got: LEXICAL_PREFERRED
+   Entities: ['BSE Limited']
+✓ Query: 'explain how transformers work'
+   Expected: SEMANTIC, Got: SEMANTIC
+   Entities: []
+✓ Query: 'what is attention mechanism'
+   Expected: SEMANTIC, Got: SEMANTIC
+   Entities: []
+✓ Query: 'summarize the document'
+   Expected: SEMANTIC, Got: SEMANTIC
+   Entities: []
+
+Passed: 9/10
+
+============================================================
+TEST: BM25 Index
+============================================================
+Building BM25 index from /Users/rohanshravan/TSAI/Arcturus/mcp_servers/faiss_index/metadata.json...
+✓ BM25 index built with 469 chunks
+
+Query: 'Anmol Singh'
+  Score: 10.94 -> INVG67564.pdf_14
+  Score: 10.56 -> INVG67564.pdf_40
+  Score: 8.97 -> INVG67564.pdf_39
+
+Query: 'transformer attention'
+  Score: 8.14 -> pdfs/2507.04239v1.pdf_94
+  Score: 8.06 -> pdfs/1706.03762v7.pdf_6
+  Score: 7.18 -> pdfs/1706.03762v7.pdf_29
+
+Query: 'Indian Policies'
+  Score: 10.94 -> SAMPLE-Indian-Policies-and-Procedures-January-2023.docx_0
+  Score: 9.33 -> SAMPLE-Indian-Policies-and-Procedures-January-2023.docx_3
+  Score: 8.08 -> SAMPLE-Indian-Policies-and-Procedures-January-2023.docx_1
+
+Query: 'INVG67564'
+  No results (score > 0)
+✓ BM25 index saved to /Users/rohanshravan/TSAI/Arcturus/mcp_servers/faiss_index/bm25_index.pkl
+
+============================================================
+TEST: Full Hybrid Pipeline
+============================================================
+✓ BM25 index loaded from /Users/rohanshravan/TSAI/Arcturus/mcp_servers/faiss_index/bm25_index.pkl (469 chunks)
+
+Query: 'Anmol Singh'
+Intent: LEXICAL_PREFERRED
+Entities: ['Anmol Singh']
+
+BM25 Results: 20 hits
+Fused Results: 20 hits
+After Entity Gate: 15 hits (gate applied: True)
+
+Filtered Results:
+  INVG67564.pdf_14: (Matrix)|Anmol Singh Jaggi is a promoter<br>Director. Paneet Singh Jaggi is an Ex-<br>Director.|Yes|...
+  INVG67564.pdf_40: of funds by Anmol Singh Jaggi**_ 68. From the analysis of the bank statements of Anmol Singh Jaggi, ...
+  INVG67564.pdf_39: In Crores)|Total<br>(Rs. In Crores)| |---|---|---|---| |Funds transferred by Gensol to Wellray Solar...
+
+============================================================
+✗ SOME TESTS FAILED - Review before integration
+============================================================

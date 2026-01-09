@@ -26,6 +26,17 @@ import base64 # ollama needs base64-encoded-image
 import asyncio
 import concurrent.futures
 import threading
+import pickle
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Optional
+
+# BM25 for hybrid search
+try:
+    from rank_bm25 import BM25Okapi
+    BM25_AVAILABLE = True
+except ImportError:
+    BM25_AVAILABLE = False
 
 # Add config to path and import settings
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -177,6 +188,153 @@ def get_safe_chunks(text: str, max_words=512, overlap=50) -> list[str]:
             
     return chunks
 
+# =============================================================================
+# HYBRID SEARCH COMPONENTS
+# =============================================================================
+
+@dataclass
+class QueryAnalysis:
+    """Result of query analysis for hybrid search."""
+    original_query: str
+    intent: str  # LEXICAL_REQUIRED, LEXICAL_PREFERRED, SEMANTIC
+    entities: list = field(default_factory=list)
+    quoted_phrases: list = field(default_factory=list)
+    proper_nouns: list = field(default_factory=list)
+
+def analyze_query(query: str) -> QueryAnalysis:
+    """Analyze query to determine intent and extract entities."""
+    analysis = QueryAnalysis(original_query=query, intent="SEMANTIC")
+    
+    # 1. Extract quoted phrases
+    quoted_pattern = r'"([^"]+)"|\'([^\']+)\''
+    quoted_matches = re.findall(quoted_pattern, query)
+    analysis.quoted_phrases = [m[0] or m[1] for m in quoted_matches]
+    
+    # 2. Extract emails/IDs
+    ids_emails = []
+    ids_emails.extend(re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', query))
+    ids_emails.extend(re.findall(r'\b[A-Z]{2,4}[-]?\d{4,}\b', query))
+    
+    # 3. Extract proper nouns (capitalized multi-word sequences)
+    clean_query = re.sub(quoted_pattern, '', query)
+    words = clean_query.split()
+    skip_words = {'The', 'A', 'An', 'This', 'Find', 'Search', 'Show', 'Get', 'About', 'For', 'Documents'}
+    current_noun = []
+    proper_nouns = []
+    
+    for word in words:
+        clean_word = re.sub(r'[^\w]', '', word)
+        if clean_word and clean_word[0].isupper() and len(clean_word) > 1 and clean_word not in skip_words:
+            current_noun.append(clean_word)
+        else:
+            if current_noun:
+                proper_nouns.append(' '.join(current_noun))
+                current_noun = []
+    if current_noun:
+        proper_nouns.append(' '.join(current_noun))
+    
+    analysis.proper_nouns = [pn for pn in proper_nouns if len(pn.split()) >= 2 or len(pn) > 2]
+    
+    # 4. Determine intent
+    all_entities = analysis.quoted_phrases + ids_emails + analysis.proper_nouns
+    analysis.entities = list(set(all_entities))
+    
+    if analysis.quoted_phrases or ids_emails:
+        analysis.intent = "LEXICAL_REQUIRED"
+    elif analysis.proper_nouns:
+        analysis.intent = "LEXICAL_PREFERRED"
+    else:
+        analysis.intent = "SEMANTIC"
+    
+    return analysis
+
+class BM25Index:
+    """BM25 keyword search index for hybrid search."""
+    
+    def __init__(self):
+        self.bm25 = None
+        self.corpus = []
+        self.chunk_ids = []
+        self.metadata = []
+    
+    def tokenize(self, text: str) -> list:
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', ' ', text)
+        return [t for t in text.split() if len(t) > 1]
+    
+    def build_from_metadata(self, metadata: list):
+        if not BM25_AVAILABLE:
+            mcp_log("WARN", "BM25 not available - install rank-bm25")
+            return
+        self.corpus = []
+        self.chunk_ids = []
+        self.metadata = metadata
+        for entry in metadata:
+            self.corpus.append(self.tokenize(entry.get('chunk', '')))
+            self.chunk_ids.append(entry.get('chunk_id', ''))
+        self.bm25 = BM25Okapi(self.corpus)
+        mcp_log("INFO", f"BM25 index built with {len(self.corpus)} chunks")
+    
+    def search(self, query: str, top_k: int = 20) -> list:
+        if not self.bm25:
+            return []
+        tokens = self.tokenize(query)
+        scores = self.bm25.get_scores(tokens)
+        top_indices = np.argsort(scores)[::-1][:top_k]
+        return [(self.chunk_ids[i], float(scores[i])) for i in top_indices if scores[i] > 0]
+    
+    def save(self, path: str):
+        with open(path, 'wb') as f:
+            pickle.dump({'bm25': self.bm25, 'corpus': self.corpus, 'chunk_ids': self.chunk_ids}, f)
+    
+    def load(self, path: str) -> bool:
+        try:
+            with open(path, 'rb') as f:
+                data = pickle.load(f)
+            self.bm25 = data['bm25']
+            self.corpus = data['corpus']
+            self.chunk_ids = data['chunk_ids']
+            return True
+        except:
+            return False
+
+# Global BM25 index instance
+_bm25_index = BM25Index()
+
+def rrf_fuse(bm25_results: list, faiss_results: list, k: int = 60) -> list:
+    """Reciprocal Rank Fusion of BM25 and FAISS results."""
+    scores = defaultdict(float)
+    for rank, (chunk_id, _) in enumerate(bm25_results):
+        scores[chunk_id] += 1.0 / (k + rank + 1)
+    for rank, (chunk_id, _) in enumerate(faiss_results):
+        scores[chunk_id] += 1.0 / (k + rank + 1)
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+def entity_gate(results: list, metadata: list, analysis: QueryAnalysis) -> tuple:
+    """Filter results based on query entities. Returns (filtered_results, gate_applied)."""
+    if analysis.intent == "SEMANTIC" or not analysis.entities:
+        return results, False
+    
+    chunk_lookup = {e['chunk_id']: e['chunk'].lower() for e in metadata}
+    filtered = []
+    
+    for chunk_id, score in results:
+        chunk_text = chunk_lookup.get(chunk_id, '')
+        
+        # For quoted phrases - exact match
+        if analysis.quoted_phrases:
+            if all(p.lower() in chunk_text for p in analysis.quoted_phrases):
+                filtered.append((chunk_id, score))
+            continue
+        
+        # For proper nouns - all tokens must appear
+        for noun in analysis.proper_nouns:
+            tokens = noun.lower().split()
+            if all(t in chunk_text for t in tokens):
+                filtered.append((chunk_id, score))
+                break
+    
+    return filtered, True
 
 @mcp.tool()
 def preview_document(path: str) -> MarkdownOutput:
@@ -286,46 +444,99 @@ CONTEXT FROM DOCUMENT:
 
 @mcp.tool()
 def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
-    """Search old stored documents like PDF, DOCX, TXT, etc. to get relevant extracts. 
+    """Search stored documents using HYBRID search (BM25 + vector + entity gating).
+    Returns relevant chunks with source information.
     Optionally provide doc_path to search within a specific document only.
     """
+    global _bm25_index
     ensure_faiss_ready()
     mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path})")
+    
     try:
-        index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
         metadata = json.loads((ROOT / "faiss_index" / "metadata.json").read_text())
+        
+        # 1. Analyze query for intent and entities
+        analysis = analyze_query(query)
+        mcp_log("SEARCH", f"Intent: {analysis.intent}, Entities: {analysis.entities}")
+        
+        # 2. FAISS vector search
+        index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
         query_vec = get_embedding(query).reshape(1, -1)
-        # Increase k to get more candidates (filtering reduces final count)
-        D, I = index.search(query_vec, k=50 if doc_path else 20)
+        D, I = index.search(query_vec, k=50 if doc_path else 30)
+        
+        faiss_results = []
+        for rank, idx in enumerate(I[0]):
+            if idx < 0 or idx >= len(metadata):
+                continue
+            chunk_id = metadata[idx].get('chunk_id', f'idx_{idx}')
+            faiss_results.append((chunk_id, float(D[0][rank])))
+        
+        # 3. BM25 keyword search (if available)
+        bm25_results = []
+        if BM25_AVAILABLE:
+            bm25_path = ROOT / "faiss_index" / "bm25_index.pkl"
+            if not _bm25_index.bm25:
+                if bm25_path.exists():
+                    _bm25_index.load(str(bm25_path))
+                else:
+                    _bm25_index.build_from_metadata(metadata)
+                    _bm25_index.save(str(bm25_path))
+            bm25_results = _bm25_index.search(query, top_k=30)
+        
+        # 4. RRF Fusion
+        if bm25_results:
+            fused_results = rrf_fuse(bm25_results, faiss_results)
+        else:
+            fused_results = [(cid, score) for cid, score in faiss_results]
+        
+        # 5. Entity Gate (for lexical-intent queries)
+        gated_results, gate_applied = entity_gate(fused_results, metadata, analysis)
+        
+        if gate_applied:
+            mcp_log("SEARCH", f"Entity gate applied: {len(fused_results)} -> {len(gated_results)} results")
+            if not gated_results and analysis.entities:
+                # No exact matches - return message indicating this
+                mcp_log("SEARCH", f"No documents contain '{analysis.entities}'")
+                return [f"⚠️ No documents contain '{', '.join(analysis.entities)}' exactly. Try a broader search."]
+        
+        # 6. Build result list
+        chunk_lookup = {e['chunk_id']: e for e in metadata}
         results = []
-        for idx in I[0]:
-            if idx < 0 or idx >= len(metadata): continue
-            data = metadata[idx]
+        seen_docs = set()
+        
+        for chunk_id, score in (gated_results if gate_applied else fused_results)[:TOP_K * 2]:
+            data = chunk_lookup.get(chunk_id)
+            if not data:
+                continue
             
-            # Filtering
+            # Doc path filtering
             if doc_path and data.get('doc') != doc_path:
                 continue
             
-            # Runtime Filtering: Check if file still exists
-            doc_rel_path = data.get('doc') # This is now relative path
-            if not doc_rel_path: continue
-            
-            # Use data dir relative check
+            # File existence check
+            doc_rel_path = data.get('doc', '')
+            if not doc_rel_path:
+                continue
             full_path = ROOT.parent / "data" / doc_rel_path
-            mcp_log("DEBUG", f"Checking path: {full_path} - exists: {full_path.exists()}")
             if not full_path.exists():
-                # Removed/Renamed file -> Skip
                 continue
             
-            # Skip empty chunks (corrupted data)
+            # Skip empty chunks
             chunk_text = data.get('chunk', '').strip()
             if not chunk_text:
                 continue
-
+            
             results.append(f"{chunk_text}\n[Source: {doc_rel_path}]")
-        mcp_log("DEBUG", f"Returning {len(results)} results")
-        return results
+            seen_docs.add(doc_rel_path)
+            
+            if len(results) >= TOP_K:
+                break
+        
+        mcp_log("SEARCH", f"Returning {len(results)} results from {len(seen_docs)} docs")
+        return results if results else ["No relevant documents found."]
+        
     except Exception as e:
+        mcp_log("ERROR", f"Hybrid search failed: {e}")
         return [f"ERROR: Failed to search: {str(e)}"]
 
 @mcp.tool()
