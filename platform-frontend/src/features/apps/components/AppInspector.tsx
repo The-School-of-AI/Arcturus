@@ -260,7 +260,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                         {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map((label, i) => (
                             <div key={i} className="flex flex-col items-center gap-1">
                                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${i === 3 ? 'border-neon-yellow bg-neon-yellow' : 'border-gray-500'}`}>
-                                    {i === 3 && <div className="w-2 h-2 rounded-full bg-black" />}
+                                    {i === 3 && <div className="w-2 h-2 rounded-full bg-foreground" />}
                                 </div>
                                 <span className="text-[8px] text-muted-foreground text-center w-12">{label}</span>
                             </div>
@@ -423,7 +423,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                 <div className="p-4 flex flex-col gap-3">
                     <div className="h-32 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center">
                         <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                            <span className="text-white text-xl">▶</span>
+                            <span className="text-foreground text-xl">▶</span>
                         </div>
                     </div>
                     <div className="text-xs text-muted-foreground text-center">Watch the video before answering</div>
@@ -2113,7 +2113,7 @@ const ColorPicker = ({
             {/* Current Color Preview */}
             <div className="flex items-center gap-2">
                 <div
-                    className="w-full h-8 rounded border border-border cursor-pointer transition-all hover:border-white/20"
+                    className="w-full h-8 rounded border border-border cursor-pointer transition-all hover:border-primary/50"
                     style={{ backgroundColor: value }}
                     onClick={() => setShowCustom(!showCustom)}
                 />
@@ -2127,7 +2127,7 @@ const ColorPicker = ({
                         onClick={() => onChange(preset.value)}
                         className={cn(
                             "w-6 h-6 rounded border-2 transition-all hover:scale-110",
-                            value === preset.value ? "border-white ring-1 ring-white/50" : "border-transparent"
+                            value === preset.value ? "border-primary ring-1 ring-primary/50" : "border-transparent"
                         )}
                         style={{ backgroundColor: preset.value }}
                         title={preset.name}

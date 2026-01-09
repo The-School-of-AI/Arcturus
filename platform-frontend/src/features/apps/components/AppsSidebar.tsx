@@ -1042,7 +1042,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 return (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 rounded">
                         <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                            <Play className="w-3 h-3 text-white" />
+                            <Play className="w-3 h-3 text-primary-foreground" />
                         </div>
                     </div>
                 );
@@ -1218,7 +1218,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
                 // Match Explorer node styling
                 isSelected
                     ? "bg-muted border-neon-yellow ring-4 ring-neon-yellow/20 scale-[1.02]"
-                    : "bg-card/90 border-border hover:border-white/30 hover:scale-[1.02]"
+                    : "bg-card/90 border-border hover:border-primary/30 hover:scale-[1.02]"
             )}
         >
             {/* Preview Area - matches the actual card appearance with animation */}
@@ -1322,7 +1322,7 @@ const SavedAppsList = () => {
                                         "hover:shadow-md",
                                         isActive
                                             ? "border-neon-yellow/40 hover:border-neon-yellow/60"
-                                            : "border-border/50 hover:border-white/20"
+                                            : "border-border/50 hover:border-primary/50"
                                     )}
                                     onClick={() => loadApp(app.id)}
                                 >

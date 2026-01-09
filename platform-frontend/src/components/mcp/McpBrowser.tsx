@@ -75,7 +75,7 @@ export const McpBrowser: React.FC = () => {
     return (
         <div className="w-full h-full bg-background flex flex-col overflow-hidden">
             <ScrollArea className="flex-1 p-8">
-                <div className="max-w-3xl mx-auto prose prose-invert prose-sm">
+                <div className="max-w-3xl mx-auto prose prose-slate dark:prose-invert prose-sm">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -83,16 +83,16 @@ export const McpBrowser: React.FC = () => {
                     ) : (
                         <ReactMarkdown
                             components={{
-                                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-primary mb-4 pb-2 border-b border-white/10" {...props} />,
+                                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-foreground mb-4 pb-2 border-b border-border" {...props} />,
                                 h2: ({ node, ...props }) => <h2 className="text-xl font-semibold text-foreground mt-8 mb-3" {...props} />,
-                                h3: ({ node, ...props }) => <h3 className="text-lg font-medium text-neon-yellow mt-6 mb-2" {...props} />,
-                                ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-1 my-4" {...props} />,
+                                h3: ({ node, ...props }) => <h3 className="text-lg font-medium text-primary mt-6 mb-2" {...props} />,
+                                ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-1 my-4 text-muted-foreground" {...props} />,
                                 li: ({ node, ...props }) => <li className="text-muted-foreground" {...props} />,
                                 code: ({ node, inline, className, children, ...props }: any) => {
                                     return inline ? (
-                                        <code className="bg-muted px-1.5 py-0.5 rounded text-neon-yellow font-mono text-xs" {...props}>{children}</code>
+                                        <code className="bg-muted px-1.5 py-0.5 rounded text-primary font-mono text-xs" {...props}>{children}</code>
                                     ) : (
-                                        <div className="bg-muted/50 p-4 rounded-lg my-4 overflow-x-auto">
+                                        <div className="bg-muted/50 p-4 rounded-lg my-4 overflow-x-auto border border-border">
                                             <code className="bg-transparent text-sm font-mono text-foreground" {...props}>{children}</code>
                                         </div>
                                     )

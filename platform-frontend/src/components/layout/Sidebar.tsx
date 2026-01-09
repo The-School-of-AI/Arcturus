@@ -178,7 +178,7 @@ export const Sidebar: React.FC = () => {
                                             "hover:shadow-md",
                                             isActive
                                                 ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
-                                                : "border-border/50 hover:border-white/20 hover:bg-muted/30"
+                                                : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                         )}
                                     >
                                         <div className="flex justify-between items-start gap-3">

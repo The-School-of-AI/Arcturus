@@ -92,7 +92,7 @@ export const McpInspector: React.FC = () => {
                 {tools.length > 0 && (
                     <div
                         onClick={toggleAll}
-                        className="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer transition-colors"
+                        className="flex items-center gap-2 px-2 py-1 rounded bg-muted/50 border border-border hover:bg-muted cursor-pointer transition-colors"
                     >
                         <span className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground">
                             {isAllEnabled ? 'Disable All' : 'Enable All'}
@@ -143,7 +143,7 @@ export const McpInspector: React.FC = () => {
                                     "w-4 h-4 rounded border flex items-center justify-center transition-colors",
                                     enabledTools[tool.name] ? "bg-primary border-primary" : "border-muted-foreground/30"
                                 )}>
-                                    {enabledTools[tool.name] && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
+                                    {enabledTools[tool.name] && <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full" />}
                                 </div>
                             </div>
 

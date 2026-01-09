@@ -266,7 +266,7 @@ export default function Table02() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive hover:text-white"
+                    className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => handleAction(task, "delete")}
                     disabled={busy}
                   >
