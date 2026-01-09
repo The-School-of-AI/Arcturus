@@ -365,73 +365,93 @@ export const NewsPanel: React.FC = () => {
             {/* Articles View */}
             {
                 viewMode === 'articles' && (
-                    <div className="flex-1 overflow-y-auto scrollbar-hide">
-                        {isNewsLoading && newsItems.length === 0 ? (
-                            <div className="flex items-center justify-center py-10">
-                                <Loader2 className="w-6 h-6 text-cyan-500 animate-spin" />
-                            </div>
-                        ) : newsItems.length === 0 ? (
-                            <div className="py-10 text-center text-muted-foreground text-sm">
-                                No articles available
-                            </div>
-                        ) : (
-                            <div className="p-2 space-y-1">
-                                {newsItems.map((item, index) => (
-                                    <div
-                                        key={item.id}
-                                        className={cn(
-                                            "group p-3 rounded-lg transition-all border",
-                                            activeNewsTab === item.url
-                                                ? "bg-cyan-500/10 border-cyan-500/30"
-                                                : "border-transparent hover:bg-muted/50 hover:border-border/50"
-                                        )}
-                                    >
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-[10px] font-mono text-muted-foreground/50 mt-0.5">
-                                                {(index + 1).toString().padStart(2, '0')}
-                                            </span>
-                                            <div
-                                                className="flex-1 min-w-0 cursor-pointer"
-                                                onClick={() => openNewsTab(item.url)}
-                                            >
-                                                <h4 className={cn(
-                                                    "text-xs font-medium line-clamp-2 leading-relaxed",
-                                                    activeNewsTab === item.url ? "text-cyan-400" : "text-foreground"
-                                                )}>
-                                                    {item.title}
-                                                </h4>
-                                                {item.summary && (
-                                                    <p className="text-[10px] text-muted-foreground/60 line-clamp-1 mt-1">
-                                                        {stripHtml(item.summary)}
-                                                    </p>
-                                                )}
+                    <div className="flex flex-col h-full bg-card">
+                        {/* Header with Back Button - Matches Search Style */}
+                        <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50 flex items-center gap-2">
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setViewMode('sources')}
+                                className="h-8 w-8 p-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <span className="text-sm font-medium truncate flex-1 leading-none">
+                                {newsItems.length > 0 ? new URL(newsItems[0].url).hostname.replace('www.', '') : 'Articles'}
+                            </span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-3">
+                            {isNewsLoading && newsItems.length === 0 ? (
+                                <div className="flex items-center justify-center py-10">
+                                    <Loader2 className="w-6 h-6 text-neon-yellow animate-spin" />
+                                </div>
+                            ) : newsItems.length === 0 ? (
+                                <div className="py-10 text-center text-muted-foreground text-sm opacity-60">
+                                    No articles available
+                                </div>
+                            ) : (
+                                newsItems.map((item, index) => {
+                                    const isActive = activeNewsTab === item.url;
+                                    const isSaved = isArticleSaved(item.url);
+
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={cn(
+                                                "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                                "bg-gradient-to-br from-card to-muted/20",
+                                                "hover:shadow-md",
+                                                isActive
+                                                    ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                                    : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                            )}
+                                            onClick={() => openNewsTab(item.url)}
+                                        >
+                                            <div className="flex justify-between items-start gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className={cn(
+                                                        "text-[13px] font-medium leading-relaxed transition-colors line-clamp-2",
+                                                        isActive ? "text-neon-yellow" : "text-foreground group-hover:text-foreground/80"
+                                                    )}>
+                                                        {item.title}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 mt-1.5">
+                                                        <span className="text-[10px] font-mono text-muted-foreground/50">
+                                                            {(index + 1).toString().padStart(2, '0')}
+                                                        </span>
+                                                        {(item.published_at || item.snippet) && (
+                                                            <span className="text-[10px] text-muted-foreground/40 font-mono truncate max-w-[150px]">
+                                                                {item.published_at ? new Date(item.published_at).toLocaleDateString() : (item.snippet ? item.snippet.slice(0, 30) + '...' : '')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col gap-1 -mr-1">
+                                                    {/* Bookmark Button */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            saveArticle(item.title, item.url);
+                                                        }}
+                                                        className={cn(
+                                                            "p-1.5 rounded-lg transition-all duration-200",
+                                                            isSaved
+                                                                ? "text-amber-400 bg-amber-400/10 opacity-100"
+                                                                : "text-muted-foreground hover:text-amber-400 hover:bg-amber-400/10 opacity-0 group-hover:opacity-100"
+                                                        )}
+                                                        title={isSaved ? "Saved" : "Save for later"}
+                                                    >
+                                                        {isSaved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (!isArticleSaved(item.url)) {
-                                                        saveArticle(item.title, item.url);
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    "p-1.5 rounded-md transition-all shrink-0",
-                                                    isArticleSaved(item.url)
-                                                        ? "text-amber-400"
-                                                        : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:bg-amber-500/10"
-                                                )}
-                                                title={isArticleSaved(item.url) ? "Saved" : "Save article"}
-                                            >
-                                                {isArticleSaved(item.url) ? (
-                                                    <BookmarkCheck className="w-3.5 h-3.5" />
-                                                ) : (
-                                                    <Bookmark className="w-3.5 h-3.5" />
-                                                )}
-                                            </button>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
                 )
             }
