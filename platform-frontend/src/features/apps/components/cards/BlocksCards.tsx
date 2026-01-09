@@ -28,6 +28,8 @@ interface StatItem {
 interface StatsTrendingCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         stats?: StatItem[];
     };
     config?: {
@@ -35,6 +37,9 @@ interface StatsTrendingCardProps {
         showChange?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultStats: StatItem[] = [
@@ -44,21 +49,25 @@ const defaultStats: StatItem[] = [
 ];
 
 export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
-    title = 'Key Metrics',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Key Metrics';
     const showTitle = config.showTitle !== false;
     const showChange = config.showChange !== false;
     const stats = data.stats || defaultStats;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col p-4">
             {showTitle && (
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
                     <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                    {title}
+                    {titleVal}
                 </h3>
             )}
             <div className="grid grid-cols-1 gap-3 flex-1">
@@ -84,7 +93,13 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
                 ))}
             </div>
         </div>
+
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 // ============================================================================
@@ -95,6 +110,8 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
 interface StatsGridCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         stats?: StatItem[];
     };
     config?: {
@@ -102,6 +119,9 @@ interface StatsGridCardProps {
         columns?: 2 | 3 | 4;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultGridStats: StatItem[] = [
@@ -112,20 +132,24 @@ const defaultGridStats: StatItem[] = [
 ];
 
 export const StatsGridCard: React.FC<StatsGridCardProps> = ({
-    title = 'Analytics Overview',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Analytics Overview';
     const showTitle = config.showTitle !== false;
     const columns = config.columns || 2;
     const stats = data.stats || defaultGridStats;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col p-4">
             {showTitle && (
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                    {title}
+                    {titleVal}
                 </h3>
             )}
             <div className={cn(
@@ -153,7 +177,13 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
                 ))}
             </div>
         </div>
+
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 // ============================================================================
@@ -171,6 +201,8 @@ interface StatusStatItem {
 interface StatsStatusCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         stats?: StatusStatItem[];
     };
     config?: {
@@ -179,6 +211,7 @@ interface StatsStatusCardProps {
     style?: any;
     cardId?: string;
     autoFit?: boolean;
+    context?: string;
 }
 
 const defaultStatusStats: StatusStatItem[] = [
@@ -196,13 +229,15 @@ const statusStyles = {
 };
 
 export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
-    title = 'System Status',
+    title: propTitle,
     data = {},
     config = {},
     style = {},
     cardId,
-    autoFit
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'System Status';
     const showTitle = config.showTitle !== false;
     const stats = data.stats || defaultStatusStats;
 
@@ -210,7 +245,7 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
         <div className="h-full flex flex-col p-4">
             {showTitle && (
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                    {title}
+                    {titleVal}
                 </h3>
             )}
             <div className="grid grid-cols-2 gap-3 flex-1">
@@ -248,6 +283,8 @@ interface SimpleTableRow {
 interface SimpleTableCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         headers?: string[];
         rows?: SimpleTableRow[];
     };
@@ -258,6 +295,7 @@ interface SimpleTableCardProps {
     style?: any;
     cardId?: string;
     autoFit?: boolean;
+    context?: string;
 }
 
 const defaultTableData = {
@@ -270,13 +308,15 @@ const defaultTableData = {
 };
 
 export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
-    title = 'Tasks',
+    title: propTitle,
     data = {},
     config = {},
     style = {},
     cardId,
-    autoFit
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Tasks';
     const showTitle = config.showTitle !== false;
     const striped = config.striped !== false;
     const headers = data.headers || defaultTableData.headers;
@@ -295,7 +335,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
             {showTitle && (
                 <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {title}
+                        {titleVal}
                     </h3>
                 </div>
             )}
@@ -364,12 +404,17 @@ interface LinkItem {
 interface StatsLinksCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         links?: LinkItem[];
     };
     config?: {
         showTitle?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultLinks: LinkItem[] = [
@@ -380,19 +425,23 @@ const defaultLinks: LinkItem[] = [
 ];
 
 export const StatsLinksCard: React.FC<StatsLinksCardProps> = ({
-    title = 'Quick Links',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Quick Links';
     const showTitle = config.showTitle !== false;
     const links = data.links || defaultLinks;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col p-4">
             {showTitle && (
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                    {title}
+                    {titleVal}
                 </h3>
             )}
             <div className="flex flex-col gap-2 flex-1">
@@ -411,6 +460,11 @@ export const StatsLinksCard: React.FC<StatsLinksCardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 
@@ -428,12 +482,17 @@ interface Stats01Stat {
 interface Stats01CardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         stats?: Stats01Stat[];
     };
     config?: {
         showTitle?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultStats01: Stats01Stat[] = [
@@ -444,20 +503,24 @@ const defaultStats01: Stats01Stat[] = [
 ];
 
 export const Stats01Card: React.FC<Stats01CardProps> = ({
-    title = 'Financial Overview',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Financial Overview';
     const showTitle = config.showTitle !== false;
     const stats = data?.stats || defaultStats01;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col">
             {showTitle && (
                 <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {title}
+                        {titleVal}
                     </h3>
                 </div>
             )}
@@ -479,6 +542,11 @@ export const Stats01Card: React.FC<Stats01CardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 
@@ -496,6 +564,8 @@ interface UsageItem {
 interface UsageStatsCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         items?: UsageItem[];
         subtitle?: string;
     };
@@ -503,6 +573,9 @@ interface UsageStatsCardProps {
         showTitle?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultUsageItems: UsageItem[] = [
@@ -513,21 +586,26 @@ const defaultUsageItems: UsageItem[] = [
 ];
 
 export const UsageStatsCard: React.FC<UsageStatsCardProps> = ({
-    title = 'Resource Usage',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Resource Usage';
     const showTitle = config.showTitle !== false;
     const items = data?.items || defaultUsageItems;
-    const subtitle = data?.subtitle || 'Last 30 days';
+    // Smart Default for Subtitle using Context
+    const subtitle = data?.subtitle || context || 'Last 30 days';
 
-    return (
+    const content = (
         <div className="h-full flex flex-col">
             {showTitle && (
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {title}
+                        {titleVal}
                     </h3>
                     <span className="text-xs text-muted-foreground">{subtitle}</span>
                 </div>
@@ -556,6 +634,11 @@ export const UsageStatsCard: React.FC<UsageStatsCardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 
@@ -572,6 +655,8 @@ interface StorageSegment {
 interface StorageCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         used?: number;
         total?: number;
         unit?: string;
@@ -581,6 +666,9 @@ interface StorageCardProps {
         showTitle?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultSegments: StorageSegment[] = [
@@ -603,11 +691,15 @@ const DEFAULT_SEGMENT_COLORS = [
 ];
 
 export const StorageCard: React.FC<StorageCardProps> = ({
-    title = 'Storage Usage',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Storage Usage';
     const showTitle = config.showTitle !== false;
     const used = data?.used || 8300;
     const total = data?.total || 15000;
@@ -622,11 +714,11 @@ export const StorageCard: React.FC<StorageCardProps> = ({
 
     const freeValue = total - used;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col p-4">
             {showTitle && (
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                    {title}
+                    {titleVal}
                 </h3>
             )}
 
@@ -660,6 +752,11 @@ export const StorageCard: React.FC<StorageCardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 
@@ -682,12 +779,17 @@ interface AccordionRowData {
 interface AccordionTableCardProps {
     title?: string;
     data?: {
+        title?: string;
+        description?: string;
         rows?: AccordionRowData[];
     };
     config?: {
         showTitle?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
+    context?: string;
 }
 
 const defaultAccordionData: AccordionRowData[] = [
@@ -752,20 +854,24 @@ const AccordionRow: React.FC<{ row: AccordionRowData; defaultOpen?: boolean }> =
 };
 
 export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
-    title = 'Projects',
+    title: propTitle,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit,
+    context
 }) => {
+    const titleVal = data.title || propTitle || 'Projects';
     const showTitle = config.showTitle !== false;
     const rows = data?.rows || defaultAccordionData;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col">
             {showTitle && (
                 <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {title}
+                        {titleVal}
                     </h3>
                 </div>
             )}
@@ -790,6 +896,11 @@ export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 

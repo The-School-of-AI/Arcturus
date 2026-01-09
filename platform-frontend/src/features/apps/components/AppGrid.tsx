@@ -223,7 +223,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     };
 
     const renderCardContent = (card: any) => {
-        const { id, type, label, config = {}, data = {}, style = {} } = card;
+        const { id, type, label, context, config = {}, data = {}, style = {} } = card;
 
         // Callback to update card data (interactive mode)
         const onUpdate = (newData: any) => {
@@ -363,19 +363,19 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     />
                 );
             case 'peer_table':
-                return <PeerTableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
+                return <PeerTableCard title={label} context={context} {...commonProps} />;
             case 'ratios':
                 // Transform ratios data array into table format
                 const ratiosData = data.ratios || [];
                 const ratiosHeaders = ["Ratio", "Value", "Health"];
                 const ratiosRows = ratiosData.map((r: any) => [r.name || '', String(r.value || ''), r.status || '']);
-                return <TableCard title={config.showTitle !== false ? label : 'Key Ratios'} headers={ratiosHeaders} rows={ratiosRows.length > 0 ? ratiosRows : [["P/E", "24.5", "Fair"]]} {...commonProps} />;
+                return <TableCard title={label} context={context} headers={ratiosHeaders} rows={ratiosRows.length > 0 ? ratiosRows : [["P/E", "24.5", "Fair"]]} {...commonProps} />;
             case 'summary':
-                return <SummaryGrid title={config.showTitle !== false ? label : ''} {...commonProps} />;
+                return <SummaryGrid title={label} context={context} {...commonProps} />;
             case 'cash_flow':
             case 'balance_sheet':
             case 'income_stmt':
-                return <TableCard title={config.showTitle !== false ? label : ''} {...commonProps} />;
+                return <TableCard title={label} context={context} {...commonProps} />;
 
             // Controls
             case 'button':
@@ -423,25 +423,25 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
             // blocks.so Cards (existing wrappers)
             case 'stats_trending':
-                return <StatsTrendingCard title={config.showTitle !== false ? label : 'Key Metrics'} {...commonProps} />;
+                return <StatsTrendingCard title={label} context={context} {...commonProps} />;
             case 'stats_grid':
-                return <StatsGridCard title={config.showTitle !== false ? label : 'Analytics'} {...commonProps} />;
+                return <StatsGridCard title={label} context={context} {...commonProps} />;
             case 'stats_status':
-                return <StatsStatusCard title={config.showTitle !== false ? label : 'System Status'} {...commonProps} />;
+                return <StatsStatusCard title={label} context={context} {...commonProps} />;
             case 'stats_links':
-                return <StatsLinksCard title={config.showTitle !== false ? label : 'Quick Links'} {...commonProps} />;
+                return <StatsLinksCard title={label} context={context} {...commonProps} />;
             case 'simple_table':
-                return <SimpleTableCard title={config.showTitle !== false ? label : 'Tasks'} {...commonProps} />;
+                return <SimpleTableCard title={label} context={context} {...commonProps} />;
 
             // blocks.so Data-Bound Cards (new wrappers)
             case 'stats_01':
-                return <Stats01Card title={config.showTitle !== false ? label : 'Financial Overview'} {...commonProps} />;
+                return <Stats01Card title={label} context={context} {...commonProps} />;
             case 'usage_stats':
-                return <UsageStatsCard title={config.showTitle !== false ? label : 'Resource Usage'} {...commonProps} />;
+                return <UsageStatsCard title={label} context={context} {...commonProps} />;
             case 'storage_card':
-                return <StorageCard title={config.showTitle !== false ? label : 'Storage Usage'} {...commonProps} />;
+                return <StorageCard title={label} context={context} {...commonProps} />;
             case 'accordion_table':
-                return <AccordionTableCard title={config.showTitle !== false ? label : 'Projects'} {...commonProps} />;
+                return <AccordionTableCard title={label} context={context} {...commonProps} />;
 
             // Quiz Blocks
             case 'quiz_mcq':
@@ -483,7 +483,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             case 'quiz_text':
                 return <QuizTextCard {...commonProps} />;
             case 'quiz_section':
-                return <QuizSectionCard {...commonProps} />;
+                return <QuizSectionCard title={label} context={context} {...commonProps} />;
             case 'quiz_media':
                 return <QuizMediaCard {...commonProps} />;
             case 'quiz_branch':

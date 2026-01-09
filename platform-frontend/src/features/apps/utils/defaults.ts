@@ -717,7 +717,7 @@ export const COMPONENT_USAGE: Record<string, string> = {
     table: 'Structured data display with rows and columns - reports, lists, detailed data.',
 
     // Finance
-    profile: 'Company profile with logo, ticker, sector info - perfect for stock analysis dashboards.',
+    profile: 'Company profile with logo, ticker, sector info - perfect for stock analysis or company profile dashboards.',
     valuation: 'Fair value gauge showing if an asset is over/undervalued with price comparison.',
     score_card: 'Circular score indicator (0-100) - quality scores, ratings, health metrics.',
     grade_card: 'Letter grade display (A+ to F) - ratings, performance grades, quality tiers.',
@@ -726,7 +726,7 @@ export const COMPONENT_USAGE: Record<string, string> = {
     cash_flow: 'Operating, investing, and financing cash flow breakdown.',
     balance_sheet: 'Assets, liabilities, and equity visualization.',
     income_stmt: 'Revenue to net income waterfall breakdown.',
-    summary: 'Executive summary with key points and highlights.',
+    summary: 'Executive summary with 4 key points and highlights.',
 
     // Controls
     button: 'Trigger actions, run analyses, or navigate to other pages.',

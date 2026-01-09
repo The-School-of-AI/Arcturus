@@ -11,22 +11,24 @@ export interface TableCardProps {
     style?: any;
     cardId?: string;
     autoFit?: boolean;
+    context?: string;
 }
 
 export const TableCard: React.FC<TableCardProps> = ({
-    title,
+    title: propTitle,
     headers,
     rows,
     data = {},
     config = {},
     style = {},
     cardId,
-    autoFit
+    autoFit,
+    context
 }) => {
     // Use data prop if available, otherwise fall back to direct props or defaults
     const tableHeaders = data.headers || headers || ["Col A", "Col B", "Col C"];
     const tableRows = data.rows || rows || [["Data 1", "100", "High"], ["Data 2", "50", "Low"], ["Data 3", "75", "Medium"]];
-    const tableTitle = data.title || title;
+    const tableTitle = data.title || propTitle;
 
     // Feature toggles from config
     const showHeader = config.showHeader !== false;

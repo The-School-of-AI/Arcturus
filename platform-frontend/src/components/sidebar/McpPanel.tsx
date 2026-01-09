@@ -157,7 +157,7 @@ export const McpPanel: React.FC = () => {
             */}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-                {servers.map((server, idx) => {
+                {(servers as unknown as McpServer[]).map((server, idx) => {
                     const isActive = selectedMcpServer?.name === server.name;
                     // Determine Type Icon
                     let typeIcon = <Box className="w-4 h-4" />;
@@ -169,7 +169,7 @@ export const McpPanel: React.FC = () => {
                     return (
                         <div
                             key={idx}
-                            onClick={() => setSelectedMcpServer(server)}
+                            onClick={() => setSelectedMcpServer(server.name)}
                             className={cn(
                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
                                 "bg-gradient-to-br from-card to-muted/20",

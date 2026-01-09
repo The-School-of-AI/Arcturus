@@ -9,6 +9,7 @@ export interface SummaryGridProps {
     className?: string;
     cardId?: string;
     autoFit?: boolean;
+    context?: string;
 }
 
 const DEFAULT_FINDINGS = [
@@ -19,11 +20,13 @@ const DEFAULT_FINDINGS = [
 ];
 
 export const SummaryGrid: React.FC<SummaryGridProps> = ({
-    title = "Executive Summary",
+    title: propTitle,
     data = {},
     cardId,
-    autoFit
+    autoFit,
+    context
 }) => {
+    const title = data.title || propTitle || "Executive Summary";
     const findings = data.findings || DEFAULT_FINDINGS;
 
     return (
@@ -37,10 +40,10 @@ export const SummaryGrid: React.FC<SummaryGridProps> = ({
                             {f.status === 'info' && <HelpCircle className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />}
                         </div>
                         <div className="space-y-0.5 min-w-0">
-                            <div className="text-[10px] font-bold text-foreground leading-none tracking-tight">
+                            <div className="text-[12px] font-bold text-foreground leading-none tracking-tight">
                                 {f.label}
                             </div>
-                            <div className="text-[10px] text-muted-foreground leading-tight opacity-90">
+                            <div className="text-[12px] text-muted-foreground leading-tight opacity-90">
                                 {f.text}
                             </div>
                         </div>

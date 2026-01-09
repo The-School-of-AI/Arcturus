@@ -15,6 +15,8 @@ interface QuizBlockProps {
     isInteractive?: boolean;
     cardId?: string;
     autoFit?: boolean;
+    title?: string;
+    context?: string;
 }
 
 // =============================================================
@@ -1012,13 +1014,17 @@ export const QuizTextCard: React.FC<QuizBlockProps> = ({ data = {} }) => {
 };
 
 // 20. Section Header
-export const QuizSectionCard: React.FC<QuizBlockProps> = ({ data = {}, cardId, autoFit = true }) => {
-    const { title = 'Section 1: Multiple Choice', description = 'Answer all questions in this section. Each question is worth 1 point.' } = data;
+export const QuizSectionCard: React.FC<QuizBlockProps> = ({ data = {}, cardId, autoFit = true, title: propTitle, context }) => {
+    // Smart Defaults: Use data first, then prop (from sidebar Display Title), then hardcoded default
+    const titleVal = data.title || propTitle || 'Section 1: Multiple Choice';
+    // Smart Defaults: Use data description first, then context (from sidebar Context), then hardcoded default
+    const descVal = data.description || context || 'Answer all questions in this section. Each question is worth 1 point.';
+
     return (
         <BaseCard cardId={cardId} autoFit={autoFit}>
             <div className="p-4 border-l-4 border-neon-yellow w-full">
-                <h3 className="text-lg font-bold text-foreground text-left">{title}</h3>
-                {description && <p className="text-xs text-muted-foreground mt-1 text-left">{description}</p>}
+                <h3 className="text-lg font-bold text-foreground text-left">{titleVal}</h3>
+                {descVal && <p className="text-xs text-muted-foreground mt-1 text-left">{descVal}</p>}
             </div>
         </BaseCard>
     );
