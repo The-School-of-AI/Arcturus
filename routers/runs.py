@@ -338,8 +338,11 @@ async def delete_run(run_id: str):
 
 # === AGENT TESTING ENDPOINTS ===
 
+class AgentTestRequest(BaseModel):
+    input: Optional[str] = None
+
 @router.post("/runs/{run_id}/agent/{node_id}/test")
-async def test_agent(run_id: str, node_id: str):
+async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body(None)):
     """
     Re-run a single agent in TEST MODE (sandbox).
     - Loads the session
@@ -382,13 +385,25 @@ async def test_agent(run_id: str, node_id: str):
         
         # 5. Build the input payload helper
         def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
+            # Determine base values
+            prompt_to_use = instruction or node_data.get("agent_prompt", node_data.get("description", ""))
+            query_to_use = G.graph.get("original_query", "")
+
+            # Apply overrides from request if present
+            if request and request.input:
+                if agent_type == "PlannerAgent":
+                    query_to_use = request.input
+                else:
+                    # For downstream agents, the input overrides the instruction/goal
+                    prompt_to_use = request.input
+
             payload = {
                 "step_id": node_id,
-                "agent_prompt": instruction or node_data.get("agent_prompt", node_data.get("description", "")),
+                "agent_prompt": prompt_to_use,
                 "reads": reads,
                 "writes": node_data.get("writes", []),
                 "inputs": inputs,
-                "original_query": G.graph.get("original_query", ""),
+                "original_query": query_to_use,
                 "session_context": {
                     "session_id": run_id,
                     "created_at": G.graph.get("created_at", ""),

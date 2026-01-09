@@ -241,7 +241,7 @@ interface AgentTestSlice {
         isLoading: boolean;
         error: string | null;
     };
-    runAgentTest: (runId: string, nodeId: string) => Promise<void>;
+    runAgentTest: (runId: string, nodeId: string, overrideInput?: string) => Promise<void>;
     saveTestResult: (runId: string, nodeId: string) => Promise<void>;
     discardTestResult: () => void;
 }
@@ -1096,7 +1096,7 @@ export const useAppStore = create<AppState>()(
                 error: null
             },
 
-            runAgentTest: async (runId: string, nodeId: string) => {
+            runAgentTest: async (runId: string, nodeId: string, overrideInput?: string) => {
                 set({
                     testMode: {
                         active: true,
@@ -1110,7 +1110,9 @@ export const useAppStore = create<AppState>()(
                 });
 
                 try {
-                    const response = await api.post(`${API_BASE}/runs/${runId}/agent/${nodeId}/test`);
+                    const response = await api.post(`${API_BASE}/runs/${runId}/agent/${nodeId}/test`, {
+                        input: overrideInput
+                    });
                     const data = response.data;
 
                     if (data.status === 'success') {

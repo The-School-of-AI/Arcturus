@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle, RefreshCw, LayoutGrid, Edit3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import Editor from "@monaco-editor/react";
@@ -86,15 +86,27 @@ export const WorkspacePanel: React.FC = () => {
     const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
     const [activeIframeUrl, setActiveIframeUrl] = React.useState<string | null>(null);
     const [isZenMode, setIsZenMode] = React.useState(false);
+    const [editedInput, setEditedInput] = React.useState('');
+    const [isEditingInput, setIsEditingInput] = React.useState(false);
 
     const isExplorer = sidebarTab === 'explorer';
     const selectedNode = isExplorer
         ? flowData?.nodes.find((n: any) => n.id === selectedExplorerNodeId)
         : nodes.find(n => n.id === selectedNodeId);
 
+    const isPlanner = selectedNode?.data?.type === 'PlannerAgent' || selectedNode?.data?.label === 'PlannerAgent';
+
     // Auto-switch tabs based on node type/content when selection changes
     React.useEffect(() => {
         if (!selectedNode) return;
+
+        // Reset edit state
+        setIsEditingInput(false);
+        if (isPlanner && currentRun) {
+            setEditedInput(currentRun.name || '');
+        } else {
+            setEditedInput(selectedNode.data.prompt || '');
+        }
 
         const nodeType = selectedNode.data.type;
         const nodeLabel = selectedNode.data.label?.toLowerCase() || '';
@@ -114,7 +126,7 @@ export const WorkspacePanel: React.FC = () => {
         } else if (selectedNodeId) {
             setActiveTab('overview');
         }
-    }, [selectedNodeId, selectedNode?.data.type, selectedNode?.data.label]);
+    }, [selectedNodeId, selectedNode?.data.type, selectedNode?.data.label, isPlanner, currentRun?.name, currentRun?.id]);
 
     // Auto-switch to Compare tab when test mode activates with results
     React.useEffect(() => {
@@ -215,7 +227,7 @@ export const WorkspacePanel: React.FC = () => {
                         {/* RUN AGAIN Button - Only for completed/failed/stale nodes */}
                         {selectedNode?.data.status && ['completed', 'failed', 'stale'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
                             <button
-                                onClick={() => runAgentTest(currentRun.id, selectedNode.id)}
+                                onClick={() => runAgentTest(currentRun.id, selectedNode.id, isEditingInput ? editedInput : undefined)}
                                 disabled={testMode.isLoading}
                                 className={cn(
                                     "flex items-center ml-2 gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
@@ -355,25 +367,71 @@ export const WorkspacePanel: React.FC = () => {
                         {/* Section: User Query (Global) */}
                         {!isExplorer && currentRun && (
                             <div className="space-y-2">
-                                <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-                                    <Terminal className="w-3 h-3 text-primary" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">User Query</span>
+                                <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                                    <div className="flex items-center gap-2">
+                                        <Terminal className="w-3 h-3 text-primary" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">User Query</span>
+                                    </div>
+                                    {isPlanner && (
+                                        <button
+                                            onClick={() => setIsEditingInput(!isEditingInput)}
+                                            className={cn(
+                                                "p-1 rounded hover:bg-muted transition-colors",
+                                                isEditingInput ? "text-primary bg-primary/10" : "text-muted-foreground"
+                                            )}
+                                            title="Edit Query for Re-run"
+                                        >
+                                            <Edit3 className="w-3 h-3" />
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-sm border border-border/50 select-text font-sans">
-                                    {currentRun.name}
-                                </div>
+                                {isPlanner && isEditingInput ? (
+                                    <textarea
+                                        value={editedInput}
+                                        onChange={(e) => setEditedInput(e.target.value)}
+                                        className="w-full p-3 bg-white dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-sm border border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary min-h-[80px]"
+                                        placeholder="Edit user query..."
+                                    />
+                                ) : (
+                                    <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-sm border border-border/50 select-text font-sans">
+                                        {currentRun.name}
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {/* Section: Agent Role (System Prompt) */}
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-                                <Brain className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Agent Goal</span>
+                            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                                <div className="flex items-center gap-2">
+                                    <Brain className="w-3 h-3 text-primary" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Agent Goal</span>
+                                </div>
+                                {!isPlanner && (
+                                    <button
+                                        onClick={() => setIsEditingInput(!isEditingInput)}
+                                        className={cn(
+                                            "p-1 rounded hover:bg-muted transition-colors",
+                                            isEditingInput ? "text-primary bg-primary/10" : "text-muted-foreground"
+                                        )}
+                                        title="Edit Prompt for Re-run"
+                                    >
+                                        <Edit3 className="w-3 h-3" />
+                                    </button>
+                                )}
                             </div>
-                            <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-[11px] border border-border/50 select-text">
-                                {selectedNode?.data.prompt || "N/A"}
-                            </div>
+                            {!isPlanner && isEditingInput ? (
+                                <textarea
+                                    value={editedInput}
+                                    onChange={(e) => setEditedInput(e.target.value)}
+                                    className="w-full p-3 bg-white dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-[11px] border border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary min-h-[80px]"
+                                    placeholder="Edit agent prompt..."
+                                />
+                            ) : (
+                                <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-[11px] border border-border/50 select-text">
+                                    {selectedNode?.data.prompt || "N/A"}
+                                </div>
+                            )}
                         </div>
 
                         {/* Clarification Input for active runs */}
