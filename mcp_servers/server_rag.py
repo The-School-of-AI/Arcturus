@@ -21,6 +21,12 @@ import subprocess
 import sqlite3
 import trafilatura
 import pymupdf4llm
+import fitz # Silencing library logs
+try:
+    fitz.TOOLS.mupdf_display_errors(False) # Newer versions
+    fitz.TOOLS.set_stderr_log(False)
+except:
+    pass
 import re
 import base64 # ollama needs base64-encoded-image
 import asyncio

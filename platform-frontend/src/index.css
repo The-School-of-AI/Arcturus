@@ -153,7 +153,10 @@
 .active-tabs-container::-webkit-scrollbar {
   display: none;
 }
-.active-tabs-container {
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

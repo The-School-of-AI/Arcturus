@@ -517,8 +517,10 @@ export const DocumentViewer: React.FC = () => {
 
                                                         <div className="relative p-4">
                                                             <div className={cn(
-                                                                "transition-all duration-300 overflow-hidden",
-                                                                isExpanded ? "max-h-none opacity-100" : "max-h-[60px] opacity-80"
+                                                                "transition-all duration-300",
+                                                                isExpanded
+                                                                    ? "opacity-100 h-auto max-h-none"
+                                                                    : "max-h-[48px] opacity-80 overflow-x-auto no-scrollbar whitespace-nowrap"
                                                             )}>
                                                                 {isCodeFile(activeDoc.type) ? (
                                                                     <SyntaxHighlighter
@@ -531,16 +533,23 @@ export const DocumentViewer: React.FC = () => {
                                                                             background: 'transparent',
                                                                             fontSize: '11px',
                                                                             lineHeight: '1.6',
-                                                                            // Force wrap for logic
-                                                                            whiteSpace: "pre-wrap",
-                                                                            wordBreak: "break-all"
                                                                         }}
-                                                                        wrapLongLines={true}
+                                                                        codeTagProps={{
+                                                                            style: {
+                                                                                whiteSpace: isExpanded ? 'pre-wrap' : 'pre',
+                                                                                wordBreak: isExpanded ? 'break-word' : 'normal',
+                                                                                fontFamily: 'inherit'
+                                                                            }
+                                                                        }}
+                                                                        wrapLongLines={isExpanded}
                                                                     >
                                                                         {chunk}
                                                                     </SyntaxHighlighter>
                                                                 ) : (
-                                                                    <div className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90 break-words">
+                                                                    <div className={cn(
+                                                                        "font-mono text-[11px] leading-relaxed text-foreground/90 transition-all",
+                                                                        isExpanded ? "whitespace-pre-wrap break-words" : "whitespace-nowrap"
+                                                                    )}>
                                                                         {chunk}
                                                                     </div>
                                                                 )}

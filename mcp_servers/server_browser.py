@@ -193,5 +193,4 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
         return f"Browser Action Failed: {str(e)}"
 
 if __name__ == "__main__":
-    print("hybrid-browser server READY")
     mcp.run(transport="stdio")
