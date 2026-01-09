@@ -224,8 +224,8 @@ export const WorkspacePanel: React.FC = () => {
                             </button>
                         )}
 
-                        {/* RUN AGAIN Button - Only for completed/failed/stale nodes */}
-                        {selectedNode?.data.status && ['completed', 'failed', 'stale'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
+                        {/* RUN / RUN AGAIN Button - For idle/completed/failed/stale nodes */}
+                        {selectedNode?.data.status && ['idle', 'completed', 'failed', 'stale'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
                             <button
                                 onClick={() => runAgentTest(currentRun.id, selectedNode.id, isEditingInput ? editedInput : undefined)}
                                 disabled={testMode.isLoading}
@@ -233,19 +233,21 @@ export const WorkspacePanel: React.FC = () => {
                                     "flex items-center ml-2 gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
                                     testMode.isLoading
                                         ? "bg-muted text-muted-foreground cursor-wait"
-                                        : "bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50"
+                                        : selectedNode.data.status === 'idle'
+                                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50"
+                                            : "bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50"
                                 )}
-                                title="Re-run this agent with current inputs (test mode)"
+                                title={selectedNode.data.status === 'idle' ? "Run this agent" : "Re-run this agent with current inputs (test mode)"}
                             >
                                 {testMode.isLoading && testMode.nodeId === selectedNode.id ? (
                                     <>
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        Testing...
+                                        {selectedNode.data.status === 'idle' ? 'Running...' : 'Testing...'}
                                     </>
                                 ) : (
                                     <>
                                         <Play className="w-3.5 h-3.5" />
-                                        RUN AGAIN
+                                        {selectedNode.data.status === 'idle' ? 'RUN' : 'RUN AGAIN'}
                                     </>
                                 )}
                             </button>
