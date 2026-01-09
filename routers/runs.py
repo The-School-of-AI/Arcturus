@@ -3,7 +3,7 @@ import asyncio
 import json
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
 
@@ -591,7 +591,60 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         
         if node_id not in G.nodes:
             raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
-        
+
+        # 2.5 SPECIAL HANDLING: PlannerAgent Graph Update
+        # If this is a PlannerAgent (has plan_graph in output), we must REBUILD the graph structure.
+        if "plan_graph" in new_output:
+            print(f"🔄 Planner Update Detected for {node_id}. Rebuilding graph...")
+            plan_graph = new_output["plan_graph"]
+            
+            # 1. Keep crucial nodes (ROOT and the Planner/Query node itself)
+            # We assume node_id is the Planner node. 
+            nodes_to_keep = ["ROOT", node_id] 
+            
+            # 2. Identify nodes to remove (all existing nodes except kept ones)
+            nodes_to_remove = [n for n in G.nodes if n not in nodes_to_keep]
+            for n in nodes_to_remove:
+                G.remove_node(n)
+                
+            # 3. Add NEW nodes from plan
+            # plan_graph['nodes'] is a list of dicts
+            new_nodes = plan_graph.get("nodes", [])
+            for n_data in new_nodes:
+                nid = n_data["id"] 
+                # Ensure we don't overwrite the planner if it's in the list for some reason (unlikely but safe)
+                if nid not in G.nodes:
+                    G.add_node(nid, **n_data)
+                    # Initialize status for new nodes
+                    G.nodes[nid]["status"] = "idle"
+            
+            # 4. Add NEW edges from plan
+            # plan_graph['edges'] or 'links'
+            new_edges = plan_graph.get("edges", plan_graph.get("links", []))
+            
+            # clear existing edges? We already removed nodes, so connected edges are gone.
+            # But we need to ensure ROOT -> Planner connection exists if not implicitly handled.
+            # In our schema, ROOT->Query (Planner). 
+            # The plan_graph usually defines edges from "ROOT" to the first new node.
+            # We must REMAP "ROOT" in the plan to be "node_id" (The Planner Node) 
+            # so that the flow is ROOT -> Planner -> FirstNode
+            
+            for edge in new_edges:
+                src = edge["source"]
+                tgt = edge["target"]
+                
+                # REMAP ROOT -> Current Planner Node
+                if src == "ROOT":
+                    src = node_id
+                    
+                G.add_edge(src, tgt)
+                
+            # Ensure ROOT is connected to Planner (node_id)
+            if not G.has_edge("ROOT", node_id):
+                G.add_edge("ROOT", node_id)
+                
+            print(f"✅ Graph Rebuilt. Nodes: {len(G.nodes)}, Edges: {len(G.edges)}")
+
         node_data = G.nodes[node_id]
         writes = node_data.get("writes", [])
         
@@ -631,11 +684,23 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         
         # 5. Update iterations array with execution_result if provided
         execution_result = body.get("execution_result")
-        if execution_result and node_data.get("iterations"):
+        if execution_result:
+            # Check if iterations exist, if not create a default one
+            if not node_data.get("iterations"):
+                 node_data["iterations"] = []
+            
             iterations = node_data["iterations"]
+            
             if iterations:
                 # Update the last iteration with the new execution result
                 iterations[-1]["execution_result"] = execution_result
+            else:
+                # Create a pseudo-iteration if none exist (e.g. single-shot agents)
+                iterations.append({
+                    "iteration": 1, 
+                    "output": new_output,
+                    "execution_result": execution_result
+                })
 
         # 5.5. Cascading Invalidation: Mark downstream nodes as 'stale'
         # This gives visual feedback (muted opacity) in the frontend that these nodes need re-running
