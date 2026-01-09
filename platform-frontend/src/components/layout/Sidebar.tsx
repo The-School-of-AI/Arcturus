@@ -67,7 +67,7 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
             <Icon className={cn("w-5 h-5 transition-colors", active ? "text-neutral-900" : "group-hover:text-foreground")} />
             <span className={cn(
                 "text-[7px] font-black uppercase tracking-tighter transition-all duration-200",
-                active ? "text-neutral-800 opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                active ? "text-neutral-800 opacity-100" : "text-muted-foreground/90 group-hover:text-foreground"
             )}>
                 {label}
             </span>
