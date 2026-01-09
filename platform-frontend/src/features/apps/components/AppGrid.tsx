@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { getDefaultData, getDefaultStyle } from '../utils/defaults';
 import { COMPONENT_CATEGORIES } from './AppsSidebar';
+import { ThemeToggle } from '@/components/theme';
 import { MetricCard } from './cards/MetricCard';
 import { TrendMetric } from './cards/TrendMetric';
 import { ChartCard } from './cards/ChartCard';
@@ -576,6 +577,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
             {/* View Controls (Top Right) */}
             <div className="absolute top-4 right-4 z-50 flex gap-2">
+                <ThemeToggle className="bg-muted/80 backdrop-blur border border-border shadow-lg rounded-lg hover:bg-muted text-foreground" />
+
                 {/* PREVIEW / EDIT Mode Toggle - Always visible */}
                 <button
                     onClick={(e) => { e.stopPropagation(); setIsAppViewMode(!isAppViewMode); }}
@@ -699,10 +702,13 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                     <div
                         style={{
                             transform: `scale(${zoomLevel})`,
-                            transformOrigin: 'top left',
+                            transformOrigin: isAppViewMode ? 'top center' : 'top left',
                             width: `${CANVAS_WIDTH}px`
                         }}
-                        className={cn(!isAppViewMode && "bg-grid-lines")}
+                        className={cn(
+                            !isAppViewMode && "bg-grid-lines",
+                            isAppViewMode && "mx-auto"
+                        )}
                     >
                         <RGLResponsive
                             className="layout min-h-[500px]"
