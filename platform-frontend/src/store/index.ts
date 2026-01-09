@@ -98,6 +98,9 @@ interface RagViewerSlice {
     setSelectedMcpServer: (server: string | null) => void;
     settingsActiveTab: 'models' | 'rag' | 'agent' | 'prompts' | 'advanced';
     setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'prompts' | 'advanced') => void;
+    showRagInsights: boolean;
+    setShowRagInsights: (show: boolean) => void;
+    toggleRagInsights: () => void;
 }
 
 interface RemmeSlice {
@@ -546,6 +549,9 @@ export const useAppStore = create<AppState>()(
             clearSelectedContexts: () => set({ selectedContexts: [], showNewsChatPanel: false }),
             selectedMcpServer: null,
             setSelectedMcpServer: (server) => set({ selectedMcpServer: server, sidebarTab: 'mcp' }),
+            showRagInsights: false,
+            setShowRagInsights: (show) => set({ showRagInsights: show }),
+            toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
 
             // --- Remme Slice ---
             memories: [],
@@ -1131,7 +1137,8 @@ export const useAppStore = create<AppState>()(
                 selectedExplorerNodeId: null,
                 activeDocumentId: null,
                 selectedMcpServer: null,
-                selectedLibraryComponent: null
+                selectedLibraryComponent: null,
+                showRagInsights: false,
             }),
 
             deleteNewsSource: async (id) => {

@@ -7,6 +7,7 @@ import { FlowWorkspace } from '../workspace/FlowWorkspace';
 import { RunTimeline } from '@/features/replay/RunTimeline';
 import { GripVertical } from 'lucide-react';
 import { DocumentViewer } from '../rag/DocumentViewer';
+import { DocumentAssistant } from '../rag/DocumentAssistant';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -39,18 +40,18 @@ export const AppLayout: React.FC = () => {
     const {
         viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId,
-        selectedMcpServer, selectedLibraryComponent, clearSelection
+        selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights
     } = useAppStore();
 
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && (selectedAppCardId || selectedLibraryComponent)) return true;
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
-        if (sidebarTab === 'rag' && activeDocumentId) return true;
+        if (sidebarTab === 'rag' && showRagInsights) return true;
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
     const hideSidebarSubPanel = isInspectorOpen;
 
@@ -77,7 +78,10 @@ export const AppLayout: React.FC = () => {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                clearSelection();
+                // MCP should be persistent as per user request
+                if (sidebarTab !== 'mcp') {
+                    clearSelection();
+                }
             }
         };
 
@@ -187,7 +191,11 @@ export const AppLayout: React.FC = () => {
                             className="h-full glass-panel rounded-2xl flex-shrink-0 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ease-out"
                             style={{ width: rightWidth }}
                         >
-                            {sidebarTab === 'apps' ? <AppInspector /> : sidebarTab === 'mcp' ? <McpInspector /> : sidebarTab === 'news' ? <NewsInspector /> : <WorkspacePanel />}
+                            {sidebarTab === 'apps' ? <AppInspector /> :
+                                sidebarTab === 'mcp' ? <McpInspector /> :
+                                    sidebarTab === 'news' ? <NewsInspector /> :
+                                        sidebarTab === 'rag' ? <DocumentAssistant /> :
+                                            <WorkspacePanel />}
                         </div>
                     </>
                 )}

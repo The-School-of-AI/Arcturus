@@ -44,6 +44,9 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
 
     const handleIconClick = () => {
         if (active && isInspectorOpen) {
+            // MCP should be persistent as per user request
+            if (sidebarTab === 'mcp') return;
+
             clearSelection();
         } else {
             onClick();

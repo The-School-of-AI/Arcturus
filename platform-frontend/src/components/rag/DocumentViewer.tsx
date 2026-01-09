@@ -127,7 +127,9 @@ export const DocumentViewer: React.FC = () => {
         addSelectedContext,
         setActiveDocument,
         closeDocument,
-        closeAllDocuments
+        closeAllDocuments,
+        showRagInsights,
+        toggleRagInsights
     } = useAppStore();
     const { theme } = useTheme();
 
@@ -387,7 +389,7 @@ export const DocumentViewer: React.FC = () => {
                     )}
 
                     {activeDoc && canPreview(activeDoc.type) && (
-                        <>
+                        <div className="flex items-center gap-2">
                             <div className="flex items-center bg-black/10 rounded-lg p-0.5 border border-border/50">
                                 <TabButton
                                     label="Source"
@@ -400,7 +402,21 @@ export const DocumentViewer: React.FC = () => {
                                     onClick={() => setViewType('ai')}
                                 />
                             </div>
-                        </>
+
+                            <button
+                                onClick={toggleRagInsights}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all text-[9px] font-bold uppercase tracking-wider border",
+                                    showRagInsights
+                                        ? "bg-primary text-primary-foreground border-primary shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+                                        : "bg-black/10 text-muted-foreground hover:text-foreground border-border/50 hover:bg-black/20"
+                                )}
+                                title="Toggle Insights Panel"
+                            >
+                                <Sparkles className={cn("w-3.5 h-3.5", showRagInsights ? "animate-pulse" : "opacity-70")} />
+                                Insights
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
