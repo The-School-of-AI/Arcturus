@@ -371,7 +371,7 @@ export const DocumentViewer: React.FC = () => {
                         </div>
                     ))}
                     {openDocuments.length === 0 && (
-                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">Discovery Workspace</div>
+                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/90">Discovery Workspace</div>
                     )}
                 </div>
 

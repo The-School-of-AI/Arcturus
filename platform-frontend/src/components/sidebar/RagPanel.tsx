@@ -341,7 +341,7 @@ export const RagPanel: React.FC = () => {
                 </div>
 
                 {/* Actions moved to Header */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0">
                     <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
                         <DialogTrigger asChild>
                             <button className="p-1.5 hover:bg-muted/50 rounded-md hover:text-neon-yellow transition-all text-muted-foreground" title="New Folder">
@@ -370,49 +370,45 @@ export const RagPanel: React.FC = () => {
                 </div>
             </div>
 
-            {/* Mode Toggle */}
-            <div className="p-3 border-b border-border/50 bg-muted/20 shrink-0">
-                <div className="flex items-center gap-2 bg-card/50 p-1 rounded-lg border border-border/50">
-                    <button
-                        onClick={() => setPanelMode('browse')}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
-                            panelMode === 'browse' ? "bg-neon-yellow text-neutral-950 shadow-sm" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <Library className="w-3 h-3" />
-                        Browse
-                    </button>
-                    <button
-                        onClick={() => setPanelMode('seek')}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
-                            panelMode === 'seek' ? "bg-neon-yellow text-neutral-950 shadow-sm" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <FileSearch className="w-3 h-3" />
-                        Seek
-                    </button>
+            {/* Search & Mode Toggle Merged */}
+            <div className="p-2 border-b border-border/50 bg-muted/10 shrink-0">
+                <div className="flex items-center gap-2">
+                    <form onSubmit={handleSearchSubmit} className="relative flex-1 group">
+                        <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-neon-yellow transition-colors" />
+                        <Input
+                            className="pl-8 pr-2 bg-card/30 border-border/30 text-xs focus:ring-1 focus:ring-neon-yellow/20 placeholder:text-muted-foreground/50 h-7.5 transition-all w-full"
+                            placeholder={panelMode === 'browse' ? "Filter..." : "Ask..."}
+                            value={innerSearch}
+                            onChange={(e) => setInnerSearch(e.target.value)}
+                        />
+                    </form>
+                    <div className="flex items-center bg-card/50 p-0.5 rounded-md border border-border/30 shrink-0">
+                        <button
+                            onClick={() => setPanelMode('browse')}
+                            className={cn(
+                                "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-tight transition-all",
+                                panelMode === 'browse' ? "bg-neon-yellow text-neutral-950" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Browse
+                        </button>
+                        <button
+                            onClick={() => setPanelMode('seek')}
+                            className={cn(
+                                "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-tight transition-all",
+                                panelMode === 'seek' ? "bg-neon-yellow text-neutral-950" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Seek
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Search */}
-            <div className="p-3 border-b border-border/50 bg-muted/20 shrink-0">
-                <form onSubmit={handleSearchSubmit} className="relative w-full">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-                    <Input
-                        className="pl-9 bg-card/50 border-border/50 text-sm focus:ring-1 focus:ring-neon-yellow/30 placeholder:text-muted-foreground h-9 transition-all w-full"
-                        placeholder={panelMode === 'browse' ? "Filter library..." : "Ask your documents..."}
-                        value={innerSearch}
-                        onChange={(e) => setInnerSearch(e.target.value)}
-                    />
-                </form>
-            </div>
-
             {/* Main Content Area */}
-            <div style={{ height: `${splitRatio}%` }} className="flex flex-col min-h-0 overflow-hidden">
+            <div style={{ height: selectedFile ? `${splitRatio}%` : '100%' }} className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {panelMode === 'browse' ? (
-                    <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto py-1 custom-scrollbar">
                         {files.map((file) => (
                             <FileTree
                                 key={file.path}
@@ -427,21 +423,20 @@ export const RagPanel: React.FC = () => {
                             />
                         ))}
                         {files.length === 0 && !loading && (
-                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-3 opacity-30">
-                                <Library className="w-10 h-10" />
-                                <p className="text-xs font-medium">Library is empty.<br />Upload files to get started.</p>
+                            <div className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-2 opacity-30">
+                                <Library className="w-8 h-8" />
+                                <p className="text-[10px] font-medium">Empty Library</p>
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                         {seeking && (
-                            <div className="flex items-center justify-center py-8 opacity-50">
-                                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                            <div className="flex items-center justify-center py-6 opacity-50">
+                                <RefreshCw className="w-5 h-5 animate-spin text-primary" />
                             </div>
                         )}
                         {!seeking && Array.isArray(ragSearchResults) && ragSearchResults.map((res: any, i) => {
-                            // Handle both old string format and new object format
                             const isStructured = typeof res === 'object' && res !== null;
                             const content = isStructured ? res.content : (parseResult(res)).content;
                             const source = isStructured ? res.source : (parseResult(res)).path;
@@ -452,127 +447,99 @@ export const RagPanel: React.FC = () => {
                             return (
                                 <div
                                     key={i}
-                                    className="p-3 rounded-lg bg-muted/50 border border-border/50 hover:border-primary/30 transition-all cursor-pointer group"
+                                    className="p-2 rounded-lg bg-muted/30 border border-border/30 hover:border-primary/20 transition-all cursor-pointer group"
                                     onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <FileText className="w-3 h-3 text-red-400" />
-                                        <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[120px]">{name}</span>
-                                        {page > 1 && (
-                                            <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-bold">
-                                                p.{page}
-                                            </span>
-                                        )}
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <FileText className="w-2.5 h-2.5 text-red-400" />
+                                        <span className="text-[9px] font-bold text-muted-foreground truncate flex-1">{name}</span>
+                                        {page > 1 && <span className="text-[8px] font-mono opacity-50">p{page}</span>}
                                     </div>
-                                    <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4 italic">"{content}"</p>
-                                    <div className="mt-2 flex justify-between items-center">
-                                        {page > 1 && (
-                                            <span className="text-[9px] text-muted-foreground">Page {page}</span>
-                                        )}
-                                        <span className="text-[10px] text-primary flex items-center gap-1 font-semibold opacity-0 group-hover:opacity-100 transition-opacity ml-auto">View Source <ChevronRight className="w-2.5 h-2.5" /></span>
-                                    </div>
+                                    <p className="text-[11px] text-foreground/70 leading-snug line-clamp-3">"{content}"</p>
                                 </div>
                             );
                         })}
                         {!seeking && innerSearch && ragSearchResults.length === 0 && (
-                            <div className="text-center py-8 text-xs text-muted-foreground opacity-50">No semantic matches found</div>
+                            <div className="text-center py-6 text-[10px] text-muted-foreground opacity-50 uppercase tracking-widest font-bold">No Matches</div>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* Draggable Handle */}
-            <div
-                className="h-1 bg-muted hover:bg-primary/50 cursor-row-resize flex items-center justify-center shrink-0 transition-colors"
-                onMouseDown={(e) => {
-                    const startY = e.clientY;
-                    const startHeight = splitRatio;
-                    const onMove = (me: MouseEvent) => {
-                        const delta = ((me.clientY - startY) / (document.getElementById('rag-panel-container')?.offsetHeight || 1)) * 100;
-                        setSplitRatio(Math.min(Math.max(startHeight + delta, 20), 85));
-                    };
-                    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-                    document.addEventListener('mousemove', onMove);
-                    document.addEventListener('mouseup', onUp);
-                }}
-            >
-                <div className="w-6 h-0.5 bg-muted rounded-full" />
-            </div>
-
-            {/* Footer Area: Info & Actions */}
-            <div className="flex-1 bg-card/50 p-3 overflow-y-auto space-y-4 min-h-0 custom-scrollbar">
-                <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Context Details</h4>
+            {/* Draggable Handle - Only show if file selected */}
+            {selectedFile && (
+                <div
+                    className="h-1 bg-muted/30 hover:bg-primary/30 cursor-row-resize flex items-center justify-center shrink-0 transition-colors"
+                    onMouseDown={(e) => {
+                        const startY = e.clientY;
+                        const startHeight = splitRatio;
+                        const onMove = (me: MouseEvent) => {
+                            const delta = ((me.clientY - startY) / (document.getElementById('rag-panel-container')?.offsetHeight || 1)) * 100;
+                            setSplitRatio(Math.min(Math.max(startHeight + delta, 20), 80));
+                        };
+                        const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('mouseup', onUp);
+                    }}
+                >
+                    <div className="w-4 h-0.5 bg-muted rounded-full" />
                 </div>
+            )}
 
+            {/* Footer Area: Context or Compact Sync Info */}
+            <div className={cn("bg-card/30 shrink-0", selectedFile ? "h-[30%] overflow-y-auto" : "p-2 border-t border-border/30")}>
                 {selectedFile ? (
-                    <div className="space-y-3">
-                        <div className="space-y-1">
-                            <label className="text-[9px] uppercase text-muted-foreground font-bold">Location</label>
-                            <div className="text-xs font-mono text-primary truncate" title={selectedFile.path}>{selectedFile.path}</div>
+                    <div className="p-3 space-y-3">
+                        <div className="flex items-center justify-between border-b border-border/30 pb-1.5">
+                            <h4 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Properties</h4>
+                            <button onClick={() => setSelectedFile(null)} className="text-[9px] text-muted-foreground hover:text-foreground">ESC</button>
                         </div>
-                        {selectedFile.type !== 'folder' && (
-                            <div className="flex items-center justify-between bg-muted/20 p-2 rounded border border-border/50">
-                                <span className="text-[10px] font-bold uppercase text-muted-foreground">Status</span>
-                                {selectedFile.indexed ? (
-                                    <div className="flex items-center gap-1.5 text-green-500 font-bold text-[10px]"><CheckCircle className="w-3 h-3" /> INDEXED</div>
-                                ) : (
-                                    <button onClick={() => handleReindex(selectedFile.path)} className="text-[9px] font-bold text-yellow-500 flex items-center gap-1 hover:underline"><AlertCircle className="w-3 h-3" /> INDEX NOW</button>
-                                )}
+                        <div className="space-y-2">
+                            <div className="space-y-0.5">
+                                <label className="text-[8px] uppercase text-muted-foreground/60 font-bold">Path</label>
+                                <div className="text-[10px] font-mono text-primary truncate" title={selectedFile.path}>{selectedFile.path}</div>
                             </div>
-                        )}
-                        {indexStatus && <div className="text-[9px] p-1.5 bg-yellow-500/10 text-yellow-400 rounded border border-yellow-500/20 animate-pulse">{indexStatus}</div>}
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-primary/30 text-primary hover:bg-primary/10 h-7 text-[10px] mt-2 gap-2"
-                            onClick={() => handleReindex()}
-                            disabled={indexing}
-                        >
-                            <RefreshCw className={cn("w-3 h-3", indexing && "animate-spin")} />
-                            {indexing ? "SCANNING..." : "REFRESH INDEX"}
-                        </Button>
+                            {selectedFile.type !== 'folder' && (
+                                <div className="flex items-center justify-between bg-muted/10 p-1.5 rounded border border-border/20">
+                                    <span className="text-[8px] font-bold uppercase text-muted-foreground">Indexing</span>
+                                    {selectedFile.indexed ? (
+                                        <div className="flex items-center gap-1 text-green-500 font-bold text-[9px] uppercase"><CheckCircle className="w-2.5 h-2.5" /> Ready</div>
+                                    ) : (
+                                        <button onClick={() => handleReindex(selectedFile.path)} className="text-[8px] font-bold text-yellow-500 flex items-center gap-1 hover:underline"><Zap className="w-2.5 h-2.5" /> Start</button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    // Minimal Status Line
+                    <div className="flex items-center justify-between gap-4 px-1">
                         {!allFilesIndexed ? (
-                            <div className="p-4 rounded-xl bg-neon-yellow/5 border border-neon-yellow/10 flex flex-col items-center gap-3 text-center">
-                                <div className="space-y-1">
-                                    <h5 className="text-xs font-bold text-neon-yellow uppercase">Unindexed Content Found</h5>
-                                    <p className="text-[10px] text-muted-foreground leading-tight">
-                                        New documents were detected that haven't been processed yet.
-                                    </p>
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <div className="p-1 bg-neon-yellow/10 rounded">
+                                    <Zap className={cn("w-3 h-3 text-neon-yellow", indexing && "animate-pulse")} />
                                 </div>
+                                <span className="text-[9px] font-bold text-neon-yellow uppercase truncate">Indexing Required</span>
                                 <Button
+                                    size="sm"
                                     onClick={() => handleReindex()}
                                     disabled={indexing}
-                                    className="w-full bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-bold h-9 gap-2 shadow-lg shadow-neon-yellow/20"
+                                    className="h-5 px-2 bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 text-[8px] font-black uppercase ml-auto"
                                 >
-                                    {indexing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                                    {indexing ? "SCANNING DOCUMENTS..." : "START BACKGROUND SCAN"}
+                                    {indexing ? "..." : "SCAN"}
                                 </Button>
                             </div>
                         ) : (
-                            <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/10 flex flex-col items-center gap-3 text-center opacity-80 transition-all hover:opacity-100">
-                                <div className="p-3 bg-green-500/10 rounded-full text-green-500">
-                                    <CheckCircle className="w-6 h-6" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h5 className="text-xs font-bold text-green-500/80 uppercase tracking-widest">System Synced</h5>
-                                    <p className="text-[10px] text-muted-foreground leading-tight px-2">
-                                        All your documents are currently indexed and ready for retrieval.
-                                    </p>
-                                </div>
-                                <Button
+                            <div className="flex items-center gap-2 flex-1">
+                                <CheckCircle className="w-3 h-3 text-green-500/50" />
+                                <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">Documents Synced</span>
+                                <button
                                     onClick={() => handleReindex()}
+                                    className="ml-auto text-[8px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase"
                                     disabled={indexing}
-                                    variant="outline"
-                                    className="w-full border-green-500/20 text-green-500/80 hover:bg-green-500/10 hover:text-green-500 h-8 text-[10px] gap-2"
                                 >
-                                    <RefreshCw className={cn("w-3 h-3", indexing && "animate-spin")} />
-                                    {indexing ? "RE-SCANNING..." : "FORCE RE-SCAN"}
-                                </Button>
+                                    Rescan
+                                </button>
                             </div>
                         )}
                     </div>
