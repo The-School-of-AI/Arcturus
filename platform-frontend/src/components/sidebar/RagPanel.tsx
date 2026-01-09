@@ -162,6 +162,8 @@ export const RagPanel: React.FC = () => {
         setIsRagNewFolderOpen: setIsNewFolderOpen
     } = useAppStore();
 
+    const [indexingProgress, setIndexingProgress] = useState<{ completed: number; total: number; currentFile: string } | null>(null);
+
     const [selectedFile, setSelectedFile] = useState<RagItem | null>(null);
     const [splitRatio, setSplitRatio] = useState(50);
     const [panelMode, setPanelMode] = useState<'browse' | 'seek'>('browse');
@@ -220,20 +222,30 @@ export const RagPanel: React.FC = () => {
         else setIndexing(true);
 
         setIndexStatus(path ? `Indexing...` : "Starting scan...");
+        setIndexingProgress(null);
 
         // Start polling for status
         const pollInterval = setInterval(async () => {
             try {
                 const statusRes = await axios.get(`${API_BASE}/rag/indexing_status`);
                 const status = statusRes.data;
-                if (status.active && status.total > 0) {
-                    const currentFile = status.currentFile || "...";
-                    setIndexStatus(`Indexing ${status.completed}/${status.total}: ${currentFile}`);
+                if (status.active) {
+                    setIndexingProgress({
+                        completed: status.completed,
+                        total: status.total,
+                        currentFile: status.currentFile || "..."
+                    });
+                } else if (status.completed > 0 && status.total > 0 && status.completed === status.total) {
+                    setIndexingProgress({
+                        completed: status.completed,
+                        total: status.total,
+                        currentFile: "Finalizing..."
+                    });
                 }
             } catch (e) {
                 // Ignore polling errors
             }
-        }, 2000);
+        }, 1000);
 
         try {
             const res = await axios.post(`${API_BASE}/rag/reindex`, null, {
@@ -244,11 +256,13 @@ export const RagPanel: React.FC = () => {
 
             if (res.data.status === 'success') {
                 setIndexStatus("Done!");
+                setIndexingProgress(null);
                 fetchFiles();
                 setTimeout(() => setIndexStatus(null), 2000);
             }
         } catch (e) {
             clearInterval(pollInterval);
+            setIndexingProgress(null);
             setIndexStatus("Failed");
             setTimeout(() => setIndexStatus(null), 2000);
         } finally {
@@ -306,20 +320,25 @@ export const RagPanel: React.FC = () => {
     };
 
     // Recursive check for unindexed files (ignore images/media)
-    const allFilesIndexed = useMemo(() => {
-        if (files.length === 0) return true;
+    const indexingStats = useMemo(() => {
+        let unindexed = 0;
+        let total = 0;
+
         const unindexable = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'mp4', 'mov', 'wav', 'mp3'];
-        const check = (items: RagItem[]): boolean => {
+
+        const scan = (items: RagItem[]) => {
             for (const item of items) {
                 if (item.type !== 'folder') {
                     if (unindexable.includes(item.type.toLowerCase())) continue;
-                    if (!item.indexed) return false;
+                    total++;
+                    if (!item.indexed) unindexed++;
                 }
-                if (item.children && !check(item.children)) return false;
+                if (item.children) scan(item.children);
             }
-            return true;
         };
-        return check(files);
+
+        scan(files);
+        return { unindexed, total, allDone: total > 0 && unindexed === 0, empty: total === 0 };
     }, [files]);
 
     return (
@@ -458,8 +477,8 @@ export const RagPanel: React.FC = () => {
                 </div>
             )}
 
-            {/* Footer Area: Context or Compact Sync Info */}
-            <div className={cn("bg-card/30 shrink-0", selectedFile ? "h-[30%] overflow-y-auto" : "p-2 border-t border-border/30")}>
+            {/* Footer Area: Detailed Sync Status */}
+            <div className={cn("bg-card/30 shrink-0", selectedFile ? "h-[30%] overflow-y-auto" : "p-3 border-t border-border/30")}>
                 {selectedFile ? (
                     <div className="p-3 space-y-3">
                         <div className="flex items-center justify-between border-b border-border/30 pb-1.5">
@@ -484,30 +503,70 @@ export const RagPanel: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    // Minimal Status Line
-                    <div className="flex items-center justify-between gap-4 px-1">
-                        {!allFilesIndexed ? (
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <div className="p-1 bg-neon-yellow/10 rounded">
-                                    <Zap className={cn("w-3 h-3 text-neon-yellow", indexing && "animate-pulse")} />
+                    <div className="px-1">
+                        {indexing || indexingProgress ? (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <RefreshCw className="w-3 h-3 text-neon-yellow animate-spin" />
+                                        <span className="text-[9px] font-black text-neon-yellow uppercase tracking-tight">
+                                            Indexing {indexingProgress ? `${indexingProgress.completed}/${indexingProgress.total}` : ''}
+                                        </span>
+                                    </div>
+                                    {indexingProgress && (
+                                        <span className="text-[9px] font-mono text-neon-yellow/60">
+                                            {Math.round((indexingProgress.completed / indexingProgress.total) * 100)}%
+                                        </span>
+                                    )}
                                 </div>
-                                <span className="text-[9px] font-bold text-neon-yellow uppercase truncate">Indexing Required</span>
-                                <Button
-                                    size="sm"
-                                    onClick={() => handleReindex()}
-                                    disabled={indexing}
-                                    className="h-5 px-2 bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 text-[8px] font-black uppercase ml-auto"
-                                >
-                                    {indexing ? "..." : "SCAN"}
-                                </Button>
+
+                                {/* Progress Bar */}
+                                <div className="h-1 w-full bg-neon-yellow/10 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-neon-yellow transition-all duration-500 ease-out shadow-[0_0_8px_rgba(255,255,0,0.5)]"
+                                        style={{ width: `${indexingProgress ? (indexingProgress.completed / indexingProgress.total) * 100 : 0}%` }}
+                                    />
+                                </div>
+
+                                {indexingProgress?.currentFile && (
+                                    <div className="flex items-center gap-1.5">
+                                        <File className="w-2.5 h-2.5 text-muted-foreground" />
+                                        <span className="text-[8px] text-muted-foreground truncate italic">
+                                            {indexingProgress.currentFile}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : !indexingStats.allDone ? (
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <div className="p-1 bg-neon-yellow/10 rounded">
+                                        <Zap className="w-3 h-3 text-neon-yellow" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-bold text-neon-yellow uppercase leading-tight tracking-tighter">
+                                            {indexingStats.empty ? "FULL INDEXING REQUIRED" : `${indexingStats.unindexed}/${indexingStats.total} FILES NEED INDEXING`}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => handleReindex()}
+                                        disabled={indexing}
+                                        className="h-6 px-3 bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 text-[9px] font-black uppercase ml-auto transition-transform active:scale-95 shadow-lg shadow-neon-yellow/20"
+                                    >
+                                        SCAN
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 flex-1">
-                                <CheckCircle className="w-3 h-3 text-green-500/50" />
-                                <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">Documents Synced</span>
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">Documents Synced</span>
+                                </div>
                                 <button
                                     onClick={() => handleReindex()}
-                                    className="ml-auto text-[8px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase"
+                                    className="ml-auto text-[8px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase hover:underline"
                                     disabled={indexing}
                                 >
                                     Rescan

@@ -1117,6 +1117,9 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
             rel_path = result.get("rel_path")
             
             if status == "SKIP":
+                # Increment progress for skipped files too
+                with index_lock:
+                    INDEXING_STATUS["completed"] += 1
                 # mcp_log("SKIP", f"Skipping {rel_path}")
                 pass
             
