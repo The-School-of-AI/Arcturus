@@ -156,7 +156,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                             New Run
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="bg-card border-border sm:max-w-md text-foreground">
+                                    <DialogContent className="bg-card border-border sm:max-w-lg text-foreground">
                                         <DialogHeader>
                                             <DialogTitle className="text-foreground text-lg">Start New Agent Run</DialogTitle>
                                         </DialogHeader>

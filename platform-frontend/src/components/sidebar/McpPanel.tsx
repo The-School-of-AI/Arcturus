@@ -158,7 +158,7 @@ export const McpPanel: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
                 {servers.map((server, idx) => {
-                    const isSelected = selectedMcpServer === server.name;
+                    const isActive = selectedMcpServer?.name === server.name;
                     // Determine Type Icon
                     let typeIcon = <Box className="w-4 h-4" />;
                     if (server.name === 'browser') typeIcon = <Globe className="w-4 h-4" />;
@@ -169,18 +169,20 @@ export const McpPanel: React.FC = () => {
                     return (
                         <div
                             key={idx}
+                            onClick={() => setSelectedMcpServer(server)}
                             className={cn(
-                                "group relative p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                isSelected
-                                    ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
-                                    : "bg-gradient-to-br from-card to-muted/20 border-border/50 hover:border-white/20 hover:bg-muted/30"
+                                "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                "bg-gradient-to-br from-card to-muted/20",
+                                "hover:shadow-md",
+                                isActive
+                                    ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                    : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                             )}
-                            onClick={() => setSelectedMcpServer(server.name)}
                         >
                             <div className="flex justify-between items-center gap-3">
                                 <div className={cn(
                                     "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                                    isSelected ? "bg-primary text-primary-inventory" : "bg-muted/50 text-muted-foreground"
+                                    isActive ? "bg-primary text-primary-inventory" : "bg-muted/50 text-muted-foreground"
                                 )}>
                                     {typeIcon}
                                 </div>
@@ -188,7 +190,7 @@ export const McpPanel: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <span className={cn(
                                             "text-xs font-bold uppercase tracking-wide",
-                                            isSelected ? "text-primary" : "text-foreground"
+                                            isActive ? "text-primary" : "text-foreground"
                                         )}>
                                             {server.name}
                                         </span>

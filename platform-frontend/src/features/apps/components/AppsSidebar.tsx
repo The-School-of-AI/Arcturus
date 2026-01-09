@@ -1327,8 +1327,8 @@ const SavedAppsList = () => {
                                         "bg-gradient-to-br from-card to-muted/20",
                                         "hover:shadow-md",
                                         isActive
-                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60"
-                                            : "border-border/50 hover:border-primary/50"
+                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                            : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                     )}
                                     onClick={() => !isEditing && loadApp(app.id)}
                                 >

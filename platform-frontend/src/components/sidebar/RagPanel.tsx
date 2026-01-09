@@ -91,8 +91,10 @@ const FileTree: React.FC<{
         <div>
             <div
                 className={cn(
-                    "group flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer select-none transition-colors",
-                    selectedPath === item.path ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    "group relative flex items-center gap-1.5 py-2 px-3 rounded-lg border transition-all duration-300 cursor-pointer select-none mb-1",
+                    selectedPath === item.path
+                        ? "border-neon-yellow/40 bg-neon-yellow/5 text-neon-yellow"
+                        : "border-border/30 hover:border-primary/30 hover:bg-accent/30 text-muted-foreground hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
@@ -413,7 +415,11 @@ export const RagPanel: React.FC = () => {
                             return (
                                 <div
                                     key={i}
-                                    className="p-2 rounded-lg bg-muted/30 border border-border/30 hover:border-primary/20 transition-all cursor-pointer group"
+                                    className={cn(
+                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                        "bg-gradient-to-br from-card to-muted/20",
+                                        "hover:shadow-md border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                    )}
                                     onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
                                     <div className="flex items-center gap-1.5 mb-1">

@@ -124,8 +124,8 @@ export const RemmePanel: React.FC = () => {
                                 "bg-gradient-to-br from-card to-muted/20",
                                 "hover:shadow-md",
                                 memory.source_exists === false
-                                    ? "border-orange-500/20 hover:border-orange-500/40"
-                                    : "border-border/50 hover:border-white/20"
+                                    ? "border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5"
+                                    : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                             )}
                         >
                             <div className="flex justify-between items-start gap-3">

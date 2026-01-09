@@ -228,15 +228,28 @@ export const NewsPanel: React.FC = () => {
                                 <p className="text-[10px] font-bold text-muted-foreground px-1 uppercase tracking-widest">Available Sources</p>
 
                                 {/* Global Feed */}
+                                {/* Global Feed */}
                                 <div
                                     onClick={() => handleSelectSource(null)}
-                                    className="group p-3 rounded-xl border border-border/50 hover:border-white/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between text-muted-foreground hover:text-foreground"
+                                    className={cn(
+                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer mb-2",
+                                        "bg-gradient-to-br from-card to-muted/20 hover:shadow-md",
+                                        selectedNewsSourceId === null
+                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                            : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                    )}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="p-1.5 rounded-lg bg-muted">
+                                        <div className={cn(
+                                            "p-2 rounded-lg transition-colors",
+                                            selectedNewsSourceId === null ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted text-muted-foreground group-hover:text-foreground"
+                                        )}>
                                             <Globe className="w-4 h-4" />
                                         </div>
-                                        <span className="text-sm font-medium text-black">AI Feed</span>
+                                        <span className={cn(
+                                            "text-sm font-medium transition-colors",
+                                            selectedNewsSourceId === null ? "text-neon-yellow" : "text-foreground group-hover:text-foreground/80"
+                                        )}>AI Feed</span>
                                     </div>
                                 </div>
 
@@ -244,11 +257,20 @@ export const NewsPanel: React.FC = () => {
                                     <div
                                         key={source.id}
                                         onClick={() => handleSelectSource(source.id)}
-                                        className="group p-3 rounded-xl border border-border/50 hover:border-white/20 hover:bg-muted/30 transition-all cursor-pointer"
+                                        className={cn(
+                                            "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                            "bg-gradient-to-br from-card to-muted/20 hover:shadow-md",
+                                            selectedNewsSourceId === source.id
+                                                ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                                : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                        )}
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-1.5 rounded-lg bg-muted text-muted-foreground">
+                                                <div className={cn(
+                                                    "p-2 rounded-lg transition-colors",
+                                                    selectedNewsSourceId === source.id ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted text-muted-foreground group-hover:text-foreground"
+                                                )}>
                                                     {source.type === 'rss' ? (
                                                         <Rss className="w-4 h-4" />
                                                     ) : (
@@ -256,7 +278,10 @@ export const NewsPanel: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-medium text-foreground truncate">{source.name}</span>
+                                                    <span className={cn(
+                                                        "text-sm font-medium truncate transition-colors",
+                                                        selectedNewsSourceId === source.id ? "text-neon-yellow" : "text-foreground group-hover:text-foreground/80"
+                                                    )}>{source.name}</span>
                                                     <span className="text-[10px] text-muted-foreground truncate opacity-60 font-mono">{new URL(source.url).hostname}</span>
                                                 </div>
                                             </div>

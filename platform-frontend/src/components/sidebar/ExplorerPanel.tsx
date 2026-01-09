@@ -36,7 +36,11 @@ export const ExplorerPanel: React.FC = () => {
             <div key={node.path} className="select-none">
                 <div
                     className={cn(
-                        "flex items-center py-1.5 px-2 hover:bg-muted/50 cursor-pointer rounded-md transition-colors group",
+                        "group relative flex items-center py-2 px-3 rounded-lg border transition-all duration-300 cursor-pointer mb-1",
+                        // Active state not easily tracked here (only via expanded?), assuming standard hover/inactive for now unless selected file logic exists
+                        // Explorer currently doesn't track "selected file" in state for highlighting, only root path.
+                        // We'll stick to the hover/inactive card style for uniformity.
+                        "border-border/30 hover:border-primary/30 hover:bg-accent/30 bg-card/30",
                         depth > 0 && "ml-2"
                     )}
                     onClick={() => node.type === 'folder' ? toggleFolder(node.path) : null}
