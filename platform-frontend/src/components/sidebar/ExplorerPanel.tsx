@@ -230,36 +230,13 @@ export const ExplorerPanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-card text-foreground overflow-hidden">
-            {/* Header - Matches Remme Style */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-neon-yellow/10 rounded-lg">
-                        <Code2 className="w-5 h-5 text-neon-yellow" />
-                    </div>
-                    <div>
-                        <h2 className="font-semibold text-sm tracking-tight text-foreground uppercase">Explorer</h2>
-                        <p className="text-[10px] text-neon-yellow/80 font-mono tracking-widest">{analysisHistory.length} PROJECTS</p>
-                    </div>
-                </div>
-                {explorerRootPath && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => setExplorerRootPath(null)}
-                        title="Close active project"
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
-                )}
-            </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                 {/* HISTORY SECTION */}
                 {analysisHistory.length > 0 && (
                     <div className="flex flex-col flex-1 min-h-0">
                         {!explorerRootPath && (
-                            <div className="px-4 py-3 flex items-center justify-between flex-shrink-0">
+                            <div className="px-4 py-3 flex items-center justify-between flex-shrink-0 pt-4">
                                 <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] select-none">Recent Analyses</h3>
                                 <div className="h-px flex-1 bg-muted/50 ml-4" />
                             </div>

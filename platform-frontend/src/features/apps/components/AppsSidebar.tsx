@@ -5,6 +5,12 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import type { SavedApp } from '@/store';
 import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight, Eye, Edit, Upload, Share2, FormInput, Bot, ListTodo, Package, FolderKanban } from 'lucide-react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
@@ -1348,17 +1354,26 @@ const SavedAppsList = () => {
                                                     className="w-full bg-muted border border-neon-yellow/50 rounded px-2 py-1 text-[13px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
                                                 />
                                             ) : (
-                                                <p
-                                                    onClick={(e) => handleStartEdit(e, app)}
-                                                    className={cn(
-                                                        "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
-                                                        "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
-                                                        isActive ? "text-neon-yellow" : "text-foreground",
-                                                        "hover:text-neon-yellow"
-                                                    )}
-                                                >
-                                                    {app.name}
-                                                </p>
+                                                <TooltipProvider>
+                                                    <Tooltip delayDuration={300}>
+                                                        <TooltipTrigger asChild>
+                                                            <p
+                                                                onDoubleClick={(e) => handleStartEdit(e, app)}
+                                                                className={cn(
+                                                                    "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
+                                                                    "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
+                                                                    isActive ? "text-neon-yellow" : "text-foreground",
+                                                                    "hover:text-neon-yellow"
+                                                                )}
+                                                            >
+                                                                {app.name}
+                                                            </p>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">
+                                                            <p>Double click to rename</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             )}
                                         </div>
                                         <button
