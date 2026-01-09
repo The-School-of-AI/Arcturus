@@ -51,11 +51,9 @@ export const AutoHeightWrapper: React.FC<AutoHeightWrapperProps> = ({
         // Match constants from AppGrid.tsx
         const RGL_MARGIN = 16;
 
-        // We add a tiny buffer (4px) to avoid precision issues where it effectively fits 
-        // but floats point math pushes it slightly over
-        const buffer = 4;
-
-        const requiredH = Math.max(2, Math.ceil((actualContentHeight + RGL_MARGIN + buffer) / (rowHeight + RGL_MARGIN)));
+        // Remove buffer to rely on strict ceiling for tight fit
+        // This prevents jumping to the next unit for near-exact fits
+        const requiredH = Math.max(2, Math.ceil((actualContentHeight + RGL_MARGIN) / (rowHeight + RGL_MARGIN)));
 
         // Update if height differs
         if (requiredH !== currentItem.h && !hasUpdated) {

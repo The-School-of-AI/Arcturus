@@ -9,6 +9,8 @@ export interface TableCardProps {
     data?: any;
     config?: any;
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
 export const TableCard: React.FC<TableCardProps> = ({
@@ -17,7 +19,9 @@ export const TableCard: React.FC<TableCardProps> = ({
     rows,
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit
 }) => {
     // Use data prop if available, otherwise fall back to direct props or defaults
     const tableHeaders = data.headers || headers || ["Col A", "Col B", "Col C"];
@@ -32,7 +36,7 @@ export const TableCard: React.FC<TableCardProps> = ({
     const textColor = (style.textColor && style.textColor !== '#ffffff' && style.textColor !== '#fff') ? style.textColor : undefined;
 
     return (
-        <BaseCard title={tableTitle} textColor={textColor}>
+        <BaseCard title={tableTitle} textColor={textColor} cardId={cardId} autoFit={autoFit}>
             <div className={cn(
                 "w-full text-xs text-left text-muted-foreground min-w-[200px]",
                 showBorders && "border border-border rounded"

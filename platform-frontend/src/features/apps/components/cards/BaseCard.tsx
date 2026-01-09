@@ -32,7 +32,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
         </div>
     );
 
-    return (
+    const cardContent = (
         <div
             className={cn("w-full h-full flex flex-col bg-transparent overflow-hidden", className)}
             style={style}
@@ -43,13 +43,17 @@ export const BaseCard: React.FC<BaseCardProps> = ({
                     {headerAction && <div>{headerAction}</div>}
                 </div>
             )}
-            {cardId && autoFit ? (
-                <AutoHeightWrapper cardId={cardId} enabled={autoFit}>
-                    {contentArea}
-                </AutoHeightWrapper>
-            ) : (
-                contentArea
-            )}
+            {contentArea}
         </div>
     );
+
+    if (cardId && autoFit) {
+        return (
+            <AutoHeightWrapper cardId={cardId} enabled={autoFit}>
+                {cardContent}
+            </AutoHeightWrapper>
+        );
+    }
+
+    return cardContent;
 };

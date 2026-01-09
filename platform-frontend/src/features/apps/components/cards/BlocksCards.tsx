@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import { AutoHeightWrapper } from './AutoHeightWrapper';
 
 // ============================================================================
 // STATS-01: Stats with Trending
@@ -176,6 +177,8 @@ interface StatsStatusCardProps {
         showTitle?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
 const defaultStatusStats: StatusStatItem[] = [
@@ -196,12 +199,14 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
     title = 'System Status',
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit
 }) => {
     const showTitle = config.showTitle !== false;
     const stats = data.stats || defaultStatusStats;
 
-    return (
+    const content = (
         <div className="h-full flex flex-col p-4">
             {showTitle && (
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -223,6 +228,11 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 // ============================================================================
@@ -246,6 +256,8 @@ interface SimpleTableCardProps {
         striped?: boolean;
     };
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
 const defaultTableData = {
@@ -261,7 +273,9 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
     title = 'Tasks',
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit
 }) => {
     const showTitle = config.showTitle !== false;
     const striped = config.striped !== false;
@@ -276,7 +290,7 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
         return row;
     });
 
-    return (
+    const content = (
         <div className="h-full flex flex-col">
             {showTitle && (
                 <div className="px-4 py-3 border-b border-border">
@@ -330,6 +344,11 @@ export const SimpleTableCard: React.FC<SimpleTableCardProps> = ({
             </div>
         </div>
     );
+
+    if (cardId && autoFit) {
+        return <AutoHeightWrapper cardId={cardId} enabled={autoFit}>{content}</AutoHeightWrapper>;
+    }
+    return content;
 };
 
 // ============================================================================

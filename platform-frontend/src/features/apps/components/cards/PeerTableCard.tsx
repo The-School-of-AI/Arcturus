@@ -6,6 +6,8 @@ interface PeerTableCardProps {
     data?: any;
     config?: any;
     style?: any;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
 const defaultPeers = [
@@ -19,14 +21,16 @@ export const PeerTableCard: React.FC<PeerTableCardProps> = ({
     title = "Peer Comparison",
     data = {},
     config = {},
-    style = {}
+    style = {},
+    cardId,
+    autoFit
 }) => {
     // Use dynamic data if provided, otherwise use defaults
     const peers = data.peers || defaultPeers;
     const tableTitle = data.title || title;
 
     return (
-        <BaseCard title={tableTitle}>
+        <BaseCard title={tableTitle} cardId={cardId} autoFit={autoFit}>
             <div className="w-full text-[10px] text-left">
                 <div className="flex border-b border-border/50 pb-2 mb-2 font-bold text-muted-foreground">
                     <div className="flex-1">Company</div>

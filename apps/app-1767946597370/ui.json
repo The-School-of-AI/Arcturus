@@ -1,0 +1,148 @@
+{
+  "name": "Dhurandhar Movie Revenue Dashboard",
+  "description": "Generated from report",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Header",
+      "config": {
+        "centered": true
+      },
+      "data": {
+        "text": "Dhurandhar Movie Revenue Report (as of January 7, 2026)"
+      },
+      "style": {}
+    },
+    {
+      "id": "summary",
+      "type": "summary",
+      "label": "Executive Summary",
+      "data": {
+        "text": "Dhurandhar has achieved remarkable box office success, becoming the highest-earning Hindi film of all time. As of January 7, 2026, the film has grossed Rs 1,227 crore worldwide. The film's India net collection reached Rs 831.40 crore, with overseas markets contributing significantly to its total earnings.",
+        "bullets": [
+          "Highest-earning Hindi film of all time",
+          "Worldwide gross: Rs 1,227 crore",
+          "India net collection: Rs 831.40 crore"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "worldwide_gross",
+      "type": "metric",
+      "label": "Worldwide Gross Revenue",
+      "data": {
+        "value": "Rs 1,227 crore",
+        "change": 0,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "india_net",
+      "type": "metric",
+      "label": "India Net Collection",
+      "data": {
+        "value": "Rs 831.40 crore",
+        "change": 0,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "regional_performance",
+      "type": "markdown",
+      "label": "Regional Performance",
+      "data": {
+        "content": "### Regional Performance\n\n\"Dhurandhar\" has shown strong regional performance, particularly in major cities such as Mumbai, Bengaluru, Chennai, and Pune. These cities have recorded above 10 percent occupancy, highlighting the film's widespread appeal across different regions in India. For example, Chennai recorded an occupancy rate of 24.5 percent on Wednesday, January 7, 2026, while Bengaluru reached 15.75 percent."
+      },
+      "style": {}
+    },
+    {
+      "id": "comparative_analysis",
+      "type": "peer_table",
+      "label": "Comparative Analysis",
+      "data": {
+        "peers": [
+          {
+            "ticker": "Pushpa 2: The Rule",
+            "metric": "Rs 830 crore net"
+          },
+          {
+            "ticker": "Jawan",
+            "metric": "Rs 643 crore net"
+          },
+          {
+            "ticker": "Stree 2",
+            "metric": "Rs 627 crore net"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "future_outlook",
+      "type": "markdown",
+      "label": "Future Outlook",
+      "data": {
+        "content": "### Future Outlook\n\nBuilding on the success of \"Dhurandhar\", the makers have already announced its Part 2, which is set to be released in March 2026. This sequel is expected to further expand the franchise's reach and solidify its position in the Indian film industry. The continued success of \"Dhurandhar\" highlights the enduring appeal of well-crafted action dramas and the strong audience demand for quality Hindi cinema."
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "summary",
+      "x": 0,
+      "y": 2,
+      "w": 24,
+      "h": 5
+    },
+    {
+      "i": "worldwide_gross",
+      "x": 0,
+      "y": 7,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "i": "india_net",
+      "x": 12,
+      "y": 7,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "i": "regional_performance",
+      "x": 0,
+      "y": 10,
+      "w": 24,
+      "h": 6
+    },
+    {
+      "i": "comparative_analysis",
+      "x": 0,
+      "y": 16,
+      "w": 24,
+      "h": 6
+    },
+    {
+      "i": "future_outlook",
+      "x": 0,
+      "y": 22,
+      "w": 24,
+      "h": 6
+    }
+  ],
+  "id": "app-1767946597370",
+  "lastModified": 1767946597370,
+  "lastHydrated": 1767946597370
+}

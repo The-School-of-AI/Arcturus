@@ -7,6 +7,8 @@ export interface SummaryGridProps {
     data?: any;
     // Removing generic style prop requirement, preferring strict props or classNames
     className?: string;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
 const DEFAULT_FINDINGS = [
@@ -19,11 +21,13 @@ const DEFAULT_FINDINGS = [
 export const SummaryGrid: React.FC<SummaryGridProps> = ({
     title = "Executive Summary",
     data = {},
+    cardId,
+    autoFit
 }) => {
     const findings = data.findings || DEFAULT_FINDINGS;
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={title} cardId={cardId} autoFit={autoFit}>
             <div className="grid grid-cols-1 gap-3">
                 {findings.map((f: any) => (
                     <div key={f.label} className="flex gap-3 items-start group">
