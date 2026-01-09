@@ -159,8 +159,8 @@ interface AnalysisHistoryItem {
     flowData?: unknown;
 }
 
-import type { AppCard, SavedApp } from '../features/apps/types/app-types';
-export type { AppCard, SavedApp };
+import type { AppCard, SavedApp, LibraryComponent } from '../features/apps/types/app-types';
+export type { AppCard, SavedApp, LibraryComponent };
 
 interface LayoutItem {
     i: string;
@@ -180,7 +180,7 @@ interface AppsSlice {
     appCards: AppCard[];
     appLayout: LayoutItem[];
     selectedAppCardId: string | null;
-    selectedLibraryComponent: unknown | null; // For sidebar preview
+    selectedLibraryComponent: LibraryComponent | null; // For sidebar preview
     appsSidebarTab: 'apps' | 'components';
     setAppsSidebarTab: (tab: 'apps' | 'components') => void;
     savedApps: SavedApp[];
@@ -196,7 +196,7 @@ interface AppsSlice {
     updateAppCardContext: (id: string, context: string) => void;
     setAppLayout: (layout: LayoutItem[]) => void;
     selectAppCard: (id: string | null) => void;
-    selectLibraryComponent: (component: any | null) => void;
+    selectLibraryComponent: (component: LibraryComponent | null) => void;
     fetchApps: () => Promise<void>;
     createNewApp: () => void;
     saveApp: (name?: string) => Promise<void>;

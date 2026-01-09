@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
-import type { SavedApp } from '@/store';
+import type { SavedApp, LibraryComponent } from '@/store';
+import type { AppCardType } from '../types/app-types';
 import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight, Eye, Edit, Upload, Share2, FormInput, Bot, ListTodo, Package, FolderKanban } from 'lucide-react';
 import {
     Tooltip,
@@ -267,7 +268,7 @@ const ComponentLibrary = () => {
                                     {category.items.map(item => (
                                         <ComponentPreviewCard
                                             key={item.type}
-                                            type={item.type}
+                                            type={item.type as AppCardType}
                                             label={item.label}
                                             icon={item.icon}
                                         />
@@ -284,7 +285,7 @@ const ComponentLibrary = () => {
 
 
 // Canva-style Preview Card with actual visual representation
-const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label: string, icon: any }) => {
+const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, label: string, icon: any }) => {
     const { selectLibraryComponent, selectedLibraryComponent } = useAppStore();
     const isSelected = selectedLibraryComponent?.type === type;
 

@@ -4,6 +4,7 @@ export type AppCardType =
     | 'header' | 'text' | 'markdown' | 'image' | 'spacer' | 'divider'
     // Charts
     | 'line_chart' | 'bar_chart' | 'area_chart' | 'pie_chart' | 'candlestick' | 'scatter'
+    | 'sankey' | 'heatmap'
     // Metrics
     | 'metric' | 'trend' | 'score_card' | 'grade_card'
     // Tables
@@ -19,10 +20,24 @@ export type AppCardType =
     // Blocks.so / Dashboards
     | 'stats_trending' | 'stats_grid' | 'stats_status' | 'stats_links'
     | 'simple_table' | 'stats_01' | 'usage_stats' | 'storage_card' | 'accordion_table'
+    // Quiz Blocks
+    | 'quiz_mcq' | 'quiz_tf' | 'quiz_multi' | 'quiz_rating' | 'quiz_likert' | 'quiz_nps'
+    | 'quiz_ranking' | 'quiz_fitb' | 'quiz_fitmb' | 'quiz_number' | 'quiz_formula'
+    | 'quiz_date' | 'quiz_essay' | 'quiz_match' | 'quiz_dropdown' | 'quiz_code'
+    | 'quiz_upload' | 'quiz_image' | 'quiz_text' | 'quiz_section' | 'quiz_media'
+    | 'quiz_branch' | 'quiz_ai'
     // New Blocks.so Components
     | 'stats_row' | 'plan_overview' | 'trend_cards' | 'usage_gauge' | 'storage_donut'
     | 'task_table' | 'inventory_table' | 'project_table'
     | 'ai_chat' | 'share_dialog' | 'file_upload' | 'form_layout';
+
+export interface LibraryComponent {
+    type: AppCardType;
+    label: string;
+    icon: any; // Lucide icon component
+    defaultW?: number;
+    defaultH?: number;
+}
 
 export interface BaseAppCardConfig {
     // Common
