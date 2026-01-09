@@ -44,7 +44,7 @@ export const AppLayout: React.FC = () => {
     } = useAppStore();
 
     const isInspectorOpen = React.useMemo(() => {
-        if (sidebarTab === 'apps' && (selectedAppCardId || selectedLibraryComponent)) return true;
+        if (sidebarTab === 'apps' && selectedAppCardId) return true;
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
         if (sidebarTab === 'rag' && showRagInsights) return true;

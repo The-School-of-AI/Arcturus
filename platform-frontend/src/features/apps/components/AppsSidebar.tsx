@@ -38,7 +38,7 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
                     onClick={() => setActiveTab('apps')}
                     className={cn(
                         "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-foreground relative",
-                        activeTab === 'apps' ? "text-neon-yellow" : "text-muted-foreground"
+                        activeTab === 'apps' ? "text-neon-yellow" : "text-muted-foreground/70"
                     )}
                 >
                     My Apps
@@ -49,7 +49,7 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
                     onClick={() => setActiveTab('components')}
                     className={cn(
                         "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-foreground relative",
-                        activeTab === 'components' ? "text-neon-yellow" : "text-muted-foreground"
+                        activeTab === 'components' ? "text-neon-yellow" : "text-muted-foreground/70"
                     )}
                 >
                     Components
@@ -1212,7 +1212,6 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
         <div
             draggable
             onDragStart={handleDragStart}
-            onClick={() => selectLibraryComponent({ type, label, description: '', usage: '' })}
             className={cn(
                 "group relative flex flex-col rounded-xl border-2 cursor-grab active:cursor-grabbing transition-all duration-300 overflow-hidden select-none shadow-lg",
                 // Match Explorer node styling
