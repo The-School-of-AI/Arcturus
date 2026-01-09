@@ -10,9 +10,16 @@ import { cn } from '@/lib/utils';
 export interface MarkdownCardProps {
     title?: string;
     content?: string;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
-export const MarkdownCard: React.FC<MarkdownCardProps> = ({ title, content = "# Hello Markdown\n\n* Item 1\n* Item 2\n\n> This is a quote." }) => {
+export const MarkdownCard: React.FC<MarkdownCardProps> = ({
+    title,
+    content = "# Hello Markdown\n\n* Item 1\n* Item 2\n\n> This is a quote.",
+    cardId,
+    autoFit = true
+}) => {
     const { theme } = useTheme();
 
     // Sanitize content to prevent XSS while allowing safe HTML
@@ -23,7 +30,7 @@ export const MarkdownCard: React.FC<MarkdownCardProps> = ({ title, content = "# 
     });
 
     return (
-        <BaseCard title={title}>
+        <BaseCard title={title} cardId={cardId} autoFit={autoFit}>
             <div className={cn("prose prose-xs max-w-none", theme === 'dark' ? "prose-invert" : "")}>
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -35,3 +42,4 @@ export const MarkdownCard: React.FC<MarkdownCardProps> = ({ title, content = "# 
         </BaseCard>
     );
 };
+

@@ -29,6 +29,7 @@ import { PeerTableCard } from './cards/PeerTableCard';
 import { TableCard } from './cards/TableCard';
 import { MarkdownCard } from './cards/MarkdownCard';
 import { ImageCard } from './cards/ImageCard';
+import { TextCard } from './cards/TextCard';
 import { DividerCard } from './cards/DividerCard';
 import { FeedCard } from './cards/FeedCard';
 import { InputCard, ActionButtonCard, SelectCard, DateRangeCard } from './cards/ControlCards';
@@ -252,9 +253,12 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 );
             case 'text':
                 return (
-                    <div className="p-4 text-sm text-foreground/80" style={{ color: style.textColor }}>
-                        {data.text || 'Basic paragraph text block. Select to edit.'}
-                    </div>
+                    <TextCard
+                        text={data.text || 'Basic paragraph text block. Select to edit.'}
+                        textColor={style.textColor}
+                        cardId={id}
+                        autoFit={config.autoFit !== false}
+                    />
                 );
             case 'markdown':
                 return <MarkdownCard content={data.content} {...commonProps} />;

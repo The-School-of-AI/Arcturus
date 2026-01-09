@@ -1,13 +1,15 @@
 {
+  "id": "app-1767353830068",
   "name": "Air Purifier Market Analysis Dashboard",
-  "description": "Generated from report",
+  "description": "",
   "cards": [
     {
       "id": "header",
       "type": "header",
       "label": "Header",
       "config": {
-        "centered": true
+        "centered": true,
+        "autoFit": false
       },
       "data": {
         "text": "Demand Analysis and Competitive Benchmark for Air Purifiers in India's Metro Cities (2027-2029)"
@@ -21,7 +23,10 @@
       "data": {
         "text": "The India air purifier market is experiencing robust growth, fueled by increasing air pollution, greater health awareness, and supportive government initiatives. This report provides a comprehensive analysis of the market demand, competitive landscape, key drivers and inhibitors, and competitive benchmarking for air purifiers in India's metro cities, focusing on the period from 2027 to 2029."
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": false
+      }
     },
     {
       "id": "metric_market_size_fy19",
@@ -30,7 +35,10 @@
       "data": {
         "value": "\u20b9189 crore"
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": false
+      }
     },
     {
       "id": "metric_market_size_fy24",
@@ -39,7 +47,10 @@
       "data": {
         "value": "\u20b9248 crore"
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": false
+      }
     },
     {
       "id": "metric_market_size_fy29",
@@ -48,7 +59,10 @@
       "data": {
         "value": "\u20b9564 crore"
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": false
+      }
     },
     {
       "id": "metric_cagr",
@@ -57,7 +71,10 @@
       "data": {
         "value": "17.9%"
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": false
+      }
     },
     {
       "id": "demand_forecast",
@@ -66,7 +83,10 @@
       "data": {
         "content": "The market is projected to experience substantial growth in the coming years. Forecasts indicate a strong CAGR, driven by increasing health consciousness and worsening air quality in metropolitan areas. MarkSpark Solutions projects a CAGR of 20.9% to reach 4.23 million units by 2032 (T002). Another report indicates a CAGR of 6.1% during 2025-2031 (6W Research, T001)."
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": true
+      }
     },
     {
       "id": "growth_drivers",
@@ -75,7 +95,10 @@
       "data": {
         "content": "<ul><li><b>Rising Urban Air Pollution:</b> Alarmingly high AQI levels in major cities drive the need for indoor air purification.</li><li><b>Increased Health Awareness:</b> Growing awareness of respiratory illnesses and allergies increases demand for air purifiers.</li><li><b>Government Initiatives:</b> Programs like the National Clean Air Program (NCAP) create opportunities for market growth.</li><li><b>Technological Upgrades:</b> Smart air purifiers with IoT-enabled controls and real-time monitoring are gaining popularity.</li><li><b>Rising Disposable Incomes:</b> Increased purchasing power allows more households to invest in air purifiers.</li></ul>"
       },
-      "style": {}
+      "style": {},
+      "config": {
+        "autoFit": true
+      }
     },
     {
       "id": "demand_inhibitors",
@@ -101,74 +124,93 @@
       "i": "header",
       "x": 0,
       "y": 0,
-      "w": 24,
-      "h": 2
+      "w": 12,
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "summary",
-      "x": 0,
-      "y": 2,
-      "w": 24,
-      "h": 5
+      "x": 17,
+      "y": 0,
+      "w": 7,
+      "h": 4,
+      "moved": false,
+      "static": false
     },
     {
       "i": "metric_market_size_fy19",
       "x": 0,
-      "y": 7,
+      "y": 3,
       "w": 6,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "metric_market_size_fy24",
       "x": 6,
-      "y": 7,
+      "y": 3,
       "w": 6,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "metric_market_size_fy29",
       "x": 12,
-      "y": 7,
-      "w": 6,
-      "h": 3
+      "y": 3,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "metric_cagr",
-      "x": 18,
-      "y": 7,
-      "w": 6,
-      "h": 3
+      "x": 12,
+      "y": 0,
+      "w": 5,
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "demand_forecast",
       "x": 0,
-      "y": 10,
+      "y": 6,
       "w": 24,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     },
     {
       "i": "growth_drivers",
       "x": 0,
-      "y": 16,
+      "y": 12,
       "w": 12,
-      "h": 6
+      "h": 7,
+      "moved": false,
+      "static": false
     },
     {
       "i": "demand_inhibitors",
       "x": 12,
-      "y": 16,
+      "y": 12,
       "w": 12,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     },
     {
       "i": "competitive_landscape",
       "x": 0,
-      "y": 22,
+      "y": 19,
       "w": 24,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     }
   ],
-  "id": "app-1767353830068",
-  "lastModified": 1767353830068,
-  "lastHydrated": 1767353830068
+  "lastModified": 1767944174904,
+  "lastHydrated": null
 }

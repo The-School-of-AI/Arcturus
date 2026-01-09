@@ -51,6 +51,19 @@ export const AutoHeightWrapper: React.FC<AutoHeightWrapperProps> = ({
         }
     }, [enabled, cardId, appLayout, setAppLayout, rowHeight, lastUpdatedH]);
 
+    // Reset and recalculate when enabled changes (user toggled autoFit)
+    useEffect(() => {
+        if (enabled) {
+            // Reset the cached height so it will recalculate
+            setLastUpdatedH(0);
+            // Small delay to ensure content is rendered, then trigger update
+            const timer = setTimeout(() => {
+                updateHeight();
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [enabled]);
+
     useEffect(() => {
         if (!enabled) return;
 
