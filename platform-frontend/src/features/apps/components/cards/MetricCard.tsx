@@ -45,7 +45,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     const getTrendColor = () => {
         if (displayTrend === 'up') return successColor;
         if (displayTrend === 'down') return dangerColor;
-        return '#9ca3af';
+        return 'hsl(var(--muted-foreground))';
     };
 
     return (
@@ -68,7 +68,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                                 {displayChange > 0 ? '+' : ''}{displayChange}%
                             </div>
                         )}
-                        {displaySubtext && <div className="text-xs text-muted-foreground">{displaySubtext}</div>}
+                        {displaySubtext && <div className="text-xs text-foreground/60">{displaySubtext}</div>}
                     </div>
                 ) : null}
             </div>

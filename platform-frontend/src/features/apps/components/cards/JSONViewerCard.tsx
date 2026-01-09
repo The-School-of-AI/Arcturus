@@ -49,12 +49,12 @@ export const JSONViewerCard: React.FC<JSONViewerCardProps> = ({
                                 <div key={i}>{i + 1}</div>
                             ))}
                         </div>
-                        <pre style={{ color: highlight ? `${accentColor}cc` : '#9ca3af' }}>
+                        <pre className="text-foreground/80" style={{ color: highlight ? `${accentColor}cc` : undefined }}>
                             {jsonString}
                         </pre>
                     </div>
                 ) : (
-                    <pre style={{ color: highlight ? `${accentColor}cc` : '#9ca3af' }}>
+                    <pre className="text-foreground/80" style={{ color: highlight ? `${accentColor}cc` : undefined }}>
                         {jsonString}
                     </pre>
                 )}

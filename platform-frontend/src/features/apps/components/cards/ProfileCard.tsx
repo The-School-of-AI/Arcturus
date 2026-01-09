@@ -76,7 +76,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 </div>
 
                 {showDescription && (
-                    <div className="text-sm leading-relaxed line-clamp-4" style={{ color: style.textColor ? `${style.textColor}99` : '#9ca3af' }}>
+                    <div className="text-sm leading-relaxed line-clamp-4 text-foreground/70" style={{ color: style.textColor }}>
                         {desc}
                     </div>
                 )}

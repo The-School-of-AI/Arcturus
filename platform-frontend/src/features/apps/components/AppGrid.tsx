@@ -119,7 +119,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
     // Container ref for width measurement
     const containerRef = useRef<HTMLDivElement>(null);
     const CANVAS_WIDTH = 1200; // Fixed large canvas width
-    const [zoomLevel, setZoomLevel] = useState(0.8); // Default 80% for edit mode
+    const [zoomLevel, setZoomLevel] = useState(1.0); // Default 100%
 
     // Connect to Store
     const {
@@ -150,7 +150,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
 
     // Auto-adjust zoom based on mode: 100% for preview, 80% for edit
     useEffect(() => {
-        setZoomLevel(isAppViewMode ? 1 : 0.8);
+        setZoomLevel(1.0); // Always default to 100%
     }, [isAppViewMode]);
 
     // Handle keyboard delete
@@ -249,7 +249,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 );
             case 'text':
                 return (
-                    <div className="p-4 text-sm" style={{ color: style.textColor || '#9ca3af' }}>
+                    <div className="p-4 text-sm text-foreground/80" style={{ color: style.textColor }}>
                         {data.text || 'Basic paragraph text block. Select to edit.'}
                     </div>
                 );
@@ -665,7 +665,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                         const y = rect ? Math.max(0, Math.floor((e.clientY - rect.top - 32) / rowHeight)) : 0;
 
                         const adjustedDims = { ...dims, w: dims.w * 2 };
-                        addAppCard(newCard, { x, y, ...adjustedDims });
+                        addAppCard(newCard, { i: newId, x, y, ...adjustedDims });
                     } catch (err) {
                         console.error('Fallback drop error:', err);
                     }
