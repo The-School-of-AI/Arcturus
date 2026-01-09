@@ -122,6 +122,7 @@ interface AnalysisHistoryItem {
 }
 
 import type { AppCard, SavedApp } from '../features/apps/types/app-types';
+export type { AppCard, SavedApp };
 
 interface LayoutItem {
     i: string;
@@ -159,6 +160,7 @@ interface AppsSlice {
     fetchApps: () => Promise<void>;
     createNewApp: () => void;
     saveApp: (name?: string) => Promise<void>;
+    renameApp: (id: string, newName: string) => Promise<void>;
     loadApp: (id: string, initialData?: SavedApp) => Promise<void>;
     revertAppChanges: () => void;
     deleteApp: (id: string) => Promise<void>;
@@ -717,6 +719,22 @@ export const useAppStore = create<AppState>()(
                     });
                 } catch (e) {
                     console.error("Failed to save app", e);
+                }
+            },
+            renameApp: async (id, newName) => {
+                const state = get();
+                const app = state.savedApps.find(a => a.id === id);
+                if (!app) return;
+
+                const updatedApp = { ...app, name: newName, lastModified: Date.now() };
+
+                try {
+                    await api.renameApp(id, newName);
+                    set((s) => ({
+                        savedApps: s.savedApps.map(a => a.id === id ? updatedApp : a)
+                    }));
+                } catch (e) {
+                    console.error("Failed to rename app", e);
                 }
             },
 

@@ -86,6 +86,10 @@ export const api = {
         await axios.post(`${API_BASE}/apps/save`, app);
     },
 
+    renameApp: async (appId: string, name: string): Promise<void> => {
+        await axios.post(`${API_BASE}/apps/${appId}/rename`, { name });
+    },
+
     deleteApp: async (appId: string): Promise<void> => {
         await axios.delete(`${API_BASE}/apps/${appId}`);
     },

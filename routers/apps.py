@@ -35,6 +35,10 @@ class SaveAppRequest(BaseModel):
     lastHydrated: Optional[int] = None  # Timestamp of last AI data refresh
 
 
+class RenameAppRequest(BaseModel):
+    name: str
+
+
 class GenerateAppRequest(BaseModel):
     name: str
     prompt: str
@@ -114,6 +118,28 @@ async def save_app_endpoint(request: SaveAppRequest):
         ui_file.write_text(json.dumps(data, indent=2))
         return {"status": "success", "id": request.id}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{app_id}/rename")
+async def rename_app_endpoint(app_id: str, request: RenameAppRequest):
+    try:
+        app_folder = PROJECT_ROOT / "apps" / app_id
+        if not app_folder.exists():
+            raise HTTPException(status_code=404, detail="App not found")
+        
+        ui_file = app_folder / "ui.json"
+        if not ui_file.exists():
+            raise HTTPException(status_code=404, detail="UI configuration not found")
+            
+        data = json.loads(ui_file.read_text())
+        data["name"] = request.name
+        data["lastModified"] = int(time.time() * 1000)
+        
+        ui_file.write_text(json.dumps(data, indent=2))
+        return {"status": "success", "id": app_id, "name": request.name}
+    except Exception as e:
+        if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
 
 

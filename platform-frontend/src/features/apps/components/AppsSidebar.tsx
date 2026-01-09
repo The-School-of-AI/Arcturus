@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
+import type { SavedApp } from '@/store';
 import { LayoutGrid, Save, Search, Trash2, TrendingUp, BarChart3, PieChart, CandlestickChart, Table2, User, Gauge, Medal, LineChart, FileText, Image, Minus, Hash, Calendar, ToggleLeft, Sliders, CheckSquare, Rss, Terminal, Braces, Code2, MessageSquare, Play, Type, AlignLeft, Plus, Palette, Star, Clock, RefreshCw, ArrowRight, Eye, Edit, Upload, Share2, FormInput, Bot, ListTodo, Package, FolderKanban } from 'lucide-react';
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
@@ -1239,9 +1240,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: string, label
 };
 
 const SavedAppsList = () => {
-    const { savedApps, loadApp, deleteApp, editingAppId, fetchApps } = useAppStore();
+    const { savedApps, loadApp, deleteApp, editingAppId, fetchApps, renameApp } = useAppStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'time'>('time');
+    const [editingNameId, setEditingNameId] = useState<string | null>(null);
+    const [tempName, setTempName] = useState('');
 
     // Auto-refresh apps every 5 seconds (Pseudo Hot-Loading)
     useEffect(() => {
@@ -1249,6 +1252,19 @@ const SavedAppsList = () => {
         const interval = setInterval(() => fetchApps(), 5000);
         return () => clearInterval(interval);
     }, [fetchApps]);
+
+    const handleStartEdit = (e: React.MouseEvent, app: SavedApp) => {
+        e.stopPropagation();
+        setEditingNameId(app.id);
+        setTempName(app.name);
+    };
+
+    const handleSaveEdit = async (id: string) => {
+        if (tempName.trim() && tempName !== savedApps.find(a => a.id === id)?.name) {
+            await renameApp(id, tempName.trim());
+        }
+        setEditingNameId(null);
+    };
 
     const sortedApps = savedApps
         .filter(app => app.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1312,6 +1328,8 @@ const SavedAppsList = () => {
                     <div className="space-y-4">
                         {sortedApps.map(app => {
                             const isActive = app.id === editingAppId;
+                            const isEditing = editingNameId === app.id;
+
                             return (
                                 <div
                                     key={app.id}
@@ -1323,17 +1341,36 @@ const SavedAppsList = () => {
                                             ? "border-neon-yellow/40 hover:border-neon-yellow/60"
                                             : "border-border/50 hover:border-primary/50"
                                     )}
-                                    onClick={() => loadApp(app.id)}
+                                    onClick={() => !isEditing && loadApp(app.id)}
                                 >
                                     <div className="flex justify-between items-start gap-0">
                                         <div className="flex-1 min-w-0">
-                                            <p className={cn(
-                                                "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
-                                                "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
-                                                isActive ? "text-neon-yellow" : "text-foreground"
-                                            )}>
-                                                {app.name}
-                                            </p>
+                                            {isEditing ? (
+                                                <input
+                                                    autoFocus
+                                                    value={tempName}
+                                                    onChange={(e) => setTempName(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleSaveEdit(app.id);
+                                                        if (e.key === 'Escape') setEditingNameId(null);
+                                                    }}
+                                                    onBlur={() => handleSaveEdit(app.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-full bg-muted border border-neon-yellow/50 rounded px-2 py-1 text-[13px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
+                                                />
+                                            ) : (
+                                                <p
+                                                    onClick={(e) => handleStartEdit(e, app)}
+                                                    className={cn(
+                                                        "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
+                                                        "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
+                                                        isActive ? "text-neon-yellow" : "text-foreground",
+                                                        "hover:text-neon-yellow"
+                                                    )}
+                                                >
+                                                    {app.name}
+                                                </p>
+                                            )}
                                         </div>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }}
