@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { AutoHeightWrapper } from './AutoHeightWrapper';
 
 export interface BaseCardProps {
     title?: string;
@@ -8,12 +9,32 @@ export interface BaseCardProps {
     headerAction?: React.ReactNode;
     style?: React.CSSProperties;
     textColor?: string;
+    cardId?: string;
+    autoFit?: boolean;
 }
 
-export const BaseCard: React.FC<BaseCardProps> = ({ title, className, children, headerAction, style, textColor }) => {
+export const BaseCard: React.FC<BaseCardProps> = ({
+    title,
+    className,
+    children,
+    headerAction,
+    style,
+    textColor,
+    cardId,
+    autoFit = true
+}) => {
+    // When autoFit is true and we have a cardId, use AutoHeightWrapper
+    // Otherwise, just render the content with scroll
+
+    const contentArea = (
+        <div className="flex-1 p-4 relative min-h-0 overflow-auto">
+            {children}
+        </div>
+    );
+
     return (
         <div
-            className={cn("w-full h-full flex flex-col bg-transparent", className)}
+            className={cn("w-full h-full flex flex-col bg-transparent overflow-hidden", className)}
             style={style}
         >
             {title && (
@@ -22,9 +43,13 @@ export const BaseCard: React.FC<BaseCardProps> = ({ title, className, children, 
                     {headerAction && <div>{headerAction}</div>}
                 </div>
             )}
-            <div className="flex-1 overflow-auto p-4 relative min-h-0">
-                {children}
-            </div>
+            {cardId && autoFit ? (
+                <AutoHeightWrapper cardId={cardId} enabled={autoFit}>
+                    {contentArea}
+                </AutoHeightWrapper>
+            ) : (
+                contentArea
+            )}
         </div>
     );
 };

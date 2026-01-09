@@ -1936,6 +1936,16 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Auto-Fit Height Toggle */}
+                                <ToggleRow
+                                    label="Auto-Fit Height"
+                                    enabled={selectedCard.config?.autoFit !== false}
+                                    onChange={(v) => updateAppCardConfig(selectedCard.id, { autoFit: v })}
+                                />
+                                <div className="text-[9px] text-muted-foreground/60 -mt-1">
+                                    Automatically expand height to fit content. Disable for scrollable cards.
+                                </div>
                             </div>
                         </CollapsibleSection>
 

@@ -23,7 +23,7 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
         <div className={cn("h-full flex flex-col bg-card text-foreground", className)}>
 
             {/* Tabs */}
-            <div className="flex items-center border-b border-border/50 bg-muted/20">
+            <div className="flex items-center border-b border-border/50 bg-muted/20 pt-1">
                 <button
                     onClick={() => setActiveTab('apps')}
                     className={cn(

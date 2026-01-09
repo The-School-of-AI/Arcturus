@@ -138,6 +138,7 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
         isAppViewMode,
         setIsAppViewMode,
         updateAppCardData,
+        updateAppCardConfig,
         hydrateApp,
         generateApp
     } = useAppStore();
@@ -232,7 +233,9 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             data,
             style: { ...style, accentColor: style.accentColor || '#F5C542' },
             onUpdate,
-            isInteractive: isAppViewMode
+            isInteractive: isAppViewMode,
+            cardId: id,
+            autoFit: config.autoFit !== false // Default to true unless explicitly disabled
         };
 
         // Match with sidebar types
@@ -704,6 +707,18 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                             isDraggable={!isAppViewMode}
                             isResizable={!isAppViewMode}
                             resizeHandles={['se', 's', 'e']}
+                            onResizeStop={(_layout: any, _oldItem: any, newItem: any) => {
+                                // When user manually resizes, disable autoFit for that card
+                                const cardId = newItem.i;
+                                const card = appCards.find(c => c.id === cardId);
+                                if (card) {
+                                    // Only disable if autoFit was previously enabled (or default true)
+                                    if (card.config?.autoFit !== false) {
+                                        console.log(`Manual resize detected for ${cardId}, disabling autoFit`);
+                                        updateAppCardConfig(cardId, { autoFit: false });
+                                    }
+                                }
+                            }}
                         >
                             {appCards.map(card => {
                                 const isSelected = selectedAppCardId === card.id;
