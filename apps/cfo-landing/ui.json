@@ -24,9 +24,9 @@
         "showSparkline": true
       },
       "data": {
-        "value": "\u20b9908.70",
-        "change": 2.08,
-        "trend": "up"
+        "value": "\u20b9882.80",
+        "change": -0.07,
+        "trend": "down"
       },
       "style": {}
     },
@@ -36,9 +36,9 @@
       "label": "Market Cap",
       "config": {},
       "data": {
-        "value": "\u20b970,642.71 Cr",
-        "change": 1.8,
-        "trend": "up"
+        "value": "\u20b968,800 Cr",
+        "change": -0.2,
+        "trend": "down"
       },
       "style": {}
     },
@@ -48,9 +48,9 @@
       "label": "P/E Ratio",
       "config": {},
       "data": {
-        "value": "-91.34x",
-        "change": 5.22,
-        "trend": "up"
+        "value": "-92.14x",
+        "change": 0.8,
+        "trend": "down"
       },
       "style": {}
     },
@@ -60,9 +60,9 @@
       "label": "Book Value",
       "config": {},
       "data": {
-        "value": "\u20b9835.07",
-        "change": 0.25,
-        "trend": "up"
+        "value": "\u20b9833",
+        "change": -0.24,
+        "trend": "down"
       },
       "style": {}
     },
@@ -686,6 +686,6 @@
       "static": false
     }
   ],
-  "lastModified": 1767347286599,
-  "lastHydrated": null
+  "lastModified": 1768012855973,
+  "lastHydrated": 1768012855973
 }

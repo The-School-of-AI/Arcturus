@@ -1,0 +1,13 @@
+{
+  "current_date": "2026-01-10",
+  "kolkata_aqi_data_T002": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[error] [Errno 35] write could not complete without blocking",
+        "annotations": null,
+        "_meta": null
+      }
+    ]
+  }
+}

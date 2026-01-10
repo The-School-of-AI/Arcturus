@@ -1,6 +1,7 @@
 {
+  "id": "app-1767946597370",
   "name": "Dhurandhar Movie Revenue Dashboard",
-  "description": "Generated from report",
+  "description": "",
   "cards": [
     {
       "id": "header",
@@ -33,8 +34,8 @@
       "type": "metric",
       "label": "Worldwide Gross Revenue",
       "data": {
-        "value": "Rs 1,227 crore",
-        "change": 0,
+        "value": "Rs 1,238.15 crore",
+        "change": 1.31,
         "trend": "up"
       },
       "style": {}
@@ -44,9 +45,9 @@
       "type": "metric",
       "label": "India Net Collection",
       "data": {
-        "value": "Rs 831.40 crore",
-        "change": 0,
-        "trend": "up"
+        "value": "Rs 793.75 crore",
+        "change": -4.53,
+        "trend": "down"
       },
       "style": {}
     },
@@ -67,15 +68,15 @@
         "peers": [
           {
             "ticker": "Pushpa 2: The Rule",
-            "metric": "Rs 830 crore net"
+            "metric": "Rs 1,760 crore gross"
           },
           {
             "ticker": "Jawan",
-            "metric": "Rs 643 crore net"
+            "metric": "Rs 1,148.32 crore gross"
           },
           {
             "ticker": "Stree 2",
-            "metric": "Rs 627 crore net"
+            "metric": "Rs 633.25 crore gross"
           }
         ]
       },
@@ -97,52 +98,65 @@
       "x": 0,
       "y": 0,
       "w": 24,
-      "h": 2
+      "h": 2,
+      "moved": false,
+      "static": false
     },
     {
       "i": "summary",
       "x": 0,
       "y": 2,
       "w": 24,
-      "h": 5
+      "h": 5,
+      "moved": false,
+      "static": false
     },
     {
       "i": "worldwide_gross",
       "x": 0,
       "y": 7,
       "w": 12,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "india_net",
       "x": 12,
       "y": 7,
       "w": 12,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "regional_performance",
       "x": 0,
       "y": 10,
       "w": 24,
-      "h": 6
+      "h": 4,
+      "moved": false,
+      "static": false
     },
     {
       "i": "comparative_analysis",
       "x": 0,
-      "y": 16,
+      "y": 14,
       "w": 24,
-      "h": 6
+      "h": 4,
+      "moved": false,
+      "static": false
     },
     {
       "i": "future_outlook",
       "x": 0,
-      "y": 22,
+      "y": 18,
       "w": 24,
-      "h": 6
+      "h": 4,
+      "moved": false,
+      "static": false
     }
   ],
-  "id": "app-1767946597370",
-  "lastModified": 1767946597370,
-  "lastHydrated": 1767946597370
+  "lastModified": 1768024274710,
+  "lastHydrated": 1768024274710
 }

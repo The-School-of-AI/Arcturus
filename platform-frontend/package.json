@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently \"npm run dev\" \"cd .. && uv run api.py\" --names \"FRONT,BACK\" --prefix-colors \"cyan,magenta\"",
+    "dev:all": "concurrently \"vite --host\" \"cd .. && uv run api.py\" --names \"FRONT,BACK\" --prefix-colors \"cyan,magenta\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -166,7 +166,8 @@
     "created_at": "2026-01-02T15:30:58.862047",
     "updated_at": "2026-01-02T16:36:12.312430",
     "source": "run_1767347752, run_1767350329",
-    "faiss_id": 72
+    "faiss_id": 72,
+    "source_exists": true
   },
   {
     "id": "4f794880-48da-47ee-9dfe-5a9c1c8f6431",
@@ -175,7 +176,8 @@
     "created_at": "2026-01-02T15:31:03.033217",
     "updated_at": "2026-01-02T15:31:03.033223",
     "source": "run_1767346377",
-    "faiss_id": 73
+    "faiss_id": 73,
+    "source_exists": true
   },
   {
     "id": "57c85951-1e53-4348-91d5-c96b860672cc",
@@ -184,7 +186,8 @@
     "created_at": "2026-01-02T15:31:11.537185",
     "updated_at": "2026-01-02T15:31:11.537195",
     "source": "run_1767000223",
-    "faiss_id": 74
+    "faiss_id": 74,
+    "source_exists": true
   },
   {
     "id": "d5302cb3-1b0c-47ea-9a33-dbe7d6683ba0",
@@ -193,7 +196,8 @@
     "created_at": "2026-01-02T15:31:13.853175",
     "updated_at": "2026-01-02T15:31:13.853182",
     "source": "run_1766994371",
-    "faiss_id": 75
+    "faiss_id": 75,
+    "source_exists": true
   },
   {
     "id": "17fae530-46fa-49d7-887d-4301c80d44b8",
@@ -202,7 +206,8 @@
     "created_at": "2026-01-02T15:31:25.472927",
     "updated_at": "2026-01-02T15:31:25.472933",
     "source": "run_1766988669",
-    "faiss_id": 76
+    "faiss_id": 76,
+    "source_exists": true
   },
   {
     "id": "2859d5d3-81bc-47f3-8655-c94693879475",
@@ -211,7 +216,8 @@
     "created_at": "2026-01-02T15:31:29.159614",
     "updated_at": "2026-01-02T15:31:29.159621",
     "source": "run_1766630156",
-    "faiss_id": 77
+    "faiss_id": 77,
+    "source_exists": true
   },
   {
     "id": "29630f98-39ba-4d05-b95f-428a0fdc3e96",
@@ -220,7 +226,8 @@
     "created_at": "2026-01-02T15:31:34.571157",
     "updated_at": "2026-01-02T15:31:34.571164",
     "source": "run_1766628890",
-    "faiss_id": 78
+    "faiss_id": 78,
+    "source_exists": true
   },
   {
     "id": "21de75cd-f2b1-4fe4-a6ef-1b4b9c7d2b86",
@@ -229,7 +236,8 @@
     "created_at": "2026-01-02T15:31:43.396385",
     "updated_at": "2026-01-02T15:31:43.396393",
     "source": "run_1766628651",
-    "faiss_id": 79
+    "faiss_id": 79,
+    "source_exists": true
   },
   {
     "id": "1b2ef9f2-9277-4e47-a6d8-a480e3f180ff",
@@ -238,7 +246,8 @@
     "created_at": "2026-01-02T15:31:49.268591",
     "updated_at": "2026-01-02T15:31:49.268598",
     "source": "run_1766628070",
-    "faiss_id": 80
+    "faiss_id": 80,
+    "source_exists": true
   },
   {
     "id": "5213c5a1-f564-41b4-afe3-6bc232a3dc54",
@@ -247,7 +256,8 @@
     "created_at": "2026-01-02T15:32:11.036572",
     "updated_at": "2026-01-02T15:32:11.036579",
     "source": "run_1766469751",
-    "faiss_id": 81
+    "faiss_id": 81,
+    "source_exists": true
   },
   {
     "id": "9fd06795-f1fa-429d-a03a-a3b67a8f362c",
@@ -256,7 +266,8 @@
     "created_at": "2026-01-02T15:32:15.613058",
     "updated_at": "2026-01-02T15:32:15.613064",
     "source": "run_1766469446",
-    "faiss_id": 82
+    "faiss_id": 82,
+    "source_exists": true
   },
   {
     "id": "3164fe46-d652-4fb4-8517-5eeb9df10cd5",
@@ -265,7 +276,8 @@
     "created_at": "2026-01-02T15:32:22.015125",
     "updated_at": "2026-01-02T15:32:22.015132",
     "source": "run_1766468612",
-    "faiss_id": 83
+    "faiss_id": 83,
+    "source_exists": true
   },
   {
     "id": "e7c2c131-8d5c-4747-9ff1-f1ed963cebf6",
@@ -274,7 +286,8 @@
     "created_at": "2026-01-02T15:32:29.018672",
     "updated_at": "2026-01-02T15:32:29.018678",
     "source": "run_1766402327",
-    "faiss_id": 84
+    "faiss_id": 84,
+    "source_exists": true
   },
   {
     "id": "75eea711-eac7-4d62-9ee0-250e6991e1bb",
@@ -283,6 +296,35 @@
     "created_at": "2026-01-09T16:40:44.987822",
     "updated_at": "2026-01-09T16:40:44.987829",
     "source": "run_1767956953",
-    "faiss_id": 85
+    "faiss_id": 85,
+    "source_exists": true
+  },
+  {
+    "id": "2222fd5f-a389-44b4-b5bf-1f42245696ac",
+    "text": "The recent \"F1 Movie\" from Apple grossed over $600 million at the worldwide box office, making it Apple\u2019s most successful theatrical release to date. The final gross exceeded $600 million, solidifying its position as a blockbuster. Domestic earnings reached approximately $165 million, while international earnings totaled $344 million. IMAX screenings contributed substantially to the film\u2019s overall revenue, generating $60 million from IMAX theaters, representing over 20% of its total gross. The film\u2019s soundtrack, \"F1 The Album,\" has also achieved considerable success, surpassing 650,000 albums sold and one billion global streams. \"F1: The Movie\" has outperformed other Apple Original Films in terms of box office revenue, surpassing \"Napoleon\" ($221 million), \"Killers of the Flower Moon\" ($158 million), \"Argylle\" ($96 million), and \"Fly Me to the Moon\" ($42 million).",
+    "category": "derived",
+    "created_at": "2026-01-10T11:09:08.281658",
+    "updated_at": "2026-01-10T11:09:08.281667",
+    "source": "run_1768012645",
+    "faiss_id": 86,
+    "source_exists": true
+  },
+  {
+    "id": "49331567-1ec1-453e-ab9c-cfca27390976",
+    "text": "The assistant determined the user's current city to be Kolkata with high confidence (91.5%) based on previous interactions and a location determination process that identified a discrepancy between the user's provided address and IP address location, favoring the IP address location as [city, state]. The system is now attempting to retrieve the current AQI for Kolkata.",
+    "category": "derived",
+    "created_at": "2026-01-10T11:35:38.496991",
+    "updated_at": "2026-01-10T11:35:38.496999",
+    "source": "run_1768025050",
+    "faiss_id": 87
+  },
+  {
+    "id": "5d2fb3ad-6452-41ed-a321-ae0e3a127743",
+    "text": "User requested AQI information for their city. The initial query resulted in AQI data unavailability.",
+    "category": "derived",
+    "created_at": "2026-01-10T12:38:59.526315",
+    "updated_at": "2026-01-10T12:38:59.526324",
+    "source": "run_1768025237",
+    "faiss_id": 88
   }
 ]

@@ -25,7 +25,7 @@
       },
       "style": {},
       "config": {
-        "autoFit": false
+        "autoFit": true
       }
     },
     {
@@ -134,7 +134,7 @@
       "x": 17,
       "y": 0,
       "w": 7,
-      "h": 4,
+      "h": 5,
       "moved": false,
       "static": false
     },
@@ -179,14 +179,14 @@
       "x": 0,
       "y": 6,
       "w": 24,
-      "h": 6,
+      "h": 3,
       "moved": false,
       "static": false
     },
     {
       "i": "growth_drivers",
       "x": 0,
-      "y": 12,
+      "y": 9,
       "w": 12,
       "h": 7,
       "moved": false,
@@ -195,7 +195,7 @@
     {
       "i": "demand_inhibitors",
       "x": 12,
-      "y": 12,
+      "y": 9,
       "w": 12,
       "h": 6,
       "moved": false,
@@ -204,13 +204,13 @@
     {
       "i": "competitive_landscape",
       "x": 0,
-      "y": 19,
+      "y": 16,
       "w": 24,
-      "h": 6,
+      "h": 4,
       "moved": false,
       "static": false
     }
   ],
-  "lastModified": 1767944174904,
+  "lastModified": 1768024507496,
   "lastHydrated": null
 }
