@@ -216,7 +216,12 @@ class QueryAnalysis:
     proper_nouns: list = field(default_factory=list)
 
 def analyze_query(query: str) -> QueryAnalysis:
-    """Analyze query to determine intent and extract entities."""
+    """Analyze query to determine intent and extract entities.
+    
+    Case-insensitive proper noun detection: We look for multi-word sequences
+    that appear to be names (e.g., "anmol singh", "Anmol Singh") by checking
+    if they look like proper nouns after title-casing.
+    """
     analysis = QueryAnalysis(original_query=query, intent="SEMANTIC")
     
     # 1. Extract quoted phrases
@@ -229,24 +234,40 @@ def analyze_query(query: str) -> QueryAnalysis:
     ids_emails.extend(re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', query))
     ids_emails.extend(re.findall(r'\b[A-Z]{2,4}[-]?\d{4,}\b', query))
     
-    # 3. Extract proper nouns (capitalized multi-word sequences)
+    # 3. Extract proper nouns - CASE INSENSITIVE detection
+    # Look for multi-word sequences that appear to be names
     clean_query = re.sub(quoted_pattern, '', query)
     words = clean_query.split()
-    skip_words = {'The', 'A', 'An', 'This', 'Find', 'Search', 'Show', 'Get', 'About', 'For', 'Documents'}
-    current_noun = []
+    skip_words = {'the', 'a', 'an', 'this', 'find', 'search', 'show', 'get', 'about', 'for', 'documents', 
+                  'what', 'who', 'where', 'when', 'how', 'is', 'are', 'was', 'were', 'in', 'on', 'at',
+                  'to', 'from', 'with', 'by', 'of', 'and', 'or', 'but', 'if', 'then', 'else'}
+    
     proper_nouns = []
+    current_noun = []
     
     for word in words:
         clean_word = re.sub(r'[^\w]', '', word)
-        if clean_word and clean_word[0].isupper() and len(clean_word) > 1 and clean_word not in skip_words:
-            current_noun.append(clean_word)
-        else:
+        if not clean_word or len(clean_word) < 2:
             if current_noun:
                 proper_nouns.append(' '.join(current_noun))
                 current_noun = []
+            continue
+        
+        # Case-insensitive check: skip common words
+        if clean_word.lower() in skip_words:
+            if current_noun:
+                proper_nouns.append(' '.join(current_noun))
+                current_noun = []
+            continue
+        
+        # Any consecutive non-skip word is a potential name component
+        # This covers both "Anmol Singh" (capitalized) and "anmol singh" (lowercase)
+        current_noun.append(clean_word)
+    
     if current_noun:
         proper_nouns.append(' '.join(current_noun))
     
+    # Filter: keep multi-word names OR single words with 3+ chars that were capitalized
     analysis.proper_nouns = [pn for pn in proper_nouns if len(pn.split()) >= 2 or len(pn) > 2]
     
     # 4. Determine intent
@@ -255,10 +276,12 @@ def analyze_query(query: str) -> QueryAnalysis:
     
     if analysis.quoted_phrases or ids_emails:
         analysis.intent = "LEXICAL_REQUIRED"
+    elif analysis.proper_nouns:
+        # Proper nouns trigger LEXICAL_PREFERRED - entity gate filters but allows fuzzy matching
+        # This ensures "anmol singh" only returns docs containing those terms
+        analysis.intent = "LEXICAL_PREFERRED"
     else:
-        # Treat proper nouns as signals for BM25 boosting (SEMANTIC), not hard filters
-        # This fixes the issue where capitalized queries ("Ranveer") triggered strict gating
-        # while lowercase queries ("ranveer") did not.
+        # Pure semantic search - no entity filtering
         analysis.intent = "SEMANTIC"
     
     return analysis

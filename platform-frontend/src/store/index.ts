@@ -532,7 +532,16 @@ export const useAppStore = create<AppState>()(
                         activeDocumentId: doc.id
                     }));
                 } else {
-                    set({ activeDocumentId: doc.id, viewMode: 'rag' });
+                    // Document already open - update its targetPage and searchText for navigation
+                    set(state => ({
+                        openDocuments: state.openDocuments.map(d =>
+                            d.id === doc.id
+                                ? { ...d, targetPage: doc.targetPage, searchText: doc.searchText }
+                                : d
+                        ),
+                        activeDocumentId: doc.id,
+                        viewMode: 'rag'
+                    }));
                 }
             },
             closeDocument: (docId) => {

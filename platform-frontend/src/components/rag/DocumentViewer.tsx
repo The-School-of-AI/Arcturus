@@ -174,9 +174,22 @@ export const DocumentViewer: React.FC = () => {
         jumpToNextMatchRef.current = jumpToNextMatch;
     });
 
+    // Track what we've already navigated to (prevents infinite loops)
+    const lastNavigatedRef = useRef<{ docId: string; page: number | null; text: string | null } | null>(null);
+
     // Auto-search for chunk text when PDF loads from SEEK result
     useEffect(() => {
         if (pdfUrl && activeDoc) {
+            // Check if we already navigated to this exact target
+            const current = lastNavigatedRef.current;
+            if (current &&
+                current.docId === activeDoc.id &&
+                current.page === (activeDoc.targetPage || null) &&
+                current.text === (activeDoc.searchText || null)) {
+                // Already navigated, skip
+                return;
+            }
+
             // Determine if we are switching docs or just nav within same doc
             const isSameDoc = prevDocIdRef.current === activeDoc.id;
             prevDocIdRef.current = activeDoc.id;
@@ -185,6 +198,13 @@ export const DocumentViewer: React.FC = () => {
             const delay = isSameDoc ? 100 : 1200;
 
             const timer = setTimeout(() => {
+                // Mark as navigated BEFORE executing to prevent re-runs
+                lastNavigatedRef.current = {
+                    docId: activeDoc.id,
+                    page: activeDoc.targetPage || null,
+                    text: activeDoc.searchText || null
+                };
+
                 // 1. Jump to page if specified (guaranteed page number)
                 if (activeDoc.targetPage && activeDoc.targetPage > 0) {
                     console.log(`Jumping to page (delay ${delay}ms):`, activeDoc.targetPage);
