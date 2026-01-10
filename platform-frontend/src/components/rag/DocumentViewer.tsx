@@ -153,9 +153,12 @@ export const DocumentViewer: React.FC = () => {
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    // ✅ CORRECT: Call the plugin hooks at the top level
     const searchPluginInstance = searchPlugin();
     const { highlight, jumpToNextMatch } = searchPluginInstance;
+
     const defaultLayoutPluginInstance = defaultLayoutPlugin();
+
     const pageNavigationPluginInstance = pageNavigationPlugin();
     const { jumpToPage } = pageNavigationPluginInstance;
 
