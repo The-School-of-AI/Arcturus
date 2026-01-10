@@ -162,6 +162,10 @@ export const DocumentViewer: React.FC = () => {
     // Store functions in refs to avoid dependency issues
     const highlightRef = useRef(highlight);
     const jumpToNextMatchRef = useRef(jumpToNextMatch);
+
+    // Track previous document to determine jump speed
+    const prevDocIdRef = useRef<string | null>(null);
+
     useEffect(() => {
         highlightRef.current = highlight;
         jumpToNextMatchRef.current = jumpToNextMatch;
@@ -170,11 +174,17 @@ export const DocumentViewer: React.FC = () => {
     // Auto-search for chunk text when PDF loads from SEEK result
     useEffect(() => {
         if (pdfUrl && activeDoc) {
-            // Give the viewer a moment to initialize
+            // Determine if we are switching docs or just nav within same doc
+            const isSameDoc = prevDocIdRef.current === activeDoc.id;
+            prevDocIdRef.current = activeDoc.id;
+
+            // Fast jump for same doc, slow jump for new doc (waiting for worker)
+            const delay = isSameDoc ? 100 : 1200;
+
             const timer = setTimeout(() => {
                 // 1. Jump to page if specified (guaranteed page number)
                 if (activeDoc.targetPage && activeDoc.targetPage > 0) {
-                    console.log('Jumping to page:', activeDoc.targetPage);
+                    console.log(`Jumping to page (delay ${delay}ms):`, activeDoc.targetPage);
                     jumpToPage(activeDoc.targetPage - 1); // 0-indexed
                 }
 
@@ -187,22 +197,31 @@ export const DocumentViewer: React.FC = () => {
                         .replace(/\s+/g, ' ')                        // Collapse spaces
                         .trim();
 
-                    // Take a smaller identifying slice to avoid mismatches on long strings
                     const searchStr = cleaned.slice(0, 45);
 
                     if (searchStr.length > 5) {
-                        console.log('Auto-searching for:', searchStr);
-                        highlightRef.current(searchStr);
-                        // Jump to first match after a brief delay for search to complete
-                        setTimeout(() => {
-                            jumpToNextMatchRef.current();
-                        }, 500);
+                        try {
+                            // Escape regex characters to safely create a pattern
+                            const escapedStr = searchStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            console.log('Auto-searching for (Regex):', searchStr);
+
+                            // Use case-insensitive regex for robust matching
+                            highlightRef.current(new RegExp(escapedStr, 'gi'));
+
+                            // Jump to first match after a brief delay for search to complete
+                            setTimeout(() => {
+                                jumpToNextMatchRef.current();
+                            }, 500);
+                        } catch (e) {
+                            console.error("Auto-highlight failed", e);
+                        }
                     }
                 }
-            }, 1200); // 1.2s delay for PDF worker stability
+            }, delay);
+
             return () => clearTimeout(timer);
         }
-    }, [activeDoc?.id, activeDoc?.targetPage, activeDoc?.searchText, pdfUrl]);
+    }, [activeDoc?.id, activeDoc?.targetPage, activeDoc?.searchText, pdfUrl, jumpToPage]);
 
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => {
