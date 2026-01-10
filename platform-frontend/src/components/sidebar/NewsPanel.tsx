@@ -44,6 +44,46 @@ export const NewsPanel: React.FC = () => {
     const [newUrl, setNewUrl] = React.useState("");
     const [isSearching, setIsSearching] = React.useState(false);
     const [isAutoSearch, setIsAutoSearch] = React.useState(false);
+    const [addArticleUrl, setAddArticleUrl] = React.useState("");
+    const [isAddingArticle, setIsAddingArticle] = React.useState(false);
+
+    const { isAddSavedArticleOpen, setIsAddSavedArticleOpen } = useAppStore();
+
+    // Function to add article with title fetching
+    const handleAddArticle = async () => {
+        if (!addArticleUrl.trim()) return;
+
+        try {
+            const urlStr = addArticleUrl.trim().startsWith('http') ? addArticleUrl.trim() : `https://${addArticleUrl.trim()}`;
+            const url = new URL(urlStr);
+
+            setIsAddingArticle(true);
+
+            // Try to fetch the page title from the backend
+            let title = url.hostname.replace('www.', '');
+            try {
+                const res = await axios.get(`${API_BASE}/news/article`, {
+                    params: { url: url.href },
+                    timeout: 10000
+                });
+                if (res.data.status === 'success' && res.data.title) {
+                    title = res.data.title;
+                }
+            } catch (e) {
+                // If fetching fails, use hostname as fallback
+                console.warn('Could not fetch title, using domain name:', e);
+            }
+
+            saveArticle(title, url.href);
+            setAddArticleUrl("");
+            setIsAddSavedArticleOpen(false);
+        } catch (e) {
+            // Invalid URL
+            console.error('Invalid URL:', e);
+        } finally {
+            setIsAddingArticle(false);
+        }
+    };
 
     React.useEffect(() => {
         fetchNewsSources();
@@ -500,50 +540,95 @@ export const NewsPanel: React.FC = () => {
             {/* Saved Articles View */}
             {
                 viewMode === 'saved' && (
-                    <div className="flex-1 overflow-y-auto scrollbar-hide">
-                        {savedArticles.length === 0 ? (
-                            <div className="py-10 text-center text-muted-foreground text-sm">
-                                No saved articles
-                            </div>
-                        ) : (
-                            <div className="p-2 space-y-1">
-                                {savedArticles.map((item, index) => (
-                                    <div
-                                        key={item.id}
-                                        className="group p-3 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/50 transition-all cursor-pointer"
-                                    >
-                                        <div className="flex items-start gap-2">
-                                            <div
-                                                className="flex-1 min-w-0"
-                                                onClick={() => openNewsTab(item.url)}
-                                            >
-                                                <h4 className={cn(
-                                                    "text-xs font-medium line-clamp-2 leading-relaxed",
-                                                    activeNewsTab === item.url ? "text-cyan-400" : "text-foreground"
-                                                )}>
-                                                    {item.title}
-                                                </h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[10px] text-muted-foreground/60 font-mono">
-                                                        {new URL(item.url).hostname.replace('www.', '')}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteSavedArticle(item.id);
-                                                }}
-                                                className="p-1.5 hover:bg-red-500/10 rounded-md text-muted-foreground/40 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
+                    <>
+                        {/* Add Article Dialog - triggered from Header.tsx */}
+                        <Dialog open={isAddSavedArticleOpen} onOpenChange={setIsAddSavedArticleOpen}>
+                            <DialogContent className="bg-card border-border sm:max-w-md text-foreground">
+                                <DialogHeader>
+                                    <DialogTitle className="text-foreground text-lg">Add Article by URL</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-muted-foreground">Article URL</label>
+                                        <Input
+                                            placeholder="https://example.com/article"
+                                            value={addArticleUrl}
+                                            onChange={(e) => setAddArticleUrl(e.target.value)}
+                                            className="bg-muted border-input text-foreground"
+                                            onKeyDown={async (e) => {
+                                                if (e.key === 'Enter' && addArticleUrl.trim()) {
+                                                    e.preventDefault();
+                                                    await handleAddArticle();
+                                                }
+                                            }}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Page title will be fetched automatically. Saved locally in your browser.
+                                        </p>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsAddSavedArticleOpen(false)}>Cancel</Button>
+                                    <Button
+                                        onClick={handleAddArticle}
+                                        disabled={isAddingArticle}
+                                        className="bg-amber-500 hover:bg-amber-400 text-white font-semibold"
+                                    >
+                                        {isAddingArticle ? (
+                                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetching...</>
+                                        ) : (
+                                            'Add Article'
+                                        )}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        <div className="flex-1 overflow-y-auto scrollbar-hide">
+                            {savedArticles.length === 0 ? (
+                                <div className="py-10 text-center text-muted-foreground text-sm">
+                                    No saved articles
+                                </div>
+                            ) : (
+                                <div className="p-2 space-y-1">
+                                    {savedArticles.map((item, index) => (
+                                        <div
+                                            key={item.id}
+                                            className="group p-3 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/50 transition-all cursor-pointer"
+                                        >
+                                            <div className="flex items-start gap-2">
+                                                <div
+                                                    className="flex-1 min-w-0"
+                                                    onClick={() => openNewsTab(item.url)}
+                                                >
+                                                    <h4 className={cn(
+                                                        "text-xs font-medium line-clamp-2 leading-relaxed",
+                                                        activeNewsTab === item.url ? "text-cyan-400" : "text-foreground"
+                                                    )}>
+                                                        {item.title}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[10px] text-muted-foreground/60 font-mono">
+                                                            {new URL(item.url).hostname.replace('www.', '')}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deleteSavedArticle(item.id);
+                                                    }}
+                                                    className="p-1.5 hover:bg-red-500/10 rounded-md text-muted-foreground/40 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
                 )
             }
         </div >

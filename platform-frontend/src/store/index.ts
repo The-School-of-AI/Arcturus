@@ -138,6 +138,8 @@ interface RagViewerSlice {
     // --- News UI States ---
     isNewsAddOpen: boolean;
     setIsNewsAddOpen: (open: boolean) => void;
+    isAddSavedArticleOpen: boolean;
+    setIsAddSavedArticleOpen: (open: boolean) => void;
     newsViewMode: 'sources' | 'articles' | 'saved' | 'search';
     setNewsViewMode: (mode: 'sources' | 'articles' | 'saved' | 'search') => void;
     newsSearchQuery: string;
@@ -701,6 +703,8 @@ export const useAppStore = create<AppState>()(
             // --- News UI States ---
             isNewsAddOpen: false,
             setIsNewsAddOpen: (open: boolean) => set({ isNewsAddOpen: open }),
+            isAddSavedArticleOpen: false,
+            setIsAddSavedArticleOpen: (open: boolean) => set({ isAddSavedArticleOpen: open }),
             newsViewMode: 'sources',
             setNewsViewMode: (mode) => set({ newsViewMode: mode }),
             newsSearchQuery: '',

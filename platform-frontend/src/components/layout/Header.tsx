@@ -175,7 +175,13 @@ export const Header: React.FC = () => {
 
                         {sidebarTab === 'news' && (
                             <>
-                                <button onClick={() => setIsNewsAddOpen(true)} className="p-1.5 hover:bg-muted rounded-full hover:text-cyan-400 transition-all text-muted-foreground" title="Add Source">
+                                <button onClick={() => {
+                                    if (newsViewMode === 'saved') {
+                                        useAppStore.getState().setIsAddSavedArticleOpen(true);
+                                    } else {
+                                        setIsNewsAddOpen(true);
+                                    }
+                                }} className="p-1.5 hover:bg-muted rounded-full hover:text-cyan-400 transition-all text-muted-foreground" title={newsViewMode === 'saved' ? "Add Article" : "Add Source"}>
                                     <Plus className="w-4 h-4" />
                                 </button>
                                 <button onClick={() => fetchNewsSources()} className="p-1.5 hover:bg-muted rounded-full hover:text-cyan-400 transition-all text-muted-foreground" title="Refresh">

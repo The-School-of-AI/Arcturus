@@ -269,6 +269,14 @@ async def get_article_content(url: str):
                 response = requests.get(url, timeout=15)
                 doc = pymupdf.open(stream=response.content, filetype="pdf")
                 
+                # Extract title from PDF metadata
+                pdf_title = doc.metadata.get("title", "") if doc.metadata else ""
+                if not pdf_title:
+                    # Fallback: use first line of first page as title
+                    first_page_text = doc[0].get_text() if len(doc) > 0 else ""
+                    first_line = first_page_text.split('\n')[0].strip() if first_page_text else ""
+                    pdf_title = first_line[:100] if first_line else url.split("/")[-1]
+                
                 html_content = "<div style='padding: 20px; font-family: sans-serif;'>"
                 # Render only first 10 pages to prevent massive load times for large docs
                 for i, page in enumerate(doc):
@@ -280,7 +288,7 @@ async def get_article_content(url: str):
                     html_content += "<hr style='margin: 20px 0; border: 0; border-top: 1px solid #ccc;'/>"
                 
                 html_content += "</div>"
-                return {"status": "success", "html": html_content, "url": url}
+                return {"status": "success", "html": html_content, "url": url, "title": pdf_title}
             except Exception as e:
                 print(f"PDF processing error for {url}: {e}")
                 # Fallback to playwright if PDF processing fails (might still fail there)
@@ -302,6 +310,9 @@ async def get_article_content(url: str):
             # Wait a bit more for dynamic content
             await page.wait_for_timeout(1000)
             
+            # Get the page title
+            page_title = await page.title()
+            
             # Get the full rendered HTML
             html_content = await page.content()
             
@@ -313,7 +324,7 @@ async def get_article_content(url: str):
                 base_tag = f'<base href="{url}" target="_blank">'
                 html_content = html_content.replace("<head>", f"<head>{base_tag}", 1)
             
-            return {"status": "success", "html": html_content, "url": url}
+            return {"status": "success", "html": html_content, "url": url, "title": page_title}
             
     except Exception as e:
         print(f"Playwright rendering error for {url}: {e}")

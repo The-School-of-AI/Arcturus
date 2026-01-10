@@ -716,32 +716,10 @@ Keep your response concise (2-3 sentences max)."""
 
 
 
-def replace_images_with_captions(markdown: str) -> str:
-    def replace(match):
-        alt, src = match.group(1), match.group(2)
-        try:
-            caption = caption_image(src)
-            # Attempt to delete only if local and file exists
-            if not src.startswith("http"):
-                img_path = Path(__file__).parent / "documents" / src
-                if img_path.exists():
-                    img_path.unlink()
-                    mcp_log("INFO", f"Deleted image after captioning: {img_path}")
-            return f"**Image:** {caption}"
-        except Exception as e:
-            mcp_log("WARN", f"Image deletion failed: {e}")
-            return f"[Image could not be processed: {src}]"
-
-    return re.sub(r'!\[(.*?)\]\((.*?)\)', replace, markdown)
 
 
-# @mcp.tool()
-# def convert_webpage_url_into_markdown(input: UrlInput) -> MarkdownOutput:
-#     """Return clean webpage content without Ads, and clutter. """
 
-#     downloaded = trafilatura.fetch_url(input.url)
-#     if not downloaded:
-#         return MarkdownOut@mcp.tool()
+
 # Global lock for PDF processing (PyMuPDF is not thread-safe in some contexts)
 pdf_lock = threading.Lock()
 
@@ -795,10 +773,7 @@ def convert_pdf_to_markdown(string: str) -> MarkdownOutput:
     return MarkdownOutput(markdown=markdown)
 
 
-@mcp.tool()
-def caption_images(img_url_or_path: str) -> str:
-    caption = caption_image(img_url_or_path)
-    return "The contents of this image are: " + caption
+
 
 
 def get_numbered_sentences(text: str, max_sentences: int = 15) -> str:
