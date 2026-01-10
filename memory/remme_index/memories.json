@@ -326,5 +326,14 @@
     "updated_at": "2026-01-10T12:38:59.526324",
     "source": "run_1768025237",
     "faiss_id": 88
+  },
+  {
+    "id": "53f44872-e325-4e4d-a8b0-55751be025f3",
+    "text": "NVIDIA launched several key products at CES 2026: Alpamayo (a family of open-source reasoning models for autonomous vehicles), the Vera Rubin Supercomputer (a next-generation successor to the Blackwell architecture), DLSS 4.5 (enhanced deep learning super sampling technology), and G-Sync Pulsar (an improvement to NVIDIA\u2019s flicker reduction technology). Alpamayo will be included in the 2025 Mercedes Benz CLA. The Vera Rubin Supercomputer has 88 custom Olympus cores and 1.5TB of system memory. DLSS 4.5 is trained on a second-generation transformer model and supports 6x multi-frame and dynamic generation. G-Sync Pulsar pulses a display\u2019s backlight to deliver perceived motion clarity relative to 1,000Hz and automatically adjusts brightness and color temperature.",
+    "category": "derived",
+    "created_at": "2026-01-10T16:39:06.651233",
+    "updated_at": "2026-01-10T16:39:06.651240",
+    "source": "run_1768043248",
+    "faiss_id": 89
   }
 ]

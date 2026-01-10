@@ -20,13 +20,31 @@ async def get_rag_documents():
     """List documents in a recursive tree structure with RAG status"""
     try:
         doc_path = PROJECT_ROOT / "data"
-        cache_file = PROJECT_ROOT / "mcp_servers" / "faiss_index" / "doc_index_cache.json"
+        index_dir = PROJECT_ROOT / "mcp_servers" / "faiss_index"
         
-        # Load cache for status
-        cache_meta = {}
-        if cache_file.exists():
+        # Try new ledger format first, fall back to legacy cache
+        ledger_file = index_dir / "ledger.json"
+        cache_file = index_dir / "doc_index_cache.json"
+        
+        file_entries = {}  # {path: {hash, status, indexed_at, ...}}
+        
+        if ledger_file.exists():
             try:
-                cache_meta = json.loads(cache_file.read_text())
+                ledger_data = json.loads(ledger_file.read_text())
+                file_entries = ledger_data.get("files", {})
+            except:
+                pass
+        elif cache_file.exists():
+            # Legacy format: {"path": "hash"}
+            try:
+                legacy_cache = json.loads(cache_file.read_text())
+                for path, file_hash in legacy_cache.items():
+                    file_entries[path] = {
+                        "hash": file_hash,
+                        "status": "complete",
+                        "indexed_at": None,
+                        "chunk_count": 0
+                    }
             except:
                 pass
 
@@ -48,8 +66,12 @@ async def get_rag_documents():
                     item["children"] = build_tree(p)
                 else:
                     item["size"] = p.stat().st_size
-                    item["indexed"] = rel_p in cache_meta
-                    item["hash"] = cache_meta.get(rel_p, "Not Indexed")
+                    entry = file_entries.get(rel_p, {})
+                    item["indexed"] = entry.get("status") == "complete" if entry else False
+                    item["status"] = entry.get("status", "unindexed")  # New field
+                    item["hash"] = entry.get("hash", "Not Indexed")
+                    item["chunk_count"] = entry.get("chunk_count", 0)
+                    item["error"] = entry.get("error")
                 
                 items.append(item)
             return items

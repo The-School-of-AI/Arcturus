@@ -207,7 +207,7 @@ export const DocumentViewer: React.FC = () => {
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => {
         const t = type.toLowerCase();
-        return ['pdf', 'docx', 'doc', 'txt', 'md', 'json', 'ts', 'tsx', 'js', 'jsx', 'py', 'c', 'cpp', 'h', 'hpp', 'css', 'html'].includes(t);
+        return ['pdf', 'docx', 'doc', 'txt', 'md', 'json', 'ts', 'tsx', 'js', 'jsx', 'py', 'c', 'cpp', 'h', 'hpp', 'css', 'html', 'png', 'jpg', 'jpeg', 'gif', 'webp'].includes(t);
     };
     const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh'].includes(type.toLowerCase());
 

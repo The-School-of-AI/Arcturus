@@ -38,4 +38,6 @@ dependencies = [
     "feedparser>=6.0.12",
     "beautifulsoup4>=4.13.4",
     "aiohttp>=3.11.18",
+    "watchdog>=3.0.0",
+    "rank_bm25>=0.2.2",
 ]

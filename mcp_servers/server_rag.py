@@ -37,6 +37,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional
 
+# Import the new index scheduler
+from index_scheduler import init_scheduler, get_scheduler, shutdown_scheduler
+
 # BM25 for hybrid search
 try:
     from rank_bm25 import BM25Okapi
@@ -594,7 +597,15 @@ def caption_image(img_url_or_path: str) -> str:
                 mcp_log("ERROR", f"Failed to fetch image URL: {resp.status_code}")
                 return f"[Image download failed: {img_url_or_path}]"
         else:
-            full_path = Path(__file__).parent / "documents" / img_url_or_path
+            # Flexible path resolution
+            if Path(img_url_or_path).is_absolute():
+                full_path = Path(img_url_or_path)
+            else:
+                # Try relative to BASE_DATA_DIR first, then relative to current mcp_servers/
+                full_path = BASE_DATA_DIR / img_url_or_path
+                if not full_path.exists():
+                    full_path = Path(__file__).parent / img_url_or_path
+            
             full_path = full_path.resolve()
             if full_path.exists():
                 image_data = full_path.read_bytes()
@@ -940,6 +951,14 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
         elif ext == ".py":
             text = file.read_text()
             markdown = f"```python\n{text}\n```"
+        elif ext in [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg"]:
+            # Dedicated image processing branch
+            mcp_log("IMG", f"Captioning standalone image: {rel_path}")
+            caption = caption_image(str(file))
+            if not caption.startswith("["):
+                markdown = f"# Image Analysis: {file.name}\n\n**Description:** {caption}\n\n![{file.name}]({rel_path})"
+            else:
+                return {"status": "ERROR", "rel_path": rel_path, "message": caption}
         elif ext == ".json":
             try:
                 data = json.loads(file.read_text())
@@ -1131,11 +1150,27 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
     INDEX_FILE = INDEX_CACHE / "index.bin"
     METADATA_FILE = INDEX_CACHE / "metadata.json"
     CACHE_FILE = INDEX_CACHE / "doc_index_cache.json"
+    LEDGER_FILE = INDEX_CACHE / "ledger.json"
 
     CACHE_META = json.loads(CACHE_FILE.read_text()) if CACHE_FILE.exists() else {}
     metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
+    
+    # Load or create ledger
+    if LEDGER_FILE.exists():
+        ledger_data = json.loads(LEDGER_FILE.read_text())
+    else:
+        ledger_data = {"version": 2, "last_reconcile": None, "files": {}}
+    
+    # IMPORTANT: If CACHE_META is empty but ledger has entries, populate from ledger
+    # This ensures we don't re-index everything after migration
+    if not CACHE_META and ledger_data.get("files"):
+        mcp_log("INFO", "CACHE_META empty, populating from ledger...")
+        for path, entry in ledger_data.get("files", {}).items():
+            if entry.get("status") == "complete" and entry.get("hash"):
+                CACHE_META[path] = entry["hash"]
+        mcp_log("INFO", f"Restored {len(CACHE_META)} entries from ledger")
 
-    mcp_log("INFO", f"Loaded cache with {len(CACHE_META)} files")
+    mcp_log("INFO", f"Loaded cache with {len(CACHE_META)} files, ledger with {len(ledger_data.get('files', {}))} files")
 
     index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
 
@@ -1153,7 +1188,7 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
         # Improved file discovery: walk and filter
         files_to_process = []
         skip_dirs = {'.git', '.github', 'node_modules', '__pycache__', 'mcp_repos', 'faiss_index'}
-        skip_exts = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.mp4', '.mov', '.wav', '.mp3', '.bin', '.exe', '.pyc'}
+        skip_exts = {'.mp4', '.mov', '.wav', '.mp3', '.bin', '.exe', '.pyc'}
         
         for root, dirs, filenames in os.walk(DOC_PATH):
             # Skip junk directories in-place
@@ -1218,11 +1253,23 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
                         metadata.extend(new_meta)
                         CACHE_META[rel_path] = fhash # Update cache
                         
+                        # Update ledger with new format
+                        from datetime import datetime
+                        ledger_data["files"][rel_path] = {
+                            "hash": fhash,
+                            "status": "complete",
+                            "indexed_at": datetime.utcnow().isoformat() + "Z",
+                            "chunk_count": len(new_embs),
+                            "error": None
+                        }
+                        
                         # 3. INCREMENTAL SAVE (Crash-safe)
                         try:
                             CACHE_FILE.write_text(json.dumps(CACHE_META, indent=2))
                             METADATA_FILE.write_text(json.dumps(metadata, indent=2))
                             faiss.write_index(index, str(INDEX_FILE))
+                            # Also save ledger
+                            LEDGER_FILE.write_text(json.dumps(ledger_data, indent=2))
                         except Exception as e:
                             mcp_log("WARN", f"Incremental save failed: {e}")
                         
@@ -1263,6 +1310,9 @@ async def reindex_documents(target_path: str = None, force: bool = False) -> str
     Optionally provide a target_path (relative to data/ folder) to index a specific file.
     If force is True, it wipes the index and performs a full fresh scan.
     """
+    # SIMPLIFIED: Always use the legacy process_documents with ledger updates
+    # The scheduler-based approach had issues with process isolation
+    
     if not REINDEX_BUSY_LOCK.acquire(blocking=False):
         mcp_log("WARN", "Re-indexing already in progress, skipping new request.")
         return "Indexing already in progress."
@@ -1271,17 +1321,17 @@ async def reindex_documents(target_path: str = None, force: bool = False) -> str
     with INDEXING_LOCK:
         INDEXING_STATUS["active"] = True
         INDEXING_STATUS["completed"] = 0
-        INDEXING_STATUS["total"] = 0 # Will be updated by process_documents
+        INDEXING_STATUS["total"] = 0
         INDEXING_STATUS["currentFile"] = "Initializing scan..."
 
     try:
+        INDEX_CACHE = ROOT / "faiss_index"
+        
         if force and not target_path:
-            # Full Rescan: Wipe existing data ONLY if force is True
-            ROOT = Path(__file__).parent.resolve()
-            INDEX_CACHE = ROOT / "faiss_index"
+            # Full Rescan: Wipe existing data
             mcp_log("INFO", "Force Rescan - Wiping existing index...")
             
-            for f in ["index.bin", "metadata.json", "doc_index_cache.json"]:
+            for f in ["index.bin", "metadata.json", "doc_index_cache.json", "ledger.json"]:
                 path = INDEX_CACHE / f
                 if path.exists():
                     try:
@@ -1289,12 +1339,11 @@ async def reindex_documents(target_path: str = None, force: bool = False) -> str
                     except Exception as e:
                         mcp_log("WARN", f"Failed to delete {f}: {e}")
                         
-        # Run the blocking process_documents in a separate thread (Fire and forget from tool perspective)
-        # The progressive status is tracked via INDEXING_STATUS which is polled by another tool
+        # Run process_documents in a separate thread 
+        # It will now update the new ledger format
         threading.Thread(target=process_documents, args=(target_path,), daemon=True).start()
         return f"Re-indexing started {'for ' + target_path if target_path else 'for all documents'}."
     except Exception as e:
-        # If thread failed to start, reset status and release lock
         with INDEXING_LOCK:
             INDEXING_STATUS["active"] = False
         try:
@@ -1485,6 +1534,82 @@ def start_background_services():
         name="SessionSyncThread"
     )
     sync_thread.start()
+    
+    # Initialize the index scheduler with callbacks
+    INDEX_CACHE = ROOT / "faiss_index"
+    INDEX_CACHE.mkdir(exist_ok=True)
+    
+    def process_file_callback(abs_path: Path, rel_path: str) -> dict:
+        """Callback for scheduler to process a single file."""
+        try:
+            # Load existing index and metadata
+            INDEX_FILE = INDEX_CACHE / "index.bin"
+            METADATA_FILE = INDEX_CACHE / "metadata.json"
+            
+            metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
+            index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
+            
+            # Remove old entries for this file
+            metadata = [m for m in metadata if m.get("doc") != rel_path]
+            
+            # Process the file
+            result = process_single_file(abs_path, BASE_DATA_DIR, {})
+            
+            if result.get("status") == "SUCCESS":
+                new_embs = result.get("embeddings", [])
+                new_meta = result.get("metadata", [])
+                
+                if new_embs:
+                    if index is None:
+                        dim = len(new_embs[0])
+                        index = faiss.IndexFlatL2(dim)
+                    
+                    index.add(np.stack(new_embs))
+                    metadata.extend(new_meta)
+                    
+                    # Save atomically
+                    METADATA_FILE.write_text(json.dumps(metadata, indent=2))
+                    faiss.write_index(index, str(INDEX_FILE))
+                    
+                    # Rebuild BM25 index
+                    if BM25_AVAILABLE:
+                        _bm25_index.build_from_metadata(metadata)
+                        _bm25_index.save(str(INDEX_CACHE / "bm25_index.pkl"))
+                    
+                    return {"chunk_count": len(new_embs)}
+            
+            return {"chunk_count": 0}
+        except Exception as e:
+            mcp_log("ERROR", f"Process callback failed for {rel_path}: {e}")
+            raise
+    
+    def delete_file_callback(rel_path: str):
+        """Callback for scheduler to remove a file from the index."""
+        try:
+            METADATA_FILE = INDEX_CACHE / "metadata.json"
+            
+            if METADATA_FILE.exists():
+                metadata = json.loads(METADATA_FILE.read_text())
+                new_metadata = [m for m in metadata if m.get("doc") != rel_path]
+                
+                if len(new_metadata) != len(metadata):
+                    METADATA_FILE.write_text(json.dumps(new_metadata, indent=2))
+                    mcp_log("INFO", f"Removed {rel_path} from metadata ({len(metadata) - len(new_metadata)} chunks)")
+                    
+                    # Rebuild BM25
+                    if BM25_AVAILABLE:
+                        _bm25_index.build_from_metadata(new_metadata)
+                        _bm25_index.save(str(INDEX_CACHE / "bm25_index.pkl"))
+        except Exception as e:
+            mcp_log("ERROR", f"Delete callback failed for {rel_path}: {e}")
+    
+    init_scheduler(
+        data_dir=BASE_DATA_DIR,
+        index_dir=INDEX_CACHE,
+        process_callback=process_file_callback,
+        delete_callback=delete_file_callback
+    )
+    mcp_log("INFO", "Index Scheduler initialized")
 
 
 if __name__ == "__main__":

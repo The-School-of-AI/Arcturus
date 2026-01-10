@@ -14,7 +14,10 @@ interface RagItem {
     type: string;
     size?: number;
     indexed?: boolean;
+    status?: 'complete' | 'pending' | 'indexing' | 'error' | 'unindexed';
     hash?: string;
+    chunk_count?: number;
+    error?: string;
     children?: RagItem[];
 }
 
@@ -93,7 +96,7 @@ const FileTree: React.FC<{
                 className={cn(
                     "group relative flex items-center gap-1.5 py-1.5 px-3 transition-all duration-200 cursor-pointer select-none",
                     selectedPath === item.path
-                        ? "bg-neon-yellow/10 text-neon-yellow shadow-[inset_2px_0_0_0_rgba(255,255,0,0.8)]"
+                        ? "bg-yellow-500/10 text-yellow-500 shadow-[inset_2px_0_0_0_#eab308]"
                         : "hover:bg-accent/30 text-muted-foreground hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
@@ -104,9 +107,13 @@ const FileTree: React.FC<{
                 <span className="truncate text-sm flex-1">{item.name}</span>
                 {!isFolder && (
                     <div className="flex items-center gap-2">
-                        {isIndexingNow ? (
+                        {isIndexingNow || item.status === 'indexing' ? (
                             <RefreshCw className="w-3 h-3 text-yellow-500 animate-spin" />
-                        ) : item.indexed ? (
+                        ) : item.status === 'pending' ? (
+                            <div className="w-3 h-3 rounded-full bg-yellow-500/50 animate-pulse" title="Queued for indexing" />
+                        ) : item.status === 'error' ? (
+                            <span title={item.error || 'Indexing failed'}><AlertCircle className="w-3 h-3 text-red-500" /></span>
+                        ) : item.indexed || item.status === 'complete' ? (
                             <CheckCircle className="w-3 h-3 text-green-500" />
                         ) : (
                             <button
@@ -308,6 +315,8 @@ export const RagPanel: React.FC = () => {
     // Recursive check for unindexed files (ignore images/media)
     const indexingStats = useMemo(() => {
         let unindexed = 0;
+        let pending = 0;
+        let errors = 0;
         let total = 0;
 
         const unindexable = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'mp4', 'mov', 'wav', 'mp3'];
@@ -319,14 +328,31 @@ export const RagPanel: React.FC = () => {
                 if (item.type !== 'folder') {
                     if (unindexable.includes(item.type.toLowerCase())) continue;
                     total++;
-                    if (!item.indexed) unindexed++;
+
+                    // Use new status field
+                    const status = item.status || (item.indexed ? 'complete' : 'unindexed');
+                    if (status === 'pending' || status === 'indexing') {
+                        pending++;
+                    } else if (status === 'error') {
+                        errors++;
+                        unindexed++; // Errors count as needing reindex
+                    } else if (status !== 'complete') {
+                        unindexed++;
+                    }
                 }
                 if (item.children) scan(item.children);
             }
         };
 
         scan(files);
-        return { unindexed, total, allDone: total > 0 && unindexed === 0, empty: total === 0 };
+        return {
+            unindexed,
+            pending,
+            errors,
+            total,
+            allDone: total > 0 && unindexed === 0 && pending === 0,
+            empty: total === 0
+        };
     }, [files]);
 
     return (
@@ -529,6 +555,19 @@ export const RagPanel: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                        ) : indexingStats.pending > 0 ? (
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <div className="p-1 bg-yellow-500/20 rounded">
+                                        <RefreshCw className="w-3 h-3 text-yellow-500 animate-spin" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-bold text-yellow-500 uppercase leading-tight tracking-tighter">
+                                            {indexingStats.pending} FILES QUEUED FOR INDEXING
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         ) : !indexingStats.allDone ? (
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -537,7 +576,9 @@ export const RagPanel: React.FC = () => {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-[9px] font-bold text-neon-yellow uppercase leading-tight tracking-tighter">
-                                            {indexingStats.empty ? "FULL INDEXING REQUIRED" : `${indexingStats.unindexed}/${indexingStats.total} FILES NEED INDEXING`}
+                                            {indexingStats.empty ? "FULL INDEXING REQUIRED" :
+                                                indexingStats.errors > 0 ? `${indexingStats.errors} ERRORS, ${indexingStats.unindexed - indexingStats.errors} UNINDEXED` :
+                                                    `${indexingStats.unindexed}/${indexingStats.total} FILES NEED INDEXING`}
                                         </span>
                                     </div>
                                     <Button
