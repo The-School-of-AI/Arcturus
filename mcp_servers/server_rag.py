@@ -255,9 +255,10 @@ def analyze_query(query: str) -> QueryAnalysis:
     
     if analysis.quoted_phrases or ids_emails:
         analysis.intent = "LEXICAL_REQUIRED"
-    elif analysis.proper_nouns:
-        analysis.intent = "LEXICAL_PREFERRED"
     else:
+        # Treat proper nouns as signals for BM25 boosting (SEMANTIC), not hard filters
+        # This fixes the issue where capitalized queries ("Ranveer") triggered strict gating
+        # while lowercase queries ("ranveer") did not.
         analysis.intent = "SEMANTIC"
     
     return analysis

@@ -1,0 +1,51 @@
+# RAG Search Architecture & Policy
+
+This document defines the governing principles and implementation details for the Arcturus RAG Search system. It serves as the source of truth to prevent regression during future optimizations.
+
+## Core Philosophy
+**"Retrieval maximizes Recall. Ranking maximizes Precision."**
+
+We use a **Hybrid Fusion** approach where multiple retrieval strategies (Vector, Lexical) run in parallel to generate candidates, which are then fused and ranked. We do not use "Hard Gates" unless the user explicitly demands them via syntax.
+
+## 1. Intent Modes
+
+The system automatically detects query intent to switch between two modes.
+
+### 🔒 Strict Mode (Hard Constraints)
+*   **Trigger:** Explicit user syntax ONLY.
+    *   Double quotes: `"exact phrase"`
+    *   IDs/Emails: `user@example.com`, `TICKET-123`
+*   **Behavior:**
+    *   Candidates must contain the exact token sequence.
+    *   Results that do not match are discarded before ranking.
+
+### 🌐 Hybrid Default Mode (Soft Anchoring)
+*   **Trigger:** Everything else (Natural language, capitalized names, questions).
+*   **Behavior:**
+    *   **Vector Search (Semantic):** Retrieves Top-50 candidates based on conceptual similarity.
+    *   **BM25 Search (Lexical):** Retrieves Top-30 candidates based on term frequency.
+    *   **Fusion (RRF):** Both candidate sets are merged. Documents appearing in both lists (e.g., matching the concept AND the name "Ranveer") naturally float to the top.
+    *   **No Filters:** We never hide a result just because a keyword is missing (unless it's a quote).
+
+## 2. Entity Handling
+
+*   **Entities are Anchors, Not Gates:** A recognized entity (Capitalized Name, Location) is treated as a strong signal for ranking relevance, but **never** as a binary filter in Hybrid Mode.
+*   **Capitalization is Ignored:** `Ranveer` and `ranveer` are treated identically during candidate generation to ensure robustness against typos and OCR errors.
+
+## 3. Modality Consistency
+
+*   **Single Unified Index:** Text documents, Code files, and Image Captions all live in the same Vector Space and BM25 Corpus.
+*   **Image Search strategy:**
+    1.  Images are auto-captioned using a Vision Model (Gemma-3:4b) during indexing.
+    2.  Captions are treated as "Text Chunks" with valid `doc_path` pointing to the image.
+    3.  A text query for "red car" retrieves the image caption just like it would a paragraph in a PDF.
+
+## 4. Technical Implementation
+
+*   **Fusion Algorithm:** Reciprocal Rank Fusion (RRF).
+    *   `Score = 1 / (k + rank_vector) + 1 / (k + rank_bm25)`
+    *   This ensures that a document strong in *either* method can surface, but specific matches in *both* win.
+*   **Tokenization:** All lexical tokens are lowercased and stripped of punctuation before indexing (except in Strict Mode logic).
+
+---
+*Created: 2026-01-10*

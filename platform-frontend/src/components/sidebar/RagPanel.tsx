@@ -96,7 +96,7 @@ const FileTree: React.FC<{
                 className={cn(
                     "group relative flex items-center gap-1.5 py-1.5 px-3 transition-all duration-200 cursor-pointer select-none",
                     selectedPath === item.path
-                        ? "bg-yellow-500/10 text-yellow-500 shadow-[inset_2px_0_0_0_#eab308]"
+                        ? "bg-blue-500/10 text-blue-500 shadow-[inset_2px_0_0_0_#2b7fff]"
                         : "hover:bg-accent/30 text-muted-foreground hover:text-foreground",
                     level > 0 && "ml-3"
                 )}
