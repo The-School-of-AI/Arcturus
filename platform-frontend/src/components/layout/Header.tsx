@@ -81,7 +81,7 @@ export const Header: React.FC = () => {
     };
 
     return (
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
+        <header className="h-14 border-b border-border/50 glass flex items-center justify-between px-4 shrink-0 shadow-none z-50">
             <div className="flex items-center gap-4">
                 {/* Brand / Logo */}
                 <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight mr-4 cursor-pointer" onClick={() => window.location.reload()}>
@@ -107,9 +107,7 @@ export const Header: React.FC = () => {
                             <ChevronLeft className="w-4 h-4" />
                         </button>
                     )}
-                    <div className={cn("p-1.5 rounded-lg bg-opacity-10", config?.color.replace('text-', 'bg-') || 'bg-neon-yellow')}>
-                        <Icon className={cn("w-5 h-5", config?.color || 'text-neon-yellow')} />
-                    </div>
+
                     <div>
                         <h2 className="font-bold text-sm tracking-tight text-foreground uppercase leading-none">
                             {sidebarTab === 'news'

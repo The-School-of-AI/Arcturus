@@ -356,7 +356,7 @@ export const RagPanel: React.FC = () => {
     }, [files]);
 
     return (
-        <div id="rag-panel-container" className="flex flex-col h-full bg-card text-foreground">
+        <div id="rag-panel-container" className="flex flex-col h-full bg-transparent text-foreground">
             {/* Header Content moved to Top Bar */}
             <input type="file" ref={fileInputRef} id="rag-upload-input" className="hidden" onChange={handleFileChange} />
 
@@ -372,7 +372,7 @@ export const RagPanel: React.FC = () => {
             </div>
 
             {/* Search & Mode Toggle Merged */}
-            <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50 shrink-0">
+            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50 shrink-0">
                 <div className="flex items-center gap-2">
                     <form onSubmit={handleSearchSubmit} className="relative flex-1">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />

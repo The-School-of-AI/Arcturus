@@ -305,13 +305,36 @@ async def get_article_content(url: str):
             page = await context.new_page()
             
             # Navigate to the URL and wait for content
-            await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            try:
+                await page.goto(url, wait_until="networkidle", timeout=15000)
+            except:
+                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
             
-            # Wait a bit more for dynamic content
-            await page.wait_for_timeout(1000)
-            
-            # Get the page title
+            # Wait for dynamic content to settle and poll for title
             page_title = await page.title()
+            for _ in range(10): # Try for 5 seconds
+                current_title = await page.title()
+                
+                # Check for og:title
+                og_title = await page.get_attribute('meta[property="og:title"]', 'content')
+                if og_title and len(og_title) > 20: 
+                    page_title = og_title
+                    break
+                
+                # Check for H1
+                try:
+                    h1_text = await page.inner_text('h1', timeout=500)
+                    if h1_text and len(h1_text.strip()) > 20:
+                        page_title = h1_text.strip()
+                        break
+                except:
+                    pass
+                
+                if current_title and len(current_title) > 30:
+                    page_title = current_title
+                    break
+                    
+                await page.wait_for_timeout(500)
             
             # Get the full rendered HTML
             html_content = await page.content()

@@ -13,6 +13,13 @@ from pathlib import Path
 import requests
 from markitdown import MarkItDown
 import time
+import sys
+
+# MCP Protocol Safety: Redirect print to stderr
+def print(*args, **kwargs):
+    sys.stderr.write(" ".join(map(str, args)) + "\n")
+    sys.stderr.flush()
+
 from models import AddInput, AddOutput, SqrtInput, SqrtOutput, StringsToIntsInput, StringsToIntsOutput, ExpSumInput, ExpSumOutput, PythonCodeInput, PythonCodeOutput, UrlInput, FilePathInput, MarkdownInput, MarkdownOutput, ChunkListOutput, SearchDocumentsInput
 from tqdm import tqdm
 import hashlib
@@ -1219,7 +1226,7 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
         futures = {executor.submit(process_single_file, f, DOC_PATH, param_cache_meta): f for f in files_to_process}
         
         # Collect results as they complete
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(files_to_process), desc="Indexing"):
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(files_to_process), desc="Indexing", file=sys.stderr):
             result = future.result()
             status = result.get("status")
             rel_path = result.get("rel_path")

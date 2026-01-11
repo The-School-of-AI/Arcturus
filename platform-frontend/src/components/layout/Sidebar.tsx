@@ -60,15 +60,15 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
             className={cn(
                 "w-12 h-12 flex flex-col items-center justify-center gap-0.5 transition-all rounded-xl group relative mx-auto",
                 active
-                    ? "text-foreground bg-white dark:bg-slate-200 shadow-[0_4px_12px_rgba(0,0,0,0.01)] ring-1 ring-black/10 z-10"
-                    : "text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 hover:bg-muted/30"
+                    ? "text-primary glass border-primary/20 shadow-lg z-10"
+                    : "text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 hover:bg-white/5"
             )}
             title={label}
         >
-            <Icon className={cn("w-5 h-5 transition-colors", active ? "text-neutral-900" : "group-hover:text-foreground")} />
+            <Icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "group-hover:text-foreground")} />
             <span className={cn(
                 "text-[7px] font-black uppercase tracking-tighter transition-all duration-200",
-                active ? "text-neutral-800 opacity-100" : "text-muted-foreground/90 group-hover:text-foreground"
+                active ? "text-primary opacity-100" : "text-muted-foreground/90 group-hover:text-foreground"
             )}>
                 {label}
             </span>
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     return (
         <div className="h-full flex overflow-hidden">
             {/* NavRail - Left Vertical Bar */}
-            <div className="w-16 border-r border-border bg-background flex flex-col items-center py-4 gap-2 shrink-0 z-20">
+            <div className="w-16 border-r border-border/50 bg-background/50 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools */}
                 <div className="flex-1 w-full px-2 space-y-2">
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
@@ -141,10 +141,10 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
 
             {/* Content Area */}
             {!hideSubPanel && (
-                <div className="flex-1 min-w-0 bg-card/40 backdrop-blur-sm flex flex-col overflow-hidden relative">
+                <div className="flex-1 min-w-0 glass border-0 border-l border-border/50 shadow-none flex flex-col overflow-hidden relative">
                     {sidebarTab === 'settings' && <SettingsPanel />}
                     {sidebarTab === 'runs' && (
-                        <div className="flex flex-col h-full bg-card text-foreground">
+                        <div className="flex flex-col h-full bg-transparent text-foreground">
 
                             {/* New Run Button */}
                             <div className="p-3 border-b border-border/50 bg-muted/20">
@@ -183,7 +183,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                             </div>
 
                             {/* Search */}
-                            <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50">
+                            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                     <Input

@@ -1,8 +1,15 @@
-from rich import print
+from rich.console import Console
 from datetime import datetime
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+import sys
+
+# MCP Protocol Safety: Redirect all rich output to stderr
+console = Console(stderr=True)
+def print(*args, **kwargs):
+    console.print(*args, **kwargs)
+
 
 def log_step(title: str, payload=None, symbol: str = "🟢"):
     print(f"\n[b]{symbol} {title}[/b]")
@@ -17,9 +24,7 @@ def log_error(message: str, err: Exception = None):
 
 def log_json_block(title: str, block):
     from rich.panel import Panel
-    from rich.console import Console
-
-    console = Console()
+    # Use global console
 
     def truncate(value, max_length=150):
         value = str(value)
@@ -59,11 +64,8 @@ def log_json_block(title: str, block):
 def render_graph(graph, depth=1):
     from rich.panel import Panel
     from rich.table import Table
-    from rich.console import Console
     from rich.text import Text
-    from rich import print
-
-    console = Console()
+    # Use global console
 
     def truncate(text, limit=200):
         text = str(text)
@@ -128,7 +130,7 @@ def render_graph(graph, depth=1):
 import json
 from pathlib import Path
 from datetime import datetime
-from rich import print
+# Use global print/console
 
 def get_log_folder(session_id: str, base_dir: str = None) -> Path:
     if base_dir is None:

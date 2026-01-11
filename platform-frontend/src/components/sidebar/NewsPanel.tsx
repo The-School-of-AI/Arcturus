@@ -192,14 +192,14 @@ export const NewsPanel: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-card text-foreground">
+        <div className="flex flex-col h-full bg-transparent text-foreground">
 
             {/* Sources View - Now with Search Bar */}
             {
                 (viewMode === 'sources' || viewMode === 'search') && (
                     <>
                         {/* Search Bar / Header */}
-                        <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50">
+                        <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
                             {isAutoSearch ? (
                                 <div className="flex items-center gap-2">
                                     <Button

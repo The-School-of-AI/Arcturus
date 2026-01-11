@@ -47,7 +47,7 @@
 
     /* Glass Design System - Light Mode */
     --glass-bg: 255 255 255;
-    --glass-alpha: 0.55;
+    --glass-alpha: 0.35;
     --glass-border: 255 255 255;
     --glass-border-alpha: 0.22;
     --glass-shadow: 15 23 42;
@@ -98,7 +98,7 @@
     /* Glass Design System - Dark Mode */
     --glass-bg: 8 12 24;
     /* deep navy (instead of flat slate) */
-    --glass-alpha: 0.52;
+    --glass-alpha: 0.28;
     --glass-border: 255 255 255;
     --glass-border-alpha: 0.10;
     --glass-shadow: 0 0 0;
@@ -174,15 +174,35 @@
 
   0%,
   100% {
-    background-size: 400% 400%;
     background-position: 0% 0%;
   }
 
   50% {
-    background-size: 400% 400%;
     background-position: 100% 100%;
   }
 }
+
+
+@keyframes meteor-effect {
+  0% {
+    transform: rotate(135deg) translateX(0);
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: rotate(135deg) translateX(2000px);
+    opacity: 0;
+  }
+}
+
+.animate-meteor-effect {
+  animation: meteor-effect linear infinite;
+}
+
 
 .animate-gradient-bg {
   background: linear-gradient(-45deg,
@@ -197,7 +217,7 @@
 }
 
 .dark .animate-gradient-bg {
-  background: radial-gradient(circle at center, transparent 0%, rgba(6, 9, 19, 0.4) 100%),
+  background: radial-gradient(circle at center, transparent 0%, rgba(6, 9, 19, 0.2) 100%),
     linear-gradient(-45deg,
       #060913,
       #0b1220,

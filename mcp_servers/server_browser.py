@@ -12,6 +12,13 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
+# MCP Protocol Safety: Redirect print to stderr
+def print(*args, **kwargs):
+    sys.stderr.write(" ".join(map(str, args)) + "\n")
+    sys.stderr.flush()
+
+load_dotenv()
+
 # Browser Use Imports
 try:
     from browser_use import Agent

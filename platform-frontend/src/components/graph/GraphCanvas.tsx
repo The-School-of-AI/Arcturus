@@ -68,12 +68,12 @@ export const GraphCanvas: React.FC = () => {
                 edgeTypes={edgeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
-                className="bg-background"
+                className="bg-transparent"
                 minZoom={0.2}
                 maxZoom={2}
             >
                 <Background color="#888" gap={20} size={1} className="opacity-20" />
-                <Controls className="react-flow__controls--dark" />
+                <Controls className="glass-panel border-border fill-white" />
                 <AutoFitter nodeCount={visibleNodes.length} />
             </ReactFlow>
         </div>

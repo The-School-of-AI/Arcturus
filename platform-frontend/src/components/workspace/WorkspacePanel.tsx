@@ -159,7 +159,7 @@ export const WorkspacePanel: React.FC = () => {
 
     if (!effectiveSelectedNodeId) {
         return (
-            <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-card text-center space-y-4">
+            <div className="h-full flex flex-col items-center justify-center p-8 glass-panel text-center space-y-4">
                 <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
                     <Terminal className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
@@ -173,12 +173,12 @@ export const WorkspacePanel: React.FC = () => {
 
     const panelContent = (
         <div className={cn(
-            "h-full flex flex-col bg-white dark:bg-card border-l border-border transition-all duration-300",
+            "h-full flex flex-col glass-panel border-l border-border transition-all duration-300",
             isZenMode ? "fixed inset-0 z-[9999] w-screen h-screen" : ""
         )}>
             {/* Sticky Header - Hidden in Zen Mode */}
             {!isZenMode && (
-                <div className="p-4 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex flex-col gap-2">
+                <div className="p-4 border-b border-border glass backdrop-blur z-10 flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                         <div className={cn(
                             "w-2 h-2 rounded-full",

@@ -218,7 +218,7 @@ const FlowWorkspaceInner: React.FC = () => {
 
     if (!flowData) {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-background p-12 text-center text-foreground">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-transparent p-12 text-center text-foreground">
                 <div className="relative mb-8">
                     <div className="absolute inset-0 bg-neon-yellow/10 blur-3xl rounded-full" />
                     <div className="relative p-8 bg-card border border-border/50 rounded-3xl shadow-2xl">
@@ -237,12 +237,12 @@ const FlowWorkspaceInner: React.FC = () => {
     }
 
     return (
-        <div className="w-full h-full bg-[#050505] relative overflow-hidden">
+        <div className="w-full h-full bg-transparent relative overflow-hidden">
             {/* Header Controls - Centered at Top to avoid Zoom controls (usually corners) */}
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex gap-4 items-start pointer-events-none">
                 <div className="flex flex-col gap-4 items-center pointer-events-auto">
                     {/* Mode Toggle */}
-                    <div className="bg-card/80 backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded p-1.5 flex gap-1">
+                    <div className="glass-panel backdrop-blur-xl ring-2 ring-white/10 shadow-2xl rounded p-1.5 flex gap-1">
                         <button
                             onClick={() => handleModeChange('READER')}
                             className={cn(
@@ -271,7 +271,7 @@ const FlowWorkspaceInner: React.FC = () => {
 
                     {/* Sequence Controls */}
                     {mode === 'SEQUENCE' && (
-                        <div className="bg-card/80 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded p-1.5 flex gap-1 animate-in slide-in-from-top-4">
+                        <div className="glass-panel backdrop-blur-xl ring-1 ring-white/10 shadow-2xl rounded p-1.5 flex gap-1 animate-in slide-in-from-top-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -316,7 +316,7 @@ const FlowWorkspaceInner: React.FC = () => {
                 elementsSelectable={true}
             >
                 <Background color="#1a1a1a" gap={20} />
-                <Controls className="bg-card border-border fill-white" />
+                <Controls className="glass-panel border-border fill-white" />
             </ReactFlow>
 
             {/* Sequence Tooltip */}

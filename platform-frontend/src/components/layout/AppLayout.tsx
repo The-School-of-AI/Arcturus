@@ -10,6 +10,7 @@ import { DocumentViewer } from '../rag/DocumentViewer';
 import { DocumentAssistant } from '../rag/DocumentAssistant';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { Meteors } from '../ui/meteors';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -139,11 +140,16 @@ export const AppLayout: React.FC = () => {
 
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg">
+        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg relative">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <Meteors number={70} />
+            </div>
+
+
             {/* Hide header when in App View Mode */}
             {!isAppViewMode && <Header />}
 
-            <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3">
+            <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3 relative z-20">
                 {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown */}
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && (
                     <>

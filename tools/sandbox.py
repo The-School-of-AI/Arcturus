@@ -8,11 +8,17 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
+import sys
 import traceback
 from core.utils import log_json_block, log_step, log_error, log_json_block
 import io
 import contextlib
-import sys
+
+# MCP Protocol Safety: Redirect print to stderr
+def print(*args, **kwargs):
+    sys.stderr.write(" ".join(map(str, args)) + "\n")
+    sys.stderr.flush()
+
 # from agent.agentSession import ExecutionSnapshot
 
 ALLOWED_MODULES = {
