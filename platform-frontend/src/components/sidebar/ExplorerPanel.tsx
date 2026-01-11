@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { useAppStore } from '@/store';
-import { FileCode, Folder, ChevronRight, ChevronDown, Play, Code2, Globe, Trash2, X, Github } from 'lucide-react';
+import { FileCode, Folder, ChevronRight, ChevronDown, Play, Code2, Globe, Trash2, X, Github, Plus, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { FileSelectionModal } from './FileSelectionModal';
 import { API_BASE } from '@/lib/api';
@@ -26,6 +27,7 @@ export const ExplorerPanel: React.FC = () => {
     const [scannedFiles, setScannedFiles] = useState<any[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [showSelectionModal, setShowSelectionModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const toggleFolder = (path: string) => {
         setIsExpanded(prev => ({ ...prev, [path]: !prev[path] }));
@@ -37,9 +39,6 @@ export const ExplorerPanel: React.FC = () => {
                 <div
                     className={cn(
                         "group relative flex items-center py-2 px-3 rounded-lg border transition-all duration-300 cursor-pointer mb-1",
-                        // Active state not easily tracked here (only via expanded?), assuming standard hover/inactive for now unless selected file logic exists
-                        // Explorer currently doesn't track "selected file" in state for highlighting, only root path.
-                        // We'll stick to the hover/inactive card style for uniformity.
                         "border-border/30 hover:border-primary/30 hover:bg-accent/30 bg-card/30",
                         depth > 0 && "ml-2"
                     )}
@@ -63,6 +62,14 @@ export const ExplorerPanel: React.FC = () => {
             </div>
         ));
     };
+
+    const filteredHistory = useMemo(() => {
+        if (!searchQuery.trim()) return analysisHistory;
+        return analysisHistory.filter(item =>
+            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.path.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [analysisHistory, searchQuery]);
 
     const handleConnect = async () => {
         if (!connectInput.trim()) return;
@@ -229,139 +236,167 @@ export const ExplorerPanel: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-card text-foreground overflow-hidden">
+        <div className="flex flex-col h-full bg-transparent text-foreground overflow-hidden">
+            {/* Header with Connect Button */}
+            <div className="p-3 border-b border-border/50 bg-muted/20">
+                <Button
+                    className="w-full gap-2 bg-primary text-primary-inventory hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
+                    onClick={() => {
+                        if (!explorerRootPath) {
+                            // If not connected, toggle expanded input? 
+                            // For now let's just use a dialog style for connect
+                        }
+                        setExplorerRootPath(null);
+                        setFlowData(null);
+                    }}
+                >
+                    <Plus className="w-4 h-4" />
+                    Connect Repository
+                </Button>
+            </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+            {/* Connect Input Area (Standardized) */}
+            {!explorerRootPath && (
+                <div className="p-4 bg-muted/50 border-b border-border space-y-3 animate-in fade-in duration-300">
+                    <div className="relative">
+                        <Github className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                        <Input
+                            placeholder="Absolute path or GitHub URL..."
+                            value={connectInput}
+                            onChange={(e) => setConnectInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                            className="w-full bg-card border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                        />
+                    </div>
+                    <Button
+                        onClick={handleConnect}
+                        disabled={isAnalyzing || !connectInput.trim()}
+                        size="sm"
+                        className="w-full bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-bold"
+                    >
+                        {isAnalyzing && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
+                        Initialize
+                    </Button>
+                </div>
+            )}
+
+            {/* Search */}
+            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                        placeholder="Search history..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-4 space-y-4">
                 {/* HISTORY SECTION */}
-                {analysisHistory.length > 0 && (
-                    <div className="flex flex-col flex-1 min-h-0">
-                        {!explorerRootPath && (
-                            <div className="px-4 py-3 flex items-center justify-between flex-shrink-0 pt-4">
-                                <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] select-none">Recent Analyses</h3>
-                                <div className="h-px flex-1 bg-muted/50 ml-4" />
-                            </div>
-                        )}
-                        <div className={cn("px-2 space-y-1 overflow-y-auto custom-scrollbar pb-2 flex-1", explorerRootPath ? "p-1" : "p-2")}>
-                            {analysisHistory.map(item => (
-                                <React.Fragment key={item.id}>
-                                    <div
-                                        className={cn(
-                                            "group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border border-transparent flex-shrink-0",
-                                            explorerRootPath === item.path ? "bg-neon-yellow/10 border-neon-yellow/20" : "hover:bg-muted/50"
-                                        )}
-                                        onClick={() => loadHistoryItem(item)}
-                                    >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <div className={cn(
-                                                "w-7 h-7 rounded flex items-center justify-center shrink-0",
-                                                item.type === 'github' ? "bg-blue-500/10 text-blue-400" : "bg-neon-yellow/10 text-neon-yellow"
-                                            )}>
-                                                {item.type === 'github' ? <Github className="w-3.5 h-3.5" /> : <Folder className="w-3.5 h-3.5" />}
+                {filteredHistory.length > 0 ? (
+                    <div className="space-y-4">
+                        {filteredHistory.map(item => (
+                            <div key={item.id} className="space-y-1">
+                                <div
+                                    className={cn(
+                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                        "bg-gradient-to-br from-card to-muted/20",
+                                        "hover:shadow-md",
+                                        explorerRootPath === item.path
+                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                            : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                    )}
+                                    onClick={() => loadHistoryItem(item)}
+                                >
+                                    <div className="flex justify-between items-center gap-3">
+                                        <div className={cn(
+                                            "w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                                            explorerRootPath === item.path ? "bg-primary text-primary-inventory" : "bg-muted/50 text-muted-foreground"
+                                        )}>
+                                            {item.type === 'github' ? <Github className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn(
+                                                    "text-xs font-bold uppercase tracking-wide truncate",
+                                                    explorerRootPath === item.path ? "text-primary shadow-primary/10" : "text-foreground"
+                                                )}>
+                                                    {item.name}
+                                                </span>
                                             </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-xs font-bold text-foreground truncate">{item.name}</span>
-                                                <span className="text-[9px] text-muted-foreground truncate font-mono opacity-60">{item.path}</span>
+                                            <div className="text-[10px] text-muted-foreground truncate opacity-70 font-mono">
+                                                {item.type} • {item.path}
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); removeFromHistory(item.id); }}
-                                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-muted-foreground transition-all"
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
+                                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); removeFromHistory(item.id); }}
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                        </button>
+                                        </Button>
                                     </div>
+                                </div>
 
-                                    {/* NESTED FILE TREE */}
-                                    {explorerRootPath === item.path && (
-                                        <div className="ml-9 mt-1 mb-4 border-l border-border/50 pl-2">
-                                            {explorerFiles.length > 0 ? (
-                                                <div className="space-y-0.5">
-                                                    {renderTree(explorerFiles)}
-                                                </div>
-                                            ) : (
-                                                <div className="py-4 text-[10px] text-muted-foreground italic">
-                                                    {item.type === 'github' || item.path.startsWith('http')
-                                                        ? "GitHub architecture map loaded (Start Analysis to see details)"
-                                                        : isAnalyzing ? "Loading files..." : "No files found."}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </React.Fragment>
-                            ))}
-                        </div>
+                                {/* NESTED FILE TREE */}
+                                {explorerRootPath === item.path && (
+                                    <div className="ml-5 mt-2 mb-4 border-l border-border/50 pl-3 animate-in slide-in-from-left-2 duration-300">
+                                        {explorerFiles.length > 0 ? (
+                                            <div className="space-y-0.5">
+                                                {renderTree(explorerFiles)}
+                                            </div>
+                                        ) : (
+                                            <div className="py-2 text-[10px] text-muted-foreground/60 italic font-mono">
+                                                {item.type === 'github' || item.path.startsWith('http')
+                                                    ? "[REMOTE ARCHITECTURE SYNCED]"
+                                                    : isAnalyzing ? "STREAMING CONTEXT..." : "NULL FILESYSTEM"}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 px-8 text-center space-y-4 opacity-30">
+                        <Code2 className="w-12 h-12" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed">No repository context initialized</p>
                     </div>
                 )}
-
-                {/* CONNECT INPUT - Show when no project is selected */}
-                <div className="flex-1 min-h-0">
-                    {explorerRootPath ? null : (
-                        <div className="flex flex-col p-6 space-y-4">
-                            <div className="space-y-2">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        placeholder="GitHub URL or Local Absolute Path..."
-                                        value={connectInput}
-                                        onChange={(e) => setConnectInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                                    />
-                                    <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                                </div>
-                                <Button
-                                    onClick={handleConnect}
-                                    disabled={isAnalyzing || !connectInput.trim()}
-                                    className="w-full bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-black text-xs py-5 rounded-xl shadow-xl shadow-neon-yellow/5 disabled:bg-muted disabled:text-muted-foreground"
-                                >
-                                    Connect Repository
-                                </Button>
-                            </div>
-
-                            <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-                                💡 <span className="text-muted-foreground">Mac tip:</span> Right-click folder in Finder → Get Info → copy path from "Where:"
-                            </p>
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Bottom Analysis Action */}
             {explorerRootPath && (
-                <div className="p-4 border-t border-border bg-card z-20">
+                <div className="p-4 border-t border-border bg-card/50 backdrop-blur-md z-20">
                     <Button
                         disabled={isAnalyzing || isScanning}
                         onClick={handleAnalyze}
                         className={cn(
-                            "w-full gap-2 font-black uppercase tracking-[0.15em] text-xs py-6 rounded-xl transition-all",
+                            "w-full gap-2 font-black uppercase tracking-[0.15em] text-[10px] py-6 rounded-xl transition-all",
                             isAnalyzing || isScanning
                                 ? "bg-muted text-muted-foreground"
-                                : "bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 shadow-[0_0_20px_rgba(234,255,0,0.1)] active:scale-95"
+                                : "bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 shadow-lg shadow-neon-yellow/10"
                         )}
                     >
                         {isAnalyzing ? (
                             <>
-                                <div className="w-3.5 h-3.5 border-2 border-charcoal-900/10 border-t-charcoal-900 rounded-full animate-spin" />
-                                Processing...
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Processing Context...
                             </>
                         ) : (
                             <>
                                 <Play className="w-3.5 h-3.5 fill-current" />
-                                {isScanning ? "Scanning..." : (
-                                    analysisHistory.some(h => h.path === explorerRootPath) ? "Analyze Again" : "Analyze Context"
+                                {isScanning ? "Scanning Workspace..." : (
+                                    analysisHistory.some(h => h.path === explorerRootPath) ? "Refresh Analysis" : "Analyze Repository"
                                 )}
                             </>
                         )}
                     </Button>
                 </div>
             )}
-            {/* Credits Footer */}
-            <div className="p-3 text-center border-t border-border/50 bg-background">
-                <p className="text-[10px] text-muted-foreground">
-                    Inspired by <a href="https://github.com/KalaINC/flowstep" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-neon-yellow transition-colors underline decoration-dotted">flowstep</a>
-                </p>
-            </div>
-
 
             <FileSelectionModal
                 isOpen={showSelectionModal}
@@ -376,4 +411,5 @@ export const ExplorerPanel: React.FC = () => {
         </div>
     );
 };
+
 

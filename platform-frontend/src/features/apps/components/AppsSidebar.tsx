@@ -12,6 +12,8 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { SankeyCard } from './cards/SankeyCard';
 import { ScatterCard } from './cards/ScatterCard';
 import { HeatmapCard } from './cards/HeatmapCard';
@@ -27,30 +29,34 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
     const setActiveTab = setAppsSidebarTab;
 
     return (
-        <div className={cn("h-full flex flex-col bg-card text-foreground", className)}>
+        <div className={cn("h-full flex flex-col bg-transparent text-foreground", className)}>
 
             {/* Tabs */}
-            <div className="flex items-center border-b border-border/50 bg-muted/20 pt-1">
+            <div className="flex items-center border-b border-border/50 bg-muted/20">
                 <button
                     onClick={() => setActiveTab('apps')}
                     className={cn(
-                        "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-foreground relative",
-                        activeTab === 'apps' ? "text-neon-yellow" : "text-muted-foreground/70"
+                        "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 relative",
+                        activeTab === 'apps'
+                            ? "text-primary bg-primary/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
                     )}
                 >
                     My Apps
-                    {activeTab === 'apps' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-yellow" />}
+                    {activeTab === 'apps' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />}
                 </button>
-                <div className="w-px h-4 bg-border" />
+                <div className="w-px h-4 bg-border/50" />
                 <button
                     onClick={() => setActiveTab('components')}
                     className={cn(
-                        "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-foreground relative",
-                        activeTab === 'components' ? "text-neon-yellow" : "text-muted-foreground/70"
+                        "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 relative",
+                        activeTab === 'components'
+                            ? "text-primary bg-primary/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
                     )}
                 >
                     Components
-                    {activeTab === 'components' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-yellow" />}
+                    {activeTab === 'components' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />}
                 </button>
             </div>
 
@@ -226,29 +232,29 @@ const ComponentLibrary = () => {
     const isSearching = search.length > 0;
 
     return (
-        <div className="flex flex-col gap-4">
-            <div className="sticky top-0 px-4 pt-4 pb-2 z-20 bg-card border-b border-border/50">
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <input
+                    <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all"
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                         placeholder="Search 60+ components..."
                     />
                 </div>
             </div>
-            <div className="px-4 pb-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
 
                 {filteredCategories.map(category => {
                     const isExpanded = isSearching || expandedCategories[category.name];
                     return (
-                        <div key={category.name} className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
+                        <div key={category.name} className="border border-border/50 rounded-xl overflow-hidden bg-gradient-to-br from-card to-muted/10 shadow-sm">
                             <button
                                 onClick={() => toggleCategory(category.name)}
-                                className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/5 transition-colors"
+                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-all duration-300"
                             >
-                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                                <span className="text-[10px] uppercase tracking-widest text-foreground font-black">
                                     {category.name}
                                 </span>
                                 <div className="flex items-center gap-2">
@@ -1210,11 +1216,12 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             draggable
             onDragStart={handleDragStart}
             className={cn(
-                "group relative flex flex-col rounded-xl border-2 cursor-grab active:cursor-grabbing transition-all duration-300 overflow-hidden select-none shadow-lg",
-                // Match Explorer node styling
+                "group relative flex flex-col rounded-xl border transition-all duration-300 overflow-hidden select-none",
+                "bg-gradient-to-br from-card to-muted/20",
+                "hover:shadow-xl hover:scale-[1.02]",
                 isSelected
-                    ? "bg-muted border-neon-yellow ring-4 ring-neon-yellow/20 scale-[1.02]"
-                    : "bg-card/90 border-border hover:border-primary/30 hover:scale-[1.02]"
+                    ? "border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20"
+                    : "border-border/50 hover:border-primary/50"
             )}
         >
             {/* Preview Area - matches the actual card appearance with animation */}
@@ -1226,8 +1233,10 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
 
             {/* Label */}
             <div className={cn(
-                "px-2 py-1 text-[10px] font-medium text-center border-t transition-colors",
-                isSelected ? "bg-muted border-neon-yellow/20 text-neon-yellow" : "bg-card border-border/50 text-muted-foreground"
+                "px-2 py-2 text-[10px] font-bold uppercase tracking-widest text-center border-t transition-all duration-300",
+                isSelected
+                    ? "bg-primary/10 border-primary/20 text-primary"
+                    : "bg-muted/30 border-border/30 text-muted-foreground group-hover:text-foreground"
             )}>
                 {label}
             </div>
@@ -1273,16 +1282,16 @@ const SavedAppsList = () => {
         });
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col h-full overflow-hidden">
             {/* Sticky Search Bar + Sort */}
-            <div className="sticky top-0 px-4 pt-4 pb-2 z-20 bg-card border-b border-border/50">
+            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <input
+                    <Input
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="Search apps..."
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all"
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                     />
                 </div>
                 {/* Minimal Sort Toggle */}
@@ -1314,7 +1323,7 @@ const SavedAppsList = () => {
             </div>
 
             {/* List */}
-            <div className="space-y-3 px-4 pb-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
                 {savedApps.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-center space-y-2 opacity-60">
                         <LayoutGrid className="w-8 h-8 opacity-20" />
@@ -1330,11 +1339,11 @@ const SavedAppsList = () => {
                                 <div
                                     key={app.id}
                                     className={cn(
-                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
                                         "bg-gradient-to-br from-card to-muted/20",
-                                        "hover:shadow-md",
+                                        "hover:shadow-lg",
                                         isActive
-                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                            ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                             : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                     )}
                                     onClick={() => !isEditing && loadApp(app.id)}
@@ -1361,10 +1370,10 @@ const SavedAppsList = () => {
                                                             <p
                                                                 onDoubleClick={(e) => handleStartEdit(e, app)}
                                                                 className={cn(
-                                                                    "text-[13px] leading-relaxed font-medium selection:bg-neon-yellow/30",
+                                                                    "text-[13px] leading-relaxed font-bold selection:bg-primary/30 tracking-tight",
                                                                     "line-clamp-2 group-hover:line-clamp-none transition-all duration-300",
-                                                                    isActive ? "text-neon-yellow" : "text-foreground",
-                                                                    "hover:text-neon-yellow"
+                                                                    isActive ? "text-primary" : "text-foreground",
+                                                                    "hover:text-primary"
                                                                 )}
                                                             >
                                                                 {app.name}
@@ -1387,11 +1396,11 @@ const SavedAppsList = () => {
                                     </div>
 
                                     <div className="mt-0 pt-0 border-t border-border/50 flex items-center justify-between">
-                                        <span className="text-[9px] text-muted-foreground font-mono">
+                                        <span className="text-[9px] text-muted-foreground font-mono opacity-60">
                                             {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
                                         </span>
                                         {isActive && (
-                                            <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter bg-neon-yellow/10 text-neon-yellow">
+                                            <span className="px-2 py-0.5 rounded-full text-[8px] uppercase font-black tracking-widest bg-primary/10 text-primary animate-pulse">
                                                 ACTIVE
                                             </span>
                                         )}

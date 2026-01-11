@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Package, Terminal, ExternalLink, Plus, Trash2, Globe, Command, Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Box, Package, Terminal, ExternalLink, Plus, Trash2, Globe, Command, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { useAppStore } from '@/store';
@@ -21,7 +21,6 @@ export const McpPanel: React.FC = () => {
         selectedMcpServer,
         setSelectedMcpServer,
         mcpServers: servers,
-        setMcpServers: setServers,
         fetchMcpServers: fetchServers,
         isMcpAddOpen: isAddOpen,
         setIsMcpAddOpen: setIsAddOpen
@@ -33,6 +32,7 @@ export const McpPanel: React.FC = () => {
     }, [fetchServers]);
 
     const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Add Server State
     const [newServerName, setNewServerName] = useState("");
@@ -40,7 +40,6 @@ export const McpPanel: React.FC = () => {
     const [newServerSource, setNewServerSource] = useState("");
     const [newServerEntry, setNewServerEntry] = useState("src/server.py");
     const [adding, setAdding] = useState(false);
-
 
     const handleAddServer = async () => {
         if (!newServerName || !newServerSource) return;
@@ -87,11 +86,27 @@ export const McpPanel: React.FC = () => {
         }
     };
 
+    const filteredServers = useMemo(() => {
+        if (!searchQuery.trim()) return servers;
+        return (servers as unknown as McpServer[]).filter(server =>
+            server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (server.config?.type || '').toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [servers, searchQuery]);
+
     return (
-        <div className="flex flex-col h-full bg-card text-foreground">
-            {/* Header Content moved to Top Bar */}
-            <div className="hidden">
+        <div className="flex flex-col h-full bg-transparent text-foreground">
+            {/* Header Content with Add Button */}
+            <div className="p-3 border-b border-border/50 bg-muted/20">
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                    <DialogTrigger asChild>
+                        <Button
+                            className="w-full gap-2 bg-primary text-primary-inventory hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add MCP Server
+                        </Button>
+                    </DialogTrigger>
                     <DialogContent className="bg-card border-border sm:max-w-md text-foreground">
                         <DialogHeader>
                             <DialogTitle className="text-foreground">Add New MCP Server</DialogTitle>
@@ -152,12 +167,21 @@ export const McpPanel: React.FC = () => {
                 </Dialog>
             </div>
 
-            {/* Default "Built-in" Servers (Browser, RAG, Sandbox) handled as just servers now 
-                But we might want to group them visually or just list them all.
-            */}
+            {/* Search */}
+            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                        placeholder="Search servers..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-                {(servers as unknown as McpServer[]).map((server, idx) => {
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                {filteredServers.map((server: McpServer, idx: number) => {
                     const isActive = selectedMcpServer === server.name;
                     // Determine Type Icon
                     let typeIcon = <Box className="w-4 h-4" />;
@@ -181,7 +205,7 @@ export const McpPanel: React.FC = () => {
                         >
                             <div className="flex justify-between items-center gap-3">
                                 <div className={cn(
-                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm",
                                     isActive ? "bg-primary text-primary-inventory" : "bg-muted/50 text-muted-foreground"
                                 )}>
                                     {typeIcon}
@@ -190,7 +214,7 @@ export const McpPanel: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <span className={cn(
                                             "text-xs font-bold uppercase tracking-wide",
-                                            isActive ? "text-primary" : "text-foreground"
+                                            isActive ? "text-primary shadow-primary/10" : "text-foreground"
                                         )}>
                                             {server.name}
                                         </span>
@@ -199,7 +223,7 @@ export const McpPanel: React.FC = () => {
                                             server.status === 'connected' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500"
                                         )} title={server.status} />
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground truncate opacity-70">
+                                    <div className="text-[10px] text-muted-foreground truncate opacity-70 font-mono">
                                         {server.config?.type || 'local'} • {server.config?.args?.[0] || 'managed'}
                                     </div>
                                 </div>
@@ -219,8 +243,8 @@ export const McpPanel: React.FC = () => {
                     );
                 })}
 
-                {servers.length === 0 && !loading && (
-                    <div className="text-center p-8 text-xs text-muted-foreground opacity-50">
+                {filteredServers.length === 0 && !loading && (
+                    <div className="text-center p-8 text-xs text-muted-foreground opacity-50 uppercase tracking-widest font-bold">
                         No servers found
                     </div>
                 )}
@@ -228,3 +252,4 @@ export const McpPanel: React.FC = () => {
         </div>
     );
 };
+

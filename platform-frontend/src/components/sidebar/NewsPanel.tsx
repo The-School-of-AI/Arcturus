@@ -254,10 +254,12 @@ export const NewsPanel: React.FC = () => {
                                             <div
                                                 key={index}
                                                 className={cn(
-                                                    "group p-3 rounded-lg transition-all border cursor-pointer",
+                                                    "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
+                                                    "bg-gradient-to-br from-card to-muted/20",
+                                                    "hover:shadow-lg hover:border-primary/50",
                                                     activeNewsTab === item.url
-                                                        ? "bg-cyan-500/10 border-cyan-500/30"
-                                                        : "border-transparent hover:bg-muted/50 hover:border-border/50"
+                                                        ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-lg shadow-primary/5"
+                                                        : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                                 )}
                                                 onClick={() => openNewsTab(item.url)}
                                             >
@@ -448,7 +450,7 @@ export const NewsPanel: React.FC = () => {
                 viewMode === 'articles' && (
                     <div className="flex flex-col h-full bg-card">
                         {/* Header with Back Button - Matches Search Style */}
-                        <div className="px-4 pt-4 pb-2 bg-card border-b border-border/50 flex items-center gap-2">
+                        <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50 flex items-center gap-2">
                             <Button
                                 size="sm"
                                 variant="ghost"
@@ -457,7 +459,7 @@ export const NewsPanel: React.FC = () => {
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </Button>
-                            <span className="text-sm font-medium truncate flex-1 leading-none">
+                            <span className="text-sm font-bold uppercase tracking-widest truncate flex-1 leading-none text-primary">
                                 {selectedSource ? selectedSource.name : (newsItems.length > 0 ? new URL(newsItems[0].url).hostname.replace('www.', '') : 'Articles')}
                             </span>
                         </div>
@@ -480,11 +482,11 @@ export const NewsPanel: React.FC = () => {
                                         <div
                                             key={item.id}
                                             className={cn(
-                                                "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
+                                                "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
                                                 "bg-gradient-to-br from-card to-muted/20",
-                                                "hover:shadow-md",
+                                                "hover:shadow-lg",
                                                 isActive
-                                                    ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                                    ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-lg shadow-primary/5"
                                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                             )}
                                             onClick={() => openNewsTab(item.url)}
@@ -492,8 +494,8 @@ export const NewsPanel: React.FC = () => {
                                             <div className="flex justify-between items-start gap-3">
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className={cn(
-                                                        "text-[13px] font-medium leading-relaxed transition-colors line-clamp-2",
-                                                        isActive ? "text-neon-yellow" : "text-foreground group-hover:text-foreground/80"
+                                                        "text-[13px] font-bold leading-relaxed transition-all duration-300 line-clamp-2 tracking-tight",
+                                                        isActive ? "text-primary" : "text-foreground group-hover:text-primary"
                                                     )}>
                                                         {item.title}
                                                     </h4>

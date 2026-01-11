@@ -378,29 +378,33 @@ export const RagPanel: React.FC = () => {
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                         <Input
                             className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                            placeholder={panelMode === 'browse' ? "Filter..." : "Ask..."}
+                            placeholder={panelMode === 'browse' ? "Search workspace..." : "Ask your context..."}
                             value={innerSearch}
                             onChange={(e) => setInnerSearch(e.target.value)}
                         />
                     </form>
-                    <div className="flex items-center bg-card/50 p-0.5 rounded-md border border-border/30 shrink-0">
+                    <div className="flex items-center bg-card/30 p-0.5 rounded-lg border border-border/50 shrink-0">
                         <button
                             onClick={() => setPanelMode('browse')}
                             className={cn(
-                                "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-tight transition-all",
-                                panelMode === 'browse' ? "bg-neon-yellow text-neutral-950" : "text-muted-foreground hover:text-foreground"
+                                "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                panelMode === 'browse'
+                                    ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                             )}
                         >
-                            SEARCH
+                            <Library className="w-3 h-3" />
                         </button>
                         <button
                             onClick={() => setPanelMode('seek')}
                             className={cn(
-                                "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-tight transition-all",
-                                panelMode === 'seek' ? "bg-neon-yellow text-neutral-950" : "text-muted-foreground hover:text-foreground"
+                                "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                panelMode === 'seek'
+                                    ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                             )}
                         >
-                            RAG
+                            <FileSearch className="w-3 h-3" />
                         </button>
                     </div>
                 </div>
@@ -452,10 +456,10 @@ export const RagPanel: React.FC = () => {
                                 <div
                                     key={i}
                                     className={cn(
-                                        "group relative p-3 transition-all duration-200 cursor-pointer",
-                                        "bg-gradient-to-br from-card to-muted/10",
-                                        "hover:bg-accent/30 text-foreground/80 hover:text-foreground",
-                                        "border-b border-border/10"
+                                        "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
+                                        "bg-gradient-to-br from-card to-muted/20",
+                                        "hover:shadow-lg hover:border-primary/50",
+                                        "border-border/50"
                                     )}
                                     onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
