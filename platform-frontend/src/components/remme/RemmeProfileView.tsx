@@ -72,9 +72,9 @@ export const RemMeProfileView: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-card overflow-hidden relative">
+        <div className="h-full flex flex-col bg-transparent overflow-hidden relative">
             {/* Header */}
-            <div className="flex-none p-6 pb-2 border-b border-border/50 bg-card/95 backdrop-blur z-10 flex items-center justify-between">
+            <div className="flex-none p-6 pb-2 border-b border-border/50 bg-transparent backdrop-blur-sm z-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent flex items-center gap-2">
                         <Sparkles className="w-6 h-6 text-yellow-500" />

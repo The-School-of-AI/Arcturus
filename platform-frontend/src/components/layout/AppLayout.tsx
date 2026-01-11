@@ -155,7 +155,7 @@ export const AppLayout: React.FC = () => {
                     <>
                         <div
                             className={cn(
-                                "h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out",
+                                "h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out border-border/50",
                                 hideSidebarSubPanel ? "w-16" : ""
                             )}
                             style={{ width: hideSidebarSubPanel ? 64 : leftWidth }}
@@ -168,7 +168,7 @@ export const AppLayout: React.FC = () => {
                 )}
 
                 {/* Center Canvas or Document Viewer - Main visual area */}
-                <div className="flex-1 flex flex-col min-w-0 glass rounded-2xl relative overflow-hidden shadow-2xl transition-all duration-300">
+                <div className="flex-1 flex flex-col min-w-0 glass-panel rounded-2xl relative overflow-hidden shadow-2xl transition-all duration-300 border-border/50">
                     {/* Content Logic */}
                     {!isAppViewMode && (
                         sidebarTab === 'apps' ? (
@@ -210,7 +210,7 @@ export const AppLayout: React.FC = () => {
 
                         {/* Right Workspace Panel - Floating Glass */}
                         <div
-                            className="h-full glass-panel rounded-2xl flex-shrink-0 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ease-out"
+                            className="h-full glass-panel rounded-2xl flex-shrink-0 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ease-out border-border/50"
                             style={{ width: rightWidth }}
                         >
                             {sidebarTab === 'apps' ? <AppInspector /> :

@@ -408,7 +408,7 @@ export const DocumentViewer: React.FC = () => {
     return (
         <div className="h-full flex flex-col relative">
             {/* Tab Bar - Browser Style */}
-            <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-12 shadow-md">
+            <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-12">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
                     {openDocuments.map(doc => (
                         <div
@@ -481,7 +481,7 @@ export const DocumentViewer: React.FC = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden relative bg-background selection:bg-primary/20 select-text">
+            <div className="flex-1 overflow-hidden relative bg-transparent selection:bg-primary/20 select-text">
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-[100] space-y-4">
                         <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-2xl">
@@ -620,12 +620,12 @@ export const DocumentViewer: React.FC = () => {
                             </div>
                         ) : (
                             /* Code View */
-                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? (theme === 'dark' ? "bg-[#1e1e1e]" : "bg-background") : "bg-background")}>
+                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? (theme === 'dark' ? "bg-[#1e1e1e]/50" : "bg-transparent") : "bg-transparent")}>
                                 {isCode && viewType === 'source' ? (
                                     <SyntaxHighlighter
                                         language={codeLang}
                                         style={theme === 'dark' ? vscDarkPlus : prism}
-                                        customStyle={{ margin: 0, height: '100%', fontSize: '14px', lineHeight: '1.5' }}
+                                        customStyle={{ margin: 0, height: '100%', fontSize: '14px', lineHeight: '1.5', background: 'transparent' }}
                                         showLineNumbers
                                     >
                                         {content}
@@ -649,7 +649,7 @@ export const DocumentViewer: React.FC = () => {
 
                 {/* Empty State */}
                 {!activeDoc ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 space-y-8 bg-background">
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 space-y-8 bg-transparent">
                         <div className="relative">
                             <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
                             <div className="relative p-10 rounded-[3rem] bg-card border border-border/50 shadow-inner">

@@ -73,7 +73,7 @@ export const McpBrowser: React.FC = () => {
     }
 
     return (
-        <div className="w-full h-full bg-background flex flex-col overflow-hidden">
+        <div className="w-full h-full bg-transparent flex flex-col overflow-hidden">
             <ScrollArea className="flex-1 p-8">
                 <div className="max-w-3xl mx-auto prose prose-slate dark:prose-invert prose-sm">
                     {loading ? (

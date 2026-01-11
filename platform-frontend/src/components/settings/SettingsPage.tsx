@@ -521,9 +521,9 @@ export const SettingsPage: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-background overflow-hidden">
+        <div className="h-full flex flex-col bg-transparent overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card/30 shrink-0">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-transparent backdrop-blur-sm shrink-0">
                 <div>
                     <h2 className="font-bold text-foreground">{TABS.find(t => t.id === activeTab)?.label}</h2>
                     <p className="text-xs text-muted-foreground">{TABS.find(t => t.id === activeTab)?.description}</p>

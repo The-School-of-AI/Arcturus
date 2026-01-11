@@ -141,7 +141,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
 
             {/* Content Area */}
             {!hideSubPanel && (
-                <div className="flex-1 min-w-0 glass border-0 border-l border-border/50 shadow-none flex flex-col overflow-hidden relative">
+                <div className="flex-1 min-w-0 bg-transparent border-l border-border/50 shadow-none flex flex-col overflow-hidden relative">
                     {sidebarTab === 'settings' && <SettingsPanel />}
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">
