@@ -96,13 +96,16 @@
     /* Aligned with global theme blue */
 
     /* Glass Design System - Dark Mode */
-    --glass-bg: 15 23 42;
-    --glass-alpha: 0.45;
+    --glass-bg: 8 12 24;
+    /* deep navy (instead of flat slate) */
+    --glass-alpha: 0.52;
     --glass-border: 255 255 255;
     --glass-border-alpha: 0.10;
     --glass-shadow: 0 0 0;
     --glass-shadow-alpha: 0.0;
-    --accent-glow-alpha: 0.18;
+    --accent-glow: 56 189 248;
+    /* keep your sky accent */
+    --accent-glow-alpha: 0.16;
   }
 }
 
@@ -192,6 +195,22 @@
   background-size: 400% 400%;
   animation: gradient-xy 150s ease infinite;
 }
+
+.dark .animate-gradient-bg {
+  background: radial-gradient(circle at center, transparent 0%, rgba(6, 9, 19, 0.4) 100%),
+    linear-gradient(-45deg,
+      #060913,
+      #0b1220,
+      #10213a,
+      #0a1326,
+      #0c1a33,
+      #060913);
+  background-size: 100% 100%, 400% 400%;
+  animation: gradient-xy 150s ease infinite;
+  filter: saturate(0.9) brightness(1.03);
+}
+
+
 
 
 
