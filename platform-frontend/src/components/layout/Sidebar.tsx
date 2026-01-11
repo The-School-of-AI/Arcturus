@@ -117,7 +117,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     return (
         <div className="h-full flex overflow-hidden">
             {/* NavRail - Left Vertical Bar */}
-            <div className="w-16 border-r border-border/50 bg-background/50 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
+            <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools */}
                 <div className="flex-1 w-full px-2 space-y-2">
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
@@ -141,7 +141,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
 
             {/* Content Area */}
             {!hideSubPanel && (
-                <div className="flex-1 min-w-0 bg-transparent border-l border-border/50 shadow-none flex flex-col overflow-hidden relative">
+                <div className="flex-1 min-w-0 bg-transparent border-l border-white/10 shadow-none flex flex-col overflow-hidden relative">
                     {sidebarTab === 'settings' && <SettingsPanel />}
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">

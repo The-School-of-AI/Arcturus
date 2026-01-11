@@ -144,7 +144,7 @@ export const RunTimeline: React.FC = () => {
     const displayTotal = totalSteps;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-card/90 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-card/10 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
             <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"
