@@ -6,52 +6,59 @@
 @layer base {
   :root {
     /* Modern Light Mode - Crisp, Airy, Tech Blue */
-    --background: 210 40% 98%; /* Very light cool blue-grey */
-    --foreground: 222 47% 11%; /* Deep navy text */
-    
+    --background: 210 40% 98%;
+    /* Very light cool blue-grey */
+    --foreground: 222 47% 11%;
+    /* Deep navy text */
+
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    
+
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    
-    --primary: 221 83% 53%; /* Bright Tech Blue */
+
+    --primary: 221 83% 53%;
+    /* Bright Tech Blue */
     --primary-foreground: 210 40% 98%;
-    
+
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11.2%;
-    
+
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    
+
     --accent: 210 40% 96.1%;
     --accent-foreground: 222 47% 11.2%;
-    
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221 83% 53%;
-    
-    --radius: 0.75rem; /* Softer corners */
-    
+
+    --radius: 0.75rem;
+    /* Softer corners */
+
     --neon-blue: 217 91% 60%;
     --neon-cyan: 189 94% 43%;
   }
 
   /* Dark Mode - Deep Space, Cyberpunk, Glass */
   .dark {
-    --background: 222 47% 11%; /* Deep Navy/Black */
+    --background: 222 47% 11%;
+    /* Deep Navy/Black */
     --foreground: 210 40% 98%;
 
-    --card: 217 33% 17%; /* Lighter navy for cards */
+    --card: 217 33% 17%;
+    /* Lighter navy for cards */
     --card-foreground: 210 40% 98%;
 
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%; /* Electric Blue */
+    --primary: 217 91% 60%;
+    /* Electric Blue */
     --primary-foreground: 222 47% 11%;
 
     --secondary: 217 33% 17.5%;
@@ -69,9 +76,10 @@
     --border: 217 33% 17.5%;
     --input: 217 33% 17.5%;
     --ring: 224 76% 48%;
-    
+
     --neon-blue: 217 91% 60%;
-    --neon-cyan: 190 100% 50%; /* Bright Cyan for accents */
+    --neon-cyan: 190 100% 50%;
+    /* Bright Cyan for accents */
   }
 }
 
@@ -79,6 +87,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-cyan-500/30 selection:text-cyan-100;
   }
@@ -91,7 +100,7 @@
   .glass {
     @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm;
   }
-  
+
   .glass-panel {
     @apply bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg;
   }
@@ -99,7 +108,7 @@
   .text-glow {
     text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
   }
-  
+
   .border-glow {
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
   }
@@ -107,10 +116,13 @@
 
 /* Background Animation */
 @keyframes gradient-xy {
-  0%, 100% {
+
+  0%,
+  100% {
     background-size: 400% 400%;
     background-position: 0% 0%;
   }
+
   50% {
     background-size: 400% 400%;
     background-position: 100% 100%;
@@ -118,9 +130,10 @@
 }
 
 .animate-gradient-bg {
-  background: linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #172554); /* Deep blues/navys */
+  background: linear-gradient(-45deg, #a5b4fc, #c4b5fd, #f9a8d4, #fda4af, #93c5fd, #a5f3fc);
+  /* Softer, whiter pastels - slowed animation */
   background-size: 400% 400%;
-  animation: gradient-xy 15s ease infinite;
+  animation: gradient-xy 150s ease infinite;
 }
 
 /* Custom Grid Background - Updated for blue theme */
@@ -134,7 +147,7 @@
 /* ReactFlow Controls - Modernized */
 .react-flow__controls {
   @apply flex flex-col glass-panel p-1 gap-1 m-0 rounded-lg top-3 left-3 bottom-auto !important;
-  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
 .react-flow__controls-button {
@@ -153,9 +166,11 @@
 .active-tabs-container::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -188,12 +203,15 @@
   opacity: 0;
   transition: opacity 0.2s ease;
 }
+
 .react-resizable:hover .react-resizable-handle {
   opacity: 1;
 }
+
 .react-resizable-handle::after {
   @apply border-muted-foreground !important;
 }
+
 .react-resizable-handle-se {
   bottom: 4px !important;
   right: 4px !important;
