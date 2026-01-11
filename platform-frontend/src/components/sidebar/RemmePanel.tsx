@@ -12,6 +12,7 @@ export const RemmePanel: React.FC = () => {
     const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen } = useAppStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [newMemoryText, setNewMemoryText] = useState("");
+    const [expandedMemoryId, setExpandedMemoryId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchMemories();
@@ -117,12 +118,13 @@ export const RemmePanel: React.FC = () => {
                     </div>
                 ) : (
                     filteredMemories.map((memory) => {
-                        const isActive = false; // Add active state if needed
+                        const isExpanded = expandedMemoryId === memory.id;
                         return (
                             <div
                                 key={memory.id}
+                                onClick={() => setExpandedMemoryId(isExpanded ? null : memory.id)}
                                 className={cn(
-                                    "group relative p-4 rounded-xl border transition-all duration-300",
+                                    "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
                                     "hover:shadow-md",
                                     memory.source_exists === false
                                         ? "border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.05)]"
@@ -132,8 +134,8 @@ export const RemmePanel: React.FC = () => {
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="flex-1 min-w-0">
                                         <p className={cn(
-                                            "text-[13px] text-foreground/90 leading-relaxed font-normal selection:bg-neon-yellow/30",
-                                            "line-clamp-2 group-hover:line-clamp-none transition-all duration-300"
+                                            "text-[13px] text-foreground/90 leading-relaxed font-normal selection:bg-neon-yellow/30 transition-all duration-300",
+                                            isExpanded ? "" : "line-clamp-2"
                                         )}>
                                             {memory.text}
                                         </p>
