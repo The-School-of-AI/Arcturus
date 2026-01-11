@@ -142,7 +142,7 @@ export const AppLayout: React.FC = () => {
     return (
         <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg relative">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <Meteors number={70} />
+                <Meteors number={35} />
             </div>
 
 

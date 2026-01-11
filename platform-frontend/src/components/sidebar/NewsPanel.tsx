@@ -255,7 +255,6 @@ export const NewsPanel: React.FC = () => {
                                                 key={index}
                                                 className={cn(
                                                     "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                                    "bg-gradient-to-br from-card to-muted/20",
                                                     "hover:shadow-lg hover:border-primary/50",
                                                     activeNewsTab === item.url
                                                         ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-lg shadow-primary/5"
@@ -316,7 +315,7 @@ export const NewsPanel: React.FC = () => {
                                     onClick={() => handleSelectSource(null)}
                                     className={cn(
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer mb-2",
-                                        "bg-gradient-to-br from-card to-muted/20 hover:shadow-md",
+                                        " hover:shadow-md",
                                         selectedNewsSourceId === null
                                             ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
                                             : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
@@ -342,7 +341,7 @@ export const NewsPanel: React.FC = () => {
                                         onClick={() => handleSelectSource(source.id)}
                                         className={cn(
                                             "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                            "bg-gradient-to-br from-card to-muted/20 hover:shadow-md",
+                                            " hover:shadow-md",
                                             selectedNewsSourceId === source.id
                                                 ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
                                                 : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
@@ -483,7 +482,6 @@ export const NewsPanel: React.FC = () => {
                                             key={item.id}
                                             className={cn(
                                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                                "bg-gradient-to-br from-card to-muted/20",
                                                 "hover:shadow-lg",
                                                 isActive
                                                     ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-lg shadow-primary/5"

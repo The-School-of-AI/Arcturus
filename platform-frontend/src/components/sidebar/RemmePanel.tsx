@@ -123,7 +123,6 @@ export const RemmePanel: React.FC = () => {
                                 key={memory.id}
                                 className={cn(
                                     "group relative p-4 rounded-xl border transition-all duration-300",
-                                    "bg-gradient-to-br from-card to-muted/20",
                                     "hover:shadow-md",
                                     memory.source_exists === false
                                         ? "border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.05)]"

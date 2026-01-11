@@ -1217,7 +1217,6 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             onDragStart={handleDragStart}
             className={cn(
                 "group relative flex flex-col rounded-xl border transition-all duration-300 overflow-hidden select-none",
-                "bg-gradient-to-br from-card to-muted/20",
                 "hover:shadow-xl hover:scale-[1.02]",
                 isSelected
                     ? "border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20"
@@ -1340,7 +1339,6 @@ const SavedAppsList = () => {
                                     key={app.id}
                                     className={cn(
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                        "bg-gradient-to-br from-card to-muted/20",
                                         "hover:shadow-lg",
                                         isActive
                                             ? "border-primary/40 hover:border-primary/60 bg-primary/5"

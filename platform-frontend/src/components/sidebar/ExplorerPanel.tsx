@@ -302,7 +302,7 @@ export const ExplorerPanel: React.FC = () => {
                                 <div
                                     className={cn(
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                        "bg-gradient-to-br from-card to-muted/20",
+
                                         "hover:shadow-md",
                                         explorerRootPath === item.path
                                             ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"

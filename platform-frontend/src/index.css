@@ -128,7 +128,7 @@
   .glass {
     background: rgb(var(--glass-bg) / var(--glass-alpha));
     border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(5px);
     box-shadow: 0 1px 2px rgb(var(--glass-shadow) / var(--glass-shadow-alpha));
   }
 
@@ -136,7 +136,7 @@
   .glass-panel {
     background: rgb(var(--glass-bg) / calc(var(--glass-alpha) - 0.18));
     border: 1px solid rgb(var(--glass-border) / calc(var(--glass-border-alpha) + 0.08));
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(5px);
     box-shadow:
       0 10px 30px rgb(var(--glass-shadow) / 0.14),
       0 1px 0 rgb(255 255 255 / 0.10) inset;
@@ -156,7 +156,7 @@
         rgb(249 168 212 / 0.10)),
       rgb(var(--glass-bg) / calc(var(--glass-alpha) - 0.10));
     border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
-    backdrop-filter: blur(18px);
+    backdrop-filter: blur(5px);
   }
 
   /* Glow utilities - use sparingly for interaction states */

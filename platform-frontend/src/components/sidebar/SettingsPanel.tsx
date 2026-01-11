@@ -41,7 +41,6 @@ export const SettingsPanel: React.FC = () => {
                             onClick={() => setSettingsActiveTab(tab.id)}
                             className={cn(
                                 "w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 text-left group overflow-hidden relative",
-                                "bg-gradient-to-br from-card to-muted/20",
                                 isActive
                                     ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/5 ring-1 ring-primary/20"
                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50 hover:shadow-md"

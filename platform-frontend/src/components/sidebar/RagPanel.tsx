@@ -457,7 +457,6 @@ export const RagPanel: React.FC = () => {
                                     key={i}
                                     className={cn(
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                        "bg-gradient-to-br from-card to-muted/20",
                                         "hover:shadow-lg hover:border-primary/50",
                                         "border-border/50"
                                     )}

@@ -196,7 +196,6 @@ export const McpPanel: React.FC = () => {
                             onClick={() => setSelectedMcpServer(server.name)}
                             className={cn(
                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                "bg-gradient-to-br from-card to-muted/20",
                                 "hover:shadow-md",
                                 isActive
                                     ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
