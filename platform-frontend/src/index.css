@@ -42,6 +42,18 @@
 
     --neon-blue: 217 91% 60%;
     --neon-cyan: 189 94% 43%;
+    --neon-yellow: var(--primary);
+    /* Aligned with global theme blue */
+
+    /* Glass Design System - Light Mode */
+    --glass-bg: 255 255 255;
+    --glass-alpha: 0.55;
+    --glass-border: 255 255 255;
+    --glass-border-alpha: 0.22;
+    --glass-shadow: 15 23 42;
+    --glass-shadow-alpha: 0.10;
+    --accent-glow: 56 189 248;
+    --accent-glow-alpha: 0.22;
   }
 
   /* Dark Mode - Deep Space, Cyberpunk, Glass */
@@ -80,6 +92,17 @@
     --neon-blue: 217 91% 60%;
     --neon-cyan: 190 100% 50%;
     /* Bright Cyan for accents */
+    --neon-yellow: var(--primary);
+    /* Aligned with global theme blue */
+
+    /* Glass Design System - Dark Mode */
+    --glass-bg: 15 23 42;
+    --glass-alpha: 0.45;
+    --glass-border: 255 255 255;
+    --glass-border-alpha: 0.10;
+    --glass-shadow: 0 0 0;
+    --glass-shadow-alpha: 0.0;
+    --accent-glow-alpha: 0.18;
   }
 }
 
@@ -95,22 +118,51 @@
 
 /* --- UTILITIES --- */
 
-/* Glassmorphism */
+/* Unified Glass Design System */
 @layer utilities {
+
+  /* Base glass (cards, header) */
   .glass {
-    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-sm;
+    background: rgb(var(--glass-bg) / var(--glass-alpha));
+    border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
+    backdrop-filter: blur(12px);
+    box-shadow: 0 1px 2px rgb(var(--glass-shadow) / var(--glass-shadow-alpha));
   }
 
+  /* Stronger glass (panels, modals) */
   .glass-panel {
-    @apply bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg;
+    background: rgb(var(--glass-bg) / calc(var(--glass-alpha) - 0.18));
+    border: 1px solid rgb(var(--glass-border) / calc(var(--glass-border-alpha) + 0.08));
+    backdrop-filter: blur(24px);
+    box-shadow:
+      0 10px 30px rgb(var(--glass-shadow) / 0.14),
+      0 1px 0 rgb(255 255 255 / 0.10) inset;
   }
 
+  /* Subtle edge highlight (makes glass feel real) */
+  .glass-edge {
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.14) inset;
+  }
+
+  /* Tinted glass that picks up gradient mood */
+  .glass-tint {
+    background:
+      linear-gradient(135deg,
+        rgb(165 180 252 / 0.18),
+        rgb(196 181 253 / 0.14),
+        rgb(249 168 212 / 0.10)),
+      rgb(var(--glass-bg) / calc(var(--glass-alpha) - 0.10));
+    border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
+    backdrop-filter: blur(18px);
+  }
+
+  /* Glow utilities - use sparingly for interaction states */
   .text-glow {
-    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    text-shadow: 0 0 18px rgb(var(--accent-glow) / 0.35);
   }
 
   .border-glow {
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 14px rgb(var(--accent-glow) / var(--accent-glow-alpha));
   }
 }
 
