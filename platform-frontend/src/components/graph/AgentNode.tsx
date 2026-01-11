@@ -24,9 +24,9 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
     // Status colors
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'running': return 'text-neon-yellow';
-            case 'completed': return 'text-green-400';
-            case 'failed': return 'text-red-400';
+            case 'running': return 'text-primary';
+            case 'completed': return 'text-green-500';
+            case 'failed': return 'text-red-500';
             case 'stale': return 'text-muted-foreground/50';
             default: return 'text-muted-foreground';
         }
@@ -39,11 +39,11 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
     return (
         <div
             className={cn(
-                "relative min-w-[180px] bg-card border rounded-xl shadow-lg transition-all duration-300 group",
+                "relative min-w-[180px] rounded-xl transition-all duration-300 group glass",
                 selected
-                    ? "border-neon-yellow shadow-[0_0_15px_rgba(246,255,77,0.3)] bg-card"
+                    ? "border-primary border-glow bg-card"
                     : "border-border hover:border-primary/50 bg-card/80 backdrop-blur-sm",
-                isRunning && "animate-pulse-subtle border-neon-yellow ring-2 ring-neon-yellow ring-offset-2 ring-offset-background shadow-[0_0_20px_rgba(246,255,77,0.5)] bg-card",
+                isRunning && "animate-pulse-subtle border-primary ring-2 ring-primary/30 ring-offset-2 ring-offset-background border-glow bg-card",
                 isStale && "opacity-90 grayscale border-border/50 bg-card/50 backdrop-blur-sm ring-2 ring-border/50"
             )}
             onClick={() => selectNode(id)}
@@ -51,11 +51,11 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             {/* 🟢 Ticker UI for Running State */}
             {isRunning && (data.agent_prompt || data.prompt || data.description) && (
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-[280px] z-50 pointer-events-none">
-                    <div className="bg-neon-yellow/10 backdrop-blur-md border border-neon-yellow/50 text-neon-yellow text-[10px] font-mono rounded-md px-2 py-1 shadow-[0_0_15px_rgba(246,255,77,0.2)]">
-                        <div className="flex items-center gap-1.5 mb-0.5 border-b border-neon-yellow/20 pb-0.5">
+                    <div className="glass text-primary text-[10px] font-mono rounded-md px-2 py-1 border-glow">
+                        <div className="flex items-center gap-1.5 mb-0.5 border-b border-primary/20 pb-0.5">
                             <span className="relative flex h-1.5 w-1.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-yellow opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-neon-yellow"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
                             </span>
                             <span className="font-bold tracking-wider uppercase text-[9px]">Active Task</span>
                         </div>
@@ -66,7 +66,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                         </div>
                     </div>
                     {/* Connector Line */}
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-[1px] h-3 bg-gradient-to-b from-neon-yellow/50 to-transparent"></div>
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-[1px] h-3 bg-gradient-to-b from-primary/50 to-transparent"></div>
                 </div>
             )}
             {/* Handles - All 4 sides for flexible routing */}
@@ -89,7 +89,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             <div className="p-4 flex items-start gap-3">
                 <div className={cn(
                     "p-2 rounded-lg bg-background/50 border border-border transition-colors",
-                    selected ? "text-neon-yellow border-neon-yellow/30" : "text-muted-foreground"
+                    selected ? "text-primary border-primary/30" : "text-muted-foreground"
                 )}>
                     <AgentIcon type={data.type} className="w-5 h-5" />
                 </div>
@@ -99,7 +99,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             {data.type}
                         </span>
-                        {isRunning && <Loader2 className="w-3 h-3 animate-spin text-neon-yellow" />}
+                        {isRunning && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
                     </div>
 
                     <h3 className={cn("text-sm font-semibold truncate mt-0.5", statusColor)}>
@@ -123,7 +123,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
 
             {/* Active Glow Gradient (Optional) */}
             {selected && (
-                <div className="absolute inset-0 -z-10 rounded-xl bg-neon-yellow/5 blur-xl pointer-events-none" />
+                <div className="absolute inset-0 -z-10 rounded-xl bg-primary/5 blur-xl pointer-events-none" />
             )}
         </div>
     );
