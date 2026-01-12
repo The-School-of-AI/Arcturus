@@ -175,9 +175,12 @@ export const RagPanel: React.FC = () => {
     } = useAppStore();
 
     const [splitRatio, setSplitRatio] = useState(50);
-    const [panelMode, setPanelMode] = useState<'browse' | 'seek'>('browse');
+    const [panelMode, setPanelMode] = useState<'browse' | 'seek' | 'grep'>('browse');
     const [innerSearch, setInnerSearch] = useState("");
     const [seeking, setSeeking] = useState(false);
+    const [grepResults, setGrepResults] = useState<any[]>([]);
+    const [isRegex, setIsRegex] = useState(false);
+    const [isCaseSensitive, setIsCaseSensitive] = useState(false);
 
     // New Folder State
     const [newFolderName, setNewFolderName] = useState("");
@@ -198,22 +201,41 @@ export const RagPanel: React.FC = () => {
 
     // Debounced Keyword Search for Browse mode
     useEffect(() => {
-        if (panelMode !== 'browse' || !innerSearch.trim()) {
+        if (!innerSearch.trim()) {
             setRagKeywordMatches([]);
+            setGrepResults([]);
             return;
         }
 
         const timer = setTimeout(async () => {
-            try {
-                const res = await axios.get(`${API_BASE}/rag/keyword_search`, { params: { query: innerSearch } });
-                setRagKeywordMatches(res.data.matches || []);
-            } catch (e) {
-                console.error("Keyword search failed", e);
+            if (panelMode === 'browse') {
+                try {
+                    const res = await axios.get(`${API_BASE}/rag/keyword_search`, { params: { query: innerSearch } });
+                    setRagKeywordMatches(res.data.matches || []);
+                } catch (e) {
+                    console.error("Keyword search failed", e);
+                }
+            } else if (panelMode === 'grep') {
+                setSeeking(true);
+                try {
+                    const res = await axios.get(`${API_BASE}/rag/ripgrep_search`, {
+                        params: {
+                            query: innerSearch,
+                            regex: isRegex,
+                            case_sensitive: isCaseSensitive
+                        }
+                    });
+                    setGrepResults(res.data?.results || []);
+                } catch (e) {
+                    console.error("Grep search failed", e);
+                } finally {
+                    setSeeking(false);
+                }
             }
-        }, 300);
+        }, 400);
 
         return () => clearTimeout(timer);
-    }, [innerSearch, panelMode, setRagKeywordMatches]);
+    }, [innerSearch, panelMode, isRegex, isCaseSensitive, setRagKeywordMatches]);
 
 
     const handleSearchSubmit = async (e?: React.FormEvent) => {
@@ -224,13 +246,26 @@ export const RagPanel: React.FC = () => {
             setSeeking(true);
             try {
                 const res = await axios.get(`${API_BASE}/rag/search`, { params: { query: innerSearch } });
-                console.log("SEEK Response:", res.data);  // DEBUG
-                console.log("Results:", res.data?.results);  // DEBUG
                 const results = res.data?.results || [];
-                console.log("Setting ragSearchResults:", results.length);  // DEBUG
                 setRagSearchResults(results);
             } catch (e) {
                 console.error("RAG search failed", e);
+            } finally {
+                setSeeking(false);
+            }
+        } else if (panelMode === 'grep') {
+            setSeeking(true);
+            try {
+                const res = await axios.get(`${API_BASE}/rag/ripgrep_search`, {
+                    params: {
+                        query: innerSearch,
+                        regex: isRegex,
+                        case_sensitive: isCaseSensitive
+                    }
+                });
+                setGrepResults(res.data?.results || []);
+            } catch (e) {
+                console.error("Grep search failed", e);
             } finally {
                 setSeeking(false);
             }
@@ -403,11 +438,53 @@ export const RagPanel: React.FC = () => {
                                     ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
                                     : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                             )}
+                            title="Semantic Search"
                         >
                             <FileSearch className="w-3 h-3" />
                         </button>
+                        <button
+                            onClick={() => setPanelMode('grep')}
+                            className={cn(
+                                "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                panelMode === 'grep'
+                                    ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                            )}
+                            title="Fast Pattern Search (Ripgrep)"
+                        >
+                            <Zap className="w-3 h-3" />
+                        </button>
                     </div>
                 </div>
+                {panelMode === 'grep' && (
+                    <div className="flex items-center justify-between mt-2 px-1">
+                        <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-1.5 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    checked={isRegex}
+                                    onChange={(e) => setIsRegex(e.target.checked)}
+                                    className="w-3 h-3 rounded border-border bg-muted text-primary focus:ring-0 focus:ring-offset-0"
+                                />
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover:text-foreground transition-colors">Regex</span>
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    checked={isCaseSensitive}
+                                    onChange={(e) => setIsCaseSensitive(e.target.checked)}
+                                    className="w-3 h-3 rounded border-border bg-muted text-primary focus:ring-0 focus:ring-offset-0"
+                                />
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover:text-foreground transition-colors">Match Case</span>
+                            </label>
+                        </div>
+                        {grepResults.length > 0 && (
+                            <span className="text-[9px] font-mono text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/20">
+                                {grepResults.length} Matches
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Main Content Area */}
@@ -437,7 +514,7 @@ export const RagPanel: React.FC = () => {
                             </div>
                         )}
                     </div>
-                ) : (
+                ) : panelMode === 'seek' ? (
                     <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                         {seeking && (
                             <div className="flex items-center justify-center py-6 opacity-50">
@@ -473,6 +550,46 @@ export const RagPanel: React.FC = () => {
                         })}
                         {!seeking && innerSearch && ragSearchResults.length === 0 && (
                             <div className="text-center py-6 text-[10px] text-muted-foreground opacity-50 uppercase tracking-widest font-bold">No Matches</div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
+                        {seeking && (
+                            <div className="flex items-center justify-center py-6 opacity-50">
+                                <RefreshCw className="w-5 h-5 animate-spin text-primary" />
+                            </div>
+                        )}
+                        {!seeking && grepResults.map((res, i) => (
+                            <div
+                                key={i}
+                                className={cn(
+                                    "group relative p-3 rounded-lg border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 cursor-pointer overflow-hidden bg-card/10"
+                                )}
+                                onClick={() => openDocument({
+                                    id: res.file || 'unknown',
+                                    title: (res.file || '').split('/').pop() || 'file',
+                                    type: (res.file || '').split('.').pop() || 'txt',
+                                    targetLine: res.line,
+                                    searchText: res.content
+                                })}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-1.5 truncate flex-1">
+                                        <File className="w-2.5 h-2.5 text-blue-400/70" />
+                                        <span className="text-[9px] font-black text-muted-foreground truncate uppercase">{res.file || 'unknown'}</span>
+                                    </div>
+                                    <span className="text-[9px] font-mono bg-muted px-1 rounded text-muted-foreground shrink-0">L{res.line || 0}</span>
+                                </div>
+                                <div className="text-[10px] text-foreground/80 font-mono line-clamp-2 break-all opacity-80 group-hover:opacity-100">
+                                    {res.content || '...'}
+                                </div>
+                            </div>
+                        ))}
+                        {!seeking && innerSearch && grepResults.length === 0 && (
+                            <div className="text-center py-8 opacity-30 flex flex-col items-center gap-2">
+                                <Search className="w-6 h-6" />
+                                <p className="text-[9px] font-bold uppercase tracking-widest">No Pattern Matches</p>
+                            </div>
                         )}
                     </div>
                 )}

@@ -279,6 +279,97 @@ async def rag_keyword_search(query: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Keyword search failed: {str(e)}")
 
+@router.get("/ripgrep_search")
+async def rag_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False):
+    """Deep pattern search using ripgrep"""
+    try:
+        args = {"query": query, "regex": regex, "case_sensitive": case_sensitive}
+        result = await multi_mcp.call_tool("rag", "advanced_ripgrep_search", args)
+        
+        # Extract results from CallToolResult - ROBUST NOISE-RESISTANT PARSER
+        results = []
+        
+        def extract_json_list(text):
+            """Helpful regex to find and extract the JSON list even if there's noise"""
+            # Try finding something that looks like a JSON list: [...]
+            import re
+            match = re.search(r'\[\s*{.*}\s*\]', text, re.DOTALL)
+            if match:
+                 try:
+                     return json.loads(match.group(0))
+                 except:
+                     pass
+            
+            # Try ast if it looks like a Python list with single quotes
+            match = re.search(r'\[\s*\{.*\}\s*\]', text, re.DOTALL)
+            if match:
+                 try:
+                     import ast
+                     return ast.literal_eval(match.group(0))
+                 except:
+                     pass
+            return None
+
+        # 1. Try to find content in 'content' list
+        if hasattr(result, 'content') and isinstance(result.content, list):
+            for item in result.content:
+                text_content = ""
+                if hasattr(item, 'text'):
+                    text_content = item.text
+                elif isinstance(item, dict) and 'text' in item:
+                    text_content = item['text']
+                
+                if text_content:
+                    # DEBUG: Print snippet
+                    print(f"DEBUG: MCP Text Content Start: {text_content[:100]}...")
+                    
+                    extracted = extract_json_list(text_content)
+                    
+                    # Validate matches
+                    valid_items = []
+                    if extracted and isinstance(extracted, list):
+                        for x in extracted:
+                            if isinstance(x, dict) and "file" in x and "line" in x:
+                                valid_items.append(x)
+                    
+                    if valid_items:
+                        results.extend(valid_items)
+                    else:
+                        # Direct try as fallback
+                        try:
+                            parsed = json.loads(text_content)
+                            if isinstance(parsed, list):
+                                valid = [x for x in parsed if isinstance(x, dict) and "file" in x]
+                                results.extend(valid)
+                            elif isinstance(parsed, dict) and "file" in parsed:
+                                results.append(parsed)
+                        except:
+                            try:
+                                import ast
+                                parsed = ast.literal_eval(text_content)
+                                if isinstance(parsed, list): 
+                                    valid = [x for x in parsed if isinstance(x, dict) and "file" in x]
+                                    results.extend(valid)
+                                elif isinstance(parsed, dict) and "file" in parsed:
+                                    results.append(parsed)
+                            except:
+                                pass
+        
+        # 2. Fallback: If result itself is already a list (direct return)
+        elif isinstance(result, list):
+            results = result
+            
+        print(f"DEBUG: Ripgrep router returning {len(results)} structured results")
+        if len(results) > 0:
+            print(f"DEBUG: First result sample: {results[0]}")
+            
+        return {"status": "success", "results": results}
+    except Exception as e:
+        import traceback
+        print(f"Ripgrep router error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Ripgrep search failed: {str(e)}")
+
 
 # === Document Content Endpoints ===
 

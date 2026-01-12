@@ -78,5 +78,6 @@ export interface RAGDocument {
     content?: string;
     chatHistory?: ChatMessage[];
     targetPage?: number;
+    targetLine?: number;  // NEW: Support ripgrep line jumping
     searchText?: string;  // Text to auto-search when opening from SEEK result
 }

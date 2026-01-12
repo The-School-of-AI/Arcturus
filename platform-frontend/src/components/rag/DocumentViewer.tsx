@@ -240,18 +240,26 @@ export const DocumentViewer: React.FC = () => {
                         }
                     }
                 }
+                // 3. Jump to Line if provided (Ripgrep)
+                if (activeDoc.targetLine && activeDoc.targetLine > 0) {
+                    const lineElement = document.getElementById(`line-${activeDoc.targetLine}`);
+                    if (lineElement) {
+                        console.log("Scrolling to line:", activeDoc.targetLine);
+                        lineElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             }, delay);
 
             return () => clearTimeout(timer);
         }
-    }, [activeDoc?.id, activeDoc?.targetPage, activeDoc?.searchText, pdfUrl, jumpToPage]);
+    }, [activeDoc?.id, activeDoc?.targetPage, activeDoc?.targetLine, activeDoc?.searchText, pdfUrl, jumpToPage]);
 
     const isImage = (type: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase());
     const canPreview = (type: string) => {
         const t = type.toLowerCase();
         return ['pdf', 'docx', 'doc', 'txt', 'md', 'json', 'ts', 'tsx', 'js', 'jsx', 'py', 'c', 'cpp', 'h', 'hpp', 'css', 'html', 'png', 'jpg', 'jpeg', 'gif', 'webp'].includes(t);
     };
-    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh'].includes(type.toLowerCase());
+    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh', 'txt', 'md'].includes(type.toLowerCase());
 
     const markdownComponents = {
         img: ({ node, ...props }: any) => (
@@ -375,7 +383,7 @@ export const DocumentViewer: React.FC = () => {
                     setImageUrl(null);
                     setDocxBlob(null);
                     setIsDocx(false);
-                    setIsCode(codeNode);
+                    setIsCode(codeNode || !!activeDoc.targetLine);
                 }
             } catch (e) {
                 console.error("Failed to load document content", e);
@@ -627,6 +635,18 @@ export const DocumentViewer: React.FC = () => {
                                         style={theme === 'dark' ? vscDarkPlus : prism}
                                         customStyle={{ margin: 0, height: '100%', fontSize: '14px', lineHeight: '1.5', background: 'transparent' }}
                                         showLineNumbers
+                                        wrapLines={true}
+                                        lineProps={(lineNumber) => {
+                                            const style: React.CSSProperties = { display: 'block', width: '100%' };
+                                            if (lineNumber === activeDoc?.targetLine) {
+                                                style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
+                                                style.borderLeft = '3px solid #eab308';
+                                            }
+                                            return {
+                                                style,
+                                                id: `line-${lineNumber}`
+                                            };
+                                        }}
                                     >
                                         {content}
                                     </SyntaxHighlighter>

@@ -87,6 +87,23 @@ INDEXING_STATUS = {
 INDEXING_LOCK = threading.Lock()
 REINDEX_BUSY_LOCK = threading.Lock()
 
+def get_rg_path():
+    """Find the ripgrep binary. Checks .bin/ folder first, then system path."""
+    project_bin = ROOT.parent / ".bin" / "rg"
+    if project_bin.exists():
+        return str(project_bin)
+    
+    # Fallback to system path
+    try:
+        import subprocess
+        result = subprocess.run(["which", "rg"], capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except:
+        pass
+    
+    return None
+
 
 def get_embedding(text: str) -> np.ndarray:
     result = requests.post(EMBED_URL, json={"model": EMBED_MODEL, "prompt": text}, timeout=OLLAMA_TIMEOUT)
@@ -592,6 +609,22 @@ def keyword_search(query: str) -> list[str]:
     Returns a list of document paths that contain the matching text.
     """
     mcp_log("KEYWORD_SEARCH", f"Query: {query}")
+    
+    # Try Ripgrep first if available for live file search
+    rg_path = get_rg_path()
+    if rg_path:
+        try:
+            mcp_log("INFO", f"Using Ripgrep for keyword search: {rg_path}")
+            # Search in the data directory
+            search_path = str(BASE_DATA_DIR)
+            cmd = [rg_path, "-l", "-i", query, search_path]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                paths = [os.path.relpath(p, BASE_DATA_DIR) for p in result.stdout.splitlines() if p.strip()]
+                return paths
+        except Exception as e:
+            mcp_log("WARN", f"Ripgrep search failed, falling back to metadata: {e}")
+
     try:
         meta_path = ROOT / "faiss_index" / "metadata.json"
         if not meta_path.exists():
@@ -612,6 +645,147 @@ def keyword_search(query: str) -> list[str]:
     except Exception as e:
         mcp_log("ERROR", f"Keyword search failed: {e}")
         return []
+
+@mcp.tool()
+def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False, max_results: int = 50) -> list[dict]:
+    """Powerful regex/keyword search using Ripgrep.
+    Returns structured results with file, line number, and match content.
+    Set regex=True for pattern matching (e.g. r"error:.*").
+    """
+    rg_path = get_rg_path()
+    if not rg_path:
+        return [{"error": "Ripgrep binary not found. Please install it or check .bin/rg"}]
+    
+    mcp_log("RG_SEARCH", f"Query: {query} (regex={regex})")
+    
+    try:
+        cmd = [rg_path, "--json", "-M", "500"] # Max columns to avoid huge blobs
+        if not case_sensitive:
+            cmd.append("-i")
+        if not regex:
+            cmd.append("-F") # Fixed strings
+        
+        cmd.extend([query, str(BASE_DATA_DIR)])
+        
+        # We need to run with Popen to manage the potential output size
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        results = []
+        
+        for line in process.stdout:
+            try:
+                data = json.loads(line)
+                if data["type"] == "match":
+                    match_data = data["data"]
+                    results.append({
+                        "file": os.path.relpath(match_data["path"]["text"], BASE_DATA_DIR),
+                        "line": match_data["line_number"],
+                        "content": match_data["lines"]["text"].strip(),
+                        "submatches": match_data["submatches"]
+                    })
+                if len(results) >= max_results:
+                    process.terminate()
+                    break
+            except:
+                continue
+        
+        process.wait(timeout=5)
+        mcp_log("RG_SEARCH", f"Found {len(results)} structured matches")
+        # return results REMOVED for hybrid search flow
+        
+    except Exception as e:
+        mcp_log("ERROR", f"Ripgrep advanced search failed: {e}")
+        # Don't return error immediately, try metadata fallback at least
+        # return [{"error": str(e)}]
+        pass
+
+    # --- Hybrid Search: Scan Metadata for PDFs/Binaries ---
+    try:
+        # Load metadata
+        meta_path = ROOT / "faiss_index" / "metadata.json"
+        
+        # Only proceed if we haven't hit max results
+        if len(results) < max_results and meta_path.exists():
+            metadata = json.loads(meta_path.read_text())
+            
+            # Prepare Regex
+            import re
+            flags = 0 if case_sensitive else re.IGNORECASE
+            
+            if not regex:
+                # Escape for literal match if not regex mode
+                pattern = re.escape(query)
+            else:
+                pattern = query
+                
+            compiled_re = re.compile(pattern, flags)
+            
+            seen_files = {r['file'] for r in results}
+            
+            for entry in metadata:
+                doc_path_raw = entry.get('doc')
+                if not doc_path_raw: continue
+                
+                # Intelligent Path Handling
+                if os.path.isabs(doc_path_raw):
+                    try:
+                        rel_path = os.path.relpath(doc_path_raw, BASE_DATA_DIR)
+                    except:
+                        rel_path = os.path.basename(doc_path_raw)
+                else:
+                    # It's already relative or just a filename
+                    rel_path = doc_path_raw
+                
+                # Debug specific file
+                if "INVG" in rel_path:
+                    mcp_log("DEBUG", f"Checking metadata for {rel_path}. Seen? {rel_path in seen_files}")
+
+                # If we already have this file from Ripgrep, skip it
+                if rel_path in seen_files:
+                    continue
+                    
+                content_chunk = entry.get('chunk', '')
+                
+                # Search in chunk
+                matches = list(compiled_re.finditer(content_chunk))
+                if matches:
+                    if "INVG" in rel_path:
+                        mcp_log("DEBUG", f"Found {len(matches)} matches in {rel_path}")
+
+                    for m in matches:
+                        # Extract context
+                        start, end = m.span()
+                        
+                        # Find line boundaries
+                        line_start = content_chunk.rfind('\n', 0, start) + 1
+                        line_end = content_chunk.find('\n', end)
+                        if line_end == -1: line_end = len(content_chunk)
+                        
+                        line_content = content_chunk[line_start:line_end].strip()
+                        
+                        # Metadata page to line mapping
+                        page_num = entry.get('page', 1) 
+                        
+                        result_obj = {
+                            "file": rel_path,
+                            "line": int(page_num) if isinstance(page_num, (int, str)) and str(page_num).isdigit() else 1,
+                            "content": line_content,
+                            "submatches": [{"match":{"text": m.group()}, "start": start - line_start, "end": end - line_start}]
+                        }
+                        
+                        results.append(result_obj)
+                        seen_files.add(rel_path) 
+                        
+                        if len(results) >= max_results:
+                            break
+                
+                if len(results) >= max_results:
+                    break
+                    
+    except Exception as e:
+        mcp_log("ERROR", f"Metadata fallback search failed: {e}")
+        
+    mcp_log("RG_SEARCH", f"Found {len(results)} structured matches (Hybrid)")
+    return results
 
 
 def caption_image(img_url_or_path: str) -> str:
