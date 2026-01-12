@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
 import { API_BASE } from '@/lib/api';
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RagItem {
     name: string;
@@ -419,41 +420,90 @@ export const RagPanel: React.FC = () => {
                         />
                     </form>
                     <div className="flex items-center bg-card/30 p-0.5 rounded-lg border border-border/50 shrink-0">
-                        <button
-                            onClick={() => setPanelMode('browse')}
-                            className={cn(
-                                "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
-                                panelMode === 'browse'
-                                    ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                            )}
-                        >
-                            <Library className="w-3 h-3" />
-                        </button>
-                        <button
-                            onClick={() => setPanelMode('seek')}
-                            className={cn(
-                                "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
-                                panelMode === 'seek'
-                                    ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                            )}
-                            title="Semantic Search"
-                        >
-                            <FileSearch className="w-3 h-3" />
-                        </button>
-                        <button
-                            onClick={() => setPanelMode('grep')}
-                            className={cn(
-                                "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
-                                panelMode === 'grep'
-                                    ? "bg-primary text-primary-inventory shadow-lg shadow-primary/20"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                            )}
-                            title="Fast Pattern Search (Ripgrep)"
-                        >
-                            <Zap className="w-3 h-3" />
-                        </button>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={() => setPanelMode('browse')}
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                        panelMode === 'browse'
+                                            ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                    )}
+                                >
+                                    <Library className="w-3 h-3" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-primary/20">
+                                <p className="font-bold text-sm text-primary flex items-center gap-2">
+                                    <Library className="w-4 h-4" /> Mode 1: Browse (File-System)
+                                </p>
+                                <div className="space-y-2 text-xs leading-relaxed">
+                                    <p>Uses <strong>Ripgrep</strong> to search raw files on disk. Best for code and markdown.</p>
+                                    <div className="p-2.5 bg-primary/5 rounded border border-primary/20 text-[10px]">
+                                        <p className="font-bold mb-1 underline decoration-primary/30">The indexing nuance:</p>
+                                        <p>Normally Ripgrep misses binary PDFs. However, we've added a <strong>Fallback</strong>: if Ripgrep finds 0 hits, it automatically checks the indexed text-metadata.</p>
+                                        <p className="mt-1.5 pt-1.5 border-t border-primary/10"><strong>Try:</strong> Searching 'anmol' might only show .md files, but 'anmol singh' triggers the fallback and reveals the PDF!</p>
+                                    </div>
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={() => setPanelMode('seek')}
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                        panelMode === 'seek'
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                    )}
+                                >
+                                    <FileSearch className="w-3 h-3" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-blue-400/20">
+                                <p className="font-bold text-sm text-blue-400 flex items-center gap-2">
+                                    <FileSearch className="w-4 h-4" /> Mode 2: Seek (Hybrid RAG)
+                                </p>
+                                <div className="space-y-2 text-xs leading-relaxed">
+                                    <p>Our smartest search. Combines <strong>BM25 Keyword</strong> matching with <strong>Semantic Vector</strong> understanding.</p>
+                                    <ul className="list-disc pl-4 space-y-1 text-[11px] opacity-90">
+                                        <li>Finds concepts, not just exact strings.</li>
+                                        <li>Bypasses disk files to use the optimized index.</li>
+                                        <li>Perfect for PDFs and deep context questions.</li>
+                                    </ul>
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={() => setPanelMode('grep')}
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                        panelMode === 'grep'
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                    )}
+                                >
+                                    <Zap className="w-3 h-3" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-yellow-400/20">
+                                <p className="font-bold text-sm text-yellow-500 flex items-center gap-2">
+                                    <Zap className="w-4 h-4" /> Mode 3: Grep (Pure Match)
+                                </p>
+                                <p className="text-xs leading-relaxed">
+                                    Raw, literal <strong>Ripgrep</strong> across the entire workspace. Returns exact line correlations and code snippets.
+                                </p>
+                                <p className="text-[11px] bg-yellow-500/5 p-2 rounded italic opacity-80 border border-yellow-500/10">
+                                    Fastest way to find specific variables, tags, or boilerplate codes.
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
                 </div>
                 {panelMode === 'grep' && (

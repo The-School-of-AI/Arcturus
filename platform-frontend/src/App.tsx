@@ -1,10 +1,13 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ThemeProvider } from '@/components/theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 function App() {
   return (
     <ThemeProvider defaultTheme="dark">
-      <AppLayout />
+      <TooltipProvider>
+        <AppLayout />
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

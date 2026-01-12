@@ -69,6 +69,18 @@ export const Header: React.FC = () => {
     const config = TAB_CONFIG[sidebarTab];
     const Icon = config?.icon || Box;
 
+    const countFilesRecursively = (items: any[]): number => {
+        let count = 0;
+        (items || []).forEach(item => {
+            if (item.type === 'folder') {
+                count += countFilesRecursively(item.children || []);
+            } else {
+                count += 1;
+            }
+        });
+        return count;
+    };
+
     const getCount = () => {
         switch (sidebarTab) {
             case 'runs': return runs.length;
@@ -78,7 +90,7 @@ export const Header: React.FC = () => {
             case 'news': return newsSources.length;
             case 'rag': return ragFiles.length;
             case 'mcp': return mcpServers.length;
-            case 'notes': return notesFiles.length;
+            case 'notes': return countFilesRecursively(notesFiles);
             default: return 0;
         }
     };
