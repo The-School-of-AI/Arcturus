@@ -25,26 +25,74 @@ turndownService.addRule('unresolveImages', {
     filter: 'img',
     replacement: function (content, node: any) {
         const src = node.getAttribute('src');
+        const alt = node.getAttribute('alt') || '';
+        let markdownAlt = alt;
+
+        // Extract width/scale and alignment from style to restore Obsidian syntax
+        const style = node.getAttribute('style') || '';
+        const flags: string[] = [];
+
+        // 1. Position/Float flags
+        if (style.includes('float: left')) flags.push('float-l');
+        else if (style.includes('float: right')) flags.push('float-r');
+        else if (style.includes('margin-left: 0') && style.includes('margin-right: auto')) flags.push('left');
+        else if (style.includes('margin-left: auto') && style.includes('margin-right: 0')) flags.push('right');
+        else if (style.includes('margin-left: auto') && style.includes('margin-right: auto')) flags.push('center');
+
+        // 2. Size flag
+        const widthMatch = style.match(/width:\s*([^;]+)/);
+        if (widthMatch) {
+            let widthValue = widthMatch[1].trim();
+            if (widthValue.endsWith('%')) {
+                const percent = parseInt(widthValue);
+                widthValue = (percent / 100).toString();
+            } else if (widthValue.endsWith('px')) {
+                widthValue = widthValue.replace('px', '');
+            }
+            flags.push(widthValue);
+        }
+
+        if (flags.length > 0) {
+            // Reconstruct the pipe syntax: ![Alt|flag1|flag2]
+            const baseAlt = alt.includes('|') ? alt.split('|')[0] : alt;
+            markdownAlt = (baseAlt ? baseAlt : '') + '|' + flags.join('|');
+        }
+
         if (src && src.includes('/rag/document_content?path=')) {
             try {
                 const url = new URL(src);
                 const fullPath = url.searchParams.get('path');
                 if (fullPath) {
-                    // Extract just the filename from the path (e.g. 'attachments/img_xxx.png')
-                    // We know all migrated images go into 'attachments/' relative to the note
                     const parts = fullPath.split('/');
                     const filename = parts.pop();
                     const subfolder = parts.pop();
                     if (subfolder === 'attachments') {
-                        return `![${node.getAttribute('alt') || ''}](./attachments/${filename})`;
+                        return `![${markdownAlt}](./attachments/${filename})`;
                     }
                 }
             } catch (e) {
                 console.error("Failed to unresolve image URL", e);
             }
         }
-        return `![${node.getAttribute('alt') || ''}](${src})`;
+        return `![${markdownAlt}](${src})`;
     }
+});
+
+// Extend TipTap Image to support scaling via style attribute
+const ScaledImage = Image.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            style: {
+                default: null,
+                parseHTML: element => element.getAttribute('style'),
+                renderHTML: attributes => {
+                    if (!attributes.style) return {};
+                    return { style: attributes.style };
+                },
+            },
+        };
+    },
 });
 
 export const NotesEditor: React.FC = () => {
@@ -66,7 +114,7 @@ export const NotesEditor: React.FC = () => {
     const editor = useEditor({
         extensions: [
             StarterKit,
-            Image.configure({
+            ScaledImage.configure({
                 HTMLAttributes: {
                     class: 'rounded-lg border border-border/50 max-w-full h-auto my-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow',
                 },
@@ -113,15 +161,54 @@ export const NotesEditor: React.FC = () => {
     }, [activeDocumentId]);
 
     // Custom marked parser that resolves image paths
+    // Custom marked parser that resolves image paths and handles scaling/alignment
     const handleParseMarkdown = useCallback(async (content: string) => {
-        // Create a local marked instance to avoid global pollution
         const renderer = new marked.Renderer();
-        const originalImage = renderer.image.bind(renderer);
 
-        // Override image renderer to resolve paths
         renderer.image = ({ href, title, text }: any) => {
             const resolvedSrc = resolveImagePath(href);
-            return `<img src="${resolvedSrc}" alt="${text || ''}" ${title ? `title="${title}"` : ''} />`;
+            let styles: string[] = [];
+            let altText = text || '';
+
+            // Obsidian-style scaling/alignment: ![alt|right|500](path)
+            if (text && text.includes('|')) {
+                const parts = text.split('|');
+                altText = parts[0].trim();
+                const flags = parts.slice(1).map((f: string) => f.trim().toLowerCase());
+
+                flags.forEach((f: string) => {
+                    if (!f) return;
+
+                    // Alignment/Float Flags
+                    if (f === 'left') {
+                        styles.push('margin-left: 0', 'margin-right: auto', 'display: block');
+                    } else if (f === 'right') {
+                        styles.push('margin-left: auto', 'margin-right: 0', 'display: block');
+                    } else if (f === 'center') {
+                        styles.push('margin-left: auto', 'margin-right: auto', 'display: block');
+                    } else if (f === 'float-l') {
+                        styles.push('float: left', 'margin-right: 1.5rem', 'margin-bottom: 0.5rem');
+                    } else if (f === 'float-r') {
+                        styles.push('float: right', 'margin-left: 1.5rem', 'margin-bottom: 0.5rem');
+                    }
+                    // Size Flags
+                    else if (f.includes('.') || (parseFloat(f) <= 1.0 && !f.includes('px'))) {
+                        const ratio = parseFloat(f);
+                        if (!isNaN(ratio)) styles.push(`width: ${ratio * 100}%`);
+                    } else if (!isNaN(parseInt(f))) {
+                        const px = parseInt(f);
+                        if (!isNaN(px)) styles.push(`width: ${px}px`);
+                    }
+                });
+            }
+
+            // Default to display: block if no float to avoid weird inline issues
+            if (!styles.some(s => s.includes('float') || s.includes('display'))) {
+                styles.push('display: block', 'margin-left: auto', 'margin-right: auto');
+            }
+
+            const styleAttr = styles.length > 0 ? `style="${styles.join('; ')}"` : '';
+            return `<img src="${resolvedSrc}" alt="${text || ''}" ${title ? `title="${title}"` : ''} ${styleAttr} />`;
         };
 
         return marked.parse(content, { renderer });
@@ -334,6 +421,18 @@ export const NotesEditor: React.FC = () => {
                             .tiptap-editor-container .prose h2,
                             .tiptap-editor-container .prose h3 {
                                 font-size: inherit !important;
+                            }
+                            /* Ensure scaled images are respected and not forced to 100% by prose */
+                            .tiptap-editor-container .prose img {
+                                display: block;
+                                margin-left: auto;
+                                margin-right: auto;
+                                max-width: 100%;
+                                height: auto;
+                            }
+                            /* If there is a width style, respect it */
+                            .tiptap-editor-container .prose img[style*="width"] {
+                                max-width: 100% !important;
                             }
                         `}</style>
                         <div className="tiptap-editor-container h-full">
