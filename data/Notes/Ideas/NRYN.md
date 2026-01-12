@@ -269,15 +269,15 @@ The last four are the missing ones.
 
 Three reasons:
 
-### 1\. Historically, humans were in the loop
+### 1. Historically, humans were in the loop
 
 Error messages were written for humans, not machines.
 
-### 2\. Languages evolved independently
+### 2. Languages evolved independently
 
 Each ecosystem invented its own diagnostics with no incentive to unify.
 
-### 3\. LLMs are new
+### 3. LLMs are new
 
 Only now does it make sense to treat the environment as an optimizer target.
 
@@ -1075,7 +1075,7 @@ Expose the above as MCP tools:
 
 *   snapshots + `--changed`
     
-*   patch safety (old\_hash)
+*   patch safety (old_hash)
     
 *   iteration loop with budgets
     

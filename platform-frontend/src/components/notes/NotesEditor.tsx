@@ -3,7 +3,6 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
@@ -200,6 +199,10 @@ export const NotesEditor: React.FC = () => {
     const [rawContent, setRawContent] = useState("");
     const [fontSize, setFontSize] = useState(16);
 
+    // Derived state for comparison
+    const trimmedCurrent = rawContent.trim();
+    const trimmedLast = lastSavedContent.trim();
+
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isFetchingRef = useRef(false);
 
@@ -280,32 +283,11 @@ export const NotesEditor: React.FC = () => {
     const suggestionConfig = {
         char: '[[',
         command: ({ editor, range, props }: any) => {
-            // Check if there are closing brackets following the range and remove them
-            const { state } = editor.view;
-            const docSize = state.doc.content.size;
-
-            let finalRange = range;
-
-            if (range && range.to !== undefined) {
-                try {
-                    // Cap the 'to' position to document size to avoid out-of-bounds errors
-                    const safeTo = Math.min(range.to + 2, docSize);
-                    const textAfter = state.doc.textBetween(range.to, safeTo);
-
-                    if (textAfter === ']]') {
-                        finalRange = { from: range.from, to: range.to + 2 };
-                    } else if (textAfter.startsWith(']')) {
-                        finalRange = { from: range.from, to: range.to + 1 };
-                    }
-                } catch (e) {
-                    console.warn("Failed to check text after range", e);
-                }
-            }
-
+            if (!range) return;
             editor
                 .chain()
                 .focus()
-                .insertContentAt(finalRange, [
+                .insertContentAt(range, [
                     {
                         type: 'wikilink',
                         attrs: props,
@@ -405,8 +387,13 @@ export const NotesEditor: React.FC = () => {
                 },
 
                 onExit() {
-                    if (popup && popup[0]) {
-                        popup[0].destroy();
+                    try {
+                        if (popup && popup[0]) {
+                            popup[0].hide();
+                            popup[0].destroy();
+                        }
+                    } catch (e) {
+                        console.warn("Error during suggestion cleanup", e);
                     }
                     component.destroy();
                 },
@@ -596,17 +583,20 @@ export const NotesEditor: React.FC = () => {
             });
 
             // If backend updated the content (e.g. moved images), sync it back
-            if (res.data.content && res.data.content !== textToSave) {
+            if (res.data.content && res.data.content.trim() !== textToSave.trim()) {
                 setRawContent(res.data.content);
                 setLastSavedContent(res.data.content);
 
                 // If in WYSIWYG mode, update editor without losing cursor if possible
-                // but for now simple refresh is safer
                 if (mode === 'wysiwyg' && editor) {
                     const html = await handleParseMarkdown(res.data.content);
                     const currentPos = editor.state.selection.from;
                     editor.commands.setContent(html, { emitUpdate: false });
-                    editor.commands.setTextSelection(currentPos);
+                    try {
+                        editor.commands.setTextSelection(currentPos);
+                    } catch (e) {
+                        // Position might be out of range if content shortened significantly
+                    }
                 }
             } else {
                 setLastSavedContent(textToSave);
@@ -618,16 +608,28 @@ export const NotesEditor: React.FC = () => {
         }
     }, [activeDocumentId]);
 
-    // Auto-save
+    // Auto-save logic
     useEffect(() => {
-        if (isFetchingRef.current) return; // Don't save if we just loaded
-        if (rawContent !== lastSavedContent && !isLoading) {
+        if (isFetchingRef.current || isLoading) return;
+
+        // Trim for comparison to avoid whitespace issues triggering unnecessary saves
+        const trimmedCurrent = rawContent.trim();
+        const trimmedLast = lastSavedContent.trim();
+
+        if (trimmedCurrent !== trimmedLast && trimmedCurrent.length > 0) {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = setTimeout(() => {
                 saveContent(rawContent);
-            }, 1000);
+            }, 1500); // 1.5s delay for auto-save
         }
     }, [rawContent, lastSavedContent, isLoading, saveContent]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        };
+    }, []);
 
     // Manual Save
     useEffect(() => {
@@ -643,8 +645,10 @@ export const NotesEditor: React.FC = () => {
 
     // Handle Mode Switch
     const toggleMode = async () => {
+        // Save current content before switching to ensure NO loss
+        await saveContent(rawContent);
+
         if (mode === 'wysiwyg') {
-            // Switching to Raw: rawContent is already up to date via onUpdate
             setMode('raw');
         } else {
             // Switching to WYSIWYG: update editor with current rawContent
@@ -678,11 +682,21 @@ export const NotesEditor: React.FC = () => {
             {/* Toolbar */}
             <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/20">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-foreground/80 truncate max-w-[300px]">
+                    <span className="text-sm font-semibold text-foreground/80 truncate max-w-[200px] sm:max-w-[400px]">
                         {activeDoc?.title || activeDocumentId.split('/').pop()}
                     </span>
-                    {isSaving && <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>}
-                    {!isSaving && rawContent !== lastSavedContent && <span className="text-xs text-yellow-500">Unsaved changes</span>}
+                    <div className="flex items-center gap-2 min-w-[100px]">
+                        {isSaving ? (
+                            <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded font-bold animate-pulse">SAVING...</span>
+                        ) : (
+                            trimmedCurrent !== trimmedLast && trimmedCurrent.length > 0 && (
+                                <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded font-bold">UNSAVED</span>
+                            )
+                        )}
+                        {!isSaving && trimmedCurrent === trimmedLast && trimmedCurrent.length > 0 && (
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded font-bold">SAVED</span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-1 bg-muted/90 p-1 rounded-sm">
