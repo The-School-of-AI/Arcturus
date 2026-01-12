@@ -13,6 +13,11 @@ import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Mention from '@tiptap/extension-mention';
+import tippy from 'tippy.js';
+import type { Instance as TippyInstance } from 'tippy.js';
+import { ReactRenderer } from '@tiptap/react';
+import { WikiLinkList } from './WikiLinkList';
 
 // Initialize Turndown service
 const turndownService = new TurndownService({
@@ -78,6 +83,22 @@ turndownService.addRule('unresolveImages', {
     }
 });
 
+// WikiLink rule for Turndown
+turndownService.addRule('wikilinks', {
+    filter: (node) => node.nodeName === 'A' && node.getAttribute('data-type') === 'wikilink',
+    replacement: (content, node: any) => {
+        const path = node.getAttribute('data-id');
+        const alias = node.textContent;
+        const noteName = path.split('/').pop()?.replace('.md', '');
+        if (alias && alias !== noteName) {
+            return `[[${path}|${alias}]]`;
+        }
+        return `[[${path}]]`;
+    }
+});
+
+// Move the image rule after... (wait, actually I should keep it organized)
+
 // Extend TipTap Image to support scaling via style attribute
 const ScaledImage = Image.extend({
     addAttributes() {
@@ -95,8 +116,40 @@ const ScaledImage = Image.extend({
     },
 });
 
+// Custom WikiLink Extension
+const WikiLink = Mention.extend({
+    name: 'wikilink',
+    addAttributes() {
+        return {
+            id: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-id'),
+                renderHTML: attributes => {
+                    if (!attributes.id) return {};
+                    return { 'data-id': attributes.id };
+                },
+            },
+            label: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-label'),
+                renderHTML: attributes => {
+                    if (!attributes.label) return {};
+                    return { 'data-label': attributes.label };
+                },
+            },
+        };
+    },
+    renderHTML({ node, HTMLAttributes }) {
+        return ['a', {
+            ...HTMLAttributes,
+            'data-type': 'wikilink',
+            class: 'text-blue-500 hover:underline cursor-pointer font-medium decoration-blue-500/30'
+        }, node.attrs.label || node.attrs.id];
+    },
+});
+
 export const NotesEditor: React.FC = () => {
-    const { activeDocumentId, openDocuments, isZenMode, toggleZenMode } = useAppStore();
+    const { activeDocumentId, openDocuments, setActiveDocument, openDocument, isZenMode, toggleZenMode } = useAppStore();
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
 
     // States
@@ -111,6 +164,123 @@ export const NotesEditor: React.FC = () => {
     const isFetchingRef = useRef(false);
 
     // Setup TipTap
+    // Suggestion logic
+    const [allNotes, setAllNotes] = useState<string[]>([]);
+
+    useEffect(() => {
+        const fetchAllNotes = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/rag/documents`);
+                const extractMdFiles = (items: any[]): string[] => {
+                    let result: string[] = [];
+                    items.forEach(item => {
+                        if (item.type === 'md' || item.type === 'markdown') {
+                            result.push(item.path);
+                        }
+                        if (item.children) {
+                            result = [...result, ...extractMdFiles(item.children)];
+                        }
+                    });
+                    return result;
+                };
+                if (res.data.files) {
+                    setAllNotes(extractMdFiles(res.data.files));
+                }
+            } catch (e) {
+                console.error("Failed to fetch notes for suggestions", e);
+            }
+        };
+        fetchAllNotes();
+    }, [activeDocumentId]);
+
+    const handleWikiLinkClick = useCallback(async (path: string) => {
+        if (!path) return;
+
+        // If path doesn't end with .md, add it
+        const fullPath = path.endsWith('.md') ? path : `${path}.md`;
+
+        // Navigate or Create
+        try {
+            // Check if file exists by trying to fetch its content
+            await axios.get(`${API_BASE}/rag/document_content`, { params: { path: fullPath } });
+
+            // Exists!
+            openDocument({ id: fullPath, title: fullPath.split('/').pop() || fullPath, type: 'note' });
+            setActiveDocument(fullPath);
+        } catch (e) {
+            // Doesn't exist, create it
+            try {
+                const formData = new FormData();
+                formData.append("path", fullPath);
+                formData.append("content", `# ${fullPath.split('/').pop()?.replace('.md', '')}\n\n`);
+                await axios.post(`${API_BASE}/rag/save_file`, formData);
+
+                openDocument({ id: fullPath, title: fullPath.split('/').pop() || fullPath, type: 'note' });
+                setActiveDocument(fullPath);
+            } catch (err) {
+                console.error("Failed to create new note", err);
+            }
+        }
+    }, [openDocument, setActiveDocument]);
+
+    const suggestionConfig = {
+        char: '[[',
+        items: ({ query }: { query: string }) => {
+            return allNotes
+                .filter(item => item.toLowerCase().includes(query.toLowerCase()))
+                .slice(0, 10);
+        },
+        render: () => {
+            let component: ReactRenderer<any>;
+            let popup: TippyInstance[];
+
+            return {
+                onStart: (props: any) => {
+                    component = new ReactRenderer(WikiLinkList, {
+                        props,
+                        editor: props.editor,
+                    });
+
+                    if (!props.clientRect) return;
+
+                    popup = tippy('body', {
+                        getReferenceClientRect: props.clientRect,
+                        appendTo: () => document.body,
+                        content: component.element,
+                        showOnCreate: true,
+                        interactive: true,
+                        trigger: 'manual',
+                        placement: 'bottom-start',
+                    });
+                },
+
+                onUpdate(props: any) {
+                    component.updateProps(props);
+
+                    if (!props.clientRect) return;
+
+                    popup[0].setProps({
+                        getReferenceClientRect: props.clientRect,
+                    });
+                },
+
+                onKeyDown(props: any) {
+                    if (props.event.key === 'Escape') {
+                        popup[0].hide();
+                        return true;
+                    }
+
+                    return component.ref?.onKeyDown(props);
+                },
+
+                onExit() {
+                    popup[0].destroy();
+                    component.destroy();
+                },
+            };
+        },
+    };
+
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -119,13 +289,24 @@ export const NotesEditor: React.FC = () => {
                     class: 'rounded-lg border border-border/50 max-w-full h-auto my-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow',
                 },
             }),
+            WikiLink.configure({
+                suggestion: suggestionConfig,
+            }),
             Placeholder.configure({
-                placeholder: 'Start writing... (Type # for heading, * for list)',
+                placeholder: 'Start writing... (Type # for heading, * for list, [[ for notes)',
             }),
         ],
         editorProps: {
             attributes: {
                 class: 'prose dark:prose-invert prose-blue max-w-none focus:outline-none min-h-[200px] px-8 py-6 text-foreground',
+            },
+            handleClick: (view, pos, event) => {
+                const node = view.state.doc.nodeAt(pos);
+                if (node?.type.name === 'wikilink') {
+                    handleWikiLinkClick(node.attrs.id);
+                    return true;
+                }
+                return false;
             },
         },
         onUpdate: ({ editor }) => {
@@ -210,8 +391,17 @@ export const NotesEditor: React.FC = () => {
             const styleAttr = styles.length > 0 ? `style="${styles.join('; ')}"` : '';
             return `<img src="${resolvedSrc}" alt="${text || ''}" ${title ? `title="${title}"` : ''} ${styleAttr} />`;
         };
+        // WikiLink rendering: [[Path]] or [[Path|Alias]]
+        // We match [[path]] or [[path|alias]]
+        const wikiLinkRegex = /\[\[(.*?)\]\]/g;
+        let finalContent = content.replace(wikiLinkRegex, (match, inner) => {
+            const parts = inner.split('|');
+            const path = parts[0].trim();
+            const alias = parts[1] ? parts[1].trim() : path.split('/').pop()?.replace('.md', '');
+            return `<a data-type="wikilink" data-id="${path}" class="text-blue-500 hover:underline cursor-pointer font-medium decoration-blue-500/30">${alias}</a>`;
+        });
 
-        return marked.parse(content, { renderer });
+        return marked.parse(finalContent, { renderer });
     }, [resolveImagePath]);
 
     // Fetch Content
