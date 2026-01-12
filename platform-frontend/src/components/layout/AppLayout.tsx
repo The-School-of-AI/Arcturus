@@ -42,7 +42,8 @@ export const AppLayout: React.FC = () => {
     const {
         viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId,
-        selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights
+        selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
+        isZenMode
     } = useAppStore();
 
     const isInspectorOpen = React.useMemo(() => {
@@ -151,8 +152,8 @@ export const AppLayout: React.FC = () => {
             {!isAppViewMode && <Header />}
 
             <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3 relative z-20">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown */}
-                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && (
+                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown OR Zen Mode */}
+                {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && !isZenMode && (
                     <>
                         <div
                             className={cn(

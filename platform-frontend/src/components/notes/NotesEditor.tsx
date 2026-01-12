@@ -6,7 +6,7 @@ import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus } from 'lucide-react';
+import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus, Maximize2, Minimize2 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ const turndownService = new TurndownService({
 });
 
 export const NotesEditor: React.FC = () => {
-    const { activeDocumentId, openDocuments } = useAppStore();
+    const { activeDocumentId, openDocuments, isZenMode, toggleZenMode } = useAppStore();
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
 
     // States
@@ -180,6 +180,15 @@ export const NotesEditor: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1 bg-muted/90 p-1 rounded-sm">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground mr-1"
+                        onClick={toggleZenMode}
+                        title={isZenMode ? "Exit Full Width" : "Full Width"}
+                    >
+                        {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                    </Button>
                     <div className="flex items-center border-r border-border/50 pr-1 mr-1">
                         <Button
                             variant="ghost"
