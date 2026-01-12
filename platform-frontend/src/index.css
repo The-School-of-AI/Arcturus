@@ -206,12 +206,12 @@
 
 .animate-gradient-bg {
   background: linear-gradient(-45deg,
-      #dfe5ff,
-      #e6ddff,
-      #ffddea,
-      #ffdfe3,
-      #e0ebff,
-      #def7fb);
+      #f0f2fd,
+      #f4f1fd,
+      #fdf3f7,
+      #eefbf6,
+      #f1f5fb,
+      #f1f9fa);
   background-size: 400% 400%;
   animation: gradient-xy 150s ease infinite;
 }
@@ -219,7 +219,7 @@
 .dark .animate-gradient-bg {
   background: radial-gradient(circle at center, transparent 0%, rgba(6, 9, 19, 0.2) 100%),
     linear-gradient(-45deg,
-      #060913,
+      #04050b,
       #0b1220,
       #10213a,
       #0a1326,
