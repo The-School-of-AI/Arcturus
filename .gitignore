@@ -58,6 +58,6 @@ mcp_servers/documents/*.gz
 .gemini/
 .env
 .bin
-data/mcp_repos/*
+data/mcp_repos/
 
 
