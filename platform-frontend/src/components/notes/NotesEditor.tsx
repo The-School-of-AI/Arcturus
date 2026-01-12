@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
@@ -24,6 +25,10 @@ const turndownService = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced'
 });
+
+// CRITICAL: Disable Turndown's aggressive escaping to prevent '[[link]] \]' bugs
+// This ensures that our markdown notes remain clean and Obsidian-compatible.
+turndownService.escape = (text: string) => text;
 
 // Rule to convert resolved API URLs back to relative paths for storage
 turndownService.addRule('unresolveImages', {
@@ -106,8 +111,8 @@ const ScaledImage = Image.extend({
             ...this.parent?.(),
             style: {
                 default: null,
-                parseHTML: element => element.getAttribute('style'),
-                renderHTML: attributes => {
+                parseHTML: (element: HTMLElement) => element.getAttribute('style'),
+                renderHTML: (attributes: any) => {
                     if (!attributes.style) return {};
                     return { style: attributes.style };
                 },
@@ -137,6 +142,22 @@ const WikiLink = Mention.extend({
                     return { 'data-label': attributes.label };
                 },
             },
+            targetLine: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-line'),
+                renderHTML: attributes => {
+                    if (!attributes.targetLine) return {};
+                    return { 'data-line': attributes.targetLine };
+                },
+            },
+            searchText: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-search'),
+                renderHTML: attributes => {
+                    if (!attributes.searchText) return {};
+                    return { 'data-search': attributes.searchText };
+                },
+            }
         };
     },
     renderHTML({ node, HTMLAttributes }) {
@@ -145,6 +166,25 @@ const WikiLink = Mention.extend({
             'data-type': 'wikilink',
             class: 'text-blue-500 hover:underline cursor-pointer font-medium decoration-blue-500/30'
         }, node.attrs.label || node.attrs.id];
+    },
+    renderText({ node }) {
+        return `[[${node.attrs.label || node.attrs.id}]]`;
+    },
+    parseHTML() {
+        return [
+            {
+                tag: 'a[data-type="wikilink"]',
+                getAttrs: element => {
+                    if (typeof element === 'string') return false;
+                    return {
+                        id: element.getAttribute('data-id'),
+                        label: element.textContent,
+                        targetLine: element.getAttribute('data-line'),
+                        searchText: element.getAttribute('data-search'),
+                    };
+                },
+            },
+        ];
     },
 });
 
@@ -193,8 +233,16 @@ export const NotesEditor: React.FC = () => {
         fetchAllNotes();
     }, [activeDocumentId]);
 
-    const handleWikiLinkClick = useCallback(async (path: string) => {
+    const handleWikiLinkClick = useCallback(async (path: string, targetLine?: number, searchText?: string) => {
         if (!path) return;
+
+        // If it's a web URL, open it in a new tab
+        if (path.startsWith('http') || (path.includes('.') && !path.includes('/') && !path.endsWith('.md'))) {
+            let url = path;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            window.open(url, '_blank');
+            return;
+        }
 
         // If path doesn't end with .md, add it
         const fullPath = path.endsWith('.md') ? path : `${path}.md`;
@@ -205,7 +253,13 @@ export const NotesEditor: React.FC = () => {
             await axios.get(`${API_BASE}/rag/document_content`, { params: { path: fullPath } });
 
             // Exists!
-            openDocument({ id: fullPath, title: fullPath.split('/').pop() || fullPath, type: 'note' });
+            openDocument({
+                id: fullPath,
+                title: fullPath.split('/').pop() || fullPath,
+                type: 'note',
+                targetLine: targetLine,
+                searchText: searchText
+            });
             setActiveDocument(fullPath);
         } catch (e) {
             // Doesn't exist, create it
@@ -225,10 +279,85 @@ export const NotesEditor: React.FC = () => {
 
     const suggestionConfig = {
         char: '[[',
-        items: ({ query }: { query: string }) => {
-            return allNotes
-                .filter(item => item.toLowerCase().includes(query.toLowerCase()))
-                .slice(0, 10);
+        command: ({ editor, range, props }: any) => {
+            // Check if there are closing brackets following the range and remove them
+            const { state } = editor.view;
+            const docSize = state.doc.content.size;
+
+            let finalRange = range;
+
+            if (range && range.to !== undefined) {
+                try {
+                    // Cap the 'to' position to document size to avoid out-of-bounds errors
+                    const safeTo = Math.min(range.to + 2, docSize);
+                    const textAfter = state.doc.textBetween(range.to, safeTo);
+
+                    if (textAfter === ']]') {
+                        finalRange = { from: range.from, to: range.to + 2 };
+                    } else if (textAfter.startsWith(']')) {
+                        finalRange = { from: range.from, to: range.to + 1 };
+                    }
+                } catch (e) {
+                    console.warn("Failed to check text after range", e);
+                }
+            }
+
+            editor
+                .chain()
+                .focus()
+                .insertContentAt(finalRange, [
+                    {
+                        type: 'wikilink',
+                        attrs: props,
+                    },
+                    {
+                        type: 'text',
+                        text: ' ',
+                    },
+                ])
+                .run();
+        },
+        items: async ({ query }: { query: string }) => {
+            if (!query || query.length < 2) {
+                return allNotes
+                    .filter(item => item.toLowerCase().includes(query.toLowerCase()))
+                    .slice(0, 10);
+            }
+
+            try {
+                const res = await axios.get(`${API_BASE}/rag/ripgrep_search`, {
+                    params: {
+                        query: query,
+                        target_dir: "Notes"
+                    }
+                });
+
+                const results = res.data?.results || [];
+                // Group by file to avoid too many duplicate file entries if query is in many lines
+                const seenFiles = new Set();
+                const uniqueResults: any[] = [];
+
+                results.forEach((r: any) => {
+                    if (!seenFiles.has(r.file)) {
+                        seenFiles.add(r.file);
+                        uniqueResults.push(r);
+                    }
+                });
+
+                // Mix with filename matches if not already in results
+                const fileMatches = allNotes.filter(n =>
+                    n.toLowerCase().includes(query.toLowerCase()) &&
+                    !seenFiles.has(n) &&
+                    !seenFiles.has(n.replace(/^Notes\//, ''))
+                ).slice(0, 5);
+
+                return [...uniqueResults, ...fileMatches].slice(0, 10);
+            } catch (e) {
+                console.error("WikiLink search failed", e);
+                return allNotes
+                    .filter(item => item.toLowerCase().includes(query.toLowerCase()))
+                    .slice(0, 10);
+            }
         },
         render: () => {
             let component: ReactRenderer<any>;
@@ -259,14 +388,16 @@ export const NotesEditor: React.FC = () => {
 
                     if (!props.clientRect) return;
 
-                    popup[0].setProps({
-                        getReferenceClientRect: props.clientRect,
-                    });
+                    if (popup && popup[0]) {
+                        popup[0].setProps({
+                            getReferenceClientRect: props.clientRect,
+                        });
+                    }
                 },
 
                 onKeyDown(props: any) {
                     if (props.event.key === 'Escape') {
-                        popup[0].hide();
+                        if (popup && popup[0]) popup[0].hide();
                         return true;
                     }
 
@@ -274,7 +405,9 @@ export const NotesEditor: React.FC = () => {
                 },
 
                 onExit() {
-                    popup[0].destroy();
+                    if (popup && popup[0]) {
+                        popup[0].destroy();
+                    }
                     component.destroy();
                 },
             };
@@ -303,8 +436,16 @@ export const NotesEditor: React.FC = () => {
             handleClick: (view, pos, event) => {
                 const node = view.state.doc.nodeAt(pos);
                 if (node?.type.name === 'wikilink') {
-                    handleWikiLinkClick(node.attrs.id);
+                    handleWikiLinkClick(node.attrs.id, node.attrs.targetLine, node.attrs.searchText);
                     return true;
+                }
+                // Handle standard TipTap Link clicks too
+                if (node?.type.name === 'text') {
+                    const mark = node.marks.find(m => m.type.name === 'link');
+                    if (mark) {
+                        handleWikiLinkClick(mark.attrs.href);
+                        return true;
+                    }
                 }
                 return false;
             },
@@ -392,8 +533,8 @@ export const NotesEditor: React.FC = () => {
             return `<img src="${resolvedSrc}" alt="${text || ''}" ${title ? `title="${title}"` : ''} ${styleAttr} />`;
         };
         // WikiLink rendering: [[Path]] or [[Path|Alias]]
-        // We match [[path]] or [[path|alias]]
-        const wikiLinkRegex = /\[\[(.*?)\]\]/g;
+        // Using a more precise regex to avoid capturing trailing artifacts
+        const wikiLinkRegex = /\[\[([^\[\]]+?)\]\]/g;
         let finalContent = content.replace(wikiLinkRegex, (match, inner) => {
             const parts = inner.split('|');
             const path = parts[0].trim();
