@@ -4,6 +4,9 @@ import re
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse, StreamingResponse
+import hashlib
+from PIL import Image
+import os
 
 from shared.state import get_multi_mcp, PROJECT_ROOT
 
@@ -145,6 +148,72 @@ async def create_rag_file(path: str = Form(...), content: str = Form("")):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def process_markdown_images(content: str, note_path: Path):
+    """
+    Scans markdown content for local absolute image paths.
+    Moves/resizes them to a local 'attachments' folder relative to the note.
+    Returns (updated_content, modified_count)
+    """
+    # Pattern to find absolute paths or file:// URLs
+    # Matches ![alt](path) or ![alt](file://path)
+    pattern = r'!\[(.*?)\]\(((?:file://)?/.*?)\)'
+    
+    modified = False
+    new_content = content
+    
+    # Target directory for attachments
+    attachments_dir = note_path.parent / "attachments"
+    
+    matches = re.findall(pattern, content)
+    for alt, raw_path in matches:
+        # Clean path
+        file_path_str = raw_path.replace("file://", "")
+        img_path = Path(file_path_str)
+        
+        if img_path.exists() and img_path.is_file():
+            try:
+                # 1. Read and check format
+                with Image.open(img_path) as img:
+                    # 2. Generate unique name based on content hash
+                    with open(img_path, "rb") as f:
+                        file_hash = hashlib.md5(f.read()).hexdigest()
+                    
+                    ext = img_path.suffix.lower() or ".png"
+                    new_filename = f"img_{file_hash[:10]}{ext}"
+                    
+                    attachments_dir.mkdir(parents=True, exist_ok=True)
+                    target_file = attachments_dir / new_filename
+                    
+                    # Check if already exists to avoid redundant processing
+                    if not target_file.exists():
+                        # 3. Resize if needed
+                        max_dim = 1024
+                        width, height = img.size
+                        if width > max_dim or height > max_dim:
+                            if width > height:
+                                new_w = max_dim
+                                new_h = int(height * (max_dim / width))
+                            else:
+                                new_h = max_dim
+                                new_w = int(width * (max_dim / height))
+                            
+                            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                            img.save(target_file)
+                        else:
+                            # Just copy/save if no resize needed
+                            img.save(target_file)
+                    
+                    # 4. Update path in markdown
+                    # Using relative path for portability
+                    rel_path = f"./attachments/{new_filename}"
+                    new_content = new_content.replace(raw_path, rel_path)
+                    modified = True
+                    
+            except Exception as e:
+                print(f"Error processing image {img_path}: {e}")
+                
+    return new_content, modified
+
 @router.post("/save_file")
 async def save_rag_file(path: str = Form(...), content: str = Form(...)):
     """Save/Overwrite file content"""
@@ -157,8 +226,14 @@ async def save_rag_file(path: str = Form(...), content: str = Form(...)):
         if not str(target_path.resolve()).startswith(str(root.resolve())):
              raise HTTPException(status_code=403, detail="Access denied")
         
+        # Process images if it's a markdown file
+        if clean_path.lower().endswith(".md"):
+            updated_content, modified = process_markdown_images(content, target_path)
+            if modified:
+                content = updated_content
+        
         target_path.write_text(content)
-        return {"status": "success"}
+        return {"status": "success", "content": content if clean_path.lower().endswith(".md") else None}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

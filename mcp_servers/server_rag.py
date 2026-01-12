@@ -668,9 +668,13 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
         
         search_path = BASE_DATA_DIR
         if target_dir:
-            # Ensure target_dir is relative and doesn't escape BASE_DATA_DIR
             clean_target = target_dir.strip("/").replace("..", "")
-            search_path = BASE_DATA_DIR / clean_target
+            if clean_target.startswith("memory"):
+                # Search in PROJECT_ROOT/memory/...
+                search_path = PROJECT_ROOT / clean_target
+            else:
+                # Search in PROJECT_ROOT/data/...
+                search_path = BASE_DATA_DIR / clean_target
         
         cmd.extend([query, str(search_path)])
         
@@ -683,8 +687,13 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                 data = json.loads(line)
                 if data["type"] == "match":
                     match_data = data["data"]
-                    rel_path = os.path.relpath(match_data["path"]["text"], BASE_DATA_DIR)
-                    
+                    # Calculate rel_path relative to PROJECT_ROOT to be safe
+                    abs_path = match_data["path"]["text"]
+                    try:
+                        rel_path = os.path.relpath(abs_path, PROJECT_ROOT)
+                    except:
+                        rel_path = os.path.basename(abs_path)
+
                     # Enforce target_dir filtering on results (extra safety)
                     if target_dir:
                         clean_target = target_dir.strip("/").replace("..", "")

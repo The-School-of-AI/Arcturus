@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Image from '@tiptap/extension-image';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
@@ -38,6 +39,11 @@ export const NotesEditor: React.FC = () => {
     const editor = useEditor({
         extensions: [
             StarterKit,
+            Image.configure({
+                HTMLAttributes: {
+                    class: 'rounded-lg border border-border/50 max-w-full h-auto my-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow',
+                },
+            }),
             Placeholder.configure({
                 placeholder: 'Start writing... (Type # for heading, * for list)',
             }),
@@ -50,10 +56,49 @@ export const NotesEditor: React.FC = () => {
         onUpdate: ({ editor }) => {
             // On editor usage, convert to MD and modify rawContent (which triggers autosave logic)
             const html = editor.getHTML();
+            // Turndown preserves src as is by default
             const md = turndownService.turndown(html);
             setRawContent(md);
         }
     });
+
+    // Helper to resolve relative image paths for rendering
+    const resolveImagePath = useCallback((src: string) => {
+        if (!activeDocumentId || !src) return src;
+        if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('blob:')) {
+            return src;
+        }
+
+        // If it starts with ./ or is a simple relative path like 'attachments/...'
+        let cleanSrc = src;
+        if (src.startsWith('./')) {
+            cleanSrc = src.substring(2);
+        } else if (src.startsWith('/')) {
+            // Absolute local paths won't render anyway, but we keep them so the backend can move them
+            return src;
+        }
+
+        const parts = activeDocumentId.split('/');
+        parts.pop(); // Remove filename
+        const folder = parts.join('/');
+        const fullPath = folder ? `${folder}/${cleanSrc}` : cleanSrc;
+        return `${API_BASE}/rag/document_content?path=${encodeURIComponent(fullPath)}`;
+    }, [activeDocumentId]);
+
+    // Custom marked parser that resolves image paths
+    const handleParseMarkdown = useCallback(async (content: string) => {
+        // Create a local marked instance to avoid global pollution
+        const renderer = new marked.Renderer();
+        const originalImage = renderer.image.bind(renderer);
+
+        // Override image renderer to resolve paths
+        renderer.image = ({ href, title, text }: any) => {
+            const resolvedSrc = resolveImagePath(href);
+            return `<img src="${resolvedSrc}" alt="${text || ''}" ${title ? `title="${title}"` : ''} />`;
+        };
+
+        return marked.parse(content, { renderer });
+    }, [resolveImagePath]);
 
     // Fetch Content
     useEffect(() => {
@@ -74,7 +119,7 @@ export const NotesEditor: React.FC = () => {
                     // Update Editor Content if in WYSIWYG mode
                     if (editor) {
                         try {
-                            const html = await marked.parse(content);
+                            const html = await handleParseMarkdown(content);
                             editor.commands.setContent(html);
                         } catch (e) {
                             console.error("Markdown parsing failed", e);
@@ -101,10 +146,26 @@ export const NotesEditor: React.FC = () => {
             formData.append("path", activeDocumentId);
             formData.append("content", textToSave);
 
-            await axios.post(`${API_BASE}/rag/save_file`, formData, {
+            const res = await axios.post(`${API_BASE}/rag/save_file`, formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            setLastSavedContent(textToSave);
+
+            // If backend updated the content (e.g. moved images), sync it back
+            if (res.data.content && res.data.content !== textToSave) {
+                setRawContent(res.data.content);
+                setLastSavedContent(res.data.content);
+
+                // If in WYSIWYG mode, update editor without losing cursor if possible
+                // but for now simple refresh is safer
+                if (mode === 'wysiwyg' && editor) {
+                    const html = await handleParseMarkdown(res.data.content);
+                    const currentPos = editor.state.selection.from;
+                    editor.commands.setContent(html, { emitUpdate: false });
+                    editor.commands.setTextSelection(currentPos);
+                }
+            } else {
+                setLastSavedContent(textToSave);
+            }
         } catch (e) {
             console.error("Failed to save note", e);
         } finally {
@@ -143,7 +204,7 @@ export const NotesEditor: React.FC = () => {
         } else {
             // Switching to WYSIWYG: update editor with current rawContent
             if (editor) {
-                const html = await marked.parse(rawContent);
+                const html = await handleParseMarkdown(rawContent);
                 editor.commands.setContent(html);
             }
             setMode('wysiwyg');
