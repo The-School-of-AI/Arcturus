@@ -343,10 +343,10 @@ async def rag_keyword_search(query: str):
         raise HTTPException(status_code=500, detail=f"Keyword search failed: {str(e)}")
 
 @router.get("/ripgrep_search")
-async def rag_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False):
+async def rag_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False, target_dir: str = None):
     """Deep pattern search using ripgrep"""
     try:
-        args = {"query": query, "regex": regex, "case_sensitive": case_sensitive}
+        args = {"query": query, "regex": regex, "case_sensitive": case_sensitive, "target_dir": target_dir}
         result = await multi_mcp.call_tool("rag", "advanced_ripgrep_search", args)
         
         # Extract results from CallToolResult - ROBUST NOISE-RESISTANT PARSER

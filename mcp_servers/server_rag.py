@@ -647,16 +647,17 @@ def keyword_search(query: str) -> list[str]:
         return []
 
 @mcp.tool()
-def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False, max_results: int = 50) -> list[dict]:
+def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False, max_results: int = 50, target_dir: str = None) -> list[dict]:
     """Powerful regex/keyword search using Ripgrep.
     Returns structured results with file, line number, and match content.
     Set regex=True for pattern matching (e.g. r"error:.*").
+    Optionally provide target_dir to search within a specific subdirectory of data/.
     """
     rg_path = get_rg_path()
     if not rg_path:
         return [{"error": "Ripgrep binary not found. Please install it or check .bin/rg"}]
     
-    mcp_log("RG_SEARCH", f"Query: {query} (regex={regex})")
+    mcp_log("RG_SEARCH", f"Query: {query} (regex={regex}, target_dir={target_dir})")
     
     try:
         cmd = [rg_path, "--json", "-M", "500"] # Max columns to avoid huge blobs
@@ -665,7 +666,13 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
         if not regex:
             cmd.append("-F") # Fixed strings
         
-        cmd.extend([query, str(BASE_DATA_DIR)])
+        search_path = BASE_DATA_DIR
+        if target_dir:
+            # Ensure target_dir is relative and doesn't escape BASE_DATA_DIR
+            clean_target = target_dir.strip("/").replace("..", "")
+            search_path = BASE_DATA_DIR / clean_target
+        
+        cmd.extend([query, str(search_path)])
         
         # We need to run with Popen to manage the potential output size
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -676,8 +683,21 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                 data = json.loads(line)
                 if data["type"] == "match":
                     match_data = data["data"]
+                    rel_path = os.path.relpath(match_data["path"]["text"], BASE_DATA_DIR)
+                    
+                    # Enforce target_dir filtering on results (extra safety)
+                    if target_dir:
+                        clean_target = target_dir.strip("/").replace("..", "")
+                        norm_path = rel_path.replace("\\", "/").strip("/")
+                        if not (norm_path == clean_target or norm_path.startswith(clean_target + "/")):
+                            continue
+                            
+                    # Enforce .md only if we are in Notes
+                    if target_dir == "Notes" and not rel_path.lower().endswith(".md"):
+                        continue
+
                     results.append({
-                        "file": os.path.relpath(match_data["path"]["text"], BASE_DATA_DIR),
+                        "file": rel_path,
                         "line": match_data["line_number"],
                         "content": match_data["lines"]["text"].strip(),
                         "submatches": match_data["submatches"]
@@ -725,6 +745,17 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                 doc_path_raw = entry.get('doc')
                 if not doc_path_raw: continue
                 
+                # Filter by target_dir if provided
+                if target_dir:
+                    clean_target = target_dir.strip("/").replace("..", "")
+                    norm_doc_path = doc_path_raw.replace("\\", "/").strip("/")
+                    if not (norm_doc_path == clean_target or norm_doc_path.startswith(clean_target + "/")):
+                        continue
+                    
+                    # Enforce .md only if we are in Notes
+                    if target_dir == "Notes" and not doc_path_raw.lower().endswith(".md"):
+                        continue
+
                 # Intelligent Path Handling
                 if os.path.isabs(doc_path_raw):
                     try:

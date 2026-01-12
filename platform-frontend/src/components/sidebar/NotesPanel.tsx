@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FileText, File, Folder, ChevronRight, ChevronDown, FolderPlus, Plus, Trash2, Search, Loader2 } from 'lucide-react';
+import { FileText, File, Folder, ChevronRight, ChevronDown, FolderPlus, Plus, Trash2, Search, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,8 @@ export const NotesPanel: React.FC = () => {
     const [newNoteName, setNewNoteName] = useState("");
 
     const [selectedItem, setSelectedItem] = useState<NoteItem | null>(null);
+    const [grepResults, setGrepResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         fetchNotesFiles();
@@ -199,6 +201,42 @@ export const NotesPanel: React.FC = () => {
         }, []);
     };
 
+    // Debounced search
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setGrepResults([]);
+            setIsSearching(false);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const res = await axios.get(`${API_BASE}/rag/ripgrep_search`, {
+                    params: {
+                        query: searchQuery,
+                        target_dir: "Notes"
+                    }
+                });
+
+                const results = res.data?.results || [];
+                const seen = new Set();
+                const filtered = results.filter((r: any) => {
+                    if (seen.has(r.file)) return false;
+                    seen.add(r.file);
+                    return true;
+                });
+                setGrepResults(filtered);
+            } catch (e) {
+                console.error("Search failed", e);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     const displayedFiles = useMemo(() => filterNodes(notesFiles, searchQuery), [notesFiles, searchQuery]);
 
     return (
@@ -245,12 +283,52 @@ export const NotesPanel: React.FC = () => {
                 </div>
             </div>
 
-            {/* File Tree */}
+            {/* File Tree or Search Results */}
             <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
                 {isNotesLoading ? (
                     <div className="flex items-center justify-center h-20 text-muted-foreground/50">
                         <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading...
                     </div>
+                ) : isSearching ? (
+                    <div className="flex items-center justify-center h-20 text-muted-foreground/50">
+                        <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Searching...
+                    </div>
+                ) : searchQuery.trim() ? (
+                    grepResults.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground/50">
+                            <Search className="w-8 h-8 opacity-20" />
+                            <span className="text-xs">No matches found</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {grepResults.map((res, i) => (
+                                <div
+                                    key={i}
+                                    className={cn(
+                                        "group relative p-2.5 rounded-lg border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 cursor-pointer overflow-hidden bg-card/10"
+                                    )}
+                                    onClick={() => openDocument({
+                                        id: res.file.startsWith('Notes/') ? res.file : `Notes/${res.file}`,
+                                        title: (res.file || '').split('/').pop() || 'note',
+                                        type: 'md',
+                                        targetLine: res.line,
+                                        searchText: res.content
+                                    })}
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-1.5 truncate flex-1">
+                                            <FileText className="w-3 h-3 text-blue-400/70" />
+                                            <span className="text-[10px] font-bold text-muted-foreground truncate">{res.file.replace(/^Notes\//, '')}</span>
+                                        </div>
+                                        <span className="text-[9px] font-mono bg-muted px-1 rounded text-muted-foreground shrink-0">L{res.line}</span>
+                                    </div>
+                                    <div className="text-[10px] text-foreground/80 font-mono line-clamp-2 break-all opacity-80 group-hover:opacity-100">
+                                        {res.content}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
                 ) : displayedFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground/50">
                         <FileText className="w-8 h-8 opacity-20" />
