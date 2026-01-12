@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Node, mergeAttributes } from '@tiptap/core';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus, Maximize2, Minimize2, X } from 'lucide-react';
+import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus, Maximize2, Minimize2, X, ChevronDown, ChevronRight, List } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -87,6 +88,23 @@ turndownService.addRule('unresolveImages', {
     }
 });
 
+// Rules for Collapsible Sections (Details/Summary)
+turndownService.addRule('details', {
+    filter: 'details',
+    replacement: (content, node: any) => {
+        const isOpen = node.hasAttribute('open');
+        return `<details${isOpen ? ' open' : ''}>\n${content}\n</details>`;
+    }
+});
+turndownService.addRule('summary', {
+    filter: 'summary',
+    replacement: (content) => `<summary>${content}</summary>`
+});
+turndownService.addRule('detailsContent', {
+    filter: (node) => node.nodeName === 'DIV' && node.classList.contains('details-content'),
+    replacement: (content) => `<div class="details-content">\n\n${content}\n\n</div>`
+});
+
 // WikiLink rule for Turndown
 turndownService.addRule('wikilinks', {
     filter: (node) => node.nodeName === 'A' && node.getAttribute('data-type') === 'wikilink',
@@ -120,7 +138,56 @@ const ScaledImage = Image.extend({
     },
 });
 
-// Custom WikiLink Extension
+// Custom Collapsible Section Extensions
+const Details = Node.create({
+    name: 'details',
+    group: 'block',
+    content: 'detailsSummary detailsContent',
+    defining: true,
+    addAttributes() {
+        return {
+            open: {
+                default: false,
+                parseHTML: element => element.hasAttribute('open'),
+                renderHTML: attributes => (attributes.open ? { open: '' } : {}),
+            },
+        };
+    },
+    parseHTML() {
+        return [{ tag: 'details' }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['details', mergeAttributes(HTMLAttributes), 0];
+    },
+});
+
+const DetailsSummary = Node.create({
+    name: 'detailsSummary',
+    group: 'block',
+    content: 'text*',
+    defining: true,
+    parseHTML() {
+        return [{ tag: 'summary' }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['summary', mergeAttributes(HTMLAttributes), 0];
+    },
+});
+
+const DetailsContent = Node.create({
+    name: 'detailsContent',
+    group: 'block',
+    content: 'block+',
+    defining: true,
+    parseHTML() {
+        return [{ tag: 'div', getAttrs: element => element.classList.contains('details-content') && {} }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['div', mergeAttributes(HTMLAttributes, { class: 'details-content' }), 0];
+    },
+});
+
+// WikiLink Extension (restored from previous)
 const WikiLink = Mention.extend({
     name: 'wikilink',
     addAttributes() {
@@ -413,6 +480,9 @@ export const NotesEditor: React.FC = () => {
     const editor = useEditor({
         extensions: [
             StarterKit,
+            Details,
+            DetailsSummary,
+            DetailsContent,
             ScaledImage.configure({
                 HTMLAttributes: {
                     class: 'rounded-lg border border-border/50 max-w-full h-auto my-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow',
@@ -431,11 +501,36 @@ export const NotesEditor: React.FC = () => {
             },
             handleClick: (view, pos, event) => {
                 const node = view.state.doc.nodeAt(pos);
+
+                // 1. Handle WikiLinks
                 if (node?.type.name === 'wikilink') {
                     handleWikiLinkClick(node.attrs.id, node.attrs.targetLine, node.attrs.searchText);
                     return true;
                 }
-                // Handle standard TipTap Link clicks too
+
+                // 2. Handle Collapsible Section Toggle
+                const target = event.target as HTMLElement;
+                const summary = target.closest('summary');
+                if (summary) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+
+                    const $pos = view.state.doc.resolve(pos);
+                    // Search upwards for the details node
+                    for (let d = $pos.depth; d > 0; d--) {
+                        const parent = $pos.node(d);
+                        if (parent.type.name === 'details') {
+                            const startPos = $pos.before(d);
+                            view.dispatch(view.state.tr.setNodeMarkup(startPos, undefined, {
+                                ...parent.attrs,
+                                open: !parent.attrs.open
+                            }));
+                            return true;
+                        }
+                    }
+                }
+
+                // 3. Handle standard TipTap Link clicks (marks)
                 if (node?.type.name === 'text') {
                     const mark = node.marks.find(m => m.type.name === 'link');
                     if (mark) {
@@ -652,6 +747,30 @@ export const NotesEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [rawContent, saveContent]);
 
+    // Insert Collapsible Section
+    const insertDetails = () => {
+        if (editor) {
+            editor.chain().focus().insertContent([
+                {
+                    type: 'details',
+                    content: [
+                        {
+                            type: 'detailsSummary',
+                            content: [{ type: 'text', text: 'Collapsible Section' }],
+                        },
+                        {
+                            type: 'detailsContent',
+                            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Enter your collapsible content here...' }] }],
+                        },
+                    ],
+                },
+                {
+                    type: 'paragraph',
+                }
+            ]).run();
+        }
+    };
+
     // Handle Mode Switch
     const toggleMode = async () => {
         // Save current content before switching to ensure NO loss
@@ -737,8 +856,18 @@ export const NotesEditor: React.FC = () => {
 
                 {/* Right: Unified Controls Section */}
                 <div className="flex items-center gap-2 pl-4 border-l border-border/30 ml-2">
-                    {/* View Mode Toggle */}
+                    {/* View Mode & Actions Section */}
                     <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={insertDetails}
+                            className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                            title="Insert Collapsible Section"
+                        >
+                            <List className="w-3.5 h-3.5" />
+                        </Button>
+                        <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
                         <Button
                             variant="ghost"
                             size="sm"
@@ -841,6 +970,49 @@ export const NotesEditor: React.FC = () => {
                             /* If there is a width style, respect it */
                             .tiptap-editor-container .prose img[style*="width"] {
                                 max-width: 100% !important;
+                            }
+                            /* Details Styling */
+                            .tiptap-editor-container details {
+                                margin: 1rem 0;
+                                padding: 0.5rem 1rem;
+                                border: 1px solid hsl(var(--border) / 0.5);
+                                border-radius: 0.75rem;
+                                background: hsl(var(--muted) / 0.2);
+                                transition: all 0.2s ease;
+                            }
+                            .tiptap-editor-container details[open] {
+                                background: hsl(var(--muted) / 0.4);
+                                border-color: hsl(var(--primary) / 0.3);
+                            }
+                            .tiptap-editor-container summary {
+                                cursor: pointer;
+                                font-weight: 700;
+                                font-size: 0.85rem;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                                color: hsl(var(--muted-foreground));
+                                outline: none;
+                                list-style: none;
+                                display: flex;
+                                items-center: center;
+                                gap: 0.5rem;
+                            }
+                            .tiptap-editor-container summary::-webkit-details-marker {
+                                display: none;
+                            }
+                            .tiptap-editor-container summary::before {
+                                content: '→';
+                                display: inline-block;
+                                transition: transform 0.2s ease;
+                                color: hsl(var(--primary));
+                            }
+                            .tiptap-editor-container details[open] > summary::before {
+                                transform: rotate(90deg);
+                            }
+                            .tiptap-editor-container .details-content {
+                                padding-top: 1rem;
+                                margin-top: 0.5rem;
+                                border-top: 1px solid hsl(var(--border) / 0.3);
                             }
                         `}</style>
                         <div className="tiptap-editor-container h-full">
