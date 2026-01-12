@@ -1,22 +1,59 @@
-# Python
+# Dependencies
+node_modules/
+.venv/
+venv/
+env/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-env/
-venv/
-.venv/
 pip-log.txt
 pip-delete-this-directory.txt
+
+# Platform Artifacts & Build
+platform-frontend/dist/
+platform-frontend/build/
+dist/
+build/
+.bin/
+
+# Large Data & User Content (Pure code only)
+data/
+Notes/
+classNotes/
+documents/
+mcp_servers/documents/
+mcp_servers/faiss_index/
+
+# Storage & Runtime State
+memory/
+*.log
+server.log
+benchmark_results.txt
+
+# Environment & Config SECRETS
+.env
+.env.*
+!.env.example
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Brain / Agent Specific
+.gemini/
+.agent/
+
+# Media / Binary Assets (Except code-required assets)
 *.png
 *.jpg
 *.jpeg
 *.gif
 *.webp
-*.svg
-!platform-frontend/public/*.svg
-!platform-frontend/public/favicon.svg
 *.pdf
 *.docx
 *.doc
@@ -28,37 +65,7 @@ pip-delete-this-directory.txt
 *.tar
 *.gz
 
-# Mac
-.DS_Store
-
-# Logs and Memory (S16 NetworkX)
-# memory/  <-- Removed to allow python code
-memory/session_logs/
-memory/debug_logs/
-# memory/session_summaries_index/
-*.log
-
-# RAG & Documents (Large files)
-mcp_servers/faiss_index/
-mcp_servers/documents/*.pdf
-mcp_servers/documents/*.docx
-mcp_servers/documents/*.doc
-mcp_servers/documents/*.pptx
-mcp_servers/documents/*.ppt
-mcp_servers/documents/*.xlsx
-mcp_servers/documents/*.xls
-mcp_servers/documents/*.zip
-mcp_servers/documents/*.tar
-mcp_servers/documents/*.gz
-
-
-# Retain keep files if necessary (optional strategy)
-# !mcp_servers/documents/.gitkeep
-
-# Gemini/Brain
-.gemini/
-.env
-.bin
-data/mcp_repos/
-
-
+# Whitelist required assets
+!platform-frontend/public/*.svg
+!platform-frontend/public/favicon.ico
+!platform-frontend/public/logo.png
