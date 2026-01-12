@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 import hashlib
 from PIL import Image
 import os
+import requests
+import io
 
 from shared.state import get_multi_mcp, PROJECT_ROOT
 
@@ -150,67 +152,98 @@ async def create_rag_file(path: str = Form(...), content: str = Form("")):
 
 def process_markdown_images(content: str, note_path: Path):
     """
-    Scans markdown content for local absolute image paths.
+    Scans markdown content for:
+    1. Local absolute image paths (/Users/...)
+    2. Internet URLs (http://...)
     Moves/resizes them to a local 'attachments' folder relative to the note.
     Returns (updated_content, modified_count)
     """
-    # Pattern to find absolute paths or file:// URLs
-    # Matches ![alt](path) or ![alt](file://path)
-    pattern = r'!\[(.*?)\]\(((?:file://)?/.*?)\)'
-    
+    pattern = r'!\[(.*?)\]\((.*?)\)'
     modified = False
     new_content = content
-    
-    # Target directory for attachments
     attachments_dir = note_path.parent / "attachments"
     
     matches = re.findall(pattern, content)
     for alt, raw_path in matches:
-        # Clean path
-        file_path_str = raw_path.replace("file://", "")
-        img_path = Path(file_path_str)
+        img_data = None
+        ext = ".png"
         
-        if img_path.exists() and img_path.is_file():
+        # SAFETY: If it's already a localhost API URL, clean it back to relative path
+        if "localhost:8000/rag/document_content?path=" in raw_path:
             try:
-                # 1. Read and check format
-                with Image.open(img_path) as img:
-                    # 2. Generate unique name based on content hash
-                    with open(img_path, "rb") as f:
-                        file_hash = hashlib.md5(f.read()).hexdigest()
-                    
-                    ext = img_path.suffix.lower() or ".png"
-                    new_filename = f"img_{file_hash[:10]}{ext}"
-                    
-                    attachments_dir.mkdir(parents=True, exist_ok=True)
-                    target_file = attachments_dir / new_filename
-                    
-                    # Check if already exists to avoid redundant processing
-                    if not target_file.exists():
-                        # 3. Resize if needed
-                        max_dim = 1024
-                        width, height = img.size
-                        if width > max_dim or height > max_dim:
-                            if width > height:
-                                new_w = max_dim
-                                new_h = int(height * (max_dim / width))
-                            else:
-                                new_h = max_dim
-                                new_w = int(width * (max_dim / height))
-                            
-                            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-                            img.save(target_file)
-                        else:
-                            # Just copy/save if no resize needed
-                            img.save(target_file)
-                    
-                    # 4. Update path in markdown
-                    # Using relative path for portability
-                    rel_path = f"./attachments/{new_filename}"
+                from urllib.parse import urlparse, parse_qs
+                parsed_url = urlparse(raw_path)
+                params = parse_qs(parsed_url.query)
+                if 'path' in params:
+                    full_img_path = params['path'][0]
+                    filename = os.path.basename(full_img_path)
+                    rel_path = f"./attachments/{filename}"
                     new_content = new_content.replace(raw_path, rel_path)
                     modified = True
-                    
-            except Exception as e:
-                print(f"Error processing image {img_path}: {e}")
+                    continue
+            except:
+                pass
+
+        is_local = raw_path.startswith("/") or raw_path.startswith("file://")
+        is_url = raw_path.startswith("http://") or raw_path.startswith("https://")
+        
+        if not (is_local or is_url):
+            continue
+            
+        try:
+            if is_local:
+                file_path_str = raw_path.replace("file://", "")
+                img_path = Path(file_path_str)
+                if img_path.exists() and img_path.is_file():
+                    with open(img_path, "rb") as f:
+                        img_data = f.read()
+                    ext = img_path.suffix.lower() or ".png"
+            elif is_url:
+                headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+                response = requests.get(raw_path, timeout=10, headers=headers)
+                if response.status_code == 200:
+                    img_data = response.content
+                    url_ext = Path(raw_path.split('?')[0]).suffix.lower()
+                    if url_ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']:
+                        ext = url_ext
+                    else:
+                        content_type = response.headers.get('content-type', '').lower()
+                        if 'image/jpeg' in content_type: ext = '.jpg'
+                        elif 'image/png' in content_type: ext = '.png'
+                        elif 'image/gif' in content_type: ext = '.gif'
+                        elif 'image/webp' in content_type: ext = '.webp'
+                        elif 'image/svg' in content_type: ext = '.svg'
+
+            if img_data:
+                file_hash = hashlib.md5(img_data).hexdigest()
+                new_filename = f"img_{file_hash[:10]}{ext}"
+                attachments_dir.mkdir(parents=True, exist_ok=True)
+                target_file = attachments_dir / new_filename
+                
+                if not target_file.exists():
+                    if ext != '.svg':
+                        with Image.open(io.BytesIO(img_data)) as img:
+                            max_dim = 1024
+                            width, height = img.size
+                            if width > max_dim or height > max_dim:
+                                if width > height:
+                                    new_w, new_h = max_dim, int(height * (max_dim / width))
+                                else:
+                                    new_h, new_w = max_dim, int(width * (max_dim / height))
+                                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                                img.save(target_file)
+                            else:
+                                with open(target_file, "wb") as f:
+                                    f.write(img_data)
+                    else:
+                        with open(target_file, "wb") as f:
+                            f.write(img_data)
+                
+                rel_path = f"./attachments/{new_filename}"
+                new_content = new_content.replace(raw_path, rel_path)
+                modified = True
+        except Exception as e:
+            print(f"Error processing image {raw_path}: {e}")
                 
     return new_content, modified
 

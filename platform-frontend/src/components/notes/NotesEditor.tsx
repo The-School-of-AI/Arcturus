@@ -20,6 +20,33 @@ const turndownService = new TurndownService({
     codeBlockStyle: 'fenced'
 });
 
+// Rule to convert resolved API URLs back to relative paths for storage
+turndownService.addRule('unresolveImages', {
+    filter: 'img',
+    replacement: function (content, node: any) {
+        const src = node.getAttribute('src');
+        if (src && src.includes('/rag/document_content?path=')) {
+            try {
+                const url = new URL(src);
+                const fullPath = url.searchParams.get('path');
+                if (fullPath) {
+                    // Extract just the filename from the path (e.g. 'attachments/img_xxx.png')
+                    // We know all migrated images go into 'attachments/' relative to the note
+                    const parts = fullPath.split('/');
+                    const filename = parts.pop();
+                    const subfolder = parts.pop();
+                    if (subfolder === 'attachments') {
+                        return `![${node.getAttribute('alt') || ''}](./attachments/${filename})`;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to unresolve image URL", e);
+            }
+        }
+        return `![${node.getAttribute('alt') || ''}](${src})`;
+    }
+});
+
 export const NotesEditor: React.FC = () => {
     const { activeDocumentId, openDocuments, isZenMode, toggleZenMode } = useAppStore();
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
@@ -241,16 +268,16 @@ export const NotesEditor: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1 bg-muted/90 p-1 rounded-sm">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground mr-1"
-                        onClick={toggleZenMode}
-                        title={isZenMode ? "Exit Full Width" : "Full Width"}
-                    >
-                        {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                    </Button>
+
                     <div className="flex items-center border-r border-border/50 pr-1 mr-1">
+                        <Button
+                            variant="ghost"
+                            onClick={toggleMode}
+                            className={cn("h-7 px-3 text-xs gap-2", "text-muted-foreground hover:text-foreground")}
+                        >
+                            {mode === 'wysiwyg' ? <Code2 className="w-2 h-2" /> : <Type className="w-2 h-2" />}
+                            {/* {mode === 'wysiwyg' ? "Raw Source" : "Visual Editor"} */}
+                        </Button>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -268,13 +295,15 @@ export const NotesEditor: React.FC = () => {
                             <Plus className="w-3 h-3" />
                         </Button>
                     </div>
+
                     <Button
                         variant="ghost"
-                        onClick={toggleMode}
-                        className={cn("h-7 px-3 text-xs gap-2", "text-muted-foreground hover:text-foreground")}
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground mr-1"
+                        onClick={toggleZenMode}
+                        title={isZenMode ? "Exit Full Width" : "Full Width"}
                     >
-                        {mode === 'wysiwyg' ? <Code2 className="w-2 h-2" /> : <Type className="w-2 h-2" />}
-                        {/* {mode === 'wysiwyg' ? "Raw Source" : "Visual Editor"} */}
+                        {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                     </Button>
                 </div>
             </div>
