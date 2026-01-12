@@ -151,6 +151,9 @@ interface RagViewerSlice {
     isNotesLoading: boolean;
     setIsNotesLoading: (loading: boolean) => void;
     fetchNotesFiles: () => Promise<void>;
+    isZenMode: boolean;
+    setIsZenMode: (zen: boolean) => void;
+    toggleZenMode: () => void;
 
     // --- Runs UI States ---
     isNewRunOpen: boolean;
@@ -739,6 +742,9 @@ export const useAppStore = create<AppState>()(
                     set({ isNotesLoading: false });
                 }
             },
+            isZenMode: false,
+            setIsZenMode: (zen) => set({ isZenMode: zen }),
+            toggleZenMode: () => set(state => ({ isZenMode: !state.isZenMode })),
 
             // --- Runs UI States ---
             isNewRunOpen: false,
