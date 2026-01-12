@@ -58,5 +58,6 @@ mcp_servers/documents/*.gz
 .gemini/
 .env
 .bin
-data/mcp_repos/yahoo_finance
+data/mcp_repos/*
+
 
