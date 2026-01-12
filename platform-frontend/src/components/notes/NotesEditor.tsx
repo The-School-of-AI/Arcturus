@@ -6,7 +6,7 @@ import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit2, Eye, FileText, Code2, Type } from 'lucide-react';
+import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,7 @@ export const NotesEditor: React.FC = () => {
     const [lastSavedContent, setLastSavedContent] = useState("");
     const [mode, setMode] = useState<'wysiwyg' | 'raw'>('wysiwyg');
     const [rawContent, setRawContent] = useState("");
+    const [fontSize, setFontSize] = useState(16);
 
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isFetchingRef = useRef(false);
@@ -179,6 +180,24 @@ export const NotesEditor: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1 bg-muted/90 p-1 rounded-sm">
+                    <div className="flex items-center border-r border-border/50 pr-1 mr-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setFontSize(s => Math.max(12, s - 1))}
+                        >
+                            <Minus className="w-3 h-3" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setFontSize(s => Math.min(32, s + 1))}
+                        >
+                            <Plus className="w-3 h-3" />
+                        </Button>
+                    </div>
                     <Button
                         variant="ghost"
                         onClick={toggleMode}
@@ -191,16 +210,37 @@ export const NotesEditor: React.FC = () => {
             </div>
 
             {/* Editor Area */}
-            <div className="flex-1 overflow-auto relative">
+            <div className="flex-1 overflow-auto relative" style={{ fontSize: `${fontSize}px` }}>
                 {mode === 'raw' ? (
                     <textarea
-                        className="w-full h-full p-8 resize-none bg-transparent outline-none font-mono text-sm leading-relaxed text-foreground"
+                        className="w-full h-full p-8 resize-none bg-transparent outline-none font-mono leading-relaxed text-foreground"
                         value={rawContent}
+                        style={{ fontSize: `${fontSize}px` }}
                         onChange={(e) => setContentRaw(e.target.value)}
                         placeholder="# Start writing your note..."
                     />
                 ) : (
-                    <EditorContent editor={editor} />
+                    <div
+                        className="h-full prose dark:prose-invert prose-blue max-w-none"
+                        style={{ fontSize: `${fontSize}px` }}
+                    >
+                        <style>{`
+                            .tiptap-editor-container .tiptap {
+                                font-size: inherit !important;
+                                line-height: 1.6;
+                            }
+                            .tiptap-editor-container .prose p, 
+                            .tiptap-editor-container .prose li,
+                            .tiptap-editor-container .prose h1,
+                            .tiptap-editor-container .prose h2,
+                            .tiptap-editor-container .prose h3 {
+                                font-size: inherit !important;
+                            }
+                        `}</style>
+                        <div className="tiptap-editor-container h-full">
+                            <EditorContent editor={editor} />
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

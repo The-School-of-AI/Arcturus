@@ -1,4 +1,4 @@
-# Dependencies
+# Dependencies & Environments
 node_modules/
 .venv/
 venv/
@@ -8,31 +8,33 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-pip-log.txt
-pip-delete-this-directory.txt
 
-# Platform Artifacts & Build
+# Build Artifacts
 platform-frontend/dist/
 platform-frontend/build/
 dist/
 build/
 .bin/
 
-# Large Data & User Content (Pure code only)
+# Data & Documents (Large files/datasets)
 data/
-Notes/
-classNotes/
 documents/
 mcp_servers/documents/
 mcp_servers/faiss_index/
+classNotes/
+Notes/
 
-# Storage & Runtime State
+# Allow only specific code-related data if needed (example: whitelisting notes)
+# !data/Notes/
+# !Notes/
+
+# Logs & Runtime State
 memory/
 *.log
 server.log
 benchmark_results.txt
 
-# Environment & Config SECRETS
+# Environment Secrets
 .env
 .env.*
 !.env.example
@@ -44,11 +46,11 @@ benchmark_results.txt
 *.swp
 *.swo
 
-# Brain / Agent Specific
+# Brain / Agent Internal
 .gemini/
 .agent/
 
-# Media / Binary Assets (Except code-required assets)
+# Binary Files & Media
 *.png
 *.jpg
 *.jpeg
@@ -65,7 +67,8 @@ benchmark_results.txt
 *.tar
 *.gz
 
-# Whitelist required assets
+# Whitelist Static Assets for Frontend
 !platform-frontend/public/*.svg
-!platform-frontend/public/favicon.ico
-!platform-frontend/public/logo.png
+!platform-frontend/public/*.ico
+!platform-frontend/public/*.png
+!platform-frontend/public/*.jpg
