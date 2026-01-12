@@ -971,6 +971,17 @@ export const NotesEditor: React.FC = () => {
                             .tiptap-editor-container .prose img[style*="width"] {
                                 max-width: 100% !important;
                             }
+                            /* Hide Tailwind Prose backticks in inline code */
+                            .tiptap-editor-container .prose code::before,
+                            .tiptap-editor-container .prose code::after {
+                                content: "" !important;
+                            }
+                            .tiptap-editor-container .prose code {
+                                background: hsl(var(--primary) / 0.1);
+                                padding: 0.2rem 0.4rem;
+                                rounded: 0.375rem;
+                                font-weight: 500;
+                            }
                             /* Details Styling */
                             .tiptap-editor-container details {
                                 margin: 1rem 0;
