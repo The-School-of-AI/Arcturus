@@ -7,7 +7,7 @@ import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus, Maximize2, Minimize2 } from 'lucide-react';
+import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus, Maximize2, Minimize2, X } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -188,7 +188,16 @@ const WikiLink = Mention.extend({
 });
 
 export const NotesEditor: React.FC = () => {
-    const { activeDocumentId, openDocuments, setActiveDocument, openDocument, isZenMode, toggleZenMode } = useAppStore();
+    const {
+        activeDocumentId,
+        openDocuments,
+        setActiveDocument,
+        openDocument,
+        closeDocument,
+        closeAllDocuments,
+        isZenMode,
+        toggleZenMode
+    } = useAppStore();
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
 
     // States
@@ -679,12 +688,49 @@ export const NotesEditor: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-background/50 backdrop-blur-sm">
+            {/* Tab Bar - Browser Style */}
+            <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-10">
+                <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
+                    {openDocuments.map(doc => {
+                        const isNote = doc.type === 'note' || doc.id.endsWith('.md');
+                        return (
+                            <div
+                                key={doc.id}
+                                onClick={() => setActiveDocument(doc.id)}
+                                className={cn(
+                                    "group flex items-center gap-1.5 px-3 h-8 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[80px] max-w-[180px] border-x border-t border-transparent relative",
+                                    activeDocumentId === doc.id
+                                        ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
+                                        : "bg-muted/10 text-muted-foreground hover:bg-muted/30"
+                                )}
+                            >
+                                {isNote ? <FileText className={cn("w-3 h-3 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} /> : <Code2 className="w-3 h-3 shrink-0 text-blue-400" />}
+                                <span className="text-[10px] font-bold uppercase tracking-tight truncate flex-1">{doc.title}</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
+                                    className="p-0.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {openDocuments.length > 0 && (
+                    <button
+                        onClick={closeAllDocuments}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/50 hover:bg-muted text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all border border-border/30"
+                    >
+                        <X className="w-2.5 h-2.5" />
+                        Clear
+                    </button>
+                )}
+            </div>
+
             {/* Toolbar */}
-            <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/20">
+            <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/10">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-foreground/80 truncate max-w-[200px] sm:max-w-[400px]">
-                        {activeDoc?.title || activeDocumentId.split('/').pop()}
-                    </span>
                     <div className="flex items-center gap-2 min-w-[100px]">
                         {isSaving ? (
                             <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded font-bold animate-pulse">SAVING...</span>
