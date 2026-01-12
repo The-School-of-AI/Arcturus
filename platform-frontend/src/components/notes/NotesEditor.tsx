@@ -688,100 +688,117 @@ export const NotesEditor: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-background/50 backdrop-blur-sm">
-            {/* Tab Bar - Browser Style */}
-            <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-10">
-                <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
+            {/* Unified Commander Bar */}
+            <div className="flex items-center justify-between border-b border-border bg-muted/20 px-4 shrink-0 h-12">
+                {/* Left: Tabs Section */}
+                <div className="flex items-center gap-[2px] h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
                     {openDocuments.map(doc => {
                         const isNote = doc.type === 'note' || doc.id.endsWith('.md');
+                        const isActive = activeDocumentId === doc.id;
+                        const isUnsaved = isActive && trimmedCurrent !== trimmedLast && trimmedCurrent.length > 0;
+                        const isCurrentlySaving = isActive && isSaving;
+
                         return (
                             <div
                                 key={doc.id}
                                 onClick={() => setActiveDocument(doc.id)}
                                 className={cn(
-                                    "group flex items-center gap-1.5 px-3 h-8 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[80px] max-w-[180px] border-x border-t border-transparent relative",
-                                    activeDocumentId === doc.id
-                                        ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
-                                        : "bg-muted/10 text-muted-foreground hover:bg-muted/30"
+                                    "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-xl transition-all cursor-pointer min-w-[100px] max-w-[200px] border-x border-t border-transparent relative",
+                                    isActive
+                                        ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-4px_16px_rgba(0,0,0,0.15)]"
+                                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                                 )}
                             >
-                                {isNote ? <FileText className={cn("w-3 h-3 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} /> : <Code2 className="w-3 h-3 shrink-0 text-blue-400" />}
-                                <span className="text-[10px] font-bold uppercase tracking-tight truncate flex-1">{doc.title}</span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
-                                    className="p-0.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <X className="w-2.5 h-2.5" />
-                                </button>
+                                {isNote ? (
+                                    <FileText className={cn("w-3.5 h-3.5 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground/60")} />
+                                ) : (
+                                    <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                                )}
+                                <span className="text-[10px] font-black uppercase tracking-wider truncate flex-1">{doc.title}</span>
+
+                                <div className="flex items-center justify-center w-4 h-4">
+                                    {isCurrentlySaving ? (
+                                        <Loader2 className="w-2.5 h-2.5 animate-spin text-primary" />
+                                    ) : isUnsaved ? (
+                                        <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)] animate-pulse" />
+                                    ) : (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
+                                            className="p-0.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {openDocuments.length > 0 && (
-                    <button
-                        onClick={closeAllDocuments}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/50 hover:bg-muted text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all border border-border/30"
-                    >
-                        <X className="w-2.5 h-2.5" />
-                        Clear
-                    </button>
-                )}
-            </div>
-
-            {/* Toolbar */}
-            <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/10">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 min-w-[100px]">
-                        {isSaving ? (
-                            <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded font-bold animate-pulse">SAVING...</span>
-                        ) : (
-                            trimmedCurrent !== trimmedLast && trimmedCurrent.length > 0 && (
-                                <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded font-bold">UNSAVED</span>
-                            )
-                        )}
-                        {!isSaving && trimmedCurrent === trimmedLast && trimmedCurrent.length > 0 && (
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded font-bold">SAVED</span>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-1 bg-muted/90 p-1 rounded-sm">
-
-                    <div className="flex items-center border-r border-border/50 pr-1 mr-1">
+                {/* Right: Unified Controls Section */}
+                <div className="flex items-center gap-2 pl-4 border-l border-border/30 ml-2">
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1">
                         <Button
                             variant="ghost"
+                            size="sm"
                             onClick={toggleMode}
-                            className={cn("h-7 px-3 text-xs gap-2", "text-muted-foreground hover:text-foreground")}
+                            className={cn(
+                                "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all",
+                                mode === 'wysiwyg' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
                         >
-                            {mode === 'wysiwyg' ? <Code2 className="w-2 h-2" /> : <Type className="w-2 h-2" />}
-                            {/* {mode === 'wysiwyg' ? "Raw Source" : "Visual Editor"} */}
+                            {mode === 'wysiwyg' ? <Eye className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
+                            {mode === 'wysiwyg' ? "Visual" : "Raw"}
                         </Button>
+                    </div>
+
+                    {/* Font Zoom Controls */}
+                    <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all"
                             onClick={() => setFontSize(s => Math.max(12, s - 1))}
                         >
                             <Minus className="w-3 h-3" />
                         </Button>
+                        <div className="w-[1px] h-3 bg-border/50" />
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110"
                             onClick={() => setFontSize(s => Math.min(32, s + 1))}
                         >
                             <Plus className="w-3 h-3" />
                         </Button>
                     </div>
 
+                    {/* Zen Mode */}
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground mr-1"
+                        className={cn(
+                            "h-8 w-8 transition-all rounded-lg border border-transparent hover:border-border/30",
+                            isZenMode ? "bg-primary/10 text-primary border-primary/20" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                        )}
                         onClick={toggleZenMode}
-                        title={isZenMode ? "Exit Full Width" : "Full Width"}
+                        title={isZenMode ? "Exit Zen Mode" : "Zen Mode"}
                     >
-                        {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                        {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </Button>
+
+                    <div className="w-[1px] h-4 bg-border/20 mx-1" />
+
+                    {/* Clear All */}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={closeAllDocuments}
+                        className="h-8 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/5 transition-all gap-1.5"
+                    >
+                        <X className="w-3.5 h-3.5" />
+                        Clear
                     </Button>
                 </div>
             </div>
