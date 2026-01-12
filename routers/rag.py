@@ -87,15 +87,78 @@ async def create_rag_folder(folder_path: str):
     """Create a new folder in RAG documents"""
     try:
         root = PROJECT_ROOT / "data"
-        # Sanitize path to prevent breaking out of documents dir
-        safe_path = Path(folder_path).name
-        target_path = root / safe_path
+        # Sanitize path to allow nested folders but prevent traversal
+        clean_path = folder_path.strip("/").replace("..", "")
+        target_path = root / clean_path
         
         if target_path.exists():
              raise HTTPException(status_code=400, detail="Folder already exists")
         
         target_path.mkdir(parents=True, exist_ok=True)
-        return {"status": "success", "path": str(safe_path)}
+        return {"status": "success", "path": str(clean_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/delete")
+async def delete_rag_item(path: str = Form(...)):
+    """Delete a file or folder in RAG documents"""
+    try:
+        root = PROJECT_ROOT / "data"
+        # Sanitize
+        clean_path = path.strip("/").replace("..", "")
+        target_path = root / clean_path
+        
+        if not target_path.exists():
+            raise HTTPException(status_code=404, detail="Item not found")
+            
+        # Security check: ensure we are deleting something inside data
+        if not str(target_path.resolve()).startswith(str(root.resolve())):
+             raise HTTPException(status_code=403, detail="Access denied")
+
+        if target_path.is_dir():
+            import shutil
+            shutil.rmtree(target_path)
+        else:
+            target_path.unlink()
+            
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/create_file")
+async def create_rag_file(path: str = Form(...), content: str = Form("")):
+    """Create a new file in RAG documents"""
+    try:
+        root = PROJECT_ROOT / "data"
+        clean_path = path.strip("/").replace("..", "")
+        target_path = root / clean_path
+        
+        if target_path.exists():
+            raise HTTPException(status_code=400, detail="File already exists")
+            
+        # Ensure parent dir exists
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        target_path.write_text(content)
+        return {"status": "success", "path": str(clean_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/save_file")
+async def save_rag_file(path: str = Form(...), content: str = Form(...)):
+    """Save/Overwrite file content"""
+    try:
+        root = PROJECT_ROOT / "data"
+        clean_path = path.strip("/").replace("..", "")
+        target_path = root / clean_path
+        
+        # Security check
+        if not str(target_path.resolve()).startswith(str(root.resolve())):
+             raise HTTPException(status_code=403, detail="Access denied")
+        
+        target_path.write_text(content)
+        return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

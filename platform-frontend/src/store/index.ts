@@ -74,8 +74,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings') => void;
+    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings') => void;
     openDocuments: RAGDocument[];
     activeDocumentId: string | null;
     openDocument: (doc: RAGDocument) => void;
@@ -144,6 +144,13 @@ interface RagViewerSlice {
     setNewsViewMode: (mode: 'sources' | 'articles' | 'saved' | 'search') => void;
     newsSearchQuery: string;
     setNewsSearchQuery: (query: string) => void;
+
+    // --- Notes UI States ---
+    notesFiles: any[];
+    setNotesFiles: (files: any[]) => void;
+    isNotesLoading: boolean;
+    setIsNotesLoading: (loading: boolean) => void;
+    fetchNotesFiles: () => Promise<void>;
 
     // --- Runs UI States ---
     isNewRunOpen: boolean;
@@ -709,6 +716,29 @@ export const useAppStore = create<AppState>()(
             setNewsViewMode: (mode) => set({ newsViewMode: mode }),
             newsSearchQuery: '',
             setNewsSearchQuery: (query) => set({ newsSearchQuery: query }),
+
+            // --- Notes UI States ---
+            notesFiles: [],
+            setNotesFiles: (files) => set({ notesFiles: files }),
+            isNotesLoading: false,
+            setIsNotesLoading: (loading) => set({ isNotesLoading: loading }),
+            fetchNotesFiles: async () => {
+                set({ isNotesLoading: true });
+                try {
+                    const res = await api.get(`${API_BASE}/rag/documents`);
+                    const allFiles = res.data.files as any[];
+                    const notesRoot = allFiles.find(f => f.name === 'Notes' && f.type === 'folder');
+                    if (notesRoot && notesRoot.children) {
+                        set({ notesFiles: notesRoot.children });
+                    } else {
+                        set({ notesFiles: [] });
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch notes", e);
+                } finally {
+                    set({ isNotesLoading: false });
+                }
+            },
 
             // --- Runs UI States ---
             isNewRunOpen: false,

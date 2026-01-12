@@ -8,6 +8,7 @@ import { RunTimeline } from '@/features/replay/RunTimeline';
 import { GripVertical } from 'lucide-react';
 import { DocumentViewer } from '../rag/DocumentViewer';
 import { DocumentAssistant } from '../rag/DocumentAssistant';
+import { NotesEditor } from '../notes/NotesEditor';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
@@ -179,6 +180,11 @@ export const AppLayout: React.FC = () => {
                             <SettingsPage />
                         ) : sidebarTab === 'rag' ? (
                             <DocumentViewer />
+                        ) : sidebarTab === 'notes' ? (
+                            /* If it's a binary file, show DocumentViewer, else show Editor */
+                            activeDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp)$/i.test(activeDocumentId)
+                                ? <DocumentViewer />
+                                : <NotesEditor />
                         ) : sidebarTab === 'remme' ? (
                             <RemMeProfileView />
                         ) : sidebarTab === 'explorer' ? (
@@ -216,7 +222,7 @@ export const AppLayout: React.FC = () => {
                             {sidebarTab === 'apps' ? <AppInspector /> :
                                 sidebarTab === 'mcp' ? <McpInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
-                                        sidebarTab === 'rag' ? <DocumentAssistant /> :
+                                        (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant /> :
                                             <WorkspacePanel />}
                         </div>
                     </>

@@ -3,7 +3,7 @@ import {
     Box, Square, Circle, PlayCircle, Database, Brain, Code2,
     LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
     RefreshCw, Zap, Sparkles, X, FolderPlus, UploadCloud, Search,
-    Loader2, ChevronLeft
+    Loader2, ChevronLeft, Notebook
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
@@ -20,6 +20,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
     apps: { label: 'App Builder', icon: LayoutGrid, color: 'text-neon-yellow', subtitleSuffix: 'DASHBOARDS' },
     news: { label: 'News Feed', icon: Newspaper, color: 'text-cyan-400', subtitleSuffix: 'SOURCES' },
     learn: { label: 'Learning', icon: GraduationCap, color: 'text-neon-yellow', subtitleSuffix: 'COURSES' },
+    notes: { label: 'Notes', icon: Notebook, color: 'text-blue-400', subtitleSuffix: 'NOTES' },
     settings: { label: 'Settings', icon: Settings, color: 'text-neon-yellow', subtitleSuffix: 'CONFIG' }
 };
 
@@ -31,7 +32,8 @@ export const Header: React.FC = () => {
         setIsNewRunOpen, setIsMcpAddOpen, setIsRemmeAddOpen,
         setIsNewsAddOpen, isRagLoading, isNewsLoading, fetchNewsSources,
         fetchApps, fetchMemories, fetchRuns, fetchMcpServers,
-        newsViewMode, setNewsViewMode, setNewsSearchQuery, setSearchResults
+        newsViewMode, setNewsViewMode, setNewsSearchQuery, setSearchResults,
+        notesFiles, fetchNotesFiles, isNotesLoading
     } = useAppStore();
 
     const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'online' | 'offline'>('checking');
@@ -76,6 +78,7 @@ export const Header: React.FC = () => {
             case 'news': return newsSources.length;
             case 'rag': return ragFiles.length;
             case 'mcp': return mcpServers.length;
+            case 'notes': return notesFiles.length;
             default: return 0;
         }
     };
@@ -188,16 +191,17 @@ export const Header: React.FC = () => {
                             </>
                         )}
 
-                        {(sidebarTab === 'runs' || sidebarTab === 'apps' || sidebarTab === 'explorer') && (
+                        {(sidebarTab === 'runs' || sidebarTab === 'apps' || sidebarTab === 'explorer' || sidebarTab === 'notes') && (
                             <button
                                 onClick={() => {
                                     if (sidebarTab === 'runs') fetchRuns();
                                     if (sidebarTab === 'apps') fetchApps();
+                                    if (sidebarTab === 'notes') fetchNotesFiles();
                                 }}
                                 className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground"
                                 title="Refresh"
                             >
-                                <RefreshCw className="w-4 h-4" />
+                                <RefreshCw className={cn("w-4 h-4", sidebarTab === 'notes' && isNotesLoading && "animate-spin")} />
                             </button>
                         )}
                     </div>

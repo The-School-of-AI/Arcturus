@@ -51,6 +51,7 @@ mcp_servers/documents/*.zip
 mcp_servers/documents/*.tar
 mcp_servers/documents/*.gz
 
+
 # Retain keep files if necessary (optional strategy)
 # !mcp_servers/documents/.gitkeep
 
