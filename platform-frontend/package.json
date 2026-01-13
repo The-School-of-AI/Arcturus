@@ -3,9 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"vite --host\" \"cd .. && uv run api.py\" --names \"FRONT,BACK\" --prefix-colors \"cyan,magenta\"",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5555 && electron .\" --names \"VITE,ELECTRON\" --prefix-colors \"cyan,blue\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -78,6 +80,8 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
     "concurrently": "^9.2.1",
+    "electron": "^39.2.7",
+    "electron-is-dev": "^3.0.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -86,6 +90,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "wait-on": "^9.0.3"
   }
 }
