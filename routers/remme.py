@@ -328,7 +328,7 @@ A high-level overview of who the user appears to be, their primary drivers, and 
 **Style:** Professional yet engaging, slightly witty, and very insightful. Use formatting (bolding, lists, blockquotes) effectively.
 """
 
-        # Call Gemini (using default configured model or explicit gemini-2.0-flash if needed)
+        # Call Gemini (using default configured model or explicit gemini-2.5-flash if needed)
         # Using ModelManager to handle the call
         model_manager = ModelManager("gemini") # Force Gemini for this token-heavy task
         profile_content = await model_manager.generate_text(prompt)

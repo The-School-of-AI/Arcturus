@@ -48,7 +48,7 @@ You receive:
 * `planning_strategy`: "conservative" or "exploratory"
 * `globals_schema`: Known variables and types
 * `file_manifest`: Metadata list of any uploaded files (e.g., filename, type, length, token count)
-* `memory_context`: (Optional) Text containing relevant facts, user preferences, or location info from previous sessions.
+* `memory_context`: (Optional) Text containing relevant but limited facts, user preferences, or location info from previous sessions. May be old. Request retreiver agent to search online or other local storages for more information. 
 
 You must:
 

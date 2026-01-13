@@ -75,7 +75,7 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
                 <div className="flex items-center justify-between gap-3">
                     <span
                         className={cn(
-                            "text-sm font-black tracking-tight leading-tight transition-colors duration-300",
+                            "text-sm font-black tracking-tight leading-tight transition-colors duration-900",
                             isHighlighted ? "text-neon-yellow" : "text-foreground"
                         )}
                     >

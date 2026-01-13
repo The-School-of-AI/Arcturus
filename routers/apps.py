@@ -179,7 +179,7 @@ async def generate_app(request: GenerateAppRequest):
         
         model_key = profile.get("llm", {}).get("text_generation", "gemini")
         model_info = models_config.get("models", {}).get(model_key, {})
-        model = model_info.get("model", "gemini-2.0-flash")
+        model = model_info.get("model", "gemini-2.5-flash")
         
         # Allow request override
         if request.model:
@@ -408,7 +408,7 @@ async def hydrate_app(app_id: str, request: HydrateRequest = None):
         
         model_key = profile.get("llm", {}).get("text_generation", "gemini")
         model_info = models_config.get("models", {}).get(model_key, {})
-        model = model_info.get("model", "gemini-2.0-flash")  # Fallback if not found
+        model = model_info.get("model", "gemini-2.5-flash")  # Fallback if not found
         
         # Allow request override
         if request and hasattr(request, 'model') and request.model:
