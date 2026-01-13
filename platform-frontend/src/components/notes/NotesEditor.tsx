@@ -854,7 +854,7 @@ export const NotesEditor: React.FC = () => {
                                 key={doc.id}
                                 onClick={() => setActiveDocument(doc.id)}
                                 className={cn(
-                                    "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-xl transition-all cursor-pointer border-x border-t border-transparent relative flex-shrink-0",
+                                    "group flex items-center gap-2 px-4 h-10 mt-auto pb-1 rounded-t-xl transition-all cursor-pointer border-x border-t border-transparent relative flex-shrink-0",
                                     isActive
                                         ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-2px_10px_rgba(0,0,0,0.08)]"
                                         : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
