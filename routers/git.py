@@ -103,3 +103,35 @@ async def commit_changes(request: GitActionRequest):
         raise HTTPException(status_code=400, detail="Commit message required")
     run_git_command(["commit", "-m", request.message], request.path)
     return {"success": True}
+
+@router.get("/history")
+async def get_git_history(path: str, limit: int = 50):
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    try:
+        # Get log with hash, message, author, relative date, and decorations (branches)
+        log_raw = run_git_command(["log", "--pretty=format:%h|%s|%an|%ar|%D", f"-n{limit}"], path)
+        history = []
+        for line in log_raw.split("\n"):
+            if not line: continue
+            parts = line.split("|")
+            if len(parts) >= 4:
+                decorations = parts[4] if len(parts) > 4 else ""
+                # Parse decorations like "HEAD -> master, origin/master"
+                branches = []
+                if decorations:
+                    # Clean up: remove "HEAD -> ", split by comma
+                    clean_dec = decorations.replace("HEAD -> ", "")
+                    branches = [b.strip() for b in clean_dec.split(",") if b.strip()]
+                
+                history.append({
+                    "hash": parts[0],
+                    "message": parts[1],
+                    "author": parts[2],
+                    "date": parts[3],
+                    "branches": branches
+                })
+        return history
+    except Exception as e:
+        return []
