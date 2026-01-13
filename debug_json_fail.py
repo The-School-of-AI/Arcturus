@@ -11,8 +11,8 @@ sys.path.append(str(PROJECT_ROOT))
 from mcp_servers.server_rag import advanced_ripgrep_search
 
 def test_debug():
-    print("Searching for 'Dhurandhar'...")
-    results = advanced_ripgrep_search("Dhurandhar", max_results=5)
+    print("Searching for 'expand'...")
+    results = advanced_ripgrep_search("expand", max_results=5)
     
     if not results or (isinstance(results, list) and "error" in results[0]):
         print("Search failed:", results)

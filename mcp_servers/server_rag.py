@@ -670,7 +670,7 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
     mcp_log("RG_SEARCH", f"Query: {query} (regex={regex}, target_dir={target_dir})")
     
     try:
-        cmd = [rg_path, "--json", "-M", "500"] # Max columns to avoid huge blobs
+        cmd = [rg_path, "--json", "-M", "500", "--no-ignore"] # Max columns, search everything even if ignored
         if not case_sensitive:
             cmd.append("-i")
         if not regex:

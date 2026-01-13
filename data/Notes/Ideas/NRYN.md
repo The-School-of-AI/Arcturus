@@ -1,6 +1,6 @@
 # NRYN
 
-> Does something like **“Narayan as a general agent substrate for any language / ML / runtime”** already exist?
+> Does something like **“NRYN as a general agent substrate for any language / ML / runtime”** already exist?
 
 Short answer first, then the careful breakdown:
 
