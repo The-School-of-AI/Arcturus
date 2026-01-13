@@ -20,7 +20,7 @@ import { NewsPanel } from '@/components/sidebar/NewsPanel';
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings',
+    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide',
     active: boolean,
     onClick: () => void
 }) => {
@@ -131,6 +131,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
                     <NavIcon icon={LayoutGrid} label="Apps" tab="apps" active={sidebarTab === 'apps'} onClick={() => setSidebarTab('apps')} />
+                    <NavIcon icon={Code2} label="IDE" tab="ide" active={sidebarTab === 'ide'} onClick={() => setSidebarTab('ide')} />
                     <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
                     <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
                 </div>

@@ -37,6 +37,7 @@ import { RemMeProfileView } from '../remme/RemmeProfileView';
 import { NewsList } from '@/features/news/components/NewsList';
 import { NewsArticleViewer } from '@/features/news/components/NewsArticleViewer';
 import { NewsInspector } from '@/features/news/components/NewsInspector';
+import { IdeLayout } from '@/features/ide/components/IdeLayout';
 
 export const AppLayout: React.FC = () => {
     const {
@@ -56,7 +57,7 @@ export const AppLayout: React.FC = () => {
         return false;
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
-    const hideSidebarSubPanel = isInspectorOpen;
+    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide';
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -192,6 +193,8 @@ export const AppLayout: React.FC = () => {
                             <FlowWorkspace />
                         ) : sidebarTab === 'news' ? (
                             <NewsArticleViewer />
+                        ) : sidebarTab === 'ide' ? (
+                            <IdeLayout />
                         ) : (
                             <>
                                 <GraphCanvas />
