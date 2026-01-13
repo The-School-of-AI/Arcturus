@@ -415,8 +415,14 @@ export const useAppStore = create<AppState>()(
                     await get().refreshCurrentRun();
                     await get().fetchRuns();
 
-                    // Auto-stop if terminal state
                     const run = get().runs.find(r => r.id === runId);
+
+                    // Sync currentRun object to ensure UI status updates (Header, etc.)
+                    if (run && get().currentRun?.id === runId) {
+                        set({ currentRun: run });
+                    }
+
+                    // Auto-stop if terminal state
                     if (run && (run.status === 'completed' || run.status === 'failed')) {
                         console.log(`Run ${runId} finished with status ${run.status}. Stopping polling.`);
                         get().stopPolling();

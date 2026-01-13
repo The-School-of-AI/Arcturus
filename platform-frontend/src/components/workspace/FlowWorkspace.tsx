@@ -106,6 +106,38 @@ const FlowWorkspaceInner: React.FC = () => {
         }
     }, [flowData, setNodes, setEdges, fitView]);
 
+    // Track the last node we auto-focused to avoid jitter or fighting the user
+    const lastFocusedNodeId = React.useRef<string | null>(null);
+
+    // Auto-Focus & Auto-Center on Running Nodes (Mimic "Camera Follow")
+    useEffect(() => {
+        if (!flowData || nodes.length === 0) return;
+
+        // Priority 1: Find the currently running node
+        const runningNode = nodes.find(n => n.data?.status === 'running' || n.data?.status === 'waiting_input');
+
+        // Priority 2: If no running node, maybe look for the latest generated node (for initial plan)
+        // But let's stick to active execution first.
+        const targetNode = runningNode;
+
+        if (targetNode && targetNode.id !== lastFocusedNodeId.current) {
+            // New active node detected!
+            lastFocusedNodeId.current = targetNode.id;
+
+            // 1. Center the Graph Camera
+            setCenter(
+                targetNode.position.x + nodeWidth / 2,
+                targetNode.position.y + nodeHeight / 2,
+                { duration: 1200, zoom: 1.0 }
+            );
+
+            // 2. Auto-Select for Sidebar details
+            // This restores the "Right side panel... automatic focus tabs" feature,
+            // because WorkspacePanel listens to selectedNode changes.
+            useAppStore.getState().selectNode(targetNode.id);
+        }
+    }, [nodes, setCenter]);
+
     const initializeSequence = useCallback(() => {
         const firstNode = nodes.find((n) => !edges.some((e) => e.target === n.id)) || nodes[0];
         if (firstNode) {
