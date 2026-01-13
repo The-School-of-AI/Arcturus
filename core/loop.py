@@ -123,8 +123,14 @@ class AgentLoop4:
 
     def _merge_plan_into_context(self, new_plan_graph):
         """Merge the planned nodes into the existing bootstrap context"""
+        new_nodes = new_plan_graph.get("nodes", [])
+        new_edges = new_plan_graph.get("edges", [])
+        
+        # Track which new nodes have incoming edges to detect orphans
+        nodes_with_incoming_edges = set()
+
         # Add new nodes
-        for node in new_plan_graph.get("nodes", []):
+        for node in new_nodes:
             # Prepare node data with defaults
             node_data = node.copy()
             # Set defaults if not present in the plan
@@ -143,16 +149,23 @@ class AgentLoop4:
             self.context.plan_graph.add_node(node["id"], **node_data)
             
         # Add new edges, redirecting ROOT -> First Step to Query -> First Step
-        for edge in new_plan_graph.get("edges", []):
+        for edge in new_edges:
             source = edge["source"]
             target = edge["target"]
             
-            # 🔄 Redirect dependencies: If a node depends on ROOT, make it depend on Query
-            # This ensures visualization flows: ROOT -> Query -> [Plan]
+            # Redirect dependencies: If a node depends on ROOT, make it depend on Query
             if source == "ROOT":
                 source = "Query"
-                
+
             self.context.plan_graph.add_edge(source, target)
+            nodes_with_incoming_edges.add(target)
+        
+        # 🛡️ AUTO-CONNECT: If a new node has NO incoming edges, connect it to "Query"
+        # This fixes cases where PlannerAgent returns nodes but forgets the edges
+        for node in new_nodes:
+            if node["id"] not in nodes_with_incoming_edges:
+                log_step(f"🔗 Auto-connected orphan node {node['id']} to Query", symbol="🔗")
+                self.context.plan_graph.add_edge("Query", node["id"])
         
         self.context._save_session()
         log_step("✅ Plan merged into execution context", symbol="🌳")

@@ -1427,7 +1427,7 @@ export const WorkspacePanel: React.FC = () => {
                                     // console.log("Preview Render:", { id: selectedNode?.id, hasOutput: !!selectedNode?.data?.output, formatContent: !!formatContent });
 
                                 } catch (e) {
-                                    console.error("Preview parsing error:", e);
+                                    // console.error("Preview parsing error:", e);
                                     // If all parsing fails, try raw content from codeContent as last resort
                                     if (codeContent && !codeContent.startsWith('{')) {
                                         formatContent = codeContent.replace(/\\n/g, '\n');
