@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GitBranch, GitCommit, AlertCircle, Plus, Minus, RefreshCw, Send, Trash2, FileCode, Check } from 'lucide-react';
+import { GitBranch, GitCommit, AlertCircle, Plus, Minus, RefreshCw, Send, Trash2, FileCode, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+interface GitHistory {
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+    branches: string[];
+}
 
 interface GitStatus {
     branch: string;
@@ -14,8 +22,9 @@ interface GitStatus {
 }
 
 export const GitSidebar: React.FC = () => {
-    const { explorerRootPath } = useAppStore();
+    const { explorerRootPath, openDocument } = useAppStore();
     const [status, setStatus] = useState<GitStatus | null>(null);
+    const [history, setHistory] = useState<GitHistory[]>([]);
     const [loading, setLoading] = useState(false);
     const [commitMessage, setCommitMessage] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -25,13 +34,22 @@ export const GitSidebar: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.get(`${API_BASE}/git/status`, {
-                params: { path: explorerRootPath }
-            });
-            setStatus(res.data);
+            const [statusRes, historyRes] = await Promise.all([
+                axios.get(`${API_BASE}/git/status`, { params: { path: explorerRootPath } }).catch(e => e),
+                axios.get(`${API_BASE}/git/history`, { params: { path: explorerRootPath } }).catch(e => ({ data: [] }))
+            ]);
+
+            if (statusRes.data) {
+                setStatus(statusRes.data);
+            } else if (statusRes.response?.data?.detail) {
+                setError(statusRes.response.data.detail);
+            }
+
+            if (historyRes.data) {
+                setHistory(historyRes.data);
+            }
         } catch (e: any) {
-            setError(e.response?.data?.detail || "Failed to fetch git status");
-            console.error(e);
+            console.error("Git Fetch Error:", e);
         } finally {
             setLoading(false);
         }
@@ -48,8 +66,8 @@ export const GitSidebar: React.FC = () => {
                 file_path: fileName
             });
             fetchStatus();
-        } catch (e) {
-            console.error(`Git ${action} failed`, e);
+        } catch (e: any) {
+            setError(e.response?.data?.detail || `Git ${action} failed`);
         }
     };
 
@@ -57,9 +75,11 @@ export const GitSidebar: React.FC = () => {
         if (!commitMessage.trim()) return;
         setLoading(true);
         try {
+            const isAutoStage = status?.staged.length === 0;
             await axios.post(`${API_BASE}/git/commit`, {
                 path: explorerRootPath,
-                message: commitMessage
+                message: commitMessage,
+                stage_all: isAutoStage
             });
             setCommitMessage('');
             fetchStatus();
@@ -79,116 +99,202 @@ export const GitSidebar: React.FC = () => {
         );
     }
 
+    const totalChanges = (status?.staged.length || 0) + (status?.unstaged.length || 0) + (status?.untracked.length || 0);
+    const hasChanges = totalChanges > 0;
+
     return (
-        <div className="h-full flex flex-col bg-background/50 backdrop-blur-md">
+        <div className="h-full flex flex-col bg-background/50">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
+            <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/50 shrink-0">
                 <div className="flex items-center gap-2">
-                    <GitBranch className="w-4 h-4 text-primary" />
-                    <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground">
+                    <GitBranch className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
                         {status?.branch || 'HEAD'}
                     </span>
                 </div>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:bg-white/5"
+                    className="h-7 w-7 hover:bg-white/5"
                     onClick={fetchStatus}
                     disabled={loading}
                 >
-                    <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+                    <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
                 </Button>
             </div>
 
-            {/* Commit Form */}
-            <div className="p-4 space-y-3 border-b border-border/50 shrink-0">
-                <textarea
-                    value={commitMessage}
-                    onChange={(e) => setCommitMessage(e.target.value)}
-                    placeholder="Commit message (Ctrl+Enter to commit)"
-                    className="w-full min-h-[80px] bg-muted/30 border border-border/50 rounded-lg p-3 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-muted-foreground/50"
-                    onKeyDown={(e) => {
-                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleCommit();
-                    }}
-                />
-                <Button
-                    className="w-full h-9 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 text-[11px] font-bold tracking-wider"
-                    onClick={handleCommit}
-                    disabled={loading || !commitMessage.trim() || status?.staged.length === 0}
-                >
-                    <GitCommit className="w-4 h-4 mr-2" />
-                    Commit Submissions
-                </Button>
-            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+                {/* COMMIT SECTION */}
+                <div className="p-3 space-y-2 border-b border-border/10">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Changes</span>
+                    </div>
 
-            {/* Changes List */}
-            <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                    <div className="relative group/input">
+                        <textarea
+                            value={commitMessage}
+                            onChange={(e) => setCommitMessage(e.target.value)}
+                            placeholder={`Message (Cmd+Enter to commit on "${status?.branch || 'master'}")`}
+                            className="w-full min-h-[60px] bg-muted/40 border border-border/30 rounded-md p-2 text-[11px] resize-none focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/40 leading-relaxed"
+                            onKeyDown={(e) => {
+                                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleCommit();
+                            }}
+                        />
+                    </div>
+
+                    <Button
+                        className={cn(
+                            "w-full h-8 text-[11px] font-bold tracking-wider transition-all",
+                            hasChanges ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted/50 text-muted-foreground/40 cursor-not-allowed"
+                        )}
+                        onClick={handleCommit}
+                        disabled={loading || !commitMessage.trim() || !hasChanges}
+                    >
+                        <Check className="w-3.5 h-3.5 mr-2" />
+                        Commit
+                    </Button>
+                </div>
+
                 {error && (
-                    <div className="mx-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>{error}</span>
+                    <div className="mx-3 mt-3 p-2 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="break-all">{error}</span>
                     </div>
                 )}
 
-                {/* Staged Section */}
-                {status && status.staged.length > 0 && (
-                    <div className="mb-4">
-                        <div className="px-4 py-1 flex items-center justify-between group">
-                            <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Staged Changes</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{status.staged.length}</span>
+                {/* CHANGES LIST */}
+                <div className="py-2">
+                    {/* Staged Section */}
+                    {status && status.staged.length > 0 && (
+                        <div className="mb-2">
+                            <div className="px-3 py-1 flex items-center justify-between group cursor-pointer hover:bg-white/5">
+                                <div className="flex items-center gap-1">
+                                    <ChevronDown className="w-3 h-3 text-muted-foreground/50" />
+                                    <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Staged Changes</span>
+                                </div>
+                                <span className="text-[9px] bg-primary/20 text-primary px-1 rounded-sm">{status.staged.length}</span>
+                            </div>
+                            {status.staged.map((file: string) => (
+                                <GitNavItem
+                                    key={file}
+                                    name={file}
+                                    state="staged"
+                                    onAction={() => handleAction('unstage', file)}
+                                />
+                            ))}
                         </div>
-                        {status.staged.map((file) => (
-                            <GitNavItem
-                                key={file}
-                                name={file}
-                                state="staged"
-                                onAction={() => handleAction('unstage', file)}
-                            />
-                        ))}
-                    </div>
-                )}
+                    )}
 
-                {/* Unstaged Section */}
-                {status && (status.unstaged.length > 0 || status.untracked.length > 0) && (
-                    <div>
-                        <div className="px-4 py-1 flex items-center justify-between group">
-                            <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Changes</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {status.unstaged.length + status.untracked.length}
-                            </span>
+                    {/* Unstaged Section */}
+                    {status && (status.unstaged.length > 0 || status.untracked.length > 0) && (
+                        <div>
+                            <div className="px-3 py-1 flex items-center justify-between group cursor-pointer hover:bg-white/5">
+                                <div className="flex items-center gap-1">
+                                    <ChevronDown className="w-3 h-3 text-muted-foreground/50" />
+                                    <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Changes</span>
+                                </div>
+                                <span className="text-[9px] bg-muted/50 text-muted-foreground/60 px-1 rounded-sm">
+                                    {status.unstaged.length + status.untracked.length}
+                                </span>
+                            </div>
+                            {status.unstaged.map((file: string) => (
+                                <GitNavItem
+                                    key={file}
+                                    name={file}
+                                    state="modified"
+                                    onAction={() => handleAction('stage', file)}
+                                />
+                            ))}
+                            {status.untracked.map((file: string) => (
+                                <GitNavItem
+                                    key={file}
+                                    name={file}
+                                    state="untracked"
+                                    onAction={() => handleAction('stage', file)}
+                                />
+                            ))}
                         </div>
-                        {status.unstaged.map((file) => (
-                            <GitNavItem
-                                key={file}
-                                name={file}
-                                state="modified"
-                                onAction={() => handleAction('stage', file)}
-                            />
-                        ))}
-                        {status.untracked.map((file) => (
-                            <GitNavItem
-                                key={file}
-                                name={file}
-                                state="untracked"
-                                onAction={() => handleAction('stage', file)}
-                            />
-                        ))}
-                    </div>
-                )}
+                    )}
 
-                {status && status.staged.length === 0 && status.unstaged.length === 0 && status.untracked.length === 0 && !loading && (
-                    <div className="flex flex-col items-center justify-center h-48 opacity-30 text-center px-8">
-                        <Check className="w-8 h-8 mb-2" />
-                        <p className="text-[11px] leading-relaxed">Workspace is clean.<br />No pending changes found.</p>
+                    {!hasChanges && !loading && (
+                        <div className="flex flex-col items-center justify-center p-8 opacity-20 text-center">
+                            <Check className="w-8 h-8 mb-2" />
+                            <p className="text-[10px] tracking-tight uppercase font-bold">Workspace Clean</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* GRAPH / HISTORY SECTION */}
+                <div className="mt-4 border-t border-border/10 pt-4 pb-8">
+                    <div className="px-4 mb-3 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Graph</span>
                     </div>
-                )}
+
+                    <div className="relative ml-4">
+                        {/* Continuous Vertical Line */}
+                        {history.length > 0 && (
+                            <div className="absolute left-[5px] top-2 bottom-4 w-[1px] bg-primary/30 z-0" />
+                        )}
+
+                        <div className="space-y-0 text-[11px]">
+                            {history.map((commit: GitHistory, idx: number) => (
+                                <div key={commit.hash} className="group relative flex items-start gap-4 py-2 hover:bg-white/5 cursor-pointer transition-colors max-w-full pr-4">
+                                    {/* Commit Dot (Solid) */}
+                                    <div className="relative shrink-0 w-[11px] h-full flex flex-col items-center">
+                                        <div className={cn(
+                                            "w-2.5 h-2.5 rounded-full z-10 mt-[3px] shadow-[0_0_8px_rgba(var(--primary),0.3)]",
+                                            idx === 0 ? "bg-primary scale-110 ring-4 ring-primary/20" : "bg-primary/60"
+                                        )} />
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                                            <span className="font-bold text-foreground/90 truncate max-w-[80%] leading-tight">
+                                                {commit.message}
+                                            </span>
+
+                                            {/* Branch Pills */}
+                                            {commit.branches.map(branch => (
+                                                <div
+                                                    key={branch}
+                                                    className={cn(
+                                                        "text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0",
+                                                        branch.includes('master') || branch.includes('main')
+                                                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                                            : "bg-muted text-muted-foreground/70"
+                                                    )}
+                                                >
+                                                    <GitBranch className="w-2.5 h-2.5" />
+                                                    {branch}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-[9px] text-muted-foreground/50">
+                                            <span className="font-medium text-muted-foreground/70">{commit.author}</span>
+                                            <span>•</span>
+                                            <span>{commit.date}</span>
+                                            <span>•</span>
+                                            <span className="font-mono uppercase opacity-60 group-hover:opacity-100 transition-opacity">{commit.hash}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {history.length === 0 && !loading && (
+                                <div className="py-8 text-center opacity-30 italic text-[10px] mr-4">
+                                    No commit history yet
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Beta Footer */}
-            <div className="p-4 border-t border-border/50 bg-muted/10 shrink-0">
-                <div className="flex items-center gap-2 text-[9px] text-muted-foreground justify-center uppercase tracking-[0.2em] font-bold opacity-50">
-                    <AlertCircle className="w-3 h-3" />
-                    <span>Experimental Core</span>
+            <div className="px-4 py-2 border-t border-border/50 bg-muted/5 shrink-0">
+                <div className="flex items-center gap-2 text-[9px] text-muted-foreground/40 justify-center uppercase tracking-[0.2em] font-bold">
+                    <span>Arcturus SCM v2</span>
                 </div>
             </div>
         </div>
@@ -201,28 +307,28 @@ const GitNavItem: React.FC<{
     onAction: () => void;
 }> = ({ name, state, onAction }) => {
     return (
-        <div className="group flex items-center gap-2 px-4 py-1.5 hover:bg-white/5 transition-colors cursor-default">
+        <div className="group flex items-center gap-2 px-3 py-1 hover:bg-white/5 transition-all cursor-default">
             <FileCode className={cn(
-                "w-3.5 h-3.5 shrink-0",
-                state === 'staged' ? "text-green-400" : state === 'modified' ? "text-amber-400" : "text-primary"
+                "w-3 h-3 shrink-0",
+                state === 'staged' ? "text-green-400" : state === 'modified' ? "text-amber-400" : "text-blue-400"
             )} />
             <div className="flex-1 min-w-0">
-                <p className="text-[11px] truncate text-foreground/80">{name.split('/').pop()}</p>
-                <p className="text-[9px] truncate text-muted-foreground/50">{name.split('/').slice(0, -1).join('/') || './'}</p>
+                <p className="text-[10px] truncate text-foreground/80">{name.split(/[/\\]/).pop()}</p>
+                <p className="text-[8px] truncate text-muted-foreground/40">{name.split(/[/\\]/).slice(0, -1).join('/') || './'}</p>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-primary/20 hover:text-primary transition-all active:scale-95"
+                    className="h-5 w-5 hover:bg-primary/20 hover:text-primary transition-all active:scale-95"
                     onClick={(e) => { e.stopPropagation(); onAction(); }}
                 >
-                    {state === 'staged' ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                    {state === 'staged' ? <Minus className="w-2.5 h-2.5" /> : <Plus className="w-2.5 h-2.5" />}
                 </Button>
             </div>
             <span className={cn(
-                "text-[9px] font-black uppercase tracking-tighter w-4 text-center",
-                state === 'staged' ? "text-green-500/50" : state === 'modified' ? "text-amber-500/50" : "text-primary/50"
+                "text-[8px] font-black uppercase tracking-tighter w-3 text-center",
+                state === 'staged' ? "text-green-500/50" : state === 'modified' ? "text-amber-500/50" : "text-blue-500/50"
             )}>
                 {state === 'staged' ? 'A' : state === 'modified' ? 'M' : 'U'}
             </span>

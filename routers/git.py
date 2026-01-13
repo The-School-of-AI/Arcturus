@@ -16,6 +16,7 @@ class GitActionRequest(BaseModel):
     path: str
     file_path: Optional[str] = None
     message: Optional[str] = None
+    stage_all: Optional[bool] = False
 
 def run_git_command(args, cwd):
     try:
@@ -26,7 +27,7 @@ def run_git_command(args, cwd):
             text=True,
             check=True
         )
-        return result.stdout.strip()
+        return result.stdout
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=e.stderr or e.stdout or str(e))
 
@@ -36,7 +37,7 @@ async def get_git_status(path: str):
         raise HTTPException(status_code=404, detail="Path not found")
     
     # Get branch name
-    branch = run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], path)
+    branch = run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], path).strip()
     
     # Get status porcelain
     status_raw = run_git_command(["status", "--porcelain"], path)
@@ -101,6 +102,11 @@ async def unstage_file(request: GitActionRequest):
 async def commit_changes(request: GitActionRequest):
     if not request.message:
         raise HTTPException(status_code=400, detail="Commit message required")
+    
+    if request.stage_all:
+        # Stage everything including untracked files
+        run_git_command(["add", "-A"], request.path)
+    
     run_git_command(["commit", "-m", request.message], request.path)
     return {"success": True}
 
@@ -111,7 +117,7 @@ async def get_git_history(path: str, limit: int = 50):
     
     try:
         # Get log with hash, message, author, relative date, and decorations (branches)
-        log_raw = run_git_command(["log", "--pretty=format:%h|%s|%an|%ar|%D", f"-n{limit}"], path)
+        log_raw = run_git_command(["log", "--pretty=format:%h|%s|%an|%ar|%D", f"-n{limit}"], path).strip()
         history = []
         for line in log_raw.split("\n"):
             if not line: continue
