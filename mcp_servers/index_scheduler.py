@@ -340,7 +340,7 @@ class IndexScheduler:
         scheduler.stop()
     """
     
-    RECONCILE_INTERVAL = 1800  # 30 minutes
+    DEBOUNCE_SECONDS = 300.0  # Wait 5m of silence before indexing
     
     # File extensions to skip during scanning
     SKIP_EXTENSIONS = {
@@ -372,7 +372,12 @@ class IndexScheduler:
         self.stop_event = threading.Event()
         self.worker_thread: Optional[threading.Thread] = None
         self.reconciler_thread: Optional[threading.Thread] = None
+        self.debouncer_thread: Optional[threading.Thread] = None
         self.observer: Optional[Observer] = None
+        
+        # Debounce tracking
+        self.pending_debounce: Dict[str, float] = {}  # rel_path -> deadline_timestamp
+        self._debounce_lock = threading.Lock()
         
         # Status tracking
         self._status_lock = threading.Lock()
@@ -382,7 +387,7 @@ class IndexScheduler:
         self._active: bool = False
     
     def start(self):
-        """Start the scheduler (watcher, worker, reconciler)."""
+        """Start the scheduler (watcher, worker, debouncer, reconciler)."""
         _log("[Scheduler] Starting RAG Index Scheduler...")
         
         self.stop_event.clear()
@@ -396,6 +401,9 @@ class IndexScheduler:
         
         # Start worker thread
         self._start_worker()
+        
+        # Start debouncer thread
+        self._start_debouncer()
         
         # Start reconciler thread
         self._start_reconciler()
@@ -421,6 +429,11 @@ class IndexScheduler:
             self.worker_thread.join(timeout=10)
         if self.reconciler_thread:
             self.reconciler_thread.join(timeout=5)
+        if self.debouncer_thread:
+            self.debouncer_thread.join(timeout=5)
+            
+        # Process anything currently pending in debounce?
+        # Ideally we might flush them, but for now we'll let them drop to avoid partial state issues.
         
         _log("[Scheduler] Stopped")
     
@@ -467,6 +480,37 @@ class IndexScheduler:
         self.worker_thread = threading.Thread(target=worker_loop, daemon=True, name="IndexWorker")
         self.worker_thread.start()
         _log("[Scheduler] Worker thread started")
+
+    def _start_debouncer(self):
+        """Start the thread that manages debounced indexing jobs."""
+        def debouncer_loop():
+            while not self.stop_event.is_set():
+                time.sleep(1.0) # Check every second
+                
+                now = time.time()
+                ready_files = []
+                
+                with self._debounce_lock:
+                    # Identify files whose deadline has passed
+                    # We iterate a copy of keys to modify dict during iteration if needed
+                    for path, deadline in list(self.pending_debounce.items()):
+                        if now >= deadline:
+                            ready_files.append(path)
+                            del self.pending_debounce[path]
+                
+                # Move ready files to the actual processing queue
+                for path in ready_files:
+                    _log(f"[Debouncer] Cooldown finished for {path}, queuing job.")
+                    # Use priority 5 (default)
+                    job = IndexJob(priority=5, path=path, action="index")
+                    self.queue.put(job)
+                    
+                    # Mark as pending in ledger now that it's officially queued
+                    self.ledger.mark_pending(path)
+
+        self.debouncer_thread = threading.Thread(target=debouncer_loop, daemon=True, name="Debouncer")
+        self.debouncer_thread.start()
+        _log(f"[Scheduler] Debouncer started (delay={self.DEBOUNCE_SECONDS}s)")
     
     def _start_reconciler(self):
         """Start the periodic reconciliation thread."""
@@ -491,19 +535,35 @@ class IndexScheduler:
         - 1: Highest (deletions)
         - 2: File watcher creates
         - 3: File watcher modifies, manual single-file trigger
-        - 5: Default
+        - 5: Default (Debounced updates)
         - 8: Reconciler discovered files
         - 10: Lowest
         """
-        job = IndexJob(priority=priority, path=rel_path, action=action)
-        self.queue.put(job)
+        # Immediate actions (Deletes, or high priority creates if we want)
+        # We also skip debounce if priority is explicitly high (e.g. initial scan or manual trigger)
+        # But 'modified' events from watcher usually come in as priority 3. 
+        # Let's say we debounce 'index' actions unless they are priority 1 or 2 (creates).
         
-        with self._status_lock:
-            self._queue_size = self.queue.qsize()
-        
-        # Mark as pending in ledger
+        if action == "delete":
+            # Deletes are always immediate
+            job = IndexJob(priority=priority, path=rel_path, action=action)
+            self.queue.put(job)
+            return
+
         if action == "index":
-            self.ledger.mark_pending(rel_path)
+            # If it's a "create" (might be priority 2) or manual force, maybe we still want to debounce?
+            # Actually, the user's main pain point is modification of existing files.
+            # Let's debounce ALL 'index' actions for simplicity and consistency.
+            # If you want to force immediate, you'd need a flag, but for now, debounce is safer.
+            
+            with self._debounce_lock:
+                # Set new deadline: now + DEBOUNCE_SECONDS
+                deadline = time.time() + self.DEBOUNCE_SECONDS
+                self.pending_debounce[rel_path] = deadline
+                # _log(f"[Scheduler] Debounced {rel_path} until {datetime.fromtimestamp(deadline).strftime('%H:%M:%S')}")
+
+        with self._status_lock:
+            self._queue_size = self.queue.qsize()  # Note: doesn't include pending_debounce items
     
     def trigger_full_scan(self, priority: int = 3):
         """
@@ -518,6 +578,8 @@ class IndexScheduler:
             if abs_path.exists():
                 file_hash = self._compute_hash(abs_path)
                 if self.ledger.needs_indexing(rel_path, file_hash):
+                    # For full scan, we enqueue. This will go through debounce logic.
+                    # This is actually GOOD because if a scan happens while user is typing, we won't race.
                     self.enqueue(rel_path, "index", priority=priority)
                     count += 1
         
@@ -652,9 +714,13 @@ class IndexScheduler:
             pending = len(self.ledger.get_by_status("pending"))
             errors = len(self.ledger.get_by_status("error"))
             
+            with self._debounce_lock:
+                debouncing_count = len(self.pending_debounce)
+
             return {
-                "active": self._active and (self._current_file is not None or self.queue.qsize() > 0),
+                "active": self._active and (self._current_file is not None or self.queue.qsize() > 0 or debouncing_count > 0),
                 "queue_size": self.queue.qsize(),
+                "debouncing_files": debouncing_count,
                 "current_file": self._current_file or "",
                 "processed_count": self._processed_count,
                 "pending_files": pending,
@@ -705,3 +771,4 @@ def shutdown_scheduler():
         if _scheduler_instance:
             _scheduler_instance.stop()
             _scheduler_instance = None
+
