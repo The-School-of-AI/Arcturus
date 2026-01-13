@@ -7,20 +7,32 @@ import math
 import sys
 import os
 import json
+from pathlib import Path
+
+# Fix attributes/imports pathing
+# 1. Add current directory (mcp_servers) to path so 'import models' works
+sys.path.append(str(Path(__file__).parent))
+# 2. Add project root to path so 'config.settings_loader' works
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import local models
+try:
+    from models import AddInput, AddOutput, SqrtInput, SqrtOutput, StringsToIntsInput, StringsToIntsOutput, ExpSumInput, ExpSumOutput, PythonCodeInput, PythonCodeOutput, UrlInput, FilePathInput, MarkdownInput, MarkdownOutput, ChunkListOutput, SearchDocumentsInput
+except ImportError:
+    # Fallback if running from root without path setup (safety)
+    from mcp_servers.models import AddInput, AddOutput, SqrtInput, SqrtOutput, StringsToIntsInput, StringsToIntsOutput, ExpSumInput, ExpSumOutput, PythonCodeInput, PythonCodeOutput, UrlInput, FilePathInput, MarkdownInput, MarkdownOutput, ChunkListOutput, SearchDocumentsInput
+
 import faiss
 import numpy as np
-from pathlib import Path
 import requests
 from markitdown import MarkItDown
 import time
-import sys
 
 # MCP Protocol Safety: Redirect print to stderr
 def print(*args, **kwargs):
     sys.stderr.write(" ".join(map(str, args)) + "\n")
     sys.stderr.flush()
 
-from models import AddInput, AddOutput, SqrtInput, SqrtOutput, StringsToIntsInput, StringsToIntsOutput, ExpSumInput, ExpSumOutput, PythonCodeInput, PythonCodeOutput, UrlInput, FilePathInput, MarkdownInput, MarkdownOutput, ChunkListOutput, SearchDocumentsInput
 from tqdm import tqdm
 import hashlib
 from pydantic import BaseModel
@@ -54,8 +66,6 @@ try:
 except ImportError:
     BM25_AVAILABLE = False
 
-# Add config to path and import settings
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.settings_loader import settings, get_ollama_url, get_model, get_timeout
 
 mcp = FastMCP("Local Storage RAG")
@@ -647,7 +657,7 @@ def keyword_search(query: str) -> list[str]:
         return []
 
 @mcp.tool()
-def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False, max_results: int = 50, target_dir: str = None) -> list[dict]:
+def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: bool = False, max_results: int = 50, target_dir: Optional[str] = None) -> list[dict]:
     """Powerful regex/keyword search using Ripgrep.
     Returns structured results with file, line number, and match content.
     Set regex=True for pattern matching (e.g. r"error:.*").
