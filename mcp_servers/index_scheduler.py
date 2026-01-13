@@ -340,6 +340,7 @@ class IndexScheduler:
         scheduler.stop()
     """
     
+    RECONCILE_INTERVAL = 1800  # 30 minutes
     DEBOUNCE_SECONDS = 300.0  # Wait 5m of silence before indexing
     
     # File extensions to skip during scanning
