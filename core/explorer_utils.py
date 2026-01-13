@@ -27,7 +27,6 @@ class CodeSkeletonExtractor:
 
     def is_ignored(self, path: str) -> bool:
         """Smarter ignore logic: check components of the path against patterns."""
-        # Use relative path from root to check components
         rel_path = os.path.relpath(path, self.root_path)
         if rel_path == ".":
             return False
@@ -35,11 +34,25 @@ class CodeSkeletonExtractor:
         parts = rel_path.split(os.sep)
         for part in parts:
             if part in self.ignore_patterns:
+                # print(f"  [Ignore] Exact match: {part} in {rel_path}")
                 return True
-            # Also handle wildcard patterns like *.pyc
+            
+            # Simple wildcard matching
             for pattern in self.ignore_patterns:
-                if pattern.startswith('*') and part.endswith(pattern[1:]):
-                    return True
+                if pattern == '*': continue # Never ignore everything via literal *
+                
+                # Handle *.ext
+                if pattern.startswith('*') and len(pattern) > 1:
+                    suffix = pattern[1:]
+                    if part.endswith(suffix):
+                        # print(f"  [Ignore] Suffix match: {pattern} for {part} in {rel_path}")
+                        return True
+                # Handle dir/*
+                if pattern.endswith('*') and len(pattern) > 1:
+                    prefix = pattern[:-1]
+                    if part.startswith(prefix):
+                        # print(f"  [Ignore] Prefix match: {pattern} for {part} in {rel_path}")
+                        return True
         return False
 
     def extract_file_skeleton(self, file_path: str) -> str:

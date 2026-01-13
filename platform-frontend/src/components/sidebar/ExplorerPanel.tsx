@@ -280,7 +280,11 @@ export const ExplorerPanel: React.FC = () => {
     // Auto-load files on mount/change of root path
     React.useEffect(() => {
         if (explorerRootPath) {
-            refreshFiles();
+            // Give backend some time to warm up if this is a fresh start/reload
+            const timer = setTimeout(() => {
+                refreshFiles();
+            }, 2000);
+            return () => clearTimeout(timer);
         }
     }, [explorerRootPath]);
 
@@ -373,15 +377,18 @@ export const ExplorerPanel: React.FC = () => {
     };
 
     const handleOpenProject = async () => {
+        console.log('[Explorer] Initiating Open Project dialog...');
         try {
             setIsAnalyzing(true);
             const path = await window.electronAPI.invoke('dialog:openDirectory');
+            console.log('[Explorer] Open Project dialog result:', path);
             if (path) {
                 setExplorerRootPath(path);
                 addToHistory({ name: path.split('/').pop() || path, path: path, type: 'local' });
             }
         } catch (error) {
-            console.error(error);
+            console.error('[Explorer] Open Project failed:', error);
+            alert('Failed to open project: ' + (error as Error).message);
         } finally {
             setIsAnalyzing(false);
         }
@@ -504,6 +511,12 @@ export const ExplorerPanel: React.FC = () => {
                                 <RefreshCw className="w-4 h-4 mr-2" />
                                 Refresh Files
                             </DropdownMenuItem>
+                            {explorerRootPath && (
+                                <DropdownMenuItem onClick={() => window.electronAPI.send('terminal:create', { cwd: explorerRootPath })}>
+                                    <TerminalIcon className="w-4 h-4 mr-2" />
+                                    Open in Terminal
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setExplorerRootPath(null)} disabled={!explorerRootPath} className="text-red-500">
                                 <X className="w-4 h-4 mr-2" />

@@ -817,7 +817,7 @@ export const useAppStore = create<AppState>()(
             },
 
             // --- Explorer Slice ---
-            explorerRootPath: "/Users/rohanshravan/Documents/DSCode",
+            explorerRootPath: null,
             setExplorerRootPath: (path) => set({ explorerRootPath: path }),
             explorerFiles: [],
             setExplorerFiles: (files) => set({ explorerFiles: files }),

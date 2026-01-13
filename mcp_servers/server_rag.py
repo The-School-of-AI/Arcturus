@@ -22,30 +22,34 @@ except ImportError:
     # Fallback if running from root without path setup (safety)
     from mcp_servers.models import AddInput, AddOutput, SqrtInput, SqrtOutput, StringsToIntsInput, StringsToIntsOutput, ExpSumInput, ExpSumOutput, PythonCodeInput, PythonCodeOutput, UrlInput, FilePathInput, MarkdownInput, MarkdownOutput, ChunkListOutput, SearchDocumentsInput
 
-import faiss
-import numpy as np
-import requests
-from markitdown import MarkItDown
-import time
+import sys
+import os
+import contextlib
 
-# MCP Protocol Safety: Redirect print to stderr
-def print(*args, **kwargs):
-    sys.stderr.write(" ".join(map(str, args)) + "\n")
-    sys.stderr.flush()
+# MCP Protocol Safety: Suppression of library noise on stdout
+@contextlib.contextmanager
+def suppress_stdout():
+    old_stdout = sys.stdout
+    sys.stdout = sys.stderr
+    try:
+        yield
+    finally:
+        sys.stdout = old_stdout
 
-from tqdm import tqdm
-import hashlib
-from pydantic import BaseModel
-import subprocess
-import sqlite3
-import trafilatura
-import pymupdf4llm
-import fitz # Silencing library logs
-try:
-    fitz.TOOLS.mupdf_display_errors(False) # Newer versions
-    fitz.TOOLS.set_stderr_log(False)
-except:
-    pass
+with suppress_stdout():
+    import faiss
+    import numpy as np
+    import requests
+    from markitdown import MarkItDown
+    from tqdm import tqdm
+    import trafilatura
+    import pymupdf4llm
+    import fitz 
+    try:
+        fitz.TOOLS.mupdf_display_errors(False) 
+        fitz.TOOLS.set_stderr_log(False)
+    except:
+        pass
 import re
 import base64 # ollama needs base64-encoded-image
 import asyncio

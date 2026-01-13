@@ -17,6 +17,7 @@ let mainWindow;
 let backendProcesses = [];
 // Terminal state
 let ptyProcess = null;
+let activeTerminalCwd = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -79,19 +80,26 @@ function startBackend(command, args, name) {
 function setupTerminalHandlers() {
 
     ipcMain.on('terminal:create', (event, options) => {
-        if (ptyProcess && typeof ptyProcess.exitCode !== 'number') {
-            console.log('[Electron] Terminal session already active.');
-            return;
-        }
-
-        // Ensure CWD exists
         let cwd = options.cwd || path.resolve(__dirname, '..', '..');
         const fs = require('fs');
         if (!fs.existsSync(cwd)) {
-            console.warn(`[Electron] Requested CWD '${cwd}' does not exist. Falling back to default.`);
             cwd = path.resolve(__dirname, '..', '..');
         }
 
+        // Check if we need to restart
+        if (ptyProcess && typeof ptyProcess.exitCode !== 'number') {
+            if (activeTerminalCwd === cwd) {
+                console.log('[Electron] Terminal session already active for this CWD.');
+                return;
+            }
+            console.log(`[Electron] Restarting terminal: '${activeTerminalCwd}' -> '${cwd}'`);
+            try {
+                ptyProcess.kill();
+            } catch (e) { }
+            ptyProcess = null;
+        }
+
+        activeTerminalCwd = cwd;
         const bridgePath = path.join(__dirname, 'pty_bridge.py');
         console.log(`[Electron] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
 
@@ -166,11 +174,19 @@ function setupTerminalHandlers() {
 function setupFSHandlers() {
     // Open Directory Dialog
     ipcMain.handle('dialog:openDirectory', async () => {
-        const result = await dialog.showOpenDialog(mainWindow, {
-            properties: ['openDirectory', 'createDirectory']
-        });
-        if (result.canceled) return null;
-        return result.filePaths[0];
+        console.log('[Electron] dialog:openDirectory invoked');
+        const { dialog } = require('electron');
+        try {
+            const result = await dialog.showOpenDialog(mainWindow, {
+                properties: ['openDirectory', 'createDirectory']
+            });
+            console.log('[Electron] Dialog result:', result);
+            if (result.canceled) return null;
+            return result.filePaths[0];
+        } catch (error) {
+            console.error('[Electron] dialog:openDirectory error:', error);
+            throw error;
+        }
     });
 
     // Shell Operations
@@ -271,6 +287,7 @@ function setupFSHandlers() {
 }
 
 app.on('ready', () => {
+    console.log('[Electron] App ready, setting up handlers...');
     // Start backends
     startBackend('uv', ['run', 'api.py'], 'API');
     startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');

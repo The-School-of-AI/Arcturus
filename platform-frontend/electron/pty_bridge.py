@@ -36,31 +36,31 @@ def main():
         # master_fd is the file descriptor to read/write to the shell
         
         try:
-            # Make sure we don't block indefinitely
+            # Set stdin to non-blocking
+            # fcntl.fcntl(sys.stdin, fcntl.F_SETFL, os.O_NONBLOCK)
+            
             while True:
-                # Watch stdin (from Electron) and master_fd (from Shell)
-                read_fds, _, _ = select.select([sys.stdin, master_fd], [], [])
+                # Watch stdin (fd 0) and master_fd (from Shell)
+                read_fds, _, _ = select.select([0, master_fd], [], [])
                 
-                if sys.stdin in read_fds:
-                    # Input from Electron -> Write to Shell
+                if 0 in read_fds:
+                    # Input from Electron (stdin) -> Write to Shell (master_fd)
                     try:
-                        # Read binary data from stdin
-                        d = os.read(sys.stdin.fileno(), 1024)
+                        d = os.read(0, 4096)
                         if not d: 
-                            break # EOF from Electron
+                            break # EOF
                         os.write(master_fd, d)
-                    except OSError:
+                    except (OSError, EOFError):
                         break
 
                 if master_fd in read_fds:
-                    # Output from Shell -> Write to Electron
+                    # Output from Shell (master_fd) -> Write to Electron (stdout)
                     try:
-                        o = os.read(master_fd, 1024)
+                        o = os.read(master_fd, 4096)
                         if not o: 
                             break # Shell closed
-                        sys.stdout.buffer.write(o)
-                        sys.stdout.buffer.flush()
-                    except OSError:
+                        os.write(1, o) # Write directly to stdout (fd 1)
+                    except (OSError, EOFError):
                         break
                         
         except Exception as e:
