@@ -8,6 +8,10 @@ import sys
 import os
 import json
 from pathlib import Path
+import subprocess
+import hashlib
+import time
+import shutil
 
 # Fix attributes/imports pathing
 # 1. Add current directory (mcp_servers) to path so 'import models' works
@@ -109,7 +113,6 @@ def get_rg_path():
     
     # Fallback to system path
     try:
-        import subprocess
         result = subprocess.run(["which", "rg"], capture_output=True, text=True)
         if result.returncode == 0:
             return result.stdout.strip()
@@ -667,6 +670,7 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
     Set regex=True for pattern matching (e.g. r"error:.*").
     Optionally provide target_dir to search within a specific subdirectory of data/.
     """
+    results = []
     rg_path = get_rg_path()
     if not rg_path:
         return [{"error": "Ripgrep binary not found. Please install it or check .bin/rg"}]
@@ -682,19 +686,22 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
         
         search_path = BASE_DATA_DIR
         if target_dir:
-            clean_target = target_dir.strip("/").replace("..", "")
-            if clean_target.startswith("memory"):
-                # Search in PROJECT_ROOT/memory/...
-                search_path = PROJECT_ROOT / clean_target
+            # Check if absolute path
+            if os.path.isabs(target_dir) or target_dir.startswith("/"):
+                search_path = Path(target_dir)
             else:
-                # Search in PROJECT_ROOT/data/...
-                search_path = BASE_DATA_DIR / clean_target
+                clean_target = target_dir.strip("/").replace("..", "")
+                if clean_target.startswith("memory"):
+                    # Search in PROJECT_ROOT/memory/...
+                    search_path = PROJECT_ROOT / clean_target
+                else:
+                    # Search in PROJECT_ROOT/data/...
+                    search_path = BASE_DATA_DIR / clean_target
         
         cmd.extend([query, str(search_path)])
         
         # We need to run with Popen to manage the potential output size
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        results = []
         
         for line in process.stdout:
             try:
@@ -710,17 +717,23 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
 
                     # Enforce target_dir filtering on results (extra safety)
                     if target_dir:
-                        clean_target = target_dir.strip("/").replace("..", "")
-                        norm_path = rel_path.replace("\\", "/").strip("/")
-                        if not (norm_path == clean_target or norm_path.startswith(clean_target + "/")):
-                            continue
+                        # Use absolute comparison if target_dir is absolute
+                        if os.path.isabs(target_dir):
+                            if not abs_path.startswith(target_dir):
+                                continue
+                        else:
+                            clean_target = target_dir.strip("/").replace("..", "")
+                            norm_path = rel_path.replace("\\", "/").strip("/")
+                            if not (norm_path == clean_target or norm_path.startswith(clean_target + "/")):
+                                continue
                             
                     # Enforce .md only if we are in Notes
                     if target_dir == "Notes" and not rel_path.lower().endswith(".md"):
                         continue
 
                     results.append({
-                        "file": rel_path,
+                        "file": abs_path,
+                        "rel_path": rel_path,
                         "line": match_data["line_number"],
                         "content": match_data["lines"]["text"].strip(),
                         "submatches": match_data["submatches"]
@@ -1737,7 +1750,6 @@ class SessionSummarySyncService:
             
             if should_copy:
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
-                import shutil
                 shutil.copy2(src_path, dest_path)
                 mcp_log("SYNC", f"Mirrored {rel_path} to RAG")
                 changes_detected = True

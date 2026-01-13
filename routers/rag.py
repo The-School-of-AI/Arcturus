@@ -631,8 +631,15 @@ async def get_document_chunks(path: str):
 async def get_document_content(path: str):
     """Get the content of a document (binary or text)"""
     try:
-        root = PROJECT_ROOT / "data"
-        doc_path = root / path
+        # Check if absolute path first
+        if os.path.isabs(path) or path.startswith("/"):
+            doc_path = Path(path)
+            if not doc_path.exists():
+                # Fallback to PROJECT_ROOT / data if it doesn't exist as absolute
+                doc_path = PROJECT_ROOT / "data" / path
+        else:
+            root = PROJECT_ROOT / "data"
+            doc_path = root / path
         
         # Fallback: Check relative to PROJECT_ROOT 
         if not doc_path.exists():

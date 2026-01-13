@@ -8,6 +8,7 @@ import { API_BASE } from '@/lib/api';
 
 interface SearchResult {
     file: string;
+    rel_path?: string; // Optional relative path for display
     line: number;
     content: string;
 }
@@ -39,7 +40,6 @@ export const SearchSidebar: React.FC = () => {
             setIsSearching(true);
             try {
                 // Use the backend's ripgrep endpoint
-                // Assuming it accepts target_dir as absolute path
                 const res = await axios.get(`${API_BASE}/rag/ripgrep_search`, {
                     params: {
                         query: debouncedQuery,
@@ -103,15 +103,8 @@ export const SearchSidebar: React.FC = () => {
                                 key={`${res.file}-${res.line}-${i}`}
                                 className="group p-2 rounded-md hover:bg-accent/50 cursor-pointer border border-transparent hover:border-border/50 transition-all"
                                 onClick={() => openDocument({
-                                    id: res.file, // Assuming backend returns full path or relative to root? 
-                                    // Usually rag/ripgrep returns relative path if target_dir is root.
-                                    // We need absolute path for openDocument usually, or properly relative.
-                                    // Let's assume for now we construct it if needed.
-                                    // If res.file starts with /, it's absolute.
-                                    // If not, combine with explorerRootPath.
-                                    // But checking NotesPanel, it seemed to rely on IDs matching paths.
-                                    // Safer to pass what we have; if absolute, good.
-                                    title: res.file.split('/').pop() || 'file',
+                                    id: res.file,
+                                    title: res.file.split(/[/\\]/).pop() || 'file',
                                     type: res.file.split('.').pop() || 'txt',
                                     targetLine: res.line,
                                     searchText: res.content
@@ -120,7 +113,7 @@ export const SearchSidebar: React.FC = () => {
                                 <div className="flex items-center gap-1.5 mb-0.5 max-w-full">
                                     <FileCode className="w-3 h-3 text-blue-400 shrink-0" />
                                     <span className="text-xs font-medium text-foreground truncate" title={res.file}>
-                                        {res.file}
+                                        {res.rel_path || res.file}
                                     </span>
                                 </div>
                                 <div className="pl-4 text-[10px] font-mono text-muted-foreground line-clamp-1 break-all">
