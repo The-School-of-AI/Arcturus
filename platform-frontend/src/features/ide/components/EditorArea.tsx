@@ -3,11 +3,12 @@ import Editor, { loader } from '@monaco-editor/react';
 import { useAppStore } from '@/store';
 // Removed unused useIdeStore import to fix potential lint if not used, or keep if needed. It was imported in previous version.
 // Checking previous file content, useIdeStore was unused.
-import { FileCode, Loader2, X, FileText, Code2 } from 'lucide-react';
+import { FileCode, Loader2, X, FileText, Code2, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
+import { Button } from '@/components/ui/button';
 
 // Configure Monaco to use local resources if needed, or just standard setup
 loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
@@ -191,35 +192,111 @@ export const EditorArea: React.FC = () => {
                 </div>
             </div>
 
-            {/* Monaco Instance */}
+            {/* Monaco Instance or Specialized Viewer */}
             <div className="flex-1 w-full h-full overflow-hidden relative">
-                {activeDoc.content === undefined ? (
+                {activeDoc.content === undefined && !['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'pdf'].includes(activeDoc.type.toLowerCase()) ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-transparent z-10 gap-3">
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">Loading Content...</span>
                     </div>
                 ) : (
-                    <Editor
-                        height="100%"
-                        path={activeDoc.id} // Important for Monaco models
-                        defaultLanguage={activeDoc.type === 'ts' || activeDoc.type === 'tsx' ? 'typescript' : activeDoc.type === 'py' ? 'python' : activeDoc.type === 'md' ? 'markdown' : 'plaintext'}
-                        value={activeDoc.content}
-                        onChange={(value) => updateDocumentContent(activeDoc.id, value || '')}
-                        onMount={handleEditorDidMount}
-                        theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'}
-                        options={{
-                            minimap: { enabled: true },
-                            fontSize: 13,
-                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                            padding: { top: 16 },
-                            scrollBeyondLastLine: false,
-                            automaticLayout: true,
-                            smoothScrolling: true,
-                            cursorBlinking: "smooth",
-                            cursorSmoothCaretAnimation: "on",
-                            renderLineHighlight: 'all',
-                        }}
-                    />
+                    (() => {
+                        const ext = activeDoc.type.toLowerCase();
+
+                        // IMAGE VIEWER
+                        if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
+                            // In Electron, we can use the local file path as src if we have a protocol or just file:// if allowed
+                            // However, since we are using a dev server, we should probably use the base64 or a direct link if accessible
+                            return (
+                                <div className="h-full w-full flex items-center justify-center p-8 bg-zinc-950/20">
+                                    <img
+                                        src={`file://${activeDoc.id}`}
+                                        alt={activeDoc.title}
+                                        className="max-w-full max-h-full object-contain shadow-2xl rounded-sm transition-transform hover:scale-[1.02]"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=Error+Loading+Image';
+                                        }}
+                                    />
+                                </div>
+                            );
+                        }
+
+                        // PDF VIEWER
+                        if (ext === 'pdf') {
+                            return (
+                                <div className="h-full w-full flex flex-col items-center justify-center bg-zinc-900/40 p-12">
+                                    <div className="p-10 rounded-3xl bg-card/40 border border-white/5 backdrop-blur-xl flex flex-col items-center gap-6 shadow-2xl">
+                                        <div className="w-20 h-20 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                                            <FileText className="w-10 h-10 text-red-400" />
+                                        </div>
+                                        <div className="text-center space-y-2">
+                                            <h3 className="text-xl font-bold bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent italic">PDF Document</h3>
+                                            <p className="text-sm text-muted-foreground max-w-[250px]">{activeDoc.title}</p>
+                                        </div>
+                                        <Button
+                                            onClick={() => window.electronAPI.send('shell:reveal', activeDoc.id)}
+                                            variant="secondary"
+                                            className="bg-white/5 hover:bg-white/10 border-white/10"
+                                        >
+                                            <ExternalLink className="w-4 h-4 mr-2" />
+                                            Open with System Viewer
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // BINARY SAFEGUARD (Large files or known binary extensions)
+                        const binaryExts = ['pt', 'zip', 'bin', 'exe', 'dll', 'so', 'dylib', 'woff', 'woff2', 'ttf', 'pkl', 'parquet'];
+                        if (binaryExts.includes(ext)) {
+                            return (
+                                <div className="h-full w-full flex flex-col items-center justify-center bg-zinc-900/40 p-12">
+                                    <div className="p-10 rounded-3xl bg-card/40 border border-white/5 backdrop-blur-xl flex flex-col items-center gap-6 shadow-2xl">
+                                        <div className="w-20 h-20 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                                            <FileCode className="w-10 h-10 text-amber-400" />
+                                        </div>
+                                        <div className="text-center space-y-2">
+                                            <h3 className="text-xl font-bold bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent italic text-amber-500">Binary File</h3>
+                                            <p className="text-sm text-muted-foreground">This file is likely binary or too large to edit safely in the IDE.</p>
+                                        </div>
+                                        <Button
+                                            onClick={() => window.electronAPI.send('shell:reveal', activeDoc.id)}
+                                            variant="secondary"
+                                            className="bg-white/5 hover:bg-white/10 border-white/10"
+                                        >
+                                            <ExternalLink className="w-4 h-4 mr-2" />
+                                            Reveal in Finder
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // DEFAULT MONACO
+                        return (
+                            <Editor
+                                height="100%"
+                                path={activeDoc.id} // Important for Monaco models
+                                defaultLanguage={activeDoc.type === 'ts' || activeDoc.type === 'tsx' ? 'typescript' : activeDoc.type === 'py' ? 'python' : activeDoc.type === 'md' ? 'markdown' : 'plaintext'}
+                                value={activeDoc.content || ''}
+                                onChange={(value) => updateDocumentContent(activeDoc.id, value || '')}
+                                onMount={handleEditorDidMount}
+                                theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'}
+                                options={{
+                                    minimap: { enabled: true },
+                                    fontSize: 13,
+                                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                    padding: { top: 16 },
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    smoothScrolling: true,
+                                    cursorBlinking: "smooth",
+                                    cursorSmoothCaretAnimation: "on",
+                                    renderLineHighlight: 'all',
+                                }}
+                            />
+                        );
+                    })()
                 )}
             </div>
         </div>

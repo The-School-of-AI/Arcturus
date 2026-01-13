@@ -23,6 +23,10 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+    DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 
 interface FileNode {
@@ -264,6 +268,7 @@ const FileTreeItem: React.FC<{
 export const ExplorerPanel: React.FC = () => {
     const {
         explorerRootPath, setExplorerRootPath,
+        recentProjects,
         explorerFiles, setExplorerFiles,
         isAnalyzing, setIsAnalyzing,
         setFlowData, addToHistory,
@@ -516,6 +521,27 @@ export const ExplorerPanel: React.FC = () => {
                                     <TerminalIcon className="w-4 h-4 mr-2" />
                                     Open in Terminal
                                 </DropdownMenuItem>
+                            )}
+                            {recentProjects.length > 0 && (
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Recent Projects
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                        <DropdownMenuSubContent className="w-64">
+                                            {recentProjects.map((projPath) => (
+                                                <DropdownMenuItem
+                                                    key={projPath}
+                                                    onClick={() => setExplorerRootPath(projPath)}
+                                                >
+                                                    <Folder className="w-3.5 h-3.5 mr-2 opacity-50" />
+                                                    <span className="truncate">{projPath.split('/').pop() || projPath}</span>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                </DropdownMenuSub>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setExplorerRootPath(null)} disabled={!explorerRootPath} className="text-red-500">

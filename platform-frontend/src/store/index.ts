@@ -239,6 +239,7 @@ interface AppsSlice {
 
 interface ExplorerSlice {
     explorerRootPath: string | null;
+    recentProjects: string[]; // List of paths
     setExplorerRootPath: (path: string | null) => void;
     explorerFiles: any[];
     setExplorerFiles: (files: any[]) => void;
@@ -818,7 +819,15 @@ export const useAppStore = create<AppState>()(
 
             // --- Explorer Slice ---
             explorerRootPath: null,
-            setExplorerRootPath: (path) => set({ explorerRootPath: path }),
+            recentProjects: [],
+            setExplorerRootPath: (path) => set((state) => {
+                if (!path) return { explorerRootPath: null };
+                const filtered = state.recentProjects.filter(p => p !== path);
+                return {
+                    explorerRootPath: path,
+                    recentProjects: [path, ...filtered].slice(0, 10)
+                };
+            }),
             explorerFiles: [],
             setExplorerFiles: (files) => set({ explorerFiles: files }),
             isAnalyzing: false,
@@ -1460,6 +1469,9 @@ export const useAppStore = create<AppState>()(
                 newsSources: state.newsSources,
                 newsItems: state.newsItems, // PERSIST NEWS ITEMS for faster reload
                 savedArticles: state.savedArticles, // PERSIST SAVED ARTICLES
+                // Persistence for IDE features
+                explorerRootPath: state.explorerRootPath,
+                recentProjects: state.recentProjects,
             }),
         }
     )
