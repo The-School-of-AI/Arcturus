@@ -4,62 +4,69 @@ const isDev = require('electron-is-dev');
 const { spawn } = require('child_process');
 
 let mainWindow;
-let pythonProcess;
+let backendProcesses = [];
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        width: 1400,
+        height: 900,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.cjs'),
             webviewTag: true,
         },
-        backgroundColor: '#000000',
+        backgroundColor: '#0b0f1a', // Matching your theme
+        title: "Arcturus Platform"
     });
 
     const startUrl = isDev
         ? 'http://localhost:5555'
         : `file://${path.join(__dirname, '../dist/index.html')}`;
 
+    console.log(`[Electron] Loading URL: ${startUrl}`);
     mainWindow.loadURL(startUrl);
 
-    if (isDev) {
-        mainWindow.webContents.openDevTools();
-    }
+    // DevTools: Uncomment to enable by default
+    // if (isDev) {
+    //     mainWindow.webContents.openDevTools();
+    // }
 
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
 }
 
-function startBackend() {
-    console.log('Starting backend...');
-    // We go up one level to find the root where uv should be run
+function startBackend(command, args, name) {
+    console.log(`[Electron] Spawning Backend [${name}]: ${command} ${args.join(' ')}`);
     const rootPath = path.join(__dirname, '..', '..');
 
-    // Starting server_rag.py via uv
-    pythonProcess = spawn('uv', ['run', 'python', 'mcp_servers/server_rag.py'], {
+    const proc = spawn(command, args, {
         cwd: rootPath,
-        shell: true
+        shell: true,
+        env: { ...process.env, PYTHONUNBUFFERED: "1" } // Ensure we see logs instantly
     });
 
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(`Backend stdout: ${data}`);
+    proc.stdout.on('data', (data) => {
+        process.stdout.write(`[${name}] ${data}`);
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Backend stderr: ${data}`);
+    proc.stderr.on('data', (data) => {
+        process.stderr.write(`[${name} ERR] ${data}`);
     });
 
-    pythonProcess.on('close', (code) => {
-        console.log(`Backend process exited with code ${code}`);
+    proc.on('close', (code) => {
+        console.log(`[Electron] Backend [${name}] exited with code ${code}`);
     });
+
+    backendProcesses.push(proc);
 }
 
 app.on('ready', () => {
-    startBackend();
+    // Start backends
+    startBackend('uv', ['run', 'api.py'], 'API');
+    startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
+
     createWindow();
 });
 
@@ -76,7 +83,8 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
-    if (pythonProcess) {
-        pythonProcess.kill();
-    }
+    console.log('[Electron] Shutting down backends...');
+    backendProcesses.forEach(proc => {
+        if (proc) proc.kill();
+    });
 });
