@@ -8,7 +8,30 @@ import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { useAppStore } from '@/store';
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus, Maximize2, Minimize2, X, ChevronDown, ChevronRight, List } from 'lucide-react';
+import {
+    Loader2, Edit2, Eye, FileText, Code2, Type, Minus, Plus,
+    Maximize2, Minimize2, X, ChevronDown, ChevronRight,
+    List as ListIcon, SquarePlus, Bold, Italic, Strikethrough,
+    Link as LinkIcon, ListOrdered, Superscript as SuperscriptIcon,
+    Subscript as SubscriptIcon, Sigma, Underline as UnderlineIcon,
+    Heading1, Heading2, Heading3, Heading4, Quote, Maximize
+} from 'lucide-react';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
+import Underline from '@tiptap/extension-underline';
+import Link from '@tiptap/extension-link';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -491,6 +514,15 @@ export const NotesEditor: React.FC = () => {
             WikiLink.configure({
                 suggestion: suggestionConfig,
             }),
+            Underline,
+            Subscript,
+            Superscript,
+            Link.configure({
+                openOnClick: false,
+                HTMLAttributes: {
+                    class: 'text-primary underline cursor-pointer hover:text-primary/80 transition-colors',
+                },
+            }),
             Placeholder.configure({
                 placeholder: 'Start writing... (Type # for heading, * for list, [[ for notes)',
             }),
@@ -856,79 +888,300 @@ export const NotesEditor: React.FC = () => {
 
                 {/* Right: Unified Controls Section */}
                 <div className="flex items-center gap-2 pl-4 border-l border-border/30 ml-2">
-                    {/* View Mode & Actions Section */}
-                    <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={insertDetails}
-                            className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
-                            title="Insert Collapsible Section"
-                        >
-                            <List className="w-3.5 h-3.5" />
-                        </Button>
-                        <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={toggleMode}
-                            className={cn(
-                                "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all",
-                                mode === 'wysiwyg' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            {mode === 'wysiwyg' ? <Eye className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
-                            {mode === 'wysiwyg' ? "Visual" : "Raw"}
-                        </Button>
-                    </div>
+                    <TooltipProvider delayDuration={200}>
+                        {/* Unified Action Bar Section */}
+                        <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1 overflow-hidden">
 
-                    {/* Font Zoom Controls */}
-                    <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all"
-                            onClick={() => setFontSize(s => Math.max(12, s - 1))}
-                        >
-                            <Minus className="w-3 h-3" />
-                        </Button>
-                        <div className="w-[1px] h-3 bg-border/50" />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110"
-                            onClick={() => setFontSize(s => Math.min(32, s + 1))}
-                        >
-                            <Plus className="w-3 h-3" />
-                        </Button>
-                    </div>
+                            {/* Headings Dropdown */}
+                            <DropdownMenu>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold text-muted-foreground hover:text-foreground">
+                                                <Type className="w-3.5 h-3.5 mr-1" />
+                                                <ChevronDown className="w-3 h-3 opacity-50" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Text Style</TooltipContent>
+                                </Tooltip>
+                                <DropdownMenuContent align="start" className="w-40 glass-panel border-border/30 bg-background/80 backdrop-blur-xl">
+                                    <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className="flex items-center gap-2 text-xs cursor-pointer">
+                                        <Heading1 className="w-3.5 h-3.5" /> Heading 1
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className="flex items-center gap-2 text-xs cursor-pointer">
+                                        <Heading2 className="w-3.5 h-3.5" /> Heading 2
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className="flex items-center gap-2 text-xs cursor-pointer">
+                                        <Heading3 className="w-3.5 h-3.5" /> Heading 3
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => editor.chain().focus().setParagraph().run()} className="flex items-center gap-2 text-xs cursor-pointer">
+                                        <Type className="w-3.5 h-3.5" /> Paragraph
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
 
-                    {/* Zen Mode */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-8 w-8 transition-all rounded-lg border border-transparent hover:border-border/30",
-                            isZenMode ? "bg-primary/10 text-primary border-primary/20" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                        )}
-                        onClick={toggleZenMode}
-                        title={isZenMode ? "Exit Zen Mode" : "Zen Mode"}
-                    >
-                        {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </Button>
+                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
 
-                    <div className="w-[1px] h-4 bg-border/20 mx-1" />
+                            {/* Formatting Group */}
+                            <div className="flex items-center">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleBold().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('bold') && "bg-primary/20 text-primary")}
+                                        >
+                                            <Bold className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Bold (Ctrl+B)</TooltipContent>
+                                </Tooltip>
 
-                    {/* Clear All */}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={closeAllDocuments}
-                        className="h-8 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/5 transition-all gap-1.5"
-                    >
-                        <X className="w-3.5 h-3.5" />
-                        Clear
-                    </Button>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleItalic().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('italic') && "bg-primary/20 text-primary")}
+                                        >
+                                            <Italic className="w-4 h-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Italic (Ctrl+I)</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleUnderline().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('underline') && "bg-primary/20 text-primary")}
+                                        >
+                                            <UnderlineIcon className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Underline (Ctrl+U)</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleStrike().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('strike') && "bg-primary/20 text-primary")}
+                                        >
+                                            <Strikethrough className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Strikethrough</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleCode().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('code') && "bg-primary/20 text-primary")}
+                                        >
+                                            <Code2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Inline Code</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                const url = window.prompt('URL');
+                                                if (url) editor.chain().focus().setLink({ href: url }).run();
+                                            }}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('link') && "bg-primary/20 text-primary")}
+                                        >
+                                            <LinkIcon className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Link</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleBulletList().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('bulletList') && "bg-primary/20 text-primary")}
+                                        >
+                                            <ListIcon className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Bullet List</TooltipContent>
+                                </Tooltip>
+                            </div>
+
+                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                            {/* Scripting Group */}
+                            <div className="flex items-center">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleSubscript().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('subscript') && "bg-primary/20 text-primary")}
+                                        >
+                                            <SubscriptIcon className="w-4 h-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Subscript</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().toggleSuperscript().run()}
+                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('superscript') && "bg-primary/20 text-primary")}
+                                        >
+                                            <SuperscriptIcon className="w-4 h-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Superscript</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => editor.chain().focus().insertContent('$$ LaTeX $$').run()}
+                                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all"
+                                        >
+                                            <Sigma className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Latex Block</TooltipContent>
+                                </Tooltip>
+                            </div>
+
+                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                            {/* Structures Group */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={insertDetails}
+                                        className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                                    >
+                                        <SquarePlus className="w-3.5 h-3.5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">Collapsible Section</TooltipContent>
+                            </Tooltip>
+
+                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                            {/* View Controls Group */}
+                            <div className="flex items-center">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={toggleMode}
+                                            className={cn(
+                                                "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all",
+                                                mode === 'wysiwyg' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            {mode === 'wysiwyg' ? <Eye className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
+                                            {mode === 'wysiwyg' ? "Visual" : "Raw"}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Toggle View Mode</TooltipContent>
+                                </Tooltip>
+
+                                <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all"
+                                            onClick={() => setFontSize(s => Math.max(12, s - 1))}
+                                        >
+                                            <Minus className="w-3 h-3" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Font Smaller</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110"
+                                            onClick={() => setFontSize(s => Math.min(32, s + 1))}
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Font Bigger</TooltipContent>
+                                </Tooltip>
+
+                                <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className={cn(
+                                                "h-7 w-7 transition-all text-muted-foreground hover:text-foreground hover:bg-white/5",
+                                                isZenMode && "text-primary bg-primary/10"
+                                            )}
+                                            onClick={toggleZenMode}
+                                        >
+                                            {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Zen Mode</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </div>
+
+                        <div className="w-[1px] h-4 bg-border/20 mx-1" />
+
+                        {/* Clear All */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={closeAllDocuments}
+                                    className="h-8 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/5 transition-all gap-1.5"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                    Clear
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">Close All Tabs</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </div>
 
