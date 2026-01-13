@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
+const isDev = !app.isPackaged;
 const { spawn } = require('child_process');
 const os = require('os');
 
@@ -75,63 +75,90 @@ function startBackend(command, args, name) {
 
 // --- Terminal Handlers ---
 function setupTerminalHandlers() {
-    if (!pty) return;
 
     ipcMain.on('terminal:create', (event, options) => {
-        if (ptyProcess) {
-            console.log('[Electron] Terminal already exists, using existing session.');
-            // event.reply('terminal:outgoing', '\r\nRestored session...\r\n');
+        if (ptyProcess && typeof ptyProcess.exitCode !== 'number') {
+            console.log('[Electron] Terminal session already active.');
             return;
         }
 
-        const shell = process.env.SHELL || (os.platform() === 'win32' ? 'powershell.exe' : 'zsh');
-        // Default CWD to project root
-        const cwd = path.resolve(__dirname, '..', '..');
+        const shell = process.env.SHELL || (os.platform() === 'win32' ? 'powershell.exe' : '/bin/zsh');
+
+        // Ensure CWD exists
+        let cwd = options.cwd || path.resolve(__dirname, '..', '..');
+        const fs = require('fs');
+        if (!fs.existsSync(cwd)) {
+            console.warn(`[Electron] Requested CWD '${cwd}' does not exist. Falling back to default.`);
+            cwd = path.resolve(__dirname, '..', '..');
+        }
+
+        console.log(`[Electron] Spawning terminal (Compatibility Mode): Shell='${shell}', CWD='${cwd}'`);
 
         try {
-            ptyProcess = pty.spawn(shell, [], {
-                name: 'xterm-256color',
-                cols: 80,
-                rows: 24,
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('terminal:outgoing', '\r\n\x1b[33m[System] Terminal running in Compatibility Mode.\r\n(Native PTY module failed to build on this system).\r\nBasic commands (git, npm, python) work. Interactive TTY apps (vim, nano) are disabled.\x1b[0m\r\n\r\n$ ');
+            }
+
+            // Spawn standard process with pipes
+            ptyProcess = spawn(shell, ['-i'], {
                 cwd: cwd,
-                env: process.env
+                env: process.env,
+                stdio: ['pipe', 'pipe', 'pipe']
             });
 
-            console.log(`[Electron] Pty process created: PID ${ptyProcess.pid}`);
+            console.log(`[Electron] Process created: PID ${ptyProcess.pid}`);
 
-            ptyProcess.onData((data) => {
+            // Handle Output
+            ptyProcess.stdout.on('data', (data) => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('terminal:outgoing', data);
+                    let str = data.toString('utf-8');
+                    // Normalize newlines for xterm
+                    str = str.replace(/\n/g, '\r\n');
+                    mainWindow.webContents.send('terminal:outgoing', str);
                 }
             });
 
-            ptyProcess.onExit(({ exitCode, signal }) => {
-                console.log(`[Electron] Pty process exited with code ${exitCode} signal ${signal}`);
+            ptyProcess.stderr.on('data', (data) => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    let str = data.toString('utf-8');
+                    str = str.replace(/\n/g, '\r\n');
+                    mainWindow.webContents.send('terminal:outgoing', str);
+                }
+            });
+
+            ptyProcess.on('close', (code) => {
+                console.log(`[Electron] Process exited with code ${code}`);
                 ptyProcess = null;
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('terminal:outgoing', '\r\n\n[Process terminated]\r\n');
+                    mainWindow.webContents.send('terminal:outgoing', `\r\n\n[Process terminated with code ${code}]\r\n`);
                 }
             });
 
         } catch (ex) {
-            console.error('[Electron] Failed to spawn pty:', ex);
+            console.error('[Electron] Failed to spawn shell:', ex);
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31mError spawning terminal: ${ex.message}\x1b[0m\r\n`);
+            }
         }
     });
 
     ipcMain.on('terminal:incoming', (event, data) => {
-        if (ptyProcess) {
-            ptyProcess.write(data);
+        if (ptyProcess && ptyProcess.stdin) {
+            try {
+                // Compatibility Mode: Manually echo input back to xterm
+                // because non-PTY shells often disable echo on pipes.
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('terminal:outgoing', data);
+                }
+                ptyProcess.stdin.write(data);
+            } catch (err) {
+                console.error("Write error", err);
+            }
         }
     });
 
     ipcMain.on('terminal:resize', (event, { cols, rows }) => {
-        if (ptyProcess) {
-            try {
-                ptyProcess.resize(cols, rows);
-            } catch (err) {
-                console.warn('[Electron] Failed to resize pty:', err);
-            }
-        }
+        // Simple spawn cannot be resized, ignore.
     });
 }
 

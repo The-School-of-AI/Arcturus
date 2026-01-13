@@ -78,6 +78,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.2",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.5",
@@ -85,7 +86,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
     "concurrently": "^9.2.1",
-    "electron": "^39.2.7",
+    "electron": "^33.0.0",
     "electron-is-dev": "^3.0.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",

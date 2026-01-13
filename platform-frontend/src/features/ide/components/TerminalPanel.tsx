@@ -6,12 +6,14 @@ import 'xterm/css/xterm.css';
 import { Terminal as TerminalIcon, Plus, Maximize2, X, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
+import { useAppStore } from '@/store'; // Import store
 
 export const TerminalPanel: React.FC = () => {
     const terminalRef = useRef<HTMLDivElement>(null);
     const xtermRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const { theme } = useTheme();
+    const { explorerRootPath } = useAppStore(); // Get current folder
 
     useEffect(() => {
         if (!terminalRef.current) return;
@@ -57,7 +59,10 @@ export const TerminalPanel: React.FC = () => {
         // IPC: Outgoing data (pty output)
         if (window.electronAPI) {
             // Create terminal session
-            window.electronAPI.send('terminal:create', {});
+            // Pass the current explorer root path as the desired CWD
+            window.electronAPI.send('terminal:create', {
+                cwd: explorerRootPath
+            });
 
             // Listen for output
             window.electronAPI.receive('terminal:outgoing', (data: string) => {
@@ -109,7 +114,7 @@ export const TerminalPanel: React.FC = () => {
 
     const handleRefresh = () => {
         if (window.electronAPI) {
-            window.electronAPI.send('terminal:create', {}); // Try simple re-create/re-connect
+            window.electronAPI.send('terminal:create', { cwd: explorerRootPath }); // Try simple re-create/re-connect
             xtermRef.current?.write('\r\n\x1b[2m[Refreshing terminal connection...]\x1b[0m\r\n');
         }
     };
@@ -119,7 +124,7 @@ export const TerminalPanel: React.FC = () => {
             {/* Terminal Header */}
             <div className={cn("h-9 min-h-[36px] flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-[#27272a] bg-[#18181b]" : "border-border bg-gray-50")}>
                 <div className="flex items-center gap-4">
-                    <div className={cn("flex items-center gap-0 text-xs font-medium cursor-pointer transition-colors border-transparent", theme === 'dark' ? "text-[#d4d4d8] hover:text-white border-white" : "text-gray-700 hover:text-black border-black")}>
+                    <div className={cn("flex items-center gap-2 text-xs font-medium cursor-pointer transition-colors border-b-2 border-transparent", theme === 'dark' ? "text-[#d4d4d8] hover:text-white border-white" : "text-gray-700 hover:text-black border-black")}>
                         <TerminalIcon className="w-3.5 h-3.5" />
                         <span>TERMINAL</span>
                     </div>

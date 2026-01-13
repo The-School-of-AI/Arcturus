@@ -56,14 +56,64 @@ export const EditorArea: React.FC = () => {
         monaco.editor.defineTheme('arcturus-dark', {
             base: 'vs-dark',
             inherit: true,
-            rules: [],
+
+            // Token colors (optional but makes it feel "yours")
+            rules: [
+                { token: 'comment', foreground: '6B7A90' },          // muted blue-gray
+                { token: 'keyword', foreground: '4588F1' },          // Arcturus blue
+                { token: 'delimiter', foreground: '9AA4B2' },
+                { token: 'number', foreground: '7AA2F7' },           // soft periwinkle
+                { token: 'string', foreground: '7DD3FC' },           // icy blue
+                { token: 'type.identifier', foreground: '93C5FD' },
+                { token: 'function', foreground: '60A5FA' },
+            ],
+
             colors: {
-                'editor.background': '#1e1e1e00', // Transparent
-                'editor.lineHighlightBackground': '#ffffff0a',
-                'editorLineNumber.foreground': '#52525b',
-                'editor.selectionBackground': '#264f78',
-                'editor.inactiveSelectionBackground': '#3a3d41',
-            }
+                // Transparent so your glass/gradient shows through
+                'editor.background': '#00000000',
+
+                // Core text/cursor
+                'editor.foreground': '#D6E0F0',
+                'editorCursor.foreground': '#60A5FA',
+
+                // Current line + selection (blue-tinted, not gray)
+                'editor.lineHighlightBackground': '#4588F112',          // ~7% blue tint
+                'editor.selectionBackground': '#1E3A8A66',              // deep blue selection
+                'editor.inactiveSelectionBackground': '#1E3A8A33',
+
+                // Line numbers
+                'editorLineNumber.foreground': '#4B5563',
+                'editorLineNumber.activeForeground': '#93C5FD',
+
+                // Guides / brackets
+                'editorIndentGuide.background1': '#1F2A44',
+                'editorIndentGuide.activeBackground1': '#2E5493',
+                'editorBracketMatch.background': '#4588F120',
+                'editorBracketMatch.border': '#4588F180',
+
+                // Find / match highlights
+                'editor.findMatchBackground': '#4588F136',
+                'editor.findMatchHighlightBackground': '#4588F11F',
+                'editor.findRangeHighlightBackground': '#4588F114',
+
+                // Widgets (hover, suggest) to match your panels
+                'editorWidget.background': '#0B1220',
+                'editorWidget.border': '#1F304F',
+                'editorHoverWidget.background': '#0B1220',
+                'editorHoverWidget.border': '#1F304F',
+                'editorSuggestWidget.background': '#0B1220',
+                'editorSuggestWidget.border': '#1F304F',
+                'editorSuggestWidget.selectedBackground': '#4588F11A',
+
+                // Scrollbar subtle blue glow
+                'scrollbarSlider.background': '#4588F118',
+                'scrollbarSlider.hoverBackground': '#4588F126',
+                'scrollbarSlider.activeBackground': '#4588F133',
+
+                // Minimap + gutter
+                'minimap.background': '#00000000',
+                'editorGutter.background': '#00000000',
+            },
         });
 
         // Light Theme
