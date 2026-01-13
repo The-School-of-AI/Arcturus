@@ -252,6 +252,8 @@ interface ExplorerSlice {
     addToHistory: (item: Omit<AnalysisHistoryItem, 'id' | 'timestamp'>) => void;
     removeFromHistory: (id: string) => void;
     updateHistoryItem: (path: string, data: Partial<AnalysisHistoryItem>) => void;
+    clipboard: { type: 'cut' | 'copy'; path: string } | null;
+    setClipboard: (item: { type: 'cut' | 'copy'; path: string } | null) => void;
 }
 
 // --- Agent Test Mode Slice ---
@@ -844,6 +846,8 @@ export const useAppStore = create<AppState>()(
                     h.path === path ? { ...h, ...data } : h
                 )
             })),
+            clipboard: null,
+            setClipboard: (item) => set({ clipboard: item }),
 
             // --- Apps Slice ---
             appCards: [],

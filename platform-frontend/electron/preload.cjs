@@ -5,7 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld(
     "electronAPI", {
     invoke: (channel, ...args) => {
-        let validChannels = ["dialog:openDirectory", "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile"];
+        let validChannels = ["dialog:openDirectory", "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile", "fs:copy", "fs:move"];
         if (validChannels.includes(channel)) {
             return ipcRenderer.invoke(channel, ...args);
         }

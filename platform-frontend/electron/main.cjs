@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const isDev = !app.isPackaged;
 const { spawn } = require('child_process');
 const os = require('os');
+const fs = require('fs');
 
 // Try to load node-pty
 let pty;
@@ -244,6 +245,26 @@ function setupFSHandlers() {
             return { success: true, content };
         } catch (error) {
             console.error('[Electron] fs:readFile failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('fs:copy', async (event, { src, dest }) => {
+        try {
+            fs.cpSync(src, dest, { recursive: true });
+            return { success: true };
+        } catch (error) {
+            console.error('[Electron] fs:copy failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('fs:move', async (event, { src, dest }) => {
+        try {
+            fs.renameSync(src, dest);
+            return { success: true };
+        } catch (error) {
+            console.error('[Electron] fs:move failed', error);
             return { success: false, error: error.message };
         }
     });
