@@ -145,11 +145,13 @@ function setupTerminalHandlers() {
     ipcMain.on('terminal:incoming', (event, data) => {
         if (ptyProcess && ptyProcess.stdin) {
             try {
-                // Determine if valid, write to bridge stdin
+                // console.log(`[Electron-Input] Writing ${data.length} bytes to PTY`); // Debug logs
                 ptyProcess.stdin.write(data);
             } catch (err) {
                 console.error("Write error", err);
             }
+        } else {
+            console.warn("[Electron] terminal:incoming received but ptyProcess is null or stdin closed.");
         }
     });
 
@@ -159,12 +161,101 @@ function setupTerminalHandlers() {
     });
 }
 
+// --- File System Handlers ---
+function setupFSHandlers() {
+    // Open Directory Dialog
+    ipcMain.handle('dialog:openDirectory', async () => {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory', 'createDirectory']
+        });
+        if (result.canceled) return null;
+        return result.filePaths[0];
+    });
+
+    // Shell Operations
+    ipcMain.on('shell:reveal', (event, path) => {
+        shell.showItemInFolder(path);
+    });
+
+    ipcMain.on('shell:openExternal', (event, url) => {
+        shell.openExternal(url);
+    });
+
+    // File Operations
+    ipcMain.handle('fs:create', async (event, { type, path: targetPath, content }) => {
+        try {
+            if (type === 'folder') {
+                if (!fs.existsSync(targetPath)) {
+                    fs.mkdirSync(targetPath, { recursive: true });
+                }
+            } else {
+                // Ensure parent dir exists
+                const parentDir = path.dirname(targetPath);
+                if (!fs.existsSync(parentDir)) {
+                    fs.mkdirSync(parentDir, { recursive: true });
+                }
+                fs.writeFileSync(targetPath, content || '', 'utf-8');
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('[Electron] fs:create failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('fs:rename', async (event, { oldPath, newPath }) => {
+        try {
+            if (fs.existsSync(newPath)) {
+                throw new Error('Destination already exists');
+            }
+            fs.renameSync(oldPath, newPath);
+            return { success: true };
+        } catch (error) {
+            console.error('[Electron] fs:rename failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('fs:delete', async (event, targetPath) => {
+        try {
+            // Use shell.trashItem to move to trash instead of permanent delete
+            await shell.trashItem(targetPath);
+            return { success: true };
+        } catch (error) {
+            console.error('[Electron] fs:delete failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    // Simple File I/O for saving
+    ipcMain.handle('fs:writeFile', async (event, { path: targetPath, content }) => {
+        try {
+            fs.writeFileSync(targetPath, content, 'utf-8');
+            return { success: true };
+        } catch (error) {
+            console.error('[Electron] fs:writeFile failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('fs:readFile', async (event, targetPath) => {
+        try {
+            const content = fs.readFileSync(targetPath, 'utf-8');
+            return { success: true, content };
+        } catch (error) {
+            console.error('[Electron] fs:readFile failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+}
+
 app.on('ready', () => {
     // Start backends
     startBackend('uv', ['run', 'api.py'], 'API');
     startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
 
     setupTerminalHandlers();
+    setupFSHandlers();
     createWindow();
 });
 

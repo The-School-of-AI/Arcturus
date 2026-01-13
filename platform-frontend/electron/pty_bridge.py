@@ -65,6 +65,7 @@ def main():
                         
         except Exception as e:
             sys.stderr.write(f"Bridge Error: {e}\n")
+            sys.stderr.flush()
         finally:
             os.close(master_fd)
             # Reap child

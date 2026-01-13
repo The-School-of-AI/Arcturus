@@ -44,40 +44,27 @@ export const TerminalPanel: React.FC = () => {
         term.loadAddon(webLinksAddon);
 
         term.open(terminalRef.current);
-        fitAddon.fit();
+        // Wait for next frame to ensure container has dimensions
+        requestAnimationFrame(() => {
+            try {
+                fitAddon.fit();
+            } catch (e) {
+                console.warn("Initial fit failed", e);
+            }
+        });
 
         xtermRef.current = term;
         fitAddonRef.current = fitAddon;
 
-        // IPC: Incoming data (user typing)
-        term.onData(data => {
-            if (window.electronAPI) {
-                window.electronAPI.send('terminal:incoming', data);
-            }
-        });
-
-        // IPC: Outgoing data (pty output)
-        if (window.electronAPI) {
-            // Create terminal session
-            // Pass the current explorer root path as the desired CWD
-            window.electronAPI.send('terminal:create', {
-                cwd: explorerRootPath
-            });
-
-            // Listen for output
-            window.electronAPI.receive('terminal:outgoing', (data: string) => {
-                term.write(data);
-            });
-        } else {
-            term.write('\r\n\x1b[33mInitialize connection failed: window.electronAPI not found.\x1b[0m\r\n');
-        }
+        // ... rest of IPC setup ...
 
         // Handle Re-sizing
         const handleResize = () => {
+            if (!fitAddonRef.current || !xtermRef.current) return;
             try {
-                fitAddon.fit();
+                fitAddonRef.current.fit();
                 if (window.electronAPI) {
-                    const dims = { cols: term.cols, rows: term.rows };
+                    const dims = { cols: xtermRef.current.cols, rows: xtermRef.current.rows };
                     window.electronAPI.send('terminal:resize', dims);
                 }
             } catch (e) {
@@ -86,8 +73,6 @@ export const TerminalPanel: React.FC = () => {
         };
 
         window.addEventListener('resize', handleResize);
-        // Also fit after a small delay to ensure container is ready
-        setTimeout(handleResize, 100);
 
         return () => {
             window.removeEventListener('resize', handleResize);

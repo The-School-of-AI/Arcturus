@@ -4,9 +4,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld(
     "electronAPI", {
+    invoke: (channel, ...args) => {
+        let validChannels = ["dialog:openDirectory", "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile"];
+        if (validChannels.includes(channel)) {
+            return ipcRenderer.invoke(channel, ...args);
+        }
+    },
     send: (channel, data) => {
         // whitelist channels
-        let validChannels = ["toMain", "terminal:create", "terminal:incoming", "terminal:resize"];
+        let validChannels = ["toMain", "terminal:create", "terminal:incoming", "terminal:resize", "shell:reveal", "shell:openExternal"];
         if (validChannels.includes(channel)) {
             ipcRenderer.send(channel, data);
         }
