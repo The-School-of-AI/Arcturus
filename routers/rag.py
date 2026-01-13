@@ -633,8 +633,17 @@ async def get_document_content(path: str):
     try:
         root = PROJECT_ROOT / "data"
         doc_path = root / path
+        
+        # Fallback: Check relative to PROJECT_ROOT (for memory/ or other paths)
         if not doc_path.exists():
-            raise HTTPException(status_code=404, detail="Document not found")
+            # Try finding it relative to project root
+            # This handles paths like "memory/session_123.json" which are not inside "data/"
+            alt_path = PROJECT_ROOT / path
+            if alt_path.exists() and alt_path.is_file():
+                doc_path = alt_path
+            
+        if not doc_path.exists():
+            raise HTTPException(status_code=404, detail=f"Document not found at {path} or data/{path}")
         
         ext = doc_path.suffix.lower()
         

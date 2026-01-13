@@ -611,35 +611,54 @@ export const RagPanel: React.FC = () => {
                         )}
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                         {seeking && (
                             <div className="flex items-center justify-center py-6 opacity-50">
                                 <RefreshCw className="w-5 h-5 animate-spin text-primary" />
                             </div>
                         )}
-                        {!seeking && grepResults.map((res, i) => (
+                        {!seeking && (Object.entries(grepResults.reduce((acc: any, res: any) => {
+                            const file = res.file || 'unknown';
+                            if (!acc[file]) acc[file] = [];
+                            acc[file].push(res);
+                            return acc;
+                        }, {})) as [string, any[]][]).map(([file, matches], i) => (
                             <div
                                 key={i}
                                 className={cn(
-                                    "group relative p-3 rounded-lg border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 cursor-pointer overflow-hidden bg-card/10"
+                                    "group relative p-3 rounded-lg border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 cursor-pointer overflow-hidden bg-card/10 select-none"
                                 )}
-                                onClick={() => openDocument({
-                                    id: res.file || 'unknown',
-                                    title: (res.file || '').split('/').pop() || 'file',
-                                    type: (res.file || '').split('.').pop() || 'txt',
-                                    targetLine: res.line,
-                                    searchText: res.content
-                                })}
+                                onClick={() => {
+                                    // Open the file at the first match
+                                    const first = matches[0];
+                                    openDocument({
+                                        id: first.file,
+                                        title: first.file.split('/').pop() || 'file',
+                                        type: first.file.split('.').pop() || 'txt',
+                                        targetLine: first.line,
+                                        searchText: first.content
+                                    });
+                                }}
                             >
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-1.5 truncate flex-1">
-                                        <File className="w-2.5 h-2.5 text-blue-400/70" />
-                                        <span className="text-[9px] font-black text-muted-foreground truncate uppercase">{res.file || 'unknown'}</span>
-                                    </div>
-                                    <span className="text-[9px] font-mono bg-muted px-1 rounded text-muted-foreground shrink-0">L{res.line || 0}</span>
+                                <div className="flex items-center gap-1.5 mb-2 border-b border-border/30 pb-1.5">
+                                    <File className="w-3 h-3 text-blue-400/70" />
+                                    <span className="text-[10px] font-black text-muted-foreground truncate uppercase flex-1" title={file}>{file}</span>
+                                    <span className="text-[9px] font-mono bg-muted px-1.5 rounded-full text-muted-foreground shrink-0 opacity-70">
+                                        {matches.length} Matches
+                                    </span>
                                 </div>
-                                <div className="text-[10px] text-foreground/80 font-mono line-clamp-2 break-all opacity-80 group-hover:opacity-100">
-                                    {res.content || '...'}
+                                <div className="space-y-1">
+                                    {matches.slice(0, 5).map((m: any, idx: number) => (
+                                        <div key={idx} className="flex gap-2 items-start opacity-80 hover:opacity-100">
+                                            <span className="text-[9px] font-mono text-primary/60 min-w-[24px] text-right shrink-0">L{m.line}</span>
+                                            <span className="text-[10px] font-mono text-foreground/80 line-clamp-1 break-all flex-1">{m.content.trim()}</span>
+                                        </div>
+                                    ))}
+                                    {matches.length > 5 && (
+                                        <div className="pl-8 text-[9px] italic opacity-50 text-muted-foreground">
+                                            + {matches.length - 5} more...
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
