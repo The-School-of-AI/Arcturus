@@ -854,9 +854,9 @@ export const NotesEditor: React.FC = () => {
                                 key={doc.id}
                                 onClick={() => setActiveDocument(doc.id)}
                                 className={cn(
-                                    "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-xl transition-all cursor-pointer min-w-[100px] max-w-[200px] border-x border-t border-transparent relative",
+                                    "group flex items-center gap-2 px-4 h-9 mt-auto rounded-t-xl transition-all cursor-pointer border-x border-t border-transparent relative flex-shrink-0",
                                     isActive
-                                        ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-4px_16px_rgba(0,0,0,0.15)]"
+                                        ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-2px_10px_rgba(0,0,0,0.08)]"
                                         : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                                 )}
                             >
@@ -865,7 +865,7 @@ export const NotesEditor: React.FC = () => {
                                 ) : (
                                     <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                                 )}
-                                <span className="text-[10px] font-black uppercase tracking-wider truncate flex-1">{doc.title}</span>
+                                <span className="text-[10px] font-black uppercase tracking-wider whitespace-nowrap">{doc.title}</span>
 
                                 <div className="flex items-center justify-center w-4 h-4">
                                     {isCurrentlySaving ? (
@@ -1103,7 +1103,7 @@ export const NotesEditor: React.FC = () => {
                                             onClick={toggleMode}
                                             className={cn(
                                                 "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all border border-transparent",
-                                                mode === 'wysiwyg' ? "bg-white/10 text-foreground border-primary/30 shadow-[0_0_12px_rgba(59,130,246,0.1)]" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                                mode === 'wysiwyg' ? "bg-white/10 text-foreground border-primary/30" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                                             )}
                                         >
                                             {mode === 'wysiwyg' ? <Eye className="w-3.5 h-3.5 text-primary" /> : <Code2 className="w-3.5 h-3.5" />}
