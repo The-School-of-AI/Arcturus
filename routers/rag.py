@@ -634,16 +634,27 @@ async def get_document_content(path: str):
         root = PROJECT_ROOT / "data"
         doc_path = root / path
         
-        # Fallback: Check relative to PROJECT_ROOT (for memory/ or other paths)
+        # Fallback: Check relative to PROJECT_ROOT 
         if not doc_path.exists():
             # Try finding it relative to project root
-            # This handles paths like "memory/session_123.json" which are not inside "data/"
             alt_path = PROJECT_ROOT / path
             if alt_path.exists() and alt_path.is_file():
                 doc_path = alt_path
+        
+        # Deep Search Fallback: If path is just a filename, search for it
+        if not doc_path.exists() and len(Path(path).parts) == 1:
+            # Search in memory and data
+            found_files = list(PROJECT_ROOT.rglob(path))
+            # Prioritize memory/ or data/
+            for f in found_files:
+                if "memory" in str(f) or "data" in str(f):
+                    doc_path = f
+                    break
+            if not doc_path.exists() and found_files:
+                doc_path = found_files[0]
             
         if not doc_path.exists():
-            raise HTTPException(status_code=404, detail=f"Document not found at {path} or data/{path}")
+            raise HTTPException(status_code=404, detail=f"Document not found at {path} or resolved paths")
         
         ext = doc_path.suffix.lower()
         
