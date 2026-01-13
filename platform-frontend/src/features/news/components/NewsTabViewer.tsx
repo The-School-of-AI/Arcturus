@@ -94,11 +94,11 @@ export const NewsTabViewer: React.FC = () => {
 
             {/* Content Area */}
             <div className="flex-1 bg-white relative">
-                <iframe
+                {/* @ts-ignore */}
+                <webview
                     id="news-content-iframe"
                     src={activeUrl}
-                    className="w-full h-full border-none shadow-inner"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    style={{ width: '100%', height: '100%' }}
                     title="News Article"
                 />
             </div>

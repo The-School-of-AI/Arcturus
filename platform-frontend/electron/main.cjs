@@ -21,7 +21,7 @@ function createWindow() {
     });
 
     const startUrl = isDev
-        ? 'http://localhost:5555'
+        ? 'http://localhost:5173'
         : `file://${path.join(__dirname, '../dist/index.html')}`;
 
     console.log(`[Electron] Loading URL: ${startUrl}`);

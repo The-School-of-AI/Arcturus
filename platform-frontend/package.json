@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"vite --host\" \"cd .. && uv run api.py\" --names \"FRONT,BACK\" --prefix-colors \"cyan,magenta\"",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5555 && electron .\" --names \"VITE,ELECTRON\" --prefix-colors \"cyan,blue\"",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\" --names \"VITE,ELECTRON\" --prefix-colors \"cyan,blue\"",
     "electron:dev:all": "npm run electron:dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
