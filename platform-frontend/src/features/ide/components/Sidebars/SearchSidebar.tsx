@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Loader2, FileCode, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Loader2, FileCode, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import axios from 'axios';
@@ -8,9 +8,15 @@ import { API_BASE } from '@/lib/api';
 
 interface SearchResult {
     file: string;
-    rel_path?: string; // Optional relative path for display
+    rel_path?: string;
     line: number;
     content: string;
+}
+
+interface FileGroup {
+    file: string;
+    rel_path: string;
+    matches: SearchResult[];
 }
 
 export const SearchSidebar: React.FC = () => {
@@ -19,6 +25,7 @@ export const SearchSidebar: React.FC = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [debouncedQuery, setDebouncedQuery] = useState("");
+    const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
     // Debounce
     useEffect(() => {
@@ -27,6 +34,36 @@ export const SearchSidebar: React.FC = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [query]);
+
+    // Grouping
+    const groupedResults = useMemo(() => {
+        const groups: { [key: string]: FileGroup } = {};
+        results.forEach(res => {
+            if (!groups[res.file]) {
+                groups[res.file] = {
+                    file: res.file,
+                    rel_path: res.rel_path || res.file,
+                    matches: []
+                };
+            }
+            groups[res.file].matches.push(res);
+        });
+        return Object.values(groups);
+    }, [results]);
+
+    // Auto-expand all on new search
+    useEffect(() => {
+        if (groupedResults.length > 0) {
+            setExpandedFiles(new Set(groupedResults.map(g => g.file)));
+        }
+    }, [groupedResults]);
+
+    const toggleFile = (file: string) => {
+        const next = new Set(expandedFiles);
+        if (next.has(file)) next.delete(file);
+        else next.add(file);
+        setExpandedFiles(next);
+    };
 
     // Search Effect
     useEffect(() => {
@@ -39,7 +76,6 @@ export const SearchSidebar: React.FC = () => {
         const performSearch = async () => {
             setIsSearching(true);
             try {
-                // Use the backend's ripgrep endpoint
                 const res = await axios.get(`${API_BASE}/rag/ripgrep_search`, {
                     params: {
                         query: debouncedQuery,
@@ -87,39 +123,58 @@ export const SearchSidebar: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
                 {isSearching ? (
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/50 gap-2">
                         <RefreshCw className="w-5 h-5 animate-spin" />
                         <span className="text-xs">Searching...</span>
                     </div>
-                ) : results.length > 0 ? (
-                    <div className="space-y-1">
-                        <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            {results.length} results
+                ) : groupedResults.length > 0 ? (
+                    <div className="space-y-0">
+                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/10">
+                            {results.length} results in {groupedResults.length} files
                         </div>
-                        {results.map((res, i) => (
-                            <div
-                                key={`${res.file}-${res.line}-${i}`}
-                                className="group p-2 rounded-md hover:bg-accent/50 cursor-pointer border border-transparent hover:border-border/50 transition-all"
-                                onClick={() => openDocument({
-                                    id: res.file,
-                                    title: res.file.split(/[/\\]/).pop() || 'file',
-                                    type: res.file.split('.').pop() || 'txt',
-                                    targetLine: res.line,
-                                    searchText: res.content
-                                })}
-                            >
-                                <div className="flex items-center gap-1.5 mb-0.5 max-w-full">
-                                    <FileCode className="w-3 h-3 text-blue-400 shrink-0" />
-                                    <span className="text-xs font-medium text-foreground truncate" title={res.file}>
-                                        {res.rel_path || res.file}
+                        {groupedResults.map((group) => (
+                            <div key={group.file} className="border-b border-border/5">
+                                <div
+                                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white/5 cursor-pointer group select-none"
+                                    onClick={() => toggleFile(group.file)}
+                                >
+                                    {expandedFiles.has(group.file) ? (
+                                        <ChevronDown className="w-3 h-3 text-muted-foreground/50" />
+                                    ) : (
+                                        <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
+                                    )}
+                                    <FileCode className="w-3.5 h-3.5 text-primary/70 shrink-0" />
+                                    <span className="text-[11px] font-semibold text-foreground/90 truncate" title={group.file}>
+                                        {group.rel_path.split(/[/\\]/).pop()}
+                                    </span>
+                                    <span className="text-[9px] text-muted-foreground/40 font-mono ml-auto">
+                                        {group.matches.length}
                                     </span>
                                 </div>
-                                <div className="pl-4 text-[10px] font-mono text-muted-foreground line-clamp-1 break-all">
-                                    <span className="text-primary/70 mr-1">{res.line}:</span>
-                                    {res.content.trim()}
-                                </div>
+                                {expandedFiles.has(group.file) && (
+                                    <div className="bg-black/10 dark:bg-white/5">
+                                        {group.matches.map((res, i) => (
+                                            <div
+                                                key={`${res.file}-${res.line}-${i}`}
+                                                className="group pl-9 pr-3 py-1.5 hover:bg-primary/10 cursor-pointer transition-colors border-l-2 border-transparent hover:border-primary/50"
+                                                onClick={() => openDocument({
+                                                    id: res.file,
+                                                    title: res.file.split(/[/\\]/).pop() || 'file',
+                                                    type: res.file.split('.').pop() || 'txt',
+                                                    targetLine: res.line,
+                                                    searchText: res.content
+                                                })}
+                                            >
+                                                <div className="text-[10px] font-mono text-muted-foreground line-clamp-2 break-all group-hover:text-foreground/80">
+                                                    <span className="text-primary/70 font-bold mr-2 w-4 inline-block text-right">{res.line}</span>
+                                                    {res.content.trim()}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

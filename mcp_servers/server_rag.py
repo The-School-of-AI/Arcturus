@@ -703,6 +703,8 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
         # We need to run with Popen to manage the potential output size
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
+        seen_matches = set() # Track (path, line) to prevent duplicates
+        
         for line in process.stdout:
             try:
                 data = json.loads(line)
@@ -710,6 +712,14 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                     match_data = data["data"]
                     # Calculate rel_path relative to PROJECT_ROOT to be safe
                     abs_path = match_data["path"]["text"]
+                    line_num = match_data["line_number"]
+                    
+                    # Deduplication
+                    match_key = (abs_path, line_num)
+                    if match_key in seen_matches:
+                        continue
+                    seen_matches.add(match_key)
+
                     try:
                         rel_path = os.path.relpath(abs_path, PROJECT_ROOT)
                     except:
@@ -734,7 +744,7 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                     results.append({
                         "file": abs_path,
                         "rel_path": rel_path,
-                        "line": match_data["line_number"],
+                        "line": line_num,
                         "content": match_data["lines"]["text"].strip(),
                         "submatches": match_data["submatches"]
                     })
@@ -781,33 +791,29 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                 doc_path_raw = entry.get('doc')
                 if not doc_path_raw: continue
                 
+                # Normalize doc_path to absolute
+                if os.path.isabs(doc_path_raw):
+                    abs_doc_path = doc_path_raw
+                else:
+                    abs_doc_path = str(BASE_DATA_DIR / doc_path_raw)
+
                 # Filter by target_dir if provided
                 if target_dir:
-                    clean_target = target_dir.strip("/").replace("..", "")
-                    norm_doc_path = doc_path_raw.replace("\\", "/").strip("/")
-                    if not (norm_doc_path == clean_target or norm_doc_path.startswith(clean_target + "/")):
-                        continue
+                    if os.path.isabs(target_dir):
+                        if not abs_doc_path.startswith(target_dir):
+                            continue
+                    else:
+                        clean_target = target_dir.strip("/").replace("..", "")
+                        norm_doc_path = doc_path_raw.replace("\\", "/").strip("/")
+                        if not (norm_doc_path == clean_target or norm_doc_path.startswith(clean_target + "/")):
+                            continue
                     
                     # Enforce .md only if we are in Notes
                     if target_dir == "Notes" and not doc_path_raw.lower().endswith(".md"):
                         continue
 
-                # Intelligent Path Handling
-                if os.path.isabs(doc_path_raw):
-                    try:
-                        rel_path = os.path.relpath(doc_path_raw, BASE_DATA_DIR)
-                    except:
-                        rel_path = os.path.basename(doc_path_raw)
-                else:
-                    # It's already relative or just a filename
-                    rel_path = doc_path_raw
-                
-                # Debug specific file
-                if "INVG" in rel_path:
-                    mcp_log("DEBUG", f"Checking metadata for {rel_path}. Seen? {rel_path in seen_files}")
-
-                # If we already have this file from Ripgrep, skip it
-                if rel_path in seen_files:
+                # If we already have this file from Ripgrep (full match), skip it
+                if abs_doc_path in seen_files:
                     continue
                     
                 content_chunk = entry.get('chunk', '')
@@ -815,9 +821,6 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                 # Search in chunk
                 matches = list(compiled_re.finditer(content_chunk))
                 if matches:
-                    if "INVG" in rel_path:
-                        mcp_log("DEBUG", f"Found {len(matches)} matches in {rel_path}")
-
                     for m in matches:
                         # Extract context
                         start, end = m.span()
@@ -831,16 +834,28 @@ def advanced_ripgrep_search(query: str, regex: bool = False, case_sensitive: boo
                         
                         # Metadata page to line mapping
                         page_num = entry.get('page', 1) 
-                        
+                        line_num = int(page_num) if isinstance(page_num, (int, str)) and str(page_num).isdigit() else 1
+
+                        # Deduplication check
+                        match_key = (abs_doc_path, line_num)
+                        if match_key in seen_matches:
+                            continue
+                        seen_matches.add(match_key)
+
+                        try:
+                            rel_path = os.path.relpath(abs_doc_path, PROJECT_ROOT)
+                        except:
+                            rel_path = os.path.basename(abs_doc_path)
+
                         result_obj = {
-                            "file": rel_path,
-                            "line": int(page_num) if isinstance(page_num, (int, str)) and str(page_num).isdigit() else 1,
+                            "file": abs_doc_path,
+                            "rel_path": rel_path,
+                            "line": line_num,
                             "content": line_content,
                             "submatches": [{"match":{"text": m.group()}, "start": start - line_start, "end": end - line_start}]
                         }
                         
                         results.append(result_obj)
-                        seen_files.add(rel_path) 
                         
                         if len(results) >= max_results:
                             break
