@@ -14,7 +14,7 @@ import {
     List as ListIcon, SquarePlus, Bold, Italic, Strikethrough,
     Link as LinkIcon, ListOrdered, Superscript as SuperscriptIcon,
     Subscript as SubscriptIcon, Sigma, Underline as UnderlineIcon,
-    Heading1, Heading2, Heading3, Heading4, Quote, Maximize
+    Heading1, Heading2, Heading3, Heading4, Quote, Maximize, View, SquareDashedBottomCode
 } from 'lucide-react';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
@@ -909,7 +909,7 @@ export const NotesEditor: React.FC = () => {
                                     <TooltipTrigger asChild>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground">
-                                                <Type className="w-3.5 h-3.5 mr-1" />
+                                                <Type className="w-3.5 h-3.5 mr-0" />
                                                 <ChevronDown className="w-3 h-3 opacity-50" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -1117,7 +1117,7 @@ export const NotesEditor: React.FC = () => {
                                                 mode === 'wysiwyg' ? "bg-white/10 text-foreground border-primary/30" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                                             )}
                                         >
-                                            {mode === 'wysiwyg' ? <Eye className="w-3.5 h-3.5 text-primary" /> : <Code2 className="w-3.5 h-3.5" />}
+                                            {mode === 'wysiwyg' ? <SquareDashedBottomCode className="w-3.5 h-3.5 text-primary" /> : <View className="w-3.5 h-3.5" />}
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="bottom">Toggle View Mode</TooltipContent>
