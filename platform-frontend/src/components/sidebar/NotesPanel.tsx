@@ -23,14 +23,16 @@ const NoteTreeItem: React.FC<{
     onSelect: (item: NoteItem) => void;
     selectedPath: string | undefined;
     onDelete: (path: string) => void;
-}> = ({ item, level, onSelect, selectedPath, onDelete }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    expandedFolders: string[];
+    toggleFolder: (path: string) => void;
+}> = ({ item, level, onSelect, selectedPath, onDelete, expandedFolders, toggleFolder }) => {
     const isFolder = item.type === 'folder';
+    const isOpen = expandedFolders.includes(item.path);
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isFolder) {
-            setIsOpen(!isOpen);
+            toggleFolder(item.path);
         }
         onSelect(item);
     };
@@ -75,6 +77,8 @@ const NoteTreeItem: React.FC<{
                             onSelect={onSelect}
                             selectedPath={selectedPath}
                             onDelete={onDelete}
+                            expandedFolders={expandedFolders}
+                            toggleFolder={toggleFolder}
                         />
                     ))}
                 </div>
@@ -90,7 +94,9 @@ export const NotesPanel: React.FC = () => {
         openDocument,
         notesFiles,
         fetchNotesFiles,
-        isNotesLoading
+        isNotesLoading,
+        expandedNotesFolders,
+        toggleNoteFolder
     } = useAppStore();
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -352,6 +358,8 @@ export const NotesPanel: React.FC = () => {
                             }}
                             selectedPath={activeDocumentId || selectedItem?.path}
                             onDelete={handleDelete}
+                            expandedFolders={expandedNotesFolders}
+                            toggleFolder={toggleNoteFolder}
                         />
                     ))
                 )}

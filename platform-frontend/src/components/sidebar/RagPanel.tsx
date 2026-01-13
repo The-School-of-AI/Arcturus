@@ -31,9 +31,11 @@ const FileTree: React.FC<{
     indexingPath: string | null;
     searchFilter: string;
     ragKeywordMatches: string[];
-}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath, searchFilter, ragKeywordMatches }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    expandedFolders: string[];
+    toggleFolder: (path: string) => void;
+}> = ({ item, level, onSelect, selectedPath, onIndexFile, indexingPath, searchFilter, ragKeywordMatches, expandedFolders, toggleFolder }) => {
     const isFolder = item.type === 'folder';
+    const isOpen = expandedFolders.includes(item.path);
     const isIndexingNow = indexingPath === item.path;
 
     // Simple recursive visibility check for search
@@ -69,7 +71,7 @@ const FileTree: React.FC<{
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isFolder) {
-            setIsOpen(!isOpen);
+            toggleFolder(item.path);
         }
         onSelect(item);
     };
@@ -141,6 +143,8 @@ const FileTree: React.FC<{
                             indexingPath={indexingPath}
                             searchFilter={searchFilter}
                             ragKeywordMatches={ragKeywordMatches}
+                            expandedFolders={expandedFolders}
+                            toggleFolder={toggleFolder}
                         />
                     ))}
                 </div>
@@ -172,7 +176,9 @@ export const RagPanel: React.FC = () => {
         ragIndexStatus: indexStatus,
         setRagIndexStatus: setIndexStatus,
         selectedRagFile: selectedFile,
-        setSelectedRagFile: setSelectedFile
+        setSelectedRagFile: setSelectedFile,
+        expandedRagFolders,
+        toggleRagFolder
     } = useAppStore();
 
     const [splitRatio, setSplitRatio] = useState(50);
@@ -549,12 +555,14 @@ export const RagPanel: React.FC = () => {
                                 key={file.path}
                                 item={file}
                                 level={0}
-                                onSelect={(f) => { setSelectedFile(f); handleOpenDoc(f); }}
+                                onSelect={(f: RagItem) => { setSelectedFile(f); handleOpenDoc(f); }}
                                 selectedPath={selectedFile?.path}
                                 onIndexFile={handleReindex}
                                 indexingPath={indexingPath}
                                 searchFilter={innerSearch}
                                 ragKeywordMatches={ragKeywordMatches}
+                                expandedFolders={expandedRagFolders}
+                                toggleFolder={toggleRagFolder}
                             />
                         ))}
                         {files.length === 0 && !loading && (

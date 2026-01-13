@@ -144,6 +144,8 @@ interface RagViewerSlice {
     setNewsViewMode: (mode: 'sources' | 'articles' | 'saved' | 'search') => void;
     newsSearchQuery: string;
     setNewsSearchQuery: (query: string) => void;
+    expandedRagFolders: string[];
+    toggleRagFolder: (path: string) => void;
 
     // --- Notes UI States ---
     notesFiles: any[];
@@ -154,6 +156,8 @@ interface RagViewerSlice {
     isZenMode: boolean;
     setIsZenMode: (zen: boolean) => void;
     toggleZenMode: () => void;
+    expandedNotesFolders: string[];
+    toggleNoteFolder: (path: string) => void;
 
     // --- Runs UI States ---
     isNewRunOpen: boolean;
@@ -719,6 +723,12 @@ export const useAppStore = create<AppState>()(
             setNewsViewMode: (mode) => set({ newsViewMode: mode }),
             newsSearchQuery: '',
             setNewsSearchQuery: (query) => set({ newsSearchQuery: query }),
+            expandedRagFolders: [],
+            toggleRagFolder: (path) => set(state => ({
+                expandedRagFolders: state.expandedRagFolders.includes(path)
+                    ? state.expandedRagFolders.filter(p => p !== path)
+                    : [...state.expandedRagFolders, path]
+            })),
 
             // --- Notes UI States ---
             notesFiles: [],
@@ -745,6 +755,12 @@ export const useAppStore = create<AppState>()(
             isZenMode: false,
             setIsZenMode: (zen) => set({ isZenMode: zen }),
             toggleZenMode: () => set(state => ({ isZenMode: !state.isZenMode })),
+            expandedNotesFolders: [],
+            toggleNoteFolder: (path) => set(state => ({
+                expandedNotesFolders: state.expandedNotesFolders.includes(path)
+                    ? state.expandedNotesFolders.filter(p => p !== path)
+                    : [...state.expandedNotesFolders, path]
+            })),
 
             // --- Runs UI States ---
             isNewRunOpen: false,
