@@ -840,7 +840,7 @@ export const NotesEditor: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-background/50 backdrop-blur-sm">
             {/* Unified Commander Bar */}
-            <div className="flex items-center justify-between border-b border-border bg-muted/20 px-4 shrink-0 h-12">
+            <div className="flex items-center justify-between border-b border-border bg-muted/20 px-2 shrink-0 h-12">
                 {/* Left: Tabs Section */}
                 <div className="flex items-center gap-[2px] h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
                     {openDocuments.map(doc => {
@@ -887,7 +887,7 @@ export const NotesEditor: React.FC = () => {
                 </div>
 
                 {/* Right: Unified Controls Section */}
-                <div className="flex items-center gap-2 pl-4 border-l border-border/30 ml-2">
+                <div className="flex items-center gap-0 pl-1 border-l border-border/30 ml-1">
                     <TooltipProvider delayDuration={200}>
                         {/* Unified Action Bar Section */}
                         <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/30 mr-1 overflow-hidden">
@@ -897,7 +897,7 @@ export const NotesEditor: React.FC = () => {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold text-muted-foreground hover:text-foreground">
+                                            <Button variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground">
                                                 <Type className="w-3.5 h-3.5 mr-1" />
                                                 <ChevronDown className="w-3 h-3 opacity-50" />
                                             </Button>
@@ -921,7 +921,7 @@ export const NotesEditor: React.FC = () => {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+                            <div className="w-[1px] h-3 bg-border/50 mx-[0px]" />
 
                             {/* Formatting Group */}
                             <div className="flex items-center">
@@ -1027,7 +1027,7 @@ export const NotesEditor: React.FC = () => {
                                 </Tooltip>
                             </div>
 
-                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+                            <div className="w-[1px] h-3 bg-border/50 mx-[1px]" />
 
                             {/* Scripting Group */}
                             <div className="flex items-center">
@@ -1074,7 +1074,7 @@ export const NotesEditor: React.FC = () => {
                                 </Tooltip>
                             </div>
 
-                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+                            <div className="w-[1px] h-3 bg-border/50 mx-[1px]" />
 
                             {/* Structures Group */}
                             <Tooltip>
@@ -1083,7 +1083,7 @@ export const NotesEditor: React.FC = () => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={insertDetails}
-                                        className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                                        className="h-7 px-1.5 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
                                     >
                                         <SquarePlus className="w-3.5 h-3.5" />
                                     </Button>
@@ -1091,7 +1091,7 @@ export const NotesEditor: React.FC = () => {
                                 <TooltipContent side="bottom">Collapsible Section</TooltipContent>
                             </Tooltip>
 
-                            <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+                            <div className="w-[1px] h-3 bg-border/50 mx-[1px]" />
 
                             {/* View Controls Group */}
                             <div className="flex items-center">
@@ -1102,7 +1102,7 @@ export const NotesEditor: React.FC = () => {
                                             size="sm"
                                             onClick={toggleMode}
                                             className={cn(
-                                                "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all border border-transparent",
+                                                "h-7 px-2 text-[10px] font-bold uppercase tracking-widest gap-1 transition-all border border-transparent",
                                                 mode === 'wysiwyg' ? "bg-white/10 text-foreground border-primary/30" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                                             )}
                                         >
@@ -1112,7 +1112,7 @@ export const NotesEditor: React.FC = () => {
                                     <TooltipContent side="bottom">Toggle View Mode</TooltipContent>
                                 </Tooltip>
 
-                                <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+                                <div className="w-[1px] h-3 bg-border/50 mx-[1px]" />
 
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1142,7 +1142,7 @@ export const NotesEditor: React.FC = () => {
                                     <TooltipContent side="bottom">Font Bigger</TooltipContent>
                                 </Tooltip>
 
-                                <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+                                <div className="w-[1px] h-3 bg-border/50 mx-[1px]" />
 
                                 <Tooltip>
                                     <TooltipTrigger asChild>
