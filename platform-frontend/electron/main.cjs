@@ -74,6 +74,7 @@ function startBackend(command, args, name) {
 }
 
 // --- Terminal Handlers ---
+// --- Terminal Handlers (Python PTY Bridge) ---
 function setupTerminalHandlers() {
 
     ipcMain.on('terminal:create', (event, options) => {
@@ -81,8 +82,6 @@ function setupTerminalHandlers() {
             console.log('[Electron] Terminal session already active.');
             return;
         }
-
-        const shell = process.env.SHELL || (os.platform() === 'win32' ? 'powershell.exe' : '/bin/zsh');
 
         // Ensure CWD exists
         let cwd = options.cwd || path.resolve(__dirname, '..', '..');
@@ -92,28 +91,29 @@ function setupTerminalHandlers() {
             cwd = path.resolve(__dirname, '..', '..');
         }
 
-        console.log(`[Electron] Spawning terminal (Compatibility Mode): Shell='${shell}', CWD='${cwd}'`);
+        const bridgePath = path.join(__dirname, 'pty_bridge.py');
+        console.log(`[Electron] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
 
         try {
             if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('terminal:outgoing', '\r\n\x1b[33m[System] Terminal running in Compatibility Mode.\r\n(Native PTY module failed to build on this system).\r\nBasic commands (git, npm, python) work. Interactive TTY apps (vim, nano) are disabled.\x1b[0m\r\n\r\n$ ');
+                mainWindow.webContents.send('terminal:outgoing', '\r\n\x1b[32m[System] Initializing Python PTY Bridge...\x1b[0m\r\n');
             }
 
-            // Spawn standard process with pipes
-            ptyProcess = spawn(shell, ['-i'], {
+            // Spawn python script which handles the PTY fork
+            ptyProcess = spawn('python3', ['-u', bridgePath], {
                 cwd: cwd,
-                env: process.env,
+                env: { ...process.env, TERM: 'xterm-256color', COLUMNS: '80', LINES: '24' },
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
-            console.log(`[Electron] Process created: PID ${ptyProcess.pid}`);
+            console.log(`[Electron] Bridge process created: PID ${ptyProcess.pid}`);
 
             // Handle Output
             ptyProcess.stdout.on('data', (data) => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     let str = data.toString('utf-8');
-                    // Normalize newlines for xterm
-                    str = str.replace(/\n/g, '\r\n');
+                    // Python PTY should yield correct PTY output, so minimal processing needed.
+                    // But if it's raw, xterm handles it.
                     mainWindow.webContents.send('terminal:outgoing', str);
                 }
             });
@@ -121,23 +121,23 @@ function setupTerminalHandlers() {
             ptyProcess.stderr.on('data', (data) => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     let str = data.toString('utf-8');
-                    str = str.replace(/\n/g, '\r\n');
+                    // Bridge errors
                     mainWindow.webContents.send('terminal:outgoing', str);
                 }
             });
 
             ptyProcess.on('close', (code) => {
-                console.log(`[Electron] Process exited with code ${code}`);
+                console.log(`[Electron] Bridge exited with code ${code}`);
                 ptyProcess = null;
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('terminal:outgoing', `\r\n\n[Process terminated with code ${code}]\r\n`);
+                    mainWindow.webContents.send('terminal:outgoing', `\r\n\n[Session terminated]\r\n`);
                 }
             });
 
         } catch (ex) {
-            console.error('[Electron] Failed to spawn shell:', ex);
+            console.error('[Electron] Failed to spawn bridge:', ex);
             if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31mError spawning terminal: ${ex.message}\x1b[0m\r\n`);
+                mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31mError spawning terminal bridge: ${ex.message}\x1b[0m\r\n`);
             }
         }
     });
@@ -145,11 +145,7 @@ function setupTerminalHandlers() {
     ipcMain.on('terminal:incoming', (event, data) => {
         if (ptyProcess && ptyProcess.stdin) {
             try {
-                // Compatibility Mode: Manually echo input back to xterm
-                // because non-PTY shells often disable echo on pipes.
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('terminal:outgoing', data);
-                }
+                // Determine if valid, write to bridge stdin
                 ptyProcess.stdin.write(data);
             } catch (err) {
                 console.error("Write error", err);
@@ -158,7 +154,8 @@ function setupTerminalHandlers() {
     });
 
     ipcMain.on('terminal:resize', (event, { cols, rows }) => {
-        // Simple spawn cannot be resized, ignore.
+        // Todo: Implement resize via signal or sideline if needed.
+        // For now, the python script hardcodes or inherits.
     });
 }
 
