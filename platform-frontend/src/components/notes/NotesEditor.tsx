@@ -296,7 +296,7 @@ export const NotesEditor: React.FC = () => {
     const [lastSavedContent, setLastSavedContent] = useState("");
     const [mode, setMode] = useState<'wysiwyg' | 'raw'>('wysiwyg');
     const [rawContent, setRawContent] = useState("");
-    const [fontSize, setFontSize] = useState(16);
+    const [fontSize, setFontSize] = useState(24);
 
     // Derived state for comparison
     const trimmedCurrent = rawContent.trim();
