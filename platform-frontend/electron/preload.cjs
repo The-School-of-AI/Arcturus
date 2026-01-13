@@ -14,7 +14,10 @@ contextBridge.exposeInMainWorld(
         // whitelist channels
         let validChannels = ["toMain", "terminal:create", "terminal:incoming", "terminal:resize", "shell:reveal", "shell:openExternal"];
         if (validChannels.includes(channel)) {
+            console.log(`[Preload] Sending to main: ${channel}`);
             ipcRenderer.send(channel, data);
+        } else {
+            console.warn(`[Preload] Blocked channel: ${channel}`);
         }
     },
     receive: (channel, func) => {

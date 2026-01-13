@@ -18,6 +18,8 @@ export const TerminalPanel: React.FC = () => {
     useEffect(() => {
         if (!terminalRef.current) return;
 
+        let isDisposed = false;
+
         // Initialize xterm
         const term = new Terminal({
             cursorBlink: true,
@@ -43,24 +45,55 @@ export const TerminalPanel: React.FC = () => {
         term.loadAddon(fitAddon);
         term.loadAddon(webLinksAddon);
 
-        term.open(terminalRef.current);
-        // Wait for next frame to ensure container has dimensions
-        requestAnimationFrame(() => {
+        // Ensure we open only if not disposed
+        if (!isDisposed) {
+            term.open(terminalRef.current);
+            xtermRef.current = term;
+            fitAddonRef.current = fitAddon;
+        }
+
+        // Wait a bit to ensure container has dimensions and is visible
+        setTimeout(() => {
+            if (isDisposed || !terminalRef.current) return;
+
+            // Check if container has dimensions
+            if (terminalRef.current.clientWidth === 0 || terminalRef.current.clientHeight === 0) {
+                console.warn("Terminal container has no dimensions, skipping initial fit");
+                return;
+            }
             try {
                 fitAddon.fit();
             } catch (e) {
                 console.warn("Initial fit failed", e);
             }
-        });
-
-        xtermRef.current = term;
-        fitAddonRef.current = fitAddon;
+        }, 100);
 
         // ... rest of IPC setup ...
+        // IPC: Incoming data (user typing)
+        term.onData(data => {
+            if (window.electronAPI) {
+                window.electronAPI.send('terminal:incoming', data);
+            }
+        });
+
+        // IPC: Outgoing data (pty output)
+        if (window.electronAPI) {
+            console.log("Initial terminal creation request...", explorerRootPath);
+            window.electronAPI.send('terminal:create', {
+                cwd: explorerRootPath
+            });
+
+            window.electronAPI.receive('terminal:outgoing', (data: string) => {
+                // Check if term is still valid before writing
+                if (!isDisposed && xtermRef.current) {
+                    term.write(data);
+                }
+            });
+        }
 
         // Handle Re-sizing
         const handleResize = () => {
-            if (!fitAddonRef.current || !xtermRef.current) return;
+            if (isDisposed || !fitAddonRef.current || !xtermRef.current) return;
             try {
                 fitAddonRef.current.fit();
                 if (window.electronAPI) {
@@ -75,8 +108,17 @@ export const TerminalPanel: React.FC = () => {
         window.addEventListener('resize', handleResize);
 
         return () => {
+            isDisposed = true;
             window.removeEventListener('resize', handleResize);
-            term.dispose();
+
+            // Proper cleanup
+            try {
+                term.dispose();
+            } catch (e) {
+                console.error("Error disposing terminal", e);
+            }
+            xtermRef.current = null;
+            fitAddonRef.current = null;
         };
     }, []); // Run once on mount
 
@@ -99,7 +141,12 @@ export const TerminalPanel: React.FC = () => {
 
     const handleRefresh = () => {
         if (window.electronAPI) {
-            window.electronAPI.send('terminal:create', { cwd: explorerRootPath }); // Try simple re-create/re-connect
+            // Create terminal session
+            // Pass the current explorer root path as the desired CWD
+            console.log("Initial terminal creation request...", explorerRootPath);
+            window.electronAPI.send('terminal:create', {
+                cwd: explorerRootPath
+            }); // Try simple re-create/re-connect
             xtermRef.current?.write('\r\n\x1b[2m[Refreshing terminal connection...]\x1b[0m\r\n');
         }
     };
