@@ -1102,12 +1102,11 @@ export const NotesEditor: React.FC = () => {
                                             size="sm"
                                             onClick={toggleMode}
                                             className={cn(
-                                                "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all",
-                                                mode === 'wysiwyg' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                                "h-7 px-3 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all border border-transparent",
+                                                mode === 'wysiwyg' ? "bg-white/10 text-foreground border-primary/30 shadow-[0_0_12px_rgba(59,130,246,0.1)]" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                                             )}
                                         >
-                                            {mode === 'wysiwyg' ? <Eye className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
-                                            {mode === 'wysiwyg' ? "Visual" : "Raw"}
+                                            {mode === 'wysiwyg' ? <Eye className="w-3.5 h-3.5 text-primary" /> : <Code2 className="w-3.5 h-3.5" />}
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="bottom">Toggle View Mode</TooltipContent>
@@ -1120,7 +1119,7 @@ export const NotesEditor: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all"
+                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all hover:bg-white/5"
                                             onClick={() => setFontSize(s => Math.max(12, s - 1))}
                                         >
                                             <Minus className="w-3 h-3" />
@@ -1134,7 +1133,7 @@ export const NotesEditor: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110"
+                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110 hover:bg-white/5"
                                             onClick={() => setFontSize(s => Math.min(32, s + 1))}
                                         >
                                             <Plus className="w-3 h-3" />
@@ -1161,26 +1160,25 @@ export const NotesEditor: React.FC = () => {
                                     </TooltipTrigger>
                                     <TooltipContent side="bottom">Zen Mode</TooltipContent>
                                 </Tooltip>
+
+                                <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                                {/* Clear All Inside the same box */}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={closeAllDocuments}
+                                            className="h-7 px-2 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-all gap-1"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">Close All Tabs</TooltipContent>
+                                </Tooltip>
                             </div>
                         </div>
-
-                        <div className="w-[1px] h-4 bg-border/20 mx-1" />
-
-                        {/* Clear All */}
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={closeAllDocuments}
-                                    className="h-8 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/5 transition-all gap-1.5"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                    Clear
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">Close All Tabs</TooltipContent>
-                        </Tooltip>
                     </TooltipProvider>
                 </div>
             </div>
@@ -1206,11 +1204,29 @@ export const NotesEditor: React.FC = () => {
                                 line-height: 1.6;
                             }
                             .tiptap-editor-container .prose p, 
-                            .tiptap-editor-container .prose li,
-                            .tiptap-editor-container .prose h1,
-                            .tiptap-editor-container .prose h2,
-                            .tiptap-editor-container .prose h3 {
+                            .tiptap-editor-container .prose li {
                                 font-size: inherit !important;
+                            }
+                            .tiptap-editor-container .prose h1 {
+                                font-size: 2.5em !important;
+                                font-weight: 800;
+                                margin-top: 1.5em;
+                                margin-bottom: 0.5em;
+                                line-height: 1.2;
+                            }
+                            .tiptap-editor-container .prose h2 {
+                                font-size: 1.8em !important;
+                                font-weight: 700;
+                                margin-top: 1.2em;
+                                margin-bottom: 0.4em;
+                                line-height: 1.3;
+                            }
+                            .tiptap-editor-container .prose h3 {
+                                font-size: 1.4em !important;
+                                font-weight: 600;
+                                margin-top: 1em;
+                                margin-bottom: 0.3em;
+                                line-height: 1.4;
                             }
                             /* Ensure scaled images are respected and not forced to 100% by prose */
                             .tiptap-editor-container .prose img {
@@ -1284,8 +1300,8 @@ export const NotesEditor: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </div>
-        </div>
+            </div >
+        </div >
     );
 
     // Helper to update raw content and sync if needed
