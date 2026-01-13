@@ -636,6 +636,13 @@ export const DocumentViewer: React.FC = () => {
                                         customStyle={{ margin: 0, height: '100%', fontSize: '14px', lineHeight: '1.5', background: 'transparent' }}
                                         showLineNumbers
                                         wrapLines={true}
+                                        wrapLongLines={true}
+                                        codeTagProps={{
+                                            style: {
+                                                whiteSpace: 'pre-wrap',
+                                                wordBreak: 'break-word'
+                                            }
+                                        }}
                                         lineProps={(lineNumber) => {
                                             const style: React.CSSProperties = { display: 'block', width: '100%' };
                                             if (lineNumber === activeDoc?.targetLine) {
