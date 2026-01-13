@@ -3,12 +3,13 @@ import Editor, { loader } from '@monaco-editor/react';
 import { useAppStore } from '@/store';
 // Removed unused useIdeStore import to fix potential lint if not used, or keep if needed. It was imported in previous version.
 // Checking previous file content, useIdeStore was unused.
-import { FileCode, Loader2, X, FileText, Code2, ExternalLink } from 'lucide-react';
+import { FileCode, Loader2, X, FileText, Code2, ExternalLink, Save, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
 import { Button } from '@/components/ui/button';
+import { useState, useCallback } from 'react';
 
 // Configure Monaco to use local resources if needed, or just standard setup
 loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
@@ -24,8 +25,44 @@ export const EditorArea: React.FC = () => {
     } = useAppStore();
 
     const { theme } = useTheme();
+    const [isSaving, setIsSaving] = useState(false);
+    const [lastSaved, setLastSaved] = useState<string | null>(null);
 
     const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+
+    const handleSave = useCallback(async () => {
+        if (!activeDoc || activeDoc.content === undefined) return;
+
+        setIsSaving(true);
+        try {
+            const result = await window.electronAPI.invoke('fs:writeFile', {
+                path: activeDoc.id,
+                content: activeDoc.content
+            });
+
+            if (result) {
+                setLastSaved(activeDoc.id);
+                setTimeout(() => setLastSaved(null), 2000);
+            }
+        } catch (error) {
+            console.error('Failed to save file:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [activeDoc, activeDoc?.id, activeDoc?.content]);
+
+    // Keyboard shortcut for saving
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleSave]);
 
     // Fetch content if missing
     useEffect(() => {
@@ -132,6 +169,34 @@ export const EditorArea: React.FC = () => {
         });
     };
 
+    const getLanguage = (ext: string) => {
+        const mapping: Record<string, string> = {
+            'js': 'javascript',
+            'jsx': 'javascript',
+            'mjs': 'javascript',
+            'cjs': 'javascript',
+            'ts': 'typescript',
+            'tsx': 'typescript',
+            'py': 'python',
+            'json': 'json',
+            'yaml': 'yaml',
+            'yml': 'yaml',
+            'toml': 'toml',
+            'html': 'html',
+            'htm': 'html',
+            'css': 'css',
+            'scss': 'scss',
+            'md': 'markdown',
+            'markdown': 'markdown',
+            'sh': 'shell',
+            'bash': 'shell',
+            'sql': 'sql',
+            'xml': 'xml',
+            'env': 'properties'
+        };
+        return mapping[ext.toLowerCase()] || 'plaintext';
+    };
+
     if (!activeDoc) {
         return (
             <div className="h-full w-full flex flex-col items-center justify-center bg-transparent text-muted-foreground space-y-4">
@@ -148,8 +213,6 @@ export const EditorArea: React.FC = () => {
             </div>
         );
     }
-
-    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh', 'txt', 'md'].includes(type.toLowerCase());
 
     return (
         <div className={cn("h-full w-full flex flex-col backdrop-blur-sm transition-colors duration-300", theme === 'dark' ? "bg-[#1e1e1e]/80" : "bg-white/80")}>
@@ -169,7 +232,8 @@ export const EditorArea: React.FC = () => {
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                         >
-                            {isCodeFile(doc.type) ? <FileCode className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
+                            {/* We keep the icon logic same or use getLanguage for better icons later */}
+                            <FileCode className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                             <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
                             <button
                                 onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
@@ -180,7 +244,24 @@ export const EditorArea: React.FC = () => {
                         </div>
                     ))}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    {lastSaved === activeDocumentId && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-500/10 text-green-500 text-[10px] font-medium animate-in fade-in slide-in-from-right-2">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Saved</span>
+                        </div>
+                    )}
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving || !activeDoc}
+                        className={cn(
+                            "p-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 transition-all",
+                            isSaving && "animate-pulse"
+                        )}
+                        title="Save (Ctrl+S)"
+                    >
+                        <Save className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                    </button>
                     {openDocuments.length > 0 && (
                         <button
                             onClick={closeAllDocuments}
@@ -246,9 +327,12 @@ export const EditorArea: React.FC = () => {
                             );
                         }
 
-                        // BINARY SAFEGUARD (Large files or known binary extensions)
-                        const binaryExts = ['pt', 'zip', 'bin', 'exe', 'dll', 'so', 'dylib', 'woff', 'woff2', 'ttf', 'pkl', 'parquet'];
-                        if (binaryExts.includes(ext)) {
+                        // BINARY SAFEGUARD (Massive files or known destructive binary extensions)
+                        // We set limit to 100MB (100 * 1024 * 1024)
+                        const binaryExts = ['zip', 'exe', 'dll', 'so', 'dylib', 'woff', 'woff2', 'ttf', 'bin'];
+                        const isMassive = activeDoc.content && activeDoc.content.length > 100 * 1024 * 1024;
+
+                        if (binaryExts.includes(ext) || isMassive) {
                             return (
                                 <div className="h-full w-full flex flex-col items-center justify-center bg-zinc-900/40 p-12">
                                     <div className="p-10 rounded-3xl bg-card/40 border border-white/5 backdrop-blur-xl flex flex-col items-center gap-6 shadow-2xl">
@@ -256,8 +340,12 @@ export const EditorArea: React.FC = () => {
                                             <FileCode className="w-10 h-10 text-amber-400" />
                                         </div>
                                         <div className="text-center space-y-2">
-                                            <h3 className="text-xl font-bold bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent italic text-amber-500">Binary File</h3>
-                                            <p className="text-sm text-muted-foreground">This file is likely binary or too large to edit safely in the IDE.</p>
+                                            <h3 className="text-xl font-bold bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent italic text-amber-500">
+                                                {isMassive ? 'Massive File' : 'Binary File'}
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                {isMassive ? 'This file is too large (>100MB) to open safely in the IDE.' : 'This file format is binary and cannot be edited as text.'}
+                                            </p>
                                         </div>
                                         <Button
                                             onClick={() => window.electronAPI.send('shell:reveal', activeDoc.id)}
@@ -277,7 +365,7 @@ export const EditorArea: React.FC = () => {
                             <Editor
                                 height="100%"
                                 path={activeDoc.id} // Important for Monaco models
-                                defaultLanguage={activeDoc.type === 'ts' || activeDoc.type === 'tsx' ? 'typescript' : activeDoc.type === 'py' ? 'python' : activeDoc.type === 'md' ? 'markdown' : 'plaintext'}
+                                language={getLanguage(activeDoc.type)}
                                 value={activeDoc.content || ''}
                                 onChange={(value) => updateDocumentContent(activeDoc.id, value || '')}
                                 onMount={handleEditorDidMount}

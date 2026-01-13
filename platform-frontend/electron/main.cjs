@@ -111,35 +111,40 @@ function setupTerminalHandlers() {
             // Spawn python script which handles the PTY fork
             ptyProcess = spawn('python3', ['-u', bridgePath], {
                 cwd: cwd,
-                env: { ...process.env, TERM: 'xterm-256color', COLUMNS: '80', LINES: '24' },
+                env: { ...process.env, TERM: 'xterm-256color', COLUMNS: '120', LINES: '30' },
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
             console.log(`[Electron] Bridge process created: PID ${ptyProcess.pid}`);
 
+            ptyProcess.on('error', (err) => {
+                console.error(`[Electron] Bridge failed to start or encountered an error:`, err);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31m[System Error] Failed to start terminal bridge: ${err.message}\x1b[0m\r\n`);
+                }
+            });
+
             // Handle Output
             ptyProcess.stdout.on('data', (data) => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     let str = data.toString('utf-8');
-                    // Python PTY should yield correct PTY output, so minimal processing needed.
-                    // But if it's raw, xterm handles it.
                     mainWindow.webContents.send('terminal:outgoing', str);
                 }
             });
 
             ptyProcess.stderr.on('data', (data) => {
+                const str = data.toString('utf-8');
+                console.error(`[Electron-PTY-Stderr] ${str}`);
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    let str = data.toString('utf-8');
-                    // Bridge errors
-                    mainWindow.webContents.send('terminal:outgoing', str);
+                    mainWindow.webContents.send('terminal:outgoing', `\x1b[33m${str}\x1b[0m`);
                 }
             });
 
-            ptyProcess.on('close', (code) => {
-                console.log(`[Electron] Bridge exited with code ${code}`);
+            ptyProcess.on('close', (code, signal) => {
+                console.log(`[Electron] Bridge exited with code ${code}, signal ${signal}`);
                 ptyProcess = null;
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('terminal:outgoing', `\r\n\n[Session terminated]\r\n`);
+                    mainWindow.webContents.send('terminal:outgoing', `\r\n\n[Terminal Session Terminated (Exit Code ${code})]\r\n`);
                 }
             });
 
