@@ -38,22 +38,22 @@ const IdeSidebar = () => {
 
     return (
         <div className="h-full flex flex-col bg-muted/20 border-r border-border/50">
-            {/* Horizontal Tool Switcher */}
-            <div className="flex items-center px-2 py-2 gap-1 border-b border-border/50 bg-background/50 backdrop-blur-sm">
+            {/* Horizontal Tool Switcher - The "Tab" Concept */}
+            <div className="flex items-center px-1 py-1 gap-1 border-b border-border/50 bg-background/50 backdrop-blur-sm">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveSidebarTab(tab.id)}
                         className={cn(
-                            "flex items-center justify-center p-1.5 rounded-md transition-all flex-1",
+                            "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md transition-all flex-1 text-[11px] font-medium select-none",
                             activeSidebarTab === tab.id
                                 ? "bg-accent text-accent-foreground shadow-sm ring-1 ring-border/50"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground alpha-60"
                         )}
                         title={tab.label}
                     >
-                        <tab.icon className="w-4 h-4" />
-                        <span className="sr-only">{tab.label}</span>
+                        <tab.icon className="w-3.5 h-3.5" />
+                        <span>{tab.label}</span>
                     </button>
                 ))}
             </div>

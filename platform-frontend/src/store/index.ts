@@ -101,6 +101,7 @@ interface RagViewerSlice {
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;
+    updateDocumentContent: (docId: string, content: string) => void;
 
     // --- RAG UI States ---
     isRagNewFolderOpen: boolean;
@@ -632,6 +633,11 @@ export const useAppStore = create<AppState>()(
             showRagInsights: false,
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
+            updateDocumentContent: (docId, content) => set(state => ({
+                openDocuments: state.openDocuments.map(doc =>
+                    doc.id === docId ? { ...doc, content } : doc
+                )
+            })),
 
             // --- RAG UI States ---
             isRagNewFolderOpen: false,
@@ -809,7 +815,7 @@ export const useAppStore = create<AppState>()(
             },
 
             // --- Explorer Slice ---
-            explorerRootPath: null,
+            explorerRootPath: "/Users/rohanshravan/Documents/DSCode",
             setExplorerRootPath: (path) => set({ explorerRootPath: path }),
             explorerFiles: [],
             setExplorerFiles: (files) => set({ explorerFiles: files }),

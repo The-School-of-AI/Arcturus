@@ -1,40 +1,176 @@
-import React from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useEffect } from 'react';
+import Editor, { loader } from '@monaco-editor/react';
+import { useAppStore } from '@/store';
+// Removed unused useIdeStore import to fix potential lint if not used, or keep if needed. It was imported in previous version.
+// Checking previous file content, useIdeStore was unused.
+import { FileCode, Loader2, X, FileText, Code2 } from 'lucide-react';
+import axios from 'axios';
+import { API_BASE } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/theme';
 
-import { FileCode } from 'lucide-react';
+// Configure Monaco to use local resources if needed, or just standard setup
+loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
 
 export const EditorArea: React.FC = () => {
-    // const { theme } = useTheme(); // layout is forced dark usually, but we can check if we want to support light
+    const {
+        openDocuments,
+        activeDocumentId,
+        updateDocumentContent,
+        setActiveDocument,
+        closeDocument,
+        closeAllDocuments
+    } = useAppStore();
+
+    const { theme } = useTheme();
+
+    const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+
+    // Fetch content if missing
+    useEffect(() => {
+        if (!activeDoc) return;
+        if (activeDoc.content === undefined && activeDoc.type !== 'folder') {
+            const fetchContent = async () => {
+                try {
+                    const res = await axios.get(`${API_BASE}/rag/document_content`, {
+                        params: { path: activeDoc.id }
+                    });
+                    // Handle various return shapes (string or json object)
+                    const content = res.data.content !== undefined
+                        ? (typeof res.data.content === 'string' ? res.data.content : JSON.stringify(res.data.content, null, 2))
+                        : (typeof res.data === 'string' ? res.data : '');
+
+                    updateDocumentContent(activeDoc.id, content);
+                } catch (e) {
+                    console.error("Failed to load document content", e);
+                    updateDocumentContent(activeDoc.id, "// Failed to load content.\n// The file might be binary or inaccessible.");
+                }
+            };
+            fetchContent();
+        }
+    }, [activeDoc?.id, activeDoc?.content]);
+
+    // Custom Monaco Theme to match RAG/App Theme
+    const handleEditorDidMount = (editor: any, monaco: any) => {
+        // Dark Theme
+        monaco.editor.defineTheme('arcturus-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {
+                'editor.background': '#1e1e1e00', // Transparent
+                'editor.lineHighlightBackground': '#ffffff0a',
+                'editorLineNumber.foreground': '#52525b',
+                'editor.selectionBackground': '#264f78',
+                'editor.inactiveSelectionBackground': '#3a3d41',
+            }
+        });
+
+        // Light Theme
+        monaco.editor.defineTheme('arcturus-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [],
+            colors: {
+                'editor.background': '#ffffff00', // Transparent
+                'editor.lineHighlightBackground': '#0000000a',
+                'editorLineNumber.foreground': '#a1a1aa',
+                'editor.selectionBackground': '#add6ff',
+                'editor.inactiveSelectionBackground': '#e5e7eb',
+            }
+        });
+    };
+
+    if (!activeDoc) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center bg-transparent text-muted-foreground space-y-4">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                    <div className="relative p-8 rounded-[2rem] bg-card/50 border border-border/50 shadow-inner backdrop-blur-sm">
+                        <Code2 className="w-16 h-16 text-primary/40" />
+                    </div>
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-lg font-bold text-foreground tracking-tight">Editor Empty</h3>
+                    <p className="text-xs opacity-50">Select a file from the Explorer to start editing</p>
+                </div>
+            </div>
+        );
+    }
+
+    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh', 'txt', 'md'].includes(type.toLowerCase());
 
     return (
-        <div className="h-full w-full flex flex-col bg-[#1e1e1e]">
-            {/* Editor Tabs (Visual Only for now) */}
-            <div className="flex items-center bg-[#18181b] border-b border-[#27272a] overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-2 px-3 py-2 bg-[#1e1e1e] border-t-2 border-t-[#eab308] border-r border-r-[#27272a] min-w-[120px]">
-                    <FileCode className="w-3.5 h-3.5 text-[#eab308]" />
-                    <span className="text-xs text-[#d4d4d8] font-medium truncate">IdeLayout.tsx</span>
+        <div className={cn("h-full w-full flex flex-col backdrop-blur-sm transition-colors duration-300", theme === 'dark' ? "bg-[#1e1e1e]/80" : "bg-white/80")}>
+            {/* Tab Bar - Browser Style (Matches DocumentViewer) */}
+            <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-10">
+                <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
+                    {openDocuments.map(doc => (
+                        <div
+                            key={doc.id}
+                            onClick={() => setActiveDocument(doc.id)}
+                            className={cn(
+                                "group flex items-center gap-1.5 px-3 h-9 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[100px] max-w-[200px] border-x border-t border-transparent relative select-none",
+                                activeDocumentId === doc.id
+                                    ? (theme === 'dark'
+                                        ? "bg-[#1e1e1e]/80 border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-[#1e1e1e]"
+                                        : "bg-white border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-white shadow-sm")
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                        >
+                            {isCodeFile(doc.type) ? <FileCode className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
+                            <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
+                                className="p-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                    ))}
                 </div>
-                <div className="flex items-center gap-2 px-3 py-2 text-[#71717a] hover:bg-[#27272a] cursor-pointer min-w-[120px] border-r border-r-[#27272a]/50">
-                    <span className="text-xs truncate">ideStore.ts</span>
+                <div className="flex items-center gap-3">
+                    {openDocuments.length > 0 && (
+                        <button
+                            onClick={closeAllDocuments}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all border border-border/50"
+                        >
+                            <X className="w-2.5 h-2.5" />
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Monaco Instance */}
-            <div className="flex-1 w-full h-full overflow-hidden">
-                <Editor
-                    height="100%"
-                    defaultLanguage="typescript"
-                    defaultValue="// Welcome to Arcturus IDE"
-                    theme="vs-dark"
-                    options={{
-                        minimap: { enabled: true },
-                        fontSize: 14,
-                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                        padding: { top: 16 },
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                    }}
-                />
+            <div className="flex-1 w-full h-full overflow-hidden relative">
+                {activeDoc.content === undefined ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-transparent z-10 gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">Loading Content...</span>
+                    </div>
+                ) : (
+                    <Editor
+                        height="100%"
+                        path={activeDoc.id} // Important for Monaco models
+                        defaultLanguage={activeDoc.type === 'ts' || activeDoc.type === 'tsx' ? 'typescript' : activeDoc.type === 'py' ? 'python' : activeDoc.type === 'md' ? 'markdown' : 'plaintext'}
+                        value={activeDoc.content}
+                        onChange={(value) => updateDocumentContent(activeDoc.id, value || '')}
+                        onMount={handleEditorDidMount}
+                        theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'}
+                        options={{
+                            minimap: { enabled: true },
+                            fontSize: 13,
+                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                            padding: { top: 16 },
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            smoothScrolling: true,
+                            cursorBlinking: "smooth",
+                            cursorSmoothCaretAnimation: "on",
+                            renderLineHighlight: 'all',
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

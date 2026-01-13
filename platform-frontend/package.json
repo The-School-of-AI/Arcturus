@@ -55,6 +55,7 @@
     "github-markdown-css": "^5.8.1",
     "lucide-react": "^0.562.0",
     "marked": "^17.0.1",
+    "node-pty": "^1.1.0",
     "pdfjs-dist": "^3.4.120",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
