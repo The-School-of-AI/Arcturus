@@ -309,6 +309,16 @@ export const NotesEditor: React.FC = () => {
     // Suggestion logic
     const [allNotes, setAllNotes] = useState<string[]>([]);
 
+    // Focus active tab on change
+    useEffect(() => {
+        if (activeDocumentId) {
+            const activeTab = document.getElementById(`tab-${activeDocumentId.replace(/[^a-zA-Z0-0]/g, '-')}`);
+            if (activeTab) {
+                activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+    }, [activeDocumentId]);
+
     useEffect(() => {
         const fetchAllNotes = async () => {
             try {
@@ -852,9 +862,10 @@ export const NotesEditor: React.FC = () => {
                         return (
                             <div
                                 key={doc.id}
+                                id={`tab-${doc.id.replace(/[^a-zA-Z0-0]/g, '-')}`}
                                 onClick={() => setActiveDocument(doc.id)}
                                 className={cn(
-                                    "group flex items-center gap-2 px-4 h-10 mt-auto pb-1 rounded-t-xl transition-all cursor-pointer border-x border-t border-transparent relative flex-shrink-0",
+                                    "group flex items-center gap-1.5 px-2 h-10 mt-auto pb-1 rounded-t-xl transition-all cursor-pointer border-x border-t border-transparent relative flex-shrink-0",
                                     isActive
                                         ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background shadow-[0_-2px_10px_rgba(0,0,0,0.08)]"
                                         : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
