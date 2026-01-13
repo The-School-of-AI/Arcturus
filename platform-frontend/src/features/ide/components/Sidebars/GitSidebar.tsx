@@ -12,6 +12,7 @@ interface GitHistory {
     author: string;
     date: string;
     branches: string[];
+    files: string[];
 }
 
 interface GitStatus {
@@ -28,6 +29,7 @@ export const GitSidebar: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [commitMessage, setCommitMessage] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
 
     const fetchStatus = useCallback(async () => {
         if (!explorerRootPath) return;
@@ -88,6 +90,40 @@ export const GitSidebar: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleFileClick = async (file: string, isStaged: boolean, commitHash?: string) => {
+        try {
+            const res = await axios.get(`${API_BASE}/git/diff_content`, {
+                params: {
+                    path: explorerRootPath,
+                    file_path: file,
+                    staged: isStaged,
+                    commit_hash: commitHash
+                }
+            });
+
+            const { original, modified, filename } = res.data;
+
+            openDocument({
+                id: `git_diff:${commitHash || (isStaged ? 'staged' : 'unstaged')}:${file}`,
+                title: `DIFF: ${filename}${commitHash ? ` (${commitHash.substring(0, 7)})` : ''}`,
+                type: 'git_diff',
+                originalContent: original,
+                modifiedContent: modified
+            });
+        } catch (e: any) {
+            setError(e.response?.data?.detail || "Failed to load diff content");
+        }
+    };
+
+    const toggleCommit = (hash: string) => {
+        setExpandedCommits(prev => {
+            const next = new Set(prev);
+            if (next.has(hash)) next.delete(hash);
+            else next.add(hash);
+            return next;
+        });
     };
 
     if (!explorerRootPath) {
@@ -179,6 +215,7 @@ export const GitSidebar: React.FC = () => {
                                     key={file}
                                     name={file}
                                     state="staged"
+                                    onClick={() => handleFileClick(file, true)}
                                     onAction={() => handleAction('unstage', file)}
                                 />
                             ))}
@@ -202,6 +239,7 @@ export const GitSidebar: React.FC = () => {
                                     key={file}
                                     name={file}
                                     state="modified"
+                                    onClick={() => handleFileClick(file, false)}
                                     onAction={() => handleAction('stage', file)}
                                 />
                             ))}
@@ -210,6 +248,7 @@ export const GitSidebar: React.FC = () => {
                                     key={file}
                                     name={file}
                                     state="untracked"
+                                    onClick={() => handleFileClick(file, false)}
                                     onAction={() => handleAction('stage', file)}
                                 />
                             ))}
@@ -237,49 +276,73 @@ export const GitSidebar: React.FC = () => {
                         )}
 
                         <div className="space-y-0 text-[11px]">
-                            {history.map((commit: GitHistory, idx: number) => (
-                                <div key={commit.hash} className="group relative flex items-start gap-4 py-2 hover:bg-white/5 cursor-pointer transition-colors max-w-full pr-4">
-                                    {/* Commit Dot (Solid) */}
-                                    <div className="relative shrink-0 w-[11px] h-full flex flex-col items-center">
-                                        <div className={cn(
-                                            "w-2.5 h-2.5 rounded-full z-10 mt-[3px] shadow-[0_0_8px_rgba(var(--primary),0.3)]",
-                                            idx === 0 ? "bg-primary scale-110 ring-4 ring-primary/20" : "bg-primary/60"
-                                        )} />
-                                    </div>
+                            {history.map((commit: GitHistory, idx: number) => {
+                                const isExpanded = expandedCommits.has(commit.hash);
+                                return (
+                                    <div key={commit.hash} className="mb-1">
+                                        <div
+                                            onClick={() => toggleCommit(commit.hash)}
+                                            className="group relative flex items-start gap-4 py-2 hover:bg-white/5 cursor-pointer transition-colors max-w-full pr-4"
+                                        >
+                                            {/* Commit Dot (Solid) */}
+                                            <div className="relative shrink-0 w-[11px] h-full flex flex-col items-center">
+                                                <div className={cn(
+                                                    "w-2.5 h-2.5 rounded-full z-10 mt-[3px] shadow-[0_0_8px_rgba(var(--primary),0.3)]",
+                                                    idx === 0 ? "bg-primary scale-110 ring-4 ring-primary/20" : "bg-primary/60"
+                                                )} />
+                                            </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                                            <span className="font-bold text-foreground/90 truncate max-w-[80%] leading-tight">
-                                                {commit.message}
-                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                                                    <span className="font-bold text-foreground/90 truncate max-w-[80%] leading-tight capitalize">
+                                                        {commit.message}
+                                                    </span>
 
-                                            {/* Branch Pills */}
-                                            {commit.branches.map(branch => (
-                                                <div
-                                                    key={branch}
-                                                    className={cn(
-                                                        "text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0",
-                                                        branch.includes('master') || branch.includes('main')
-                                                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                                            : "bg-muted text-muted-foreground/70"
-                                                    )}
-                                                >
-                                                    <GitBranch className="w-2.5 h-2.5" />
-                                                    {branch}
+                                                    {/* Branch Pills */}
+                                                    {commit.branches.map(branch => (
+                                                        <div
+                                                            key={branch}
+                                                            className={cn(
+                                                                "text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0",
+                                                                branch.includes('master') || branch.includes('main')
+                                                                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                                                    : "bg-muted text-muted-foreground/70"
+                                                            )}
+                                                        >
+                                                            <GitBranch className="w-2.5 h-2.5" />
+                                                            {branch}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+
+                                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground/50">
+                                                    <span className="font-medium text-muted-foreground/70">{commit.author}</span>
+                                                    <span>•</span>
+                                                    <span>{commit.date}</span>
+                                                    <span>•</span>
+                                                    <span className="font-mono uppercase opacity-60 group-hover:opacity-100 transition-opacity">{commit.hash}</span>
+                                                </div>
+                                            </div>
+                                            <ChevronDown className={cn("w-3 h-3 text-muted-foreground/30 transition-transform", isExpanded ? "" : "-rotate-90")} />
                                         </div>
 
-                                        <div className="flex items-center gap-2 text-[9px] text-muted-foreground/50">
-                                            <span className="font-medium text-muted-foreground/70">{commit.author}</span>
-                                            <span>•</span>
-                                            <span>{commit.date}</span>
-                                            <span>•</span>
-                                            <span className="font-mono uppercase opacity-60 group-hover:opacity-100 transition-opacity">{commit.hash}</span>
-                                        </div>
+                                        {/* Files list when expanded */}
+                                        {isExpanded && (
+                                            <div className="ml-[11px] border-l border-primary/20 pl-4 py-1 space-y-0.5">
+                                                {commit.files.map(file => (
+                                                    <GitNavItem
+                                                        key={file}
+                                                        name={file}
+                                                        state="modified"
+                                                        onClick={() => handleFileClick(file, false, commit.hash)}
+                                                        onAction={() => { }} // No action for history files
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             {history.length === 0 && !loading && (
                                 <div className="py-8 text-center opacity-30 italic text-[10px] mr-4">
@@ -304,16 +367,20 @@ export const GitSidebar: React.FC = () => {
 const GitNavItem: React.FC<{
     name: string;
     state: 'staged' | 'modified' | 'untracked';
+    onClick: () => void;
     onAction: () => void;
-}> = ({ name, state, onAction }) => {
+}> = ({ name, state, onClick, onAction }) => {
     return (
-        <div className="group flex items-center gap-2 px-3 py-1 hover:bg-white/5 transition-all cursor-default">
+        <div
+            onClick={onClick}
+            className="group flex items-center gap-2 px-3 py-1 hover:bg-white/5 transition-all cursor-pointer select-none overflow-hidden"
+        >
             <FileCode className={cn(
                 "w-3 h-3 shrink-0",
                 state === 'staged' ? "text-green-400" : state === 'modified' ? "text-amber-400" : "text-blue-400"
             )} />
             <div className="flex-1 min-w-0">
-                <p className="text-[10px] truncate text-foreground/80">{name.split(/[/\\]/).pop()}</p>
+                <p className="text-[10px] truncate font-bold text-foreground/80">{name.split(/[/\\]/).pop()}</p>
                 <p className="text-[8px] truncate text-muted-foreground/40">{name.split(/[/\\]/).slice(0, -1).join('/') || './'}</p>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -327,7 +394,7 @@ const GitNavItem: React.FC<{
                 </Button>
             </div>
             <span className={cn(
-                "text-[8px] font-black uppercase tracking-tighter w-3 text-center",
+                "text-[8px] font-black uppercase tracking-tighter w-3 text-center shrink-0",
                 state === 'staged' ? "text-green-500/50" : state === 'modified' ? "text-amber-500/50" : "text-blue-500/50"
             )}>
                 {state === 'staged' ? 'A' : state === 'modified' ? 'M' : 'U'}

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import Editor, { loader } from '@monaco-editor/react';
+import Editor, { loader, DiffEditor } from '@monaco-editor/react';
 import { useAppStore } from '@/store';
 // Removed unused useIdeStore import to fix potential lint if not used, or keep if needed. It was imported in previous version.
 // Checking previous file content, useIdeStore was unused.
@@ -357,6 +357,31 @@ export const EditorArea: React.FC = () => {
                                         </Button>
                                     </div>
                                 </div>
+                            );
+                        }
+
+                        if (activeDoc.type === 'git_diff') {
+                            const filename = activeDoc.id.split(':').pop() || '';
+                            return (
+                                <DiffEditor
+                                    height="100%"
+                                    original={activeDoc.originalContent || ''}
+                                    modified={activeDoc.modifiedContent || ''}
+                                    language={getLanguage(filename.split('.').pop() || '')}
+                                    theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'}
+                                    onMount={handleEditorDidMount}
+                                    options={{
+                                        renderSideBySide: true,
+                                        readOnly: true,
+                                        originalEditable: false,
+                                        fontSize: 13,
+                                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                        padding: { top: 16 },
+                                        scrollBeyondLastLine: false,
+                                        automaticLayout: true,
+                                        ignoreTrimWhitespace: false,
+                                    }}
+                                />
                             );
                         }
 

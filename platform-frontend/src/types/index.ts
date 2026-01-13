@@ -80,4 +80,6 @@ export interface RAGDocument {
     targetPage?: number;
     targetLine?: number;  // NEW: Support ripgrep line jumping
     searchText?: string;  // Text to auto-search when opening from SEEK result
+    originalContent?: string; // For Git Diffs
+    modifiedContent?: string; // For Git Diffs
 }

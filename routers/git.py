@@ -110,6 +110,48 @@ async def commit_changes(request: GitActionRequest):
     run_git_command(["commit", "-m", request.message], request.path)
     return {"success": True}
 
+@router.get("/diff_content")
+async def get_git_diff_content(path: str, file_path: str, staged: bool = False, commit_hash: Optional[str] = None):
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    try:
+        if commit_hash:
+            # Historical Commit Diff: Original is Parent, Modified is Commit
+            modified = run_git_command(["show", f"{commit_hash}:{file_path}"], path)
+            try:
+                original = run_git_command(["show", f"{commit_hash}^:{file_path}"], path)
+            except:
+                # First commit or no parent for this file
+                original = ""
+        elif staged:
+            # Staged: Original is HEAD, Modified is Index (staged)
+            original = run_git_command(["show", f"HEAD:{file_path}"], path)
+            modified = run_git_command(["show", f":{file_path}"], path)
+        else:
+            # Unstaged: Original is Index, Modified is Working Tree (disk)
+            try:
+                original = run_git_command(["show", f":{file_path}"], path)
+            except:
+                # If file is not in index (untracked), original is empty
+                original = ""
+            
+            # Read from disk
+            full_path = os.path.join(path, file_path)
+            if os.path.exists(full_path):
+                with open(full_path, "r") as f:
+                    modified = f.read()
+            else:
+                modified = ""
+                
+        return {
+            "original": original,
+            "modified": modified,
+            "filename": file_path
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/history")
 async def get_git_history(path: str, limit: int = 50):
     if not os.path.exists(path):
@@ -131,12 +173,22 @@ async def get_git_history(path: str, limit: int = 50):
                     clean_dec = decorations.replace("HEAD -> ", "")
                     branches = [b.strip() for b in clean_dec.split(",") if b.strip()]
                 
+                commit_hash = parts[0]
+                
+                # Fetch files changed in this commit
+                try:
+                    files_raw = run_git_command(["show", "--pretty=format:", "--name-only", commit_hash], path).strip()
+                    files_changed = [f for f in files_raw.split("\n") if f.strip()]
+                except:
+                    files_changed = []
+
                 history.append({
-                    "hash": parts[0],
+                    "hash": commit_hash,
                     "message": parts[1],
                     "author": parts[2],
                     "date": parts[3],
-                    "branches": branches
+                    "branches": branches,
+                    "files": files_changed
                 })
         return history
     except Exception as e:
