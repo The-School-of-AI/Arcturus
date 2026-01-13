@@ -315,3 +315,20 @@
   bottom: 4px !important;
   right: 4px !important;
 }
+
+/* Custom Animation Speeds */
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

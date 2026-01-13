@@ -3,7 +3,6 @@ import time
 import asyncio
 import json
 import yaml
-import requests
 from pathlib import Path
 from google import genai
 from google.genai.errors import ServerError
@@ -83,8 +82,9 @@ class ModelManager:
     async def _gemini_generate(self, prompt: str) -> str:
         await self._wait_for_rate_limit()
         try:
-            # ✅ CORRECT: Use truly async method
-            response = await self.client.aio.models.generate_content(
+            # ✅ CORRECT: Use synchronous SDK client in thread to bypass aiohttp/DNS issues common on macOS
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_info["model"],
                 contents=prompt
             )
@@ -98,10 +98,11 @@ class ModelManager:
             raise RuntimeError(f"Gemini generation failed: {str(e)}")
 
     async def _gemini_generate_content(self, contents: list) -> str:
-        """Generate content with support for text and images using Gemini"""
+        """Generate content with support for text and images using Gemini SDK"""
         try:
-            # ✅ Use async method with contents array (text + images)
-            response = await self.client.aio.models.generate_content(
+            # ✅ Use synchronous SDK client in thread (text + images)
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_info["model"],
                 contents=contents
             )
@@ -121,7 +122,7 @@ class ModelManager:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     self.model_info["url"]["generate"],
-                    json={"model": self.model_info["model"], "prompt": prompt, "stream": False}
+                    json = {"model": self.model_info["model"], "prompt": prompt, "stream": False}
                 ) as response:
                     response.raise_for_status()
                     result = await response.json()

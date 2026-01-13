@@ -68,7 +68,7 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
 
             {/* Glowing Accent for Highlighted nodes */}
             {isHighlighted && (
-                <div className="absolute inset-0 rounded-xl bg-neon-yellow/5 blur-xl -z-10 animate-pulse" />
+                <div className="absolute inset-0 rounded-xl bg-neon-yellow/5 blur-xl -z-10 animate-pulse-slow" />
             )}
 
             <div className="flex flex-col gap-3">
