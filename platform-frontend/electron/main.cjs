@@ -29,6 +29,8 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.cjs'),
             webviewTag: true,
         },
+        titleBarStyle: 'hiddenInset',
+        trafficLightPosition: { x: 12, y: 12 }, // Optional: adjust slightly if needed
         backgroundColor: '#0b0f1a', // Matching your theme
         title: "Arcturus Platform"
     });
@@ -260,6 +262,31 @@ function setupFSHandlers() {
             return { success: false, error: error.message };
         }
     });
+
+    ipcMain.handle('fs:readDir', async (event, targetPath) => {
+        try {
+            const items = fs.readdirSync(targetPath, { withFileTypes: true });
+            const files = items.map(item => ({
+                name: item.name,
+                path: path.join(targetPath, item.name),
+                type: item.isDirectory() ? 'folder' : (item.name.split('.').pop() || 'file'),
+                children: item.isDirectory() ? [] : undefined
+            })).filter(item => !item.name.startsWith('.')); // Basic hidden file filter
+
+            // Sort: folders first, then files
+            files.sort((a, b) => {
+                if (a.type === 'folder' && b.type !== 'folder') return -1;
+                if (a.type !== 'folder' && b.type === 'folder') return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            return { success: true, files };
+        } catch (error) {
+            console.error('[Electron] fs:readDir failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
 
     ipcMain.handle('fs:copy', async (event, { src, dest }) => {
         try {

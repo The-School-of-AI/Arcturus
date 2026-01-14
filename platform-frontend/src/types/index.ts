@@ -82,4 +82,5 @@ export interface RAGDocument {
     searchText?: string;  // Text to auto-search when opening from SEEK result
     originalContent?: string; // For Git Diffs
     modifiedContent?: string; // For Git Diffs
+    isDirty?: boolean; // Track unsaved changes
 }

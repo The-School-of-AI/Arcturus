@@ -101,7 +101,8 @@ interface RagViewerSlice {
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;
-    updateDocumentContent: (docId: string, content: string) => void;
+    updateDocumentContent: (docId: string, content: string, isDirty?: boolean) => void;
+    markDocumentSaved: (docId: string) => void;
 
     // --- RAG UI States ---
     isRagNewFolderOpen: boolean;
@@ -636,9 +637,14 @@ export const useAppStore = create<AppState>()(
             showRagInsights: false,
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
-            updateDocumentContent: (docId, content) => set(state => ({
+            updateDocumentContent: (docId, content, isDirty = false) => set(state => ({
                 openDocuments: state.openDocuments.map(doc =>
-                    doc.id === docId ? { ...doc, content } : doc
+                    doc.id === docId ? { ...doc, content, isDirty: isDirty ? true : doc.isDirty } : doc
+                )
+            })),
+            markDocumentSaved: (docId) => set(state => ({
+                openDocuments: state.openDocuments.map(doc =>
+                    doc.id === docId ? { ...doc, isDirty: false } : doc
                 )
             })),
 

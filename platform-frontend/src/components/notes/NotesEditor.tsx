@@ -766,7 +766,7 @@ export const NotesEditor: React.FC = () => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = setTimeout(() => {
                 saveContent(rawContent);
-            }, 1500); // 1.5s delay for auto-save
+            }, 5000); // 5s delay for auto-save
         }
     }, [rawContent, lastSavedContent, isLoading, saveContent]);
 

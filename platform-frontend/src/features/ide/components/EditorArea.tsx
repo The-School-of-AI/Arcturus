@@ -17,6 +17,7 @@ export const EditorArea: React.FC = () => {
         openDocuments,
         activeDocumentId,
         updateDocumentContent,
+        markDocumentSaved,
         setActiveDocument,
         closeDocument,
         closeAllDocuments
@@ -39,6 +40,7 @@ export const EditorArea: React.FC = () => {
             });
 
             if (result) {
+                markDocumentSaved(activeDoc.id);
                 setLastSaved(activeDoc.id);
                 setTimeout(() => setLastSaved(null), 2000);
             }
@@ -78,13 +80,13 @@ export const EditorArea: React.FC = () => {
                     const result = await window.electronAPI.invoke('fs:readFile', activeDoc.id);
 
                     if (result && result.success) {
-                        updateDocumentContent(activeDoc.id, result.content);
+                        updateDocumentContent(activeDoc.id, result.content, false);
                     } else {
                         throw new Error(result?.error || 'Unknown error');
                     }
                 } catch (e: any) {
                     console.error("Failed to load document content", e);
-                    updateDocumentContent(activeDoc.id, `// Failed to load content.\n// Error: ${e.message || e}\n// The file might be binary or inaccessible.`);
+                    updateDocumentContent(activeDoc.id, `// Failed to load content.\n// Error: ${e.message || e}\n// The file might be binary or inaccessible.`, false);
                 }
             };
             fetchContent();
@@ -179,6 +181,7 @@ export const EditorArea: React.FC = () => {
                         >
                             <FileCode className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                             <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
+                            {doc.isDirty && <div className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mr-1" />}
                             <button onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }} className="p-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <X className="w-3 h-3" />
                             </button>
@@ -217,7 +220,7 @@ export const EditorArea: React.FC = () => {
                             const filename = activeDoc.id.split(':').pop() || '';
                             return <DiffEditor height="100%" original={activeDoc.originalContent || ''} modified={activeDoc.modifiedContent || ''} language={getLanguage(filename.split('.').pop() || '')} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} beforeMount={handleBeforeMount} options={{ fontSize: 13, automaticLayout: true }} />;
                         }
-                        return <Editor height="100%" path={activeDoc.id} language={getLanguage(activeDoc.type)} value={activeDoc.content || ''} onChange={(val) => updateDocumentContent(activeDoc.id, val || '')} beforeMount={handleBeforeMount} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }} />;
+                        return <Editor height="100%" path={activeDoc.id} language={getLanguage(activeDoc.type)} value={activeDoc.content || ''} onChange={(val) => updateDocumentContent(activeDoc.id, val || '', true)} beforeMount={handleBeforeMount} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }} />;
                     })()
                 )}
             </div>

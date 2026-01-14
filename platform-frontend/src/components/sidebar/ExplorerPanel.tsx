@@ -321,12 +321,12 @@ export const ExplorerPanel: React.FC = () => {
 
             if (findAndLoad(explorerFiles)) {
                 try {
-                    const res = await axios.get(`${API_BASE}/system/files?path=${encodeURIComponent(path)}`);
-                    if (res.data.files) {
+                    const res = await window.electronAPI.invoke('fs:readDir', path);
+                    if (res.success && res.files) {
                         const updateTree = (nodes: any[]): any[] => {
                             return nodes.map(node => {
                                 if (node.path === path) {
-                                    return { ...node, children: res.data.files };
+                                    return { ...node, children: res.files };
                                 }
                                 if (node.children) {
                                     return { ...node, children: updateTree(node.children) };
@@ -443,8 +443,8 @@ export const ExplorerPanel: React.FC = () => {
         if (!explorerRootPath) return;
         setIsAnalyzing(true);
         try {
-            const res = await axios.get(`${API_BASE}/system/files?path=${encodeURIComponent(explorerRootPath)}`);
-            if (res.data.files) setExplorerFiles(res.data.files);
+            const res = await window.electronAPI.invoke('fs:readDir', explorerRootPath);
+            if (res.success && res.files) setExplorerFiles(res.files);
         } catch (e) {
             console.error("Failed to refresh", e);
         } finally {

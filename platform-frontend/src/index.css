@@ -167,6 +167,15 @@
   .border-glow {
     box-shadow: 0 0 14px rgb(var(--accent-glow) / var(--accent-glow-alpha));
   }
+
+  /* Electron Drag Regions */
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
 }
 
 /* Background Animation */
