@@ -23,7 +23,7 @@ interface GitStatus {
 }
 
 export const GitSidebar: React.FC = () => {
-    const { explorerRootPath, openDocument } = useAppStore();
+    const { explorerRootPath, openIdeDocument } = useAppStore();
     const [status, setStatus] = useState<GitStatus | null>(null);
     const [history, setHistory] = useState<GitHistory[]>([]);
     const [loading, setLoading] = useState(false);
@@ -105,7 +105,7 @@ export const GitSidebar: React.FC = () => {
 
             const { original, modified, filename } = res.data;
 
-            openDocument({
+            openIdeDocument({
                 id: `git_diff:${commitHash || (isStaged ? 'staged' : 'unstaged')}:${file}`,
                 title: `DIFF: ${filename}${commitHash ? ` (${commitHash.substring(0, 7)})` : ''}`,
                 type: 'git_diff',
