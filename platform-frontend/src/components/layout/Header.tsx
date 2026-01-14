@@ -10,6 +10,7 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { api, API_BASE } from '@/lib/api';
 import { ThemeToggle, useTheme } from '@/components/theme';
+import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 
 const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subtitleSuffix: string }> = {
     runs: { label: 'Agent Runs', icon: PlayCircle, color: 'text-neon-yellow', subtitleSuffix: 'SESSIONS' },
@@ -109,13 +110,13 @@ export const Header: React.FC = () => {
 
     return (
         <header className={cn(
-            "h-14 border-b flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-3 drag-region", // Added drag-region
+            "h-11 border-b flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-0 drag-region", // Added drag-region
             theme === 'dark' ? "bg-[#0b1220] border-border/50" : "bg-white border-border"
         )}>
-            <div className="flex items-center gap-4 pl-16"> {/* Added pl-16 to clear traffic lights */}
+            <div className="flex items-center gap-2 pl-16"> {/* Added pl-16 to clear traffic lights */}
                 {/* Brand / Logo */}
-                <div className="flex items-center gap-2 text-primary font-bold text-lg tracking-tight mr-4 cursor-pointer no-drag" onClick={() => window.location.reload()}>
-                    <Box className="w-6 h-6" />
+                <div className="flex items-center gap-0 text-primary font-bold text-lg tracking-tight mr-4 cursor-pointer no-drag" onClick={() => window.location.reload()}>
+                    <ArcturusLogo className="w-8 h-8" />
                     <span className="hidden sm:inline">Arcturus<span className="text-foreground">Platform</span></span>
                 </div>
 
