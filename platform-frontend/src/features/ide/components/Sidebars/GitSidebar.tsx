@@ -117,13 +117,34 @@ export const GitSidebar: React.FC = () => {
         }
     };
 
-    const toggleCommit = (hash: string) => {
+    const toggleCommit = async (hash: string) => {
+        const isExpanding = !expandedCommits.has(hash);
+
         setExpandedCommits(prev => {
             const next = new Set(prev);
             if (next.has(hash)) next.delete(hash);
             else next.add(hash);
             return next;
         });
+
+        // Fetch files on demand if expanding and they aren't loaded yet
+        if (isExpanding) {
+            const commit = history.find(c => c.hash === hash);
+            if (commit && commit.files.length === 0) {
+                try {
+                    const res = await axios.get(`${API_BASE}/git/commit_files`, {
+                        params: { path: explorerRootPath, commit_hash: hash }
+                    });
+                    if (res.data.files) {
+                        setHistory(prev => prev.map(c =>
+                            c.hash === hash ? { ...c, files: res.data.files } : c
+                        ));
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch commit files:", e);
+                }
+            }
+        }
     };
 
     if (!explorerRootPath) {

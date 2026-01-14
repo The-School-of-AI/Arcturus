@@ -71,10 +71,8 @@ async def list_files(path: str):
                 full_path = os.path.join(current_path, item)
                 try:
                     if extractor.is_ignored(full_path):
-                        print(f"    - Ignored: {item}")
                         continue
                     
-                    print(f"    + Found: {item} ({'folder' if os.path.isdir(full_path) else 'file'})")
                     node = {
                         "name": item,
                         "path": full_path,
@@ -85,8 +83,7 @@ async def list_files(path: str):
                         if children:
                             node["children"] = children
                     nodes.append(node)
-                except Exception as e:
-                    print(f"    ⚠️ Error processing {item}: {e}")
+                except Exception:
                     continue
             
             nodes.sort(key=lambda x: (x["type"] != "folder", x["name"].lower()))

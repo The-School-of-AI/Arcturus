@@ -175,21 +175,26 @@ async def get_git_history(path: str, limit: int = 50):
                 
                 commit_hash = parts[0]
                 
-                # Fetch files changed in this commit
-                try:
-                    files_raw = run_git_command(["show", "--pretty=format:", "--name-only", commit_hash], path).strip()
-                    files_changed = [f for f in files_raw.split("\n") if f.strip()]
-                except:
-                    files_changed = []
-
                 history.append({
                     "hash": commit_hash,
                     "message": parts[1],
                     "author": parts[2],
                     "date": parts[3],
                     "branches": branches,
-                    "files": files_changed
+                    "files": [] # No longer fetched by default
                 })
         return history
     except Exception as e:
         return []
+
+@router.get("/commit_files")
+async def get_with_commit_files(path: str, commit_hash: str):
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    try:
+        files_raw = run_git_command(["show", "--pretty=format:", "--name-only", commit_hash], path).strip()
+        files_changed = [f for f in files_raw.split("\n") if f.strip()]
+        return {"files": files_changed}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

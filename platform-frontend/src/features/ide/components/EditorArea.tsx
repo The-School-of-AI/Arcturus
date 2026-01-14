@@ -215,7 +215,7 @@ export const EditorArea: React.FC = () => {
     }
 
     return (
-        <div className={cn("h-full w-full flex flex-col backdrop-blur-sm transition-colors duration-300", theme === 'dark' ? "bg-[#1e1e1e]/80" : "bg-white/80")}>
+        <div className={cn("h-full flex flex-col border-t transition-colors", theme === 'dark' ? "bg-background border-border/50" : "bg-white border-border")}>
             {/* Tab Bar - Browser Style (Matches DocumentViewer) */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-10">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">

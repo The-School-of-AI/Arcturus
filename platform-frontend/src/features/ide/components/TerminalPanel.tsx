@@ -60,6 +60,9 @@ export const TerminalPanel: React.FC = () => {
                     fitAddon.fit();
                 }
 
+                // Focus terminal
+                term.focus();
+
                 // Setup ResizeObserver
                 resizeObserver = new ResizeObserver(() => {
                     if (isDisposed || !terminalRef.current || !xtermRef.current) return;
@@ -161,7 +164,7 @@ export const TerminalPanel: React.FC = () => {
     };
 
     return (
-        <div className={cn("h-full flex flex-col border-t transition-colors", theme === 'dark' ? "bg-[#18181b] border-[#27272a]" : "bg-white border-border")}>
+        <div className={cn("h-full flex flex-col border-t transition-colors", theme === 'dark' ? "bg-background border-border/50" : "bg-white border-border")}>
             {/* Terminal Header */}
             <div className={cn("h-9 min-h-[36px] flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-[#27272a] bg-[#18181b]" : "border-border bg-gray-50")}>
                 <div className="flex items-center gap-4">

@@ -401,11 +401,14 @@ export const ExplorerPanel: React.FC = () => {
 
     const refreshFiles = async () => {
         if (!explorerRootPath) return;
+        setIsAnalyzing(true);
         try {
             const res = await axios.get(`${API_BASE}/system/files?path=${encodeURIComponent(explorerRootPath)}`);
             if (res.data.files) setExplorerFiles(res.data.files);
         } catch (e) {
             console.error("Failed to refresh", e);
+        } finally {
+            setIsAnalyzing(false);
         }
     };
 
