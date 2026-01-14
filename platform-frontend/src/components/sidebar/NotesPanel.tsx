@@ -248,12 +248,23 @@ export const NotesPanel: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-transparent text-foreground">
             {/* Header */}
-            <div className="p-3 border-b border-border/50 bg-muted/20 space-y-3">
-                <div className="flex items-center gap-2">
+            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
+                {/* Search */}
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <Input
+                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                        placeholder="Search notes..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                <div className="flex items-center">
                     <Dialog open={isNewNoteOpen} onOpenChange={setIsNewNoteOpen}>
                         <DialogTrigger asChild>
-                            <Button className="flex-1 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 h-9 transition-all font-semibold text-xs">
-                                <Plus className="w-3.5 h-3.5" /> New Note
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Note">
+                                <Plus className="w-4 h-4" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -265,7 +276,7 @@ export const NotesPanel: React.FC = () => {
 
                     <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-9 w-9 border-border bg-background/50 hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-all duration-200">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Folder">
                                 <FolderPlus className="w-4 h-4" />
                             </Button>
                         </DialogTrigger>
@@ -275,17 +286,6 @@ export const NotesPanel: React.FC = () => {
                             <DialogFooter><Button onClick={handleCreateFolder}>Create</Button></DialogFooter>
                         </DialogContent>
                     </Dialog>
-                </div>
-
-                {/* Search */}
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <Input
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                        placeholder="Search notes..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
                 </div>
             </div>
 

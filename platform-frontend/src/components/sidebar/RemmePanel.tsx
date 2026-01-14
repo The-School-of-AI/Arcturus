@@ -45,7 +45,7 @@ export const RemmePanel: React.FC = () => {
             <div className="p-3 border-b border-border/50 bg-muted/20">
                 <div className="flex gap-2">
                     <Button
-                        className="flex-1 gap-2 bg-primary text-primary-inventory hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
+                        className="flex-1 gap-2 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
                         onClick={() => setIsAddOpen(!isAddOpen)}
                     >
                         <Plus className="w-4 h-4" />

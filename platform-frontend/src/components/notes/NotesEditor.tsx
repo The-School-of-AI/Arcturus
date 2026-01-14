@@ -32,6 +32,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -297,6 +298,7 @@ export const NotesEditor: React.FC = () => {
     const [mode, setMode] = useState<'wysiwyg' | 'raw'>('wysiwyg');
     const [rawContent, setRawContent] = useState("");
     const [fontSize, setFontSize] = useState(20);
+    const [linkUrl, setLinkUrl] = useState('');
 
     // Derived state for comparison
     const trimmedCurrent = rawContent.trim();
@@ -1007,20 +1009,43 @@ export const NotesEditor: React.FC = () => {
                                 </Tooltip>
 
                                 <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                const url = window.prompt('URL');
-                                                if (url) editor.chain().focus().setLink({ href: url }).run();
-                                            }}
-                                            className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('link') && "bg-primary/20 text-primary")}
-                                        >
-                                            <LinkIcon className="w-3.5 h-3.5" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom">Link</TooltipContent>
+                                    <DropdownMenu>
+                                        <TooltipTrigger asChild>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={cn("h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all", editor.isActive('link') && "bg-primary/20 text-primary")}
+                                                >
+                                                    <LinkIcon className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">Link</TooltipContent>
+                                        <DropdownMenuContent align="center" className="p-2 w-60 flex gap-1 z-50 bg-background border-border" onCloseAutoFocus={(e) => e.preventDefault()}>
+                                            <Input
+                                                value={linkUrl}
+                                                onChange={(e) => setLinkUrl(e.target.value)}
+                                                placeholder="https://..."
+                                                className="h-7 text-[10px]"
+                                                onKeyDown={(e) => {
+                                                    e.stopPropagation();
+                                                    if (e.key === 'Enter') {
+                                                        if (linkUrl) {
+                                                            editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+                                                            setLinkUrl('');
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                            <Button size="sm" className="h-7 px-2 text-[10px]" onClick={() => {
+                                                if (linkUrl) {
+                                                    editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+                                                    setLinkUrl('');
+                                                }
+                                            }}>Add</Button>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </Tooltip>
 
                                 <Tooltip>
