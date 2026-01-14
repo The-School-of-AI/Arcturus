@@ -400,8 +400,7 @@ export const DocumentAssistant: React.FC = () => {
                         {/* Message Header (Role Name) - Optional, maybe just for Bot */}
                         {msg.role === 'assistant' && (
                             <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                                <Bot className="w-3 h-3" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Assistant</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">RESPONSE</span>
                             </div>
                         )}
 
@@ -414,7 +413,7 @@ export const DocumentAssistant: React.FC = () => {
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'
-                                    ? "bg-muted/30 border border-input text-foreground py-2.5 px-4 rounded-2xl rounded-tr-sm shadow-sm leading-relaxed" // User Bubble: Matches input box
+                                    ? "bg-white/10 border border-input text-foreground py-2.5 px-4 rounded-sm shadow-md leading-normal" // User Bubble: Matches input box
                                     : "text-foreground leading-relaxed pl-1" // Bot: minimal/no style
                             )}>
                                 <MessageContent content={msg.content} role={msg.role} />

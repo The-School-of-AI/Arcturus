@@ -22,7 +22,6 @@ import {
   IconPaperclip,
   IconPlus,
   IconProgress,
-  IconRobot,
   IconSend,
   IconUser,
   IconWand,
@@ -52,7 +51,7 @@ export default function Ai03() {
           type="file"
           multiple
           className="sr-only"
-          onChange={(e) => {}}
+          onChange={(e) => { }}
         />
 
         <div className="px-3 pt-3 pb-2 grow">
@@ -99,21 +98,21 @@ export default function Ai03() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-[calc(1rem-6px)] text-xs"
-                    onClick={() => {}}
+                    onClick={() => { }}
                   >
                     <IconCode size={16} className="opacity-60" />
                     Code Interpreter
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-[calc(1rem-6px)] text-xs"
-                    onClick={() => {}}
+                    onClick={() => { }}
                   >
                     <IconWorld size={16} className="opacity-60" />
                     Web Search
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-[calc(1rem-6px)] text-xs"
-                    onClick={() => {}}
+                    onClick={() => { }}
                   >
                     <IconHistory size={16} className="opacity-60" />
                     Chat History
@@ -216,7 +215,6 @@ export default function Ai03() {
                 className="rounded-[calc(1rem-6px)] text-xs"
                 onClick={() => setSelectedAgent("Assistant")}
               >
-                <IconRobot size={16} className="opacity-60" />
                 Assistant
               </DropdownMenuItem>
             </DropdownMenuGroup>
