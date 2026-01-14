@@ -8,6 +8,7 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.bin
 
 # Build Artifacts
 platform-frontend/dist/
