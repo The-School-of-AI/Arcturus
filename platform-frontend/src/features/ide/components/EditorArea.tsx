@@ -63,22 +63,28 @@ export const EditorArea: React.FC = () => {
     }, [handleSave]);
 
     // Fetch content if missing
+    // Fetch content if missing
     useEffect(() => {
         if (!activeDoc) return;
-        if (activeDoc.content === undefined && activeDoc.type !== 'folder') {
+
+        // Skip fetching for folders or known binary types that we render differently
+        const binaryTypes = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'pdf', 'ico', 'mp4', 'webm'];
+        if (activeDoc.type === 'folder' || binaryTypes.includes(activeDoc.type.toLowerCase())) return;
+
+        if (activeDoc.content === undefined) {
             const fetchContent = async () => {
                 try {
-                    const res = await axios.get(`${API_BASE}/rag/document_content`, {
-                        params: { path: activeDoc.id }
-                    });
-                    const content = res.data.content !== undefined
-                        ? (typeof res.data.content === 'string' ? res.data.content : JSON.stringify(res.data.content, null, 2))
-                        : (typeof res.data === 'string' ? res.data : '');
+                    // Use Electron IPC to read file directly
+                    const result = await window.electronAPI.invoke('fs:readFile', activeDoc.id);
 
-                    updateDocumentContent(activeDoc.id, content);
-                } catch (e) {
+                    if (result && result.success) {
+                        updateDocumentContent(activeDoc.id, result.content);
+                    } else {
+                        throw new Error(result?.error || 'Unknown error');
+                    }
+                } catch (e: any) {
                     console.error("Failed to load document content", e);
-                    updateDocumentContent(activeDoc.id, "// Failed to load content.\n// The file might be binary or inaccessible.");
+                    updateDocumentContent(activeDoc.id, `// Failed to load content.\n// Error: ${e.message || e}\n// The file might be binary or inaccessible.`);
                 }
             };
             fetchContent();
