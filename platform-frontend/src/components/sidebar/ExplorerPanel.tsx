@@ -285,10 +285,9 @@ export const ExplorerPanel: React.FC = () => {
     // Auto-load files on mount/change of root path
     React.useEffect(() => {
         if (explorerRootPath) {
-            // Give backend some time to warm up if this is a fresh start/reload
             const timer = setTimeout(() => {
                 refreshFiles();
-            }, 2000);
+            }, 1000); // Small delay to wait for backend on cold start
             return () => clearTimeout(timer);
         }
     }, [explorerRootPath]);
@@ -299,8 +298,49 @@ export const ExplorerPanel: React.FC = () => {
         }
     }, [creating]);
 
-    const toggleFolder = (path: string) => {
-        setIsExpanded(prev => ({ ...prev, [path]: !prev[path] }));
+    const toggleFolder = async (path: string) => {
+        const isSoonExpanded = !isExpanded[path];
+        setIsExpanded(prev => ({ ...prev, [path]: isSoonExpanded }));
+
+        if (isSoonExpanded) {
+            // Find if this node needs its children fetched
+            const findAndLoad = (nodes: any[]): boolean => {
+                for (let i = 0; i < nodes.length; i++) {
+                    if (nodes[i].path === path) {
+                        if (nodes[i].type === 'folder' && (!nodes[i].children || nodes[i].children.length === 0)) {
+                            return true;
+                        }
+                        return false;
+                    }
+                    if (nodes[i].children && nodes[i].children.length > 0) {
+                        if (findAndLoad(nodes[i].children)) return true;
+                    }
+                }
+                return false;
+            };
+
+            if (findAndLoad(explorerFiles)) {
+                try {
+                    const res = await axios.get(`${API_BASE}/system/files?path=${encodeURIComponent(path)}`);
+                    if (res.data.files) {
+                        const updateTree = (nodes: any[]): any[] => {
+                            return nodes.map(node => {
+                                if (node.path === path) {
+                                    return { ...node, children: res.data.files };
+                                }
+                                if (node.children) {
+                                    return { ...node, children: updateTree(node.children) };
+                                }
+                                return node;
+                            });
+                        };
+                        setExplorerFiles(updateTree(explorerFiles));
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch subfolder", e);
+                }
+            }
+        }
     };
 
     const handleFileClick = (node: FileNode) => {

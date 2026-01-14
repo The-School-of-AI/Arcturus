@@ -59,15 +59,17 @@ async def list_files(path: str):
             return { "files": [], "root_path": abs_path, "error": "Path not found" }
         
         extractor = CodeSkeletonExtractor(abs_path)
-        
-        def build_tree(current_path):
+        def list_items(current_path):
             nodes = []
             try:
                 items = os.listdir(current_path)
-            except (PermissionError, FileNotFoundError):
+                print(f"  📂 Found {len(items)} raw items in {current_path}")
+            except Exception as e:
+                print(f"  ❌ listdir failed for {current_path}: {e}")
                 return []
-                
+
             for item in items:
+                if item.startswith('.'): continue
                 full_path = os.path.join(current_path, item)
                 try:
                     if extractor.is_ignored(full_path):
@@ -76,21 +78,22 @@ async def list_files(path: str):
                     node = {
                         "name": item,
                         "path": full_path,
-                        "type": "folder" if os.path.isdir(full_path) else "file"
+                        "type": "folder" if os.path.isdir(full_path) else "file",
+                        "children": [] if os.path.isdir(full_path) else None
                     }
-                    if os.path.isdir(full_path):
-                        children = build_tree(full_path)
-                        if children:
-                            node["children"] = children
                     nodes.append(node)
-                except Exception:
+                except Exception as e:
+                    print(f"  ⚠️ Error processing {item}: {e}")
                     continue
             
             nodes.sort(key=lambda x: (x["type"] != "folder", x["name"].lower()))
+            print(f"  ✅ Returning {len(nodes)} processed nodes")
             return nodes
 
+        files = list_items(abs_path)
+
         return {
-            "files": build_tree(abs_path),
+            "files": files,
             "root_path": abs_path
         }
     except Exception as e:

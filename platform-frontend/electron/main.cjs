@@ -86,13 +86,9 @@ function setupTerminalHandlers() {
             cwd = path.resolve(__dirname, '..', '..');
         }
 
-        // Check if we need to restart
+        // Always recreate the terminal session to ensure a fresh prompt on UI reloads
         if (ptyProcess && typeof ptyProcess.exitCode !== 'number') {
-            if (activeTerminalCwd === cwd) {
-                console.log('[Electron] Terminal session already active for this CWD.');
-                return;
-            }
-            console.log(`[Electron] Restarting terminal: '${activeTerminalCwd}' -> '${cwd}'`);
+            console.log(`[Electron] Ending previous terminal session at '${activeTerminalCwd}'`);
             try {
                 ptyProcess.kill();
             } catch (e) { }
@@ -104,10 +100,6 @@ function setupTerminalHandlers() {
         console.log(`[Electron] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
 
         try {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('terminal:outgoing', '\r\n\x1b[32m[System] Initializing Python PTY Bridge...\x1b[0m\r\n');
-            }
-
             // Spawn python script which handles the PTY fork
             ptyProcess = spawn('python3', ['-u', bridgePath], {
                 cwd: cwd,
@@ -143,9 +135,6 @@ function setupTerminalHandlers() {
             ptyProcess.on('close', (code, signal) => {
                 console.log(`[Electron] Bridge exited with code ${code}, signal ${signal}`);
                 ptyProcess = null;
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('terminal:outgoing', `\r\n\n[Terminal Session Terminated (Exit Code ${code})]\r\n`);
-                }
             });
 
         } catch (ex) {
