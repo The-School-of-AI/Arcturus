@@ -1,4 +1,0 @@
-{
-  "location_identification_methods_T001": "IP address lookup (if available), location services (if available), user-provided information (if available)",
-  "raw_location_data_T001": "IP address, GPS coordinates, user-provided address"
-}

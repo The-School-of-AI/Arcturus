@@ -1,9 +1,0 @@
-{
-  "found_urls_T001": "['https://www.aqi.in/in/dashboard/india/west-bengal/kolkata/historical-analysis', 'https://www.data.gov.in/catalog/historical-daily-ambient-air-quality-data', 'https://aqicn.org/historical', 'https://airquality.cpcb.gov.in/AQI_India/', 'https://developers.google.com/maps/documentation/air-quality/history']",
-  "api_endpoint_T002": null,
-  "website_url_T002": null,
-  "result_variable_T002": [
-    "Error: found_urls_T001 is not a list. It is of type: <class 'str'>"
-  ],
-  "error": "No API endpoint or website URL provided."
-}
