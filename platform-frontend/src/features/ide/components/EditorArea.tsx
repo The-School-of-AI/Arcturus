@@ -263,7 +263,7 @@ export const EditorArea: React.FC = () => {
                             beforeMount={handleBeforeMount}
                             onMount={handleEditorDidMount}
                             theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'}
-                            options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }}
+                            options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: false } }}
                         />;
                     })()
                 )}

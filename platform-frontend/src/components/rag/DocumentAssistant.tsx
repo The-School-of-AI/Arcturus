@@ -414,8 +414,8 @@ export const DocumentAssistant: React.FC = () => {
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'
-                                    ? "bg-primary text-primary-foreground py-2.5 px-4 rounded-2xl rounded-tr-sm shadow-sm leading-relaxed" // User Bubble
-                                    : "text-foreground leading-relaxed pl-1" // Bot: minimal/no style, just text
+                                    ? "bg-muted/30 border border-input text-foreground py-2.5 px-4 rounded-2xl rounded-tr-sm shadow-sm leading-relaxed" // User Bubble: Matches input box
+                                    : "text-foreground leading-relaxed pl-1" // Bot: minimal/no style
                             )}>
                                 <MessageContent content={msg.content} role={msg.role} />
                             </div>
@@ -440,7 +440,7 @@ export const DocumentAssistant: React.FC = () => {
             </div>
 
             {/* Input Area: Redesigned */}
-            <div className="p-4 bg-background border-t border-border">
+            <div className="p-2 bg-background border-t border-border">
                 {/* Image Preview */}
                 {pastedImage && (
                     <div className="relative mb-3 inline-block group">
@@ -477,7 +477,7 @@ export const DocumentAssistant: React.FC = () => {
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
                         placeholder={selectedContexts.length > 0 ? "Ask about selected text..." : "Ask a question..."}
-                        className="w-full bg-transparent text-foreground placeholder:text-muted-foreground border-none rounded-t-xl px-4 py-3 text-sm focus:outline-none resize-none min-h-[50px] max-h-[160px]"
+                        className="w-full bg-transparent text-foreground placeholder:text-muted-foreground border-none rounded-t-xl px-2 py-2 text-sm focus:outline-none resize-none min-h-[50px] max-h-[160px]"
                         style={{
                             height: 'auto',
                             overflow: inputValue.split('\n').length > 5 ? 'auto' : 'hidden'
@@ -491,21 +491,20 @@ export const DocumentAssistant: React.FC = () => {
                     />
 
                     {/* Bottom Row: Controls */}
-                    <div className="flex items-center justify-between px-3 py-2 border-t border-border/40 bg-muted/20 rounded-b-xl">
+                    <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 bg-muted/20 rounded-b-xl">
                         {/* Model Selector */}
                         <div className="flex items-center gap-2">
                             <div className="relative group">
-                                <Cpu className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground group-hover:text-primary transition-colors pointer-events-none" />
                                 <select
                                     value={selectedModel}
                                     onChange={(e) => setSelectedModel(e.target.value)}
-                                    className="h-7 pl-7 pr-8 text-[10px] font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 text-muted-foreground hover:text-foreground hover:border-border/80 transition-all cursor-pointer appearance-none"
+                                    className="h-7 pl-2 pr-8 text-[10px] font-medium bg-background border border-border rounded-sm focus:outline-none focus:ring-1 focus:ring-primary/50 text-muted-foreground hover:text-foreground hover:border-border/80 transition-all cursor-pointer appearance-none"
                                 >
                                     <option value="qwen3-vl:8b">Qwen 3 (Chat)</option>
                                     <option value="gemma3:4b">Gemma (Fast)</option>
                                     <option value="deepseek-coder:6.7b">DeepSeek (Code)</option>
                                 </select>
-                                <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                <ChevronDown className="w-3 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                             </div>
                         </div>
 
@@ -523,9 +522,6 @@ export const DocumentAssistant: React.FC = () => {
                             <Send className="w-4 h-4" />
                         </button>
                     </div>
-                </div>
-                <div className="text-[10px] text-center mt-2 text-muted-foreground/40">
-                    AI can make mistakes. Check important info.
                 </div>
             </div>
         </div>
