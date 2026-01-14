@@ -658,6 +658,15 @@ export const useAppStore = create<AppState>()(
             ragKeywordMatches: [],
             setRagKeywordMatches: (matches) => set({ ragKeywordMatches: matches }),
             addMessageToDocChat: (docId, message) => {
+                let currentSessionId = get().activeChatSessionId;
+                let isNewSession = false;
+
+                if (!currentSessionId) {
+                    currentSessionId = crypto.randomUUID();
+                    isNewSession = true;
+                    set({ activeChatSessionId: currentSessionId });
+                }
+
                 set((state) => ({
                     ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
                         doc.id === docId
@@ -672,10 +681,61 @@ export const useAppStore = create<AppState>()(
                 }));
 
                 const finalState = get();
-                const sessionId = finalState.activeChatSessionId;
-                if (sessionId) {
+                let doc = finalState.ragOpenDocuments.find((d: any) => d.id === docId);
+                let type: 'rag' | 'ide' = 'rag';
+                if (!doc) {
+                    doc = finalState.ideOpenDocuments.find((d: any) => d.id === docId);
+                    type = 'ide';
+                }
+
+                if (doc && currentSessionId) {
+                    const sessionData = {
+                        id: currentSessionId,
+                        target_type: type,
+                        target_id: docId,
+                        title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
+                        messages: doc.chatHistory || [],
+                        created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
+                        updated_at: Date.now() / 1000
+                    };
+
+                    api.saveChatSession(sessionData).then(() => {
+                        if (isNewSession || sessionData.title === "New Chat") {
+                            get().fetchChatSessions(type, docId);
+                        }
+                    }).catch(console.error);
+                }
+            },
+            updateMessageContent: (docId, messageId, newContent) => {
+                set((state) => ({
+                    ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
+                        doc.id === docId
+                            ? {
+                                ...doc,
+                                chatHistory: (doc.chatHistory || []).map(msg =>
+                                    msg.id === messageId ? { ...msg, content: newContent } : msg
+                                )
+                            }
+                            : doc
+                    ),
+                    ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
+                        doc.id === docId
+                            ? {
+                                ...doc,
+                                chatHistory: (doc.chatHistory || []).map(msg =>
+                                    msg.id === messageId ? { ...msg, content: newContent } : msg
+                                )
+                            }
+                            : doc
+                    )
+                }));
+
+                // Auto-save update
+                const finalState = get();
+                const currentSessionId = finalState.activeChatSessionId;
+                if (currentSessionId) {
                     let doc = finalState.ragOpenDocuments.find((d: any) => d.id === docId);
-                    let type = 'rag';
+                    let type: 'rag' | 'ide' = 'rag';
                     if (!doc) {
                         doc = finalState.ideOpenDocuments.find((d: any) => d.id === docId);
                         type = 'ide';
@@ -683,39 +743,17 @@ export const useAppStore = create<AppState>()(
 
                     if (doc) {
                         api.saveChatSession({
-                            id: sessionId,
+                            id: currentSessionId,
                             target_type: type,
                             target_id: docId,
-                            title: finalState.chatSessions.find((s: any) => s.id === sessionId)?.title || "New Chat",
+                            title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
                             messages: doc.chatHistory || [],
-                            created_at: Date.now() / 1000,
+                            created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
                             updated_at: Date.now() / 1000
                         }).catch(console.error);
                     }
                 }
             },
-            updateMessageContent: (docId, messageId, newContent) => set((state) => ({
-                ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
-                    doc.id === docId
-                        ? {
-                            ...doc,
-                            chatHistory: (doc.chatHistory || []).map(msg =>
-                                msg.id === messageId ? { ...msg, content: newContent } : msg
-                            )
-                        }
-                        : doc
-                ),
-                ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
-                    doc.id === docId
-                        ? {
-                            ...doc,
-                            chatHistory: (doc.chatHistory || []).map(msg =>
-                                msg.id === messageId ? { ...msg, content: newContent } : msg
-                            )
-                        }
-                        : doc
-                )
-            })),
             selectedContexts: [],
             addSelectedContext: (text) => set((state) => ({
                 selectedContexts: [...state.selectedContexts, text]

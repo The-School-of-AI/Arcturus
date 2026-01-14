@@ -78,10 +78,34 @@ export const DocumentAssistant: React.FC = () => {
     const [isThinking, setIsThinking] = useState(false);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-    const [selectedModel, setSelectedModel] = useState('qwen3-vl:8b');
+    const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+    const selectedModel = useAppStore(state => state.localModel);
+    const setSelectedModel = useAppStore(state => state.setLocalModel);
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isUserScrolledUp = useRef(false);
+
+    const modelOptions = [
+        { value: 'qwen3-vl:8b', label: 'Qwen 3 (Chat)' },
+        { value: 'gemma3:4b', label: 'Gemma (Fast)' },
+        { value: 'deepseek-coder:6.7b', label: 'DeepSeek (Code)' }
+    ];
+
+    // Close menus on click away
+    useEffect(() => {
+        const handleClickAway = (e: MouseEvent) => {
+            if (isHistoryOpen || isModelMenuOpen) {
+                // Check if we clicked inside a button that toggles them
+                const target = e.target as HTMLElement;
+                if (!target.closest('.history-menu-container') && !target.closest('.model-menu-container')) {
+                    setIsHistoryOpen(false);
+                    setIsModelMenuOpen(false);
+                }
+            }
+        };
+        document.addEventListener('mousedown', handleClickAway);
+        return () => document.removeEventListener('mousedown', handleClickAway);
+    }, [isHistoryOpen, isModelMenuOpen]);
 
     // Determine active document from either RAG or IDE
     const sidebarTab = useAppStore(state => state.sidebarTab);
@@ -293,7 +317,7 @@ export const DocumentAssistant: React.FC = () => {
                         <Plus className="w-4 h-4" />
                     </button>
 
-                    <div className="relative">
+                    <div className="relative history-menu-container">
                         <button
                             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
                             className={cn(
@@ -491,19 +515,37 @@ export const DocumentAssistant: React.FC = () => {
 
                     {/* Bottom Row: Controls */}
                     <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 bg-muted/20 rounded-b-xl">
-                        {/* Model Selector */}
-                        <div className="flex items-center gap-2">
-                            <div className="relative group">
-                                <select
-                                    value={selectedModel}
-                                    onChange={(e) => setSelectedModel(e.target.value)}
-                                    className="h-7 pl-2 pr-8 text-[10px] font-medium bg-background border border-border rounded-sm focus:outline-none focus:ring-1 focus:ring-primary/50 text-muted-foreground hover:text-foreground hover:border-border/80 transition-all cursor-pointer appearance-none"
+                        <div className="flex items-center gap-2 model-menu-container">
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                                    className="h-7 px-2 flex items-center gap-2 text-[10px] font-medium bg-background border border-border rounded-sm hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
                                 >
-                                    <option value="qwen3-vl:8b">Qwen 3 (Chat)</option>
-                                    <option value="gemma3:4b">Gemma (Fast)</option>
-                                    <option value="deepseek-coder:6.7b">DeepSeek (Code)</option>
-                                </select>
-                                <ChevronDown className="w-3 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                    <span>{modelOptions.find(m => m.value === selectedModel)?.label || selectedModel}</span>
+                                    <ChevronDown className={cn("w-3 h-3 transition-transform", isModelMenuOpen && "rotate-180")} />
+                                </button>
+
+                                {isModelMenuOpen && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-background border border-border shadow-xl rounded-lg z-50 p-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 mb-1 opacity-50">Select Model</p>
+                                        {modelOptions.map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => {
+                                                    setSelectedModel(opt.value);
+                                                    setIsModelMenuOpen(false);
+                                                }}
+                                                className={cn(
+                                                    "w-full text-left px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-[11px] flex items-center justify-between group",
+                                                    selectedModel === opt.value ? "text-primary bg-primary/5" : "text-foreground/80"
+                                                )}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {selectedModel === opt.value && <div className="w-1 h-1 rounded-full bg-primary" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

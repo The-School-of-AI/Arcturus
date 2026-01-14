@@ -34,15 +34,21 @@ class ChatSession(BaseModel):
 
 def get_chat_storage_path(target_type: str, target_id: str) -> Path:
     """Determine where to store chats based on target."""
+    doc_hash = hashlib.md5(target_id.encode()).hexdigest()
+    
     if target_type == 'rag':
         # Store in data/.meta/chats/{doc_hash}
-        # We hash the doc path to avoid filesystem issues with long/complex paths
-        doc_hash = hashlib.md5(target_id.encode()).hexdigest()
         path = PROJECT_ROOT / "data" / ".meta" / "chats" / doc_hash
     else:
-        # For IDE, we expect target_id to be the absolute path to the project root
-        # We store in {project_root}/.gemini/chats
-        path = Path(target_id) / ".gemini" / "chats"
+        # For IDE, find base directory
+        target_path = Path(target_id)
+        if target_path.is_file():
+            base_dir = target_path.parent
+        else:
+            base_dir = target_path
+            
+        # Store in {base_dir}/.arcturus/chats/{file_hash}
+        path = base_dir / ".arcturus" / "chats" / doc_hash
     
     path.mkdir(parents=True, exist_ok=True)
     return path
