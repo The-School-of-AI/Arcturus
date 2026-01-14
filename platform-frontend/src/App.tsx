@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Meteors } from '@/components/ui/meteors';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -17,10 +18,8 @@ function SplashScreen() {
 
       {/* Content */}
       <div className="text-center space-y-4 relative z-10">
-        <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center animate-pulse backdrop-blur-sm border border-primary/30">
-          <svg className="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-          </svg>
+        <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center animate-pulse backdrop-blur-sm border border-primary/20">
+          <ArcturusLogo className="w-12 h-12" />
         </div>
         <h2 className="text-2xl font-bold text-foreground">Arcturus Platform</h2>
         <p className="text-sm text-muted-foreground animate-pulse">Initializing backend services...</p>

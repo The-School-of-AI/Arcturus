@@ -110,7 +110,7 @@ export const Header: React.FC = () => {
 
     return (
         <header className={cn(
-            "h-11 border-b flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-0 drag-region", // Added drag-region
+            "h-10 border-b flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-0 drag-region", // Added drag-region
             theme === 'dark' ? "bg-[#0b1220] border-border/50" : "bg-white border-border"
         )}>
             <div className="flex items-center gap-2 pl-16"> {/* Added pl-16 to clear traffic lights */}
@@ -139,14 +139,14 @@ export const Header: React.FC = () => {
                         </button>
                     )}
 
-                    <div>
-                        <h2 className="font-bold text-sm tracking-tight text-foreground uppercase leading-none">
+                    <div className="flex flex-row items-center gap-3">
+                        <h2 className="font-bold text-xs tracking-tight text-foreground uppercase leading-none whitespace-nowrap">
                             {sidebarTab === 'news'
                                 ? (newsViewMode === 'saved' ? 'Saved Articles' : newsViewMode === 'search' ? 'Web Search' : Array.isArray(newsSources) && newsSources.find(s => s.id === useAppStore.getState().selectedNewsSourceId)?.name || 'News Feed')
                                 : (config?.label || sidebarTab)}
                         </h2>
                         {sidebarTab === 'ide' ? (
-                            <p className={cn("text-[9px] font-mono tracking-widest mt-1 opacity-80 uppercase", config?.color || 'text-neon-yellow')}>
+                            <p className={cn("text-[9px] font-mono tracking-widest opacity-80 uppercase leading-none", config?.color || 'text-neon-yellow')}>
                                 {!gitSummary ? (
                                     "GIT NOT FOUND"
                                 ) : gitSummary.staged > 0 ? (
@@ -154,11 +154,11 @@ export const Header: React.FC = () => {
                                 ) : (gitSummary.unstaged + gitSummary.untracked) > 0 ? (
                                     <span className="text-amber-400">{gitSummary.unstaged + gitSummary.untracked} CHANGES</span>
                                 ) : (
-                                    <span className="text-muted-foreground">ALL COMMITTED</span>
+                                    <span className="text-muted-foreground whitespace-nowrap">ALL COMMITTED</span>
                                 )}
                             </p>
                         ) : (
-                            <p className={cn("text-[9px] font-mono tracking-widest mt-1 opacity-80 uppercase", config?.color || 'text-neon-yellow')}>
+                            <p className={cn("text-[9px] font-mono tracking-widest opacity-80 uppercase leading-none", config?.color || 'text-neon-yellow')}>
                                 {getCount()} {config?.subtitleSuffix}
                             </p>
                         )}
