@@ -2,7 +2,7 @@ import React from 'react';
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { useIdeStore, type IdeSidebarTab } from '../store/ideStore';
 import { cn } from '@/lib/utils';
-import { FileCode, Search, GitBranch, ListTodo } from 'lucide-react';
+import { FileCode, Search, GitBranch, ListTodo, PanelLeft, PanelBottom, PanelRight } from 'lucide-react';
 import { useAppStore } from '@/store';
 
 // Components
@@ -136,27 +136,27 @@ export const IdeLayout: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-black/20 rounded p-0.5 gap-px">
+                    <div className="flex items-center bg-transparent rounded p-0.5 gap-px">
                         <button
                             onClick={() => useIdeStore.getState().toggleLeftPanel()}
-                            className={cn("px-2 py-0.5 rounded hover:bg-white/10 transition-colors", isLeftPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
+                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", isLeftPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
                             title="Toggle Left Panel"
                         >
-                            Left
+                            <PanelLeft className="w-3.5 h-3.5" />
                         </button>
                         <button
                             onClick={() => useIdeStore.getState().toggleBottomPanel()}
-                            className={cn("px-2 py-0.5 rounded hover:bg-white/10 transition-colors", isBottomPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
+                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", isBottomPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
                             title="Toggle Terminal"
                         >
-                            Term
+                            <PanelBottom className="w-3.5 h-3.5" />
                         </button>
                         <button
                             onClick={() => useIdeStore.getState().toggleRightPanel()}
-                            className={cn("px-2 py-0.5 rounded hover:bg-white/10 transition-colors", isRightPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
+                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", isRightPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
                             title="Toggle Right Panel"
                         >
-                            Right
+                            <PanelRight className="w-3.5 h-3.5" />
                         </button>
                     </div>
 
