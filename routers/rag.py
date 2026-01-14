@@ -789,13 +789,15 @@ CONTEXT FROM DOCUMENT:
             user_msg["images"] = [image]
         messages.append(user_msg)
 
+        model = body.get("model", "qwen3-vl:8b") # Default to Qwen
+
         async def token_generator():
             try:
                 # Use a separate session or direct httpx for streaming
                 import httpx
                 async with httpx.AsyncClient(timeout=300) as client:
                     async with client.stream("POST", "http://127.0.0.1:11434/api/chat", json={
-                        "model": "qwen3-vl:8b", # Consistent with server_rag.py
+                        "model": model, 
                         "messages": messages,
                         "stream": True
                     }) as response:

@@ -157,6 +157,24 @@ interface RagViewerSlice {
     setIsNewRunOpen: (open: boolean) => void;
 }
 
+interface ChatSessionSummary {
+    id: string;
+    title: string;
+    created_at: number;
+    updated_at: number;
+    model?: string;
+    preview: string;
+}
+
+interface ChatSlice {
+    chatSessions: ChatSessionSummary[];
+    activeChatSessionId: string | null;
+    fetchChatSessions: (targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
+    loadChatSession: (sessionId: string, targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
+    createNewChatSession: (targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
+    deleteChatSession: (sessionId: string, targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
+}
+
 interface NotesSlice {
     // --- Notes Document Management ---
     notesOpenDocuments: RAGDocument[];
@@ -336,7 +354,7 @@ interface NewsSlice {
     clearSelection: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -639,18 +657,43 @@ export const useAppStore = create<AppState>()(
             setRagSearchResults: (results) => set({ ragSearchResults: results }),
             ragKeywordMatches: [],
             setRagKeywordMatches: (matches) => set({ ragKeywordMatches: matches }),
-            addMessageToDocChat: (docId, message) => set((state) => ({
-                ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
-                    doc.id === docId
-                        ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
-                        : doc
-                ),
-                ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
-                    doc.id === docId
-                        ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
-                        : doc
-                )
-            })),
+            addMessageToDocChat: (docId, message) => {
+                set((state) => ({
+                    ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
+                        doc.id === docId
+                            ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                            : doc
+                    ),
+                    ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
+                        doc.id === docId
+                            ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                            : doc
+                    )
+                }));
+
+                const finalState = get();
+                const sessionId = finalState.activeChatSessionId;
+                if (sessionId) {
+                    let doc = finalState.ragOpenDocuments.find((d: any) => d.id === docId);
+                    let type = 'rag';
+                    if (!doc) {
+                        doc = finalState.ideOpenDocuments.find((d: any) => d.id === docId);
+                        type = 'ide';
+                    }
+
+                    if (doc) {
+                        api.saveChatSession({
+                            id: sessionId,
+                            target_type: type,
+                            target_id: docId,
+                            title: finalState.chatSessions.find((s: any) => s.id === sessionId)?.title || "New Chat",
+                            messages: doc.chatHistory || [],
+                            created_at: Date.now() / 1000,
+                            updated_at: Date.now() / 1000
+                        }).catch(console.error);
+                    }
+                }
+            },
             updateMessageContent: (docId, messageId, newContent) => set((state) => ({
                 ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
                     doc.id === docId
@@ -797,7 +840,75 @@ export const useAppStore = create<AppState>()(
             setRagIndexingPath: (path: string | null) => set({ ragIndexingPath: path }),
             ragIndexStatus: null,
             setRagIndexStatus: (status: string | null) => set({ ragIndexStatus: status }),
+
             isRagIndexing: false,
+
+            // --- Chat Slice ---
+            chatSessions: [],
+            activeChatSessionId: null,
+
+            fetchChatSessions: async (targetType, targetId) => {
+                try {
+                    const sessions = await api.getChatSessions(targetType, targetId);
+                    set({ chatSessions: sessions });
+                } catch (e) {
+                    console.error("Failed to fetch chat sessions", e);
+                }
+            },
+
+            loadChatSession: async (sessionId, targetType, targetId) => {
+                try {
+                    const session = await api.getChatSession(sessionId, targetType, targetId);
+
+                    // Update Active Doc History
+                    const updateDocHistory = (docs: any[]) => docs.map(d =>
+                        d.id === targetId ? { ...d, chatHistory: session.messages } : d
+                    );
+
+                    set(state => ({
+                        activeChatSessionId: sessionId,
+                        ragOpenDocuments: targetType === 'rag' ? updateDocHistory(state.ragOpenDocuments) : state.ragOpenDocuments,
+                        ideOpenDocuments: targetType === 'ide' ? updateDocHistory(state.ideOpenDocuments) : state.ideOpenDocuments,
+                    }));
+                } catch (e) {
+                    console.error("Failed to load session", e);
+                }
+            },
+
+            createNewChatSession: async (targetType, targetId) => {
+                const newId = crypto.randomUUID();
+
+                // Clear current doc history
+                const clearDocHistory = (docs: any[]) => docs.map(d =>
+                    d.id === targetId ? { ...d, chatHistory: [] } : d
+                );
+
+                set(state => ({
+                    activeChatSessionId: newId,
+                    ragOpenDocuments: targetType === 'rag' ? clearDocHistory(state.ragOpenDocuments) : state.ragOpenDocuments,
+                    ideOpenDocuments: targetType === 'ide' ? clearDocHistory(state.ideOpenDocuments) : state.ideOpenDocuments,
+                    // Optimistically add to list
+                    chatSessions: [{
+                        id: newId,
+                        title: "New Chat",
+                        created_at: Date.now() / 1000,
+                        updated_at: Date.now() / 1000,
+                        preview: "",
+                        model: "default"
+                    }, ...state.chatSessions]
+                }));
+            },
+
+            deleteChatSession: async (sessionId, targetType, targetId) => {
+                await api.deleteChatSession(sessionId, targetType, targetId);
+                set(state => ({
+                    chatSessions: state.chatSessions.filter(s => s.id !== sessionId),
+                    // If deleted active session, clear active state
+                    activeChatSessionId: state.activeChatSessionId === sessionId ? null : state.activeChatSessionId
+                }));
+                // If we deleted the active one, maybe create a new one? Or just leave it empty.
+                // For now, let's leave as is. User can click +.
+            },
             setIsRagIndexing: (indexing: boolean) => set({ isRagIndexing: indexing }),
             ragIndexingProgress: null,
             setRagIndexingProgress: (progress) => set({ ragIndexingProgress: progress }),

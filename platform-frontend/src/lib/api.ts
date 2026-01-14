@@ -102,5 +102,24 @@ export const api = {
     generateApp: async (name: string, prompt: string): Promise<any> => {
         const res = await axios.post(`${API_BASE}/apps/generate`, { name, prompt });
         return res.data;
+    },
+
+    // Chat Sessions
+    getChatSessions: async (targetType: string, targetId: string): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/chat/sessions`, { params: { target_type: targetType, target_id: targetId } });
+        return res.data.sessions;
+    },
+
+    getChatSession: async (sessionId: string, targetType: string, targetId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/chat/session/${sessionId}`, { params: { target_type: targetType, target_id: targetId } });
+        return res.data.session;
+    },
+
+    saveChatSession: async (session: any): Promise<void> => {
+        await axios.post(`${API_BASE}/chat/session`, session);
+    },
+
+    deleteChatSession: async (sessionId: string, targetType: string, targetId: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/chat/session/${sessionId}`, { params: { target_type: targetType, target_id: targetId } });
     }
 };

@@ -91,6 +91,11 @@ app.include_router(prompts_router.router)
 app.include_router(news_router.router)
 app.include_router(git_router.router)
 
+from routers import chat as chat_router
+app.include_router(chat_router.router)
+# Chat router included
+
+
 
 
 

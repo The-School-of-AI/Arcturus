@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -69,9 +69,19 @@ export const DocumentAssistant: React.FC = () => {
     const selectedContexts = useAppStore(state => state.selectedContexts);
     const removeSelectedContext = useAppStore(state => state.removeSelectedContext);
     const clearSelectedContexts = useAppStore(state => state.clearSelectedContexts);
+
+    // Chat Session Store Hooks
+    const chatSessions = useAppStore(state => state.chatSessions);
+    const fetchChatSessions = useAppStore(state => state.fetchChatSessions);
+    const loadChatSession = useAppStore(state => state.loadChatSession);
+    const createNewChatSession = useAppStore(state => state.createNewChatSession);
+    const activeChatSessionId = useAppStore(state => state.activeChatSessionId);
+
     const [inputValue, setInputValue] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [selectedModel, setSelectedModel] = useState('qwen3-vl:8b');
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,6 +90,14 @@ export const DocumentAssistant: React.FC = () => {
     const activeDoc = (sidebarTab === 'ide' && ideActiveDocumentId)
         ? ideOpenDocuments?.find(d => d.id === ideActiveDocumentId)
         : openDocuments.find(d => d.id === activeDocumentId);
+
+    // Fetch sessions on doc change
+    useEffect(() => {
+        if (activeDoc) {
+            const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
+            fetchChatSessions(type, activeDoc.id);
+        }
+    }, [activeDoc?.id, sidebarTab, ideActiveDocumentId]);
 
     const history = activeDoc?.chatHistory || [];
 
@@ -169,7 +187,8 @@ export const DocumentAssistant: React.FC = () => {
                     docId: activeDoc.id,
                     query: fullMessage,
                     history: history, // Send full history including context
-                    image: currentPastedImage
+                    image: currentPastedImage,
+                    model: selectedModel // Send selected model
                 })
             });
 
@@ -244,6 +263,63 @@ export const DocumentAssistant: React.FC = () => {
                 >
                     <X className="w-4 h-4" />
                 </button>
+            </div>
+
+            {/* Toolbar: History & New Chat */}
+            <div className="px-4 py-2 border-b border-border bg-muted/20 flex gap-2 items-center">
+                <button
+                    onClick={() => {
+                        const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
+                        if (activeDoc) createNewChatSession(type, activeDoc.id);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 text-[10px] font-medium bg-background border border-border rounded-md py-1.5 hover:bg-muted transition-colors"
+                >
+                    <Plus className="w-3 h-3 text-primary" />
+                    New Chat
+                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                        className={cn(
+                            "flex items-center justify-center gap-2 px-3 py-1.5 text-[10px] font-medium border rounded-md transition-colors",
+                            isHistoryOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-muted"
+                        )}
+                    >
+                        <History className="w-3 h-3" />
+                    </button>
+
+                    {isHistoryOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-64 bg-background border border-border shadow-xl rounded-lg z-50 p-2 max-h-60 overflow-y-auto">
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1 mb-1">Previous Chats</p>
+                            {chatSessions.length === 0 ? (
+                                <p className="text-xs text-muted-foreground px-2 py-4 text-center italic">No history yet</p>
+                            ) : (
+                                chatSessions.map(session => (
+                                    <button
+                                        key={session.id}
+                                        onClick={() => {
+                                            const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
+                                            if (activeDoc) loadChatSession(session.id, type, activeDoc.id);
+                                            setIsHistoryOpen(false);
+                                        }}
+                                        className={cn(
+                                            "w-full text-left px-2 py-2 rounded-md hover:bg-muted transition-colors text-xs mb-1 flex items-center justify-between group",
+                                            activeChatSessionId === session.id ? "bg-muted" : ""
+                                        )}
+                                    >
+                                        <div className="truncate flex-1 pr-2">
+                                            <span className="block truncate font-medium">{session.title}</span>
+                                            <span className="block text-[9px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                <Clock className="w-2 h-2" />
+                                                {new Date(session.updated_at * 1000).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Chat History */}
@@ -368,6 +444,20 @@ export const DocumentAssistant: React.FC = () => {
                                 overflow: inputValue.split('\n').length > 3 ? 'auto' : 'hidden'
                             }}
                         />
+
+                        {/* Model Selector Pill */}
+                        <div className="absolute bottom-2 left-2 flex gap-1">
+                            <select
+                                value={selectedModel}
+                                onChange={(e) => setSelectedModel(e.target.value)}
+                                className="h-5 text-[9px] bg-background/50 border border-border/50 rounded-md px-1 focus:outline-none focus:ring-1 focus:ring-primary/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            >
+                                <option value="qwen3-vl:8b">Qwen (Chat)</option>
+                                <option value="gemma3:4b">Gemma (Fast)</option>
+                                <option value="deepseek-coder:6.7b">DeepSeek (Code)</option>
+                            </select>
+                        </div>
+
                     </div>
                     <button
                         onClick={handleSend}
