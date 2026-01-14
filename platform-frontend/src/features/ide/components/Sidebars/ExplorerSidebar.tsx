@@ -3,7 +3,7 @@ import { ExplorerPanel as OriginalExplorerPanel } from '@/components/sidebar/Exp
 
 export const ExplorerSidebar: React.FC = () => {
     return (
-        <div className="h-full bg-background">
+        <div className="h-full bg-transparent">
             <OriginalExplorerPanel />
         </div>
     );

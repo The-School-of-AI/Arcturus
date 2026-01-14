@@ -112,7 +112,7 @@ export const TerminalPanel: React.FC = () => {
     return (
         <div className={cn(
             "h-full w-full flex flex-col overflow-hidden transition-colors border-t border-border/50",
-            theme === 'dark' ? "bg-background/95" : "bg-white"
+            theme === 'dark' ? "bg-background/30" : "bg-white/80"
         )}>
             <div className={cn("h-5 flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-border/50 bg-white/10" : "border-border bg-white")}>
                 <div className="flex items-center gap-4">

@@ -164,7 +164,7 @@ export const EditorArea: React.FC = () => {
     }
 
     return (
-        <div className={cn("h-full flex flex-col border-t transition-colors", theme === 'dark' ? "bg-background border-border/50" : "bg-white border-border")}>
+        <div className={cn("h-full flex flex-col border-t transition-colors", theme === 'dark' ? "bg-transparent border-border/50" : "bg-white/80 border-border")}>
             {/* Tab Bar */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-10">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">

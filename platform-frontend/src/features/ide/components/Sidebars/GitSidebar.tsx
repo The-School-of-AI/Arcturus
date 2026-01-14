@@ -160,7 +160,7 @@ export const GitSidebar: React.FC = () => {
     const hasChanges = totalChanges > 0;
 
     return (
-        <div className="h-full flex flex-col bg-background/50">
+        <div className="h-full flex flex-col bg-transparent">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/50 shrink-0">
                 <div className="flex items-center gap-2">

@@ -111,7 +111,7 @@ export const PlanSidebar = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-background">
+        <div className="h-full flex flex-col bg-transparent">
             <div className="px-4 py-3 border-b border-border/40">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Plan</h3>
                 {planPath && <p className="text-[9px] text-muted-foreground/50 truncate mt-1">{planPath.split('/').pop()}</p>}

@@ -20,7 +20,7 @@ interface FileGroup {
 }
 
 export const SearchSidebar: React.FC = () => {
-    const { explorerRootPath, openDocument } = useAppStore();
+    const { explorerRootPath, openIdeDocument } = useAppStore();
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -109,7 +109,7 @@ export const SearchSidebar: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-background">
+        <div className="h-full flex flex-col bg-transparent">
             <div className="p-3 border-b border-border/50 bg-muted/20">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -159,7 +159,7 @@ export const SearchSidebar: React.FC = () => {
                                             <div
                                                 key={`${res.file}-${res.line}-${i}`}
                                                 className="group pl-9 pr-3 py-1.5 hover:bg-primary/10 cursor-pointer transition-colors border-l-2 border-transparent hover:border-primary/50"
-                                                onClick={() => openDocument({
+                                                onClick={() => openIdeDocument({
                                                     id: res.file,
                                                     title: res.file.split(/[/\\]/).pop() || 'file',
                                                     type: res.file.split('.').pop() || 'txt',

@@ -37,7 +37,7 @@ const IdeSidebar = () => {
     };
 
     return (
-        <div className="h-full flex flex-col bg-muted/20 border-r border-border/50">
+        <div className="h-full flex flex-col bg-muted/10 border-r border-border/50">
             {/* Horizontal Tool Switcher - The "Tab" Concept */}
             <div className="flex items-center px-1 py-1 gap-1 border-b border-border/50 bg-background/50 backdrop-blur-sm">
                 {tabs.map(tab => (
@@ -76,7 +76,7 @@ export const IdeLayout: React.FC = () => {
     };
 
     return (
-        <div className="h-full w-full bg-background flex flex-col overflow-hidden">
+        <div className="h-full w-full bg-transparent flex flex-col overflow-hidden">
             {/* Key forces re-mount on reset */}
             <PanelGroup key={layoutKey} orientation="horizontal">
 
