@@ -76,12 +76,17 @@ interface RagViewerSlice {
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
     sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide';
     setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide') => void;
-    openDocuments: RAGDocument[];
-    activeDocumentId: string | null;
-    openDocument: (doc: RAGDocument) => void;
-    closeDocument: (docId: string) => void;
-    closeAllDocuments: () => void;
-    setActiveDocument: (docId: string) => void;
+
+    // --- RAG Document Management ---
+    ragOpenDocuments: RAGDocument[];
+    ragActiveDocumentId: string | null;
+    openRagDocument: (doc: RAGDocument) => void;
+    closeRagDocument: (docId: string) => void;
+    closeAllRagDocuments: () => void;
+    setActiveRagDocument: (docId: string) => void;
+    updateRagDocumentContent: (docId: string, content: string, isDirty?: boolean) => void;
+    markRagDocumentSaved: (docId: string) => void;
+
     ragSearchQuery: string;
     setRagSearchQuery: (query: string) => void;
     ragSearchResults: unknown[];
@@ -101,8 +106,6 @@ interface RagViewerSlice {
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;
-    updateDocumentContent: (docId: string, content: string, isDirty?: boolean) => void;
-    markDocumentSaved: (docId: string) => void;
 
     // --- RAG UI States ---
     isRagNewFolderOpen: boolean;
@@ -149,6 +152,22 @@ interface RagViewerSlice {
     expandedRagFolders: string[];
     toggleRagFolder: (path: string) => void;
 
+    // --- Runs UI States ---
+    isNewRunOpen: boolean;
+    setIsNewRunOpen: (open: boolean) => void;
+}
+
+interface NotesSlice {
+    // --- Notes Document Management ---
+    notesOpenDocuments: RAGDocument[];
+    notesActiveDocumentId: string | null;
+    openNotesDocument: (doc: RAGDocument) => void;
+    closeNotesDocument: (docId: string) => void;
+    closeAllNotesDocuments: () => void;
+    setActiveNotesDocument: (docId: string) => void;
+    updateNotesDocumentContent: (docId: string, content: string, isDirty?: boolean) => void;
+    markNotesDocumentSaved: (docId: string) => void;
+
     // --- Notes UI States ---
     notesFiles: any[];
     setNotesFiles: (files: any[]) => void;
@@ -160,10 +179,18 @@ interface RagViewerSlice {
     toggleZenMode: () => void;
     expandedNotesFolders: string[];
     toggleNoteFolder: (path: string) => void;
+}
 
-    // --- Runs UI States ---
-    isNewRunOpen: boolean;
-    setIsNewRunOpen: (open: boolean) => void;
+interface IdeSlice {
+    // --- IDE Document Management ---
+    ideOpenDocuments: RAGDocument[];
+    ideActiveDocumentId: string | null;
+    openIdeDocument: (doc: RAGDocument) => void;
+    closeIdeDocument: (docId: string) => void;
+    closeAllIdeDocuments: () => void;
+    setActiveIdeDocument: (docId: string) => void;
+    updateIdeDocumentContent: (docId: string, content: string, isDirty?: boolean) => void;
+    markIdeDocumentSaved: (docId: string) => void;
 }
 
 interface RemmeSlice {
@@ -307,7 +334,7 @@ interface NewsSlice {
     clearSelection: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -548,47 +575,58 @@ export const useAppStore = create<AppState>()(
             // RAG Viewer
             viewMode: 'graph',
             setViewMode: (mode) => set({ viewMode: mode }),
-            openDocuments: [],
-            activeDocumentId: null,
-            openDocument: (doc) => {
-                const alreadyOpen = get().openDocuments.find(d => d.id === doc.id);
+            ragOpenDocuments: [],
+            ragActiveDocumentId: null,
+            openRagDocument: (doc) => {
+                const alreadyOpen = get().ragOpenDocuments.find(d => d.id === doc.id);
                 if (!alreadyOpen) {
                     set(state => ({
-                        openDocuments: [...state.openDocuments, doc],
+                        ragOpenDocuments: [...state.ragOpenDocuments, doc],
                         viewMode: 'rag',
-                        activeDocumentId: doc.id
+                        ragActiveDocumentId: doc.id
                     }));
                 } else {
                     // Document already open - update its targetPage and searchText for navigation
                     set(state => ({
-                        openDocuments: state.openDocuments.map(d =>
+                        ragOpenDocuments: state.ragOpenDocuments.map(d =>
                             d.id === doc.id
                                 ? { ...d, targetPage: doc.targetPage, searchText: doc.searchText }
                                 : d
                         ),
-                        activeDocumentId: doc.id,
+                        ragActiveDocumentId: doc.id,
                         viewMode: 'rag'
                     }));
                 }
             },
-            closeDocument: (docId) => {
-                const newDocs = get().openDocuments.filter(d => d.id !== docId);
-                let newActiveId = get().activeDocumentId;
+            closeRagDocument: (docId) => {
+                const newDocs = get().ragOpenDocuments.filter(d => d.id !== docId);
+                let newActiveId = get().ragActiveDocumentId;
                 if (newActiveId === docId) {
                     newActiveId = newDocs.length > 0 ? newDocs[newDocs.length - 1].id : null;
                 }
                 set({
-                    openDocuments: newDocs,
-                    activeDocumentId: newActiveId,
+                    ragOpenDocuments: newDocs,
+                    ragActiveDocumentId: newActiveId,
                     viewMode: newDocs.length === 0 ? 'graph' : 'rag'
                 });
             },
-            closeAllDocuments: () => set({
-                openDocuments: [],
-                activeDocumentId: null,
+            closeAllRagDocuments: () => set({
+                ragOpenDocuments: [],
+                ragActiveDocumentId: null,
                 viewMode: 'graph'
             }),
-            setActiveDocument: (docId) => set({ activeDocumentId: docId, viewMode: 'rag' }),
+            setActiveRagDocument: (docId) => set({ ragActiveDocumentId: docId, viewMode: 'rag' }),
+            updateRagDocumentContent: (docId, content, isDirty = false) => set(state => ({
+                ragOpenDocuments: state.ragOpenDocuments.map(doc =>
+                    doc.id === docId ? { ...doc, content, isDirty: isDirty ? true : doc.isDirty } : doc
+                )
+            })),
+            markRagDocumentSaved: (docId) => set(state => ({
+                ragOpenDocuments: state.ragOpenDocuments.map(doc =>
+                    doc.id === docId ? { ...doc, isDirty: false } : doc
+                )
+            })),
+
             sidebarTab: 'runs',
             setSidebarTab: (tab) => set({ sidebarTab: tab }),
             settingsActiveTab: 'models',
@@ -600,14 +638,14 @@ export const useAppStore = create<AppState>()(
             ragKeywordMatches: [],
             setRagKeywordMatches: (matches) => set({ ragKeywordMatches: matches }),
             addMessageToDocChat: (docId, message) => set((state) => ({
-                openDocuments: state.openDocuments.map((doc) =>
+                ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
                     doc.id === docId
                         ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
                         : doc
                 )
             })),
             updateMessageContent: (docId, messageId, newContent) => set((state) => ({
-                openDocuments: state.openDocuments.map((doc) =>
+                ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
                     doc.id === docId
                         ? {
                             ...doc,
@@ -637,13 +675,100 @@ export const useAppStore = create<AppState>()(
             showRagInsights: false,
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
-            updateDocumentContent: (docId, content, isDirty = false) => set(state => ({
-                openDocuments: state.openDocuments.map(doc =>
+
+            // --- Ide Slice ---
+            ideOpenDocuments: [],
+            ideActiveDocumentId: null,
+            openIdeDocument: (doc) => {
+                const alreadyOpen = get().ideOpenDocuments.find(d => d.id === doc.id);
+                if (!alreadyOpen) {
+                    set(state => ({
+                        ideOpenDocuments: [...state.ideOpenDocuments, doc],
+                        ideActiveDocumentId: doc.id
+                    }));
+                } else {
+                    // Update if already open (e.g. navigation params)
+                    set(state => ({
+                        ideOpenDocuments: state.ideOpenDocuments.map(d =>
+                            d.id === doc.id
+                                ? { ...d, targetPage: doc.targetPage, searchText: doc.searchText }
+                                : d
+                        ),
+                        ideActiveDocumentId: doc.id
+                    }));
+                }
+            },
+            closeIdeDocument: (docId) => {
+                const newDocs = get().ideOpenDocuments.filter(d => d.id !== docId);
+                let newActiveId = get().ideActiveDocumentId;
+                if (newActiveId === docId) {
+                    newActiveId = newDocs.length > 0 ? newDocs[newDocs.length - 1].id : null;
+                }
+                set({
+                    ideOpenDocuments: newDocs,
+                    ideActiveDocumentId: newActiveId
+                });
+            },
+            closeAllIdeDocuments: () => set({
+                ideOpenDocuments: [],
+                ideActiveDocumentId: null
+            }),
+            setActiveIdeDocument: (docId) => set({ ideActiveDocumentId: docId }),
+            updateIdeDocumentContent: (docId, content, isDirty = false) => set(state => ({
+                ideOpenDocuments: state.ideOpenDocuments.map(doc =>
                     doc.id === docId ? { ...doc, content, isDirty: isDirty ? true : doc.isDirty } : doc
                 )
             })),
-            markDocumentSaved: (docId) => set(state => ({
-                openDocuments: state.openDocuments.map(doc =>
+            markIdeDocumentSaved: (docId) => set(state => ({
+                ideOpenDocuments: state.ideOpenDocuments.map(doc =>
+                    doc.id === docId ? { ...doc, isDirty: false } : doc
+                )
+            })),
+
+            // --- Notes Slice ---
+            notesOpenDocuments: [],
+            notesActiveDocumentId: null,
+            openNotesDocument: (doc) => {
+                const alreadyOpen = get().notesOpenDocuments.find(d => d.id === doc.id);
+                if (!alreadyOpen) {
+                    set(state => ({
+                        notesOpenDocuments: [...state.notesOpenDocuments, doc],
+                        notesActiveDocumentId: doc.id
+                    }));
+                } else {
+                    set(state => ({
+                        notesOpenDocuments: state.notesOpenDocuments.map(d =>
+                            d.id === doc.id
+                                ? { ...d, targetPage: doc.targetPage, searchText: doc.searchText }
+                                : d
+                        ),
+                        notesActiveDocumentId: doc.id
+                    }));
+                }
+            },
+            closeNotesDocument: (docId) => {
+                const newDocs = get().notesOpenDocuments.filter(d => d.id !== docId);
+                let newActiveId = get().notesActiveDocumentId;
+                if (newActiveId === docId) {
+                    newActiveId = newDocs.length > 0 ? newDocs[newDocs.length - 1].id : null;
+                }
+                set({
+                    notesOpenDocuments: newDocs,
+                    notesActiveDocumentId: newActiveId
+                });
+            },
+            closeAllNotesDocuments: () => set({
+                notesOpenDocuments: [],
+                notesActiveDocumentId: null
+            }),
+            setActiveNotesDocument: (docId) => set({ notesActiveDocumentId: docId }),
+            updateNotesDocumentContent: (docId, content, isDirty = false) => set(state => ({
+                notesOpenDocuments: state.notesOpenDocuments.map(doc =>
+                    doc.id === docId ? { ...doc, content, isDirty: isDirty ? true : doc.isDirty } : doc
+                )
+            })),
+            markNotesDocumentSaved: (docId) => set(state => ({
+                notesOpenDocuments: state.notesOpenDocuments.map(doc =>
                     doc.id === docId ? { ...doc, isDirty: false } : doc
                 )
             })),
@@ -751,7 +876,7 @@ export const useAppStore = create<AppState>()(
                     : [...state.expandedRagFolders, path]
             })),
 
-            // --- Notes UI States ---
+            // --- Notes UI States moved to NotesSlice ---
             notesFiles: [],
             setNotesFiles: (files) => set({ notesFiles: files }),
             isNotesLoading: false,
@@ -1399,7 +1524,9 @@ export const useAppStore = create<AppState>()(
                 selectedNodeId: null,
                 selectedAppCardId: null,
                 selectedExplorerNodeId: null,
-                activeDocumentId: null,
+                ragActiveDocumentId: null,
+                notesActiveDocumentId: null,
+                ideActiveDocumentId: null,
                 selectedMcpServer: null,
                 selectedLibraryComponent: null,
                 showRagInsights: false,
@@ -1462,8 +1589,13 @@ export const useAppStore = create<AppState>()(
                 localModel: state.localModel,
                 viewMode: state.viewMode,
                 sidebarTab: state.sidebarTab,
-                activeDocumentId: state.activeDocumentId,
-                openDocuments: state.openDocuments,
+                activeDocumentId: state.ragActiveDocumentId,
+                openDocuments: state.ragOpenDocuments,
+                // Persist new slices
+                notesOpenDocuments: state.notesOpenDocuments,
+                notesActiveDocumentId: state.notesActiveDocumentId,
+                ideOpenDocuments: state.ideOpenDocuments,
+                ideActiveDocumentId: state.ideActiveDocumentId,
                 selectedContexts: state.selectedContexts,
                 analysisHistory: state.analysisHistory,
                 appCards: state.appCards,

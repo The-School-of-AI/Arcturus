@@ -14,20 +14,20 @@ loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/
 
 export const EditorArea: React.FC = () => {
     const {
-        openDocuments,
-        activeDocumentId,
-        updateDocumentContent,
-        markDocumentSaved,
-        setActiveDocument,
-        closeDocument,
-        closeAllDocuments
+        ideOpenDocuments,
+        ideActiveDocumentId,
+        updateIdeDocumentContent,
+        markIdeDocumentSaved,
+        setActiveIdeDocument,
+        closeIdeDocument,
+        closeAllIdeDocuments
     } = useAppStore();
 
     const { theme } = useTheme();
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
 
-    const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
 
     const handleSave = useCallback(async () => {
         if (!activeDoc || activeDoc.content === undefined) return;
@@ -40,7 +40,7 @@ export const EditorArea: React.FC = () => {
             });
 
             if (result) {
-                markDocumentSaved(activeDoc.id);
+                markIdeDocumentSaved(activeDoc.id);
                 setLastSaved(activeDoc.id);
                 setTimeout(() => setLastSaved(null), 2000);
             }
@@ -80,13 +80,13 @@ export const EditorArea: React.FC = () => {
                     const result = await window.electronAPI.invoke('fs:readFile', activeDoc.id);
 
                     if (result && result.success) {
-                        updateDocumentContent(activeDoc.id, result.content, false);
+                        updateIdeDocumentContent(activeDoc.id, result.content, false);
                     } else {
                         throw new Error(result?.error || 'Unknown error');
                     }
                 } catch (e: any) {
                     console.error("Failed to load document content", e);
-                    updateDocumentContent(activeDoc.id, `// Failed to load content.\n// Error: ${e.message || e}\n// The file might be binary or inaccessible.`, false);
+                    updateIdeDocumentContent(activeDoc.id, `// Failed to load content.\n// Error: ${e.message || e}\n// The file might be binary or inaccessible.`, false);
                 }
             };
             fetchContent();
@@ -168,28 +168,28 @@ export const EditorArea: React.FC = () => {
             {/* Tab Bar */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-10">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
-                    {openDocuments.map(doc => (
+                    {ideOpenDocuments.map(doc => (
                         <div
                             key={doc.id}
-                            onClick={() => setActiveDocument(doc.id)}
+                            onClick={() => setActiveIdeDocument(doc.id)}
                             className={cn(
                                 "group flex items-center gap-1.5 px-3 h-9 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[100px] max-w-[200px] border-x border-t border-transparent relative select-none",
-                                activeDocumentId === doc.id
-                                    ? (theme === 'dark' ? "bg-[#1e1e1e]/80 border-border text-foreground z-10" : "bg-white border-border text-foreground z-10")
+                                ideActiveDocumentId === doc.id
+                                    ? (theme === 'dark' ? "bg-background border-border text-foreground z-10 font-bold" : "bg-white border-border text-foreground z-10")
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
                             )}
                         >
                             <FileCode className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                             <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
                             {doc.isDirty && <div className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mr-1" />}
-                            <button onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }} className="p-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); closeIdeDocument(doc.id); }} className="p-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <X className="w-3 h-3" />
                             </button>
                         </div>
                     ))}
                 </div>
                 <div className="flex items-center gap-2">
-                    {lastSaved === activeDocumentId && (
+                    {lastSaved === ideActiveDocumentId && (
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-500/10 text-green-500 text-[10px] font-medium">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Saved</span>
@@ -220,7 +220,7 @@ export const EditorArea: React.FC = () => {
                             const filename = activeDoc.id.split(':').pop() || '';
                             return <DiffEditor height="100%" original={activeDoc.originalContent || ''} modified={activeDoc.modifiedContent || ''} language={getLanguage(filename.split('.').pop() || '')} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} beforeMount={handleBeforeMount} options={{ fontSize: 13, automaticLayout: true }} />;
                         }
-                        return <Editor height="100%" path={activeDoc.id} language={getLanguage(activeDoc.type)} value={activeDoc.content || ''} onChange={(val) => updateDocumentContent(activeDoc.id, val || '', true)} beforeMount={handleBeforeMount} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }} />;
+                        return <Editor height="100%" path={activeDoc.id} language={getLanguage(activeDoc.type)} value={activeDoc.content || ''} onChange={(val) => updateIdeDocumentContent(activeDoc.id, val || '', true)} beforeMount={handleBeforeMount} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }} />;
                     })()
                 )}
             </div>

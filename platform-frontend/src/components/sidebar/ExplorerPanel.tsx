@@ -272,8 +272,8 @@ export const ExplorerPanel: React.FC = () => {
         explorerFiles, setExplorerFiles,
         isAnalyzing, setIsAnalyzing,
         setFlowData, addToHistory,
-        openDocument,
-        activeDocumentId,
+        openIdeDocument,
+        ideActiveDocumentId,
         clipboard, setClipboard
     } = useAppStore();
 
@@ -344,7 +344,7 @@ export const ExplorerPanel: React.FC = () => {
     };
 
     const handleFileClick = (node: FileNode) => {
-        openDocument({
+        openIdeDocument({
             id: node.path,
             title: node.name,
             type: node.name.split('.').pop() || 'txt',
@@ -492,7 +492,7 @@ export const ExplorerPanel: React.FC = () => {
                     expandedFolders={isExpanded}
                     toggleFolder={toggleFolder}
                     onSelect={handleFileClick}
-                    selectedPath={activeDocumentId}
+                    selectedPath={ideActiveDocumentId}
                     onRename={handleRename}
                     onRefresh={refreshFiles}
                     onAction={handleAction}

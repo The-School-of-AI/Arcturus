@@ -279,16 +279,16 @@ const WikiLink = Mention.extend({
 
 export const NotesEditor: React.FC = () => {
     const {
-        activeDocumentId,
-        openDocuments,
-        setActiveDocument,
-        openDocument,
-        closeDocument,
-        closeAllDocuments,
+        notesActiveDocumentId,
+        notesOpenDocuments,
+        setActiveNotesDocument,
+        openNotesDocument,
+        closeNotesDocument,
+        closeAllNotesDocuments,
         isZenMode,
         toggleZenMode
     } = useAppStore();
-    const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    const activeDoc = notesOpenDocuments.find(d => d.id === notesActiveDocumentId);
 
     // States
     const [isLoading, setIsLoading] = useState(false);
@@ -311,13 +311,13 @@ export const NotesEditor: React.FC = () => {
 
     // Focus active tab on change
     useEffect(() => {
-        if (activeDocumentId) {
-            const activeTab = document.getElementById(`tab-${activeDocumentId.replace(/[^a-zA-Z0-0]/g, '-')}`);
+        if (notesActiveDocumentId) {
+            const activeTab = document.getElementById(`tab-${notesActiveDocumentId.replace(/[^a-zA-Z0-0]/g, '-')}`);
             if (activeTab) {
                 activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
         }
-    }, [activeDocumentId]);
+    }, [notesActiveDocumentId]);
 
     useEffect(() => {
         const fetchAllNotes = async () => {
@@ -343,7 +343,7 @@ export const NotesEditor: React.FC = () => {
             }
         };
         fetchAllNotes();
-    }, [activeDocumentId]);
+    }, [notesActiveDocumentId]);
 
     const handleWikiLinkClick = useCallback(async (path: string, targetLine?: number, searchText?: string) => {
         if (!path) return;
@@ -365,14 +365,14 @@ export const NotesEditor: React.FC = () => {
             await axios.get(`${API_BASE}/rag/document_content`, { params: { path: fullPath } });
 
             // Exists!
-            openDocument({
+            openNotesDocument({
                 id: fullPath,
                 title: fullPath.split('/').pop() || fullPath,
                 type: 'note',
                 targetLine: targetLine,
                 searchText: searchText
             });
-            setActiveDocument(fullPath);
+            setActiveNotesDocument(fullPath);
         } catch (e) {
             // Doesn't exist, create it
             try {
@@ -381,13 +381,13 @@ export const NotesEditor: React.FC = () => {
                 formData.append("content", `# ${fullPath.split('/').pop()?.replace('.md', '')}\n\n`);
                 await axios.post(`${API_BASE}/rag/save_file`, formData);
 
-                openDocument({ id: fullPath, title: fullPath.split('/').pop() || fullPath, type: 'note' });
-                setActiveDocument(fullPath);
+                openNotesDocument({ id: fullPath, title: fullPath.split('/').pop() || fullPath, type: 'note' });
+                setActiveNotesDocument(fullPath);
             } catch (err) {
                 console.error("Failed to create new note", err);
             }
         }
-    }, [openDocument, setActiveDocument]);
+    }, [openNotesDocument, setActiveNotesDocument]);
 
     const suggestionConfig = {
         char: '[[',
@@ -594,7 +594,7 @@ export const NotesEditor: React.FC = () => {
 
     // Helper to resolve relative image paths for rendering
     const resolveImagePath = useCallback((src: string) => {
-        if (!activeDocumentId || !src) return src;
+        if (!notesActiveDocumentId || !src) return src;
         if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('blob:')) {
             return src;
         }
@@ -608,12 +608,12 @@ export const NotesEditor: React.FC = () => {
             return src;
         }
 
-        const parts = activeDocumentId.split('/');
+        const parts = notesActiveDocumentId.split('/');
         parts.pop(); // Remove filename
         const folder = parts.join('/');
         const fullPath = folder ? `${folder}/${cleanSrc}` : cleanSrc;
         return `${API_BASE}/rag/document_content?path=${encodeURIComponent(fullPath)}`;
-    }, [activeDocumentId]);
+    }, [notesActiveDocumentId]);
 
     // Custom marked parser that resolves image paths
     // Custom marked parser that resolves image paths and handles scaling/alignment
@@ -680,14 +680,14 @@ export const NotesEditor: React.FC = () => {
 
     // Fetch Content
     useEffect(() => {
-        if (!activeDocumentId) return;
+        if (!notesActiveDocumentId) return;
 
         const fetchContent = async () => {
             setIsLoading(true);
             isFetchingRef.current = true;
             try {
                 const res = await axios.get(`${API_BASE}/rag/document_content`, {
-                    params: { path: activeDocumentId }
+                    params: { path: notesActiveDocumentId }
                 });
                 if (res.data.content !== undefined) {
                     const content = res.data.content;
@@ -713,15 +713,15 @@ export const NotesEditor: React.FC = () => {
             }
         };
         fetchContent();
-    }, [activeDocumentId, editor]); // Dependent on editor existence to set initial content
+    }, [notesActiveDocumentId, editor]); // Dependent on editor existence to set initial content
 
     // Save Logic
     const saveContent = useCallback(async (textToSave: string) => {
-        if (!activeDocumentId) return;
+        if (!notesActiveDocumentId) return;
         setIsSaving(true);
         try {
             const formData = new FormData();
-            formData.append("path", activeDocumentId);
+            formData.append("path", notesActiveDocumentId);
             formData.append("content", textToSave);
 
             const res = await axios.post(`${API_BASE}/rag/save_file`, formData, {
@@ -752,7 +752,7 @@ export const NotesEditor: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
-    }, [activeDocumentId]);
+    }, [notesActiveDocumentId]);
 
     // Auto-save logic
     useEffect(() => {
@@ -830,7 +830,7 @@ export const NotesEditor: React.FC = () => {
         }
     };
 
-    if (!activeDocumentId) {
+    if (!notesActiveDocumentId) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground/50">
                 <FileText className="w-16 h-16 opacity-10 mb-4" />
@@ -853,9 +853,9 @@ export const NotesEditor: React.FC = () => {
             <div className="flex items-center justify-between border-b border-border bg-muted/20 px-2 shrink-0 h-12">
                 {/* Left: Tabs Section */}
                 <div className="flex items-center gap-[2px] h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
-                    {openDocuments.map(doc => {
+                    {notesOpenDocuments.map(doc => {
                         const isNote = doc.type === 'note' || doc.id.endsWith('.md');
-                        const isActive = activeDocumentId === doc.id;
+                        const isActive = notesActiveDocumentId === doc.id;
                         const isUnsaved = isActive && trimmedCurrent !== trimmedLast && trimmedCurrent.length > 0;
                         const isCurrentlySaving = isActive && isSaving;
 
@@ -863,7 +863,7 @@ export const NotesEditor: React.FC = () => {
                             <div
                                 key={doc.id}
                                 id={`tab-${doc.id.replace(/[^a-zA-Z0-0]/g, '-')}`}
-                                onClick={() => setActiveDocument(doc.id)}
+                                onClick={() => setActiveNotesDocument(doc.id)}
                                 className={cn(
                                     "group flex items-center gap-1.5 px-2 h-10 mt-auto pb-1 rounded-t-xl transition-all cursor-pointer border-x border-t border-transparent relative flex-shrink-0",
                                     isActive
@@ -885,7 +885,7 @@ export const NotesEditor: React.FC = () => {
                                         <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)] animate-pulse" />
                                     ) : (
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
+                                            onClick={(e) => { e.stopPropagation(); closeNotesDocument(doc.id); }}
                                             className="p-0.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                                         >
                                             <X className="w-3 h-3" />
@@ -1180,7 +1180,7 @@ export const NotesEditor: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={closeAllDocuments}
+                                            onClick={closeAllNotesDocuments}
                                             className="h-7 px-2 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-all gap-1"
                                         >
                                             <X className="w-3.5 h-3.5" />

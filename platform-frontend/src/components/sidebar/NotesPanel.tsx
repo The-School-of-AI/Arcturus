@@ -89,9 +89,9 @@ const NoteTreeItem: React.FC<{
 
 export const NotesPanel: React.FC = () => {
     const {
-        setActiveDocument,
-        activeDocumentId,
-        openDocument,
+        setActiveNotesDocument,
+        notesActiveDocumentId,
+        openNotesDocument,
         notesFiles,
         fetchNotesFiles,
         isNotesLoading,
@@ -172,7 +172,7 @@ export const NotesPanel: React.FC = () => {
             await fetchNotesFiles();
 
             // Open it
-            openDocument({
+            openNotesDocument({
                 id: fullPath,
                 title: fileName,
                 type: 'md'
@@ -313,7 +313,7 @@ export const NotesPanel: React.FC = () => {
                                     className={cn(
                                         "group relative p-2.5 rounded-lg border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 cursor-pointer overflow-hidden bg-card/10"
                                     )}
-                                    onClick={() => openDocument({
+                                    onClick={() => openNotesDocument({
                                         id: res.file.startsWith('Notes/') ? res.file : `Notes/${res.file}`,
                                         title: (res.file || '').split('/').pop() || 'note',
                                         type: 'md',
@@ -349,14 +349,14 @@ export const NotesPanel: React.FC = () => {
                             onSelect={(item) => {
                                 setSelectedItem(item);
                                 if (item.type !== 'folder') {
-                                    openDocument({
+                                    openNotesDocument({
                                         id: item.path,
                                         title: item.name,
                                         type: item.type
                                     });
                                 }
                             }}
-                            selectedPath={activeDocumentId || selectedItem?.path}
+                            selectedPath={notesActiveDocumentId || selectedItem?.path}
                             onDelete={handleDelete}
                             expandedFolders={expandedNotesFolders}
                             toggleFolder={toggleNoteFolder}

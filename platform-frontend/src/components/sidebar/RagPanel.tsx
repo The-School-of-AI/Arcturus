@@ -155,7 +155,7 @@ const FileTree: React.FC<{
 
 export const RagPanel: React.FC = () => {
     const {
-        openDocument,
+        openRagDocument,
         setRagSearchResults,
         ragSearchResults,
         ragKeywordMatches,
@@ -335,7 +335,7 @@ export const RagPanel: React.FC = () => {
 
     const handleOpenDoc = (item: RagItem) => {
         if (item.type === 'folder') return;
-        openDocument({
+        openRagDocument({
             id: item.path,
             title: item.name,
             type: item.type
@@ -595,7 +595,7 @@ export const RagPanel: React.FC = () => {
                                         "hover:shadow-lg hover:border-primary/50",
                                         "border-border/50"
                                     )}
-                                    onClick={() => source && openDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
+                                    onClick={() => source && openRagDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
                                     <div className="flex items-center gap-1.5 mb-1">
                                         <FileText className="w-2.5 h-2.5 text-red-400" />
@@ -631,7 +631,7 @@ export const RagPanel: React.FC = () => {
                                 onClick={() => {
                                     // Open the file at the first match
                                     const first = matches[0];
-                                    openDocument({
+                                    openRagDocument({
                                         id: first.file,
                                         title: first.file.split('/').pop() || 'file',
                                         type: first.file.split('.').pop() || 'txt',

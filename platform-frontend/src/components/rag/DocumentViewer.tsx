@@ -121,13 +121,13 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
 
 export const DocumentViewer: React.FC = () => {
     const {
-        activeDocumentId,
-        openDocuments,
+        ragActiveDocumentId,
+        ragOpenDocuments,
         viewMode,
         addSelectedContext,
-        setActiveDocument,
-        closeDocument,
-        closeAllDocuments,
+        setActiveRagDocument,
+        closeRagDocument,
+        closeAllRagDocuments,
         showRagInsights,
         toggleRagInsights
     } = useAppStore();
@@ -152,7 +152,7 @@ export const DocumentViewer: React.FC = () => {
     const [insightsQuestion, setInsightsQuestion] = useState('');
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
-    const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    const activeDoc = ragOpenDocuments.find(d => d.id === ragActiveDocumentId);
     // ✅ CORRECT: Call the plugin hooks at the top level
     const searchPluginInstance = searchPlugin();
     const { highlight, jumpToNextMatch } = searchPluginInstance;
@@ -418,36 +418,36 @@ export const DocumentViewer: React.FC = () => {
             {/* Tab Bar - Browser Style */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-12">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
-                    {openDocuments.map(doc => (
+                    {ragOpenDocuments.map(doc => (
                         <div
                             key={doc.id}
-                            onClick={() => setActiveDocument(doc.id)}
+                            onClick={() => setActiveRagDocument(doc.id)}
                             className={cn(
                                 "group flex items-center gap-0 px-2 h-10 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[50px] max-w-[150px] border-x border-t border-transparent relative",
-                                activeDocumentId === doc.id
+                                ragActiveDocumentId === doc.id
                                     ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background"
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
                             )}
                         >
-                            {isCodeFile(doc.type) ? <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
+                            {isCodeFile(doc.type) ? <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", ragActiveDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
                             <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
                             <button
-                                onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
+                                onClick={(e) => { e.stopPropagation(); closeRagDocument(doc.id); }}
                                 className="p-1 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <X className="w-3 h-3" />
                             </button>
                         </div>
                     ))}
-                    {openDocuments.length === 0 && (
+                    {ragOpenDocuments.length === 0 && (
                         <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/90">Discovery Workspace</div>
                     )}
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {openDocuments.length > 0 && (
+                    {ragOpenDocuments.length > 0 && (
                         <button
-                            onClick={closeAllDocuments}
+                            onClick={closeAllRagDocuments}
                             className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/10 border border-border/50"
                         >
                             <X className="w-2.5 h-2.5" />
@@ -628,7 +628,7 @@ export const DocumentViewer: React.FC = () => {
                             </div>
                         ) : (
                             /* Code View */
-                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? (theme === 'dark' ? "bg-[#1e1e1e]/50" : "bg-transparent") : "bg-transparent")}>
+                            <div className={cn("h-full overflow-hidden", (viewType === 'source' && isCode) ? (theme === 'dark' ? "bg-transparent/50" : "bg-transparent") : "bg-transparent")}>
                                 {isCode && viewType === 'source' ? (
                                     <SyntaxHighlighter
                                         language={codeLang}
