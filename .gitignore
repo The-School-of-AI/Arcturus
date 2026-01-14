@@ -16,7 +16,8 @@ platform-frontend/build/
 dist/
 build/
 .bin/
-core/__pycache__/
+core/__pycache__/*
+action/sandbos_state/
 
 
 # Data & Documents (Large files/datasets)
