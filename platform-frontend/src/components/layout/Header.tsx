@@ -21,7 +21,8 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
     news: { label: 'News Feed', icon: Newspaper, color: 'text-cyan-400', subtitleSuffix: 'SOURCES' },
     learn: { label: 'Learning', icon: GraduationCap, color: 'text-neon-yellow', subtitleSuffix: 'COURSES' },
     notes: { label: 'Notes', icon: Notebook, color: 'text-blue-400', subtitleSuffix: 'NOTES' },
-    settings: { label: 'Settings', icon: Settings, color: 'text-neon-yellow', subtitleSuffix: 'CONFIG' }
+    settings: { label: 'Settings', icon: Settings, color: 'text-neon-yellow', subtitleSuffix: 'CONFIG' },
+    ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' }
 };
 
 export const Header: React.FC = () => {
@@ -33,7 +34,8 @@ export const Header: React.FC = () => {
         setIsNewsAddOpen, isRagLoading, isNewsLoading, fetchNewsSources,
         fetchApps, fetchMemories, fetchRuns, fetchMcpServers,
         newsViewMode, setNewsViewMode, setNewsSearchQuery, setSearchResults,
-        notesFiles, fetchNotesFiles, isNotesLoading
+        notesFiles, fetchNotesFiles, isNotesLoading,
+        gitSummary, fetchGitSummary
     } = useAppStore();
     const { theme } = useTheme();
 
@@ -57,6 +59,15 @@ export const Header: React.FC = () => {
         const interval = setInterval(checkOllama, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Check Git Status if in IDE
+    useEffect(() => {
+        if (sidebarTab === 'ide') {
+            fetchGitSummary();
+            const interval = setInterval(fetchGitSummary, 5000); // Check every 5s
+            return () => clearInterval(interval);
+        }
+    }, [sidebarTab, fetchGitSummary]);
 
     const handleStop = async () => {
         if (!currentRun) return;
@@ -133,9 +144,23 @@ export const Header: React.FC = () => {
                                 ? (newsViewMode === 'saved' ? 'Saved Articles' : newsViewMode === 'search' ? 'Web Search' : Array.isArray(newsSources) && newsSources.find(s => s.id === useAppStore.getState().selectedNewsSourceId)?.name || 'News Feed')
                                 : (config?.label || sidebarTab)}
                         </h2>
-                        <p className={cn("text-[9px] font-mono tracking-widest mt-1 opacity-80 uppercase", config?.color || 'text-neon-yellow')}>
-                            {getCount()} {config?.subtitleSuffix}
-                        </p>
+                        {sidebarTab === 'ide' ? (
+                            <p className={cn("text-[9px] font-mono tracking-widest mt-1 opacity-80 uppercase", config?.color || 'text-neon-yellow')}>
+                                {!gitSummary ? (
+                                    "GIT NOT FOUND"
+                                ) : gitSummary.staged > 0 ? (
+                                    <span className="text-green-400">{gitSummary.staged} STAGED</span>
+                                ) : (gitSummary.unstaged + gitSummary.untracked) > 0 ? (
+                                    <span className="text-amber-400">{gitSummary.unstaged + gitSummary.untracked} CHANGES</span>
+                                ) : (
+                                    <span className="text-muted-foreground">ALL COMMITTED</span>
+                                )}
+                            </p>
+                        ) : (
+                            <p className={cn("text-[9px] font-mono tracking-widest mt-1 opacity-80 uppercase", config?.color || 'text-neon-yellow')}>
+                                {getCount()} {config?.subtitleSuffix}
+                            </p>
+                        )}
                     </div>
 
                     {/* Action Buttons for Specific Tabs */}

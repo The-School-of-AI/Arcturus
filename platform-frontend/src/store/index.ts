@@ -283,6 +283,8 @@ interface ExplorerSlice {
     updateHistoryItem: (path: string, data: Partial<AnalysisHistoryItem>) => void;
     clipboard: { type: 'cut' | 'copy'; path: string } | null;
     setClipboard: (item: { type: 'cut' | 'copy'; path: string } | null) => void;
+    gitSummary: { branch: string; staged: number; unstaged: number; untracked: number } | null;
+    fetchGitSummary: () => Promise<void>;
 }
 
 // --- Agent Test Mode Slice ---
@@ -986,6 +988,30 @@ export const useAppStore = create<AppState>()(
                     h.path === path ? { ...h, ...data } : h
                 )
             })),
+            gitSummary: null,
+            fetchGitSummary: async () => {
+                const path = get().explorerRootPath;
+                if (!path) {
+                    set({ gitSummary: null });
+                    return;
+                }
+                try {
+                    const res = await api.get(`${API_BASE}/git/status`, { params: { path } });
+                    if (res.data) {
+                        set({
+                            gitSummary: {
+                                branch: res.data.branch,
+                                staged: res.data.staged.length,
+                                unstaged: res.data.unstaged.length,
+                                untracked: res.data.untracked.length
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // Fail silently or clear status if git fetch fails
+                    set({ gitSummary: null });
+                }
+            },
             clipboard: null,
             setClipboard: (item) => set({ clipboard: item }),
 
