@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine } from 'lucide-react';
 import { useAppStore } from '@/store';
 import type { FileContext } from '@/types';
@@ -10,8 +10,127 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '@/components/theme';
 
+const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent, ...props }: any) => {
+    const match = /language-(\w+)/.exec(className || '');
+    const [copied, setCopied] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const content = String(children).replace(/\n$/, '');
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleInsert = () => {
+        if (ideActiveDocumentId) {
+            const activeDoc = ideOpenDocuments.find((d: any) => d.id === ideActiveDocumentId);
+            if (activeDoc) {
+                const newContent = (activeDoc.content || '') + '\n' + content;
+                updateIdeDocumentContent(ideActiveDocumentId, newContent, true);
+            }
+        }
+    };
+
+    if (inline || !match) {
+        return (
+            <code className={cn("px-1.5 py-0.5 rounded-md bg-muted/50 font-mono text-[11px] text-primary/80 border border-border/30", className)} {...props}>
+                {children}
+            </code>
+        );
+    }
+
+    return (
+        <div className={cn(
+            "relative group my-4 rounded-sm overflow-hidden border shadow-xl transition-all hover:border-primary/40",
+            theme === 'dark'
+                ? "bg-black/40 border-border/50 backdrop-blur-sm selection:bg-primary/30"
+                : "bg-white border-slate-300 shadow-slate-200/60 selection:bg-blue-100/80 selection:text-slate-900"
+        )}>
+            <div className={cn(
+                "flex items-center justify-between px-3 py-1.5 border-b cursor-pointer select-none",
+                theme === 'dark'
+                    ? "bg-muted/40 border-border/30 backdrop-blur-md"
+                    : "bg-slate-100 border-slate-300"
+            )}
+                onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+                <div className="flex items-center gap-2">
+                    <ChevronRight className={cn(
+                        "w-3 h-3 transition-transform duration-200",
+                        !isCollapsed ? "rotate-90" : "",
+                        theme === 'dark' ? "text-muted-foreground/60" : "text-slate-500"
+                    )} />
+                    <span className={cn(
+                        "text-[10px] font-bold uppercase tracking-[2px]",
+                        theme === 'dark' ? "text-muted-foreground/60" : "text-slate-600"
+                    )}>{match[1]}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    {!isCollapsed && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleInsert(); }}
+                                className={cn(
+                                    "hover:bg-primary/20 rounded-md transition-all flex items-center gap-1.5 px-2 py-1",
+                                    theme === 'dark' ? "text-muted-foreground hover:text-primary" : "text-slate-600 hover:text-primary"
+                                )}
+                                title="Insert into active file"
+                            >
+                                <ArrowRightToLine className="w-3 h-3" />
+                                <span className="text-[9px] font-bold">INSERT</span>
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+                                className={cn(
+                                    "hover:bg-primary/20 rounded-md transition-all flex items-center gap-1.5 px-2 py-1",
+                                    theme === 'dark' ? "text-muted-foreground hover:text-primary" : "text-slate-600 hover:text-primary"
+                                )}
+                                title="Copy to clipboard"
+                            >
+                                {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
+                            </button>
+                        </div>
+                    )}
+                    {isCollapsed && (
+                        <span className="text-[9px] font-medium text-muted-foreground italic px-2">
+                            {content.split('\n').length} lines
+                        </span>
+                    )}
+                </div>
+            </div>
+            {!isCollapsed && (
+                /* @ts-ignore */
+                <SyntaxHighlighter
+                    {...props}
+                    style={theme === 'dark' ? vscDarkPlus : oneLight}
+                    language={match[1]}
+                    PreTag="div"
+                    className="!bg-transparent !m-0 !p-3 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full"
+                    codeTagProps={{
+                        style: {
+                            fontSize: '11px',
+                            fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
+                            lineHeight: '1.7',
+                            letterSpacing: '-0.3px',
+                            color: theme === 'dark' ? undefined : '#24292e'
+                        }
+                    }}
+                >
+                    {content}
+                </SyntaxHighlighter>
+            )}
+        </div>
+    );
+};
+
 const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | 'system' }> = ({ content, role }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const { theme } = useTheme();
+    const updateIdeDocumentContent = useAppStore(state => state.updateIdeDocumentContent);
+    const ideActiveDocumentId = useAppStore(state => state.ideActiveDocumentId);
+    const ideOpenDocuments = useAppStore(state => state.ideOpenDocuments);
 
     if (role === 'user') {
         return (
@@ -33,125 +152,21 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
     // Calculate approximate tokens (4 chars/token)
     const tokenCount = thinking ? Math.max(1, Math.round(thinking.length / 4)) : 0;
 
-    const { theme } = useTheme();
-    const { updateIdeDocumentContent, ideActiveDocumentId, ideOpenDocuments } = useAppStore();
-
-    const markdownComponents = {
-        code({ node, inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '');
-            const [copied, setCopied] = useState(false);
-            const [isCollapsed, setIsCollapsed] = useState(false);
-            const content = String(children).replace(/\n$/, '');
-
-            const handleCopy = () => {
-                navigator.clipboard.writeText(content);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            };
-
-            const handleInsert = () => {
-                if (ideActiveDocumentId) {
-                    const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
-                    if (activeDoc) {
-                        const newContent = (activeDoc.content || '') + '\n' + content;
-                        updateIdeDocumentContent(ideActiveDocumentId, newContent, true);
-                    }
-                }
-            };
-
-            return !inline && match ? (
-                <div className={cn(
-                    "relative group my-4 rounded-sm overflow-hidden border shadow-xl transition-all hover:border-primary/40",
-                    theme === 'dark'
-                        ? "bg-black/40 border-border/50 backdrop-blur-sm"
-                        : "bg-white border-slate-300 shadow-slate-200/60"
-                )}>
-                    <div className={cn(
-                        "flex items-center justify-between px-3 py-1.5 border-b cursor-pointer select-none",
-                        theme === 'dark'
-                            ? "bg-muted/40 border-border/30 backdrop-blur-md"
-                            : "bg-slate-100 border-slate-300"
-                    )}
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                    >
-                        <div className="flex items-center gap-2">
-                            <ChevronRight className={cn(
-                                "w-3 h-3 transition-transform duration-200",
-                                !isCollapsed ? "rotate-90" : "",
-                                theme === 'dark' ? "text-muted-foreground/60" : "text-slate-500"
-                            )} />
-                            <span className={cn(
-                                "text-[10px] font-bold uppercase tracking-[2px]",
-                                theme === 'dark' ? "text-muted-foreground/60" : "text-slate-600"
-                            )}>{match[1]}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {!isCollapsed && (
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleInsert(); }}
-                                        className={cn(
-                                            "hover:bg-primary/20 rounded-md transition-all flex items-center gap-1.5 px-2 py-1",
-                                            theme === 'dark' ? "text-muted-foreground hover:text-primary" : "text-slate-600 hover:text-primary"
-                                        )}
-                                        title="Insert into active file"
-                                    >
-                                        <ArrowRightToLine className="w-3 h-3" />
-                                        <span className="text-[9px] font-bold">INSERT</span>
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleCopy(); }}
-                                        className={cn(
-                                            "hover:bg-primary/20 rounded-md transition-all flex items-center gap-1.5 px-2 py-1",
-                                            theme === 'dark' ? "text-muted-foreground hover:text-primary" : "text-slate-600 hover:text-primary"
-                                        )}
-                                        title="Copy to clipboard"
-                                    >
-                                        {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                        <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
-                                    </button>
-                                </div>
-                            )}
-                            {isCollapsed && (
-                                <span className="text-[9px] font-medium text-muted-foreground italic px-2">
-                                    {content.split('\n').length} lines
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    {!isCollapsed && (
-                        /* @ts-ignore */
-                        <SyntaxHighlighter
-                            {...props}
-                            style={theme === 'dark' ? vscDarkPlus : oneLight}
-                            language={match[1]}
-                            PreTag="div"
-                            className="!bg-transparent !m-0 !p-3 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full"
-                            codeTagProps={{
-                                style: {
-                                    fontSize: '11px',
-                                    fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
-                                    lineHeight: '1.7',
-                                    letterSpacing: '-0.3px',
-                                    color: theme === 'dark' ? undefined : '#24292e' // Force darker text in light mode
-                                }
-                            }}
-                        >
-                            {content}
-                        </SyntaxHighlighter>
-                    )}
-                </div>
-            ) : (
-                <code className={cn("px-1.5 py-0.5 rounded-md bg-muted/50 font-mono text-[11px] text-primary/80 border border-border/30", className)} {...props}>
-                    {children}
-                </code>
-            );
-        },
+    const markdownComponents = useMemo(() => ({
+        code: (props: any) => (
+            <CodeBlock
+                {...props}
+                theme={theme}
+                ideActiveDocumentId={ideActiveDocumentId}
+                ideOpenDocuments={ideOpenDocuments}
+                updateIdeDocumentContent={updateIdeDocumentContent}
+            />
+        ),
         p: ({ children }: any) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
         ul: ({ children }: any) => <ul className="ml-4 space-y-1 mb-3 list-disc text-sm">{children}</ul>,
         ol: ({ children }: any) => <ol className="ml-4 space-y-1 mb-3 list-decimal text-sm">{children}</ol>,
         li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
-    };
+    }), [theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent]);
 
     return (
         <div className="space-y-1 min-w-0">
@@ -180,9 +195,9 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
 
 const ContextPill: React.FC<{ content: string }> = ({ content }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const { theme } = useTheme();
 
     // Simple heuristic to get a "label" for the context
-    // Usually it's code or a sentence.
     const firstLine = content.split('\n')[0].trim();
     const label = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
 
@@ -190,14 +205,17 @@ const ContextPill: React.FC<{ content: string }> = ({ content }) => {
         <div
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
-                "group flex flex-col gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-[10px] items-start rounded-md border border-primary/20 mb-1 cursor-pointer transition-all hover:bg-primary/20",
+                "group flex flex-col gap-1.5 px-3 py-1.5 rounded-md border mb-1 cursor-pointer transition-all",
+                theme === 'dark'
+                    ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                    : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm",
                 isExpanded ? "w-full max-w-full" : "max-w-fit"
             )}
         >
             <div className="flex items-center gap-2 w-full">
-                <Quote className="w-3 h-3 shrink-0 opacity-70" />
-                <span className={cn("font-medium truncate", isExpanded && "whitespace-normal")}>
-                    {isExpanded ? label : label}
+                <Quote className={cn("w-3 h-3 shrink-0", theme === 'dark' ? "opacity-70" : "opacity-90")} />
+                <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                    {label}
                 </span>
                 {!isExpanded ? (
                     <ChevronDown className="w-3 h-3 opacity-50 group-hover:opacity-100" />
@@ -206,7 +224,12 @@ const ContextPill: React.FC<{ content: string }> = ({ content }) => {
                 )}
             </div>
             {isExpanded && (
-                <div className="mt-1 w-full text-foreground/80 font-mono bg-white/5 p-2 rounded border border-white/5 whitespace-pre-wrap break-words leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className={cn(
+                    "mt-1 w-full font-mono p-2.5 rounded border whitespace-pre-wrap break-words text-[11px] leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200",
+                    theme === 'dark'
+                        ? "bg-black/40 text-foreground/90 border-white/10"
+                        : "bg-white text-slate-800 border-blue-100 shadow-inner"
+                )}>
                     {content}
                 </div>
             )}
@@ -215,7 +238,7 @@ const ContextPill: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file, onRemove }) => {
-    const { openIdeDocument } = useAppStore();
+    const openIdeDocument = useAppStore(state => state.openIdeDocument);
 
     const getIcon = () => {
         if (file.name.endsWith('.tsx') || file.name.endsWith('.ts')) return <FileCode className="w-3 h-3 text-blue-400" />;
@@ -254,41 +277,38 @@ const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file
 };
 
 export const DocumentAssistant: React.FC = () => {
-    const activeDocumentId = useAppStore(state => state.ragActiveDocumentId);
-    const openDocuments = useAppStore(state => state.ragOpenDocuments);
-
-    // Add IDE store access
+    const explorerRootPath = useAppStore(state => state.explorerRootPath);
+    const sidebarTab = useAppStore(state => state.sidebarTab);
+    const ragActiveDocumentId = useAppStore(state => state.ragActiveDocumentId);
+    const ragOpenDocuments = useAppStore(state => state.ragOpenDocuments);
     const ideActiveDocumentId = useAppStore(state => state.ideActiveDocumentId);
     const ideOpenDocuments = useAppStore(state => state.ideOpenDocuments);
-
-    const addMessageToDocChat = useAppStore(state => state.addMessageToDocChat);
-    const selectedContexts = useAppStore(state => state.selectedContexts);
-    const removeSelectedContext = useAppStore(state => state.removeSelectedContext);
-    const clearSelectedContexts = useAppStore(state => state.clearSelectedContexts);
-
-    // Chat Session Store Hooks
+    const ideProjectChatHistory = useAppStore(state => state.ideProjectChatHistory);
     const chatSessions = useAppStore(state => state.chatSessions);
     const fetchChatSessions = useAppStore(state => state.fetchChatSessions);
     const loadChatSession = useAppStore(state => state.loadChatSession);
     const createNewChatSession = useAppStore(state => state.createNewChatSession);
     const activeChatSessionId = useAppStore(state => state.activeChatSessionId);
-    const explorerRootPath = useAppStore(state => state.explorerRootPath);
-    const ideProjectChatHistory = useAppStore(state => state.ideProjectChatHistory);
+    const addMessageToDocChat = useAppStore(state => state.addMessageToDocChat);
+    const updateMessageContent = useAppStore(state => state.updateMessageContent);
+    const selectedFileContexts = useAppStore(state => state.selectedFileContexts);
+    const addSelectedFileContext = useAppStore(state => state.addSelectedFileContext);
+    const removeSelectedFileContext = useAppStore(state => state.removeSelectedFileContext);
+    const clearSelectedFileContexts = useAppStore(state => state.clearSelectedFileContexts);
+    const selectedContexts = useAppStore(state => state.selectedContexts);
+    const removeSelectedContext = useAppStore(state => state.removeSelectedContext);
+    const clearSelectedContexts = useAppStore(state => state.clearSelectedContexts);
+    const selectedModel = useAppStore(state => state.localModel); // For model selection
+    const setSelectedModel = useAppStore(state => state.setLocalModel);
+    const ollamaModels = useAppStore(state => state.ollamaModels);
+    const fetchOllamaModels = useAppStore(state => state.fetchOllamaModels);
+
 
     const [inputValue, setInputValue] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
-    const selectedModel = useAppStore(state => state.localModel);
-    const setSelectedModel = useAppStore(state => state.setLocalModel);
-    const ollamaModels = useAppStore(state => state.ollamaModels);
-    const fetchOllamaModels = useAppStore(state => state.fetchOllamaModels);
-
-    const selectedFileContexts = useAppStore(state => state.selectedFileContexts);
-    const addSelectedFileContext = useAppStore(state => state.addSelectedFileContext);
-    const removeSelectedFileContext = useAppStore(state => state.removeSelectedFileContext);
-    const clearSelectedFileContexts = useAppStore(state => state.clearSelectedFileContexts);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -312,10 +332,9 @@ export const DocumentAssistant: React.FC = () => {
     }, [isHistoryOpen, isModelMenuOpen]);
 
     // Determine active document from either RAG or IDE
-    const sidebarTab = useAppStore(state => state.sidebarTab);
     const activeDoc = (sidebarTab === 'ide' && ideActiveDocumentId)
         ? ideOpenDocuments?.find(d => d.id === ideActiveDocumentId)
-        : openDocuments.find(d => d.id === activeDocumentId);
+        : ragOpenDocuments.find(d => d.id === ragActiveDocumentId);
 
     // Fetch sessions and models on mount/doc change
     useEffect(() => {
@@ -325,7 +344,7 @@ export const DocumentAssistant: React.FC = () => {
             fetchChatSessions(isIde ? 'ide' : 'rag', targetId);
         }
         fetchOllamaModels();
-    }, [activeDoc?.id, sidebarTab, ideActiveDocumentId, explorerRootPath]);
+    }, [activeDoc?.id, sidebarTab, ideActiveDocumentId, explorerRootPath, fetchChatSessions, fetchOllamaModels]);
 
     const history = sidebarTab === 'ide' ? ideProjectChatHistory : (activeDoc?.chatHistory || []);
 
