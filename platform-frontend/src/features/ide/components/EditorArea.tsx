@@ -12,6 +12,8 @@ import { useState, useCallback } from 'react';
 // Configure Monaco to use local resources if needed, or just standard setup
 loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
 
+import { SelectionMenu } from '@/components/common/SelectionMenu';
+
 export const EditorArea: React.FC = () => {
     const {
         ideOpenDocuments,
@@ -20,12 +22,15 @@ export const EditorArea: React.FC = () => {
         markIdeDocumentSaved,
         setActiveIdeDocument,
         closeIdeDocument,
-        closeAllIdeDocuments
+        closeAllIdeDocuments,
+        addSelectedContext
     } = useAppStore();
 
     const { theme } = useTheme();
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
+
+
 
     const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
 
@@ -223,6 +228,8 @@ export const EditorArea: React.FC = () => {
                         return <Editor height="100%" path={activeDoc.id} language={getLanguage(activeDoc.type)} value={activeDoc.content || ''} onChange={(val) => updateIdeDocumentContent(activeDoc.id, val || '', true)} beforeMount={handleBeforeMount} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }} />;
                     })()
                 )}
+                {/* Global Selection Menu for ID */}
+                <SelectionMenu onAdd={(text) => addSelectedContext(text)} />
             </div>
         </div>
     );

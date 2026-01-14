@@ -8,13 +8,15 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
 import { useAppStore } from '@/store';
 
+import { SelectionMenu } from '@/components/common/SelectionMenu';
+
 export const TerminalPanel: React.FC = () => {
     const terminalRef = useRef<HTMLDivElement>(null);
     const xtermRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const { theme } = useTheme();
     const themeRef = useRef(theme);
-    const { explorerRootPath } = useAppStore();
+    const { explorerRootPath, addSelectedContext } = useAppStore();
 
     // Keep themeRef in sync
     useEffect(() => {
@@ -86,7 +88,7 @@ export const TerminalPanel: React.FC = () => {
                     window.electronAPI.send('terminal:create', { cwd: explorerRootPath });
                 }
             } catch (e) { console.error("Xterm open fail", e); }
-        }, 100); // Reduced delay since we are safer now
+        }, 100);
 
         term.onData(data => window.electronAPI?.send('terminal:incoming', data));
 
@@ -123,7 +125,10 @@ export const TerminalPanel: React.FC = () => {
                 </div>
                 <button onClick={handleRefresh} className="p-1 hover:bg-muted rounded-md"><RefreshCw className="w-3.5 h-3.5 text-muted-foreground" /></button>
             </div>
-            <div ref={terminalRef} className="flex-1 w-full h-full p-2 bg-transparent overflow-hidden" />
+            <div className="flex-1 w-full h-full relative p-2 bg-transparent overflow-hidden">
+                <div ref={terminalRef} className="w-full h-full" />
+                <SelectionMenu onAdd={(text) => addSelectedContext(text)} />
+            </div>
         </div>
     );
 };

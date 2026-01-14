@@ -58,8 +58,13 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
 };
 
 export const DocumentAssistant: React.FC = () => {
-    const activeDocumentId = useAppStore(state => state.activeDocumentId);
-    const openDocuments = useAppStore(state => state.openDocuments);
+    const activeDocumentId = useAppStore(state => state.ragActiveDocumentId);
+    const openDocuments = useAppStore(state => state.ragOpenDocuments);
+
+    // Add IDE store access
+    const ideActiveDocumentId = useAppStore(state => state.ideActiveDocumentId);
+    const ideOpenDocuments = useAppStore(state => state.ideOpenDocuments);
+
     const addMessageToDocChat = useAppStore(state => state.addMessageToDocChat);
     const selectedContexts = useAppStore(state => state.selectedContexts);
     const removeSelectedContext = useAppStore(state => state.removeSelectedContext);
@@ -70,7 +75,12 @@ export const DocumentAssistant: React.FC = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const activeDoc = openDocuments.find(d => d.id === activeDocumentId);
+    // Determine active document from either RAG or IDE
+    const sidebarTab = useAppStore(state => state.sidebarTab);
+    const activeDoc = (sidebarTab === 'ide' && ideActiveDocumentId)
+        ? ideOpenDocuments?.find(d => d.id === ideActiveDocumentId)
+        : openDocuments.find(d => d.id === activeDocumentId);
+
     const history = activeDoc?.chatHistory || [];
 
     useEffect(() => {
