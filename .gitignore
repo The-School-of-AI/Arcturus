@@ -16,6 +16,8 @@ platform-frontend/build/
 dist/
 build/
 .bin/
+core/__pycache__/
+
 
 # Data & Documents (Large files/datasets)
 data/
