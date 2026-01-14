@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine } from 'lucide-react';
 import { useAppStore } from '@/store';
 import type { FileContext } from '@/types';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { API_BASE } from '@/lib/api';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useTheme } from '@/components/theme';
 
 const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | 'system' }> = ({ content, role }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -30,6 +33,87 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
     // Calculate approximate tokens (4 chars/token)
     const tokenCount = thinking ? Math.max(1, Math.round(thinking.length / 4)) : 0;
 
+    const { theme } = useTheme();
+    const { updateIdeDocumentContent, ideActiveDocumentId, ideOpenDocuments } = useAppStore();
+
+    const markdownComponents = {
+        code({ node, inline, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || '');
+            const [copied, setCopied] = useState(false);
+            const content = String(children).replace(/\n$/, '');
+
+            const handleCopy = () => {
+                navigator.clipboard.writeText(content);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            };
+
+            const handleInsert = () => {
+                if (ideActiveDocumentId) {
+                    const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
+                    if (activeDoc) {
+                        const newContent = (activeDoc.content || '') + '\n' + content;
+                        updateIdeDocumentContent(ideActiveDocumentId, newContent, true);
+                    }
+                }
+            };
+
+            return !inline && match ? (
+                <div className="relative group my-4 rounded-sm overflow-hidden border border-border/50 shadow-xl bg-black/40 backdrop-blur-sm transition-all hover:border-primary/30">
+                    <div className="flex items-center justify-between px-2 bg-muted/40 border-b border-border/30 backdrop-blur-md">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-[2px] text-muted-foreground/60">{match[1]}</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                                onClick={handleInsert}
+                                className=" hover:bg-primary/20 rounded-md text-muted-foreground hover:text-primary transition-all flex items-center gap-1.5 px-2"
+                                title="Insert into active file"
+                            >
+                                <ArrowRightToLine className="w-3 h-3" />
+                                <span className="text-[9px] font-bold">INSERT</span>
+                            </button>
+                            <button
+                                onClick={handleCopy}
+                                className="p-1.5 hover:bg-primary/20 rounded-md text-muted-foreground hover:text-primary transition-all flex items-center gap-1.5 px-2"
+                                title="Copy to clipboard"
+                            >
+                                {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
+                            </button>
+                        </div>
+                    </div>
+                    {/* @ts-ignore */}
+                    <SyntaxHighlighter
+                        {...props}
+                        style={theme === 'dark' ? vscDarkPlus : tomorrow}
+                        language={match[1]}
+                        PreTag="div"
+                        className="!bg-transparent !m-0 !p-2 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full scrollbar-track-transparent"
+                        codeTagProps={{
+                            style: {
+                                fontSize: '11px',
+                                fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
+                                lineHeight: '1.7',
+                                letterSpacing: '-0.3px'
+                            }
+                        }}
+                    >
+                        {content}
+                    </SyntaxHighlighter>
+                </div>
+            ) : (
+                <code className={cn("px-1.5 py-0.5 rounded-md bg-muted/50 font-mono text-[11px] text-primary/80 border border-border/30", className)} {...props}>
+                    {children}
+                </code>
+            );
+        },
+        p: ({ children }: any) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
+        ul: ({ children }: any) => <ul className="ml-4 space-y-1 mb-3 list-disc text-sm">{children}</ul>,
+        ol: ({ children }: any) => <ol className="ml-4 space-y-1 mb-3 list-decimal text-sm">{children}</ol>,
+        li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
+    };
+
     return (
         <div className="space-y-1 min-w-0">
             {thinking && (
@@ -43,13 +127,13 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                     </button>
                     {isExpanded && (
                         <div className="mt-2 pl-4 border-l-2 border-primary/20 text-muted-foreground text-xs leading-relaxed">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{thinking}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{thinking}</ReactMarkdown>
                         </div>
                     )}
                 </div>
             )}
             <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground/90">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{mainAnswer || (thinking ? "" : content)}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{mainAnswer || (thinking ? "" : content)}</ReactMarkdown>
             </div>
         </div>
     );
@@ -149,6 +233,8 @@ export const DocumentAssistant: React.FC = () => {
     const loadChatSession = useAppStore(state => state.loadChatSession);
     const createNewChatSession = useAppStore(state => state.createNewChatSession);
     const activeChatSessionId = useAppStore(state => state.activeChatSessionId);
+    const explorerRootPath = useAppStore(state => state.explorerRootPath);
+    const ideProjectChatHistory = useAppStore(state => state.ideProjectChatHistory);
 
     const [inputValue, setInputValue] = useState('');
     const [isThinking, setIsThinking] = useState(false);
@@ -194,14 +280,15 @@ export const DocumentAssistant: React.FC = () => {
 
     // Fetch sessions and models on mount/doc change
     useEffect(() => {
-        if (activeDoc) {
-            const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
-            fetchChatSessions(type, activeDoc.id);
+        const isIde = sidebarTab === 'ide';
+        const targetId = isIde ? explorerRootPath : activeDoc?.id;
+        if (targetId) {
+            fetchChatSessions(isIde ? 'ide' : 'rag', targetId);
         }
         fetchOllamaModels();
-    }, [activeDoc?.id, sidebarTab, ideActiveDocumentId]);
+    }, [activeDoc?.id, sidebarTab, ideActiveDocumentId, explorerRootPath]);
 
-    const history = activeDoc?.chatHistory || [];
+    const history = sidebarTab === 'ide' ? ideProjectChatHistory : (activeDoc?.chatHistory || []);
 
     // Smart Scroll Logic
     const handleScroll = () => {
@@ -242,7 +329,9 @@ export const DocumentAssistant: React.FC = () => {
     };
 
     const handleSend = async () => {
-        if ((!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0) || !activeDoc) return;
+        const isIde = sidebarTab === 'ide';
+        const targetId = isIde ? explorerRootPath : activeDoc?.id;
+        if ((!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0) || !targetId) return;
 
         // Combine all selected text contexts
         let contextString = selectedContexts.length > 0
@@ -267,12 +356,16 @@ export const DocumentAssistant: React.FC = () => {
         // SPECIAL CASE: For Summarize/Key Takeaways, fetch FULL chunks
         if (inputValue.includes("Summarize") || inputValue.includes("Key Takeaways") || inputValue.includes("takeaways")) {
             try {
-                const res = await fetch(`${API_BASE}/rag/document_chunks?path=${encodeURIComponent(activeDoc.id)}`);
-                const data = await res.json();
-                if (data.status === 'success' && data.markdown) {
-                    // Limit context to ~30k chars to avoid token limits (adjust based on model)
-                    const chunks = data.markdown.slice(0, 30000);
-                    contextString += `\n\nFULL DOCUMENT CONTENT (Truncated to first 30k chars):\n${chunks}\n\n`;
+                // If IDE mode, we might want to fetch project summary, but for now we keep it doc-based if activeDoc exists
+                const path = activeDoc?.id || explorerRootPath;
+                if (path) {
+                    const res = await fetch(`${API_BASE}/rag/document_chunks?path=${encodeURIComponent(path)}`);
+                    const data = await res.json();
+                    if (data.status === 'success' && data.markdown) {
+                        // Limit context to ~30k chars to avoid token limits (adjust based on model)
+                        const chunks = data.markdown.slice(0, 30000);
+                        contextString += `\n\nFULL DOCUMENT CONTENT (Truncated to first 30k chars):\n${chunks}\n\n`;
+                    }
                 }
             } catch (e) {
                 console.error("Failed to fetch full context", e);
@@ -292,7 +385,7 @@ export const DocumentAssistant: React.FC = () => {
         const fullMessage = contextString + `User Question: ${inputValue}`;
         const currentPastedImage = pastedImage;
 
-        addMessageToDocChat(activeDoc.id, userMsg);
+        addMessageToDocChat(targetId, userMsg);
         setInputValue('');
         setPastedImage(null);
         clearSelectedContexts();
@@ -314,7 +407,7 @@ export const DocumentAssistant: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    docId: activeDoc.id,
+                    docId: targetId,
                     query: fullMessage,
                     history: history, // Send full history including context
                     image: currentPastedImage,
@@ -326,7 +419,7 @@ export const DocumentAssistant: React.FC = () => {
 
             // Stop thinking animation and add the empty bot message ONLY when we're ready to stream
             setIsThinking(false);
-            addMessageToDocChat(activeDoc.id, botMsg);
+            addMessageToDocChat(targetId, botMsg);
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -346,7 +439,7 @@ export const DocumentAssistant: React.FC = () => {
                             if (data.content) {
                                 accumulatedContent += data.content;
                                 // Update the SPECIFIC bot message using its ID
-                                useAppStore.getState().updateMessageContent(activeDoc.id, botMsgId, accumulatedContent);
+                                useAppStore.getState().updateMessageContent(targetId, botMsgId, accumulatedContent);
                             } else if (data.error) {
                                 console.error("Streaming error:", data.error);
                             }
@@ -366,7 +459,7 @@ export const DocumentAssistant: React.FC = () => {
             // Actually simpler: if we fail, we MUST show something.
             // Let's rely on checking if the message exists in the store? No, that's async/complex.
             // Let's use a flag.
-            addMessageToDocChat(activeDoc.id, {
+            addMessageToDocChat(targetId, {
                 ...botMsg,
                 content: "⚠️ Error communicating with AI. Please try again."
             });
@@ -375,15 +468,19 @@ export const DocumentAssistant: React.FC = () => {
         }
     };
 
-    if (!activeDoc) {
+    if (!activeDoc && !(sidebarTab === 'ide' && explorerRootPath)) {
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-card text-center space-y-4">
                 <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
                     <ScrollText className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
                 <div className="space-y-1">
-                    <h3 className="font-bold text-foreground">Document Assistant</h3>
-                    <p className="text-xs text-muted-foreground">Select a document from the library to start an interactive deep-dive.</p>
+                    <h3 className="font-bold text-foreground">{sidebarTab === 'ide' ? 'Project Assistant' : 'Document Assistant'}</h3>
+                    <p className="text-xs text-muted-foreground">
+                        {sidebarTab === 'ide'
+                            ? 'Open a project to start an interactive deep-dive into your codebase.'
+                            : 'Select a document from the library to start an interactive deep-dive.'}
+                    </p>
                 </div>
             </div>
         );
@@ -432,15 +529,20 @@ export const DocumentAssistant: React.FC = () => {
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chat</span>
-                        <span className="text-xs font-medium truncate text-foreground">{activeDoc.title}</span>
+                        <span className="text-xs font-medium truncate text-foreground">
+                            {sidebarTab === 'ide'
+                                ? (explorerRootPath?.split('/').pop() || 'Project')
+                                : activeDoc?.title}
+                        </span>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => {
-                            const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
-                            if (activeDoc) createNewChatSession(type, activeDoc.id);
+                            const isIde = sidebarTab === 'ide';
+                            const targetId = isIde ? explorerRootPath : activeDoc?.id;
+                            if (targetId) createNewChatSession(isIde ? 'ide' : 'rag', targetId);
                         }}
                         className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
                         title="New Chat"
@@ -470,8 +572,9 @@ export const DocumentAssistant: React.FC = () => {
                                         <button
                                             key={session.id}
                                             onClick={() => {
-                                                const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
-                                                if (activeDoc) loadChatSession(session.id, type, activeDoc.id);
+                                                const isIde = sidebarTab === 'ide';
+                                                const targetId = isIde ? explorerRootPath : activeDoc?.id;
+                                                if (targetId) loadChatSession(session.id, isIde ? 'ide' : 'rag', targetId);
                                                 setIsHistoryOpen(false);
                                             }}
                                             className={cn(
@@ -515,7 +618,7 @@ export const DocumentAssistant: React.FC = () => {
                     <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-8">
                         <div className="opacity-50 space-y-2">
                             <Bot className="w-8 h-8 mx-auto" />
-                            <p className="text-xs">Ask anything about this document.<br />Selected text from the viewer will be added as context automatically.</p>
+                            <p className="text-xs">Ask anything about this {sidebarTab === 'ide' ? 'project' : 'document'}.<br />Selected text will be added as context automatically.</p>
                         </div>
 
                         {/* Quick Actions */}

@@ -18,8 +18,8 @@
     "top_k": 3
   },
   "agent": {
-    "model_provider": "ollama",
-    "default_model": "nemotron-3-nano:latest",
+    "model_provider": "gemini",
+    "default_model": "gemini-2.0-flash",
     "max_steps": 3,
     "max_lifelines_per_step": 3,
     "planning_mode": "conservative",

@@ -207,6 +207,8 @@ interface NotesSlice {
 }
 
 interface IdeSlice {
+    ideProjectChatHistory: ChatMessage[];
+    setIdeProjectChatHistory: (history: ChatMessage[]) => void;
     // --- IDE Document Management ---
     ideOpenDocuments: RAGDocument[];
     ideActiveDocumentId: string | null;
@@ -695,87 +697,84 @@ export const useAppStore = create<AppState>()(
                     set({ activeChatSessionId: currentSessionId });
                 }
 
-                set((state) => ({
-                    ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
-                        doc.id === docId
-                            ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
-                            : doc
-                    ),
-                    ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
-                        doc.id === docId
-                            ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
-                            : doc
-                    )
-                }));
+                const sidebarTab = get().sidebarTab;
+                const isIde = sidebarTab === 'ide';
 
-                const finalState = get();
-                let doc = finalState.ragOpenDocuments.find((d: any) => d.id === docId);
-                let type: 'rag' | 'ide' = 'rag';
-                if (!doc) {
-                    doc = finalState.ideOpenDocuments.find((d: any) => d.id === docId);
-                    type = 'ide';
+                if (isIde) {
+                    set((state) => ({
+                        ideProjectChatHistory: [...(state.ideProjectChatHistory || []), message]
+                    }));
+                } else {
+                    set((state) => ({
+                        ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
+                            doc.id === docId
+                                ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                                : doc
+                        )
+                    }));
                 }
 
-                if (doc && currentSessionId) {
+                const finalState = get();
+                let type: 'rag' | 'ide' = isIde ? 'ide' : 'rag';
+                const targetId = isIde ? finalState.explorerRootPath : docId;
+
+                if (targetId && currentSessionId) {
                     const sessionData = {
                         id: currentSessionId,
                         target_type: type,
-                        target_id: docId,
+                        target_id: targetId,
                         title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
-                        messages: doc.chatHistory || [],
+                        messages: isIde ? finalState.ideProjectChatHistory : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || [],
                         created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
                         updated_at: Date.now() / 1000
                     };
 
                     api.saveChatSession(sessionData).then(() => {
                         if (isNewSession || sessionData.title === "New Chat") {
-                            get().fetchChatSessions(type, docId);
+                            get().fetchChatSessions(type, targetId);
                         }
                     }).catch(console.error);
                 }
             },
             updateMessageContent: (docId, messageId, newContent) => {
-                set((state) => ({
-                    ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
-                        doc.id === docId
-                            ? {
-                                ...doc,
-                                chatHistory: (doc.chatHistory || []).map(msg =>
-                                    msg.id === messageId ? { ...msg, content: newContent } : msg
-                                )
-                            }
-                            : doc
-                    ),
-                    ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
-                        doc.id === docId
-                            ? {
-                                ...doc,
-                                chatHistory: (doc.chatHistory || []).map(msg =>
-                                    msg.id === messageId ? { ...msg, content: newContent } : msg
-                                )
-                            }
-                            : doc
-                    )
-                }));
+                const sidebarTab = get().sidebarTab;
+                const isIde = sidebarTab === 'ide';
+
+                if (isIde) {
+                    set((state) => ({
+                        ideProjectChatHistory: (state.ideProjectChatHistory || []).map(msg =>
+                            msg.id === messageId ? { ...msg, content: newContent } : msg
+                        )
+                    }));
+                } else {
+                    set((state) => ({
+                        ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
+                            doc.id === docId
+                                ? {
+                                    ...doc,
+                                    chatHistory: (doc.chatHistory || []).map(msg =>
+                                        msg.id === messageId ? { ...msg, content: newContent } : msg
+                                    )
+                                }
+                                : doc
+                        )
+                    }));
+                }
 
                 // Auto-save update
                 const finalState = get();
                 const currentSessionId = finalState.activeChatSessionId;
                 if (currentSessionId) {
-                    let doc = finalState.ragOpenDocuments.find((d: any) => d.id === docId);
-                    let type: 'rag' | 'ide' = 'rag';
-                    if (!doc) {
-                        doc = finalState.ideOpenDocuments.find((d: any) => d.id === docId);
-                        type = 'ide';
-                    }
+                    let type: 'rag' | 'ide' = isIde ? 'ide' : 'rag';
+                    const targetId = isIde ? finalState.explorerRootPath : docId;
 
-                    if (doc) {
+                    if (targetId) {
                         api.saveChatSession({
                             id: currentSessionId,
                             target_type: type,
-                            target_id: docId,
+                            target_id: targetId,
                             title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
-                            messages: doc.chatHistory || [],
+                            messages: isIde ? finalState.ideProjectChatHistory : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || [],
                             created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
                             updated_at: Date.now() / 1000
                         }).catch(console.error);
@@ -811,6 +810,8 @@ export const useAppStore = create<AppState>()(
             clearSelectedFileContexts: () => set({ selectedFileContexts: [] }),
 
             // --- Ide Slice ---
+            ideProjectChatHistory: [],
+            setIdeProjectChatHistory: (history) => set({ ideProjectChatHistory: history }),
             ideOpenDocuments: [],
             ideActiveDocumentId: null,
             openIdeDocument: (doc) => {
@@ -934,16 +935,19 @@ export const useAppStore = create<AppState>()(
                 try {
                     const session = await api.getChatSession(sessionId, targetType, targetId);
 
-                    // Update Active Doc History
-                    const updateDocHistory = (docs: any[]) => docs.map(d =>
-                        d.id === targetId ? { ...d, chatHistory: session.messages } : d
-                    );
-
-                    set(state => ({
-                        activeChatSessionId: sessionId,
-                        ragOpenDocuments: targetType === 'rag' ? updateDocHistory(state.ragOpenDocuments) : state.ragOpenDocuments,
-                        ideOpenDocuments: targetType === 'ide' ? updateDocHistory(state.ideOpenDocuments) : state.ideOpenDocuments,
-                    }));
+                    if (targetType === 'ide') {
+                        set({
+                            activeChatSessionId: sessionId,
+                            ideProjectChatHistory: session.messages
+                        });
+                    } else {
+                        set(state => ({
+                            activeChatSessionId: sessionId,
+                            ragOpenDocuments: state.ragOpenDocuments.map(d =>
+                                d.id === targetId ? { ...d, chatHistory: session.messages } : d
+                            )
+                        }));
+                    }
                 } catch (e) {
                     console.error("Failed to load session", e);
                 }
@@ -952,25 +956,35 @@ export const useAppStore = create<AppState>()(
             createNewChatSession: async (targetType, targetId) => {
                 const newId = crypto.randomUUID();
 
-                // Clear current doc history
-                const clearDocHistory = (docs: any[]) => docs.map(d =>
-                    d.id === targetId ? { ...d, chatHistory: [] } : d
-                );
-
-                set(state => ({
-                    activeChatSessionId: newId,
-                    ragOpenDocuments: targetType === 'rag' ? clearDocHistory(state.ragOpenDocuments) : state.ragOpenDocuments,
-                    ideOpenDocuments: targetType === 'ide' ? clearDocHistory(state.ideOpenDocuments) : state.ideOpenDocuments,
-                    // Optimistically add to list
-                    chatSessions: [{
-                        id: newId,
-                        title: "New Chat",
-                        created_at: Date.now() / 1000,
-                        updated_at: Date.now() / 1000,
-                        preview: "",
-                        model: "default"
-                    }, ...state.chatSessions]
-                }));
+                if (targetType === 'ide') {
+                    set(state => ({
+                        activeChatSessionId: newId,
+                        ideProjectChatHistory: [],
+                        chatSessions: [{
+                            id: newId,
+                            title: "New Chat",
+                            created_at: Date.now() / 1000,
+                            updated_at: Date.now() / 1000,
+                            preview: "",
+                            model: "default"
+                        }, ...state.chatSessions]
+                    }));
+                } else {
+                    set(state => ({
+                        activeChatSessionId: newId,
+                        ragOpenDocuments: state.ragOpenDocuments.map(d =>
+                            d.id === targetId ? { ...d, chatHistory: [] } : d
+                        ),
+                        chatSessions: [{
+                            id: newId,
+                            title: "New Chat",
+                            created_at: Date.now() / 1000,
+                            updated_at: Date.now() / 1000,
+                            preview: "",
+                            model: "default"
+                        }, ...state.chatSessions]
+                    }));
+                }
             },
 
             deleteChatSession: async (sessionId, targetType, targetId) => {
@@ -1156,9 +1170,14 @@ export const useAppStore = create<AppState>()(
             setExplorerRootPath: (path) => set((state) => {
                 if (!path) return { explorerRootPath: null };
                 const filtered = state.recentProjects.filter(p => p !== path);
+
+                // When project changes, reset IDE chat state to blank
                 return {
                     explorerRootPath: path,
-                    recentProjects: [path, ...filtered].slice(0, 10)
+                    recentProjects: [path, ...filtered].slice(0, 10),
+                    ideProjectChatHistory: [],
+                    activeChatSessionId: null,
+                    chatSessions: [] // Clear sessions, they will be re-fetched for the new project
                 };
             }),
             explorerFiles: [],
