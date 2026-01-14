@@ -287,18 +287,18 @@
 .docx-viewer {
   scroll-behavior: smooth;
   @apply bg-background !important;
+  padding: 20px !important;
 }
 
 .docx-viewer .docx-wrapper {
   background-color: transparent !important;
-  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
 }
 
 .docx-viewer .docx {
-  @apply bg-white dark:bg-slate-900 shadow-2xl mt-8 mb-8 rounded-sm !important;
+  @apply bg-white p-20 mt-0 mb-0 rounded-sm text-black !important;
 }
 
 /* Syntax Highlighter Correction */

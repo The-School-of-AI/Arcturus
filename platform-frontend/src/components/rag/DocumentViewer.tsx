@@ -16,6 +16,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { api, API_BASE } from '@/lib/api';
 import { useTheme } from '@/components/theme';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Import styles
 import '@react-pdf-viewer/core/lib/styles/index.css';
@@ -259,7 +260,7 @@ export const DocumentViewer: React.FC = () => {
         const t = type.toLowerCase();
         return ['pdf', 'docx', 'doc', 'txt', 'md', 'json', 'ts', 'tsx', 'js', 'jsx', 'py', 'c', 'cpp', 'h', 'hpp', 'css', 'html', 'png', 'jpg', 'jpeg', 'gif', 'webp'].includes(t);
     };
-    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh', 'txt', 'md'].includes(type.toLowerCase());
+    const isCodeFile = (type: string) => ['py', 'js', 'ts', 'tsx', 'jsx', 'json', 'css', 'html', 'sh', 'txt'].includes(type.toLowerCase());
 
     const markdownComponents = {
         img: ({ node, ...props }: any) => (
@@ -502,7 +503,7 @@ export const DocumentViewer: React.FC = () => {
                 {/* PDF Viewer */}
                 {activeDoc?.type.toLowerCase() === 'pdf' && pdfUrl && viewType === 'source' && (
                     <div className={cn("h-full overflow-hidden", theme === 'dark' ? "bg-[#2a2a2e]" : "bg-[#ebebeb]")}>
-                        <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+                        <Worker workerUrl={pdfWorker}>
                             <Viewer
                                 fileUrl={pdfUrl}
                                 plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance, searchPluginInstance]}
@@ -528,8 +529,8 @@ export const DocumentViewer: React.FC = () => {
 
                 {/* DOCX Viewer (Source Mode) */}
                 {isDocx && viewType === 'source' && (
-                    <div className="h-full overflow-y-auto bg-background p-8 docx-viewer">
-                        <div ref={docxContainerRef} className="max-w-[900px] mx-auto min-h-full" />
+                    <div className="h-full overflow-y-auto bg-background docx-viewer">
+                        <div ref={docxContainerRef} className="max-w-[1200px] mx-auto min-h-full text-black" />
                     </div>
                 )}
 
