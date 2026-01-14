@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, Zap, Search, Library, FileSearch } from 'lucide-react';
+import { FileText, File, Folder, CheckCircle, AlertCircle, RefreshCw, ChevronRight, ChevronDown, FolderPlus, UploadCloud, Zap, Search, Library, FileSearch, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store';
 import { API_BASE } from '@/lib/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface RagItem {
     name: string;
@@ -413,32 +419,57 @@ export const RagPanel: React.FC = () => {
                 </Dialog>
             </div>
 
-            {/* Search & Mode Toggle Merged */}
-            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50 shrink-0">
-                <div className="flex items-center gap-2">
-                    <form onSubmit={handleSearchSubmit} className="relative flex-1">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            {/* Header */}
+            <div className="flex flex-col border-b border-border/50 bg-muted/20">
+                <div className="p-2 flex items-center gap-1.5 shrink-0">
+                    {/* Search */}
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                         <Input
-                            className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                            className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
                             placeholder={panelMode === 'browse' ? "Search workspace..." : "Ask your context..."}
                             value={innerSearch}
                             onChange={(e) => setInnerSearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                         />
-                    </form>
-                    <div className="flex items-center bg-card/30 p-0.5 rounded-lg border border-border/50 shrink-0">
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                        {/* Add Actions */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="Add to Knowledge Base">
+                                    <Plus className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                                    <UploadCloud className="w-4 h-4 mr-2" />
+                                    Upload File
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIsNewFolderOpen(true)}>
+                                    <FolderPlus className="w-4 h-4 mr-2" />
+                                    New Folder
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <div className="w-px h-4 bg-border/50 mx-1" />
+
+                        {/* Mode Toggles */}
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() => setPanelMode('browse')}
                                     className={cn(
-                                        "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
-                                        panelMode === 'browse'
-                                            ? "bg-primary text-white shadow-lg shadow-primary/20"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                        "h-8 w-8 transition-all",
+                                        panelMode === 'browse' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-background/80"
                                     )}
                                 >
-                                    <Library className="w-3 h-3" />
-                                </button>
+                                    <Library className="w-4 h-4" />
+                                </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-primary/20">
                                 <p className="font-bold text-sm text-primary flex items-center gap-2">
@@ -457,17 +488,17 @@ export const RagPanel: React.FC = () => {
 
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() => setPanelMode('seek')}
                                     className={cn(
-                                        "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
-                                        panelMode === 'seek'
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                        "h-8 w-8 transition-all",
+                                        panelMode === 'seek' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-background/80"
                                     )}
                                 >
-                                    <FileSearch className="w-3 h-3" />
-                                </button>
+                                    <FileSearch className="w-4 h-4" />
+                                </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-blue-400/20">
                                 <p className="font-bold text-sm text-blue-400 flex items-center gap-2">
@@ -486,17 +517,17 @@ export const RagPanel: React.FC = () => {
 
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() => setPanelMode('grep')}
                                     className={cn(
-                                        "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-300",
-                                        panelMode === 'grep'
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                        "h-8 w-8 transition-all",
+                                        panelMode === 'grep' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-background/80"
                                     )}
                                 >
-                                    <Zap className="w-3 h-3" />
-                                </button>
+                                    <Zap className="w-4 h-4" />
+                                </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-yellow-400/20">
                                 <p className="font-bold text-sm text-yellow-500 flex items-center gap-2">
@@ -512,8 +543,9 @@ export const RagPanel: React.FC = () => {
                         </Tooltip>
                     </div>
                 </div>
+
                 {panelMode === 'grep' && (
-                    <div className="flex items-center justify-between mt-2 px-1">
+                    <div className="flex items-center justify-between px-2 pb-2">
                         <div className="flex items-center gap-3">
                             <label className="flex items-center gap-1.5 cursor-pointer group">
                                 <input
