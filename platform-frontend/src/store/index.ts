@@ -66,9 +66,11 @@ interface SettingsSlice {
     mcpToolStates: Record<string, Record<string, boolean>>; // { serverName: { toolName: boolean } }
     toggleMcpTool: (serverName: string, toolName: string) => void;
     setMcpToolStates: (serverName: string, states: Record<string, boolean>) => void;
-    theme: 'dark' | 'light'; // although we force dark mostly
+    theme: 'dark' | 'light';
     localModel: string;
     setLocalModel: (model: string) => void;
+    ollamaModels: any[];
+    fetchOllamaModels: () => Promise<void>;
 }
 
 interface RagViewerSlice {
@@ -589,8 +591,29 @@ export const useAppStore = create<AppState>()(
                 // For now, let's keep setMcpToolStates local for hydration.
             },
             theme: 'dark',
-            localModel: 'mistral:latest',
+            localModel: 'qwen3-vl:8b', // Updated default to one the user has
             setLocalModel: (model) => set({ localModel: model }),
+            ollamaModels: [],
+            fetchOllamaModels: async () => {
+                try {
+                    const res = await api.get(`${API_BASE}/ollama/models`);
+                    const models = res.data.models || [];
+                    // Filter out embedding models
+                    const chatModels = models.filter((m: any) =>
+                        !m.name.toLowerCase().includes('embed') &&
+                        !m.capabilities.includes('embedding')
+                    );
+                    set({ ollamaModels: chatModels });
+
+                    // If current localModel is not in the list, and list is not empty, pick first one
+                    const current = get().localModel;
+                    if (!chatModels.some((m: any) => m.name === current) && chatModels.length > 0) {
+                        set({ localModel: chatModels[0].name });
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch Ollama models", e);
+                }
+            },
 
             // RAG Viewer
             viewMode: 'graph',

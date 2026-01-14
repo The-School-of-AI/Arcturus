@@ -81,15 +81,11 @@ export const DocumentAssistant: React.FC = () => {
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
     const selectedModel = useAppStore(state => state.localModel);
     const setSelectedModel = useAppStore(state => state.setLocalModel);
+    const ollamaModels = useAppStore(state => state.ollamaModels);
+    const fetchOllamaModels = useAppStore(state => state.fetchOllamaModels);
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isUserScrolledUp = useRef(false);
-
-    const modelOptions = [
-        { value: 'qwen3-vl:8b', label: 'Qwen 3 (Chat)' },
-        { value: 'gemma3:4b', label: 'Gemma (Fast)' },
-        { value: 'deepseek-coder:6.7b', label: 'DeepSeek (Code)' }
-    ];
 
     // Close menus on click away
     useEffect(() => {
@@ -113,12 +109,13 @@ export const DocumentAssistant: React.FC = () => {
         ? ideOpenDocuments?.find(d => d.id === ideActiveDocumentId)
         : openDocuments.find(d => d.id === activeDocumentId);
 
-    // Fetch sessions on doc change
+    // Fetch sessions and models on mount/doc change
     useEffect(() => {
         if (activeDoc) {
             const type = (sidebarTab === 'ide' && ideActiveDocumentId) ? 'ide' : 'rag';
             fetchChatSessions(type, activeDoc.id);
         }
+        fetchOllamaModels();
     }, [activeDoc?.id, sidebarTab, ideActiveDocumentId]);
 
     const history = activeDoc?.chatHistory || [];
@@ -521,29 +518,38 @@ export const DocumentAssistant: React.FC = () => {
                                     onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                                     className="h-7 px-2 flex items-center gap-2 text-[10px] font-medium bg-background border border-border rounded-sm hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
                                 >
-                                    <span>{modelOptions.find(m => m.value === selectedModel)?.label || selectedModel}</span>
+                                    <span>{selectedModel}</span>
                                     <ChevronDown className={cn("w-3 h-3 transition-transform", isModelMenuOpen && "rotate-180")} />
                                 </button>
 
                                 {isModelMenuOpen && (
-                                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-background border border-border shadow-xl rounded-lg z-50 p-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 mb-1 opacity-50">Select Model</p>
-                                        {modelOptions.map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => {
-                                                    setSelectedModel(opt.value);
-                                                    setIsModelMenuOpen(false);
-                                                }}
-                                                className={cn(
-                                                    "w-full text-left px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-[11px] flex items-center justify-between group",
-                                                    selectedModel === opt.value ? "text-primary bg-primary/5" : "text-foreground/80"
-                                                )}
-                                            >
-                                                <span>{opt.label}</span>
-                                                {selectedModel === opt.value && <div className="w-1 h-1 rounded-full bg-primary" />}
-                                            </button>
-                                        ))}
+                                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-background border border-border shadow-xl rounded-lg z-50 p-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 mb-1 opacity-50">Select Local Model</p>
+                                        <div className="max-h-64 overflow-y-auto">
+                                            {ollamaModels.length === 0 ? (
+                                                <p className="text-[10px] text-muted-foreground p-2 text-center italic">No models found</p>
+                                            ) : (
+                                                ollamaModels.map(opt => (
+                                                    <button
+                                                        key={opt.name}
+                                                        onClick={() => {
+                                                            setSelectedModel(opt.name);
+                                                            setIsModelMenuOpen(false);
+                                                        }}
+                                                        className={cn(
+                                                            "w-full text-left px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-[11px] flex items-center justify-between group",
+                                                            selectedModel === opt.name ? "text-primary bg-primary/5" : "text-foreground/80"
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">{opt.name}</span>
+                                                            <span className="text-[9px] opacity-50">{opt.size_gb}GB</span>
+                                                        </div>
+                                                        {selectedModel === opt.name && <div className="w-1 h-1 rounded-full bg-primary" />}
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

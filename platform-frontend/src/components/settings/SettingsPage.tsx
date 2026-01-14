@@ -73,9 +73,8 @@ const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[
 ];
 
 export const SettingsPage: React.FC = () => {
-    const { settingsActiveTab: activeTab } = useAppStore();
+    const { settingsActiveTab: activeTab, ollamaModels, fetchOllamaModels } = useAppStore();
     const [settings, setSettings] = useState<SettingsData | null>(null);
-    const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [promptContent, setPromptContent] = useState('');
@@ -97,14 +96,13 @@ export const SettingsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const [settingsRes, modelsRes, promptsRes, geminiRes] = await Promise.all([
+            const [settingsRes, promptsRes, geminiRes] = await Promise.all([
                 axios.get(`${API_BASE}/settings`),
-                axios.get(`${API_BASE}/ollama/models`).catch(() => ({ data: { models: [] } })),
                 axios.get(`${API_BASE}/prompts`),
                 axios.get(`${API_BASE}/gemini/status`).catch(() => ({ data: { configured: false, key_preview: null } }))
             ]);
+            await fetchOllamaModels();
             setSettings(settingsRes.data.settings);
-            setOllamaModels(modelsRes.data.models || []);
             setPrompts(promptsRes.data.prompts || []);
             setGeminiStatus(geminiRes.data);
         } catch (e: any) {
@@ -173,9 +171,8 @@ export const SettingsPage: React.FC = () => {
         try {
             await axios.post(`${API_BASE}/ollama/pull`, { name: newModelName });
             setNewModelName('');
-            // Refresh models
-            const res = await axios.get(`${API_BASE}/ollama/models`);
-            setOllamaModels(res.data.models || []);
+            // Refresh models via store
+            await fetchOllamaModels();
         } catch (e: any) {
             setError(e.response?.data?.detail || 'Failed to pull model');
         } finally {
