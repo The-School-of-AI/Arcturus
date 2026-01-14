@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File } from 'lucide-react';
 import { useAppStore } from '@/store';
+import type { FileContext } from '@/types';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -90,6 +91,45 @@ const ContextPill: React.FC<{ content: string }> = ({ content }) => {
     );
 };
 
+const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file, onRemove }) => {
+    const { openIdeDocument } = useAppStore();
+
+    const getIcon = () => {
+        if (file.name.endsWith('.tsx') || file.name.endsWith('.ts')) return <FileCode className="w-3 h-3 text-blue-400" />;
+        if (file.name.endsWith('.py')) return <FileCode className="w-3 h-3 text-green-400" />;
+        if (file.name.endsWith('.md')) return <FileText className="w-3 h-3 text-purple-400" />;
+        return <File className="w-3 h-3 text-muted-foreground" />;
+    };
+
+    return (
+        <div
+            onClick={(e) => {
+                e.stopPropagation();
+                openIdeDocument({
+                    id: file.path,
+                    title: file.name,
+                    type: file.name.split('.').pop() || 'txt'
+                });
+            }}
+            className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-accent/30 text-foreground text-[10px] font-medium rounded-md border border-border/50 cursor-pointer hover:bg-accent/50 transition-all select-none mb-1 shadow-sm"
+        >
+            {getIcon()}
+            <span className="truncate max-w-[140px]">{file.name}</span>
+            {onRemove && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove();
+                    }}
+                    className="hover:text-destructive transition-colors ml-0.5"
+                >
+                    <X className="w-3 h-3" />
+                </button>
+            )}
+        </div>
+    );
+};
+
 export const DocumentAssistant: React.FC = () => {
     const activeDocumentId = useAppStore(state => state.ragActiveDocumentId);
     const openDocuments = useAppStore(state => state.ragOpenDocuments);
@@ -119,9 +159,16 @@ export const DocumentAssistant: React.FC = () => {
     const setSelectedModel = useAppStore(state => state.setLocalModel);
     const ollamaModels = useAppStore(state => state.ollamaModels);
     const fetchOllamaModels = useAppStore(state => state.fetchOllamaModels);
+
+    const selectedFileContexts = useAppStore(state => state.selectedFileContexts);
+    const addSelectedFileContext = useAppStore(state => state.addSelectedFileContext);
+    const removeSelectedFileContext = useAppStore(state => state.removeSelectedFileContext);
+    const clearSelectedFileContexts = useAppStore(state => state.clearSelectedFileContexts);
+
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isUserScrolledUp = useRef(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Close menus on click away
     useEffect(() => {
@@ -195,12 +242,27 @@ export const DocumentAssistant: React.FC = () => {
     };
 
     const handleSend = async () => {
-        if ((!inputValue.trim() && !pastedImage) || !activeDoc) return;
+        if ((!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0) || !activeDoc) return;
 
-        // Combine all selected contexts
+        // Combine all selected text contexts
         let contextString = selectedContexts.length > 0
             ? `Context extracts from document:\n${selectedContexts.map(c => `> ${c}`).join('\n\n')}\n\n`
             : '';
+
+        // Add file contexts
+        if (selectedFileContexts.length > 0) {
+            contextString += "Attached File Contents:\n";
+            for (const file of selectedFileContexts) {
+                try {
+                    const res = await window.electronAPI.invoke('fs:readFile', file.path);
+                    if (res.success) {
+                        contextString += `\n--- FILE: ${file.name} ---\n${res.content}\n--- END FILE ---\n`;
+                    }
+                } catch (e) {
+                    console.error(`Failed to read file ${file.path}`, e);
+                }
+            }
+        }
 
         // SPECIAL CASE: For Summarize/Key Takeaways, fetch FULL chunks
         if (inputValue.includes("Summarize") || inputValue.includes("Key Takeaways") || inputValue.includes("takeaways")) {
@@ -223,6 +285,7 @@ export const DocumentAssistant: React.FC = () => {
             role: 'user' as const,
             content: inputValue + (pastedImage ? "\n\n[Pasted Image]" : ""),
             contexts: [...selectedContexts],
+            fileContexts: [...selectedFileContexts],
             timestamp: Date.now()
         };
 
@@ -233,6 +296,7 @@ export const DocumentAssistant: React.FC = () => {
         setInputValue('');
         setPastedImage(null);
         clearSelectedContexts();
+        clearSelectedFileContexts();
         setIsThinking(true);
         // Reset scroll lock
         isUserScrolledUp.current = false;
@@ -326,7 +390,40 @@ export const DocumentAssistant: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-card">
+        <div
+            className="h-full flex flex-col bg-white dark:bg-card relative"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+            onDragLeave={(e) => {
+                // Only stop if we leave the main container, not just its children
+                if (e.currentTarget === e.target) setIsDragging(false);
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                const fileData = e.dataTransfer.getData('application/arcturus-file');
+                if (fileData) {
+                    try {
+                        const file = JSON.parse(fileData);
+                        if (!selectedFileContexts.some(f => f.path === file.path)) {
+                            addSelectedFileContext(file);
+                        }
+                    } catch (e) { console.error("Drop parse error", e); }
+                }
+            }}
+        >
+            {/* Full Panel Drop Overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-[100] bg-primary/5 backdrop-blur-[2px] border-2 border-dashed border-primary/40 rounded-lg flex flex-col items-center justify-center p-8 pointer-events-none animate-in fade-in duration-200">
+                    <div className="bg-background/80 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-primary/20 scale-110">
+                        <div className="p-4 bg-primary/10 rounded-full">
+                            <Plus className="w-8 h-8 text-primary animate-bounce" />
+                        </div>
+                        <p className="text-sm font-bold text-primary">Drop file to add as context</p>
+                    </div>
+                </div>
+            )}
             {/* Header: Minimal */}
             <div className="px-4 py-3 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
                 <div className="flex items-center gap-3 overflow-hidden">
@@ -468,10 +565,13 @@ export const DocumentAssistant: React.FC = () => {
                                 msg.role === 'user' ? "max-w-[85%]" : "w-full" // User gets bubble limit, Bot gets full width
                             )}
                         >
-                            {msg.role === 'user' && msg.contexts && msg.contexts.length > 0 && (
-                                <div className="flex flex-col items-end w-full mb-1">
-                                    {msg.contexts.map((ctx, idx) => (
-                                        <ContextPill key={idx} content={ctx} />
+                            {msg.role === 'user' && ((msg.contexts && msg.contexts.length > 0) || (msg.fileContexts && msg.fileContexts.length > 0)) && (
+                                <div className="flex flex-col items-end w-full mb-1 space-y-1">
+                                    {msg.contexts?.map((ctx, idx) => (
+                                        <ContextPill key={`ctx-${idx}`} content={ctx} />
+                                    ))}
+                                    {msg.fileContexts?.map((file, idx) => (
+                                        <FilePill key={`file-${idx}`} file={file} />
                                     ))}
                                 </div>
                             )}
@@ -518,15 +618,20 @@ export const DocumentAssistant: React.FC = () => {
                     </div>
                 )}
 
-                {/* Selected Context Pills */}
-                {selectedContexts.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
+                {/* File Context Pills */}
+                {(selectedContexts.length > 0 || selectedFileContexts.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mb-3 items-start">
+                        {/* Text Contexts */}
                         {selectedContexts.map((ctx, i) => (
-                            <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20">
-                                <Quote className="w-3 h-3 shrink-0" />
-                                <span className="truncate max-w-[200px]">{ctx.substring(0, 40)}...</span>
-                                <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1"><X className="w-3 h-3" /></button>
+                            <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm">
+                                <Quote className="w-3 h-3 shrink-0 opacity-70" />
+                                <span className="truncate max-w-[160px]">{ctx.substring(0, 40)}...</span>
+                                <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
                             </div>
+                        ))}
+                        {/* File Contexts */}
+                        {selectedFileContexts.map((file, i) => (
+                            <FilePill key={`file-${i}`} file={file} onRemove={() => removeSelectedFileContext(i)} />
                         ))}
                     </div>
                 )}

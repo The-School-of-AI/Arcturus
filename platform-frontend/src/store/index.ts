@@ -8,6 +8,7 @@ import type {
     RAGDocument,
     ChatMessage,
     Memory,
+    FileContext,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
 import { api, API_BASE } from '../lib/api';
@@ -101,6 +102,10 @@ interface RagViewerSlice {
     addSelectedContext: (text: string) => void;
     removeSelectedContext: (index: number) => void;
     clearSelectedContexts: () => void;
+    selectedFileContexts: FileContext[];
+    addSelectedFileContext: (file: FileContext) => void;
+    removeSelectedFileContext: (index: number) => void;
+    clearSelectedFileContexts: () => void;
     selectedMcpServer: string | null;
     setSelectedMcpServer: (server: string | null) => void;
     settingsActiveTab: 'models' | 'rag' | 'agent' | 'prompts' | 'advanced';
@@ -796,6 +801,14 @@ export const useAppStore = create<AppState>()(
             showRagInsights: false,
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
+            selectedFileContexts: [],
+            addSelectedFileContext: (file) => set((state) => ({
+                selectedFileContexts: [...state.selectedFileContexts, file]
+            })),
+            removeSelectedFileContext: (index) => set((state) => ({
+                selectedFileContexts: state.selectedFileContexts.filter((_, i) => i !== index)
+            })),
+            clearSelectedFileContexts: () => set({ selectedFileContexts: [] }),
 
             // --- Ide Slice ---
             ideOpenDocuments: [],

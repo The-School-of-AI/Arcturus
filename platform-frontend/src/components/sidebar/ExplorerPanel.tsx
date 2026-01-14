@@ -160,6 +160,15 @@ const FileTreeItem: React.FC<{
                         )}
                         style={{ paddingLeft: `${Math.max(4, level * 12)}px` }}
                         onClick={handleClick}
+                        draggable={!isFolder}
+                        onDragStart={(e) => {
+                            if (!isFolder) {
+                                e.dataTransfer.setData('application/arcturus-file', JSON.stringify({
+                                    name: item.name,
+                                    path: item.path
+                                }));
+                            }
+                        }}
                     >
                         <div className="shrink-0 flex items-center justify-center w-4 h-4">
                             {getIcon()}

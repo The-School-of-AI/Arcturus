@@ -54,11 +54,17 @@ export interface Snapshot {
     };
 }
 
+export interface FileContext {
+    name: string;
+    path: string;
+}
+
 export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant' | 'system';
     content: string | any; // Supports mixed content (thinking)
     contexts?: string[]; // Attached context pill text
+    fileContexts?: FileContext[]; // Attached file pills
     timestamp: number;
 }
 
