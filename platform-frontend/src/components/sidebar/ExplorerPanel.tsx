@@ -282,32 +282,15 @@ export const ExplorerPanel: React.FC = () => {
     const [creationValue, setCreationValue] = useState('');
     const creationInputRef = React.useRef<HTMLInputElement>(null);
 
-    const hasCalledRefresh = React.useRef(false);
-
-    // Auto-load files when explorerRootPath changes
+    // Auto-load files on mount/change of root path
     React.useEffect(() => {
-        if (explorerRootPath && !hasCalledRefresh.current) {
-            hasCalledRefresh.current = true;
-            console.log('[ExplorerPanel] Auto-refresh triggered for:', explorerRootPath);
+        if (explorerRootPath) {
             const timer = setTimeout(() => {
                 refreshFiles();
-            }, 1500);
+            }, 1000); // Small delay to wait for backend on cold start
             return () => clearTimeout(timer);
         }
     }, [explorerRootPath]);
-
-    // Fallback: check again after 3s using getState() to avoid stale closures
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            const state = useAppStore.getState();
-            if (state.explorerRootPath && state.explorerFiles.length === 0 && !state.isAnalyzing) {
-                console.log('[ExplorerPanel] Hydration fallback triggered for:', state.explorerRootPath);
-                hasCalledRefresh.current = true;
-                refreshFiles();
-            }
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, []);
 
     React.useEffect(() => {
         if (creating && creationInputRef.current) {

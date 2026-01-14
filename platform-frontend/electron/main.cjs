@@ -57,6 +57,7 @@ function startBackend(command, args, name) {
     const proc = spawn(command, args, {
         cwd: rootPath,
         shell: true,
+        detached: true, // Allow killing the whole process group
         env: { ...process.env, PYTHONUNBUFFERED: "1" } // Ensure we see logs instantly
     });
 
@@ -103,6 +104,7 @@ function setupTerminalHandlers() {
             // Spawn python script which handles the PTY fork
             ptyProcess = spawn('python3', ['-u', bridgePath], {
                 cwd: cwd,
+                detached: true,
                 env: { ...process.env, TERM: 'xterm-256color', COLUMNS: '120', LINES: '30' },
                 stdio: ['pipe', 'pipe', 'pipe']
             });
@@ -292,12 +294,8 @@ app.on('ready', () => {
 });
 
 app.on('window-all-closed', () => {
-    if (ptyProcess) {
-        ptyProcess.kill();
-    }
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+    // Explicitly quit the app when windows are closed to trigger backend cleanup
+    app.quit();
 });
 
 app.on('activate', () => {
@@ -307,13 +305,23 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
-    console.log('[Electron] Shutting down backends...');
+    console.log('[Electron] Shutting down backends and terminal sessions...');
     backendProcesses.forEach(proc => {
-        if (proc) proc.kill();
+        if (proc && proc.pid) {
+            try {
+                // Kill process group (usually works if detached: true)
+                process.kill(-proc.pid, 'SIGTERM');
+            } catch (e) {
+                try { proc.kill(); } catch (e2) { }
+            }
+        }
     });
-    if (ptyProcess) {
+
+    if (ptyProcess && ptyProcess.pid) {
         try {
-            ptyProcess.kill();
-        } catch (e) { }
+            process.kill(-ptyProcess.pid, 'SIGTERM');
+        } catch (e) {
+            try { ptyProcess.kill(); } catch (e2) { }
+        }
     }
 });

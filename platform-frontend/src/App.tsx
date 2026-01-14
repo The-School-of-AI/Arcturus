@@ -38,14 +38,21 @@ function App() {
 
     const checkBackend = async () => {
       try {
-        await axios.get(`${API_BASE}/runs`, { timeout: 1000 });
-        setIsBackendReady(true);
-      } catch {
+        console.log(`[App] Checking backend health... (Attempt ${attempts + 1}/${maxAttempts})`);
+        const res = await axios.get(`${API_BASE}/health`, { timeout: 2000 });
+        if (res.data.status === 'ok') {
+          console.log('[App] Backend is healthy and ready.');
+          // Small extra delay to ensure everything is really settled
+          setTimeout(() => setIsBackendReady(true), 500);
+        } else {
+          throw new Error('Backend responded but is not ready');
+        }
+      } catch (err) {
         attempts++;
         if (attempts < maxAttempts) {
           setTimeout(checkBackend, 1000);
         } else {
-          // Force show UI after 30s even if backend isn't responding
+          console.error('[App] Backend check failed after max attempts. Forcing ready state.');
           setIsBackendReady(true);
         }
       }
@@ -57,10 +64,11 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <TooltipProvider>
-        {!isBackendReady && <SplashScreen />}
-        <div className={isBackendReady ? 'opacity-100 transition-opacity duration-500' : 'opacity-0'}>
+        {!isBackendReady ? (
+          <SplashScreen />
+        ) : (
           <AppLayout />
-        </div>
+        )}
       </TooltipProvider>
     </ThemeProvider>
   );

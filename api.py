@@ -93,6 +93,14 @@ app.include_router(git_router.router)
 
 
 
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "mcp_ready": True # Since lifespan finishes multi_mcp.start()
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

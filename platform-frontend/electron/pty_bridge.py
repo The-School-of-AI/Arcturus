@@ -37,6 +37,15 @@ def main():
             os._exit(1)
     else:
         # Parent process (The Bridge)
+        def kill_child(signum, frame):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except:
+                pass
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, kill_child)
+        signal.signal(signal.SIGINT, kill_child)
         try:
             while True:
                 # Watch stdin (fd 0) and master_fd (from Shell)

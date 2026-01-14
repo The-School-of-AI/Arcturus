@@ -6,14 +6,28 @@ import 'xterm/css/xterm.css';
 import { Terminal as TerminalIcon, Plus, Maximize2, X, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
-import { useAppStore } from '@/store'; // Import store
+import { useAppStore } from '@/store';
 
 export const TerminalPanel: React.FC = () => {
     const terminalRef = useRef<HTMLDivElement>(null);
     const xtermRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const { theme } = useTheme();
-    const { explorerRootPath } = useAppStore(); // Get current folder
+    const themeRef = useRef(theme);
+    const { explorerRootPath } = useAppStore();
+
+    // Keep themeRef in sync
+    useEffect(() => {
+        themeRef.current = theme;
+        if (xtermRef.current) {
+            xtermRef.current.options.theme = {
+                background: '#00000000',
+                foreground: theme === 'dark' ? '#d4d4d8' : '#000000',
+                cursor: theme === 'dark' ? '#ffffff' : '#000000',
+                selectionBackground: theme === 'dark' ? '#264f78' : '#add6ff',
+            };
+        }
+    }, [theme]);
 
     useEffect(() => {
         if (!terminalRef.current) return;
@@ -21,186 +35,95 @@ export const TerminalPanel: React.FC = () => {
         let isDisposed = false;
         let resizeObserver: ResizeObserver | null = null;
 
-        // Initialize xterm
+        // Create terminal immediately
         const term = new Terminal({
             cursorBlink: true,
             fontSize: 13,
             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            theme: theme === 'dark' ? {
-                background: '#18181b', // Matches container bg
-                foreground: '#d4d4d8',
-                cursor: '#ffffff',
-                selectionBackground: '#264f78',
-            } : {
-                background: '#ffffff',
-                foreground: '#000000',
-                cursor: '#000000',
-                selectionBackground: '#add6ff',
-            },
             allowProposedApi: true,
+            allowTransparency: true,
+            theme: {
+                background: '#00000000',
+                foreground: themeRef.current === 'dark' ? '#d4d4d8' : '#000000',
+                cursor: themeRef.current === 'dark' ? '#ffffff' : '#000000',
+                selectionBackground: themeRef.current === 'dark' ? '#264f78' : '#add6ff',
+            }
         });
 
+        // Assign refs IMMEDIATELY so other effects can operate on it
+        xtermRef.current = term;
+
         const fitAddon = new FitAddon();
-        const webLinksAddon = new WebLinksAddon();
-
         term.loadAddon(fitAddon);
-        term.loadAddon(webLinksAddon);
+        fitAddonRef.current = fitAddon;
 
-        // DELAYED MOUNT: Wait for container to be ready
+        term.loadAddon(new WebLinksAddon());
+
+        // Mount to DOM with slight delay to ensure container layout
         const mountTimeout = setTimeout(() => {
             if (isDisposed || !terminalRef.current) return;
-
             try {
+                // Ensure theme is fresh before open (in case it changed during timeout)
+                term.options.theme = {
+                    background: '#00000000',
+                    foreground: themeRef.current === 'dark' ? '#d4d4d8' : '#000000',
+                    cursor: themeRef.current === 'dark' ? '#ffffff' : '#000000',
+                    selectionBackground: themeRef.current === 'dark' ? '#264f78' : '#add6ff',
+                };
+
                 term.open(terminalRef.current);
-                xtermRef.current = term;
-                fitAddonRef.current = fitAddon;
-
-                // Initial fit if possible
-                if (terminalRef.current.clientWidth > 0 && terminalRef.current.clientHeight > 0) {
-                    fitAddon.fit();
-                }
-
-                // Focus terminal
+                fitAddon.fit();
                 term.focus();
 
-                // Setup ResizeObserver
                 resizeObserver = new ResizeObserver(() => {
-                    if (isDisposed || !terminalRef.current || !xtermRef.current) return;
-                    if (terminalRef.current.clientWidth === 0 || terminalRef.current.clientHeight === 0) return;
-
-                    try {
-                        fitAddon.fit();
-                        if (window.electronAPI) {
-                            const dims = { cols: term.cols, rows: term.rows };
-                            window.electronAPI.send('terminal:resize', dims);
-                        }
-                    } catch (e) {
-                        // Ignore resize errors
+                    if (!isDisposed && xtermRef.current) {
+                        try { fitAddon.fit(); } catch (e) { /* ignore */ }
                     }
                 });
                 resizeObserver.observe(terminalRef.current);
 
-                // Initial session create
                 if (window.electronAPI) {
-                    console.log("[Terminal] Creating initial session with cwd:", explorerRootPath);
                     window.electronAPI.send('terminal:create', { cwd: explorerRootPath });
                 }
-            } catch (e) {
-                console.error("[Terminal] Fail to open xterm:", e);
-            }
-        }, 500); // 500ms delay to ensure layout is settled
+            } catch (e) { console.error("Xterm open fail", e); }
+        }, 100); // Reduced delay since we are safer now
 
-        // IPC: Incoming data (user typing)
-        term.onData(data => {
-            if (window.electronAPI) {
-                window.electronAPI.send('terminal:incoming', data);
-            }
-        });
+        term.onData(data => window.electronAPI?.send('terminal:incoming', data));
 
-        // IPC: Outgoing data (pty output)
         if (window.electronAPI) {
-            const handleOutgoing = (data: string) => {
-                if (!isDisposed && xtermRef.current) {
-                    term.write(data);
-                }
-            };
-            window.electronAPI.receive('terminal:outgoing', handleOutgoing);
+            window.electronAPI.receive('terminal:outgoing', (data: string) => {
+                if (!isDisposed && xtermRef.current) term.write(data);
+            });
         }
 
         return () => {
             isDisposed = true;
             clearTimeout(mountTimeout);
             if (resizeObserver) resizeObserver.disconnect();
-
-            try {
-                term.dispose();
-            } catch (e) {
-                // Ignore disposal errors
-            }
+            term.dispose();
             xtermRef.current = null;
-            fitAddonRef.current = null;
         };
     }, []); // Run once on mount
 
-    // Update theme dynamically
-    useEffect(() => {
-        if (xtermRef.current && xtermRef.current.element) {
-            try {
-                xtermRef.current.options.theme = theme === 'dark' ? {
-                    background: '#18181b',
-                    foreground: '#d4d4d8',
-                    cursor: '#ffffff',
-                    selectionBackground: '#264f78',
-                } : {
-                    background: '#ffffff',
-                    foreground: '#000000',
-                    cursor: '#000000',
-                    selectionBackground: '#add6ff',
-                };
-            } catch (e) {
-                console.warn("Failed to update terminal theme", e);
-            }
-        }
-    }, [theme]);
-
-    // Sync terminal when project changes
-    useEffect(() => {
-        if (window.electronAPI && explorerRootPath && xtermRef.current) {
-            console.log("[Terminal] Project changed, requesting terminal update:", explorerRootPath);
-            window.electronAPI.send('terminal:create', { cwd: explorerRootPath });
-        }
-    }, [explorerRootPath]);
-
     const handleRefresh = () => {
-        if (window.electronAPI) {
-            // Create terminal session
-            // Pass the current explorer root path as the desired CWD
-            console.log("Initial terminal creation request...", explorerRootPath);
-            window.electronAPI.send('terminal:create', {
-                cwd: explorerRootPath
-            }); // Try simple re-create/re-connect
-            xtermRef.current?.write('\r\n\x1b[2m[Refreshing terminal connection...]\x1b[0m\r\n');
-        }
+        window.electronAPI?.send('terminal:create', { cwd: explorerRootPath });
     };
 
     return (
-        <div className={cn("h-full flex flex-col border-t transition-colors", theme === 'dark' ? "bg-background border-border/50" : "bg-white border-border")}>
-            {/* Terminal Header */}
-            <div className={cn("h-9 min-h-[36px] flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-[#27272a] bg-[#18181b]" : "border-border bg-gray-50")}>
+        <div className={cn(
+            "h-full w-full flex flex-col overflow-hidden transition-colors border-t border-border/50",
+            theme === 'dark' ? "bg-background/95" : "bg-white"
+        )}>
+            <div className={cn("h-9 flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-border/50 bg-[#1e1e1e]/50" : "border-border bg-gray-50")}>
                 <div className="flex items-center gap-4">
-                    <div className={cn("flex items-center gap-2 text-xs font-medium cursor-pointer transition-colors border-b-2 border-transparent", theme === 'dark' ? "text-[#d4d4d8] hover:text-white border-white" : "text-gray-700 hover:text-black border-black")}>
+                    <div className="flex items-center gap-2 text-xs font-bold text-primary">
                         <TerminalIcon className="w-3.5 h-3.5" />
                         <span>TERMINAL</span>
                     </div>
-                    <div className={cn("flex items-center gap-2 text-xs font-medium cursor-pointer transition-colors", theme === 'dark' ? "text-[#71717a] hover:text-[#d4d4d8]" : "text-gray-400 hover:text-gray-600")}>
-                        <span>OUTPUT</span>
-                    </div>
                 </div>
-
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={handleRefresh}
-                        className={cn("p-1 rounded-md transition-colors", theme === 'dark' ? "hover:bg-[#27272a] text-[#a1a1aa] hover:text-white" : "hover:bg-gray-200 text-gray-500 hover:text-black")}
-                        title="Reconnect"
-                    >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
-                    <button className={cn("p-1 rounded-md transition-colors", theme === 'dark' ? "hover:bg-[#27272a] text-[#a1a1aa] hover:text-white" : "hover:bg-gray-200 text-gray-500 hover:text-black")}>
-                        <Plus className="w-3.5 h-3.5" />
-                    </button>
-                    <button className={cn("p-1 rounded-md transition-colors", theme === 'dark' ? "hover:bg-[#27272a] text-[#a1a1aa] hover:text-white" : "hover:bg-gray-200 text-gray-500 hover:text-black")}>
-                        <Maximize2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button className={cn("p-1 rounded-md transition-colors", theme === 'dark' ? "hover:bg-[#27272a] text-[#a1a1aa] hover:text-white" : "hover:bg-gray-200 text-gray-500 hover:text-black")}>
-                        <X className="w-3.5 h-3.5" />
-                    </button>
-                </div>
+                <button onClick={handleRefresh} className="p-1 hover:bg-muted rounded-md"><RefreshCw className="w-3.5 h-3.5 text-muted-foreground" /></button>
             </div>
-
-            {/* Terminal Body (xterm container) */}
-            <div className="flex-1 overflow-hidden relative" style={{ padding: '8px 0 0 12px' }}>
-                <div ref={terminalRef} className="h-full w-full" />
-            </div>
+            <div ref={terminalRef} className="flex-1 w-full h-full p-2 bg-transparent overflow-hidden" />
         </div>
     );
 };
