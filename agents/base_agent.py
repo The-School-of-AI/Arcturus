@@ -93,9 +93,10 @@ class AgentRunner:
             log_step(f"🤖 {agent_type} invoked", payload={"prompt_file": config['prompt_file'], "input_keys": list(input_data.keys())}, symbol="🟦")
 
             # 4. Create model manager with user's selected model from settings
-            # Read from settings instead of hardcoded agent_config.yaml
-            from config.settings_loader import settings
-            agent_settings = settings.get("agent", {})
+            # IMPORTANT: Use reload_settings() to get fresh settings from disk
+            from config.settings_loader import reload_settings
+            fresh_settings = reload_settings()
+            agent_settings = fresh_settings.get("agent", {})
             model_provider = agent_settings.get("model_provider", "gemini")
             model_name = agent_settings.get("default_model", "gemini-2.5-flash")
             

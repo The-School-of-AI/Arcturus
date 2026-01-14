@@ -372,16 +372,28 @@ export const SettingsPage: React.FC = () => {
             m.capabilities.includes('text') && !m.capabilities.includes('embedding')
         );
 
-        // Handle model selection - updates both provider and model
+        // Handle model selection - updates both provider and model atomically
         const handleAgentModelChange = (value: string) => {
-            if (value.startsWith('gemini:')) {
-                const modelName = value.replace('gemini:', '');
-                updateSetting('agent', 'model_provider', 'gemini');
-                updateSetting('agent', 'default_model', modelName);
-            } else if (value.startsWith('ollama:')) {
-                const modelName = value.replace('ollama:', '');
-                updateSetting('agent', 'model_provider', 'ollama');
-                updateSetting('agent', 'default_model', modelName);
+            if (!settings) return;
+
+            // Find the first colon to split provider:model
+            const colonIndex = value.indexOf(':');
+            if (colonIndex === -1) return;
+
+            const provider = value.substring(0, colonIndex);
+            const modelName = value.substring(colonIndex + 1);
+
+            if (provider === 'gemini' || provider === 'ollama') {
+                // Update both fields in a single state update to prevent stale state issues
+                setSettings({
+                    ...settings,
+                    agent: {
+                        ...settings.agent,
+                        model_provider: provider as 'gemini' | 'ollama',
+                        default_model: modelName
+                    }
+                });
+                setHasChanges(true);
             }
         };
 
@@ -397,23 +409,27 @@ export const SettingsPage: React.FC = () => {
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
                     >
                         {/* Gemini Cloud Models */}
-                        <optgroup label="☁️ Gemini (Cloud)">
-                            {GEMINI_MODELS.map((m) => (
-                                <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
-                                    {m.label} — {m.description}
-                                </option>
-                            ))}
-                        </optgroup>
+                        <option disabled value="" className="text-muted-foreground font-semibold">
+                            Gemini (Cloud)
+                        </option>
+                        {GEMINI_MODELS.map((m) => (
+                            <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                &nbsp;&nbsp;{m.label} — {m.description}
+                            </option>
+                        ))}
 
                         {/* Ollama Local Models */}
                         {ollamaTextModels.length > 0 && (
-                            <optgroup label="🖥️ Ollama (Local)">
+                            <>
+                                <option disabled value="" className="text-muted-foreground font-semibold">
+                                    Ollama (Local)
+                                </option>
                                 {ollamaTextModels.map((m) => (
                                     <option key={`ollama:${m.name}`} value={`ollama:${m.name}`}>
-                                        {m.name} — Local ({m.size_gb}GB)
+                                        &nbsp;&nbsp;{m.name} — Local ({m.size_gb}GB)
                                     </option>
                                 ))}
-                            </optgroup>
+                            </>
                         )}
                     </select>
 
@@ -421,11 +437,11 @@ export const SettingsPage: React.FC = () => {
                     <div className="mt-2 flex items-center gap-2 text-xs">
                         {settings?.agent.model_provider === 'ollama' ? (
                             <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
-                                🖥️ Local Execution
+                                Local Execution
                             </span>
                         ) : (
                             <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                ☁️ Cloud Execution
+                                Cloud Execution
                             </span>
                         )}
                         <span className="text-muted-foreground">

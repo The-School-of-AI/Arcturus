@@ -330,8 +330,9 @@ A high-level overview of who the user appears to be, their primary drivers, and 
 
         # Call model using user's selected provider from settings
         # Note: This is a token-heavy task - works best with large context models
-        from config.settings_loader import settings
-        agent_settings = settings.get("agent", {})
+        from config.settings_loader import reload_settings
+        fresh_settings = reload_settings()
+        agent_settings = fresh_settings.get("agent", {})
         model_provider = agent_settings.get("model_provider", "gemini")
         model_name = agent_settings.get("default_model", "gemini-2.5-flash")
         

@@ -161,8 +161,9 @@ async def analyze_project(request: AnalyzeRequest):
             raise HTTPException(status_code=400, detail="No content found in the specified path/files for analysis.")
 
         # 3. LLM ANALYSIS - Use user's selected model from settings
-        from config.settings_loader import settings
-        agent_settings = settings.get("agent", {})
+        from config.settings_loader import reload_settings
+        fresh_settings = reload_settings()
+        agent_settings = fresh_settings.get("agent", {})
         model_provider = agent_settings.get("model_provider", "gemini")
         model_name = agent_settings.get("default_model", "gemini-2.5-flash")
         
