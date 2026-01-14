@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Editor, { loader, DiffEditor } from '@monaco-editor/react';
 import { useAppStore } from '@/store';
 import { FileCode, Loader2, X, FileText, Code2, ExternalLink, Save, CheckCircle2 } from 'lucide-react';
@@ -7,12 +7,10 @@ import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
 import { Button } from '@/components/ui/button';
-import { useState, useCallback } from 'react';
+import { SelectionMenu } from '@/components/common/SelectionMenu';
 
 // Configure Monaco to use local resources if needed, or just standard setup
 loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
-
-import { SelectionMenu } from '@/components/common/SelectionMenu';
 
 export const EditorArea: React.FC = () => {
     const {
@@ -29,10 +27,42 @@ export const EditorArea: React.FC = () => {
     const { theme } = useTheme();
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
-
-
+    const [selectionMenu, setSelectionMenu] = useState<{ visible: boolean, x: number, y: number, text: string }>({ visible: false, x: 0, y: 0, text: '' });
+    const editorRef = useRef<any>(null);
 
     const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
+
+    const handleEditorDidMount = (editor: any, monaco: any) => {
+        editorRef.current = editor;
+
+        editor.onDidChangeCursorSelection((e: any) => {
+            const selection = editor.getSelection();
+            const model = editor.getModel();
+            if (!selection || !model) {
+                setSelectionMenu(prev => ({ ...prev, visible: false }));
+                return;
+            }
+
+            const text = model.getValueInRange(selection).trim();
+            if (text.length > 0) {
+                const endPos = selection.getEndPosition();
+                const scrolledPos = editor.getScrolledVisiblePosition(endPos);
+                const domNode = editor.getDomNode();
+
+                if (scrolledPos && domNode) {
+                    const rect = domNode.getBoundingClientRect();
+                    setSelectionMenu({
+                        visible: true,
+                        x: rect.left + scrolledPos.left,
+                        y: rect.top + scrolledPos.top - 40,
+                        text
+                    });
+                }
+            } else {
+                setSelectionMenu(prev => ({ ...prev, visible: false }));
+            }
+        });
+    };
 
     const handleSave = useCallback(async () => {
         if (!activeDoc || activeDoc.content === undefined) return;
@@ -69,7 +99,6 @@ export const EditorArea: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSave]);
 
-    // Fetch content if missing
     // Fetch content if missing
     useEffect(() => {
         if (!activeDoc) return;
@@ -225,11 +254,29 @@ export const EditorArea: React.FC = () => {
                             const filename = activeDoc.id.split(':').pop() || '';
                             return <DiffEditor height="100%" original={activeDoc.originalContent || ''} modified={activeDoc.modifiedContent || ''} language={getLanguage(filename.split('.').pop() || '')} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} beforeMount={handleBeforeMount} options={{ fontSize: 13, automaticLayout: true }} />;
                         }
-                        return <Editor height="100%" path={activeDoc.id} language={getLanguage(activeDoc.type)} value={activeDoc.content || ''} onChange={(val) => updateIdeDocumentContent(activeDoc.id, val || '', true)} beforeMount={handleBeforeMount} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }} />;
+                        return <Editor
+                            height="100%"
+                            path={activeDoc.id}
+                            language={getLanguage(activeDoc.type)}
+                            value={activeDoc.content || ''}
+                            onChange={(val) => updateIdeDocumentContent(activeDoc.id, val || '', true)}
+                            beforeMount={handleBeforeMount}
+                            onMount={handleEditorDidMount}
+                            theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'}
+                            options={{ fontSize: 13, automaticLayout: true, minimap: { enabled: true } }}
+                        />;
                     })()
                 )}
-                {/* Global Selection Menu for ID */}
-                <SelectionMenu onAdd={(text) => addSelectedContext(text)} />
+                {/* Global Selection Menu for IDE */}
+                <SelectionMenu
+                    onAdd={(text) => {
+                        addSelectedContext(text);
+                        setSelectionMenu(prev => ({ ...prev, visible: false }));
+                    }}
+                    manualVisible={selectionMenu.visible}
+                    manualPosition={{ x: selectionMenu.x, y: selectionMenu.y }}
+                    manualText={selectionMenu.text}
+                />
             </div>
         </div>
     );

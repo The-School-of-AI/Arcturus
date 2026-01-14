@@ -1,13 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import 'xterm/css/xterm.css';
-import { Terminal as TerminalIcon, Plus, Maximize2, X, RefreshCw } from 'lucide-react';
+import { Terminal as TerminalIcon, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme';
 import { useAppStore } from '@/store';
-
 import { SelectionMenu } from '@/components/common/SelectionMenu';
 
 export const TerminalPanel: React.FC = () => {
@@ -17,6 +16,9 @@ export const TerminalPanel: React.FC = () => {
     const { theme } = useTheme();
     const themeRef = useRef(theme);
     const { explorerRootPath, addSelectedContext } = useAppStore();
+
+    // State for controlled SelectionMenu
+    const [selectionMenu, setSelectionMenu] = useState<{ visible: boolean, x: number, y: number, text: string }>({ visible: false, x: 0, y: 0, text: '' });
 
     // Keep themeRef in sync
     useEffect(() => {
@@ -111,6 +113,23 @@ export const TerminalPanel: React.FC = () => {
         window.electronAPI?.send('terminal:create', { cwd: explorerRootPath });
     };
 
+    const handleMouseUp = (e: React.MouseEvent) => {
+        if (!xtermRef.current) return;
+
+        // Xterm selection
+        const text = xtermRef.current.getSelection().trim();
+        if (text.length > 0) {
+            setSelectionMenu({
+                visible: true,
+                x: e.clientX,
+                y: e.clientY - 40,
+                text
+            });
+        } else {
+            setSelectionMenu(prev => ({ ...prev, visible: false }));
+        }
+    };
+
     return (
         <div className={cn(
             "h-full w-full flex flex-col overflow-hidden transition-colors border-t border-border/50",
@@ -125,9 +144,20 @@ export const TerminalPanel: React.FC = () => {
                 </div>
                 <button onClick={handleRefresh} className="p-1 hover:bg-muted rounded-md"><RefreshCw className="w-3.5 h-3.5 text-muted-foreground" /></button>
             </div>
-            <div className="flex-1 w-full h-full relative p-2 bg-transparent overflow-hidden">
+            <div
+                className="flex-1 w-full h-full relative p-2 bg-transparent overflow-hidden"
+                onMouseUp={handleMouseUp}
+            >
                 <div ref={terminalRef} className="w-full h-full" />
-                <SelectionMenu onAdd={(text) => addSelectedContext(text)} />
+                <SelectionMenu
+                    onAdd={(text) => {
+                        addSelectedContext(text);
+                        setSelectionMenu(prev => ({ ...prev, visible: false }));
+                    }}
+                    manualVisible={selectionMenu.visible}
+                    manualPosition={{ x: selectionMenu.x, y: selectionMenu.y }}
+                    manualText={selectionMenu.text}
+                />
             </div>
         </div>
     );

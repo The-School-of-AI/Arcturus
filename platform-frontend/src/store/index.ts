@@ -644,10 +644,25 @@ export const useAppStore = create<AppState>()(
                     doc.id === docId
                         ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
                         : doc
+                ),
+                ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
+                    doc.id === docId
+                        ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                        : doc
                 )
             })),
             updateMessageContent: (docId, messageId, newContent) => set((state) => ({
                 ragOpenDocuments: state.ragOpenDocuments.map((doc) =>
+                    doc.id === docId
+                        ? {
+                            ...doc,
+                            chatHistory: (doc.chatHistory || []).map(msg =>
+                                msg.id === messageId ? { ...msg, content: newContent } : msg
+                            )
+                        }
+                        : doc
+                ),
+                ideOpenDocuments: state.ideOpenDocuments.map((doc) =>
                     doc.id === docId
                         ? {
                             ...doc,

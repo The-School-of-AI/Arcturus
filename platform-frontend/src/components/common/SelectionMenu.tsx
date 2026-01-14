@@ -4,16 +4,43 @@ import { cn } from '@/lib/utils';
 
 interface SelectionMenuProps {
     onAdd: (text: string) => void;
+    // Optional props for controlled usage (e.g. Monaco/Xterm)
+    manualVisible?: boolean;
+    manualPosition?: { x: number; y: number };
+    manualText?: string;
 }
 
-export const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
+export const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, manualVisible, manualPosition, manualText }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [currentText, setCurrentText] = useState("");
     const [isAdded, setIsAdded] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    // Controlled mode: sync local state with props
     useEffect(() => {
+        if (manualVisible !== undefined) {
+            setIsVisible(manualVisible);
+        }
+    }, [manualVisible]);
+
+    useEffect(() => {
+        if (manualPosition) {
+            setPosition(manualPosition);
+        }
+    }, [manualPosition]);
+
+    useEffect(() => {
+        if (manualText) {
+            setCurrentText(manualText);
+        }
+    }, [manualText]);
+
+
+    // Auto mode effect (only runs if manual props are NOT provided)
+    useEffect(() => {
+        if (manualVisible !== undefined) return;
+
         const handleSelectionChange = () => {
             const selection = window.getSelection();
             const text = selection?.toString().trim();
@@ -60,28 +87,28 @@ export const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd }) => {
             document.removeEventListener('mouseup', debouncedHandler);
             clearTimeout(timeoutId);
         };
-    }, [isAdded]);
+    }, [isAdded, manualVisible]);
 
     const handleAddClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
 
-        // Final check for text
-        const selection = window.getSelection();
-        const text = selection?.toString().trim() || currentText;
+        // Use manual text if provided, otherwise standard selection
+        const text = manualText || window.getSelection()?.toString().trim() || currentText;
 
         if (text) {
             onAdd(text);
             setIsAdded(true);
             setTimeout(() => {
-                setIsVisible(false);
+                // If it's controlled (manualVisible is set), let the parent handle hiding via prop update or timeout
+                // But for visual feedback we reset isAdded
+                if (manualVisible === undefined) setIsVisible(false);
                 setIsAdded(false);
-                // Clear selection after adding? Optional.
             }, 800);
         }
     };
 
-    if (!isVisible) return null;
+    if (!isVisible && !isAdded) return null;
 
     return (
         <div
