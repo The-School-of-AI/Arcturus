@@ -198,30 +198,24 @@ const FileTreeItem: React.FC<{
                 {isFolder && (
                     <>
                         <ContextMenuItem onClick={() => handleContextMenuAction('new-file')}>
-                            <FilePlus className="w-4 h-4 mr-2 text-muted-foreground" />
                             New File
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleContextMenuAction('new-folder')}>
-                            <FolderPlus className="w-4 h-4 mr-2 text-muted-foreground" />
                             New Folder
                         </ContextMenuItem>
-                        <ContextMenuSeparator />
+
                     </>
                 )}
 
                 <ContextMenuItem onClick={() => handleContextMenuAction('cut')}>
-                    <Scissors className="w-4 h-4 mr-2 text-muted-foreground" />
                     Cut
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => handleContextMenuAction('copy')}>
-                    <Copy className="w-4 h-4 mr-2 text-muted-foreground" />
                     Copy
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => handleContextMenuAction('paste')} disabled={!clipboard}>
-                    <Clipboard className="w-4 h-4 mr-2 text-muted-foreground" />
                     Paste
                 </ContextMenuItem>
-                <ContextMenuSeparator />
 
                 <ContextMenuItem onClick={() => handleContextMenuAction('copy-relative-path')}>
                     Copy Relative Path
@@ -229,25 +223,21 @@ const FileTreeItem: React.FC<{
                 <ContextMenuItem onClick={() => handleContextMenuAction('copy-absolute-path')}>
                     Copy Absolute Path
                 </ContextMenuItem>
-                <ContextMenuSeparator />
 
                 {isFolder && (
                     <ContextMenuItem onClick={() => handleContextMenuAction('terminal')}>
-                        <TerminalIcon className="w-4 h-4 mr-2 text-muted-foreground" />
+                        <TerminalIcon className="w-4 h-4 text-muted-foreground" />
                         Open in Terminal
                     </ContextMenuItem>
                 )}
                 <ContextMenuItem onClick={() => handleContextMenuAction('reveal')}>
-                    <ExternalLink className="w-4 h-4 mr-2 text-muted-foreground" />
                     Locate on Computer
                 </ContextMenuItem>
-                <ContextMenuSeparator />
 
                 <ContextMenuItem onClick={() => handleContextMenuAction('rename')}>
                     Rename
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleContextMenuAction('delete')} className="text-red-500">
-                    <Trash2 className="w-4 h-4 mr-2" />
+                <ContextMenuItem onClick={() => handleContextMenuAction('delete')}>
                     Delete
                 </ContextMenuItem>
             </ContextMenuContent>
