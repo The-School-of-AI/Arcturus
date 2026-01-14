@@ -19,6 +19,7 @@ class ChatMessage(BaseModel):
     content: str
     timestamp: float
     images: Optional[List[str]] = None
+    contexts: Optional[List[str]] = None
 
 class ChatSession(BaseModel):
     id: str

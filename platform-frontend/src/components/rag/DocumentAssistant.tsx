@@ -54,6 +54,42 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
     );
 };
 
+const ContextPill: React.FC<{ content: string }> = ({ content }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Simple heuristic to get a "label" for the context
+    // Usually it's code or a sentence.
+    const firstLine = content.split('\n')[0].trim();
+    const label = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
+
+    return (
+        <div
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={cn(
+                "group flex flex-col gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-[10px] items-start rounded-md border border-primary/20 mb-1 cursor-pointer transition-all hover:bg-primary/20",
+                isExpanded ? "w-full max-w-full" : "max-w-fit"
+            )}
+        >
+            <div className="flex items-center gap-2 w-full">
+                <Quote className="w-3 h-3 shrink-0 opacity-70" />
+                <span className={cn("font-medium truncate", isExpanded && "whitespace-normal")}>
+                    {isExpanded ? label : label}
+                </span>
+                {!isExpanded ? (
+                    <ChevronDown className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                ) : (
+                    <ChevronUp className="w-3 h-3 opacity-50 group-hover:opacity-100 ml-auto" />
+                )}
+            </div>
+            {isExpanded && (
+                <div className="mt-1 w-full text-foreground/80 font-mono bg-white/5 p-2 rounded border border-white/5 whitespace-pre-wrap break-words leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                    {content}
+                </div>
+            )}
+        </div>
+    );
+};
+
 export const DocumentAssistant: React.FC = () => {
     const activeDocumentId = useAppStore(state => state.ragActiveDocumentId);
     const openDocuments = useAppStore(state => state.ragOpenDocuments);
@@ -186,6 +222,7 @@ export const DocumentAssistant: React.FC = () => {
             id: userMsgId,
             role: 'user' as const,
             content: inputValue + (pastedImage ? "\n\n[Pasted Image]" : ""),
+            contexts: [...selectedContexts],
             timestamp: Date.now()
         };
 
@@ -431,6 +468,13 @@ export const DocumentAssistant: React.FC = () => {
                                 msg.role === 'user' ? "max-w-[85%]" : "w-full" // User gets bubble limit, Bot gets full width
                             )}
                         >
+                            {msg.role === 'user' && msg.contexts && msg.contexts.length > 0 && (
+                                <div className="flex flex-col items-end w-full mb-1">
+                                    {msg.contexts.map((ctx, idx) => (
+                                        <ContextPill key={idx} content={ctx} />
+                                    ))}
+                                </div>
+                            )}
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'

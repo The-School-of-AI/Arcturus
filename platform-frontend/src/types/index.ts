@@ -58,6 +58,7 @@ export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant' | 'system';
     content: string | any; // Supports mixed content (thinking)
+    contexts?: string[]; // Attached context pill text
     timestamp: number;
 }
 
