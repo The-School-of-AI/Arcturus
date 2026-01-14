@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { API_BASE } from '@/lib/api';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '@/components/theme';
 
 const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | 'system' }> = ({ content, role }) => {
@@ -40,6 +40,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
         code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             const [copied, setCopied] = useState(false);
+            const [isCollapsed, setIsCollapsed] = useState(false);
             const content = String(children).replace(/\n$/, '');
 
             const handleCopy = () => {
@@ -59,48 +60,86 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
             };
 
             return !inline && match ? (
-                <div className="relative group my-4 rounded-sm overflow-hidden border border-border/50 shadow-xl bg-black/40 backdrop-blur-sm transition-all hover:border-primary/30">
-                    <div className="flex items-center justify-between px-2 bg-muted/40 border-b border-border/30 backdrop-blur-md">
+                <div className={cn(
+                    "relative group my-4 rounded-sm overflow-hidden border shadow-xl transition-all hover:border-primary/40",
+                    theme === 'dark'
+                        ? "bg-black/40 border-border/50 backdrop-blur-sm"
+                        : "bg-white border-slate-300 shadow-slate-200/60"
+                )}>
+                    <div className={cn(
+                        "flex items-center justify-between px-3 py-1.5 border-b cursor-pointer select-none",
+                        theme === 'dark'
+                            ? "bg-muted/40 border-border/30 backdrop-blur-md"
+                            : "bg-slate-100 border-slate-300"
+                    )}
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                    >
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-[2px] text-muted-foreground/60">{match[1]}</span>
+                            <ChevronRight className={cn(
+                                "w-3 h-3 transition-transform duration-200",
+                                !isCollapsed ? "rotate-90" : "",
+                                theme === 'dark' ? "text-muted-foreground/60" : "text-slate-500"
+                            )} />
+                            <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-[2px]",
+                                theme === 'dark' ? "text-muted-foreground/60" : "text-slate-600"
+                            )}>{match[1]}</span>
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <button
-                                onClick={handleInsert}
-                                className=" hover:bg-primary/20 rounded-md text-muted-foreground hover:text-primary transition-all flex items-center gap-1.5 px-2"
-                                title="Insert into active file"
-                            >
-                                <ArrowRightToLine className="w-3 h-3" />
-                                <span className="text-[9px] font-bold">INSERT</span>
-                            </button>
-                            <button
-                                onClick={handleCopy}
-                                className="p-1.5 hover:bg-primary/20 rounded-md text-muted-foreground hover:text-primary transition-all flex items-center gap-1.5 px-2"
-                                title="Copy to clipboard"
-                            >
-                                {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
-                            </button>
+                        <div className="flex items-center gap-1">
+                            {!isCollapsed && (
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleInsert(); }}
+                                        className={cn(
+                                            "hover:bg-primary/20 rounded-md transition-all flex items-center gap-1.5 px-2 py-1",
+                                            theme === 'dark' ? "text-muted-foreground hover:text-primary" : "text-slate-600 hover:text-primary"
+                                        )}
+                                        title="Insert into active file"
+                                    >
+                                        <ArrowRightToLine className="w-3 h-3" />
+                                        <span className="text-[9px] font-bold">INSERT</span>
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+                                        className={cn(
+                                            "hover:bg-primary/20 rounded-md transition-all flex items-center gap-1.5 px-2 py-1",
+                                            theme === 'dark' ? "text-muted-foreground hover:text-primary" : "text-slate-600 hover:text-primary"
+                                        )}
+                                        title="Copy to clipboard"
+                                    >
+                                        {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                        <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
+                                    </button>
+                                </div>
+                            )}
+                            {isCollapsed && (
+                                <span className="text-[9px] font-medium text-muted-foreground italic px-2">
+                                    {content.split('\n').length} lines
+                                </span>
+                            )}
                         </div>
                     </div>
-                    {/* @ts-ignore */}
-                    <SyntaxHighlighter
-                        {...props}
-                        style={theme === 'dark' ? vscDarkPlus : tomorrow}
-                        language={match[1]}
-                        PreTag="div"
-                        className="!bg-transparent !m-0 !p-2 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full scrollbar-track-transparent"
-                        codeTagProps={{
-                            style: {
-                                fontSize: '11px',
-                                fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
-                                lineHeight: '1.7',
-                                letterSpacing: '-0.3px'
-                            }
-                        }}
-                    >
-                        {content}
-                    </SyntaxHighlighter>
+                    {!isCollapsed && (
+                        /* @ts-ignore */
+                        <SyntaxHighlighter
+                            {...props}
+                            style={theme === 'dark' ? vscDarkPlus : oneLight}
+                            language={match[1]}
+                            PreTag="div"
+                            className="!bg-transparent !m-0 !p-3 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full"
+                            codeTagProps={{
+                                style: {
+                                    fontSize: '11px',
+                                    fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
+                                    lineHeight: '1.7',
+                                    letterSpacing: '-0.3px',
+                                    color: theme === 'dark' ? undefined : '#24292e' // Force darker text in light mode
+                                }
+                            }}
+                        >
+                            {content}
+                        </SyntaxHighlighter>
+                    )}
                 </div>
             ) : (
                 <code className={cn("px-1.5 py-0.5 rounded-md bg-muted/50 font-mono text-[11px] text-primary/80 border border-border/30", className)} {...props}>
@@ -524,9 +563,6 @@ export const DocumentAssistant: React.FC = () => {
             {/* Header: Minimal */}
             <div className="px-4 py-3 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="bg-primary/10 p-1.5 rounded-md">
-                        <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chat</span>
                         <span className="text-xs font-medium truncate text-foreground">
