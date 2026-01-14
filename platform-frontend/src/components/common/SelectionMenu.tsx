@@ -113,23 +113,23 @@ export const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, manualVisib
     return (
         <div
             ref={menuRef}
-            className="fixed z-[9999] flex items-center gap-2 p-1 bg-popover border border-border rounded-lg shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
+            className="fixed z-[9999] flex items-center bg-popover rounded-md shadow-xl animate-in fade-in zoom-in-95 duration-200"
             style={{ left: position.x, top: position.y, transform: 'translateX(-50%)' }}
             onMouseDown={(e) => e.stopPropagation()} // Prevent deselecting
         >
             <button
                 onMouseDown={handleAddClick}
                 className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all active:scale-95",
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-sm transition-all active:scale-95 shadow-lg",
                     isAdded
-                        ? "bg-green-500 text-foreground shadow-lg shadow-green-500/20"
-                        : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
+                        ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
+                        : "bg-primary text-white hover:shadow-lg hover:shadow-primary/20"
                 )}
             >
                 {isAdded ? (
-                    <><PlusCircle className="w-3.5 h-3.5" /> Added!</>
+                    <><PlusCircle className="w-3.5 h-3.5 text-white" /> Added!</>
                 ) : (
-                    <><PlusCircle className="w-3.5 h-3.5" /> Add to Context</>
+                    <><PlusCircle className="w-3.5 h-3.5 text-white" /> Add to Context</>
                 )}
             </button>
         </div>
