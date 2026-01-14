@@ -96,15 +96,22 @@ export const McpPanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-transparent text-foreground">
-            {/* Header Content with Add Button */}
-            <div className="p-3 border-b border-border/50 bg-muted/20">
+            {/* Header & Search */}
+            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <Input
+                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                        placeholder="Search servers..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                     <DialogTrigger asChild>
-                        <Button
-                            className="w-full gap-2 bg-primary text-primary-inventory hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="Add MCP Server">
                             <Plus className="w-4 h-4" />
-                            Add MCP Server
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-card border-border sm:max-w-md text-foreground">
@@ -165,19 +172,6 @@ export const McpPanel: React.FC = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-            </div>
-
-            {/* Search */}
-            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <Input
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                        placeholder="Search servers..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">

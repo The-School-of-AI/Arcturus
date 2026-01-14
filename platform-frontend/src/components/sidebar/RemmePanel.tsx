@@ -41,22 +41,35 @@ export const RemmePanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-transparent text-foreground">
-            {/* Header Content with Add Button */}
-            <div className="p-3 border-b border-border/50 bg-muted/20">
-                <div className="flex gap-2">
+            {/* Header & Search */}
+            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <Input
+                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                        placeholder="Search your memories..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                <div className="flex items-center gap-1">
                     <Button
-                        className="flex-1 gap-2 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80"
                         onClick={() => setIsAddOpen(!isAddOpen)}
+                        title="Manual Add"
                     >
                         <Plus className="w-4 h-4" />
-                        Manual Add
                     </Button>
+
                     <Button
                         variant="ghost"
                         size="icon"
                         disabled={danglingCount === 0}
                         className={cn(
-                            "h-10 w-10 shrink-0",
+                            "h-8 w-8 shrink-0",
                             danglingCount > 0
                                 ? "text-orange-400 hover:text-orange-300 hover:bg-orange-400/10"
                                 : "text-muted-foreground opacity-30 cursor-not-allowed"
@@ -70,39 +83,6 @@ export const RemmePanel: React.FC = () => {
                     >
                         <TriangleAlert className="w-4 h-4" />
                     </Button>
-                </div>
-            </div>
-
-            {/* Add New Memory Overlay/Area */}
-            {isAddOpen && (
-                <div className="p-4 bg-muted/50 border-b border-border animate-in slide-in-from-top-2">
-                    <textarea
-                        className="w-full bg-card border border-border rounded-lg p-3 text-sm text-foreground mb-3 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 transition-all placeholder:text-muted-foreground"
-                        rows={3}
-                        placeholder="Define a new fact for the agent to remember..."
-                        value={newMemoryText}
-                        onChange={(e) => setNewMemoryText(e.target.value)}
-                        autoFocus
-                    />
-                    <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                        <Button size="sm" className="bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-bold px-4" onClick={handleAdd}>
-                            Save Fact
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* Search */}
-            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <Input
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                        placeholder="Search your memories..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
                 </div>
             </div>
 

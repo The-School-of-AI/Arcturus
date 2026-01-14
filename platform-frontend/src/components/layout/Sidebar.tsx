@@ -29,7 +29,7 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     const selectedNodeId = useAppStore(state => state.selectedNodeId);
     const selectedAppCardId = useAppStore(state => state.selectedAppCardId);
     const selectedExplorerNodeId = useAppStore(state => state.selectedExplorerNodeId);
-    const activeDocumentId = useAppStore(state => state.activeDocumentId);
+    const ragActiveDocumentId = useAppStore(state => state.ragActiveDocumentId);
     const selectedMcpServer = useAppStore(state => state.selectedMcpServer);
     const selectedRagFile = useAppStore(state => state.selectedRagFile);
     const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
@@ -38,11 +38,11 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
-        if (sidebarTab === 'rag' && (activeDocumentId || selectedRagFile)) return true;
+        if (sidebarTab === 'rag' && (ragActiveDocumentId || selectedRagFile)) return true;
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel]);
 
     const handleIconClick = () => {
         if (active && isInspectorOpen) {
@@ -149,15 +149,21 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">
 
-                            {/* New Run Button */}
-                            <div className="p-3 border-b border-border/50 bg-muted/20">
+                            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
+                                <div className="relative flex-1 group">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                    <Input
+                                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                                        placeholder="Search runs..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+
                                 <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
                                     <DialogTrigger asChild>
-                                        <Button
-                                            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-semibold"
-                                        >
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Run">
                                             <Plus className="w-4 h-4" />
-                                            New Run
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className="bg-card border-border sm:max-w-lg text-foreground">
@@ -183,19 +189,6 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
-                            </div>
-
-                            {/* Search */}
-                            <div className="px-4 pt-4 pb-2 bg-transparent border-b border-border/50">
-                                <div className="relative">
-                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                                    <Input
-                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
-                                        placeholder="Search runs..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
                             </div>
 
                             {/* List - Matches Remme Style */}
