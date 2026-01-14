@@ -92,8 +92,15 @@ class AgentRunner:
             (debug_log_dir / "latest_prompt.txt").write_text(f"AGENT: {agent_type}\nCONFIG: {config['prompt_file']}\n\n{full_prompt}", encoding="utf-8")
             log_step(f"🤖 {agent_type} invoked", payload={"prompt_file": config['prompt_file'], "input_keys": list(input_data.keys())}, symbol="🟦")
 
-            # 4. Create model manager with agent's specified model
-            model_manager = ModelManager(config["model"])
+            # 4. Create model manager with user's selected model from settings
+            # Read from settings instead of hardcoded agent_config.yaml
+            from config.settings_loader import settings
+            agent_settings = settings.get("agent", {})
+            model_provider = agent_settings.get("model_provider", "gemini")
+            model_name = agent_settings.get("default_model", "gemini-2.5-flash")
+            
+            log_step(f"📡 Using {model_provider}:{model_name}", symbol="🔌")
+            model_manager = ModelManager(model_name, provider=model_provider)
             
             # 5. Generate response (with or without image)
             if image_path and os.path.exists(image_path):

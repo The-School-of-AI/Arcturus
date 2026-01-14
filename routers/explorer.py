@@ -160,8 +160,13 @@ async def analyze_project(request: AnalyzeRequest):
         if not context_str:
             raise HTTPException(status_code=400, detail="No content found in the specified path/files for analysis.")
 
-        # 3. LLM ANALYSIS
-        model = ModelManager("gemini")
+        # 3. LLM ANALYSIS - Use user's selected model from settings
+        from config.settings_loader import settings
+        agent_settings = settings.get("agent", {})
+        model_provider = agent_settings.get("model_provider", "gemini")
+        model_name = agent_settings.get("default_model", "gemini-2.5-flash")
+        
+        model = ModelManager(model_name, provider=model_provider)
         prompt = f"""
         You are an elite software architect. Analyze the following code skeleton and generate a high-level architecture map in FlowStep format.
         

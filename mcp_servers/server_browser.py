@@ -174,15 +174,30 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
         return "Error: `browser-use` library is not installed."
 
     try:
-        # Import settings for default model
+        # Import settings for model provider and name
         try:
             from config.settings_loader import settings
-            default_model = settings.get("agent", {}).get("default_model", "gemini-2.5-flash")
+            agent_settings = settings.get("agent", {})
+            model_provider = agent_settings.get("model_provider", "gemini")
+            model_name = agent_settings.get("default_model", "gemini-2.5-flash")
+            ollama_base_url = settings.get("ollama", {}).get("base_url", "http://127.0.0.1:11434")
         except:
-            default_model = "gemini-2.5-flash"
+            model_provider = "gemini"
+            model_name = "gemini-2.5-flash"
+            ollama_base_url = "http://127.0.0.1:11434"
         
-        # Initialize LLM
-        llm = ChatGoogleGenerativeAI(model=default_model, google_api_key=os.getenv("GEMINI_API_KEY"))
+        # Initialize LLM based on provider
+        if model_provider == "ollama":
+            try:
+                from langchain_ollama import ChatOllama
+                llm = ChatOllama(model=model_name, base_url=ollama_base_url)
+                print(f"🖥️ Browser Use: Using Ollama model {model_name}")
+            except ImportError:
+                print("⚠️ langchain_ollama not installed, falling back to Gemini")
+                llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
+        else:
+            llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=os.getenv("GEMINI_API_KEY"))
+            print(f"☁️ Browser Use: Using Gemini model {model_name}")
         
         # Initialize Agent
         agent = Agent(

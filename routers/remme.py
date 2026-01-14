@@ -328,9 +328,14 @@ A high-level overview of who the user appears to be, their primary drivers, and 
 **Style:** Professional yet engaging, slightly witty, and very insightful. Use formatting (bolding, lists, blockquotes) effectively.
 """
 
-        # Call Gemini (using default configured model or explicit gemini-2.5-flash if needed)
-        # Using ModelManager to handle the call
-        model_manager = ModelManager("gemini") # Force Gemini for this token-heavy task
+        # Call model using user's selected provider from settings
+        # Note: This is a token-heavy task - works best with large context models
+        from config.settings_loader import settings
+        agent_settings = settings.get("agent", {})
+        model_provider = agent_settings.get("model_provider", "gemini")
+        model_name = agent_settings.get("default_model", "gemini-2.5-flash")
+        
+        model_manager = ModelManager(model_name, provider=model_provider)
         profile_content = await model_manager.generate_text(prompt)
         
         # Save to Cache

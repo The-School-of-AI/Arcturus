@@ -18,6 +18,7 @@
     "top_k": 3
   },
   "agent": {
+    "model_provider": "gemini",
     "default_model": "gemini-2.5-flash",
     "max_steps": 3,
     "max_lifelines_per_step": 3,

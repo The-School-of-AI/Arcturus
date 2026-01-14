@@ -52,6 +52,7 @@ interface SettingsData {
         top_k: number;
     };
     agent: {
+        model_provider: 'gemini' | 'ollama';
         default_model: string;
         max_steps: number;
         max_lifelines_per_step: number;
@@ -67,7 +68,7 @@ type TabId = 'models' | 'rag' | 'agent' | 'prompts' | 'advanced';
 const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini model selection' },
     { id: 'rag', label: 'RAG Pipeline', icon: FileText, description: 'Document chunking and search' },
-    { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution behavior & Gemini model' },
+    { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution & Model (Gemini/Ollama)' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Edit agent system prompts' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs, timeouts, restart' },
 ];
@@ -365,35 +366,90 @@ export const SettingsPage: React.FC = () => {
         </div>
     );
 
-    const renderAgentTab = () => (
-        <div className="space-y-6">
-            <SettingGroup title="Default Gemini Model" description="Model used for agent execution">
-                <select
-                    value={settings?.agent.default_model || 'gemini-2.5-flash'}
-                    onChange={(e) => updateSetting('agent', 'default_model', e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
-                >
-                    {GEMINI_MODELS.map((m) => (
-                        <option key={m.value} value={m.value}>
-                            {m.label} — {m.description}
-                        </option>
-                    ))}
-                </select>
-            </SettingGroup>
-            <SettingGroup title="Max Steps" description="Maximum reasoning steps per agent run">
-                <Input type="number" value={settings?.agent.max_steps || 3} onChange={(e) => updateSetting('agent', 'max_steps', parseInt(e.target.value))} />
-            </SettingGroup>
-            <SettingGroup title="Lifelines per Step" description="Retry attempts on failure">
-                <Input type="number" value={settings?.agent.max_lifelines_per_step || 3} onChange={(e) => updateSetting('agent', 'max_lifelines_per_step', parseInt(e.target.value))} />
-            </SettingGroup>
-            <SettingGroup title="Planning Mode" description="Agent planning strategy">
-                <select value={settings?.agent.planning_mode || 'conservative'} onChange={(e) => updateSetting('agent', 'planning_mode', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm">
-                    <option value="conservative">Conservative</option>
-                    <option value="exploratory">Exploratory</option>
-                </select>
-            </SettingGroup>
-        </div>
-    );
+    const renderAgentTab = () => {
+        // Get text-capable Ollama models for agent execution
+        const ollamaTextModels = ollamaModels.filter(m =>
+            m.capabilities.includes('text') && !m.capabilities.includes('embedding')
+        );
+
+        // Handle model selection - updates both provider and model
+        const handleAgentModelChange = (value: string) => {
+            if (value.startsWith('gemini:')) {
+                const modelName = value.replace('gemini:', '');
+                updateSetting('agent', 'model_provider', 'gemini');
+                updateSetting('agent', 'default_model', modelName);
+            } else if (value.startsWith('ollama:')) {
+                const modelName = value.replace('ollama:', '');
+                updateSetting('agent', 'model_provider', 'ollama');
+                updateSetting('agent', 'default_model', modelName);
+            }
+        };
+
+        // Current composite value for the select
+        const currentValue = `${settings?.agent.model_provider || 'gemini'}:${settings?.agent.default_model || 'gemini-2.5-flash'}`;
+
+        return (
+            <div className="space-y-6">
+                <SettingGroup title="Default Agent Model" description="Model used for agent execution (Cloud or Local)">
+                    <select
+                        value={currentValue}
+                        onChange={(e) => handleAgentModelChange(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
+                    >
+                        {/* Gemini Cloud Models */}
+                        <optgroup label="☁️ Gemini (Cloud)">
+                            {GEMINI_MODELS.map((m) => (
+                                <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                    {m.label} — {m.description}
+                                </option>
+                            ))}
+                        </optgroup>
+
+                        {/* Ollama Local Models */}
+                        {ollamaTextModels.length > 0 && (
+                            <optgroup label="🖥️ Ollama (Local)">
+                                {ollamaTextModels.map((m) => (
+                                    <option key={`ollama:${m.name}`} value={`ollama:${m.name}`}>
+                                        {m.name} — Local ({m.size_gb}GB)
+                                    </option>
+                                ))}
+                            </optgroup>
+                        )}
+                    </select>
+
+                    {/* Provider indicator */}
+                    <div className="mt-2 flex items-center gap-2 text-xs">
+                        {settings?.agent.model_provider === 'ollama' ? (
+                            <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                                🖥️ Local Execution
+                            </span>
+                        ) : (
+                            <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                ☁️ Cloud Execution
+                            </span>
+                        )}
+                        <span className="text-muted-foreground">
+                            {settings?.agent.model_provider === 'ollama'
+                                ? 'Running on your machine via Ollama'
+                                : 'Using Google Gemini API'}
+                        </span>
+                    </div>
+                </SettingGroup>
+                <SettingGroup title="Max Steps" description="Maximum reasoning steps per agent run">
+                    <Input type="number" value={settings?.agent.max_steps || 3} onChange={(e) => updateSetting('agent', 'max_steps', parseInt(e.target.value))} />
+                </SettingGroup>
+                <SettingGroup title="Lifelines per Step" description="Retry attempts on failure">
+                    <Input type="number" value={settings?.agent.max_lifelines_per_step || 3} onChange={(e) => updateSetting('agent', 'max_lifelines_per_step', parseInt(e.target.value))} />
+                </SettingGroup>
+                <SettingGroup title="Planning Mode" description="Agent planning strategy">
+                    <select value={settings?.agent.planning_mode || 'conservative'} onChange={(e) => updateSetting('agent', 'planning_mode', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm">
+                        <option value="conservative">Conservative</option>
+                        <option value="exploratory">Exploratory</option>
+                    </select>
+                </SettingGroup>
+            </div>
+        );
+    };
 
     const renderPromptsTab = () => {
         const agentPrompts = prompts.filter(p => !['remme_extraction', 'rag_semantic_chunking'].includes(p.name));

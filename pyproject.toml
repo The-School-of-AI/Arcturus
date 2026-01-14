@@ -39,5 +39,7 @@ dependencies = [
     "beautifulsoup4>=4.13.4",
     "aiohttp>=3.11.18",
     "watchdog>=3.0.0",
+    "langchain-ollama>=0.3.2",
+    "langchain-google-genai>=2.1.2",
     "rank_bm25>=0.2.2",
 ]
