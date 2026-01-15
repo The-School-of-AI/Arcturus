@@ -131,96 +131,136 @@ class AgentLoop4:
                 file_profiles = file_result["output"]
                 self.context.set_file_profiles(file_profiles)
 
-        # Phase 2: Planning with AgentRunner (with retry for transient failures)
-        # Note: The "Query" node is already 'running' in our bootstrap context
-        async def run_planner():
-            return await self.agent_runner.run_agent(
-                "PlannerAgent",
-                {
-                    "original_query": query,
-                    "planning_strategy": self.strategy,
-                    "globals_schema": globals_schema,
-                    "file_manifest": file_manifest,
-                    "file_profiles": file_profiles,
-                    "memory_context": memory_context
-                }
+        # Phase 2: Planning and Execution Loop
+        while True:
+            if self.context.stop_requested:
+                break
+
+            # Note: The "Query" node is already 'running' in our bootstrap context
+            async def run_planner():
+                return await self.agent_runner.run_agent(
+                    "PlannerAgent",
+                    {
+                        "original_query": query,
+                        "planning_strategy": self.strategy,
+                        "globals_schema": self.context.plan_graph.graph.get("globals_schema", {}),
+                        "file_manifest": file_manifest,
+                        "file_profiles": file_profiles,
+                        "memory_context": memory_context
+                    }
+                )
+            plan_result = await retry_with_backoff(run_planner)
+
+            if self.context.stop_requested:
+                break
+
+            if not plan_result["success"]:
+                self.context.mark_failed("Query", plan_result['error'])
+                raise RuntimeError(f"Planning failed: {plan_result['error']}")
+
+            if 'plan_graph' not in plan_result['output']:
+                self.context.mark_failed("Query", "Output missing plan_graph")
+                raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key.")
+            
+            # ===== AUTO-CLARIFICATION CHECK =====
+            AUTO_CLARYFY_THRESHOLD = 0.7
+            confidence = plan_result["output"].get("interpretation_confidence", 1.0)
+            ambiguity_notes = plan_result["output"].get("ambiguity_notes", [])
+            
+            # Check if Planner already added a ClarificationAgent (avoid duplicates)
+            plan_nodes = plan_result["output"]["plan_graph"].get("nodes", [])
+            has_clarification_agent = any(
+                n.get("agent") == "ClarificationAgent" for n in plan_nodes
             )
-        plan_result = await retry_with_backoff(run_planner)
+            
+            if confidence < AUTO_CLARYFY_THRESHOLD and ambiguity_notes and not has_clarification_agent:
+                log_step(f"Low confidence ({confidence:.2f}), auto-triggering clarification", symbol="❓")
+                
+                # Get the first step ID from the plan
+                first_step = plan_result["output"].get("next_step_id", "T001")
+                
+                # Create clarification node
+                clarification_node = {
+                    "id": "T000_AutoClarify",
+                    "agent": "ClarificationAgent",
+                    "description": "Clarify ambiguous requirements before proceeding",
+                    "agent_prompt": f"The system has identified ambiguities in the user's request. Please ask for clarification on: {'; '.join(ambiguity_notes)}",
+                    "reads": [],
+                    "writes": ["user_clarification_T000"],
+                    "status": "pending"
+                }
+                
+                # Insert clarification node at beginning
+                plan_result["output"]["plan_graph"]["nodes"].insert(0, clarification_node)
+                
+                # Add edge from ROOT to clarification, and clarification to first step
+                plan_result["output"]["plan_graph"]["edges"].insert(0, {
+                    "source": "T000_AutoClarify",
+                    "target": first_step
+                })
+                
+                # Update next_step_id to start with clarification
+                plan_result["output"]["next_step_id"] = "T000_AutoClarify"
+                
+                log_step(f"Injected ClarificationAgent before {first_step}", symbol="➕")
+            elif has_clarification_agent:
+                log_step(f"Planner already added ClarificationAgent, skipping auto-injection", symbol="ℹ️")
+            
+            # ✅ Mark Query/Planner as Done
+            self.context.plan_graph.nodes["Query"]["output"] = plan_result["output"]
+            self.context.plan_graph.nodes["Query"]["status"] = "completed"
+            self.context.plan_graph.nodes["Query"]["end_time"] = datetime.utcnow().isoformat()
+            
+            # 🟢 PHASE 3: EXPAND GRAPH
+            # Merge the new plan into our existing context
+            new_plan_graph = plan_result["output"]["plan_graph"]
+            self._merge_plan_into_context(new_plan_graph)
 
-        if not plan_result["success"]:
-            self.context.mark_failed("Query", plan_result['error'])
-            raise RuntimeError(f"Planning failed: {plan_result['error']}")
+            try:
+                # Phase 4: Execute DAG
+                await self._execute_dag(self.context)
 
-        if 'plan_graph' not in plan_result['output']:
-            self.context.mark_failed("Query", "Output missing plan_graph")
-            raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key.")
-        
-        # ===== AUTO-CLARIFICATION CHECK =====
-        AUTO_CLARIFY_THRESHOLD = 0.7
-        confidence = plan_result["output"].get("interpretation_confidence", 1.0)
-        ambiguity_notes = plan_result["output"].get("ambiguity_notes", [])
-        
-        # Check if Planner already added a ClarificationAgent (avoid duplicates)
-        plan_nodes = plan_result["output"]["plan_graph"].get("nodes", [])
-        has_clarification_agent = any(
-            n.get("agent") == "ClarificationAgent" for n in plan_nodes
-        )
-        
-        if confidence < AUTO_CLARIFY_THRESHOLD and ambiguity_notes and not has_clarification_agent:
-            log_step(f"Low confidence ({confidence:.2f}), auto-triggering clarification", symbol="❓")
-            
-            # Get the first step ID from the plan
-            first_step = plan_result["output"].get("next_step_id", "T001")
-            
-            # Create clarification node
-            clarification_node = {
-                "id": "T000_AutoClarify",
-                "agent": "ClarificationAgent",
-                "description": "Clarify ambiguous requirements before proceeding",
-                "agent_prompt": f"The system has identified ambiguities in the user's request. Please ask for clarification on: {'; '.join(ambiguity_notes)}",
-                "reads": [],
-                "writes": ["user_clarification_T000"],
-                "status": "pending"
-            }
-            
-            # Insert clarification node at beginning
-            plan_result["output"]["plan_graph"]["nodes"].insert(0, clarification_node)
-            
-            # Add edge from ROOT to clarification, and clarification to first step
-            plan_result["output"]["plan_graph"]["edges"].insert(0, {
-                "source": "T000_AutoClarify",
-                "target": first_step
-            })
-            
-            # Update next_step_id to start with clarification
-            plan_result["output"]["next_step_id"] = "T000_AutoClarify"
-            
-            log_step(f"Injected ClarificationAgent before {first_step}", symbol="➕")
-        elif has_clarification_agent:
-            log_step(f"Planner already added ClarificationAgent, skipping auto-injection", symbol="ℹ️")
-        
-        # ✅ Mark Query/Planner as Done
-        self.context.plan_graph.nodes["Query"]["output"] = plan_result["output"]
-        self.context.plan_graph.nodes["Query"]["status"] = "completed"
-        self.context.plan_graph.nodes["Query"]["end_time"] = datetime.utcnow().isoformat()
-        
-        # 🟢 PHASE 3: EXPAND GRAPH
-        # Merge the new plan into our existing context
-        new_plan_graph = plan_result["output"]["plan_graph"]
-        self._merge_plan_into_context(new_plan_graph)
+                if self.context.stop_requested:
+                    break
 
-        try:
-            # Phase 4: Execute DAG with visualization
-            await self._execute_dag(self.context)
+                # Phase 5: Check for Adaptive Re-Planning (Dead End Discovery)
+                if self._should_replan():
+                    log_step("♻️ Adaptive Re-planning: Clarification resolved, formulating next steps...", symbol="🔄")
+                    # Reactivate Query node for UI
+                    self.context.plan_graph.nodes["Query"]["status"] = "running"
+                    self.context._save_session()
+                    continue
+                else:
+                    # No more work or re-planning needed
+                    return self.context
 
-            # Phase 5: Return the CONTEXT OBJECT
-            return self.context
+            except Exception as e:
+                print(f"❌ ERROR during execution: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
 
-        except Exception as e:
-            print(f"❌ ERROR during execution: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+    def _should_replan(self):
+        """
+        Check if the graph needs expansion (re-planning).
+        Conditions:
+        1. All current nodes are finished (completed/skipped).
+        2. At least one ClarificationAgent recently completed.
+        3. That ClarificationAgent was a 'leaf' (had no successors in the current graph).
+        """
+        # If any node is still pending/running, we aren't at a dead end yet
+        if not self.context.all_done():
+            return False
+            
+        has_new_leaf_clarification = False
+        for node_id, node_data in self.context.plan_graph.nodes(data=True):
+            if node_data.get("agent") == "ClarificationAgent" and node_data.get("status") == "completed":
+                # Check if it was a leaf node (no arrows coming out)
+                if not list(self.context.plan_graph.successors(node_id)):
+                    has_new_leaf_clarification = True
+                    break
+        
+        return has_new_leaf_clarification
 
     def _merge_plan_into_context(self, new_plan_graph):
         """Merge the planned nodes into the existing bootstrap context"""
@@ -247,6 +287,12 @@ class AgentLoop4:
             for k, v in defaults.items():
                 node_data.setdefault(k, v)
                 
+            # Avoid overwriting already completed nodes if they somehow appear in the new plan
+            if node["id"] in self.context.plan_graph:
+                 existing_status = self.context.plan_graph.nodes[node["id"]].get("status")
+                 if existing_status == "completed":
+                      continue
+
             self.context.plan_graph.add_node(node["id"], **node_data)
             
         # Add new edges, redirecting ROOT -> First Step to Query -> First Step
@@ -303,7 +349,12 @@ class AgentLoop4:
 
         while not context.all_done():
             if context.stop_requested:
-                console.print("[yellow]🛑 Execution stopped by user[/yellow]")
+                console.print("[yellow]🛑 Aborting execution: Cleaning up nodes...[/yellow]")
+                # Cleanup: Mark any 'running' nodes as 'stopped' to prevent zombie spinners in UI
+                for n_id in context.plan_graph.nodes:
+                    if context.plan_graph.nodes[n_id].get("status") == "running":
+                        context.plan_graph.nodes[n_id]["status"] = "stopped"
+                context._save_session()
                 break
             
             # Get ready nodes
@@ -508,6 +559,11 @@ class AgentLoop4:
 
             iterations_data.append({"iteration": turn, "output": output})
             
+            # ✅ IMMEDIATE STOP CHECK (Between turns)
+            if context.stop_requested:
+                log_step(f"🛑 {agent_type}: Stop requested, aborting iteration {turn}", symbol="🛑")
+                return {"success": False, "error": "Stop requested"}
+
             # Update step data with iterations so far
             step_data = context.get_step_data(step_id)
             step_data['iterations'] = iterations_data
@@ -581,6 +637,10 @@ class AgentLoop4:
 
             # 3. Success (No tool call, just output) - Execute code for final iteration
             else:
+                # ✅ LAST-SECOND STOP CHECK
+                if context.stop_requested:
+                    return {"success": False, "error": "Stop requested"}
+                    
                 # Execute code if present and save to iterations_data (same as call_self path)
                 if context._has_executable_code(output):
                     execution_result = await context._auto_execute_code(step_id, output)

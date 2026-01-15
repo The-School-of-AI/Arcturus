@@ -107,6 +107,11 @@ class MultiMCP:
 
     async def _start_server(self, name: str, config: dict):
         """Start a single server with timeout protection"""
+        # Skip if explicitly disabled
+        if config.get("enabled", True) is False:
+            print(f"  ⏭️ [dim]Server '{name}' is disabled in config. Skipping.[/dim]")
+            return False
+
         try:
             cmd = config.get("command", "uv")
             args = config.get("args", [])
@@ -273,7 +278,10 @@ class MultiMCP:
         """Start all configured servers"""
         print("[bold green]🚀 Starting MCP Servers...[/bold green]")
         for name, config in self.server_configs.items():
-            await self._start_server(name, config)
+            if config.get("enabled", True):
+                await self._start_server(name, config)
+            else:
+                print(f"  ⏭️ [dim]Skipping disabled server: {name}[/dim]")
 
     async def stop(self):
         """Stop all servers"""

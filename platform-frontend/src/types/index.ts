@@ -2,7 +2,7 @@ import type { Node, Edge } from 'reactflow';
 
 export type AgentType = 'Planner' | 'Retriever' | 'Thinker' | 'Coder' | 'Executor' | 'Evaluator' | 'Summarizer' | 'User';
 
-export type RunStatus = 'running' | 'completed' | 'failed' | 'paused';
+export type RunStatus = 'running' | 'completed' | 'failed' | 'paused' | 'stopped';
 
 export interface Run {
     id: string;
@@ -17,7 +17,7 @@ export interface Run {
 export interface AgentNodeData {
     label: string;
     type: AgentType | 'Generic';
-    status: 'pending' | 'running' | 'completed' | 'failed' | 'waiting_input' | 'stale';
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'waiting_input' | 'stale' | 'stopped';
     description?: string;
     prompt?: string;
     agent_prompt?: string; // Explicit field from backend

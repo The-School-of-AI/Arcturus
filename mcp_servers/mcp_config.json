@@ -5,7 +5,8 @@
       "run",
       "server_browser.py"
     ],
-    "type": "local-script"
+    "type": "local-script",
+    "enabled": true
   },
   "rag": {
     "command": "uv",
@@ -13,7 +14,8 @@
       "run",
       "server_rag.py"
     ],
-    "type": "local-script"
+    "type": "local-script",
+    "enabled": true
   },
   "sandbox": {
     "command": "uv",
@@ -21,7 +23,8 @@
       "run",
       "server_sandbox.py"
     ],
-    "type": "local-script"
+    "type": "local-script",
+    "enabled": true
   },
   "alphavantage": {
     "command": "uvx",
@@ -29,7 +32,8 @@
       "av-mcp",
       "VXLTQQFJYNCMMPZE"
     ],
-    "type": "stdio-pypi"
+    "type": "stdio-pypi",
+    "enabled": true
   },
   "yahoo_finance": {
     "type": "stdio-git",
@@ -38,6 +42,7 @@
     "args": [
       "run",
       "src/server.py"
-    ]
+    ],
+    "enabled": true
   }
 }

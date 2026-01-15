@@ -45,13 +45,32 @@ export const GraphCanvas: React.FC = () => {
     const nodeTypes = useMemo(() => NODE_TYPES, []);
     const edgeTypes = useMemo(() => EDGE_TYPES, []);
 
+    const [userIntervened, setUserIntervened] = React.useState(false);
+
     // Auto-follow running nodes
     React.useEffect(() => {
+        // If the user has manually selected something, don't jump unless they explicitly clear it 
+        // Or if the selection is the ROOT node (default start)
+        if (userIntervened && selectedNodeId && selectedNodeId !== 'ROOT') {
+            return;
+        }
+
         const runningNode = nodes.find(n => n.data.status === 'running');
         if (runningNode && runningNode.id !== selectedNodeId) {
             selectNode(runningNode.id);
         }
-    }, [nodes, selectedNodeId, selectNode]);
+    }, [nodes, selectedNodeId, selectNode, userIntervened]);
+
+    // Reset intervention when click on canvas (empty space)
+    const onPaneClick = React.useCallback(() => {
+        setUserIntervened(false);
+        selectNode(null);
+    }, [selectNode]);
+
+    const onNodeClick = React.useCallback((_: React.MouseEvent, node: Node) => {
+        setUserIntervened(true);
+        selectNode(node.id);
+    }, [selectNode]);
 
     const visibleNodes = nodes.filter(n => n.id !== 'ROOT');
 
@@ -63,7 +82,8 @@ export const GraphCanvas: React.FC = () => {
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
-                onNodeClick={(_: React.MouseEvent, node: Node) => useAppStore.getState().selectNode(node.id)}
+                onNodeClick={onNodeClick}
+                onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 fitView

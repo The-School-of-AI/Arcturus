@@ -1156,19 +1156,24 @@ export const WorkspacePanel: React.FC = () => {
 
                                     // 4. Final fallback: Scan all text content in all iterations/code_variants
                                     const allContentStr = JSON.stringify({
-                                        parsed,
-                                        iterations: selectedNode?.data?.iterations
+                                        parsed: parsed || {},
+                                        iterations: selectedNode?.data?.iterations || []
                                     });
-                                    const globalUrlMatches = allContentStr.match(/https?:\/\/[^\s'"]+/g);
-                                    if (globalUrlMatches) {
-                                        globalUrlMatches.forEach(url => addUrl(url));
+                                    const globalUrlMatchList = allContentStr.match(/https?:\/\/[^\s'"]+/g);
+                                    if (globalUrlMatchList) {
+                                        globalUrlMatchList.forEach(url => {
+                                            const cleanUrl = url.replace(/['"\]]+$/, '');
+                                            addUrl(cleanUrl, "Global Scan");
+                                        });
                                     }
-                                } catch { }
+                                } catch (e) {
+                                    console.log("Web Tab Scan Error:", e);
+                                }
 
                                 // The state hooks are at the component level now
 
                                 if (urls.length === 0) {
-                                    console.log("Web Tab Debug: No URLs found in", parsed);
+                                    console.log("Web Tab Debug: No URLs found. Parsed:", parsed, "Iterations:", selectedNode?.data?.iterations?.length);
                                     return (
                                         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4 p-8 overflow-auto">
                                             <Globe className="w-16 h-16 opacity-20" />

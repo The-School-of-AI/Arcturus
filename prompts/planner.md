@@ -52,10 +52,10 @@ You receive:
 
 You must:
 
-* **First, check `memory_context`**:
-  * If it contains the answer or critical context (e.g., "User is in Bangalore"), **USE IT**.
-  * Do **NOT** create tasks to rediscover known facts.
-  * If the memory answers the query, your plan should just be a FormatterAgent task to present it.
+* **First, check `globals_schema` and `memory_context`**:
+  * If `globals_schema` contains user clarifications (e.g., from a prior `ClarificationAgent` step), **USE THEM** to build the final execution plan.
+  * Do **NOT** ask for info already present in `globals_schema` or `memory_context`.
+  * If memory or globals answer the query, the plan should just be a `FormatterAgent` task.
 * Output a full `plan_graph` with:
 
   * `nodes`: Discrete, agent-assigned task objects (ID, description, prompt, IO)
