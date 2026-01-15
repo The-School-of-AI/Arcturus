@@ -59,13 +59,23 @@ export interface FileContext {
     path: string;
 }
 
+export interface ContextItem {
+    id: string;
+    text: string;
+    file?: string;
+    range?: {
+        startLine: number;
+        endLine: number;
+    };
+}
+
 export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant' | 'system';
     content: string | any; // Supports mixed content (thinking)
-    contexts?: string[]; // Attached context pill text
+    contexts?: ContextItem[]; // Attached rich context pills
     fileContexts?: FileContext[]; // Attached file pills
-    images?: string[]; // Attached images (base64)
+    images?: string[]; // Attached images (base64)క్ష
     timestamp: number;
 }
 

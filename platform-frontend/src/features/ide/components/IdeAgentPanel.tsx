@@ -209,14 +209,14 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                 updateIdeDocumentContent={updateIdeDocumentContent}
             />
         ),
-        p: ({ children }: any) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
-        ul: ({ children }: any) => <ul className="ml-4 space-y-1 mb-3 list-disc text-sm">{children}</ul>,
-        ol: ({ children }: any) => <ol className="ml-4 space-y-1 mb-3 list-decimal text-sm">{children}</ol>,
-        li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
+        p: ({ children }: any) => <p className="mb-1.5 last:mb-0 leading-relaxed text-foreground/90">{children}</p>,
+        ul: ({ children }: any) => <ul className="ml-4 space-y-0.5 mb-1.5 list-disc text-sm">{children}</ul>,
+        ol: ({ children }: any) => <ol className="ml-4 space-y-0.5 mb-1.5 list-decimal text-sm">{children}</ol>,
+        li: ({ children }: any) => <li className="leading-relaxed mb-0.5 last:mb-0 [&_p]:mb-0">{children}</li>,
     }), [theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent]);
 
     return (
-        <div className="space-y-1 min-w-0">
+        <div className="min-w-0">
             {thinking && (
                 <div className="mb-2">
                     <button
@@ -233,8 +233,13 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                     )}
                 </div>
             )}
-            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground/90">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{mainAnswer || (thinking ? "" : content)}</ReactMarkdown>
+            <div className="text-sm leading-relaxed break-words">
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownComponents}
+                >
+                    {(mainAnswer || (thinking ? "" : content)).trim().replace(/\n{3,}/g, '\n\n')}
+                </ReactMarkdown>
             </div>
         </div>
     );
