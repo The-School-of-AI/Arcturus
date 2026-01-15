@@ -185,7 +185,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                         </div>
                                         <DialogFooter>
                                             <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                                            <Button onClick={handleStartRun} className="bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                            <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>

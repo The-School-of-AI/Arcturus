@@ -75,8 +75,8 @@ class ExecutionVisualizer:
             
             # Status symbols
             status_symbol = {
-                "pending": "🔲", "running": "🔄", "completed": "✅", "failed": "❌"
-            }[status]
+                "pending": "🔲", "running": "🔄", "completed": "✅", "failed": "❌", "waiting_input": "⏳"
+            }.get(status, "❓")
             
             # Format label
             if current_node == "ROOT":
@@ -90,6 +90,8 @@ class ExecutionVisualizer:
                 label.stylize("green")
             elif status == "running":
                 label.stylize("yellow") 
+            elif status == "waiting_input":
+                label.stylize("orange3")
             elif status == "failed":
                 label.stylize("red")
             else:
@@ -182,6 +184,12 @@ class ExecutionVisualizer:
         error_msg = f": {str(error)[:30]}..." if error else ""
         self.log_messages.append(f"[{timestamp}] ❌ Failed {node_id} ({agent}){error_msg}")
         self.G.nodes[node_id]["status"] = "failed"
+
+    def mark_waiting(self, node_id):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        agent = self.G.nodes[node_id]["agent"]
+        self.log_messages.append(f"[{timestamp}] ⏳ Waiting {node_id} ({agent})")
+        self.G.nodes[node_id]["status"] = "waiting_input"
 
     def is_finished(self):
         return all(

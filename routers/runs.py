@@ -47,7 +47,8 @@ class RunResponse(BaseModel):
 
 
 class UserInputRequest(BaseModel):
-    input: str
+    node_id: str
+    response: str
 
 
 class AgentTestRequest(BaseModel):
@@ -67,7 +68,7 @@ async def process_run(run_id: str, query: str):
         results = []
         try:
             emb = get_embedding(query, task_type="search_query")
-            results = remme_store.search(emb, query_text=query, k=10)
+            results = remme_store.search(emb, query_text=query, k=3)
             if results:
                 memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
                 memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
@@ -286,16 +287,43 @@ async def get_run(run_id: str):
 
 @router.post("/runs/{run_id}/input")
 async def provide_input(run_id: str, request: UserInputRequest):
-    """Provide specific input to a running agent"""
+    """Provide user input to a running agent (e.g., ClarificationAgent response)"""
     if run_id in active_loops:
         loop = active_loops[run_id]
         if loop.context:
-            loop.context.provide_user_input(request.input)
-            return {"id": run_id, "status": "input_received"}
+            try:
+                # Find the ClarificationAgent node that's awaiting input
+                for node_id, node_data in loop.context.plan_graph.nodes(data=True):
+                    if node_data.get("agent") == "ClarificationAgent" and node_data.get("status") in ["running", "waiting_input"]:
+                        # Get the writes key for this clarification
+                        writes = node_data.get("writes", ["user_clarification"])
+                        write_key = writes[0] if writes else "user_clarification"
+                        
+                        # Store user input in globals_schema
+                        loop.context.plan_graph.graph.setdefault("globals_schema", {})[write_key] = request.response
+                        
+                        # Mark the clarification step as completed with user's response as output
+                        loop.context.plan_graph.nodes[node_id]["output"] = {
+                            "clarificationMessage": "User provided clarification",
+                            write_key: request.response
+                        }
+                        loop.context.plan_graph.nodes[node_id]["status"] = "completed"
+                        
+                        # Save the session
+                        loop.context._save_session()
+                        
+                        return {"id": run_id, "status": "input_received", "stored_as": write_key}
+                
+                # No running ClarificationAgent found
+                raise HTTPException(status_code=400, detail="No ClarificationAgent is currently waiting for input")
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error processing input: {str(e)}")
         else:
             raise HTTPException(status_code=400, detail="Context not initialized")
     
-    raise HTTPException(status_code=404, detail="Active run not found or not waiting for input")
+    raise HTTPException(status_code=404, detail="Active run not found")
 
 
 @router.post("/runs/{run_id}/stop")

@@ -298,7 +298,41 @@ Use `SchedulerAgent` to define:
     "nodes": [...],
     "edges": [...]
   },
-  "next_step_id": "T001"
+  "next_step_id": "T001",
+  "interpretation_confidence": 0.85,
+  "ambiguity_notes": []
+}
+```
+
+### Confidence Scoring Guide
+
+Rate your confidence based on how well you understood the user's intent:
+
+| Score | Meaning | Action |
+|-------|---------|--------|
+| **0.9-1.0** | All parameters clear, single obvious interpretation | Proceed |
+| **0.7-0.9** | Minor ambiguities, reasonable defaults chosen | Proceed with note |
+| **0.5-0.7** | Significant ambiguities, multiple valid interpretations | Add clarification note |
+| **0.0-0.5** | Critical information missing, cannot proceed reliably | Must clarify |
+
+**When to add ambiguity_notes:**
+- Budget/cost not specified
+- Timeline unclear
+- Scope boundaries ambiguous
+- Multiple interpretations possible
+- User preferences unknown
+
+Example with low confidence:
+```json
+{
+  "plan_graph": {...},
+  "next_step_id": "T001",
+  "interpretation_confidence": 0.55,
+  "ambiguity_notes": [
+    "Budget not specified - assuming mid-range",
+    "Timeline not mentioned - assuming flexible",
+    "Target audience unclear"
+  ]
 }
 ```
 

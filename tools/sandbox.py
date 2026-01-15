@@ -57,6 +57,87 @@ SAFE_BUILTINS = [
 MAX_FUNCTIONS = 20
 TIMEOUT_PER_FUNCTION = 50
 
+# ===== SECURITY: BLOCKED PATTERNS =====
+BLOCKED_PATTERNS = [
+    # File system attacks
+    (r"rm\s+-rf", "Recursive file deletion"),
+    (r"shutil\.rmtree", "Directory deletion"),
+    (r"os\.remove\(", "File deletion"),
+    (r"os\.unlink\(", "File deletion"),
+    
+    # SQL injection
+    (r"DROP\s+TABLE", "SQL DROP TABLE"),
+    (r"DELETE\s+FROM\s+\w+\s*;?\s*$", "SQL DELETE without WHERE"),
+    (r"TRUNCATE\s+TABLE", "SQL TRUNCATE"),
+    
+    # Code execution
+    (r"os\.system\(", "Shell command execution"),
+    (r"subprocess\.", "Subprocess execution"),
+    (r"eval\s*\(", "Eval execution"),
+    (r"exec\s*\(", "Exec execution"),
+    (r"__import__\s*\(\s*['\"]os", "Dynamic os import"),
+    
+    # Network access (if not explicitly allowed)
+    (r"socket\.", "Raw socket access"),
+    
+    # Sensitive file access
+    (r"open\s*\(\s*['\"]\/etc\/", "System file access"),
+    (r"open\s*\(\s*['\"]\/proc\/", "Proc file access"),
+    
+    # Crypto mining / resource abuse
+    (r"while\s+True\s*:", "Infinite loop pattern"),
+    (r"for\s+_\s+in\s+iter\s*\(\s*int\s*,\s*1\s*\)", "Infinite iterator"),
+]
+
+SECURITY_LOG_PATH = Path(__file__).parent.parent / "data" / "security_logs"
+
+
+def check_code_safety(code: str) -> tuple[bool, list[dict]]:
+    """
+    Check code for dangerous patterns.
+    
+    Returns:
+        (is_safe, violations)
+        where violations is a list of {"pattern": str, "description": str, "match": str}
+    """
+    violations = []
+    
+    for pattern, description in BLOCKED_PATTERNS:
+        matches = re.finditer(pattern, code, re.IGNORECASE)
+        for match in matches:
+            violations.append({
+                "pattern": pattern,
+                "description": description,
+                "match": match.group(),
+                "position": match.start()
+            })
+    
+    return len(violations) == 0, violations
+
+
+def log_security_event(event: dict):
+    """
+    Log a security event to file.
+    
+    Creates a daily log file with all blocked attempts.
+    Example output in data/security_logs/2026-01-15.jsonl
+    """
+    try:
+        SECURITY_LOG_PATH.mkdir(parents=True, exist_ok=True)
+        
+        today = datetime.now().strftime("%Y-%m-%d")
+        log_file = SECURITY_LOG_PATH / f"{today}.jsonl"
+        
+        event["timestamp"] = datetime.now().isoformat()
+        
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event) + "\n")
+        
+        # Also log to console for immediate visibility
+        log_error(f"🚨 SECURITY: {event.get('action', 'EVENT')} - {event.get('violation', 'Unknown')}")
+    except Exception as e:
+        log_error(f"Failed to log security event: {e}")
+
 class KeywordStripper(ast.NodeTransformer):
     """Rewrite all function calls to remove keyword args and keep only values as positional."""
     def visit_Call(self, node):
@@ -165,6 +246,29 @@ def make_tool_proxy(tool_name: str, mcp):
 async def run_user_code(code: str, multi_mcp, session_id: str = "default_session") -> dict:
     start_time = time.perf_counter()
     start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # ===== SAFETY CHECK BEFORE EXECUTION =====
+    is_safe, violations = check_code_safety(code)
+    
+    if not is_safe:
+        # Log the blocked attempt
+        log_security_event({
+            "session_id": session_id,
+            "action": "BLOCKED",
+            "violation": violations[0]["description"],
+            "pattern_matched": violations[0]["pattern"],
+            "code_snippet": code[:500],  # First 500 chars only
+            "all_violations": [v["description"] for v in violations]
+        })
+        
+        return {
+            "status": "blocked",
+            "error": f"Security violation: {violations[0]['description']}",
+            "violations": [v["description"] for v in violations],
+            "blocked_pattern": violations[0]["match"],
+            "execution_time": start_timestamp,
+            "total_time": str(round(time.perf_counter() - start_time, 3))
+        }
 
     def is_json_serializable(value):
         return isinstance(value, (str, int, float, bool, type(None), list, dict))

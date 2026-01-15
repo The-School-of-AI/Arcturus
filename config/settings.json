@@ -19,11 +19,13 @@
   },
   "agent": {
     "model_provider": "gemini",
-    "default_model": "gemini-2.0-flash",
+    "default_model": "gemini-2.5-flash",
     "max_steps": 3,
     "max_lifelines_per_step": 3,
     "planning_mode": "conservative",
-    "rate_limit_interval": 4.5
+    "rate_limit_interval": 4.5,
+    "max_cost_per_run": 0.5,
+    "warn_at_cost": 0.25
   },
   "remme": {
     "extraction_prompt": "You are a Contextual Memory Management AI.\nYour job is to update the \"Memory Vault\" based on the latest conversation.\n\nRULES:\n1. ANTI-FRAGMENTATION: NEVER split related items into separate facts. Merge them into ONE rich, coherent memory entry.\n2. NO REDUNDANCY: If info is already captured, do nothing unless you have NEW details (use \"update\").\n3. CONTEXTUAL HUBS: Prefer a single \"Hub\" memory over separate atomic facts.\n4. NO NEGATIVE FACTS: NEVER store \"not found\" or \"missing\" info.\n5. NO META-LOGS: Do not store internal reasoning or agent traces.\n6. HIGH SALIENCE ONLY: Focus on project decisions, user preferences, architectural details.\n7. ACTIONS: \"add\" for new facts, \"update\" to expand existing, \"delete\" if proven false."
