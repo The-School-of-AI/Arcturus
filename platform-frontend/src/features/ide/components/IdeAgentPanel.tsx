@@ -415,7 +415,7 @@ export const IdeAgentPanel: React.FC = () => {
             clearSelectedFileContexts();
             clearSelectedContexts();
 
-            callAgent([...ideProjectChatHistory, msg], fullContent, currentImages);
+            callAgent(ideProjectChatHistory, fullContent, currentImages);
         }
     };
 
@@ -907,29 +907,33 @@ export const IdeAgentPanel: React.FC = () => {
                         <div className={cn(
                             "max-w-full min-w-0 overflow-hidden"
                         )}>
-                            {msg.role === 'user' && ((msg.contexts && msg.contexts.length > 0) || (msg.fileContexts && msg.fileContexts.length > 0)) && (
-                                <div className="flex flex-col items-end w-full mb-1 space-y-1">
-                                    {msg.contexts?.map((ctx: string, idx: number) => (
-                                        <ContextPill key={`ctx-${idx}`} content={ctx} />
-                                    ))}
-                                    {msg.fileContexts?.map((file: any, idx: number) => (
-                                        <FilePill key={`file-${idx}`} file={file} />
-                                    ))}
-                                    {msg.images && msg.images.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            {msg.images.map((img: string, idx: number) => (
-                                                <img
-                                                    key={`msg-img-${idx}`}
-                                                    src={img}
-                                                    alt="User upload"
-                                                    className="w-20 h-20 object-cover rounded-md border border-border/50 cursor-zoom-in hover:brightness-90 transition-all shadow-sm"
-                                                    onClick={() => setSelectedImage(img)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            {msg.role === 'user' && (
+                                (msg.contexts && msg.contexts.length > 0) ||
+                                (msg.fileContexts && msg.fileContexts.length > 0) ||
+                                (msg.images && msg.images.length > 0)
+                            ) && (
+                                    <div className="flex flex-col items-end w-full mb-1 space-y-1">
+                                        {msg.contexts?.map((ctx: string, idx: number) => (
+                                            <ContextPill key={`ctx-${idx}`} content={ctx} />
+                                        ))}
+                                        {msg.fileContexts?.map((file: any, idx: number) => (
+                                            <FilePill key={`file-${idx}`} file={file} />
+                                        ))}
+                                        {msg.images && msg.images.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {msg.images.map((img: string, idx: number) => (
+                                                    <img
+                                                        key={`msg-img-${idx}`}
+                                                        src={img}
+                                                        alt="User upload"
+                                                        className="w-20 h-20 object-cover rounded-md border border-border/50 cursor-zoom-in hover:brightness-90 transition-all shadow-sm"
+                                                        onClick={() => setSelectedImage(img)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'
@@ -1080,11 +1084,11 @@ export const IdeAgentPanel: React.FC = () => {
             {/* Image Lightbox */}
             {selectedImage && (
                 <div
-                    className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-[200] bg-black/10 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
                     onClick={() => setSelectedImage(null)}
                 >
                     <button
-                        className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                        className="absolute top-6 right-6 p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
                         onClick={() => setSelectedImage(null)}
                     >
                         <X className="w-6 h-6" />

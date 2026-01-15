@@ -105,7 +105,21 @@ Available Tools:
         
         # Add history (limit to last 10 turns to save context)
         for msg in history[-10:]: 
-            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            m = {"role": role, "content": content}
+            
+            # Support images in history
+            hist_images = msg.get("images", [])
+            if hist_images:
+                clean_hist = []
+                for img in hist_images:
+                    if isinstance(img, str):
+                        if "," in img: clean_hist.append(img.split(",")[1])
+                        else: clean_hist.append(img)
+                m["images"] = clean_hist
+            
+            messages.append(m)
             
         user_msg = {"role": "user", "content": query}
         if images:
