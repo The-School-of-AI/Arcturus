@@ -1171,11 +1171,13 @@ export const useAppStore = create<AppState>()(
                 if (!path) return { explorerRootPath: null };
                 const filtered = state.recentProjects.filter(p => p !== path);
 
-                // When project changes, reset IDE chat state to blank
+                // When project changes, reset IDE chat state and open documents to blank
                 return {
                     explorerRootPath: path,
                     recentProjects: [path, ...filtered].slice(0, 10),
                     ideProjectChatHistory: [],
+                    ideOpenDocuments: [],
+                    ideActiveDocumentId: null,
                     activeChatSessionId: null,
                     chatSessions: [] // Clear sessions, they will be re-fetched for the new project
                 };

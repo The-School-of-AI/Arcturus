@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowRight } from 'lucide-react';
 import { useAppStore } from '@/store';
 import type { FileContext } from '@/types';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { API_BASE } from '@/lib/api';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '@/components/theme';
+import { availableTools, type ToolCall } from '@/lib/agent-tools';
 
 const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent, ...props }: any) => {
     const match = /language-(\w+)/.exec(className || '');
@@ -309,11 +310,22 @@ export const DocumentAssistant: React.FC = () => {
     const [pastedImage, setPastedImage] = useState<string | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+    const thinkingRef = useRef(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isUserScrolledUp = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    const stopAgent = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        setIsThinking(false);
+        thinkingRef.current = false;
+    };
 
     // Close menus on click away
     useEffect(() => {
@@ -386,6 +398,317 @@ export const DocumentAssistant: React.FC = () => {
         }
     };
 
+    // --- TOOL EXECUTOR ---
+    const executeTool = async (toolCall: ToolCall, projectRoot?: string): Promise<string> => {
+        console.log(`[Agent] Executing tool: ${toolCall.name}`, toolCall.arguments);
+
+        const validatePath = (path: string) => {
+            if (!projectRoot) return { valid: true, path }; // If no root, can't validate (dangerous, but for non-ide chats)
+
+            // Normalize path: if relative, make it absolute under root
+            let fullPath = path;
+            if (!path.startsWith('/') && !path.startsWith('C:') && !path.startsWith('file://')) {
+                fullPath = `${projectRoot}/${path}`.replace(/\/+/g, '/');
+            }
+
+            // Security Check: simple string check. In production we'd use path.resolve()
+            // But we don't have 'path' module here easily. 
+            // We can check if it contains '..' to jump out
+            if (fullPath.includes('..')) {
+                return { valid: false, error: "Access denied: Path cannot contain '..' to traverse outside project root." };
+            }
+
+            if (!fullPath.startsWith(projectRoot)) {
+                return { valid: false, error: `Access denied: Path must be within project root (${projectRoot}). Got: ${fullPath}` };
+            }
+
+            return { valid: true, path: fullPath };
+        };
+
+        try {
+            switch (toolCall.name) {
+                // --- File System Tools (Electron IPC) ---
+                case 'read_file': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const readRes = await window.electronAPI.invoke('fs:readFile', validation.path);
+                    if (!readRes) return "Error: Failed to invoke filesystem read.";
+                    return readRes.success ? readRes.content : `Error: ${readRes.error}`;
+                }
+
+                case 'write_file': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const writeRes = await window.electronAPI.invoke('fs:writeFile', {
+                        path: validation.path,
+                        content: toolCall.arguments.content
+                    });
+                    if (!writeRes) return "Error: Failed to invoke filesystem write.";
+                    return writeRes.success ? `Success: File written to ${validation.path}` : `Error: ${writeRes.error}`;
+                }
+
+                case 'replace_in_file': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const { target, replacement } = toolCall.arguments;
+                    const originalRes = await window.electronAPI.invoke('fs:readFile', validation.path);
+                    if (!originalRes || !originalRes.success) return `Error reading file: ${originalRes?.error || 'Unknown error'}`;
+
+                    if (!originalRes.content.includes(target)) {
+                        return "Error: Target text not found in file. Please ensure exact match including whitespace.";
+                    }
+
+                    if (originalRes.content.indexOf(target) !== originalRes.content.lastIndexOf(target)) {
+                        return "Error: Target text is ambiguous (found multiple times). Please provide more context in 'target' to make it unique.";
+                    }
+
+                    const newContent = originalRes.content.replace(target, replacement);
+                    const replaceRes = await window.electronAPI.invoke('fs:writeFile', {
+                        path: validation.path,
+                        content: newContent
+                    });
+
+                    if (!replaceRes) return "Error: Failed to invoke filesystem write.";
+                    return replaceRes.success ? `Success: Text replaced in ${validation.path}` : `Error writing file: ${replaceRes.error}`;
+                }
+
+                case 'list_dir': {
+                    const validation = validatePath(toolCall.arguments.path || "./");
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const listRes = await window.electronAPI.invoke('fs:readDir', validation.path);
+                    if (!listRes || !listRes.success) return `Error: ${listRes?.error || 'Unknown error'}`;
+                    const items = (listRes.files || []).map((f: any) => `${f.type === 'folder' ? '[DIR]' : '[FILE]'} ${f.name}`).join('\n');
+                    return items || "Empty directory.";
+                }
+
+                case 'find_by_name': {
+                    const rootValidation = validatePath(toolCall.arguments.root || "./");
+                    if (!rootValidation.valid) return `Error: ${rootValidation.error}`;
+
+                    const findRes = await window.electronAPI.invoke('fs:find', {
+                        pattern: toolCall.arguments.pattern,
+                        root: rootValidation.path
+                    });
+                    if (!findRes || !findRes.success) return `Error: ${findRes?.error || 'Unknown error'}`;
+                    return (findRes.files || []).join('\n') || "No matches found.";
+                }
+
+                case 'grep_search': {
+                    const rootValidation = validatePath(toolCall.arguments.root || "./");
+                    if (!rootValidation.valid) return `Error: ${rootValidation.error}`;
+
+                    const grepRes = await window.electronAPI.invoke('fs:grep', {
+                        query: toolCall.arguments.query,
+                        root: rootValidation.path
+                    });
+                    if (!grepRes || !grepRes.success) return `Error: ${grepRes?.error || 'Unknown error'}`;
+                    return (grepRes.files || []).join('\n') || "No matches found.";
+                }
+
+                case 'view_file_outline': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const outlineRes = await window.electronAPI.invoke('fs:viewOutline', validation.path);
+                    if (!outlineRes || !outlineRes.success) return `Error: ${outlineRes?.error || 'Unknown error'}`;
+                    return outlineRes.outline || "No items found in file.";
+                }
+
+                case 'read_terminal': {
+                    const termRes = await window.electronAPI.invoke('terminal:read');
+                    if (!termRes) return "Error: Failed to read terminal.";
+                    return termRes.success ? termRes.content : `Error reading terminal: ${termRes.error}`;
+                }
+
+                case 'multi_replace_file_content': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const { changes } = toolCall.arguments;
+                    const multiReadRes = await window.electronAPI.invoke('fs:readFile', validation.path);
+                    if (!multiReadRes || !multiReadRes.success) return `Error reading file: ${multiReadRes?.error || 'Unknown error'}`;
+
+                    let currentContent = multiReadRes.content;
+                    for (const change of changes) {
+                        if (!currentContent.includes(change.target)) {
+                            return `Error: Target text '${change.target.substring(0, 20)}...' not found. Aborting ALL changes.`;
+                        }
+                        currentContent = currentContent.replace(change.target, change.replacement);
+                    }
+
+                    const multiWriteRes = await window.electronAPI.invoke('fs:writeFile', {
+                        path: validation.path,
+                        content: currentContent
+                    });
+                    if (!multiWriteRes) return "Error: Failed to invoke filesystem write.";
+                    return multiWriteRes.success ? `Success: Applied ${changes.length} changes to ${validation.path}` : `Error writing file: ${multiWriteRes.error}`;
+                }
+
+                case 'run_command': {
+                    const cmdRes = await window.electronAPI.invoke('shell:exec', {
+                        cmd: toolCall.arguments.command,
+                        cwd: toolCall.arguments.cwd || projectRoot
+                    });
+                    if (!cmdRes) return "Error: Failed to execute command.";
+                    return cmdRes.success ? `STDOUT:\n${cmdRes.stdout}\nSTDERR:\n${cmdRes.stderr}` : `Execution Error: ${cmdRes.error}`;
+                }
+
+                // --- Search Tools (Backend API) ---
+                case 'search_web': {
+                    const searchRes = await fetch(`${API_BASE}/agent/search`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: toolCall.arguments.query })
+                    });
+                    const searchData = await searchRes.json();
+                    return JSON.stringify(searchData, null, 2);
+                }
+
+                case 'read_url': {
+                    const urlRes = await fetch(`${API_BASE}/agent/read_url`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: toolCall.arguments.url })
+                    });
+                    const urlData = await urlRes.json();
+                    return JSON.stringify(urlData, null, 2);
+                }
+
+                default:
+                    return `Error: Unknown tool '${toolCall.name}'`;
+            }
+        } catch (e) {
+            return `System Error executing tool: ${e}`;
+        }
+    };
+
+    const callAgent = async (targetId: string, currentHistory: any[], userMessage: string | null, image: string | null) => {
+        setIsThinking(true);
+        thinkingRef.current = true;
+
+        // Abort previous request if any
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
+        const botMsgId = (Date.now() + Math.random()).toString();
+        const botMsg = { id: botMsgId, role: 'assistant' as const, content: '', timestamp: Date.now() };
+        addMessageToDocChat(targetId, botMsg);
+
+        let accumulatedContent = '';
+
+        try {
+            const payload = {
+                docId: targetId,
+                query: userMessage || "Continue process...",
+                history: currentHistory,
+                image: image,
+                model: selectedModel,
+                tools: availableTools,
+                project_root: explorerRootPath // Add this back
+            };
+
+            const response = await fetch(`${API_BASE}/rag/ask`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: abortControllerRef.current.signal
+            });
+
+            if (!response.body) throw new Error("No response body");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.content) {
+                                accumulatedContent += data.content;
+                                useAppStore.getState().updateMessageContent(targetId, botMsgId, accumulatedContent);
+                            }
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                        } catch (e) { }
+                    }
+                }
+            }
+
+            // 4. Tool Detection & Recursion
+            const toolRegex = /```json\s*(\{[\s\S]*?"tool":[\s\S]*?\})\s*```/g;
+            let match;
+            let toolCalls: ToolCall[] = [];
+
+            while ((match = toolRegex.exec(accumulatedContent)) !== null) {
+                try {
+                    const jsonCall = JSON.parse(match[1]);
+                    const toolName = jsonCall.tool || jsonCall.name; // Defensive
+                    if (toolName) {
+                        toolCalls.push({
+                            name: toolName,
+                            arguments: jsonCall.args || jsonCall.arguments || {}
+                        });
+                    }
+                } catch (e) {
+                    console.error("Failed to parse tool call", e);
+                }
+            }
+
+            if (toolCalls.length > 0) {
+                if (!thinkingRef.current) return; // Stopped
+
+                let toolOutputs = "";
+                for (const call of toolCalls) {
+                    const result = await executeTool(call, explorerRootPath || undefined);
+                    toolOutputs += `\n\n> Tool Output (${call.name}):\n\`\`\`\n${result}\n\`\`\`\n`;
+                }
+
+                const toolOutputMsg = {
+                    id: (Date.now() + Math.random()).toString(),
+                    role: 'user' as const,
+                    content: `[System Tool Output]:${toolOutputs}\n\nPlease proceed with this information.`,
+                    timestamp: Date.now()
+                };
+
+                const newHistory = [
+                    ...currentHistory,
+                    { role: 'assistant', content: accumulatedContent },
+                    { role: 'user', content: toolOutputMsg.content }
+                ];
+
+                await callAgent(targetId, newHistory, null, null);
+            }
+
+        } catch (e: any) {
+            if (e.name === 'AbortError') {
+                console.log("Agent request aborted");
+                return;
+            }
+            console.error("Agent Error:", e);
+            addMessageToDocChat(targetId, {
+                ...botMsg,
+                content: (accumulatedContent || '') + "\n\n⚠️ Error during generation: " + e.message
+            });
+        } finally {
+            abortControllerRef.current = null;
+            setIsThinking(false);
+            thinkingRef.current = false;
+        }
+    };
+
     const handleSend = async () => {
         const isIde = sidebarTab === 'ide';
         const targetId = isIde ? explorerRootPath : activeDoc?.id;
@@ -441,89 +764,29 @@ export const DocumentAssistant: React.FC = () => {
         };
 
         const fullMessage = contextString + `User Question: ${inputValue}`;
-        const currentPastedImage = pastedImage;
 
+        // Add User Message
         addMessageToDocChat(targetId, userMsg);
+
+        // Reset UI
         setInputValue('');
         setPastedImage(null);
         clearSelectedContexts();
         clearSelectedFileContexts();
-        setIsThinking(true);
-        // Reset scroll lock
         isUserScrolledUp.current = false;
 
-        const botMsgId = (Date.now() + 1).toString();
-        const botMsg = {
-            id: botMsgId,
-            role: 'assistant' as const,
-            content: '',
-            timestamp: Date.now()
-        };
+        // Current Chat History including this new message? 
+        // No, callAgent appends this one. But we passed `history` which is PREVIOUS history.
+        // So we need to append the user message to history effectively.
+        // `history` variable comes from store which might not have updated yet.
+        // So we manually append.
+        const currentHistory = [
+            ...history,
+            { role: 'user', content: fullMessage } // Enhanced context message
+        ];
 
-        try {
-            const response = await fetch(`${API_BASE}/rag/ask`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    docId: targetId,
-                    query: fullMessage,
-                    history: history, // Send full history including context
-                    image: currentPastedImage,
-                    model: selectedModel // Send selected model
-                })
-            });
-
-            if (!response.body) throw new Error("No response body");
-
-            // Stop thinking animation and add the empty bot message ONLY when we're ready to stream
-            setIsThinking(false);
-            addMessageToDocChat(targetId, botMsg);
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let accumulatedContent = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.content) {
-                                accumulatedContent += data.content;
-                                // Update the SPECIFIC bot message using its ID
-                                useAppStore.getState().updateMessageContent(targetId, botMsgId, accumulatedContent);
-                            } else if (data.error) {
-                                console.error("Streaming error:", data.error);
-                            }
-                        } catch (e) {
-                            // Part of a JSON chunk, wait for next
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Failed to ask document:", e);
-            setIsThinking(false);
-            // If the message wasn't added yet (error during fetch init), add it with error
-            // We can check if it exists in list, or just check our local flow. 
-            // Simpler: just add a new error message if we failed early.
-            // But to be cleaner, let's assume if we are here and isThinking was true, we probably haven't added it or we failed mid-stream.
-            // Actually simpler: if we fail, we MUST show something.
-            // Let's rely on checking if the message exists in the store? No, that's async/complex.
-            // Let's use a flag.
-            addMessageToDocChat(targetId, {
-                ...botMsg,
-                content: "⚠️ Error communicating with AI. Please try again."
-            });
-        } finally {
-            setIsThinking(false);
-        }
+        // Trigger Agent Loop
+        callAgent(targetId, currentHistory, fullMessage, pastedImage);
     };
 
     if (!activeDoc && !(sidebarTab === 'ide' && explorerRootPath)) {
@@ -862,19 +1125,32 @@ export const DocumentAssistant: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Send Button */}
-                        <button
-                            onClick={handleSend}
-                            disabled={!inputValue.trim() && !pastedImage}
-                            className={cn(
-                                "p-2 rounded-lg transition-all flex items-center justify-center",
-                                inputValue.trim() || pastedImage
-                                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm scale-100"
-                                    : "bg-transparent text-muted-foreground/40 scale-95 cursor-not-allowed"
+                        <div className="flex items-center gap-2">
+                            {/* Stop Button (Only when thinking) */}
+                            {isThinking && (
+                                <button
+                                    onClick={stopAgent}
+                                    className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all flex items-center justify-center"
+                                    title="Stop Agent"
+                                >
+                                    <Square className="w-4 h-4 fill-current" />
+                                </button>
                             )}
-                        >
-                            <Send className="w-4 h-4" />
-                        </button>
+
+                            {/* Send Button */}
+                            <button
+                                onClick={handleSend}
+                                disabled={(!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0) || isThinking}
+                                className={cn(
+                                    "p-2 rounded-lg transition-all flex items-center justify-center",
+                                    (inputValue.trim() || pastedImage || selectedFileContexts.length > 0) && !isThinking
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm scale-100"
+                                        : "bg-transparent text-muted-foreground/40 scale-95 cursor-not-allowed"
+                                )}
+                            >
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

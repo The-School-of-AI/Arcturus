@@ -18,6 +18,7 @@ let backendProcesses = [];
 // Terminal state
 let ptyProcess = null;
 let activeTerminalCwd = null;
+let activeTerminalBuffer = ""; // Store terminal history
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -122,8 +123,14 @@ function setupTerminalHandlers() {
 
             // Handle Output
             ptyProcess.stdout.on('data', (data) => {
+                const str = data.toString('utf-8');
+                // Persist to history buffer (max 50KB)
+                if (activeTerminalBuffer.length > 50000) {
+                    activeTerminalBuffer = activeTerminalBuffer.slice(-40000); // Keep last 40KB
+                }
+                activeTerminalBuffer += str;
+
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    let str = data.toString('utf-8');
                     mainWindow.webContents.send('terminal:outgoing', str);
                 }
             });
@@ -163,8 +170,17 @@ function setupTerminalHandlers() {
     });
 
     ipcMain.on('terminal:resize', (event, { cols, rows }) => {
-        // Todo: Implement resize via signal or sideline if needed.
-        // For now, the python script hardcodes or inherits.
+        if (ptyProcess) {
+            try {
+                ptyProcess.resize(cols, rows);
+            } catch (e) { }
+        }
+    });
+
+    ipcMain.handle('terminal:read', async () => {
+        console.log('[Electron] terminal:read invoked from Agent');
+        // Return the last 10KB of history to avoid overwhelming LLM
+        return { success: true, content: activeTerminalBuffer.slice(-10000) || "[No output captured yet]" };
     });
 }
 
@@ -194,6 +210,31 @@ function setupFSHandlers() {
 
     ipcMain.on('shell:openExternal', (event, url) => {
         shell.openExternal(url);
+    });
+
+    // Shell Execution for Agent
+    ipcMain.handle('shell:exec', async (event, { cmd, cwd }) => {
+        console.log(`[Electron] shell:exec '${cmd}' in '${cwd}'`);
+        const { exec } = require('child_process');
+        return new Promise((resolve) => {
+            exec(cmd, { cwd: cwd || undefined, maxBuffer: 5 * 1024 * 1024 }, (error, stdout, stderr) => {
+                if (error) {
+                    // We typically want to return the output even if it failed (exit code non-zero)
+                    resolve({
+                        success: false,
+                        error: error.message,
+                        stdout: stdout || '',
+                        stderr: stderr || ''
+                    });
+                } else {
+                    resolve({
+                        success: true,
+                        stdout: stdout || '',
+                        stderr: stderr || ''
+                    });
+                }
+            });
+        });
     });
 
     // File Operations
@@ -306,6 +347,64 @@ function setupFSHandlers() {
             console.error('[Electron] fs:move failed', error);
             return { success: false, error: error.message };
         }
+    });
+
+    // Advanced Discovery Handlers
+    ipcMain.handle('fs:find', async (event, { pattern, root }) => {
+        const { spawn } = require('child_process');
+        // Fallback to project root if root not provided
+        const searchRoot = root || path.join(__dirname, '..', '..');
+        console.log(`[Electron] fs:find '${pattern}' in '${searchRoot}'`);
+
+        return new Promise((resolve) => {
+            // Find files matching pattern (case-insensitive, ignoring .git)
+            const findCmd = process.platform === 'win32' ? 'where /r . *' : 'find . -name "*"';
+            // Better: use 'find' with some smart ignores or 'fd' if available
+            // For now, let's use a simple recursive JS glob or similar if we want to be cross-platform,
+            // but since we are on Mac, let's go with 'find'
+            const find = spawn('find', ['.', '-name', `*${pattern}*`, '-not', '-path', '*/.*'], { cwd: searchRoot });
+
+            let stdout = '';
+            find.stdout.on('data', data => { stdout += data; });
+            find.on('close', () => {
+                const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
+                resolve({ success: true, files: files.slice(0, 50) }); // Limit results
+            });
+            find.on('error', err => resolve({ success: false, error: err.message }));
+        });
+    });
+
+    ipcMain.handle('fs:viewOutline', async (event, filePath) => {
+        const { spawn } = require('child_process');
+        const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'file_outline.py');
+        console.log(`[Electron] fs:viewOutline for '${filePath}'`);
+
+        return new Promise((resolve) => {
+            const proc = spawn('python3', [scriptPath, filePath]);
+            let stdout = '';
+            proc.stdout.on('data', data => { stdout += data; });
+            proc.on('close', () => resolve({ success: true, outline: stdout }));
+            proc.on('error', err => resolve({ success: false, error: err.message }));
+        });
+    });
+
+    ipcMain.handle('fs:grep', async (event, { query, root }) => {
+        const { spawn } = require('child_process');
+        const searchRoot = root || path.join(__dirname, '..', '..');
+        console.log(`[Electron] fs:grep '${query}' in '${searchRoot}'`);
+
+        return new Promise((resolve) => {
+            // ripgrep is preferred but grep -r is more universal
+            const grep = spawn('grep', ['-r', '-l', '--exclude-dir=.*', query, '.'], { cwd: searchRoot });
+
+            let stdout = '';
+            grep.stdout.on('data', data => { stdout += data; });
+            grep.on('close', () => {
+                const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
+                resolve({ success: true, files: files.slice(0, 50) });
+            });
+            grep.on('error', err => resolve({ success: false, error: err.message }));
+        });
     });
 }
 

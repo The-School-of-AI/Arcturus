@@ -93,6 +93,8 @@ app.include_router(git_router.router)
 
 from routers import chat as chat_router
 app.include_router(chat_router.router)
+from routers import agent as agent_router
+app.include_router(agent_router.router)
 # Chat router included
 
 

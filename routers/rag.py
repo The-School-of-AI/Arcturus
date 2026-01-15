@@ -766,8 +766,15 @@ async def ask_rag_document(request: Request):
         context_text = "\n\n".join(context_list) if context_list else "No relevant context found in document."
 
         # 2. Build Ollama Prompt
-        system_prompt = f"""You are a helpful document assistant. 
-Answer the user's question based strictly on the provided context from the document.
+        tools = body.get("tools")
+        project_root = body.get("project_root", "Unknown")
+        system_prompt = f"""You are a helpful document assistant and coding agent. 
+Answer the user's question based strictly on the provided context from the document or by using your tools.
+
+CRITICAL: Your current working directory (project root) is: {project_root}
+All file operations (read, write, list, etc.) MUST be relative to or within this directory.
+Do NOT attempt to access files outside of this path.
+
 If the context doesn't contain the answer, say so, but try to be helpful based on what is available.
 
 CRITICAL: Always start your response with a thinking process enclosed in <think> tags. 
@@ -777,6 +784,27 @@ CONTEXT FROM DOCUMENT:
 ---
 {context_text}
 ---
+"""
+
+        if tools:
+            import json
+            tools_desc = json.dumps(tools, indent=2)
+            system_prompt += f"""
+\n### AGENT TOOLS
+You have access to the following tools to interact with the environment.
+To use a tool, you MUST output a valid JSON block enclosed in markdown code fences, like this:
+
+```json
+{{
+  "tool": "tool_name",
+  "args": {{ "arg_name": "value" }}
+}}
+```
+
+Available Tools:
+{tools_desc}
+
+When the tool output is provided to you in a subsequent message, use it to answer the user's request.
 """
         messages = [{"role": "system", "content": system_prompt}]
         for msg in history[-5:]:
