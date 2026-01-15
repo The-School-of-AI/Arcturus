@@ -217,12 +217,17 @@ function setupFSHandlers() {
         console.log(`[Electron] shell:exec '${cmd}' in '${cwd}'`);
         const { exec } = require('child_process');
         return new Promise((resolve) => {
-            exec(cmd, { cwd: cwd || undefined, maxBuffer: 5 * 1024 * 1024 }, (error, stdout, stderr) => {
+            // Added 60s timeout to prevent hanging on interactive inputs (like python's input())
+            exec(cmd, {
+                cwd: cwd || undefined,
+                maxBuffer: 10 * 1024 * 1024, // Increased to 10MB
+                timeout: 60000
+            }, (error, stdout, stderr) => {
                 if (error) {
-                    // We typically want to return the output even if it failed (exit code non-zero)
+                    const isTimeout = error.killed || error.signal === 'SIGTERM';
                     resolve({
                         success: false,
-                        error: error.message,
+                        error: isTimeout ? "Command timed out after 60s (likely waiting for input)" : error.message,
                         stdout: stdout || '',
                         stderr: stderr || ''
                     });

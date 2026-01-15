@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowRight } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowUp } from 'lucide-react';
 import { useAppStore } from '@/store';
-import type { FileContext } from '@/types';
+import type { FileContext, RAGDocument } from '@/types';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -134,6 +134,50 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
     const ideOpenDocuments = useAppStore(state => state.ideOpenDocuments);
 
     if (role === 'user') {
+        const isToolOutput = content.includes('[System Tool Output]');
+        if (isToolOutput) {
+            // Robust regex to parse tool outputs: "> Tool Output (name):\n```\nresult\n```"
+            // Handles potential variation in newlines and spacing. 
+            // We use [\s\S] to match any char including newlines.
+            const toolResults: { name: string, output: string }[] = [];
+            const regex = />?\s*Tool Output \((.*?)\):?\s*?\n+```(?:[\w-]*\n)?([\s\S]*?)```/g;
+            let match;
+            while ((match = regex.exec(content)) !== null) {
+                toolResults.push({ name: match[1].trim(), output: match[2].trim() });
+            }
+
+            if (toolResults.length > 0) {
+                return (
+                    <div className="flex flex-col gap-3 my-2 w-full">
+                        {toolResults.map((tr, idx) => (
+                            <div key={idx} className="rounded-lg border border-border overflow-hidden bg-card/50 shadow-sm transition-all hover:bg-card/80">
+                                <div className="px-3 py-1.5 bg-muted/40 border-b border-border flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className={cn(
+                                            "w-1.5 h-1.5 rounded-full shrink-0",
+                                            tr.name === 'run_command' ? "bg-green-500 animate-pulse" : "bg-primary"
+                                        )} />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]">
+                                            {tr.name.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[8px] opacity-40 font-mono tracking-tighter">AGENT TOOL OUTPUT</span>
+                                        <X className="w-2.5 h-2.5 opacity-20" />
+                                    </div>
+                                </div>
+                                <div className={cn(
+                                    "p-3 font-mono text-[11px] overflow-x-auto selection:bg-primary/20",
+                                    (tr.name === 'run_command' || tr.name === 'read_terminal') ? "bg-[#1e1e1e] text-[#d4d4d4]" : "text-foreground/85"
+                                )}>
+                                    <pre className="whitespace-pre-wrap break-words leading-relaxed">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
+        }
         return (
             <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                 {content}
@@ -432,9 +476,20 @@ export const DocumentAssistant: React.FC = () => {
                     const validation = validatePath(toolCall.arguments.path);
                     if (!validation.valid) return `Error: ${validation.error}`;
 
-                    const readRes = await window.electronAPI.invoke('fs:readFile', validation.path);
+                    const readRes = await window.electronAPI.invoke('fs:readFile', validation.path!);
                     if (!readRes) return "Error: Failed to invoke filesystem read.";
-                    return readRes.success ? readRes.content : `Error: ${readRes.error}`;
+                    if (readRes.success) {
+                        // Automatically open the file in the IDE if successfully read
+                        useAppStore.getState().openIdeDocument({
+                            id: validation.path!,
+                            title: validation.path!.split('/').pop() || 'Untitled',
+                            content: readRes.content,
+                            type: 'file',
+                            isDirty: false
+                        } as RAGDocument);
+                        return readRes.content;
+                    }
+                    return `Error: ${readRes.error}`;
                 }
 
                 case 'write_file': {
@@ -446,7 +501,20 @@ export const DocumentAssistant: React.FC = () => {
                         content: toolCall.arguments.content
                     });
                     if (!writeRes) return "Error: Failed to invoke filesystem write.";
-                    return writeRes.success ? `Success: File written to ${validation.path}` : `Error: ${writeRes.error}`;
+                    if (writeRes.success) {
+                        useAppStore.getState().refreshExplorerFiles();
+                        // Automatically open the new/modified file in the IDE
+                        const finalPath = validation.path as string;
+                        useAppStore.getState().openIdeDocument({
+                            id: finalPath,
+                            title: finalPath.split('/').pop() || 'Untitled',
+                            content: toolCall.arguments.content,
+                            type: 'file',
+                            isDirty: false
+                        } as RAGDocument);
+                        return `Success: File written to ${finalPath}`;
+                    }
+                    return `Error: ${writeRes.error}`;
                 }
 
                 case 'replace_in_file': {
@@ -454,7 +522,7 @@ export const DocumentAssistant: React.FC = () => {
                     if (!validation.valid) return `Error: ${validation.error}`;
 
                     const { target, replacement } = toolCall.arguments;
-                    const originalRes = await window.electronAPI.invoke('fs:readFile', validation.path);
+                    const originalRes = await window.electronAPI.invoke('fs:readFile', validation.path!);
                     if (!originalRes || !originalRes.success) return `Error reading file: ${originalRes?.error || 'Unknown error'}`;
 
                     if (!originalRes.content.includes(target)) {
@@ -467,12 +535,24 @@ export const DocumentAssistant: React.FC = () => {
 
                     const newContent = originalRes.content.replace(target, replacement);
                     const replaceRes = await window.electronAPI.invoke('fs:writeFile', {
-                        path: validation.path,
+                        path: validation.path!,
                         content: newContent
                     });
 
                     if (!replaceRes) return "Error: Failed to invoke filesystem write.";
-                    return replaceRes.success ? `Success: Text replaced in ${validation.path}` : `Error writing file: ${replaceRes.error}`;
+                    if (replaceRes.success) {
+                        useAppStore.getState().refreshExplorerFiles();
+                        // Update IDE if open
+                        useAppStore.getState().openIdeDocument({
+                            id: validation.path!,
+                            title: validation.path!.split('/').pop() || 'Untitled',
+                            content: newContent,
+                            type: 'file',
+                            isDirty: false
+                        } as RAGDocument);
+                        return `Success: Text replaced in ${validation.path}`;
+                    }
+                    return `Error writing file: ${replaceRes.error}`;
                 }
 
                 case 'list_dir': {
@@ -529,23 +609,37 @@ export const DocumentAssistant: React.FC = () => {
                     if (!validation.valid) return `Error: ${validation.error}`;
 
                     const { changes } = toolCall.arguments;
-                    const multiReadRes = await window.electronAPI.invoke('fs:readFile', validation.path);
+                    const multiReadRes = await window.electronAPI.invoke('fs:readFile', validation.path!);
                     if (!multiReadRes || !multiReadRes.success) return `Error reading file: ${multiReadRes?.error || 'Unknown error'}`;
 
                     let currentContent = multiReadRes.content;
                     for (const change of changes) {
                         if (!currentContent.includes(change.target)) {
-                            return `Error: Target text '${change.target.substring(0, 20)}...' not found. Aborting ALL changes.`;
+                            console.error(`[MultiReplace] Target not found: "${change.target.substring(0, 50)}..."`);
+                            return `Error: Change ${changes.indexOf(change) + 1}/${changes.length} failed. Target text not found. Ensure you are matching exact whitespace and content.`;
                         }
                         currentContent = currentContent.replace(change.target, change.replacement);
+                        console.log(`[MultiReplace] Applied change ${changes.indexOf(change) + 1}`);
                     }
 
                     const multiWriteRes = await window.electronAPI.invoke('fs:writeFile', {
-                        path: validation.path,
+                        path: validation.path!,
                         content: currentContent
                     });
                     if (!multiWriteRes) return "Error: Failed to invoke filesystem write.";
-                    return multiWriteRes.success ? `Success: Applied ${changes.length} changes to ${validation.path}` : `Error writing file: ${multiWriteRes.error}`;
+                    if (multiWriteRes.success) {
+                        useAppStore.getState().refreshExplorerFiles();
+                        // Update IDE if open
+                        useAppStore.getState().openIdeDocument({
+                            id: validation.path!,
+                            title: validation.path!.split('/').pop() || 'Untitled',
+                            content: currentContent,
+                            type: 'file',
+                            isDirty: false
+                        } as RAGDocument);
+                        return `Success: Applied ${changes.length} changes to ${validation.path}`;
+                    }
+                    return `Error writing file: ${multiWriteRes.error}`;
                 }
 
                 case 'run_command': {
@@ -553,8 +647,20 @@ export const DocumentAssistant: React.FC = () => {
                         cmd: toolCall.arguments.command,
                         cwd: toolCall.arguments.cwd || projectRoot
                     });
-                    if (!cmdRes) return "Error: Failed to execute command.";
-                    return cmdRes.success ? `STDOUT:\n${cmdRes.stdout}\nSTDERR:\n${cmdRes.stderr}` : `Execution Error: ${cmdRes.error}`;
+                    if (!cmdRes) {
+                        console.error("run_command: IPC shell:exec returned null");
+                        return "Error: Internal IPC failure. 'shell:exec' returned no response.";
+                    }
+                    if (cmdRes.success) {
+                        useAppStore.getState().refreshExplorerFiles();
+                        const stdout = cmdRes.stdout;
+                        const stderr = cmdRes.stderr;
+                        if (!stdout && !stderr) {
+                            return `Success (Exit Code 0). Warning: Command produced no output. Did you forget to print()?`;
+                        }
+                        return `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`;
+                    }
+                    return `Execution Error: ${cmdRes.error}`;
                 }
 
                 // --- Search Tools (Backend API) ---
@@ -682,6 +788,9 @@ export const DocumentAssistant: React.FC = () => {
                     content: `[System Tool Output]:${toolOutputs}\n\nPlease proceed with this information.`,
                     timestamp: Date.now()
                 };
+
+                // CRITICAL: Add the tool output to the UI store so the user can see it!
+                addMessageToDocChat(targetId, toolOutputMsg);
 
                 const newHistory = [
                     ...currentHistory,
@@ -1126,8 +1235,8 @@ export const DocumentAssistant: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {/* Stop Button (Only when thinking) */}
-                            {isThinking && (
+                            {/* Stop Button OR Send Button (Mutually Exclusive) */}
+                            {isThinking ? (
                                 <button
                                     onClick={stopAgent}
                                     className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all flex items-center justify-center"
@@ -1135,21 +1244,20 @@ export const DocumentAssistant: React.FC = () => {
                                 >
                                     <Square className="w-4 h-4 fill-current" />
                                 </button>
+                            ) : (
+                                <button
+                                    onClick={handleSend}
+                                    disabled={(!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0)}
+                                    className={cn(
+                                        "p-2 rounded-lg transition-all flex items-center justify-center",
+                                        (inputValue.trim() || pastedImage || selectedFileContexts.length > 0)
+                                            ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm scale-100"
+                                            : "bg-transparent text-muted-foreground/40 scale-95 cursor-not-allowed"
+                                    )}
+                                >
+                                    <ArrowUp className="w-4 h-4" />
+                                </button>
                             )}
-
-                            {/* Send Button */}
-                            <button
-                                onClick={handleSend}
-                                disabled={(!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0) || isThinking}
-                                className={cn(
-                                    "p-2 rounded-lg transition-all flex items-center justify-center",
-                                    (inputValue.trim() || pastedImage || selectedFileContexts.length > 0) && !isThinking
-                                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm scale-100"
-                                        : "bg-transparent text-muted-foreground/40 scale-95 cursor-not-allowed"
-                                )}
-                            >
-                                <ArrowRight className="w-4 h-4" />
-                            </button>
                         </div>
                     </div>
                 </div>

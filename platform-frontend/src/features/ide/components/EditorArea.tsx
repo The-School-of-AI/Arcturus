@@ -247,6 +247,11 @@ export const EditorArea: React.FC = () => {
                         if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) {
                             return <div className="h-full w-full flex items-center justify-center p-8"><img src={`file://${activeDoc.id}`} className="max-w-full max-h-full object-contain" /></div>;
                         }
+
+                        // Debug language detection
+                        const detectedLang = activeDoc.language || getLanguage(activeDoc.id.split('.').pop() || activeDoc.type);
+                        console.log(`[EditorArea] Opening ${activeDoc.id}, Language: ${detectedLang}, StoreLang: ${activeDoc.language}, Type: ${activeDoc.type}`);
+
                         if (ext === 'pdf') {
                             return <div className="h-full w-full flex flex-col items-center justify-center bg-zinc-900/40 p-12"><FileText className="w-12 h-12 text-red-400" /></div>;
                         }
@@ -257,7 +262,7 @@ export const EditorArea: React.FC = () => {
                         return <Editor
                             height="100%"
                             path={activeDoc.id}
-                            language={getLanguage(activeDoc.type)}
+                            language={activeDoc.language || getLanguage(activeDoc.id.split('.').pop() || activeDoc.type)}
                             value={activeDoc.content || ''}
                             onChange={(val) => updateIdeDocumentContent(activeDoc.id, val || '', true)}
                             beforeMount={handleBeforeMount}

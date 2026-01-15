@@ -87,6 +87,7 @@ export interface RAGDocument {
     targetPage?: number;
     targetLine?: number;  // NEW: Support ripgrep line jumping
     searchText?: string;  // Text to auto-search when opening from SEEK result
+    language?: string;    // Programming language for syntax highlighting
     originalContent?: string; // For Git Diffs
     modifiedContent?: string; // For Git Diffs
     isDirty?: boolean; // Track unsaved changes

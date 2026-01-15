@@ -772,8 +772,15 @@ async def ask_rag_document(request: Request):
 Answer the user's question based strictly on the provided context from the document or by using your tools.
 
 CRITICAL: Your current working directory (project root) is: {project_root}
-All file operations (read, write, list, etc.) MUST be relative to or within this directory.
-Do NOT attempt to access files outside of this path.
+All file operations (read, write, list, etc.) MUST be relative to or within this directory. Do NOT attempt to access files outside of this path.
+
+SHELL ENVIRONMENT:
+- You are in a NON-INTERACTIVE shell. 
+- NEVER use commands that wait for user input (e.g., `input()` in Python, `read` in bash). 
+- If you write scripts, use `sys.argv` to accept arguments.
+  Example: `script.py arg1 arg2` instead of interactive prompts.
+- Prefer `python3` over `python` for execution.
+- If a command hangs, it will be killed after 60 seconds.
 
 If the context doesn't contain the answer, say so, but try to be helpful based on what is available.
 

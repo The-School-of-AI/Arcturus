@@ -298,6 +298,7 @@ interface ExplorerSlice {
     setExplorerRootPath: (path: string | null) => void;
     explorerFiles: any[];
     setExplorerFiles: (files: any[]) => void;
+    refreshExplorerFiles: () => Promise<void>;
     isAnalyzing: boolean;
     setIsAnalyzing: (analyzing: boolean) => void;
     flowData: any | null;
@@ -815,18 +816,35 @@ export const useAppStore = create<AppState>()(
             ideOpenDocuments: [],
             ideActiveDocumentId: null,
             openIdeDocument: (doc) => {
+                const getLanguage = (path: string) => {
+                    if (path.endsWith('.py')) return 'python';
+                    if (path.endsWith('.ts') || path.endsWith('.tsx')) return 'typescript';
+                    if (path.endsWith('.js') || path.endsWith('.cjs') || path.endsWith('.mjs')) return 'javascript';
+                    if (path.endsWith('.json')) return 'json';
+                    if (path.endsWith('.html')) return 'html';
+                    if (path.endsWith('.css')) return 'css';
+                    if (path.endsWith('.md')) return 'markdown';
+                    if (path.endsWith('.yml') || path.endsWith('.yaml')) return 'yaml';
+                    return 'plaintext';
+                };
+
+                const docWithLang = {
+                    ...doc,
+                    language: doc.language || getLanguage(doc.id)
+                };
+
                 const alreadyOpen = get().ideOpenDocuments.find(d => d.id === doc.id);
                 if (!alreadyOpen) {
                     set(state => ({
-                        ideOpenDocuments: [...state.ideOpenDocuments, doc],
+                        ideOpenDocuments: [...state.ideOpenDocuments, docWithLang],
                         ideActiveDocumentId: doc.id
                     }));
                 } else {
-                    // Update if already open (e.g. navigation params)
+                    // Update if already open (e.g. navigation params OR agent file write)
                     set(state => ({
                         ideOpenDocuments: state.ideOpenDocuments.map(d =>
                             d.id === doc.id
-                                ? { ...d, targetPage: doc.targetPage, searchText: doc.searchText }
+                                ? { ...d, content: doc.content || d.content, targetPage: doc.targetPage, searchText: doc.searchText, language: docWithLang.language }
                                 : d
                         ),
                         ideActiveDocumentId: doc.id
@@ -1167,23 +1185,37 @@ export const useAppStore = create<AppState>()(
             // --- Explorer Slice ---
             explorerRootPath: null,
             recentProjects: [],
-            setExplorerRootPath: (path) => set((state) => {
-                if (!path) return { explorerRootPath: null };
-                const filtered = state.recentProjects.filter(p => p !== path);
+            setExplorerRootPath: (path) => {
+                set((state) => {
+                    if (!path) return { explorerRootPath: null };
+                    const filtered = state.recentProjects.filter(p => p !== path);
 
-                // When project changes, reset IDE chat state and open documents to blank
-                return {
-                    explorerRootPath: path,
-                    recentProjects: [path, ...filtered].slice(0, 10),
-                    ideProjectChatHistory: [],
-                    ideOpenDocuments: [],
-                    ideActiveDocumentId: null,
-                    activeChatSessionId: null,
-                    chatSessions: [] // Clear sessions, they will be re-fetched for the new project
-                };
-            }),
+                    // When project changes, reset IDE chat state and open documents to blank
+                    return {
+                        explorerRootPath: path,
+                        recentProjects: [path, ...filtered].slice(0, 10),
+                        ideProjectChatHistory: [],
+                        ideOpenDocuments: [],
+                        ideActiveDocumentId: null,
+                        activeChatSessionId: null,
+                        chatSessions: []
+                    };
+                });
+                // Auto-refresh files when path is set
+                if (path) get().refreshExplorerFiles();
+            },
             explorerFiles: [],
             setExplorerFiles: (files) => set({ explorerFiles: files }),
+            refreshExplorerFiles: async () => {
+                const { explorerRootPath } = get();
+                if (!explorerRootPath) return;
+                try {
+                    const res = await window.electronAPI.invoke('fs:readDir', explorerRootPath);
+                    if (res.success && res.files) set({ explorerFiles: res.files });
+                } catch (e) {
+                    console.error("[Store] Failed to refresh explorer:", e);
+                }
+            },
             isAnalyzing: false,
             setIsAnalyzing: (analyzing) => set({ isAnalyzing: analyzing }),
             flowData: null,

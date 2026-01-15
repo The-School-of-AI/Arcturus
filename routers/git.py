@@ -36,11 +36,20 @@ async def get_git_status(path: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Path not found")
     
-    # Get branch name
-    branch = run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], path).strip()
-    
-    # Get status porcelain
-    status_raw = run_git_command(["status", "--porcelain"], path)
+    try:
+        # Get branch name
+        branch = run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], path).strip()
+        
+        # Get status porcelain
+        status_raw = run_git_command(["status", "--porcelain"], path)
+    except Exception:
+        # Not a git repo or other error
+        return {
+            "branch": "not a git repo",
+            "staged": [],
+            "unstaged": [],
+            "untracked": []
+        }
     
     staged = []
     unstaged = []
