@@ -401,6 +401,14 @@ export const IdeAgentPanel: React.FC = () => {
         }
     };
 
+    // Auto-resize textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, window.innerHeight * 0.5)}px`;
+        }
+    }, [inputValue]);
+
     // Initial Load
     useEffect(() => {
         if (explorerRootPath) {
@@ -708,19 +716,35 @@ export const IdeAgentPanel: React.FC = () => {
         }
     };
 
+    const dragCounter = useRef(0);
+
     // Render Logic...
     return (
         <div
             className="h-full flex flex-col bg-white dark:bg-card relative"
-            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
-            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+            onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounter.current += 1;
+                setIsDragging(true);
+            }}
             onDragLeave={(e) => {
-                if (e.currentTarget === e.target) setIsDragging(false);
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounter.current -= 1;
+                if (dragCounter.current === 0) {
+                    setIsDragging(false);
+                }
+            }}
+            onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
             }}
             onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setIsDragging(false);
+                dragCounter.current = 0;
                 const fileData = e.dataTransfer.getData('application/arcturus-file');
                 if (fileData) {
                     try {
@@ -890,7 +914,6 @@ export const IdeAgentPanel: React.FC = () => {
                 {isThinking && (
                     <div className="flex flex-col w-full mb-4">
                         <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                            <Bot className="w-3 h-3" />
                             <span className="text-[10px] font-bold uppercase tracking-widest">Assistant</span>
                         </div>
                         <div className="pl-1 text-sm text-foreground">
@@ -949,9 +972,9 @@ export const IdeAgentPanel: React.FC = () => {
                             }
                         }}
                         placeholder={selectedContexts.length > 0 ? "Ask about selected text..." : "Ask anything..."}
-                        className="w-full bg-transparent p-3 text-sm focus:outline-none resize-none min-h-[40px] max-h-[200px]"
+                        className="w-full bg-transparent p-3 text-sm focus:outline-none resize-none min-h-[44px] max-h-[50vh] overflow-y-auto"
                         rows={1}
-                        style={{ height: 'auto', minHeight: '44px' }}
+                        style={{ minHeight: '44px' }}
                     />
 
                     <div className="flex items-center justify-between p-2 border-t border-border/10">
@@ -961,7 +984,6 @@ export const IdeAgentPanel: React.FC = () => {
                                 onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30"
                             >
-                                <Cpu className="w-3 h-3" />
                                 <span>{ollamaModels.find(m => m.name === selectedModel)?.name || selectedModel}</span>
                                 <ChevronDown className="w-3 h-3 opacity-50" />
                             </button>
