@@ -1,0 +1,52 @@
+# Agentic Capabilities Implementation Plan
+
+This plan details how to upgrade the **DocumentAssistant** (your IDE Chat) from a passive chatter to an active agent capable of reading, writing, and executing code.
+
+## Goal
+Give the local LLM (Ollama/Gemini) "Hands" to interact with the project similarly to how I (Antigravity) do.
+
+## User Review Required
+> [!IMPORTANT]
+> **Safety Model**: We need to decide on a safety model. Should tools run automatically (like "Read File") vs. requiring approval (like "Write File")?
+> *Proposal*: "Read" tools are auto-approved. "Write/Run" tools require a simple "Run" button click by the user.
+
+## Proposed Changes
+
+### 1. Tool Schema Definition (`src/lib/agent-tools.ts`)
+Define the JSON structure for the tools we want to support. This allows us to strictly type the tools and pass them to the LLM (if using function calling) or include them in the system prompt.
+
+#### [NEW] `src/lib/agent-tools.ts`
+*   `ToolDefinition`: Interface for tool name, args, and description.
+*   `availableTools`: Constant list of tools (`read_file`, `write_file`, `list_dir`, `run_command`).
+*   `ToolCall`: Interface for parsed tool calls.
+
+### 2. System Prompt Engineering (`src/features/ai/prompts.ts`)
+We need to "teach" the model how to use these tools.
+
+#### [NEW] `src/features/ai/agent-prompt.ts`
+*   Create a specialized system prompt that:
+    1.  Lists the available tools.
+    2.  Defines the output format (e.g., XML `<tool_code>` or JSON markdown).
+    3.  Instructs the model to **stop and wait** for tool output.
+
+### 3. Tool Execution Layer ([DocumentAssistant.tsx](file:///Users/rohanshravan/TSAI/Arcturus/platform-frontend/src/components/rag/DocumentAssistant.tsx))
+The frontend needs to intercept LLM messages, look for tool calls, execute them, and feed the result back.
+
+#### [MODIFY] [src/components/rag/DocumentAssistant.tsx](file:///Users/rohanshravan/TSAI/Arcturus/platform-frontend/src/components/rag/DocumentAssistant.tsx)
+*   **Parser**: Detect tool calls in the streaming response.
+*   **Executor**: Map tool calls to `window.electronAPI` methods:
+    *   `read_file` -> `fs:readFile`
+    *   `write_file` -> `fs:writeFile`
+    *   `run_command` -> `terminal:execute` (or similar)
+*   **Feedback Loop**: When a tool finishes, append a "System" message with the output so the LLM can generate the final answer.
+
+## Verification Plan
+
+### Automated Tests
+*   We can't easily unit test the LLM behavior, but we can unit test the **Tool Executor**.
+*   Create a mock tool call string and verify it triggers the correct `electronAPI` invoke.
+
+### Manual Verification
+1.  **Read Test**: Ask "Read package.json". Verify the agent calls `read_file` and displays the content.
+2.  **Write Test**: Ask "Create a file named `hello.txt` with 'Hello World'". Verify the file appears in the Explorer.
+3.  **Command Test**: Ask "Run `ls -la`". Verify the terminal output is shown in chat.

@@ -1,0 +1,83 @@
+# Agent Capabilities & Toolset Reference
+
+This document is a **comprehensive and transparent** list of every tool available to me (Antigravity). It serves as a reference for building your IDE Chat agent.
+
+## 1. File System & Navigation
+
+I do not "know" line numbers magically. I must read a file or search for a pattern to find them.
+
+| Tool Name | Exact Functionality | How It Works |
+| :--- | :--- | :--- |
+| **`list_dir`** | Lists files/folders in a path. | Like running `ls -F`. Shows me what's there. |
+| **`find_by_name`** | Finds paths matching a pattern. | Uses `fd`. **Note:** Respects [.gitignore](file:///Users/rohanshravan/TSAI/Arcturus/.gitignore) by default. If a file is ignored (like `node_modules`), I won't see it unless I specifically check for it or navigate there blindly. |
+| **`view_file_outline`** | Parses a file to list classes/functions. | Uses a language parser (AST) to give me a high-level map (e.g., "Function [render](file:///Users/rohanshravan/TSAI/Arcturus/platform-frontend/src/components/sidebar/ExplorerPanel.tsx#485-503) is on line 45-90"). |
+| **`view_file`** | Reads file content. | I request specific lines (e.g., `StartLine: 1, EndLine: 100`). The system returns the text **prefixed with line numbers** so I can reference them in edits. |
+| **`view_code_item`** | Reads a specific symbol. | I ask for `Class.method`, and the system finds the exact lines for me. |
+| **[grep_search](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py#666-871)** | Searches text/regex. | Uses [ripgrep](file:///Users/rohanshravan/TSAI/Arcturus/mcp_servers/server_rag.py#666-871). Returns filename, line number, and content. This is how I find "where is [AppLayout](file:///Users/rohanshravan/TSAI/Arcturus/platform-frontend/src/components/layout/AppLayout.tsx#42-238) used?". |
+
+## 2. File Editing (The "Effectors")
+
+I don't just "rewrite" files. I use surgical tools to minimize tokens and errors.
+
+| Tool Name | Exact Functionality | Why Use This? |
+| :--- | :--- | :--- |
+| **`replace_file_content`** | Replaces ONE block of code. | Requires `StartLine`, `EndLine`, `TargetContent` (context matching), and `ReplacementContent`. This ensures I don't edit the wrong place if the file changed slightly. |
+| **`multi_replace_file_content`** | Replaces MULTIPLE blocks. | Example: Add an import at the top (Lines 1-5) AND fix a bug at the bottom (Lines 300-310) in one turn. |
+| **`write_to_file`** | Creates or fully overwrites a file. | Used for new files or when rewriting small config files entirely. |
+
+## 3. Terminal & Execution
+
+I have a persistent shell session.
+
+| Tool Name | Exact Functionality | Notes |
+| :--- | :--- | :--- |
+| **`run_command`** | Runs a shell command. | I can run anything (`npm`, `git`, `python`). I must specify `Cwd` (current working directory). |
+| **`command_status`** | Checks background commands. | If I run a dev server, I use this to see if it's still running or crashed. |
+| **`read_terminal`** | Reads terminal output history. | "What did the last command output?" |
+| **`send_command_input`** | Types into stdin. | Used for interactive prompts (e.g., "Press Y to confirm"). |
+
+## 4. External & Utility Tools
+
+| Tool Name | Purpose |
+| :--- | :--- |
+| **`browser_subagent`** | A mini-agent that controls a headless Chrome browser to visit URLs, click buttons, and verify UI. |
+| **`search_web`** | Performs a Google search for documentation or libraries. |
+| **`read_url_content`** | Scrapes text from a generic URL (lighter than browser_subagent). |
+| **`generate_image`** | Uses an image generation model (like Imagen) to create assets. |
+
+## 5. Meta/System Tools
+
+These are "invisible" tools I use to manage our conversation and my own memory.
+
+| Tool Name | Purpose |
+| :--- | :--- |
+| **`task_boundary`** | Sets the current "Task" status (shown in your task widget). Helps me stay focused. |
+| **`notify_user`** | The *only* way I can "speak" to you when I am in the middle of a complex task (task mode). |
+| **`list_resources`** / **`read_resource`** | Access to MCP (Model Context Protocol) resources provided by external servers (like a database or API connector). |
+
+---
+
+## Addressing Your Questions
+
+### "How do you know line numbers?"
+I don't memorize them.
+1. I call `view_file`.
+2. The system output looks like:
+   ```text
+   10: function foo() {
+   11:   return true;
+   12: }
+   ```
+3. I read that line 10 starts the function. If I want to edit it, I tell the `replace_file_content` tool: "Start at line 10".
+
+### "I saw you reading gitignore..."
+Yes, I often read [.gitignore](file:///Users/rohanshravan/TSAI/Arcturus/.gitignore) first. Why?
+- `find_by_name` (my file finder) **hides** ignored files by default.
+- If I can't find a file I expect to be there (like a build artifact or a config file), I check [.gitignore](file:///Users/rohanshravan/TSAI/Arcturus/.gitignore) to see if that's why it's invisible to me.
+- **I can still read ignored files** (using `view_file` with the absolute path), but I have to know they exist first. I can't "discover" them with [find](file:///Users/rohanshravan/TSAI/Arcturus/platform-frontend/src/components/sidebar/ExplorerPanel.tsx#305-320) if they are ignored.
+
+### "Are you being honest?"
+This list defines the *entirety* of my interaction with your computer. I have no secret "backdoor" access. I can only:
+1. Read/Write files in your workspace.
+2. Run terminal commands (which you can see/approve).
+3. Browse the web.

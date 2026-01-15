@@ -107,7 +107,8 @@ const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, id
                     style={theme === 'dark' ? vscDarkPlus : oneLight}
                     language={match[1]}
                     PreTag="div"
-                    className="!bg-transparent !m-0 !p-4 max-h-[500px] w-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full !text-[12px] !leading-relaxed"
+                    className="!bg-transparent !m-0 !p-4 w-full !text-[12px] !leading-relaxed !whitespace-pre-wrap !break-all"
+                    wrapLongLines={true}
                     codeTagProps={{
                         style: {
                             fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
@@ -175,7 +176,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                     "p-3 font-mono text-[11px] overflow-x-auto selection:bg-blue-500/30",
                                     theme === 'dark' ? "bg-[#1e1e1e]/50 text-[#d4d4d4]" : "bg-[#fafafa] text-[#383a42]"
                                 )}>
-                                    <pre className="whitespace-pre-wrap break-words leading-relaxed">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
+                                    <pre className="whitespace-pre-wrap break-all leading-relaxed max-w-full">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
                                 </div>
                             </div>
                         ))}
@@ -194,9 +195,16 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
         return <div className="text-xs text-muted-foreground italic">Invalid message content</div>;
     }
 
-    const thinkMatch = content.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
-    const thinking = thinkMatch ? thinkMatch[1].trim() : null;
-    const mainAnswer = content.replace(/<think>([\s\S]*?)(?:<\/think>|$)/, '').trim();
+    const thinkingParts: string[] = [];
+    const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/g;
+    let match;
+
+    while ((match = thinkRegex.exec(content)) !== null) {
+        if (match[1]) thinkingParts.push(match[1].trim());
+    }
+
+    const thinking = thinkingParts.length > 0 ? thinkingParts.join('\n\n***\n\n') : null;
+    const mainAnswer = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim();
     const tokenCount = thinking ? Math.max(1, Math.round(thinking.length / 4)) : 0;
 
     const markdownComponents = useMemo(() => ({

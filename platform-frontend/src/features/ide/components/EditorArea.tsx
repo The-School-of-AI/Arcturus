@@ -263,7 +263,6 @@ export const EditorArea: React.FC = () => {
 
                         // Debug language detection
                         const detectedLang = activeDoc.language || getLanguage(activeDoc.id.split('.').pop() || activeDoc.type);
-                        console.log(`[EditorArea] Opening ${activeDoc.id}, Language: ${detectedLang}, StoreLang: ${activeDoc.language}, Type: ${activeDoc.type}`);
 
                         if (ext === 'pdf') {
                             return <div className="h-full w-full flex flex-col items-center justify-center bg-zinc-900/40 p-12"><FileText className="w-12 h-12 text-red-400" /></div>;

@@ -36,8 +36,8 @@ classNotes/
 Notes/
 
 # Allow only specific code-related data if needed (example: whitelisting notes)
-# !data/Notes/
-# !Notes/
+!data/Notes/
+!Notes/
 
 # Logs & Runtime State
 memory/
