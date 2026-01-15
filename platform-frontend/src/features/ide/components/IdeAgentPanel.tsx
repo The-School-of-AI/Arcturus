@@ -326,6 +326,7 @@ export const IdeAgentPanel: React.FC = () => {
     const [inputValue, setInputValue] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const [pastedImages, setPastedImages] = useState<string[]>([]);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null); // For Lightbox
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
     const thinkingRef = useRef(false);
@@ -914,6 +915,19 @@ export const IdeAgentPanel: React.FC = () => {
                                     {msg.fileContexts?.map((file: any, idx: number) => (
                                         <FilePill key={`file-${idx}`} file={file} />
                                     ))}
+                                    {msg.images && msg.images.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            {msg.images.map((img: string, idx: number) => (
+                                                <img
+                                                    key={`msg-img-${idx}`}
+                                                    src={img}
+                                                    alt="User upload"
+                                                    className="w-20 h-20 object-cover rounded-md border border-border/50 cursor-zoom-in hover:brightness-90 transition-all shadow-sm"
+                                                    onClick={() => setSelectedImage(img)}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             <div className={cn(
@@ -946,7 +960,7 @@ export const IdeAgentPanel: React.FC = () => {
             <div className="p-3 border-t border-border/50 bg-background/50 backdrop-blur-sm">
                 {/* Context Pills (Text & File) & Image Previews */}
                 {(selectedContexts.length > 0 || selectedFileContexts.length > 0 || pastedImages.length > 0) && (
-                    <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto">
+                    <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-muted">
                         {/* Text Contexts */}
                         {selectedContexts.map((ctx, i) => (
                             <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
@@ -1054,6 +1068,27 @@ export const IdeAgentPanel: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Image Lightbox */}
+            {selectedImage && (
+                <div
+                    className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 animate-in fade-in duration-200"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <button
+                        className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                    <img
+                        src={selectedImage}
+                        alt="Zoomed"
+                        className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </div>
     );
 };
