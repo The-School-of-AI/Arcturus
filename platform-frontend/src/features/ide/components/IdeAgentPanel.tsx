@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ArrowRight, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowUp } from 'lucide-react';
+import { ArrowRight, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowUp, Download } from 'lucide-react';
 import { useAppStore } from '@/store';
 import type { FileContext, RAGDocument } from '@/types';
 import { cn } from '@/lib/utils';
@@ -153,7 +153,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                             {tr.name.replace(/_/g, ' ')}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center shrink-0">
                                         <span className="text-[8px] opacity-40 font-mono tracking-tighter">AGENT TOOL OUTPUT</span>
                                     </div>
                                 </div>
@@ -329,7 +329,21 @@ export const IdeAgentPanel: React.FC = () => {
     const [selectedImage, setSelectedImage] = useState<string | null>(null); // For Lightbox
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+    const [copiedImage, setCopiedImage] = useState(false);
     const thinkingRef = useRef(false);
+
+    const copyImageToClipboard = async (dataUrl: string) => {
+        try {
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            const item = new ClipboardItem({ [blob.type]: blob });
+            await navigator.clipboard.write([item]);
+            setCopiedImage(true);
+            setTimeout(() => setCopiedImage(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy image:', err);
+        }
+    };
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -937,7 +951,7 @@ export const IdeAgentPanel: React.FC = () => {
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'
-                                    ? "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm"
+                                    ? "bg-white/10 p-2 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm"
                                     : "text-foreground leading-relaxed"
                             )}>
                                 <MessageContent content={msg.content} role={msg.role as any} />
@@ -1087,16 +1101,43 @@ export const IdeAgentPanel: React.FC = () => {
                     className="fixed inset-0 z-[200] bg-black/10 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
                     onClick={() => setSelectedImage(null)}
                 >
-                    <button
-                        className="absolute top-6 right-6 p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
-                        onClick={() => setSelectedImage(null)}
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
+                    <div className="absolute top-6 right-6 flex items-center gap-3">
+                        <button
+                            className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                copyImageToClipboard(selectedImage);
+                            }}
+                            title="Copy to clipboard"
+                        >
+                            {copiedImage ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                            <span className="text-xs font-bold">{copiedImage ? 'COPIED' : 'COPY'}</span>
+                        </button>
+                        <button
+                            className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const link = document.createElement('a');
+                                link.href = selectedImage;
+                                link.download = `pasted_image_${Date.now()}.png`;
+                                link.click();
+                            }}
+                            title="Download image"
+                        >
+                            <Download className="w-5 h-5" />
+                            <span className="text-xs font-bold">SAVE</span>
+                        </button>
+                        <button
+                            className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
                     <img
                         src={selectedImage}
                         alt="Zoomed"
-                        className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300"
+                        className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
                         onClick={(e) => e.stopPropagation()}
                     />
                 </div>
