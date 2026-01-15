@@ -989,7 +989,7 @@ export const IdeAgentPanel: React.FC = () => {
 
                 <div className={cn(
                     "relative bg-muted/40 border border-border/50 rounded-xl focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-sm",
-                    isThinking ? "opacity-80 pointer-events-none" : ""
+                    isThinking ? "opacity-80" : ""
                 )}>
                     <textarea
                         ref={textareaRef}
@@ -997,13 +997,17 @@ export const IdeAgentPanel: React.FC = () => {
                         onChange={e => setInputValue(e.target.value)}
                         onPaste={handlePaste}
                         onKeyDown={e => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
+                            if (e.key === 'Enter' && !e.shiftKey && !isThinking) {
                                 e.preventDefault();
                                 handleSend();
                             }
                         }}
                         placeholder={selectedContexts.length > 0 ? "Ask about selected text..." : "Ask anything..."}
-                        className="w-full bg-transparent p-3 text-sm focus:outline-none resize-none min-h-[44px] max-h-[50vh] overflow-y-auto"
+                        readOnly={isThinking}
+                        className={cn(
+                            "w-full bg-transparent p-3 text-sm focus:outline-none resize-none min-h-[44px] max-h-[50vh] overflow-y-auto",
+                            isThinking ? "cursor-not-allowed opacity-50" : ""
+                        )}
                         rows={1}
                         style={{ minHeight: '44px' }}
                     />
@@ -1013,7 +1017,11 @@ export const IdeAgentPanel: React.FC = () => {
                         <div className="relative model-menu-container">
                             <button
                                 onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-                                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30"
+                                disabled={isThinking}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30",
+                                    isThinking ? "opacity-50 cursor-not-allowed" : ""
+                                )}
                             >
                                 <Cpu className="w-3 h-3" />
                                 <span>{ollamaModels.find(m => m.name === selectedModel)?.name || selectedModel}</span>

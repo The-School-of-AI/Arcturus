@@ -76,7 +76,11 @@ SHELL ENVIRONMENT:
 - If a command hangs, it will be killed after 60 seconds.
 
 CRITICAL: Always start your response with a thinking process enclosed in <think> tags. 
-Analyze the user request, checks the tools available, and plan your answer before providing the final response or tool call.
+Analyze the user request (including any provided images), checks the tools available, and plan your answer before providing the final response or tool call.
+
+VISION CAPABILITIES:
+- If images are provided in the user message, you CAN see and analyze them. 
+- Use the images to understand UI issues, code screenshots, or any visual context provided by the user.
 
 """
         if tools:

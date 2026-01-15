@@ -65,6 +65,7 @@ export interface ChatMessage {
     content: string | any; // Supports mixed content (thinking)
     contexts?: string[]; // Attached context pill text
     fileContexts?: FileContext[]; // Attached file pills
+    images?: string[]; // Attached images (base64)
     timestamp: number;
 }
 
