@@ -142,7 +142,12 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                 return (
                     <div className="flex flex-col gap-3 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
                         {toolResults.map((tr, idx) => (
-                            <div key={idx} className="rounded-sm border border-border overflow-hidden bg-card/30 transition-all hover:bg-card/80">
+                            <div key={idx} className={cn(
+                                "rounded-lg border overflow-hidden my-3 transition-all hover:border-primary/40 shadow-sm",
+                                theme === 'dark'
+                                    ? "bg-black/40 border-border/50 backdrop-blur-sm"
+                                    : "bg-white border-slate-200 shadow-slate-200/60"
+                            )}>
                                 <div className={cn(
                                     "px-3 py-1.5 border-b flex items-center justify-between",
                                     theme === 'dark' ? "bg-muted/40 border-border/30" : "bg-slate-50 border-slate-200"
@@ -168,9 +173,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                 </div>
                                 <div className={cn(
                                     "p-3 font-mono text-[11px] overflow-x-auto selection:bg-blue-500/30",
-                                    (tr.name === 'run_command' || tr.name === 'read_terminal')
-                                        ? (theme === 'dark' ? "bg-[#1e1e1e] text-[#d4d4d4]" : "bg-[#fafafa] text-[#383a42] border-t border-slate-100")
-                                        : "text-foreground/85"
+                                    theme === 'dark' ? "bg-[#1e1e1e]/50 text-[#d4d4d4]" : "bg-[#fafafa] text-[#383a42]"
                                 )}>
                                     <pre className="whitespace-pre-wrap break-words leading-relaxed">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
                                 </div>
