@@ -8,7 +8,7 @@ import { useAppStore } from '@/store';
 // Components
 import { EditorArea } from './EditorArea';
 import { TerminalPanel } from './TerminalPanel';
-import { DocumentAssistant } from '@/components/rag/DocumentAssistant';
+import { IdeAgentPanel } from './IdeAgentPanel';
 
 // Sidebars
 import { PlanSidebar } from './Sidebars/PlanSidebar';
@@ -103,7 +103,7 @@ export const IdeLayout: React.FC = () => {
                         {isBottomPanelVisible && (
                             <>
                                 <PanelResizeHandle className="h-px bg-border/50 hover:bg-primary/50 transition-colors" />
-                                {/* TERMINAL AREA */}
+                                { /* TERMINAL AREA */}
                                 <Panel defaultSize={30} minSize={10}>
                                     <TerminalPanel />
                                 </Panel>
@@ -112,14 +112,14 @@ export const IdeLayout: React.FC = () => {
                     </PanelGroup>
                 </Panel>
 
-                {/* RIGHT PANEL: INSIGHTS (DocumentAssistant) */}
+                {/* RIGHT PANEL: INSIGHTS (IdeAgentPanel) */}
                 {isRightPanelVisible && (
                     <>
                         <PanelResizeHandle className="w-px bg-border/50 hover:bg-primary/50 transition-colors" />
                         {/* @ts-ignore */}
                         <Panel defaultSize={25} minSize={20} order={3}>
                             <div className="h-full border-l border-border/50 bg-background/50 backdrop-blur-md overflow-hidden">
-                                <DocumentAssistant />
+                                <IdeAgentPanel />
                             </div>
                         </Panel>
                     </>

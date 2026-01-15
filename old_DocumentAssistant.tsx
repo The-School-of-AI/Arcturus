@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowRight } from 'lucide-react';
+import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowUp } from 'lucide-react';
 import { useAppStore } from '@/store';
 import type { FileContext, RAGDocument } from '@/types';
 import { cn } from '@/lib/utils';
@@ -11,11 +11,7 @@ import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/
 import { useTheme } from '@/components/theme';
 import { availableTools, type ToolCall } from '@/lib/agent-tools';
 
-const CodeBlock = ({ inline, className, children, theme, ...props }: any) => {
-    const ideActiveDocumentId = useAppStore(state => state.ideActiveDocumentId);
-    const ideOpenDocuments = useAppStore(state => state.ideOpenDocuments);
-    const updateIdeDocumentContent = useAppStore(state => state.updateIdeDocumentContent);
-
+const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent, ...props }: any) => {
     const match = /language-(\w+)/.exec(className || '');
     const [copied, setCopied] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -206,13 +202,16 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
             <CodeBlock
                 {...props}
                 theme={theme}
+                ideActiveDocumentId={ideActiveDocumentId}
+                ideOpenDocuments={ideOpenDocuments}
+                updateIdeDocumentContent={updateIdeDocumentContent}
             />
         ),
         p: ({ children }: any) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
         ul: ({ children }: any) => <ul className="ml-4 space-y-1 mb-3 list-disc text-sm">{children}</ul>,
         ol: ({ children }: any) => <ol className="ml-4 space-y-1 mb-3 list-decimal text-sm">{children}</ol>,
         li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
-    }), [theme]);
+    }), [theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent]);
 
     return (
         <div className="space-y-1 min-w-0">
@@ -323,8 +322,13 @@ const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file
 };
 
 export const DocumentAssistant: React.FC = () => {
+    const explorerRootPath = useAppStore(state => state.explorerRootPath);
+    const sidebarTab = useAppStore(state => state.sidebarTab);
     const ragActiveDocumentId = useAppStore(state => state.ragActiveDocumentId);
     const ragOpenDocuments = useAppStore(state => state.ragOpenDocuments);
+    const ideActiveDocumentId = useAppStore(state => state.ideActiveDocumentId);
+    const ideOpenDocuments = useAppStore(state => state.ideOpenDocuments);
+    const ideProjectChatHistory = useAppStore(state => state.ideProjectChatHistory);
     const chatSessions = useAppStore(state => state.chatSessions);
     const fetchChatSessions = useAppStore(state => state.fetchChatSessions);
     const loadChatSession = useAppStore(state => state.loadChatSession);
@@ -383,18 +387,22 @@ export const DocumentAssistant: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickAway);
     }, [isHistoryOpen, isModelMenuOpen]);
 
-    // Determine active document (RAG only)
-    const activeDoc = ragOpenDocuments.find(d => d.id === ragActiveDocumentId);
+    // Determine active document from either RAG or IDE
+    const activeDoc = (sidebarTab === 'ide' && ideActiveDocumentId)
+        ? ideOpenDocuments?.find(d => d.id === ideActiveDocumentId)
+        : ragOpenDocuments.find(d => d.id === ragActiveDocumentId);
 
     // Fetch sessions and models on mount/doc change
     useEffect(() => {
-        if (activeDoc?.id) {
-            fetchChatSessions('rag', activeDoc.id);
+        const isIde = sidebarTab === 'ide';
+        const targetId = isIde ? explorerRootPath : activeDoc?.id;
+        if (targetId) {
+            fetchChatSessions(isIde ? 'ide' : 'rag', targetId);
         }
         fetchOllamaModels();
-    }, [activeDoc?.id, fetchChatSessions, fetchOllamaModels]);
+    }, [activeDoc?.id, sidebarTab, ideActiveDocumentId, explorerRootPath, fetchChatSessions, fetchOllamaModels]);
 
-    const history = activeDoc?.chatHistory || [];
+    const history = sidebarTab === 'ide' ? ideProjectChatHistory : (activeDoc?.chatHistory || []);
 
     // Smart Scroll Logic
     const handleScroll = () => {
@@ -708,7 +716,7 @@ export const DocumentAssistant: React.FC = () => {
                 image: image,
                 model: selectedModel,
                 tools: availableTools,
-                project_root: undefined
+                project_root: explorerRootPath // Add this back
             };
 
             const response = await fetch(`${API_BASE}/rag/ask`, {
@@ -770,7 +778,7 @@ export const DocumentAssistant: React.FC = () => {
 
                 let toolOutputs = "";
                 for (const call of toolCalls) {
-                    const result = await executeTool(call, undefined);
+                    const result = await executeTool(call, explorerRootPath || undefined);
                     toolOutputs += `\n\n> Tool Output (${call.name}):\n\`\`\`\n${result}\n\`\`\`\n`;
                 }
 
@@ -811,7 +819,8 @@ export const DocumentAssistant: React.FC = () => {
     };
 
     const handleSend = async () => {
-        const targetId = activeDoc?.id;
+        const isIde = sidebarTab === 'ide';
+        const targetId = isIde ? explorerRootPath : activeDoc?.id;
         if ((!inputValue.trim() && !pastedImage && selectedFileContexts.length === 0) || !targetId) return;
 
         // Combine all selected text contexts
@@ -838,7 +847,7 @@ export const DocumentAssistant: React.FC = () => {
         if (inputValue.includes("Summarize") || inputValue.includes("Key Takeaways") || inputValue.includes("takeaways")) {
             try {
                 // If IDE mode, we might want to fetch project summary, but for now we keep it doc-based if activeDoc exists
-                const path = activeDoc?.id;
+                const path = activeDoc?.id || explorerRootPath;
                 if (path) {
                     const res = await fetch(`${API_BASE}/rag/document_chunks?path=${encodeURIComponent(path)}`);
                     const data = await res.json();
@@ -889,16 +898,18 @@ export const DocumentAssistant: React.FC = () => {
         callAgent(targetId, currentHistory, fullMessage, pastedImage);
     };
 
-    if (!activeDoc) {
+    if (!activeDoc && !(sidebarTab === 'ide' && explorerRootPath)) {
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-card text-center space-y-4">
                 <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
                     <ScrollText className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
                 <div className="space-y-1">
-                    <h3 className="font-bold text-foreground">Document Assistant</h3>
+                    <h3 className="font-bold text-foreground">{sidebarTab === 'ide' ? 'Project Assistant' : 'Document Assistant'}</h3>
                     <p className="text-xs text-muted-foreground">
-                        Select a document from the library to start an interactive deep-dive.
+                        {sidebarTab === 'ide'
+                            ? 'Open a project to start an interactive deep-dive into your codebase.'
+                            : 'Select a document from the library to start an interactive deep-dive.'}
                     </p>
                 </div>
             </div>
@@ -946,7 +957,9 @@ export const DocumentAssistant: React.FC = () => {
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chat</span>
                         <span className="text-xs font-medium truncate text-foreground">
-                            {activeDoc?.title}
+                            {sidebarTab === 'ide'
+                                ? (explorerRootPath?.split('/').pop() || 'Project')
+                                : activeDoc?.title}
                         </span>
                     </div>
                 </div>
@@ -954,8 +967,9 @@ export const DocumentAssistant: React.FC = () => {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => {
-                            const targetId = activeDoc?.id;
-                            if (targetId) createNewChatSession('rag', targetId);
+                            const isIde = sidebarTab === 'ide';
+                            const targetId = isIde ? explorerRootPath : activeDoc?.id;
+                            if (targetId) createNewChatSession(isIde ? 'ide' : 'rag', targetId);
                         }}
                         className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
                         title="New Chat"
@@ -985,8 +999,9 @@ export const DocumentAssistant: React.FC = () => {
                                         <button
                                             key={session.id}
                                             onClick={() => {
-                                                const targetId = activeDoc?.id;
-                                                if (targetId) loadChatSession(session.id, 'rag', targetId);
+                                                const isIde = sidebarTab === 'ide';
+                                                const targetId = isIde ? explorerRootPath : activeDoc?.id;
+                                                if (targetId) loadChatSession(session.id, isIde ? 'ide' : 'rag', targetId);
                                                 setIsHistoryOpen(false);
                                             }}
                                             className={cn(
@@ -1030,7 +1045,7 @@ export const DocumentAssistant: React.FC = () => {
                     <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-8">
                         <div className="opacity-50 space-y-2">
                             <Bot className="w-8 h-8 mx-auto" />
-                            <p className="text-xs">Ask anything about this document.<br />Selected text will be added as context automatically.</p>
+                            <p className="text-xs">Ask anything about this {sidebarTab === 'ide' ? 'project' : 'document'}.<br />Selected text will be added as context automatically.</p>
                         </div>
 
                         {/* Quick Actions */}
@@ -1240,7 +1255,7 @@ export const DocumentAssistant: React.FC = () => {
                                             : "bg-transparent text-muted-foreground/40 scale-95 cursor-not-allowed"
                                     )}
                                 >
-                                    <ArrowRight className="w-4 h-4" />
+                                    <ArrowUp className="w-4 h-4" />
                                 </button>
                             )}
                         </div>

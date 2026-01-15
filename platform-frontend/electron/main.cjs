@@ -291,6 +291,10 @@ function setupFSHandlers() {
     // Simple File I/O for saving
     ipcMain.handle('fs:writeFile', async (event, { path: targetPath, content }) => {
         try {
+            const parentDir = path.dirname(targetPath);
+            if (!fs.existsSync(parentDir)) {
+                fs.mkdirSync(parentDir, { recursive: true });
+            }
             fs.writeFileSync(targetPath, content, 'utf-8');
             return { success: true };
         } catch (error) {

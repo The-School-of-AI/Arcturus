@@ -95,6 +95,8 @@ from routers import chat as chat_router
 app.include_router(chat_router.router)
 from routers import agent as agent_router
 app.include_router(agent_router.router)
+from routers import ide_agent as ide_agent_router
+app.include_router(ide_agent_router.router)
 # Chat router included
 
 
