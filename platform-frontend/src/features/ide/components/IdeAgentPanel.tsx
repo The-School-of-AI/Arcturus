@@ -142,24 +142,35 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                 return (
                     <div className="flex flex-col gap-3 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
                         {toolResults.map((tr, idx) => (
-                            <div key={idx} className="rounded-sm border border-border overflow-hidden bg-card/30 shadow-sm transition-all hover:bg-card/80">
-                                <div className="px-3 py-1.5 bg-muted/40 border-b border-border flex items-center justify-between">
+                            <div key={idx} className="rounded-sm border border-border overflow-hidden bg-card/30 transition-all hover:bg-card/80">
+                                <div className={cn(
+                                    "px-3 py-1.5 border-b flex items-center justify-between",
+                                    theme === 'dark' ? "bg-muted/40 border-border/30" : "bg-slate-50 border-slate-200"
+                                )}>
                                     <div className="flex items-center gap-2">
                                         <div className={cn(
                                             "w-1.5 h-1.5 rounded-full shrink-0",
                                             tr.name === 'run_command' ? "bg-green-500 animate-pulse" : "bg-primary"
                                         )} />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]">
+                                        <span className={cn(
+                                            "text-[9px] font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]",
+                                            theme === 'dark' ? "text-muted-foreground" : "text-slate-600"
+                                        )}>
                                             {tr.name.replace(/_/g, ' ')}
                                         </span>
                                     </div>
                                     <div className="flex items-center shrink-0">
-                                        <span className="text-[8px] opacity-40 font-mono tracking-tighter">AGENT TOOL OUTPUT</span>
+                                        <span className={cn(
+                                            "text-[8px] font-mono tracking-tighter opacity-40",
+                                            theme === 'dark' ? "text-muted-foreground" : "text-slate-500"
+                                        )}>AGENT TOOL OUTPUT</span>
                                     </div>
                                 </div>
                                 <div className={cn(
                                     "p-3 font-mono text-[11px] overflow-x-auto selection:bg-blue-500/30",
-                                    (tr.name === 'run_command' || tr.name === 'read_terminal') ? "bg-[#1e1e1e] text-[#d4d4d4]" : "text-foreground/85"
+                                    (tr.name === 'run_command' || tr.name === 'read_terminal')
+                                        ? (theme === 'dark' ? "bg-[#1e1e1e] text-[#d4d4d4]" : "bg-[#fafafa] text-[#383a42] border-t border-slate-100")
+                                        : "text-foreground/85"
                                 )}>
                                     <pre className="whitespace-pre-wrap break-words leading-relaxed">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
                                 </div>
@@ -170,7 +181,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
             }
         }
         return (
-            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words p-2">
                 {content}
             </div>
         );
@@ -951,7 +962,9 @@ export const IdeAgentPanel: React.FC = () => {
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'
-                                    ? "bg-white/10 p-2 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm"
+                                    ? (msg.content?.includes('[System Tool Output]')
+                                        ? "w-full"
+                                        : "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
                                     : "text-foreground leading-relaxed"
                             )}>
                                 <MessageContent content={msg.content} role={msg.role as any} />
