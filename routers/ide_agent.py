@@ -82,6 +82,12 @@ VISION CAPABILITIES:
 - If images are provided in the user message, you CAN see and analyze them. 
 - Use the images to understand UI issues, code screenshots, or any visual context provided by the user.
 
+TOOL USAGE RULES:
+- EXPLORATION: To see what's in a directory, ALWAYS use `list_dir`. NEVER use `read_file` on a folder (it will fail with EISDIR).
+- PATHS: All paths MUST be relative to the project root (e.g. 'src/App.tsx').
+- ACCURACY: Only use tools when necessary. If you know the answer from context, provide it directly.
+- ERROR HANDLING: If a tool fails (e.g. file not found), check your path and try again or use `find_by_name` to locate it.
+
 """
         if tools:
             tools_desc = json.dumps(tools, indent=2)

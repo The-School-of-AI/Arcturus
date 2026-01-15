@@ -343,6 +343,16 @@ export const IdeAgentPanel: React.FC = () => {
     const [copiedImage, setCopiedImage] = useState(false);
     const thinkingRef = useRef(false);
 
+    const formatRelativeTime = (timestamp: number) => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = now - timestamp;
+        if (diff < 60) return `${diff}s`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+        return new Date(timestamp * 1000).toLocaleDateString();
+    };
+
     const copyImageToClipboard = async (dataUrl: string) => {
         try {
             const response = await fetch(dataUrl);
@@ -888,29 +898,54 @@ export const IdeAgentPanel: React.FC = () => {
             >
                 {/* Empty State */}
                 {ideProjectChatHistory.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-8">
-                        <div className="opacity-50 space-y-2">
-                            <Cpu className="w-12 h-12 mx-auto text-primary/50" />
-                            <p className="text-sm font-medium">Ready to code.</p>
-                            <p className="text-xs text-muted-foreground max-w-[200px]">I have full access to execute commands and read/write files in this project.</p>
+                    <div className="flex flex-col justify-end min-h-[500px] h-full pb-12 animate-in fade-in duration-700">
+                        <div className="flex-1" />
+
+                        {/* Title */}
+                        <div className="mb-12 text-center">
+                            <h1 className="text-3xl font-semibold opacity-30 tracking-tight text-foreground select-none">Arcturus</h1>
                         </div>
-                        {/* Quick Actions */}
-                        <div className="flex flex-col gap-2 w-full max-w-xs mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Quick Actions</p>
+
+                        {/* Recent Chats */}
+                        {chatSessions.length > 0 && (
+                            <div className="w-full max-w-md mx-auto px-4 mb-8 space-y-1">
+                                {chatSessions.slice(0, 3).map((session) => (
+                                    <button
+                                        key={session.id}
+                                        onClick={() => explorerRootPath && loadChatSession(session.id, 'ide', explorerRootPath)}
+                                        className="w-full flex items-center justify-between py-2 group hover:opacity-70 transition-all text-left"
+                                    >
+                                        <span className="text-sm text-foreground/60 group-hover:text-foreground transition-colors truncate pr-4">
+                                            {session.title}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground/40 font-mono shrink-0">
+                                            {formatRelativeTime(session.updated_at)}
+                                        </span>
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setIsHistoryOpen(true)}
+                                    className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors pt-2 block"
+                                >
+                                    See all
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Quick Actions - Minimal version */}
+                        <div className="flex flex-col gap-1 w-full max-w-md mx-auto px-4 opacity-40 hover:opacity-100 transition-opacity">
                             <button
                                 onClick={() => handleSend('Summarize this project structure and key components.')}
-                                disabled={isThinking}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 hover:bg-muted rounded-lg text-xs text-foreground transition-all border border-border/50 hover:border-primary/20 text-left"
+                                className="flex items-center gap-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-all text-left"
                             >
-                                <ScrollText className="w-4 h-4 text-primary shrink-0" />
+                                <ScrollText className="w-3 h-3 shrink-0" />
                                 <span>Summarize Project Structure</span>
                             </button>
                             <button
                                 onClick={() => handleSend('What are the key takeaways and main features of this codebase?')}
-                                disabled={isThinking}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 hover:bg-muted rounded-lg text-xs text-foreground transition-all border border-border/50 hover:border-primary/20 text-left"
+                                className="flex items-center gap-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-all text-left"
                             >
-                                <Quote className="w-4 h-4 text-primary shrink-0" />
+                                <Quote className="w-3 h-3 shrink-0" />
                                 <span>Key Takeaways</span>
                             </button>
                         </div>
