@@ -4,8 +4,31 @@ import json
 import httpx
 from pathlib import Path
 from shared.state import PROJECT_ROOT
+from .browser_utils import perform_web_search, extract_url_content
 
 router = APIRouter(prefix="/ide", tags=["IDE Agent"])
+
+@router.post("/tools/search")
+async def tool_search(request: Request):
+    try:
+        body = await request.json()
+        query = body.get("query")
+        if not query:
+            raise HTTPException(status_code=400, detail="Missing query")
+        return await perform_web_search(query)
+    except Exception as e:
+        return f"[Error] {e}"
+
+@router.post("/tools/read-url")
+async def tool_read_url(request: Request):
+    try:
+        body = await request.json()
+        url = body.get("url")
+        if not url:
+            raise HTTPException(status_code=400, detail="Missing url")
+        return await extract_url_content(url)
+    except Exception as e:
+        return f"[Error] {e}"
 
 @router.post("/ask")
 async def ask_ide_agent(request: Request):

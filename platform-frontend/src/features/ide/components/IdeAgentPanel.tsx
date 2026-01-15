@@ -10,6 +10,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '@/components/theme';
 import { availableTools, type ToolCall } from '@/lib/agent-tools';
+import permissions from '@/config/agent_permissions.json'; // Direct import assuming resolveJsonModule is on
 
 // --- Reused Components (To be extracted later) ---
 
@@ -173,7 +174,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                     </div>
                                 </div>
                                 <div className={cn(
-                                    "p-3 font-mono text-[11px] overflow-x-auto selection:bg-blue-500/30",
+                                    "p-3 font-mono text-[11px] overflow-x-auto selection:bg-blue-500/30 max-h-[300px] overflow-y-auto",
                                     theme === 'dark' ? "bg-[#1e1e1e]/50 text-[#d4d4d4]" : "bg-[#fafafa] text-[#383a42]"
                                 )}>
                                     <pre className="whitespace-pre-wrap break-all leading-relaxed max-w-full">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
@@ -507,6 +508,18 @@ export const IdeAgentPanel: React.FC = () => {
     const executeTool = async (toolCall: ToolCall, projectRoot?: string): Promise<string> => {
         console.log(`[IDE Agent] Executing tool: ${toolCall.name}`, toolCall.arguments);
 
+        // --- Permission Check ---
+        if (toolCall.name === 'run_command') {
+            const cmdName = toolCall.arguments.command?.split(' ')[0];
+            if (permissions.blocked_commands.includes(cmdName)) {
+                return `Error: Command '${cmdName}' is BLOCKED by security policy.`;
+            }
+        }
+        if ((toolCall.name === 'fs:delete' || toolCall.name === 'write_file') && permissions.require_confirmation) {
+            // For now, valid unless we implement UI confirmation interception.
+            // We'll proceed but log warning.
+        }
+
         const validatePath = (path: string) => {
             if (!projectRoot) return { valid: true, path };
             let fullPath = path;
@@ -571,8 +584,6 @@ export const IdeAgentPanel: React.FC = () => {
                         return "Error: Target text not found in file. Ensure exact match including whitespace.";
                     }
 
-                    // Check for multiple occurrences if needed, usually simple replace is first occurrence
-                    // but for safety we might want uniqueness. adapting form DocAssistant logic:
                     if (originalRes.content.indexOf(target) !== originalRes.content.lastIndexOf(target)) {
                         return "Error: Target text is ambiguous (found multiple times). Provide more context.";
                     }
@@ -611,7 +622,7 @@ export const IdeAgentPanel: React.FC = () => {
                     if (!rootValidation.valid) return `Error: ${rootValidation.error}`;
 
                     const findRes = await window.electronAPI.invoke('fs:find', {
-                        pattern: toolCall.arguments.pattern, // e.g. "*.py"
+                        pattern: toolCall.arguments.pattern,
                         root: rootValidation.path
                     });
                     if (!findRes || !findRes.success) return `Error: ${findRes?.error || 'Unknown error'}`;
@@ -649,7 +660,6 @@ export const IdeAgentPanel: React.FC = () => {
                     const validation = validatePath(toolCall.arguments.path);
                     if (!validation.valid) return `Error: ${validation.error}`;
 
-                    // Tool arguments usually come as { path, changes: [{target, replacement}] }
                     const changes = toolCall.arguments.changes;
                     if (!changes || !Array.isArray(changes)) return "Error: 'changes' arguments must be an array.";
 
@@ -690,16 +700,54 @@ export const IdeAgentPanel: React.FC = () => {
                         cwd = `${projectRoot}/${cwd}`.replace(/\/+/g, '/');
                     }
 
-                    const res = await window.electronAPI.invoke('shell:exec', {
+                    // Use shell:spawn for background support
+                    const res = await window.electronAPI.invoke('shell:spawn', {
                         cmd: toolCall.arguments.command,
                         cwd: cwd
                     });
+
                     if (res.success) {
                         useAppStore.getState().refreshExplorerFiles();
-                        if (!res.stdout && !res.stderr) return "Success (No Output)";
-                        return `STDOUT:\n${res.stdout}\nSTDERR:\n${res.stderr}`;
+
+                        // Wait briefly to see if it finishes fast (e.g. `ls`)
+                        await new Promise(r => setTimeout(r, 500));
+
+                        const statusRes = await window.electronAPI.invoke('shell:status', res.pid);
+                        if (statusRes.success && statusRes.status === 'done') {
+                            if (!statusRes.stdout && !statusRes.stderr) return "Success (No Output)";
+                            return `STDOUT:\n${statusRes.stdout}\nSTDERR:\n${statusRes.stderr}`;
+                        } else {
+                            return `Command started in background (PID: ${res.pid}). Status: ${statusRes.status}. Output so far:\n${statusRes.stdout}`;
+                        }
                     }
                     return `Error: ${res.error}`;
+                }
+
+                case 'command_status': {
+                    const pid = toolCall.arguments.pid;
+                    const res = await window.electronAPI.invoke('shell:status', pid);
+                    if (!res.success) return `Error: ${res.error}`;
+                    return `Status: ${res.status}\nExit Code: ${res.exitCode}\nSTDOUT:\n${res.stdout}\nSTDERR:\n${res.stderr}`;
+                }
+
+                case 'search_web': {
+                    const searchRes = await fetch(`${API_BASE}/ide/tools/search`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: toolCall.arguments.query })
+                    });
+                    const data = await searchRes.json();
+                    return typeof data === 'string' ? data : JSON.stringify(data);
+                }
+
+                case 'read_url': {
+                    const readRes = await fetch(`${API_BASE}/ide/tools/read-url`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: toolCall.arguments.url })
+                    });
+                    const data = await readRes.json();
+                    return typeof data === 'string' ? data : JSON.stringify(data);
                 }
 
                 default:

@@ -1,0 +1,30 @@
+{
+    "blocked_commands": [
+        "rm",
+        "sudo",
+        "mv",
+        "chmod",
+        "chown",
+        "reboot",
+        "shutdown",
+        "init",
+        ":(){ :|:& };:"
+    ],
+    "allowed_commands": [
+        "ls",
+        "cat",
+        "grep",
+        "find",
+        "pwd",
+        "echo",
+        "touch",
+        "mkdir",
+        "git",
+        "npm",
+        "node",
+        "python",
+        "python3",
+        "uv"
+    ],
+    "require_confirmation": true
+}

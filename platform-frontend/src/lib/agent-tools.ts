@@ -161,5 +161,16 @@ export const availableTools: ToolDefinition[] = [
             },
             required: ["url"]
         }
+    },
+    {
+        name: "command_status",
+        description: "Check the status and output of a background command using its PID.",
+        parameters: {
+            type: "object",
+            properties: {
+                pid: { type: "string", description: "The Process ID (PID) to check." }
+            },
+            required: ["pid"]
+        }
     }
 ];

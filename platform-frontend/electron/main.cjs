@@ -15,6 +15,8 @@ try {
 
 let mainWindow;
 let backendProcesses = [];
+let backgroundProcesses = new Map(); // pid -> { process, stdout: '', stderr: '', startTime: number }
+
 // Terminal state
 let ptyProcess = null;
 let activeTerminalCwd = null;
@@ -213,21 +215,37 @@ function setupFSHandlers() {
     });
 
     // Shell Execution for Agent
+
+    // Helper to validate and resolve CWD
+    const validateCwd = (requestedCwd) => {
+        const rootPath = path.resolve(__dirname, '..', '..'); // Project Root
+        const targetCwd = requestedCwd ? path.resolve(requestedCwd) : rootPath;
+
+        // Strict Security Check: Enforce CWD is within Project Root
+        if (!targetCwd.startsWith(rootPath)) {
+            console.warn(`[Electron] Security Block: Attempted CWD escape to ${targetCwd}`);
+            return { valid: false, reason: "Access denied: Execution outside project root is prohibited." };
+        }
+        return { valid: true, path: targetCwd };
+    };
+
     ipcMain.handle('shell:exec', async (event, { cmd, cwd }) => {
-        console.log(`[Electron] shell:exec '${cmd}' in '${cwd}'`);
+        const cwdValidation = validateCwd(cwd);
+        if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
+
+        console.log(`[Electron] shell:exec '${cmd}' in '${cwdValidation.path}'`);
         const { exec } = require('child_process');
         return new Promise((resolve) => {
-            // Added 60s timeout to prevent hanging on interactive inputs (like python's input())
             exec(cmd, {
-                cwd: cwd || undefined,
-                maxBuffer: 10 * 1024 * 1024, // Increased to 10MB
+                cwd: cwdValidation.path,
+                maxBuffer: 10 * 1024 * 1024,
                 timeout: 60000
             }, (error, stdout, stderr) => {
                 if (error) {
                     const isTimeout = error.killed || error.signal === 'SIGTERM';
                     resolve({
                         success: false,
-                        error: isTimeout ? "Command timed out after 60s (likely waiting for input)" : error.message,
+                        error: isTimeout ? "Command timed out after 60s" : error.message,
                         stdout: stdout || '',
                         stderr: stderr || ''
                     });
@@ -240,6 +258,93 @@ function setupFSHandlers() {
                 }
             });
         });
+    });
+
+    // NEW: Background Spawn with PID tracking
+    ipcMain.handle('shell:spawn', async (event, { cmd, cwd }) => {
+        const cwdValidation = validateCwd(cwd);
+        if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
+
+        const { spawn } = require('child_process');
+        console.log(`[Electron] shell:spawn '${cmd}' in '${cwdValidation.path}'`);
+
+        try {
+            const [command, ...args] = cmd.split(' '); // Simple split, might need better parsing for quoted args
+            // Better to use shell: true to support pipes/redirections if cmd is complex, 
+            // but for safety usually single command preferred. 
+            // However, run_command might send complex strings. 
+            // Let's use shell: true for consistency with exec, but be careful.
+
+            const proc = spawn(cmd, [], {
+                cwd: cwdValidation.path,
+                shell: true,
+                detached: false
+            });
+
+            const pid = proc.pid;
+            const procState = {
+                pid,
+                stdout: '',
+                stderr: '',
+                status: 'running',
+                startTime: Date.now(),
+                exitCode: null
+            };
+
+            // Buffer handling (Circular-ish limit implemented simply)
+            const appendLog = (type, data) => {
+                const str = data.toString();
+                if (procState[type].length > 50000) procState[type] = procState[type].slice(-40000);
+                procState[type] += str;
+            };
+
+            proc.stdout.on('data', d => appendLog('stdout', d));
+            proc.stderr.on('data', d => appendLog('stderr', d));
+
+            proc.on('close', (code) => {
+                procState.status = 'done';
+                procState.exitCode = code;
+                console.log(`[Electron] BG Process ${pid} finished with ${code}`);
+                // Auto-cleanup after 1 hour if not checked? 
+                // For now, keep it in memory until app restart is fine for modest usage.
+            });
+
+            proc.on('error', (err) => {
+                procState.status = 'error';
+                procState.stderr += `\nSystem Error: ${err.message}`;
+            });
+
+            backgroundProcesses.set(pid.toString(), procState);
+            return { success: true, pid: pid.toString(), status: 'running' };
+
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('shell:status', async (event, pid) => {
+        const proc = backgroundProcesses.get(pid?.toString());
+        if (!proc) return { success: false, error: "Process not found or expired" };
+
+        return {
+            success: true,
+            status: proc.status,
+            exitCode: proc.exitCode,
+            stdout: proc.stdout,
+            stderr: proc.stderr
+        };
+    });
+
+    ipcMain.handle('shell:kill', async (event, pid) => {
+        const procData = backgroundProcesses.get(pid?.toString());
+        if (!procData) return { success: false, error: "Process not found" };
+
+        try {
+            process.kill(parseInt(pid), 'SIGTERM');
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
     });
 
     // File Operations
@@ -439,24 +544,38 @@ app.on('activate', () => {
     }
 });
 
+const treeKill = require('tree-kill');
+
 app.on('will-quit', () => {
     console.log('[Electron] Shutting down backends and terminal sessions...');
+
+    // Kill backend services
     backendProcesses.forEach(proc => {
         if (proc && proc.pid) {
-            try {
-                // Kill process group (usually works if detached: true)
-                process.kill(-proc.pid, 'SIGTERM');
-            } catch (e) {
-                try { proc.kill(); } catch (e2) { }
-            }
+            console.log(`[Electron] Killing backend process ${proc.pid}`);
+            treeKill(proc.pid, 'SIGKILL', (err) => {
+                if (err) console.error(`[Electron] Failed to kill process ${proc.pid}`, err);
+            });
         }
     });
 
+    // Kill background shell tasks
+    backgroundProcesses.forEach((proc, pidKey) => {
+        if (proc && proc.pid && proc.status === 'running') {
+            console.log(`[Electron] Killing background task ${proc.pid}`);
+            treeKill(proc.pid, 'SIGKILL');
+        }
+    });
+
+    // Kill PTY
     if (ptyProcess && ptyProcess.pid) {
+        console.log(`[Electron] Killing PTY ${ptyProcess.pid}`);
         try {
-            process.kill(-ptyProcess.pid, 'SIGTERM');
+            // ptyProcess from node-pty might need standard kill or tree-kill
+            // tree-kill is safer
+            treeKill(ptyProcess.pid, 'SIGKILL');
         } catch (e) {
-            try { ptyProcess.kill(); } catch (e2) { }
+            console.error('[Electron] Failed to kill PTY', e);
         }
     }
 });
