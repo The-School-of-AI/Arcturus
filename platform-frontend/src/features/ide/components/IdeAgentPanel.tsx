@@ -107,7 +107,7 @@ const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, id
                     style={theme === 'dark' ? vscDarkPlus : oneLight}
                     language={match[1]}
                     PreTag="div"
-                    className="!bg-transparent !m-0 !p-4 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full !text-[12px] !leading-relaxed"
+                    className="!bg-transparent !m-0 !p-4 max-h-[500px] w-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent h-full !text-[12px] !leading-relaxed"
                     codeTagProps={{
                         style: {
                             fontFamily: 'JetBrains Mono, Menlo, Courier New, monospace',
@@ -158,7 +158,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                     </div>
                                 </div>
                                 <div className={cn(
-                                    "p-3 font-mono text-[11px] overflow-x-auto selection:bg-primary/20",
+                                    "p-3 font-mono text-[11px] overflow-x-auto selection:bg-blue-500/30",
                                     (tr.name === 'run_command' || tr.name === 'read_terminal') ? "bg-[#1e1e1e] text-[#d4d4d4]" : "text-foreground/85"
                                 )}>
                                     <pre className="whitespace-pre-wrap break-words leading-relaxed">{tr.output || <span className="italic opacity-50 px-1">(No output)</span>}</pre>
@@ -325,7 +325,7 @@ export const IdeAgentPanel: React.FC = () => {
 
     const [inputValue, setInputValue] = useState('');
     const [isThinking, setIsThinking] = useState(false);
-    const [pastedImage, setPastedImage] = useState<string | null>(null);
+    const [pastedImages, setPastedImages] = useState<string[]>([]);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
     const thinkingRef = useRef(false);
@@ -362,13 +362,24 @@ export const IdeAgentPanel: React.FC = () => {
 
     const handlePaste = (e: React.ClipboardEvent) => {
         const items = e.clipboardData.items;
+        const newImages: string[] = [];
+        let processCount = 0;
+        let imageItemsCount = 0;
+
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
+                imageItemsCount++;
                 const blob = items[i].getAsFile();
                 if (blob) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        setPastedImage(event.target?.result as string);
+                        if (event.target?.result) {
+                            newImages.push(event.target.result as string);
+                        }
+                        processCount++;
+                        if (processCount === imageItemsCount) {
+                            setPastedImages(prev => [...prev, ...newImages].slice(0, 10));
+                        }
                     };
                     reader.readAsDataURL(blob);
                 }
@@ -376,11 +387,15 @@ export const IdeAgentPanel: React.FC = () => {
         }
     };
 
+    const removePastedImage = (index: number) => {
+        setPastedImages(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleSend = async (textOverride?: string) => {
         const textToSend = textOverride || inputValue;
-        if ((textToSend.trim() || pastedImage)) {
+        if ((textToSend.trim() || pastedImages.length > 0)) {
             let fullContent = textToSend;
-            if (pastedImage) fullContent += "\n\n[Pasted Image]";
+            if (pastedImages.length > 0) fullContent += `\n\n[${pastedImages.length} Pasted Image${pastedImages.length > 1 ? 's' : ''}]`;
 
             const msg = {
                 id: Date.now().toString(),
@@ -388,16 +403,18 @@ export const IdeAgentPanel: React.FC = () => {
                 content: fullContent,
                 timestamp: Date.now(),
                 fileContexts: [...selectedFileContexts],
-                contexts: [...selectedContexts]
+                contexts: [...selectedContexts],
+                images: [...pastedImages] // Store in history for potential local preview if needed
             };
 
             addMessageToDocChat(explorerRootPath!, msg);
             setInputValue('');
-            setPastedImage(null);
+            const currentImages = [...pastedImages];
+            setPastedImages([]);
             clearSelectedFileContexts();
             clearSelectedContexts();
 
-            callAgent([...ideProjectChatHistory, msg], fullContent);
+            callAgent([...ideProjectChatHistory, msg], fullContent, currentImages);
         }
     };
 
@@ -626,7 +643,7 @@ export const IdeAgentPanel: React.FC = () => {
     // Full Implementation of executeTool needed to work
     // I will overwrite `executeTool` above with the COMPLETE one in the actual file write.
 
-    const callAgent = async (currentHistory: any[], userMessage: string | null) => {
+    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[]) => {
         if (!explorerRootPath) return;
         setIsThinking(true);
         thinkingRef.current = true;
@@ -644,7 +661,8 @@ export const IdeAgentPanel: React.FC = () => {
                 history: currentHistory,
                 model: selectedModel,
                 tools: availableTools,
-                project_root: explorerRootPath
+                project_root: explorerRootPath,
+                images: images || []
             };
 
             // NEW ENDPOINT
@@ -886,8 +904,7 @@ export const IdeAgentPanel: React.FC = () => {
                         )}
 
                         <div className={cn(
-                            "max-w-full min-w-0 overflow-hidden",
-                            msg.role === 'user' ? "max-w-[98%]" : "w-full"
+                            "max-w-full min-w-0 overflow-hidden"
                         )}>
                             {msg.role === 'user' && ((msg.contexts && msg.contexts.length > 0) || (msg.fileContexts && msg.fileContexts.length > 0)) && (
                                 <div className="flex flex-col items-end w-full mb-1 space-y-1">
@@ -927,22 +944,9 @@ export const IdeAgentPanel: React.FC = () => {
 
             {/* Input Area */}
             <div className="p-3 border-t border-border/50 bg-background/50 backdrop-blur-sm">
-                {/* Image Preview */}
-                {pastedImage && (
-                    <div className="relative mb-3 inline-block group animate-in fade-in zoom-in duration-200">
-                        <img src={pastedImage} alt="Pasted" className="h-20 rounded-lg border border-border shadow-md object-cover" />
-                        <button
-                            onClick={() => setPastedImage(null)}
-                            className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                            <X className="w-3 h-3" />
-                        </button>
-                    </div>
-                )}
-
-                {/* Context Pills (Text & File) */}
-                {(selectedContexts.length > 0 || selectedFileContexts.length > 0) && (
-                    <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted">
+                {/* Context Pills (Text & File) & Image Previews */}
+                {(selectedContexts.length > 0 || selectedFileContexts.length > 0 || pastedImages.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto">
                         {/* Text Contexts */}
                         {selectedContexts.map((ctx, i) => (
                             <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
@@ -953,6 +957,19 @@ export const IdeAgentPanel: React.FC = () => {
                         ))}
                         {/* File Contexts */}
                         {selectedFileContexts.map((f, i) => <FilePill key={`file-${i}`} file={f} onRemove={() => removeSelectedFileContext(i)} />)}
+
+                        {/* Image Previews */}
+                        {pastedImages.map((img, i) => (
+                            <div key={`img-${i}`} className="relative group animate-in fade-in zoom-in duration-200">
+                                <img src={img} alt={`Pasted ${i}`} className="w-12 h-12 object-cover rounded-md border border-border shadow-sm" />
+                                <button
+                                    onClick={() => removePastedImage(i)}
+                                    className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 )}
 
@@ -984,6 +1001,7 @@ export const IdeAgentPanel: React.FC = () => {
                                 onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30"
                             >
+                                <Cpu className="w-3 h-3" />
                                 <span>{ollamaModels.find(m => m.name === selectedModel)?.name || selectedModel}</span>
                                 <ChevronDown className="w-3 h-3 opacity-50" />
                             </button>
@@ -1026,7 +1044,7 @@ export const IdeAgentPanel: React.FC = () => {
                             ) : (
                                 <button
                                     onClick={() => handleSend()}
-                                    disabled={!inputValue.trim() && selectedFileContexts.length === 0}
+                                    disabled={!inputValue.trim() && selectedFileContexts.length === 0 && pastedImages.length === 0}
                                     className="p-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <ArrowRight className="w-3.5 h-3.5" />
@@ -1038,5 +1056,4 @@ export const IdeAgentPanel: React.FC = () => {
             </div>
         </div>
     );
-
 };

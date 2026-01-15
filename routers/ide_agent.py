@@ -19,13 +19,43 @@ async def ask_ide_agent(request: Request):
         body = await request.json()
         query = body.get("query")
         history = body.get("history", [])
-        image = body.get("image") # Base64
+        images = body.get("images", [])
+        image = body.get("image") # Data URI
+        if image:
+            images.append(image)
+
         tools = body.get("tools")
         project_root = body.get("project_root", str(PROJECT_ROOT))
         model = body.get("model", "qwen3-vl:8b")
 
         if not query:
             raise HTTPException(status_code=400, detail="Missing query")
+
+        # Save images to .arcturus/images
+        if images:
+            import base64
+            import time
+            
+            try:
+                images_dir = Path(project_root) / ".arcturus" / "images"
+                images_dir.mkdir(parents=True, exist_ok=True)
+                
+                for i, img_data in enumerate(images):
+                    if "," in img_data:
+                        header, b64_str = img_data.split(",", 1)
+                        ext = "png"
+                        if "jpeg" in header: ext = "jpg"
+                        elif "webp" in header: ext = "webp"
+                    else:
+                        b64_str = img_data
+                        ext = "png"
+                        
+                    # Save file
+                    timestamp = int(time.time() * 1000)
+                    filename = f"image_{timestamp}_{i}.{ext}"
+                    (images_dir / filename).write_bytes(base64.b64decode(b64_str))
+            except Exception as e:
+                print(f"Failed to save images: {e}")
 
         # 1. Load System Prompt
         prompt_path = PROJECT_ROOT / "prompts" / "ide_agent_prompt.md"
@@ -74,9 +104,15 @@ Available Tools:
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
             
         user_msg = {"role": "user", "content": query}
-        if image:
-            if "," in image: image = image.split(",")[1]
-            user_msg["images"] = [image]
+        if images:
+            # Ollama expects pure base64
+            clean_images = []
+            for img in images:
+                if "," in img:
+                    clean_images.append(img.split(",")[1])
+                else:
+                    clean_images.append(img)
+            user_msg["images"] = clean_images
         messages.append(user_msg)
 
         # 4. Stream Response
