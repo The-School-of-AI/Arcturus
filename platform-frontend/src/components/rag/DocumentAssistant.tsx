@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowRight } from 'lucide-react';
 import { useAppStore } from '@/store';
-import type { FileContext, RAGDocument } from '@/types';
+import type { FileContext, RAGDocument, ContextItem } from '@/types';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -239,11 +239,14 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
     );
 };
 
-const ContextPill: React.FC<{ content: string }> = ({ content }) => {
+const ContextPill: React.FC<{ item: ContextItem | string }> = ({ item }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const { theme } = useTheme();
 
-    // Simple heuristic to get a "label" for the context
+    // Handle backward compatibility or string fallback
+    const content = typeof item === 'string' ? item : item.text;
+    const metadata = typeof item !== 'string' && item.file ? item : null;
+
     const firstLine = content.split('\n')[0].trim();
     const label = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
 
@@ -260,11 +263,24 @@ const ContextPill: React.FC<{ content: string }> = ({ content }) => {
         >
             <div className="flex items-center gap-2 w-full">
                 <Quote className={cn("w-3 h-3 shrink-0", theme === 'dark' ? "opacity-70" : "opacity-90")} />
-                <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
-                    {label}
-                </span>
+
+                {metadata ? (
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                            {metadata.file?.split('/').pop()} <span className="opacity-60 font-normal">:{metadata.range?.startLine}-{metadata.range?.endLine}</span>
+                        </span>
+                        <span className={cn("truncate text-[9px] opacity-70 font-mono", isExpanded && "whitespace-normal")}>
+                            {label}
+                        </span>
+                    </div>
+                ) : (
+                    <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                        {label}
+                    </span>
+                )}
+
                 {!isExpanded ? (
-                    <ChevronDown className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                    <ChevronDown className="w-3 h-3 opacity-50 group-hover:opacity-100 ml-auto" />
                 ) : (
                     <ChevronUp className="w-3 h-3 opacity-50 group-hover:opacity-100 ml-auto" />
                 )}
@@ -1083,7 +1099,8 @@ export const DocumentAssistant: React.FC = () => {
                             {msg.role === 'user' && ((msg.contexts && msg.contexts.length > 0) || (msg.fileContexts && msg.fileContexts.length > 0)) && (
                                 <div className="flex flex-col items-end w-full mb-1 space-y-1">
                                     {msg.contexts?.map((ctx, idx) => (
-                                        <ContextPill key={`ctx-${idx}`} content={ctx} />
+                                        /* @ts-ignore */
+                                        <ContextPill key={`ctx-${idx}`} item={ctx} />
                                     ))}
                                     {msg.fileContexts?.map((file, idx) => (
                                         <FilePill key={`file-${idx}`} file={file} />
@@ -1133,17 +1150,32 @@ export const DocumentAssistant: React.FC = () => {
                     </div>
                 )}
 
+                {/* Text Contexts */}
+                {selectedContexts.map((ctx: any, i: number) => {
+                    const text = typeof ctx === 'string' ? ctx : ctx.text;
+                    return (
+                        <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                            <Quote className="w-3 h-3 shrink-0 opacity-70" />
+                            <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
+                            <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
+                        </div>
+                    );
+                })}
+
                 {/* File Context Pills */}
                 {(selectedContexts.length > 0 || selectedFileContexts.length > 0) && (
                     <div className="flex flex-wrap gap-2 mb-3 items-start">
                         {/* Text Contexts */}
-                        {selectedContexts.map((ctx, i) => (
-                            <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm">
-                                <Quote className="w-3 h-3 shrink-0 opacity-70" />
-                                <span className="truncate max-w-[160px]">{ctx.substring(0, 40)}...</span>
-                                <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
-                            </div>
-                        ))}
+                        {selectedContexts.map((ctx, i) => {
+                            const text = typeof ctx === 'string' ? ctx : ctx.text;
+                            return (
+                                <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm">
+                                    <Quote className="w-3 h-3 shrink-0 opacity-70" />
+                                    <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
+                                    <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })}
                         {/* File Contexts */}
                         {selectedFileContexts.map((file, i) => (
                             <FilePill key={`file-${i}`} file={file} onRemove={() => removeSelectedFileContext(i)} />

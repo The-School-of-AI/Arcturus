@@ -9,6 +9,7 @@ import type {
     ChatMessage,
     Memory,
     FileContext,
+    ContextItem,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
 import { api, API_BASE } from '../lib/api';
@@ -98,8 +99,8 @@ interface RagViewerSlice {
     setRagKeywordMatches: (matches: string[]) => void;
     addMessageToDocChat: (docId: string, message: ChatMessage) => void;
     updateMessageContent: (docId: string, messageId: string, newContent: string) => void;
-    selectedContexts: string[];
-    addSelectedContext: (text: string) => void;
+    selectedContexts: ContextItem[];
+    addSelectedContext: (item: string | ContextItem) => void;
     removeSelectedContext: (index: number) => void;
     clearSelectedContexts: () => void;
     selectedFileContexts: FileContext[];
@@ -783,9 +784,15 @@ export const useAppStore = create<AppState>()(
                 }
             },
             selectedContexts: [],
-            addSelectedContext: (text) => set((state) => ({
-                selectedContexts: [...state.selectedContexts, text]
-            })),
+            addSelectedContext: (item) => set((state) => {
+                const newItem: ContextItem = typeof item === 'string'
+                    ? { id: crypto.randomUUID(), text: item }
+                    : { ...item, id: item.id || crypto.randomUUID() };
+
+                return {
+                    selectedContexts: [...state.selectedContexts, newItem]
+                };
+            }),
             removeSelectedContext: (index) => {
                 const newContexts = get().selectedContexts.filter((_, i) => i !== index);
                 // Close chat panel when all contexts are removed

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ArrowRight, User, Bot, Trash2, Quote, ScrollText, MessageSquare, X, ChevronDown, ChevronUp, Sparkles, History, Plus, Clock, Cpu, ChevronRight, FileCode, FileText, File, Copy, Check, ArrowRightToLine, Square, ArrowUp, Download } from 'lucide-react';
 import { useAppStore } from '@/store';
-import type { FileContext, RAGDocument } from '@/types';
+import type { FileContext, RAGDocument, ContextItem } from '@/types';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -278,9 +278,13 @@ const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file
     );
 };
 
-const ContextPill: React.FC<{ content: string }> = ({ content }) => {
+const ContextPill: React.FC<{ item: ContextItem | string }> = ({ item }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const { theme } = useTheme();
+
+    // Handle backward compatibility or string fallback
+    const content = typeof item === 'string' ? item : item.text;
+    const metadata = typeof item !== 'string' && item.file ? item : null;
 
     const firstLine = content.split('\n')[0].trim();
     const label = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
@@ -298,11 +302,24 @@ const ContextPill: React.FC<{ content: string }> = ({ content }) => {
         >
             <div className="flex items-center gap-2 w-full">
                 <Quote className={cn("w-3 h-3 shrink-0", theme === 'dark' ? "opacity-70" : "opacity-90")} />
-                <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
-                    {label}
-                </span>
+
+                {metadata ? (
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                            {metadata.file?.split('/').pop()} <span className="opacity-60 font-normal">:{metadata.range?.startLine}-{metadata.range?.endLine}</span>
+                        </span>
+                        <span className={cn("truncate text-[9px] opacity-70 font-mono", isExpanded && "whitespace-normal")}>
+                            {label}
+                        </span>
+                    </div>
+                ) : (
+                    <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                        {label}
+                    </span>
+                )}
+
                 {!isExpanded ? (
-                    <ChevronDown className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                    <ChevronDown className="w-3 h-3 opacity-50 group-hover:opacity-100 ml-auto" />
                 ) : (
                     <ChevronUp className="w-3 h-3 opacity-50 group-hover:opacity-100 ml-auto" />
                 )}
@@ -454,11 +471,12 @@ export const IdeAgentPanel: React.FC = () => {
             addMessageToDocChat(explorerRootPath!, msg);
             setInputValue('');
             const currentImages = [...pastedImages];
+            const currentContexts = [...selectedContexts];
             setPastedImages([]);
             clearSelectedFileContexts();
             clearSelectedContexts();
 
-            callAgent(ideProjectChatHistory, fullContent, currentImages);
+            callAgent(ideProjectChatHistory, fullContent, currentImages, currentContexts);
         }
     };
 
@@ -687,7 +705,7 @@ export const IdeAgentPanel: React.FC = () => {
     // Full Implementation of executeTool needed to work
     // I will overwrite `executeTool` above with the COMPLETE one in the actual file write.
 
-    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[]) => {
+    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[]) => {
         if (!explorerRootPath) return;
         setIsThinking(true);
         thinkingRef.current = true;
@@ -700,9 +718,38 @@ export const IdeAgentPanel: React.FC = () => {
         let accumulatedContent = '';
 
         try {
+            // Transform history to include context in content string for the LLM
+            const effectiveHistory = currentHistory.map(msg => {
+                let contextStr = "";
+                if (msg.contexts && msg.contexts.length > 0) {
+                    contextStr = msg.contexts.map((c: ContextItem | string) => {
+                        const text = typeof c === 'string' ? c : c.text;
+                        const meta = typeof c !== 'string' && c.file
+                            ? `\nFile: ${c.file} (Lines ${c.range?.startLine}-${c.range?.endLine})`
+                            : '';
+                        const lang = typeof c !== 'string' && c.file ? c.file.split('.').pop() : '';
+                        return `\n\n> Context${meta}:\n\`\`\`${lang}\n${text}\n\`\`\``;
+                    }).join('');
+                }
+                return { ...msg, content: msg.content + contextStr };
+            });
+
+            // Prepare current message context
+            let currentContextStr = "";
+            if (currentContexts && currentContexts.length > 0) {
+                currentContextStr = currentContexts.map((c: ContextItem | string) => {
+                    const text = typeof c === 'string' ? c : c.text;
+                    const meta = typeof c !== 'string' && c.file
+                        ? `\nFile: ${c.file} (Lines ${c.range?.startLine}-${c.range?.endLine})`
+                        : '';
+                    const lang = typeof c !== 'string' && c.file ? c.file.split('.').pop() : '';
+                    return `\n\n> Context${meta}:\n\`\`\`${lang}\n${text}\n\`\`\``;
+                }).join('');
+            }
+
             const payload = {
-                query: userMessage || "Continue...",
-                history: currentHistory,
+                query: (userMessage || "Continue...") + currentContextStr,
+                history: effectiveHistory,
                 model: selectedModel,
                 tools: availableTools,
                 project_root: explorerRootPath,
@@ -981,37 +1028,31 @@ export const IdeAgentPanel: React.FC = () => {
                                 (msg.images && msg.images.length > 0)
                             ) && (
                                     <div className="flex flex-col items-end w-full mb-1 space-y-1">
-                                        {msg.contexts?.map((ctx: string, idx: number) => (
-                                            <ContextPill key={`ctx-${idx}`} content={ctx} />
-                                        ))}
-                                        {msg.fileContexts?.map((file: any, idx: number) => (
+                                        {msg.fileContexts?.map((file, idx) => (
                                             <FilePill key={`file-${idx}`} file={file} />
                                         ))}
-                                        {msg.images && msg.images.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {msg.images.map((img: string, idx: number) => (
-                                                    <img
-                                                        key={`msg-img-${idx}`}
-                                                        src={img}
-                                                        alt="User upload"
-                                                        className="w-20 h-20 object-cover rounded-md border border-border/50 cursor-zoom-in hover:brightness-90 transition-all shadow-sm"
-                                                        onClick={() => setSelectedImage(img)}
-                                                    />
-                                                ))}
+                                        {msg.contexts?.map((ctx, idx) => (
+                                            /* @ts-ignore */
+                                            <ContextPill key={`ctx-${idx}`} item={ctx} />
+                                        ))}
+                                        {msg.images?.map((img, idx) => (
+                                            <div key={`img-${idx}`} className="relative group max-w-[200px] mb-1">
+                                                <img src={img} className="rounded-md border border-border/50 shadow-sm" alt="User upload" />
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
                                 )}
-                            <div className={cn(
-                                "text-sm",
-                                msg.role === 'user'
-                                    ? (msg.content?.includes('[System Tool Output]')
-                                        ? "w-full"
-                                        : "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
-                                    : "text-foreground leading-relaxed"
-                            )}>
-                                <MessageContent content={msg.content} role={msg.role as any} />
-                            </div>
+                        </div>
+
+                        <div className={cn(
+                            "text-sm",
+                            msg.role === 'user'
+                                ? ((msg.content && msg.content.includes && msg.content.includes('[System Tool Output]'))
+                                    ? "w-full"
+                                    : "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
+                                : "text-foreground leading-relaxed"
+                        )}>
+                            <MessageContent content={msg.content} role={msg.role as any} />
                         </div>
                     </div>
                 ))}
@@ -1036,13 +1077,16 @@ export const IdeAgentPanel: React.FC = () => {
                 {(selectedContexts.length > 0 || selectedFileContexts.length > 0 || pastedImages.length > 0) && (
                     <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-muted">
                         {/* Text Contexts */}
-                        {selectedContexts.map((ctx, i) => (
-                            <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
-                                <Quote className="w-3 h-3 shrink-0 opacity-70" />
-                                <span className="truncate max-w-[160px]">{ctx.substring(0, 40)}...</span>
-                                <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
-                            </div>
-                        ))}
+                        {selectedContexts.map((ctx, i) => {
+                            const text = typeof ctx === 'string' ? ctx : ctx.text;
+                            return (
+                                <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                                    <Quote className="w-3 h-3 shrink-0 opacity-70" />
+                                    <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
+                                    <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })}
                         {/* File Contexts */}
                         {selectedFileContexts.map((f, i) => <FilePill key={`file-${i}`} file={f} onRemove={() => removeSelectedFileContext(i)} />)}
 
@@ -1152,52 +1196,57 @@ export const IdeAgentPanel: React.FC = () => {
             </div>
 
             {/* Image Lightbox */}
-            {selectedImage && (
-                <div
-                    className="fixed inset-0 z-[200] bg-black/10 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
-                    onClick={() => setSelectedImage(null)}
-                >
-                    <div className="absolute top-6 right-6 flex items-center gap-3">
-                        <button
-                            className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                copyImageToClipboard(selectedImage);
-                            }}
-                            title="Copy to clipboard"
-                        >
-                            {copiedImage ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
-                            <span className="text-xs font-bold">{copiedImage ? 'COPIED' : 'COPY'}</span>
-                        </button>
-                        <button
-                            className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                const link = document.createElement('a');
-                                link.href = selectedImage;
-                                link.download = `pasted_image_${Date.now()}.png`;
-                                link.click();
-                            }}
-                            title="Download image"
-                        >
-                            <Download className="w-5 h-5" />
-                            <span className="text-xs font-bold">SAVE</span>
-                        </button>
-                        <button
-                            className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
-                            onClick={() => setSelectedImage(null)}
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
+            {
+                selectedImage && (
+                    <div
+                        className="fixed inset-0 z-[200] bg-black/10 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <div className="absolute top-6 right-6 flex items-center gap-3">
+                            <button
+                                className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (selectedImage) copyImageToClipboard(selectedImage);
+                                }}
+                                title="Copy to clipboard"
+                            >
+                                {copiedImage ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                                <span className="text-xs font-bold">{copiedImage ? 'COPIED' : 'COPY'}</span>
+                            </button>
+                            <button
+                                className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!selectedImage) return;
+                                    const link = document.createElement('a');
+                                    link.href = selectedImage;
+                                    link.download = `pasted_image_${Date.now()}.png`;
+                                    link.click();
+                                }}
+                                title="Download image"
+                            >
+                                <Download className="w-5 h-5" />
+                                <span className="text-xs font-bold">SAVE</span>
+                            </button>
+                            <button
+                                className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
+                                onClick={() => setSelectedImage(null)}
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        {selectedImage && (
+                            <img
+                                src={selectedImage}
+                                alt="Zoomed"
+                                className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        )}
                     </div>
-                    <img
-                        src={selectedImage}
-                        alt="Zoomed"
-                        className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };

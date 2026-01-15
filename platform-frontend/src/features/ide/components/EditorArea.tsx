@@ -27,7 +27,13 @@ export const EditorArea: React.FC = () => {
     const { theme } = useTheme();
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
-    const [selectionMenu, setSelectionMenu] = useState<{ visible: boolean, x: number, y: number, text: string }>({ visible: false, x: 0, y: 0, text: '' });
+    const [selectionMenu, setSelectionMenu] = useState<{
+        visible: boolean,
+        x: number,
+        y: number,
+        text: string,
+        metadata?: { file: string, range: { startLine: number, endLine: number } }
+    }>({ visible: false, x: 0, y: 0, text: '' });
     const editorRef = useRef<any>(null);
 
     const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
@@ -51,11 +57,18 @@ export const EditorArea: React.FC = () => {
 
                 if (scrolledPos && domNode) {
                     const rect = domNode.getBoundingClientRect();
+                    const startLine = selection.startLineNumber;
+                    const endLine = selection.endLineNumber;
+
                     setSelectionMenu({
                         visible: true,
                         x: rect.left + scrolledPos.left,
                         y: rect.top + scrolledPos.top - 40,
-                        text
+                        text,
+                        metadata: {
+                            file: activeDoc?.id || '',
+                            range: { startLine, endLine }
+                        }
                     });
                 }
             } else {
@@ -275,7 +288,16 @@ export const EditorArea: React.FC = () => {
                 {/* Global Selection Menu for IDE */}
                 <SelectionMenu
                     onAdd={(text) => {
-                        addSelectedContext(text);
+                        if (selectionMenu.metadata) {
+                            addSelectedContext({
+                                id: crypto.randomUUID(),
+                                text: text,
+                                file: selectionMenu.metadata.file,
+                                range: selectionMenu.metadata.range
+                            });
+                        } else {
+                            addSelectedContext(text);
+                        }
                         setSelectionMenu(prev => ({ ...prev, visible: false }));
                     }}
                     manualVisible={selectionMenu.visible}
