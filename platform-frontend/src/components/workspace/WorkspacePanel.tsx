@@ -1066,10 +1066,20 @@ export const WorkspacePanel: React.FC = () => {
                                     const addUrl = (url: string, content?: any) => {
                                         try {
                                             const domain = new URL(url).hostname;
-                                            if (!urls.find(u => u.url === url)) {
+                                            const newContent = typeof content === 'string' ? content : (content ? JSON.stringify(content) : 'No content extracted');
+
+                                            const existing = urls.find(u => u.url === url);
+                                            if (existing) {
+                                                // Update if existing is just a placeholder or status line, and we have something new
+                                                // Avoid overwriting full text content with a status log
+                                                const isExistingStatus = existing.content === 'Navigation Log' || existing.content.startsWith('Status:') || existing.content.startsWith('Link:') || existing.content.length < 100;
+                                                if (isExistingStatus && newContent !== existing.content) {
+                                                    existing.content = newContent;
+                                                }
+                                            } else {
                                                 urls.push({
                                                     url,
-                                                    content: typeof content === 'string' ? content : (content ? JSON.stringify(content) : 'No content extracted'),
+                                                    content: newContent,
                                                     domain
                                                 });
                                             }
@@ -1140,10 +1150,14 @@ export const WorkspacePanel: React.FC = () => {
 
                                         // Look for "Link: https://..." or "Navigating to https://..."
                                         // We want to capture the URL specifically
-                                        const navigationRegex = /(?:Navigating to|Visiting|Link:) (https?:\/\/[^\s'"]+)/gi;
+                                        // Updated to capture details after the URL (e.g. " | Status: Extracted | Tokens: 50")
+                                        const navigationRegex = /(?:Navigating to|Visiting|Link:) (https?:\/\/[^\s'"]+)(?: \| (.+))?/gi;
                                         let navMatch;
                                         while ((navMatch = navigationRegex.exec(logs)) !== null) {
-                                            if (navMatch[1]) addUrl(navMatch[1], "Navigation Log");
+                                            if (navMatch[1]) {
+                                                const details = navMatch[2] ? navMatch[2].trim() : "Navigation Log";
+                                                addUrl(navMatch[1], details);
+                                            }
                                         }
 
                                         // Also generic URL scan

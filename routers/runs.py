@@ -164,6 +164,58 @@ async def process_run(run_id: str, query: str):
             import traceback
             traceback.print_exc()
 
+        # 3. AUTO-SAVE REPORTS TO NOTES
+        try:
+             if context and context.plan_graph:
+                import re
+                
+                notes_dir = PROJECT_ROOT / "data" / "Notes" / "Arcturus"
+                notes_dir.mkdir(parents=True, exist_ok=True)
+                
+                def sanitize_filename(title):
+                    title = re.sub(r'[\\/*?:"<>|]', "", title)
+                    return title[:50].strip()
+
+                def extract_title(content):
+                    match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+                    if match:
+                        return match.group(1).strip()
+                    first_line = content.strip().split('\n')[0]
+                    return first_line.strip()
+
+                for node_id in context.plan_graph.nodes:
+                    node = context.plan_graph.nodes[node_id]
+                    output = node.get("output", {})
+                    if not output: continue
+
+                    # Check for Formatter output keys
+                    markdown = output.get("fallback_markdown")
+                    if not markdown:
+                         for k, v in output.items():
+                             if k.startswith("formatted_report") and isinstance(v, str):
+                                 markdown = v
+                                 break
+                    
+                    if markdown and len(markdown) > 100:
+                         title = extract_title(markdown)
+                         filename = sanitize_filename(title) + ".md"
+                         target_path = notes_dir / filename
+                         
+                         # Check if file exists and content is identical to avoid IO churn
+                         if target_path.exists():
+                             if target_path.read_text(encoding='utf-8') == markdown:
+                                 continue
+
+                         header = f"<!-- Source: session_{run_id}.json -->\n"
+                         with open(target_path, 'w', encoding='utf-8') as f:
+                                # We strip the header if it was already there (from backfill) to be clean, 
+                                # but actually pure markdown is better. Let's just write the content.
+                             f.write(markdown)
+                         print(f"✅ Auto-Saved Report to Notes: {filename}")
+
+        except Exception as e:
+            print(f"⚠️ Failed to auto-save report: {e}")
+
 
 # === Endpoints ===
 

@@ -94,10 +94,14 @@ async def search_web_with_text_content(string: str) -> dict:
         
         for i, url in enumerate(urls[:max_extracts]):
             try:
+                print(f"Link: {url} | Status: Visiting...") 
                 web_result = await asyncio.wait_for(smart_web_extract(url), timeout=20)
                 text_content = web_result.get("best_text", "")[:4000]
                 text_content = text_content.replace('\n', ' ').replace('  ', ' ').strip()
+                token_count = len(text_content) // 4
                 
+                print(f"Link: {url} | Status: Extracted | Tokens: {token_count}")
+
                 results.append({
                     "url": url,
                     "content": text_content if text_content.strip() else "[error] No readable content found",
@@ -105,6 +109,7 @@ async def search_web_with_text_content(string: str) -> dict:
                     "rank": i + 1
                 })
             except Exception as e:
+                print(f"Link: {url} | Status: Failed | Error: {str(e)}")
                 results.append({
                     "url": url,
                     "content": f"[error] {str(e)}",
