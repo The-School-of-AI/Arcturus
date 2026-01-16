@@ -127,7 +127,7 @@ async def process_run(run_id: str, query: str):
             print(f" Remme: Extracting facts from run {run_id}...")
             # Pass existing memories from earlier search to context-aware extractor
             # ⚡ RUN IN THREAD TO AVOID BLOCKING EVENT LOOP
-            commands = await asyncio.to_thread(
+            commands, preferences = await asyncio.to_thread(
                 remme_extractor.extract, 
                 query, 
                 history, 
@@ -158,6 +158,12 @@ async def process_run(run_id: str, query: str):
                             print(f"🗑️ Remme: Deleted fact {target_id}")
                     except Exception as e:
                         print(f"❌ Remme Action Failed: {e}")
+            
+            # Apply preferences to hubs
+            if preferences:
+                from remme.extractor import apply_preferences_to_hubs
+                apply_preferences_to_hubs(preferences)
+                print(f"✅ Remme: Processed {len(preferences)} preference updates.")
                 
                 print(f"✅ Remme: Processed {len(commands)} memory updates.")
             else:

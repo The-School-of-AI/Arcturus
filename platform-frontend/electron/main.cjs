@@ -22,15 +22,16 @@ let mainWindow;
 let backendProcesses = [];
 let backgroundProcesses = new Map(); // pid -> { process, stdout: '', stderr: '', startTime: number }
 
+const iconPath = isDev
+    ? path.join(__dirname, '../public/icon.png')
+    : path.join(__dirname, '../dist/icon.png');
+
 // Terminal state
 let ptyProcess = null;
 let activeTerminalCwd = null;
 let activeTerminalBuffer = ""; // Store terminal history
 
 function createWindow() {
-    const iconPath = isDev
-        ? path.join(__dirname, '../public/icon.png')
-        : path.join(__dirname, '../dist/icon.png');
 
     // Set Dock Icon for macOS
     if (process.platform === 'darwin') {
@@ -546,6 +547,55 @@ function setupFSHandlers() {
     });
 }
 
+function setupDialogHandlers() {
+    ipcMain.handle('dialog:confirm', async (event, { message, title, type = 'question' }) => {
+        const { nativeImage } = require('electron');
+        const icon = nativeImage.createFromPath(iconPath);
+
+        const result = await dialog.showMessageBox(mainWindow, {
+            type,
+            title: title || 'Confirmation',
+            message: message,
+            buttons: ['Cancel', 'OK'],
+            defaultId: 1,
+            cancelId: 0,
+            icon: icon
+        });
+
+        return result.response === 1;
+    });
+
+    ipcMain.handle('dialog:alert', async (event, { message, title, type = 'info' }) => {
+        const { nativeImage } = require('electron');
+        const icon = nativeImage.createFromPath(iconPath);
+
+        await dialog.showMessageBox(mainWindow, {
+            type,
+            title: title || 'Alert',
+            message: message,
+            buttons: ['OK'],
+            icon: icon
+        });
+    });
+
+    ipcMain.on('dialog:confirmSync', (event, { message, title, type = 'question' }) => {
+        const { nativeImage } = require('electron');
+        const icon = nativeImage.createFromPath(iconPath);
+
+        const response = dialog.showMessageBoxSync(mainWindow, {
+            type,
+            title: title || 'Confirmation',
+            message: message,
+            buttons: ['Cancel', 'OK'],
+            defaultId: 1,
+            cancelId: 0,
+            icon: icon
+        });
+
+        event.returnValue = response === 1;
+    });
+}
+
 app.on('ready', () => {
     console.log('[Arcturus] App ready, setting up handlers...');
 
@@ -609,6 +659,7 @@ app.on('ready', () => {
 
     setupTerminalHandlers();
     setupFSHandlers();
+    setupDialogHandlers();
     createWindow();
 });
 

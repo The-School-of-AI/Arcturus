@@ -42,7 +42,7 @@ async def update_settings(request: UpdateSettingsRequest):
         # Deep merge incoming settings with existing
         def deep_merge(base: dict, update: dict) -> dict:
             for key, value in update.items():
-                if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                if key in base and isinstance(base[key], dict) and isinstance(value, dict) and value:
                     deep_merge(base[key], value)
                 else:
                     base[key] = value
@@ -62,7 +62,9 @@ async def update_settings(request: UpdateSettingsRequest):
                     warnings.append(f"Changed '{key}' - requires re-indexing documents to take effect")
         
         if "models" in request.settings:
-            warnings.append("Model changes take effect on next document processing or server restart")
+            # Agent models take effect on next run, but RAG models might need more
+            warnings.append("Agent model changes will take effect on the next run.")
+            warnings.append("RAG model changes take effect on next document processing or server restart")
         
         return {
             "status": "success",

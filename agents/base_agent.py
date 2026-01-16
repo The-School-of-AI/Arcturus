@@ -143,7 +143,12 @@ class AgentRunner:
 
             # 6. Parse JSON response dynamically
             output = parse_llm_json(response)
-            log_step(f"✅ {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="🟩")
+            
+            # Robustness: Some models (like gemma3) wrap JSON in a list
+            if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict):
+                output = output[0]
+                
+            log_step(f"🟩 {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="🟩")
 
             # import pdb; pdb.set_trace()
             

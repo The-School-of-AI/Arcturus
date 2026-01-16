@@ -472,7 +472,30 @@ export const SettingsPage: React.FC = () => {
 
                 {/* Per-Agent Overrides */}
                 <div className="pt-6 border-t border-border">
-                    <h3 className="text-sm font-bold text-foreground mb-4">Per-Agent Model Overrides</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-foreground">Per-Agent Model Overrides</h3>
+                        {settings?.agent.overrides && Object.keys(settings.agent.overrides).length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    if (!settings) return;
+                                    setSettings({
+                                        ...settings,
+                                        agent: {
+                                            ...settings.agent,
+                                            overrides: {}
+                                        }
+                                    });
+                                    setHasChanges(true);
+                                }}
+                                className="h-7 px-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                Reset to Globals
+                            </Button>
+                        )}
+                    </div>
                     <p className="text-xs text-muted-foreground mb-4">
                         Override the default model for specific agent types. If not set, the default model above is used.
                     </p>

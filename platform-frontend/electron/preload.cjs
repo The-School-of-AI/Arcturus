@@ -5,7 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld(
     "electronAPI", {
     invoke: (channel, ...args) => {
-        let validChannels = ["dialog:openDirectory", "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile", "fs:copy", "fs:move", "fs:readDir", "fs:find", "fs:grep", "fs:viewOutline", "shell:exec", "shell:spawn", "shell:status", "shell:kill", "terminal:read"];
+        let validChannels = ["dialog:openDirectory", "dialog:confirm", "dialog:alert", "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile", "fs:copy", "fs:move", "fs:readDir", "fs:find", "fs:grep", "fs:viewOutline", "shell:exec", "shell:spawn", "shell:status", "shell:kill", "terminal:read"];
         if (validChannels.includes(channel)) {
             return ipcRenderer.invoke(channel, ...args);
         }
@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld(
             // Deliberately strip event as it includes `sender` 
             ipcRenderer.on(channel, (event, ...args) => func(...args));
         }
+    },
+    confirm: (message) => {
+        return ipcRenderer.sendSync('dialog:confirmSync', { message });
     }
 }
 );

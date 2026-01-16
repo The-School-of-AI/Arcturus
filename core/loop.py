@@ -69,11 +69,32 @@ class AgentLoop4:
         self.strategy = strategy
         self.agent_runner = AgentRunner(multi_mcp)
         self.context = None  # Reference for external stopping
+        self._tasks = set()  # Track active async tasks for immediate cancellation
 
     def stop(self):
         """Request execution stop"""
         if self.context:
             self.context.stop()
+        # Immediately cancel all tracked tasks
+        for t in list(self._tasks):
+            if not t.done():
+                t.cancel()
+
+    async def _track_task(self, coro_or_future):
+        """Track an async task or future so it can be cancelled immediately on stop()"""
+        if asyncio.iscoroutine(coro_or_future):
+            task = asyncio.create_task(coro_or_future)
+        else:
+            # It's already a task or future (like from asyncio.gather)
+            task = coro_or_future
+            
+        self._tasks.add(task)
+        try:
+            return await task
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._tasks.discard(task)
 
     async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None):
         # 🟢 PHASE 0: BOOTSTRAP CONTEXT (Immediate VS Code feedback)
@@ -126,7 +147,7 @@ class AgentLoop4:
                         "writes": ["file_profiles"]
                     }
                 )
-            file_result = await retry_with_backoff(run_distiller)
+            file_result = await self._track_task(retry_with_backoff(run_distiller))
             if file_result["success"]:
                 file_profiles = file_result["output"]
                 self.context.set_file_profiles(file_profiles)
@@ -150,7 +171,7 @@ class AgentLoop4:
                             "memory_context": memory_context
                         }
                     )
-                plan_result = await retry_with_backoff(run_planner)
+                plan_result = await self._track_task(retry_with_backoff(run_planner))
 
                 if self.context.stop_requested:
                     break
@@ -219,7 +240,7 @@ class AgentLoop4:
 
                 try:
                     # Phase 4: Execute DAG
-                    await self._execute_dag(self.context)
+                    await self._track_task(self._execute_dag(self.context))
 
                     if self.context.stop_requested:
                         break
@@ -235,23 +256,31 @@ class AgentLoop4:
                         # No more work or re-planning needed
                         return self.context
 
-                except Exception as e:
+                except (Exception, asyncio.CancelledError) as e:
+                    if isinstance(e, asyncio.CancelledError) or self.context.stop_requested:
+                        log_step("🛑 Execution interrupted/stopped.", symbol="🛑")
+                        break
                     print(f"❌ ERROR during execution: {e}")
                     import traceback
                     traceback.print_exc()
                     raise
-        except Exception as e:
+        except (Exception, asyncio.CancelledError) as e:
             if self.context:
-                # Mark ANY running/pending node as failed to stop spinners
+                # Mark ANY running/pending node as stopped/failed to stop spinners
+                final_status = "stopped" if (self.context.stop_requested or isinstance(e, asyncio.CancelledError)) else "failed"
                 for node_id in self.context.plan_graph.nodes:
                     if self.context.plan_graph.nodes[node_id].get("status") in ["running", "pending"]:
-                        self.context.plan_graph.nodes[node_id]["status"] = "failed"
-                        self.context.plan_graph.nodes[node_id]["error"] = str(e)
+                        self.context.plan_graph.nodes[node_id]["status"] = final_status
+                        if final_status == "failed":
+                             self.context.plan_graph.nodes[node_id]["error"] = str(e)
                 
-                self.context.plan_graph.graph['status'] = 'failed'
-                self.context.plan_graph.graph['error'] = str(e)
+                self.context.plan_graph.graph['status'] = final_status
+                if final_status == "failed":
+                    self.context.plan_graph.graph['error'] = str(e)
                 self.context._save_session()
-            raise e
+            if not isinstance(e, asyncio.CancelledError) and not self.context.stop_requested:
+                raise e
+            return self.context
 
     def _should_replan(self):
         """
@@ -424,9 +453,9 @@ class AgentLoop4:
                 
                 visualizer.mark_running(step_id)
                 context.mark_running(step_id)
-                tasks.append(self._execute_step(step_id, context))
+                tasks.append(self._track_task(self._execute_step(step_id, context)))
 
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results = await self._track_task(asyncio.gather(*tasks, return_exceptions=True))
 
             # Step-level retry configuration
             MAX_STEP_RETRIES = 2
