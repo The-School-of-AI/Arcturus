@@ -116,12 +116,10 @@ export const WorkspacePanel: React.FC = () => {
         setActiveIframeUrl(null);
 
         // Switch to appropriate tab based on agent type
-        if (nodeLabel.includes('retriever')) {
-            setActiveTab('web');
-        } else if (nodeType === 'Summarizer' || nodeType === 'Evaluator' ||
+        if (nodeType === 'Summarizer' || nodeType === 'Evaluator' ||
             nodeLabel.includes('formatter') || nodeLabel.includes('summarizer')) {
             setActiveTab('preview');
-        } else if (nodeType === 'Coder') {
+        } else if (nodeType === 'Coder' || nodeLabel.includes('thinker') || nodeLabel.includes('distiller') || nodeLabel.includes('retriever')) {
             setActiveTab('code');
         } else if (selectedNodeId) {
             setActiveTab('overview');
@@ -327,7 +325,12 @@ export const WorkspacePanel: React.FC = () => {
             {!isZenMode && (
                 <div className="flex items-center border-b border-border px-2">
                     <PanelTab label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Terminal className="w-3 h-3" />} />
-                    <PanelTab label="Code" active={activeTab === 'code'} onClick={() => setActiveTab('code')} icon={<Code2 className="w-3 h-3" />} />
+                    <PanelTab
+                        label={selectedNode?.data?.iterations?.some((iter: any) => iter.output?.code_variants) ? "Code" : "Output"}
+                        active={activeTab === 'code'}
+                        onClick={() => setActiveTab('code')}
+                        icon={selectedNode?.data?.iterations?.some((iter: any) => iter.output?.code_variants) ? <Code2 className="w-3 h-3" /> : <Terminal className="w-3 h-3" />}
+                    />
                     <PanelTab label="Web" active={activeTab === 'web'} onClick={() => setActiveTab('web')} icon={<Globe className="w-3 h-3" />} />
                     <PanelTab label="Preview" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Eye className="w-3 h-3" />} />
                     <PanelTab label="Stats" active={activeTab === 'output'} onClick={() => setActiveTab('output')} icon={<Terminal className="w-3 h-3" />} />
@@ -693,6 +696,12 @@ export const WorkspacePanel: React.FC = () => {
                                 const primaryCodeKey = executedVariant || codeKeys[0];
                                 const primaryCode = codeVariants[primaryCodeKey] || '';
 
+                                // Get other data keys (filtering out meta keys)
+                                const dataKeys = Object.keys(output).filter(k =>
+                                    !['code_variants', 'call_self', 'next_instruction', 'iteration_context',
+                                        'executed_variant', 'input_tokens', 'output_tokens', 'cost', 'total_tokens'].includes(k)
+                                );
+
                                 return (
                                     <div key={idx} className="border border-border rounded-lg overflow-hidden bg-muted/30">
                                         {/* Iteration Header */}
@@ -750,6 +759,30 @@ export const WorkspacePanel: React.FC = () => {
                                                         <pre className="p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed">
                                                             {codeVariants[key]}
                                                         </pre>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Data Output Section (for non-code agents or agents with extra metadata) */}
+                                        {codeKeys.length === 0 && dataKeys.length > 0 && (
+                                            <div className="p-4 space-y-3">
+                                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2">
+                                                    <Terminal className="w-3 h-3" />
+                                                    Output Data
+                                                </div>
+                                                {dataKeys.map(key => (
+                                                    <div key={key} className="space-y-2">
+                                                        <div className="text-[9px] text-muted-foreground font-mono uppercase font-bold tracking-wider">
+                                                            {key}
+                                                        </div>
+                                                        <div className="rounded-lg overflow-hidden border border-border/20 bg-background/40 p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                            {typeof output[key] === 'object' ? (
+                                                                <pre className="text-foreground/80">{JSON.stringify(output[key], null, 2)}</pre>
+                                                            ) : (
+                                                                <div className="text-foreground/80">{String(output[key])}</div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
