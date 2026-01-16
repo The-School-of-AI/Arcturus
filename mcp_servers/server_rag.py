@@ -1242,7 +1242,7 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
                         
                         if isinstance(output, dict):
                             # Try to find meaningful text output
-                            text_val = output.get("fallback_markdown") or output.get("summary") or output.get("answer")
+                            text_val = output.get("markdown_report") or output.get("summary") or output.get("answer")
                             if not text_val:
                                 # Look into nested keys
                                 for k, v in output.items():

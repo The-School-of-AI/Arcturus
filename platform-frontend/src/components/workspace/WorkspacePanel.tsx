@@ -1463,7 +1463,7 @@ export const WorkspacePanel: React.FC = () => {
 
                                         // PASS 3: Fallback to markdown/content keys
                                         if (!formatContent) {
-                                            const fallbackKeys = ['fallback_markdown', 'markdown', 'report', 'content', 'result'];
+                                            const fallbackKeys = ['markdown_report', 'markdown', 'report', 'content', 'result'];
                                             for (const key of fallbackKeys) {
                                                 const value = parsed[key as keyof typeof parsed];
                                                 if (typeof value === 'string' && value.trim()) {

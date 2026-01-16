@@ -197,7 +197,7 @@ async def process_run(run_id: str, query: str):
                     if not output: continue
 
                     # Check for Formatter output keys
-                    markdown = output.get("fallback_markdown")
+                    markdown = output.get("markdown_report")
                     if not markdown:
                          for k, v in output.items():
                              if k.startswith("formatted_report") and isinstance(v, str):

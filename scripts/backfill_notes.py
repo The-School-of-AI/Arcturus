@@ -59,7 +59,7 @@ def backfill_notes():
                 if not output:
                     return
 
-                markdown = output.get("fallback_markdown")
+                markdown = output.get("markdown_report")
                 # Also check for "formatted_report_..." keys 
                 if not markdown:
                      for k, v in output.items():
