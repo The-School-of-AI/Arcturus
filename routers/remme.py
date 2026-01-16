@@ -102,10 +102,17 @@ async def background_smart_scan():
                 except:
                     pass
                 
-                # Extract
-                commands = await asyncio.to_thread(extractor.extract, query, hist, existing)
+                # Extract memories AND preferences using new format
+                result = await asyncio.to_thread(extractor.extract, query, hist, existing)
                 
-                # Apply
+                # Handle both new tuple format and legacy list format
+                if isinstance(result, tuple):
+                    commands, preferences = result
+                else:
+                    commands = result
+                    preferences = {}
+                
+                # Apply memory commands to store
                 if commands:
                     for cmd in commands:
                         action = cmd.get("action")
@@ -125,8 +132,17 @@ async def background_smart_scan():
                         except Exception as e:
                             print(f"❌ RemMe Action Failed: {e}")
                 
-                # If no commands generated, we still need to mark it as scanned?
-                # YES - we now use an explicit tracking file.
+                # Write preferences to staging queue (will be normalized later)
+                if preferences:
+                    try:
+                        from remme.staging import get_staging_store
+                        staging = get_staging_store()
+                        staging.add(preferences, source=f"session_{run_id}")
+                        print(f"📥 Staged {len(preferences)} preferences for normalization")
+                    except Exception as e:
+                        print(f"⚠️ Failed to stage preferences: {e}")
+                
+                # Mark session as scanned
                 remme_store.mark_run_scanned(run_id)
                 
             except Exception as e:
@@ -227,7 +243,7 @@ async def add_memory(request: AddMemoryRequest):
         
         # Auto-extract preferences from this single memory
         try:
-            from user_model.extractors.memory_bootstrap import extract_from_memories, apply_extraction_to_hubs
+            from remme.bootstrap import extract_from_memories, apply_extraction_to_hubs
             
             print(f"🔄 Auto-extracting preferences from: '{request.text[:50]}...'")
             extraction = await extract_from_memories([{"text": request.text, "category": request.category}])
@@ -372,10 +388,10 @@ A high-level overview of who the user appears to be, their primary drivers, and 
 async def get_user_preferences():
     """Get all UserModel preferences for frontend display."""
     try:
-        from user_model.hubs.preferences_hub import get_preferences_hub
-        from user_model.hubs.operating_context_hub import get_operating_context_hub
-        from user_model.hubs.soft_identity_hub import get_soft_identity_hub
-        from user_model.engines.evidence_log import get_evidence_log
+        from remme.hubs.preferences_hub import get_preferences_hub
+        from remme.hubs.operating_context_hub import get_operating_context_hub
+        from remme.hubs.soft_identity_hub import get_soft_identity_hub
+        from remme.engines.evidence_log import get_evidence_log
         
         prefs_hub = get_preferences_hub()
         context_hub = get_operating_context_hub()
@@ -483,7 +499,7 @@ async def get_user_preferences():
 async def bootstrap_preferences():
     """Bootstrap UserModel hubs from existing REMME memories using LLM extraction."""
     try:
-        from user_model.extractors.memory_bootstrap import bootstrap_from_remme
+        from remme.bootstrap import bootstrap_from_remme
         
         print("🚀 Starting preferences bootstrap...")
         changes = await bootstrap_from_remme()
@@ -503,3 +519,123 @@ async def bootstrap_preferences():
         }
 
 
+@router.get("/staging/status")
+async def get_staging_status():
+    """Get status of the preference staging queue."""
+    try:
+        from remme.staging import get_staging_store
+        
+        staging = get_staging_store()
+        
+        return {
+            "status": "success",
+            "pending_count": staging.get_pending_count(),
+            "should_normalize": staging.should_normalize(),
+            "last_normalized": staging.data.get("last_normalized"),
+            "pending_preview": staging.get_pending()[:5]  # First 5 items
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "pending_count": 0
+        }
+
+
+@router.post("/normalize")
+async def run_normalize():
+    """Run the normalizer to process pending preferences from staging."""
+    try:
+        from remme.normalizer import run_normalizer
+        
+        print("🔄 Running preference normalizer...")
+        changes = await run_normalizer()
+        
+        return {
+            "status": "success",
+            "message": f"Normalized and applied {len(changes)} preferences",
+            "changes": changes
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": str(e),
+            "changes": []
+        }
+
+
+@router.post("/scan/system")
+async def run_system_scan():
+    """
+    Run system-wide preference scan across ALL sources:
+    - Notes folder
+    - Session summaries
+    - Then normalize and apply to hubs
+    """
+    try:
+        from remme.sources.notes_scanner import scan_notes
+        from remme.sources.session_scanner import scan_sessions
+        from remme.normalizer import run_normalizer
+        
+        print("🔍 Starting SYSTEM-WIDE preference scan...")
+        
+        # 1. Scan Notes
+        notes_count = await scan_notes()
+        
+        # 2. Scan Sessions
+        sessions_count = await scan_sessions()
+        
+        # 3. Run normalizer on all staged preferences
+        changes = await run_normalizer()
+        
+        return {
+            "status": "success",
+            "message": f"System scan complete",
+            "notes_scanned": notes_count,
+            "sessions_scanned": sessions_count,
+            "preferences_normalized": len(changes),
+            "changes": changes
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+@router.post("/scan/notes")
+async def run_notes_scan():
+    """Scan Notes folder for preferences."""
+    try:
+        from remme.sources.notes_scanner import scan_notes
+        
+        print("📝 Scanning Notes folder...")
+        count = await scan_notes()
+        
+        return {
+            "status": "success",
+            "message": f"Scanned notes, found preferences in {count} files"
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.post("/scan/sessions")
+async def run_sessions_scan():
+    """Scan session summaries for preferences."""
+    try:
+        from remme.sources.session_scanner import scan_sessions
+        
+        print("💬 Scanning session summaries...")
+        count = await scan_sessions()
+        
+        return {
+            "status": "success",
+            "message": f"Scanned sessions, found preferences in {count} sessions"
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

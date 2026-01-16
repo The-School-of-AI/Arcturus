@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from user_model.schemas.hub_schemas import (
+from remme.schemas.hub_schemas import (
     EvidenceLogSchema,
     EvidenceEvent,
     EvidenceSource,

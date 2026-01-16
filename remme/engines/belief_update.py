@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import json
 
-from user_model.schemas.hub_schemas import (
+from remme.schemas.hub_schemas import (
     BeliefUpdateEngineSchema,
     ConfidenceConfig,
     RecencyDecayConfig,

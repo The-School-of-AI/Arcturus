@@ -131,10 +131,10 @@ def apply_extraction_to_hubs(extraction: Dict[str, Any]):
     Args:
         extraction: Dict with 'preferences', 'operating_context', 'soft_identity' keys
     """
-    from user_model.hubs.preferences_hub import get_preferences_hub
-    from user_model.hubs.operating_context_hub import get_operating_context_hub
-    from user_model.hubs.soft_identity_hub import get_soft_identity_hub
-    from user_model.engines.evidence_log import get_evidence_log
+    from remme.hubs.preferences_hub import get_preferences_hub
+    from remme.hubs.operating_context_hub import get_operating_context_hub
+    from remme.hubs.soft_identity_hub import get_soft_identity_hub
+    from remme.engines.evidence_log import get_evidence_log
     
     prefs_hub = get_preferences_hub()
     context_hub = get_operating_context_hub()

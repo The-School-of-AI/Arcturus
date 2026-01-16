@@ -13,8 +13,8 @@ from typing import Any, Dict, List, Optional
 import platform
 import os
 
-from user_model.hubs.base_hub import BaseHub
-from user_model.schemas.hub_schemas import (
+from remme.hubs.base_hub import BaseHub
+from remme.schemas.hub_schemas import (
     OperatingContextHubSchema,
     ConfidenceField,
 )

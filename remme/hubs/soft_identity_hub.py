@@ -12,8 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from user_model.hubs.base_hub import BaseHub
-from user_model.schemas.hub_schemas import SoftIdentityHubSchema
+from remme.hubs.base_hub import BaseHub
+from remme.schemas.hub_schemas import SoftIdentityHubSchema
 
 
 class SoftIdentityHub(BaseHub):
