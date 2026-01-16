@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import StarterKit from '@tiptap/starter-kit';
 import { Node, mergeAttributes } from '@tiptap/core';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -43,12 +47,15 @@ import tippy from 'tippy.js';
 import type { Instance as TippyInstance } from 'tippy.js';
 import { ReactRenderer } from '@tiptap/react';
 import { WikiLinkList } from './WikiLinkList';
+import { gfm } from 'turndown-plugin-gfm';
 
 // Initialize Turndown service
 const turndownService = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced'
 });
+// Add this line to support Tables during MD conversion
+turndownService.use(gfm);
 
 // CRITICAL: Disable Turndown's aggressive escaping to prevent '[[link]] \]' bugs
 // This ensures that our markdown notes remain clean and Obsidian-compatible.
@@ -515,6 +522,12 @@ export const NotesEditor: React.FC = () => {
     const editor = useEditor({
         extensions: [
             StarterKit,
+            Table.configure({
+                resizable: true, // Optional: allows dragging column widths
+            }),
+            TableRow,
+            TableHeader,
+            TableCell,
             Details,
             DetailsSummary,
             DetailsContent,
@@ -591,6 +604,13 @@ export const NotesEditor: React.FC = () => {
             // Turndown preserves src as is by default
             const md = turndownService.turndown(html);
             setRawContent(md);
+
+            // CRITICAL: If we are currently loading the document, sync the "lastSavedContent" 
+            // with Turndown's normalized output. This prevents the "unsaved" yellow circle 
+            // from appearing just because Turndown formatted the markdown differently than the raw file.
+            if (isFetchingRef.current) {
+                setLastSavedContent(md);
+            }
         }
     });
 
@@ -677,7 +697,11 @@ export const NotesEditor: React.FC = () => {
             return `<a data-type="wikilink" data-id="${path}" class="text-blue-500 hover:underline cursor-pointer font-medium decoration-blue-500/30">${alias}</a>`;
         });
 
-        return marked.parse(finalContent, { renderer });
+        return marked.parse(finalContent, {
+            renderer,
+            gfm: true,        // Ensure GFM is enabled
+            breaks: true      // Optional: treats single line breaks as <br>
+        });
     }, [resolveImagePath]);
 
     // Fetch Content

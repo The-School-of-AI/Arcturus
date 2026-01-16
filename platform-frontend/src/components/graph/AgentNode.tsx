@@ -43,7 +43,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                 selected
                     ? "border-primary border-glow bg-card"
                     : "border-border hover:border-primary/50 bg-card/80 backdrop-blur-sm",
-                isRunning && "animate-pulse-subtle border-primary ring-2 ring-primary/30 ring-offset-2 ring-offset-background border-glow bg-card",
+                isRunning && "animate-pulse-subtle border-primary ring-2 ring-primary/30 ring-offset-2 ring-offset-background bg-card",
                 isStale && "opacity-90 grayscale border-border/50 bg-card/50 backdrop-blur-sm ring-2 ring-border/50"
             )}
             onClick={() => selectNode(id)}
