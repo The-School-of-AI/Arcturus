@@ -113,8 +113,17 @@ class AgentRunner:
             from config.settings_loader import reload_settings
             fresh_settings = reload_settings()
             agent_settings = fresh_settings.get("agent", {})
-            model_provider = agent_settings.get("model_provider", "gemini")
-            model_name = agent_settings.get("default_model", "gemini-2.5-flash")
+            
+            # Check for per-agent overrides
+            overrides = agent_settings.get("overrides", {})
+            if agent_type in overrides:
+                override = overrides[agent_type]
+                model_provider = override.get("model_provider", "gemini")
+                model_name = override.get("model", "gemini-2.5-flash")
+                log_step(f"🎯 Override for {agent_type}: {model_provider}:{model_name}", symbol="✨")
+            else:
+                model_provider = agent_settings.get("model_provider", "gemini")
+                model_name = agent_settings.get("default_model", "gemini-2.5-flash")
             
             log_step(f"📡 Using {model_provider}:{model_name}", symbol="🔌")
             model_manager = ModelManager(model_name, provider=model_provider)
@@ -147,9 +156,10 @@ class AgentRunner:
             # Calculate cost and tokens
             cost_data = self.calculate_cost(input_text, output_text)
             
-            # Add cost data to result
+            # Add cost data and model info to result
             if isinstance(output, dict):
                 output.update(cost_data)
+                output["executed_model"] = f"{model_provider}:{model_name}"
             
             return {
                 "success": True,

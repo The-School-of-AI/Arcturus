@@ -31,8 +31,8 @@ export interface AgentNodeData {
     logs?: string[];
     execution_logs?: string;
     iterations?: any[];
-    calls?: any[];
-    execution_result?: any;
+    agent?: string; // e.g. "PlannerAgent"
+    executed_model?: string; // e.g. "gemini:gemini-2.5-flash-lite"
     isDark?: boolean; // For styling
 }
 

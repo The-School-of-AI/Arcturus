@@ -571,12 +571,18 @@ export const WorkspacePanel: React.FC = () => {
                                     const parsed = JSON.parse(codeContent);
                                     return (
                                         <div className="mt-2 space-y-1 select-text">
+                                            {parsed.executed_model && (
+                                                <div className="flex justify-between text-xs py-1 border-b border-border/50 bg-primary/5 px-1 rounded">
+                                                    <span className="text-primary font-bold select-none">model</span>
+                                                    <span className="text-foreground font-bold truncate max-w-[150px]">{parsed.executed_model}</span>
+                                                </div>
+                                            )}
                                             {Object.entries(parsed).slice(0, 5).map(([k, v]) => {
-                                                if (typeof v === 'object' || String(v).length > 200 || k === 'code_variants') return null;
+                                                if (typeof v === 'object' || String(v).length > 200 || k === 'code_variants' || k === 'executed_model') return null;
                                                 return (
                                                     <div key={k} className="flex justify-between text-xs py-0.5 border-b border-border/50">
                                                         <span className="text-muted-foreground select-none">{k}</span>
-                                                        <span className="text-foreground truncate max-w-[150px]">{String(v)}</span>
+                                                        <span className="text-foreground truncate max-w-[150px] font-mono">{String(v)}</span>
                                                     </div>
                                                 );
                                             })}
@@ -942,12 +948,19 @@ export const WorkspacePanel: React.FC = () => {
                                     return (
                                         <div className="mt-4 pt-4 border-t border-border">
                                             <div className="text-yellow-400 font-bold mb-2 select-none"># Results</div>
+                                            {/* Priority: Show Executed Model first */}
+                                            {parsed.executed_model && (
+                                                <div className="flex justify-between border-b border-border/50 py-1 bg-primary/5 px-1 rounded">
+                                                    <span className="text-primary font-bold select-none">model</span>
+                                                    <span className="text-foreground font-bold">{parsed.executed_model}</span>
+                                                </div>
+                                            )}
                                             {Object.entries(parsed).map(([k, v]) => {
-                                                if (typeof v === 'object' || String(v).length > 200) return null; // Skip non-primitive or huge
+                                                if (typeof v === 'object' || String(v).length > 200 || k === 'executed_model') return null; // Skip non-primitive or huge
                                                 return (
                                                     <div key={k} className="flex justify-between border-b border-border/50 py-1">
                                                         <span className="text-muted-foreground select-none">{k}</span>
-                                                        <span className="text-foreground">{String(v)}</span>
+                                                        <span className="text-foreground font-mono">{String(v)}</span>
                                                     </div>
                                                 );
                                             })}

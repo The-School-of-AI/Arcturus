@@ -517,12 +517,15 @@ export const useAppStore = create<AppState>()(
 
                 if (node && node.data) {
                     // Populate panels
+                    const nodeData = node.data as any;
+                    const executedModel = nodeData.output?.executed_model || nodeData.executed_model;
                     set({
-                        codeContent: node.data.output || '// Waiting for output',
+                        codeContent: typeof nodeData.output === 'string' ? nodeData.output : JSON.stringify(nodeData.output || {}, null, 2),
                         logs: [
-                            `Status: ${node.data.status}`,
-                            `Type: ${node.data.type}`,
-                            node.data.error ? `Error: ${node.data.error}` : ''
+                            `Status: ${nodeData.status}`,
+                            `Type: ${nodeData.agent || nodeData.type || 'StandardNode'}`,
+                            executedModel ? `Model: ${executedModel}` : '',
+                            nodeData.error ? `Error: ${nodeData.error}` : ''
                         ].filter(Boolean)
                     });
                 }

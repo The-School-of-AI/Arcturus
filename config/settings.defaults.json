@@ -20,6 +20,7 @@
     "agent": {
         "model_provider": "gemini",
         "default_model": "gemini-2.5-flash",
+        "overrides": {},
         "max_steps": 3,
         "max_lifelines_per_step": 3,
         "planning_mode": "conservative",

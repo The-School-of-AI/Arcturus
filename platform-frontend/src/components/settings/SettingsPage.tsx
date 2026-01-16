@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
     Settings, Cpu, FileText, Brain, Wrench, RotateCcw, Save, AlertTriangle,
-    Loader2, RefreshCw, Download, Check, X, Terminal
+    Loader2, RefreshCw, Download, Check, X, Terminal, Code, Play, Bot, CheckCircle2,
+    Search, LayoutList, ShieldAlert, MessageSquare, Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ interface SettingsData {
     agent: {
         model_provider: 'gemini' | 'ollama';
         default_model: string;
+        overrides?: Record<string, { model_provider: 'gemini' | 'ollama'; model: string }>;
         max_steps: number;
         max_lifelines_per_step: number;
         planning_mode: string;
@@ -451,18 +453,126 @@ export const SettingsPage: React.FC = () => {
                         </span>
                     </div>
                 </SettingGroup>
-                <SettingGroup title="Max Steps" description="Maximum reasoning steps per agent run">
-                    <Input type="number" value={settings?.agent.max_steps || 3} onChange={(e) => updateSetting('agent', 'max_steps', parseInt(e.target.value))} />
-                </SettingGroup>
-                <SettingGroup title="Lifelines per Step" description="Retry attempts on failure">
-                    <Input type="number" value={settings?.agent.max_lifelines_per_step || 3} onChange={(e) => updateSetting('agent', 'max_lifelines_per_step', parseInt(e.target.value))} />
-                </SettingGroup>
-                <SettingGroup title="Planning Mode" description="Agent planning strategy">
-                    <select value={settings?.agent.planning_mode || 'conservative'} onChange={(e) => updateSetting('agent', 'planning_mode', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm">
-                        <option value="conservative">Conservative</option>
-                        <option value="exploratory">Exploratory</option>
-                    </select>
-                </SettingGroup>
+                <div className="flex flex-row gap-4 items-start">
+                    <SettingGroup title="Max Steps" description="Maximum reasoning steps per agent run">
+                        <Input type="number" value={settings?.agent.max_steps || 3} onChange={(e) => updateSetting('agent', 'max_steps', parseInt(e.target.value))} />
+                    </SettingGroup>
+
+                    <SettingGroup title="Lifelines per Step" description="Retry attempts on failure">
+                        <Input type="number" value={settings?.agent.max_lifelines_per_step || 3} onChange={(e) => updateSetting('agent', 'max_lifelines_per_step', parseInt(e.target.value))} />
+                    </SettingGroup>
+
+                    <SettingGroup title="Planning Mode" description="Agent planning strategy">
+                        <select value={settings?.agent.planning_mode || 'conservative'} onChange={(e) => updateSetting('agent', 'planning_mode', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm">
+                            <option value="conservative">Conservative</option>
+                            <option value="exploratory">Exploratory</option>
+                        </select>
+                    </SettingGroup>
+                </div>
+
+                {/* Per-Agent Overrides */}
+                <div className="pt-6 border-t border-border">
+                    <h3 className="text-sm font-bold text-foreground mb-4">Per-Agent Model Overrides</h3>
+                    <p className="text-xs text-muted-foreground mb-4">
+                        Override the default model for specific agent types. If not set, the default model above is used.
+                    </p>
+
+                    <div className="space-y-3">
+                        {[
+                            { id: "PlannerAgent", icon: LayoutList, color: "text-blue-500" },
+                            { id: "RetrieverAgent", icon: Search, color: "text-purple-500" },
+                            { id: "ThinkerAgent", icon: Brain, color: "text-pink-500" },
+                            { id: "DistillerAgent", icon: FileText, color: "text-orange-500" },
+                            { id: "CoderAgent", icon: Code, color: "text-green-500" },
+                            { id: "FormatterAgent", icon: LayoutList, color: "text-indigo-500" },
+                            { id: "QAAgent", icon: ShieldAlert, color: "text-red-500" },
+                            { id: "ClarificationAgent", icon: MessageSquare, color: "text-yellow-500" },
+                            { id: "SchedulerAgent", icon: Clock, color: "text-cyan-500" }
+                        ].map(({ id: agentType, icon: Icon, color }) => {
+                            const override = settings?.agent.overrides?.[agentType];
+                            const overrideValue = override ? `${override.model_provider}:${override.model}` : 'default';
+
+                            const handleOverrideChange = (value: string) => {
+                                if (!settings) return;
+                                const newOverrides = { ...(settings.agent.overrides || {}) };
+
+                                if (value === 'default') {
+                                    delete newOverrides[agentType];
+                                } else {
+                                    const colonIndex = value.indexOf(':');
+                                    const provider = value.substring(0, colonIndex);
+                                    const model = value.substring(colonIndex + 1);
+
+                                    newOverrides[agentType] = {
+                                        model_provider: provider as 'gemini' | 'ollama',
+                                        model
+                                    };
+                                }
+
+                                setSettings({
+                                    ...settings,
+                                    agent: {
+                                        ...settings.agent,
+                                        overrides: newOverrides
+                                    }
+                                });
+                                setHasChanges(true);
+                            };
+
+                            return (
+                                <div key={agentType} className={cn(
+                                    "flex items-center justify-between gap-4 p-3 rounded-lg border transition-all duration-200",
+                                    override
+                                        ? "border-primary/40 bg-primary/5 shadow-sm"
+                                        : "border-border/50 bg-background/30 hover:bg-background/50"
+                                )}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("p-2 rounded-md bg-background border border-border/50", color)}>
+                                            <Icon className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-foreground">{agentType}</span>
+                                            <span className={cn(
+                                                "text-[9px] uppercase tracking-widest font-bold",
+                                                override ? "text-primary" : "text-muted-foreground"
+                                            )}>
+                                                {override ? `${override.model_provider} — ${override.model}` : "Using Global Default"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <select
+                                        value={overrideValue}
+                                        onChange={(e) => handleOverrideChange(e.target.value)}
+                                        className={cn(
+                                            "min-w-[220px] bg-background border rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer transition-all",
+                                            override
+                                                ? "border-primary text-primary bg-primary/5 focus:ring-1 focus:ring-primary"
+                                                : "border-border text-muted-foreground hover:border-muted-foreground/50"
+                                        )}
+                                    >
+                                        <option value="default" className="text-foreground">Global Default Model</option>
+                                        <optgroup label="Gemini (Cloud)">
+                                            {GEMINI_MODELS.map(m => (
+                                                <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                                    Gemini: {m.label}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                        {ollamaTextModels.length > 0 && (
+                                            <optgroup label="Ollama (Local)">
+                                                {ollamaTextModels.map(m => (
+                                                    <option key={`ollama:${m.name}`} value={`ollama:${m.name}`}>
+                                                        Ollama: {m.name}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                    </select>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         );
     };

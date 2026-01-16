@@ -26,22 +26,17 @@
     "type": "local-script",
     "enabled": true
   },
-  "alphavantage": {
-    "command": "uvx",
-    "args": [
-      "av-mcp",
-      "VXLTQQFJYNCMMPZE"
-    ],
-    "type": "stdio-pypi",
-    "enabled": true
-  },
   "yahoo_finance": {
     "type": "stdio-git",
     "source": "https://github.com/dino65-dev/Finance_mcp-server",
     "command": "uv",
     "args": [
       "run",
-      "src/server.py"
+      "--directory",
+      "/Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance",
+      "--with-requirements",
+      "/Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance/requirements.txt",
+      "yfinance_mcp_server.py"
     ],
     "enabled": true
   }
