@@ -220,10 +220,28 @@ async def cleanup_dangling_memories():
 
 @router.post("/add")
 async def add_memory(request: AddMemoryRequest):
-    """Manually add a memory"""
+    """Manually add a memory and auto-extract to UserModel hubs."""
     try:
         emb = get_embedding(request.text, task_type="search_query")
         memory = remme_store.add(request.text, emb, category=request.category, source="manual")
+        
+        # Auto-extract preferences from this single memory
+        try:
+            from user_model.extractors.memory_bootstrap import extract_from_memories, apply_extraction_to_hubs
+            
+            print(f"🔄 Auto-extracting preferences from: '{request.text[:50]}...'")
+            extraction = await extract_from_memories([{"text": request.text, "category": request.category}])
+            
+            if extraction:
+                changes = apply_extraction_to_hubs(extraction)
+                print(f"✅ Auto-extracted {len(changes)} preferences from new memory")
+                memory["extracted_preferences"] = changes
+            else:
+                memory["extracted_preferences"] = []
+        except Exception as e:
+            print(f"⚠️ Auto-extraction failed (memory still saved): {e}")
+            memory["extracted_preferences"] = []
+        
         return {"status": "success", "memory": memory}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -348,3 +366,140 @@ A high-level overview of who the user appears to be, their primary drivers, and 
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/preferences")
+async def get_user_preferences():
+    """Get all UserModel preferences for frontend display."""
+    try:
+        from user_model.hubs.preferences_hub import get_preferences_hub
+        from user_model.hubs.operating_context_hub import get_operating_context_hub
+        from user_model.hubs.soft_identity_hub import get_soft_identity_hub
+        from user_model.engines.evidence_log import get_evidence_log
+        
+        prefs_hub = get_preferences_hub()
+        context_hub = get_operating_context_hub()
+        soft_hub = get_soft_identity_hub()
+        evidence_log = get_evidence_log()
+        
+        # Get soft identity data with full detail
+        soft_data = soft_hub.data
+        
+        return {
+            "status": "success",
+            "preferences": {
+                # Output Contract
+                "output_contract": {
+                    "verbosity": prefs_hub.get_verbosity(),
+                    "format": prefs_hub.get_format(),
+                    "tone_constraints": prefs_hub.get_tone_constraints(),
+                    "structure_rules": prefs_hub.get_structure_rules(),
+                    "clarifications": prefs_hub.get_clarifications_policy(),
+                },
+                # Anti-preferences
+                "anti_preferences": prefs_hub.get_avoid_patterns(),
+                # Tooling
+                "tooling": prefs_hub.get_tooling_defaults(),
+                # Autonomy
+                "autonomy": {
+                    "create_files": prefs_hub.get_autonomy("create_files"),
+                    "run_shell": prefs_hub.get_autonomy("run_shell"),
+                    "delete_files": prefs_hub.get_autonomy("delete_files"),
+                    "git_operations": prefs_hub.get_autonomy("git_operations"),
+                },
+                "risk_tolerance": prefs_hub.get_risk_tolerance(),
+            },
+            "operating_context": {
+                "os": context_hub.get_os(),
+                "shell": context_hub.get_shell(),
+                "cpu_architecture": context_hub.get_cpu_architecture(),
+                "primary_languages": context_hub.get_primary_languages(),
+                "has_gpu": context_hub.has_gpu(),
+                "assumption_limits": context_hub.get_assumption_limits(),
+                "location": context_hub.data.environment.location_region.value,
+            },
+            "soft_identity": {
+                # Food & Dining
+                "dietary_style": soft_data.food_and_dining.dietary_style.value,
+                "cuisine_likes": soft_data.food_and_dining.cuisine_affinities.likes,
+                "cuisine_dislikes": soft_data.food_and_dining.cuisine_affinities.dislikes,
+                "favorite_foods": soft_data.food_and_dining.cuisine_affinities.favorites,
+                "food_allergies": soft_data.food_and_dining.restrictions.allergies,
+                # Pets
+                "pet_affinity": soft_data.pets_and_animals.affinity.value,
+                "pet_names": soft_data.pets_and_animals.ownership.pet_names,
+                # Lifestyle
+                "activity_level": soft_data.lifestyle_and_wellness.activity_level.value,
+                "sleep_rhythm": soft_data.lifestyle_and_wellness.sleep_rhythm.value,
+                "travel_style": soft_data.lifestyle_and_wellness.travel_style.value,
+                # Media
+                "music_genres": soft_data.media_and_entertainment.music.genres,
+                "movie_genres": soft_data.media_and_entertainment.movies_tv.genres,
+                "book_genres": soft_data.media_and_entertainment.books.genres,
+                "podcast_genres": soft_data.media_and_entertainment.podcasts.genres,
+                # Communication
+                "humor_tolerance": soft_data.communication_style.humor_tolerance.value,
+                "small_talk_tolerance": soft_data.communication_style.small_talk_tolerance.value,
+                "formality_preference": soft_data.communication_style.formality_preference.value,
+                # Interests
+                "professional_interests": soft_data.interests_and_hobbies.professional_interests,
+                "personal_hobbies": soft_data.interests_and_hobbies.personal_hobbies,
+                "learning_interests": soft_data.interests_and_hobbies.learning_interests,
+                "side_projects": soft_data.interests_and_hobbies.side_projects,
+                # Professional
+                "industry": soft_data.professional_context.industry.value,
+                "role_type": soft_data.professional_context.role_type.value,
+                "experience_level": soft_data.professional_context.experience_level.value,
+                "company_or_org": soft_data.professional_context.team_size.value,
+            },
+            "evidence": {
+                "total_events": len(evidence_log.data.events),
+                "events_by_source": dict(evidence_log.data.meta.events_by_source),
+                "events_by_type": dict(evidence_log.data.meta.events_by_type),
+            },
+            "meta": {
+                "preferences_confidence": prefs_hub.data.meta.confidence,
+                "preferences_evidence_count": prefs_hub.data.meta.evidence_count,
+                "context_confidence": context_hub.data.meta.confidence,
+                "soft_identity_confidence": soft_hub.data.meta.confidence,
+            }
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        # Return empty/default structure on error
+        return {
+            "status": "error",
+            "error": str(e),
+            "preferences": {},
+            "operating_context": {},
+            "soft_identity": {},
+            "evidence": {},
+            "meta": {}
+        }
+
+
+@router.post("/preferences/bootstrap")
+async def bootstrap_preferences():
+    """Bootstrap UserModel hubs from existing REMME memories using LLM extraction."""
+    try:
+        from user_model.extractors.memory_bootstrap import bootstrap_from_remme
+        
+        print("🚀 Starting preferences bootstrap...")
+        changes = await bootstrap_from_remme()
+        
+        return {
+            "status": "success",
+            "message": f"Bootstrapped {len(changes)} preference fields from memories",
+            "changes": changes
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": str(e),
+            "changes": []
+        }
+
+
