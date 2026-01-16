@@ -48,7 +48,7 @@ export const SettingsPanel: React.FC = () => {
                         >
                             <div className={cn(
                                 "p-2 rounded-lg transition-colors duration-300",
-                                isActive ? "bg-primary text-primary-inventory" : "bg-muted text-muted-foreground group-hover:text-foreground"
+                                isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:text-foreground"
                             )}>
                                 <tab.icon className="w-4 h-4 shrink-0" />
                             </div>

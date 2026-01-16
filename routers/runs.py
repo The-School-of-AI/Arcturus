@@ -136,6 +136,10 @@ async def process_run(run_id: str, query: str):
             
             if commands:
                 for cmd in commands:
+                    if not isinstance(cmd, dict):
+                        print(f"⚠️ Remme: Skipping invalid command format: {cmd}")
+                        continue
+                        
                     action = cmd.get("action")
                     text = cmd.get("text")
                     target_id = cmd.get("id")
@@ -173,15 +177,19 @@ async def process_run(run_id: str, query: str):
                 notes_dir.mkdir(parents=True, exist_ok=True)
                 
                 def sanitize_filename(title):
-                    title = re.sub(r'[\\/*?:"<>|]', "", title)
-                    return title[:50].strip()
+                    title = re.sub(r'[\\/*?:"<>|#]', "", title)
+                    title = title.replace("\n", " ").strip()
+                    return title[:60].strip()
 
                 def extract_title(content):
-                    match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+                    match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
                     if match:
                         return match.group(1).strip()
-                    first_line = content.strip().split('\n')[0]
-                    return first_line.strip()
+                    # Fallback to first non-empty line
+                    lines = [l.strip() for l in content.split('\n') if l.strip()]
+                    if lines:
+                        return lines[0]
+                    return "Untitled Report"
 
                 for node_id in context.plan_graph.nodes:
                     node = context.plan_graph.nodes[node_id]
