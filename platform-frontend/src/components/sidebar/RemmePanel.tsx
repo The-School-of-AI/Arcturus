@@ -350,10 +350,10 @@ const PreferencesView: React.FC = () => {
                 <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-foreground/70" />
                     <div>
-                        <span className="text-xs font-semibold tracking-tight">Model Confidence</span>
+                        <span className="text-xs font-semibold tracking-tight">Profile Awareness</span>
                         <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/70 font-light">Evidence: <span className="font-semibold text-foreground/80">{meta.preferences_evidence_count || 0}</span></span>
-                            <span className="text-[10px] text-muted-foreground/70 font-light">Conf: <span className="font-semibold text-foreground/80">{((meta.preferences_confidence || 0) * 100).toFixed(0)}%</span></span>
+                            <span className="text-[10px] text-muted-foreground/70 font-light">Evidence: <span className="font-semibold text-foreground/80">{meta.total_evidence || 0}</span></span>
+                            <span className="text-[10px] text-muted-foreground/70 font-light">Conf: <span className="font-semibold text-foreground/80">{((meta.overall_confidence || 0) * 100).toFixed(0)}%</span></span>
                         </div>
                     </div>
                 </div>
@@ -362,14 +362,14 @@ const PreferencesView: React.FC = () => {
                     variant="outline"
                     onClick={handleBootstrap}
                     disabled={bootstrapping}
-                    className="h-8 text-xs gap-1.5 border-border hover:border-foreground/40 hover:bg-muted/10 transition-all duration-300"
+                    className="h-8 text-[8px] gap-1.5 border-border hover:border-foreground/40 hover:bg-muted/10 transition-all duration-300"
                 >
                     {bootstrapping ? (
                         <RefreshCw className="w-3 h-3 animate-spin" />
                     ) : (
                         <Sparkles className="w-3 h-3" />
                     )}
-                    {bootstrapping ? 'Extracting...' : 'Bootstrap'}
+                    {bootstrapping ? 'PROCESSING' : 'REINDEX'}
                 </Button>
             </div>
 

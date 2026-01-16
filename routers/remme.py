@@ -495,6 +495,16 @@ async def get_user_preferences():
                 "preferences_evidence_count": prefs_hub.data.meta.evidence_count,
                 "context_confidence": context_hub.data.meta.confidence,
                 "soft_identity_confidence": soft_hub.data.meta.confidence,
+                "total_evidence": (
+                    prefs_hub.data.meta.evidence_count + 
+                    context_hub.data.meta.evidence_count + 
+                    soft_hub.data.meta.evidence_count
+                ),
+                "overall_confidence": max(
+                    prefs_hub.data.meta.confidence,
+                    context_hub.data.meta.confidence,
+                    soft_hub.data.meta.confidence
+                )
             }
         }
     except Exception as e:

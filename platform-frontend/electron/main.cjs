@@ -1,4 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+// Set App Name early for MacOS Dock/Menu
+app.name = "Arcturus";
+app.setName("Arcturus");
+process.title = "Arcturus";
+
 const path = require('path');
 const isDev = !app.isPackaged;
 const { spawn } = require('child_process');
@@ -10,7 +15,7 @@ let pty;
 try {
     pty = require('node-pty');
 } catch (e) {
-    console.error("[Arctrus] Failed to load node-pty. Terminal features will be disabled.", e);
+    console.error("[Arcturus] Failed to load node-pty. Terminal features will be disabled.", e);
 }
 
 let mainWindow;
@@ -45,14 +50,23 @@ function createWindow() {
         titleBarStyle: 'hiddenInset',
         trafficLightPosition: { x: 12, y: 12 }, // Optional: adjust slightly if needed
         backgroundColor: '#0b0f1a', // Matching your theme
-        title: "Arcturus Platform"
+        title: "Arcturus"
     });
+
+    if (process.platform === 'darwin') {
+        app.setAboutPanelOptions({
+            applicationName: "Arcturus",
+            applicationVersion: "0.0.1",
+            copyright: "Copyright © 2026 Arcturus",
+            iconPath: iconPath
+        });
+    }
 
     const startUrl = isDev
         ? 'http://localhost:5173'
         : `file://${path.join(__dirname, '../dist/index.html')}`;
 
-    console.log(`[Arctrus] Loading URL: ${startUrl}`);
+    console.log(`[Arcturus] Loading URL: ${startUrl}`);
     mainWindow.loadURL(startUrl);
 
     // DevTools: Uncomment to enable by default
@@ -66,7 +80,7 @@ function createWindow() {
 }
 
 function startBackend(command, args, name) {
-    console.log(`[Arctrus] Spawning Backend [${name}]: ${command} ${args.join(' ')}`);
+    console.log(`[Arcturus] Spawning Backend [${name}]: ${command} ${args.join(' ')}`);
     const rootPath = path.join(__dirname, '..', '..');
 
     const proc = spawn(command, args, {
@@ -85,7 +99,7 @@ function startBackend(command, args, name) {
     });
 
     proc.on('close', (code) => {
-        console.log(`[Arctrus] Backend [${name}] exited with code ${code}`);
+        console.log(`[Arcturus] Backend [${name}] exited with code ${code}`);
     });
 
     backendProcesses.push(proc);
@@ -104,7 +118,7 @@ function setupTerminalHandlers() {
 
         // Always recreate the terminal session to ensure a fresh prompt on UI reloads
         if (ptyProcess && typeof ptyProcess.exitCode !== 'number') {
-            console.log(`[Arctrus] Ending previous terminal session at '${activeTerminalCwd}'`);
+            console.log(`[Arcturus] Ending previous terminal session at '${activeTerminalCwd}'`);
             try {
                 ptyProcess.kill();
             } catch (e) { }
@@ -113,7 +127,7 @@ function setupTerminalHandlers() {
 
         activeTerminalCwd = cwd;
         const bridgePath = path.join(__dirname, 'pty_bridge.py');
-        console.log(`[Arctrus] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
+        console.log(`[Arcturus] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
 
         try {
             // Spawn python script which handles the PTY fork
@@ -124,10 +138,10 @@ function setupTerminalHandlers() {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
-            console.log(`[Arctrus] Bridge process created: PID ${ptyProcess.pid}`);
+            console.log(`[Arcturus] Bridge process created: PID ${ptyProcess.pid}`);
 
             ptyProcess.on('error', (err) => {
-                console.error(`[Arctrus] Bridge failed to start or encountered an error:`, err);
+                console.error(`[Arcturus] Bridge failed to start or encountered an error:`, err);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31m[System Error] Failed to start terminal bridge: ${err.message}\x1b[0m\r\n`);
                 }
@@ -149,19 +163,19 @@ function setupTerminalHandlers() {
 
             ptyProcess.stderr.on('data', (data) => {
                 const str = data.toString('utf-8');
-                console.error(`[Arctrus-PTY-Stderr] ${str}`);
+                console.error(`[Arcturus-PTY-Stderr] ${str}`);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('terminal:outgoing', `\x1b[33m${str}\x1b[0m`);
                 }
             });
 
             ptyProcess.on('close', (code, signal) => {
-                console.log(`[Arctrus] Bridge exited with code ${code}, signal ${signal}`);
+                console.log(`[Arcturus] Bridge exited with code ${code}, signal ${signal}`);
                 ptyProcess = null;
             });
 
         } catch (ex) {
-            console.error('[Arctrus] Failed to spawn bridge:', ex);
+            console.error('[Arcturus] Failed to spawn bridge:', ex);
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31mError spawning terminal bridge: ${ex.message}\x1b[0m\r\n`);
             }
@@ -171,13 +185,13 @@ function setupTerminalHandlers() {
     ipcMain.on('terminal:incoming', (event, data) => {
         if (ptyProcess && ptyProcess.stdin) {
             try {
-                // console.log(`[Arctrus-Input] Writing ${data.length} bytes to PTY`); // Debug logs
+                // console.log(`[Arcturus-Input] Writing ${data.length} bytes to PTY`); // Debug logs
                 ptyProcess.stdin.write(data);
             } catch (err) {
                 console.error("Write error", err);
             }
         } else {
-            console.warn("[Arctrus] terminal:incoming received but ptyProcess is null or stdin closed.");
+            console.warn("[Arcturus] terminal:incoming received but ptyProcess is null or stdin closed.");
         }
     });
 
@@ -190,7 +204,7 @@ function setupTerminalHandlers() {
     });
 
     ipcMain.handle('terminal:read', async () => {
-        console.log('[Arctrus] terminal:read invoked from Agent');
+        console.log('[Arcturus] terminal:read invoked from Agent');
         // Return the last 10KB of history to avoid overwhelming LLM
         return { success: true, content: activeTerminalBuffer.slice(-10000) || "[No output captured yet]" };
     });
@@ -200,17 +214,17 @@ function setupTerminalHandlers() {
 function setupFSHandlers() {
     // Open Directory Dialog
     ipcMain.handle('dialog:openDirectory', async () => {
-        console.log('[Arctrus] dialog:openDirectory invoked');
+        console.log('[Arcturus] dialog:openDirectory invoked');
         const { dialog } = require('electron');
         try {
             const result = await dialog.showOpenDialog(mainWindow, {
                 properties: ['openDirectory', 'createDirectory']
             });
-            console.log('[Arctrus] Dialog result:', result);
+            console.log('[Arcturus] Dialog result:', result);
             if (result.canceled) return null;
             return result.filePaths[0];
         } catch (error) {
-            console.error('[Arctrus] dialog:openDirectory error:', error);
+            console.error('[Arcturus] dialog:openDirectory error:', error);
             throw error;
         }
     });
@@ -233,7 +247,7 @@ function setupFSHandlers() {
 
         // Strict Security Check: Enforce CWD is within Project Root
         if (!targetCwd.startsWith(rootPath)) {
-            console.warn(`[Arctrus] Security Block: Attempted CWD escape to ${targetCwd}`);
+            console.warn(`[Arcturus] Security Block: Attempted CWD escape to ${targetCwd}`);
             return { valid: false, reason: "Access denied: Execution outside project root is prohibited." };
         }
         return { valid: true, path: targetCwd };
@@ -243,7 +257,7 @@ function setupFSHandlers() {
         const cwdValidation = validateCwd(cwd);
         if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
 
-        console.log(`[Arctrus] shell:exec '${cmd}' in '${cwdValidation.path}'`);
+        console.log(`[Arcturus] shell:exec '${cmd}' in '${cwdValidation.path}'`);
         const { exec } = require('child_process');
         return new Promise((resolve) => {
             exec(cmd, {
@@ -276,7 +290,7 @@ function setupFSHandlers() {
         if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
 
         const { spawn } = require('child_process');
-        console.log(`[Arctrus] shell:spawn '${cmd}' in '${cwdValidation.path}'`);
+        console.log(`[Arcturus] shell:spawn '${cmd}' in '${cwdValidation.path}'`);
 
         try {
             const [command, ...args] = cmd.split(' '); // Simple split, might need better parsing for quoted args
@@ -314,7 +328,7 @@ function setupFSHandlers() {
             proc.on('close', (code) => {
                 procState.status = 'done';
                 procState.exitCode = code;
-                console.log(`[Arctrus] BG Process ${pid} finished with ${code}`);
+                console.log(`[Arcturus] BG Process ${pid} finished with ${code}`);
                 // Auto-cleanup after 1 hour if not checked? 
                 // For now, keep it in memory until app restart is fine for modest usage.
             });
@@ -374,7 +388,7 @@ function setupFSHandlers() {
             }
             return { success: true };
         } catch (error) {
-            console.error('[Arctrus] fs:create failed', error);
+            console.error('[Arcturus] fs:create failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -387,7 +401,7 @@ function setupFSHandlers() {
             fs.renameSync(oldPath, newPath);
             return { success: true };
         } catch (error) {
-            console.error('[Arctrus] fs:rename failed', error);
+            console.error('[Arcturus] fs:rename failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -398,7 +412,7 @@ function setupFSHandlers() {
             await shell.trashItem(targetPath);
             return { success: true };
         } catch (error) {
-            console.error('[Arctrus] fs:delete failed', error);
+            console.error('[Arcturus] fs:delete failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -413,7 +427,7 @@ function setupFSHandlers() {
             fs.writeFileSync(targetPath, content, 'utf-8');
             return { success: true };
         } catch (error) {
-            console.error('[Arctrus] fs:writeFile failed', error);
+            console.error('[Arcturus] fs:writeFile failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -423,7 +437,7 @@ function setupFSHandlers() {
             const content = fs.readFileSync(targetPath, 'utf-8');
             return { success: true, content };
         } catch (error) {
-            console.error('[Arctrus] fs:readFile failed', error);
+            console.error('[Arcturus] fs:readFile failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -447,7 +461,7 @@ function setupFSHandlers() {
 
             return { success: true, files };
         } catch (error) {
-            console.error('[Arctrus] fs:readDir failed', error);
+            console.error('[Arcturus] fs:readDir failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -458,7 +472,7 @@ function setupFSHandlers() {
             fs.cpSync(src, dest, { recursive: true });
             return { success: true };
         } catch (error) {
-            console.error('[Arctrus] fs:copy failed', error);
+            console.error('[Arcturus] fs:copy failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -468,7 +482,7 @@ function setupFSHandlers() {
             fs.renameSync(src, dest);
             return { success: true };
         } catch (error) {
-            console.error('[Arctrus] fs:move failed', error);
+            console.error('[Arcturus] fs:move failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -478,7 +492,7 @@ function setupFSHandlers() {
         const { spawn } = require('child_process');
         // Fallback to project root if root not provided
         const searchRoot = root || path.join(__dirname, '..', '..');
-        console.log(`[Arctrus] fs:find '${pattern}' in '${searchRoot}'`);
+        console.log(`[Arcturus] fs:find '${pattern}' in '${searchRoot}'`);
 
         return new Promise((resolve) => {
             // Find files matching pattern (case-insensitive, ignoring .git)
@@ -501,7 +515,7 @@ function setupFSHandlers() {
     ipcMain.handle('fs:viewOutline', async (event, filePath) => {
         const { spawn } = require('child_process');
         const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'file_outline.py');
-        console.log(`[Arctrus] fs:viewOutline for '${filePath}'`);
+        console.log(`[Arcturus] fs:viewOutline for '${filePath}'`);
 
         return new Promise((resolve) => {
             const proc = spawn('python3', [scriptPath, filePath]);
@@ -515,7 +529,7 @@ function setupFSHandlers() {
     ipcMain.handle('fs:grep', async (event, { query, root }) => {
         const { spawn } = require('child_process');
         const searchRoot = root || path.join(__dirname, '..', '..');
-        console.log(`[Arctrus] fs:grep '${query}' in '${searchRoot}'`);
+        console.log(`[Arcturus] fs:grep '${query}' in '${searchRoot}'`);
 
         return new Promise((resolve) => {
             // ripgrep is preferred but grep -r is more universal
@@ -533,7 +547,62 @@ function setupFSHandlers() {
 }
 
 app.on('ready', () => {
-    console.log('[Arctrus] App ready, setting up handlers...');
+    console.log('[Arcturus] App ready, setting up handlers...');
+
+    // Set Menu for macOS to show "Arcturus" instead of "Electron"
+    const template = [
+        {
+            label: "Arcturus",
+            submenu: [
+                { role: 'about' },
+                { type: 'separator' },
+                { role: 'services' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' }
+            ]
+        },
+        {
+            label: 'Edit',
+            submenu: [
+                { role: 'undo' },
+                { role: 'redo' },
+                { type: 'separator' },
+                { role: 'cut' },
+                { role: 'copy' },
+                { role: 'paste' },
+                { role: 'selectAll' }
+            ]
+        },
+        {
+            label: 'View',
+            submenu: [
+                { role: 'reload' },
+                { role: 'forceReload' },
+                { role: 'toggleDevTools' },
+                { type: 'separator' },
+                { role: 'resetZoom' },
+                { role: 'zoomIn' },
+                { role: 'zoomOut' },
+                { type: 'separator' },
+                { role: 'togglefullscreen' }
+            ]
+        },
+        {
+            role: 'window',
+            submenu: [
+                { role: 'minimize' },
+                { role: 'zoom' },
+                { role: 'close' }
+            ]
+        }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+
     // Start backends
     startBackend('uv', ['run', 'api.py'], 'API');
     startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
@@ -557,14 +626,14 @@ app.on('activate', () => {
 const treeKill = require('tree-kill');
 
 app.on('will-quit', () => {
-    console.log('[Arctrus] Shutting down backends and terminal sessions...');
+    console.log('[Arcturus] Shutting down backends and terminal sessions...');
 
     // Kill backend services
     backendProcesses.forEach(proc => {
         if (proc && proc.pid) {
-            console.log(`[Arctrus] Killing backend process ${proc.pid}`);
+            console.log(`[Arcturus] Killing backend process ${proc.pid}`);
             treeKill(proc.pid, 'SIGKILL', (err) => {
-                if (err) console.error(`[Arctrus] Failed to kill process ${proc.pid}`, err);
+                if (err) console.error(`[Arcturus] Failed to kill process ${proc.pid}`, err);
             });
         }
     });
@@ -572,20 +641,20 @@ app.on('will-quit', () => {
     // Kill background shell tasks
     backgroundProcesses.forEach((proc, pidKey) => {
         if (proc && proc.pid && proc.status === 'running') {
-            console.log(`[Arctrus] Killing background task ${proc.pid}`);
+            console.log(`[Arcturus] Killing background task ${proc.pid}`);
             treeKill(proc.pid, 'SIGKILL');
         }
     });
 
     // Kill PTY
     if (ptyProcess && ptyProcess.pid) {
-        console.log(`[Arctrus] Killing PTY ${ptyProcess.pid}`);
+        console.log(`[Arcturus] Killing PTY ${ptyProcess.pid}`);
         try {
             // ptyProcess from node-pty might need standard kill or tree-kill
             // tree-kill is safer
             treeKill(ptyProcess.pid, 'SIGKILL');
         } catch (e) {
-            console.error('[Arctrus] Failed to kill PTY', e);
+            console.error('[Arcturus] Failed to kill PTY', e);
         }
     }
 });

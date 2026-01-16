@@ -1,5 +1,6 @@
 {
-  "name": "platform-frontend",
+  "name": "arcturus",
+  "productName": "Arcturus",
   "private": true,
   "version": "0.0.0",
   "type": "module",
