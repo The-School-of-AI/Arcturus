@@ -150,6 +150,79 @@ async def create_rag_file(path: str = Form(...), content: str = Form("")):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/rename")
+async def rename_rag_item(old_path: str = Form(...), new_path: str = Form(...)):
+    """Rename a file or folder in RAG documents"""
+    try:
+        root = PROJECT_ROOT / "data"
+        old_target = root / old_path.strip("/").replace("..", "")
+        new_target = root / new_path.strip("/").replace("..", "")
+        
+        if not old_target.exists():
+            raise HTTPException(status_code=404, detail="Item not found")
+        if new_target.exists():
+            raise HTTPException(status_code=400, detail="Target already exists")
+            
+        # Security check
+        if not str(old_target.resolve()).startswith(str(root.resolve())) or \
+           not str(new_target.resolve()).startswith(str(root.resolve())):
+             raise HTTPException(status_code=403, detail="Access denied")
+
+        old_target.rename(new_target)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/move")
+async def move_rag_item(src: str = Form(...), dest: str = Form(...)):
+    """Move/Cut-Paste a file or folder"""
+    try:
+        root = PROJECT_ROOT / "data"
+        src_target = root / src.strip("/").replace("..", "")
+        dest_target = root / dest.strip("/").replace("..", "")
+        
+        if not src_target.exists():
+            raise HTTPException(status_code=404, detail="Source not found")
+            
+        # Security check
+        if not str(src_target.resolve()).startswith(str(root.resolve())) or \
+           not str(dest_target.resolve()).startswith(str(root.resolve())):
+             raise HTTPException(status_code=403, detail="Access denied")
+
+        import shutil
+        shutil.move(str(src_target), str(dest_target))
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/copy")
+async def copy_rag_item(src: str = Form(...), dest: str = Form(...)):
+    """Copy a file or folder"""
+    try:
+        root = PROJECT_ROOT / "data"
+        src_target = root / src.strip("/").replace("..", "")
+        dest_target = root / dest.strip("/").replace("..", "")
+        
+        if not src_target.exists():
+            raise HTTPException(status_code=404, detail="Source not found")
+            
+        # Security check
+        if not str(src_target.resolve()).startswith(str(root.resolve())) or \
+           not str(dest_target.resolve()).startswith(str(root.resolve())):
+             raise HTTPException(status_code=403, detail="Access denied")
+
+        import shutil
+        if src_target.is_dir():
+            shutil.copytree(src_target, dest_target)
+        else:
+            shutil.copy2(src_target, dest_target)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 def process_markdown_images(content: str, note_path: Path):
     """
     Scans markdown content for:
