@@ -10,7 +10,7 @@ let pty;
 try {
     pty = require('node-pty');
 } catch (e) {
-    console.error("[Electron] Failed to load node-pty. Terminal features will be disabled.", e);
+    console.error("[Arctrus] Failed to load node-pty. Terminal features will be disabled.", e);
 }
 
 let mainWindow;
@@ -23,9 +23,19 @@ let activeTerminalCwd = null;
 let activeTerminalBuffer = ""; // Store terminal history
 
 function createWindow() {
+    const iconPath = isDev
+        ? path.join(__dirname, '../public/icon.png')
+        : path.join(__dirname, '../dist/icon.png');
+
+    // Set Dock Icon for macOS
+    if (process.platform === 'darwin') {
+        app.dock.setIcon(iconPath);
+    }
+
     mainWindow = new BrowserWindow({
         width: 1400,
         height: 900,
+        icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -42,7 +52,7 @@ function createWindow() {
         ? 'http://localhost:5173'
         : `file://${path.join(__dirname, '../dist/index.html')}`;
 
-    console.log(`[Electron] Loading URL: ${startUrl}`);
+    console.log(`[Arctrus] Loading URL: ${startUrl}`);
     mainWindow.loadURL(startUrl);
 
     // DevTools: Uncomment to enable by default
@@ -56,7 +66,7 @@ function createWindow() {
 }
 
 function startBackend(command, args, name) {
-    console.log(`[Electron] Spawning Backend [${name}]: ${command} ${args.join(' ')}`);
+    console.log(`[Arctrus] Spawning Backend [${name}]: ${command} ${args.join(' ')}`);
     const rootPath = path.join(__dirname, '..', '..');
 
     const proc = spawn(command, args, {
@@ -75,7 +85,7 @@ function startBackend(command, args, name) {
     });
 
     proc.on('close', (code) => {
-        console.log(`[Electron] Backend [${name}] exited with code ${code}`);
+        console.log(`[Arctrus] Backend [${name}] exited with code ${code}`);
     });
 
     backendProcesses.push(proc);
@@ -94,7 +104,7 @@ function setupTerminalHandlers() {
 
         // Always recreate the terminal session to ensure a fresh prompt on UI reloads
         if (ptyProcess && typeof ptyProcess.exitCode !== 'number') {
-            console.log(`[Electron] Ending previous terminal session at '${activeTerminalCwd}'`);
+            console.log(`[Arctrus] Ending previous terminal session at '${activeTerminalCwd}'`);
             try {
                 ptyProcess.kill();
             } catch (e) { }
@@ -103,7 +113,7 @@ function setupTerminalHandlers() {
 
         activeTerminalCwd = cwd;
         const bridgePath = path.join(__dirname, 'pty_bridge.py');
-        console.log(`[Electron] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
+        console.log(`[Arctrus] Spawning Python PTY Bridge: ${bridgePath} in ${cwd}`);
 
         try {
             // Spawn python script which handles the PTY fork
@@ -114,10 +124,10 @@ function setupTerminalHandlers() {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
-            console.log(`[Electron] Bridge process created: PID ${ptyProcess.pid}`);
+            console.log(`[Arctrus] Bridge process created: PID ${ptyProcess.pid}`);
 
             ptyProcess.on('error', (err) => {
-                console.error(`[Electron] Bridge failed to start or encountered an error:`, err);
+                console.error(`[Arctrus] Bridge failed to start or encountered an error:`, err);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31m[System Error] Failed to start terminal bridge: ${err.message}\x1b[0m\r\n`);
                 }
@@ -139,19 +149,19 @@ function setupTerminalHandlers() {
 
             ptyProcess.stderr.on('data', (data) => {
                 const str = data.toString('utf-8');
-                console.error(`[Electron-PTY-Stderr] ${str}`);
+                console.error(`[Arctrus-PTY-Stderr] ${str}`);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('terminal:outgoing', `\x1b[33m${str}\x1b[0m`);
                 }
             });
 
             ptyProcess.on('close', (code, signal) => {
-                console.log(`[Electron] Bridge exited with code ${code}, signal ${signal}`);
+                console.log(`[Arctrus] Bridge exited with code ${code}, signal ${signal}`);
                 ptyProcess = null;
             });
 
         } catch (ex) {
-            console.error('[Electron] Failed to spawn bridge:', ex);
+            console.error('[Arctrus] Failed to spawn bridge:', ex);
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('terminal:outgoing', `\r\n\x1b[31mError spawning terminal bridge: ${ex.message}\x1b[0m\r\n`);
             }
@@ -161,13 +171,13 @@ function setupTerminalHandlers() {
     ipcMain.on('terminal:incoming', (event, data) => {
         if (ptyProcess && ptyProcess.stdin) {
             try {
-                // console.log(`[Electron-Input] Writing ${data.length} bytes to PTY`); // Debug logs
+                // console.log(`[Arctrus-Input] Writing ${data.length} bytes to PTY`); // Debug logs
                 ptyProcess.stdin.write(data);
             } catch (err) {
                 console.error("Write error", err);
             }
         } else {
-            console.warn("[Electron] terminal:incoming received but ptyProcess is null or stdin closed.");
+            console.warn("[Arctrus] terminal:incoming received but ptyProcess is null or stdin closed.");
         }
     });
 
@@ -180,7 +190,7 @@ function setupTerminalHandlers() {
     });
 
     ipcMain.handle('terminal:read', async () => {
-        console.log('[Electron] terminal:read invoked from Agent');
+        console.log('[Arctrus] terminal:read invoked from Agent');
         // Return the last 10KB of history to avoid overwhelming LLM
         return { success: true, content: activeTerminalBuffer.slice(-10000) || "[No output captured yet]" };
     });
@@ -190,17 +200,17 @@ function setupTerminalHandlers() {
 function setupFSHandlers() {
     // Open Directory Dialog
     ipcMain.handle('dialog:openDirectory', async () => {
-        console.log('[Electron] dialog:openDirectory invoked');
+        console.log('[Arctrus] dialog:openDirectory invoked');
         const { dialog } = require('electron');
         try {
             const result = await dialog.showOpenDialog(mainWindow, {
                 properties: ['openDirectory', 'createDirectory']
             });
-            console.log('[Electron] Dialog result:', result);
+            console.log('[Arctrus] Dialog result:', result);
             if (result.canceled) return null;
             return result.filePaths[0];
         } catch (error) {
-            console.error('[Electron] dialog:openDirectory error:', error);
+            console.error('[Arctrus] dialog:openDirectory error:', error);
             throw error;
         }
     });
@@ -223,7 +233,7 @@ function setupFSHandlers() {
 
         // Strict Security Check: Enforce CWD is within Project Root
         if (!targetCwd.startsWith(rootPath)) {
-            console.warn(`[Electron] Security Block: Attempted CWD escape to ${targetCwd}`);
+            console.warn(`[Arctrus] Security Block: Attempted CWD escape to ${targetCwd}`);
             return { valid: false, reason: "Access denied: Execution outside project root is prohibited." };
         }
         return { valid: true, path: targetCwd };
@@ -233,7 +243,7 @@ function setupFSHandlers() {
         const cwdValidation = validateCwd(cwd);
         if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
 
-        console.log(`[Electron] shell:exec '${cmd}' in '${cwdValidation.path}'`);
+        console.log(`[Arctrus] shell:exec '${cmd}' in '${cwdValidation.path}'`);
         const { exec } = require('child_process');
         return new Promise((resolve) => {
             exec(cmd, {
@@ -266,7 +276,7 @@ function setupFSHandlers() {
         if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
 
         const { spawn } = require('child_process');
-        console.log(`[Electron] shell:spawn '${cmd}' in '${cwdValidation.path}'`);
+        console.log(`[Arctrus] shell:spawn '${cmd}' in '${cwdValidation.path}'`);
 
         try {
             const [command, ...args] = cmd.split(' '); // Simple split, might need better parsing for quoted args
@@ -304,7 +314,7 @@ function setupFSHandlers() {
             proc.on('close', (code) => {
                 procState.status = 'done';
                 procState.exitCode = code;
-                console.log(`[Electron] BG Process ${pid} finished with ${code}`);
+                console.log(`[Arctrus] BG Process ${pid} finished with ${code}`);
                 // Auto-cleanup after 1 hour if not checked? 
                 // For now, keep it in memory until app restart is fine for modest usage.
             });
@@ -364,7 +374,7 @@ function setupFSHandlers() {
             }
             return { success: true };
         } catch (error) {
-            console.error('[Electron] fs:create failed', error);
+            console.error('[Arctrus] fs:create failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -377,7 +387,7 @@ function setupFSHandlers() {
             fs.renameSync(oldPath, newPath);
             return { success: true };
         } catch (error) {
-            console.error('[Electron] fs:rename failed', error);
+            console.error('[Arctrus] fs:rename failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -388,7 +398,7 @@ function setupFSHandlers() {
             await shell.trashItem(targetPath);
             return { success: true };
         } catch (error) {
-            console.error('[Electron] fs:delete failed', error);
+            console.error('[Arctrus] fs:delete failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -403,7 +413,7 @@ function setupFSHandlers() {
             fs.writeFileSync(targetPath, content, 'utf-8');
             return { success: true };
         } catch (error) {
-            console.error('[Electron] fs:writeFile failed', error);
+            console.error('[Arctrus] fs:writeFile failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -413,7 +423,7 @@ function setupFSHandlers() {
             const content = fs.readFileSync(targetPath, 'utf-8');
             return { success: true, content };
         } catch (error) {
-            console.error('[Electron] fs:readFile failed', error);
+            console.error('[Arctrus] fs:readFile failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -437,7 +447,7 @@ function setupFSHandlers() {
 
             return { success: true, files };
         } catch (error) {
-            console.error('[Electron] fs:readDir failed', error);
+            console.error('[Arctrus] fs:readDir failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -448,7 +458,7 @@ function setupFSHandlers() {
             fs.cpSync(src, dest, { recursive: true });
             return { success: true };
         } catch (error) {
-            console.error('[Electron] fs:copy failed', error);
+            console.error('[Arctrus] fs:copy failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -458,7 +468,7 @@ function setupFSHandlers() {
             fs.renameSync(src, dest);
             return { success: true };
         } catch (error) {
-            console.error('[Electron] fs:move failed', error);
+            console.error('[Arctrus] fs:move failed', error);
             return { success: false, error: error.message };
         }
     });
@@ -468,7 +478,7 @@ function setupFSHandlers() {
         const { spawn } = require('child_process');
         // Fallback to project root if root not provided
         const searchRoot = root || path.join(__dirname, '..', '..');
-        console.log(`[Electron] fs:find '${pattern}' in '${searchRoot}'`);
+        console.log(`[Arctrus] fs:find '${pattern}' in '${searchRoot}'`);
 
         return new Promise((resolve) => {
             // Find files matching pattern (case-insensitive, ignoring .git)
@@ -491,7 +501,7 @@ function setupFSHandlers() {
     ipcMain.handle('fs:viewOutline', async (event, filePath) => {
         const { spawn } = require('child_process');
         const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'file_outline.py');
-        console.log(`[Electron] fs:viewOutline for '${filePath}'`);
+        console.log(`[Arctrus] fs:viewOutline for '${filePath}'`);
 
         return new Promise((resolve) => {
             const proc = spawn('python3', [scriptPath, filePath]);
@@ -505,7 +515,7 @@ function setupFSHandlers() {
     ipcMain.handle('fs:grep', async (event, { query, root }) => {
         const { spawn } = require('child_process');
         const searchRoot = root || path.join(__dirname, '..', '..');
-        console.log(`[Electron] fs:grep '${query}' in '${searchRoot}'`);
+        console.log(`[Arctrus] fs:grep '${query}' in '${searchRoot}'`);
 
         return new Promise((resolve) => {
             // ripgrep is preferred but grep -r is more universal
@@ -523,7 +533,7 @@ function setupFSHandlers() {
 }
 
 app.on('ready', () => {
-    console.log('[Electron] App ready, setting up handlers...');
+    console.log('[Arctrus] App ready, setting up handlers...');
     // Start backends
     startBackend('uv', ['run', 'api.py'], 'API');
     startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
@@ -547,14 +557,14 @@ app.on('activate', () => {
 const treeKill = require('tree-kill');
 
 app.on('will-quit', () => {
-    console.log('[Electron] Shutting down backends and terminal sessions...');
+    console.log('[Arctrus] Shutting down backends and terminal sessions...');
 
     // Kill backend services
     backendProcesses.forEach(proc => {
         if (proc && proc.pid) {
-            console.log(`[Electron] Killing backend process ${proc.pid}`);
+            console.log(`[Arctrus] Killing backend process ${proc.pid}`);
             treeKill(proc.pid, 'SIGKILL', (err) => {
-                if (err) console.error(`[Electron] Failed to kill process ${proc.pid}`, err);
+                if (err) console.error(`[Arctrus] Failed to kill process ${proc.pid}`, err);
             });
         }
     });
@@ -562,20 +572,20 @@ app.on('will-quit', () => {
     // Kill background shell tasks
     backgroundProcesses.forEach((proc, pidKey) => {
         if (proc && proc.pid && proc.status === 'running') {
-            console.log(`[Electron] Killing background task ${proc.pid}`);
+            console.log(`[Arctrus] Killing background task ${proc.pid}`);
             treeKill(proc.pid, 'SIGKILL');
         }
     });
 
     // Kill PTY
     if (ptyProcess && ptyProcess.pid) {
-        console.log(`[Electron] Killing PTY ${ptyProcess.pid}`);
+        console.log(`[Arctrus] Killing PTY ${ptyProcess.pid}`);
         try {
             // ptyProcess from node-pty might need standard kill or tree-kill
             // tree-kill is safer
             treeKill(ptyProcess.pid, 'SIGKILL');
         } catch (e) {
-            console.error('[Electron] Failed to kill PTY', e);
+            console.error('[Arctrus] Failed to kill PTY', e);
         }
     }
 });

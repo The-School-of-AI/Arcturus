@@ -435,38 +435,55 @@ async def get_user_preferences():
                 "location": context_hub.data.environment.location_region.value,
             },
             "soft_identity": {
+                # Discovered Traits (Extras) - Keep as objects with confidence
+                "extras": soft_data.extras if hasattr(soft_data, "extras") else {},
+                
                 # Food & Dining
-                "dietary_style": soft_data.food_and_dining.dietary_style.value,
-                "cuisine_likes": soft_data.food_and_dining.cuisine_affinities.likes,
-                "cuisine_dislikes": soft_data.food_and_dining.cuisine_affinities.dislikes,
-                "favorite_foods": soft_data.food_and_dining.cuisine_affinities.favorites,
-                "food_allergies": soft_data.food_and_dining.restrictions.allergies,
+                "food_and_dining": {
+                    "dietary_style": soft_data.food_and_dining.dietary_style.value,
+                    "cuisine_likes": soft_data.food_and_dining.cuisine_affinities.likes,
+                    "cuisine_dislikes": soft_data.food_and_dining.cuisine_affinities.dislikes,
+                    "favorite_foods": soft_data.food_and_dining.cuisine_affinities.favorites,
+                    "food_allergies": soft_data.food_and_dining.restrictions.allergies,
+                },
                 # Pets
-                "pet_affinity": soft_data.pets_and_animals.affinity.value,
-                "pet_names": soft_data.pets_and_animals.ownership.pet_names,
+                "pets_and_animals": {
+                    "affinity": soft_data.pets_and_animals.affinity.value,
+                    "pet_names": soft_data.pets_and_animals.ownership.pet_names,
+                },
                 # Lifestyle
-                "activity_level": soft_data.lifestyle_and_wellness.activity_level.value,
-                "sleep_rhythm": soft_data.lifestyle_and_wellness.sleep_rhythm.value,
-                "travel_style": soft_data.lifestyle_and_wellness.travel_style.value,
+                "lifestyle_and_wellness": {
+                    "activity_level": soft_data.lifestyle_and_wellness.activity_level.value,
+                    "sleep_rhythm": soft_data.lifestyle_and_wellness.sleep_rhythm.value,
+                    "travel_style": soft_data.lifestyle_and_wellness.travel_style.value,
+                },
                 # Media
-                "music_genres": soft_data.media_and_entertainment.music.genres,
-                "movie_genres": soft_data.media_and_entertainment.movies_tv.genres,
-                "book_genres": soft_data.media_and_entertainment.books.genres,
-                "podcast_genres": soft_data.media_and_entertainment.podcasts.genres,
+                "media_and_entertainment": {
+                    "music_genres": soft_data.media_and_entertainment.music.genres,
+                    "movie_genres": soft_data.media_and_entertainment.movies_tv.genres,
+                    "book_genres": soft_data.media_and_entertainment.books.genres,
+                    "podcast_genres": soft_data.media_and_entertainment.podcasts.genres,
+                },
                 # Communication
-                "humor_tolerance": soft_data.communication_style.humor_tolerance.value,
-                "small_talk_tolerance": soft_data.communication_style.small_talk_tolerance.value,
-                "formality_preference": soft_data.communication_style.formality_preference.value,
+                "communication_style": {
+                    "humor_tolerance": soft_data.communication_style.humor_tolerance.value,
+                    "small_talk_tolerance": soft_data.communication_style.small_talk_tolerance.value,
+                    "formality_preference": soft_data.communication_style.formality_preference.value,
+                },
                 # Interests
-                "professional_interests": soft_data.interests_and_hobbies.professional_interests,
-                "personal_hobbies": soft_data.interests_and_hobbies.personal_hobbies,
-                "learning_interests": soft_data.interests_and_hobbies.learning_interests,
-                "side_projects": soft_data.interests_and_hobbies.side_projects,
+                "interests_and_hobbies": {
+                    "professional_interests": soft_data.interests_and_hobbies.professional_interests,
+                    "personal_hobbies": soft_data.interests_and_hobbies.personal_hobbies,
+                    "learning_interests": soft_data.interests_and_hobbies.learning_interests,
+                    "side_projects": soft_data.interests_and_hobbies.side_projects,
+                },
                 # Professional
-                "industry": soft_data.professional_context.industry.value,
-                "role_type": soft_data.professional_context.role_type.value,
-                "experience_level": soft_data.professional_context.experience_level.value,
-                "company_or_org": soft_data.professional_context.team_size.value,
+                "professional_context": {
+                    "industry": soft_data.professional_context.industry.value,
+                    "role_type": soft_data.professional_context.role_type.value,
+                    "experience_level": soft_data.professional_context.experience_level.value,
+                    "team_size": soft_data.professional_context.team_size.value,
+                },
             },
             "evidence": {
                 "total_events": len(evidence_log.data.events),

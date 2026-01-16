@@ -7,6 +7,7 @@ during conversations and adds them to staging queue.
 
 import json
 import requests
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -39,7 +40,9 @@ class SessionScanner:
     """
     
     def __init__(self, summaries_dir: str = "memory/session_summaries_index"):
-        self.summaries_dir = Path(__file__).parent.parent.parent / summaries_dir
+        # Resolve path relative to project root (assuming this file is in remme/sources)
+        self.project_root = Path(__file__).parent.parent.parent
+        self.summaries_dir = self.project_root / summaries_dir
         self.model = get_model("memory_extraction")
         self.api_url = get_ollama_url("chat")
         self.staging = get_staging_store()
@@ -62,28 +65,55 @@ class SessionScanner:
         try:
             session_data = json.loads(session_path.read_text())
             
-            # Build conversation text from session
             content_parts = []
             
-            # Add summary if present
-            if "summary" in session_data:
-                content_parts.append(f"Summary: {session_data['summary']}")
-            
-            # Add conversation history
-            if "history" in session_data:
-                for msg in session_data["history"][-15:]:  # Last 15 messages
-                    role = msg.get("role", "unknown")
-                    text = msg.get("content", "")[:300]  # Limit message size
-                    content_parts.append(f"{role.upper()}: {text}")
-            
-            # Add query if present
-            if "query" in session_data:
-                content_parts.append(f"USER QUERY: {session_data['query']}")
-            
+            # --- Schema 1: Legacy (summary, history) ---
+            if "summary" in session_data or "history" in session_data:
+                # Add summary if present
+                if "summary" in session_data:
+                    content_parts.append(f"Summary: {session_data['summary']}")
+                
+                # Add conversation history
+                if "history" in session_data:
+                    for msg in session_data["history"][-15:]:  # Last 15 messages
+                        role = msg.get("role", "unknown")
+                        text = msg.get("content", "")[:300]  # Limit message size
+                        content_parts.append(f"{role.upper()}: {text}")
+                
+                # Add query if present
+                if "query" in session_data:
+                    content_parts.append(f"USER QUERY: {session_data['query']}")
+
+            # --- Schema 2: Graph (nodes, graph.original_query) ---
+            if "graph" in session_data or "nodes" in session_data:
+                graph = session_data.get("graph", {})
+                if "original_query" in graph:
+                    content_parts.append(f"USER QUERY: {graph['original_query']}")
+                
+                nodes = session_data.get("nodes", [])
+                # Sort nodes by some criteria if needed, but list order is usually execution order
+                for node in nodes[-15:]: # Look at last 15 nodes
+                    agent = node.get("agent", "Unknown")
+                    desc = node.get("description", "")
+                    prompt = node.get("agent_prompt", "")
+                    
+                    if desc:
+                        content_parts.append(f"STEP ({agent}): {desc}")
+                    if prompt:
+                        content_parts.append(f"CONTEXT: {prompt[:500]}") # Truncate long prompts
+                    
+                    # Check for direct outputs if they are strings (rare in graph, usually dicts)
+                    output = node.get("output")
+                    if isinstance(output, str):
+                        content_parts.append(f"OUTPUT: {output[:300]}")
+
             if not content_parts:
+                print(f"❌ No content in {session_path.name}")
                 return {}
             
             content = "\n".join(content_parts)[:4000]  # Limit total size
+            
+            print(f"Scanning {session_path.name} ({len(content)} chars)...")
             
             prompt = SESSION_EXTRACTION_PROMPT.format(content=content)
             
@@ -105,6 +135,8 @@ class SessionScanner:
             result = response.json()
             raw_content = result.get("message", {}).get("content", "{}")
             
+            print(f"LLM Response for {session_path.name}: {raw_content[:200].replace(chr(10), ' ')}")
+
             # Clean up common JSON issues
             raw_content = raw_content.strip()
             if not raw_content.startswith("{"):
@@ -116,6 +148,11 @@ class SessionScanner:
                     return {}
             
             preferences = json.loads(raw_content)
+            if preferences:
+                print(f"✅ Found preferences in {session_path.name}: {preferences}")
+            else:
+                print(f"ℹ️  No preferences in {session_path.name}")
+            
             return preferences if isinstance(preferences, dict) else {}
             
         except json.JSONDecodeError as e:
@@ -125,12 +162,13 @@ class SessionScanner:
             print(f"⚠️ Failed to extract from {session_path.name}: {str(e)[:50]}")
             return {}
     
-    def scan_all(self, max_sessions: int = 50) -> int:
+    def scan_all(self, max_sessions: int = 50, force: bool = False) -> int:
         """
         Scan session summaries and add preferences to staging.
         
         Args:
             max_sessions: Maximum number of sessions to scan
+            force: If True, rescan all files regardless of tracker state
         
         Returns:
             Number of sessions that yielded preferences
@@ -138,15 +176,19 @@ class SessionScanner:
         tracker = get_scan_tracker()
         all_files = self.get_session_files(max_sessions * 2)  # Get more to filter
         
-        # Filter to only unscanned/modified files
-        files = tracker.get_unscanned_files("sessions", all_files)
-        files = files[:max_sessions]
-        
-        print(f"💬 Scanning {len(files)} session summaries ({len(all_files) - len(files)} skipped)...")
+        if force:
+            files = all_files[:max_sessions]
+            print(f"Force scanning {len(files)} sessions...")
+        else:
+            # Filter to only unscanned/modified files
+            files = tracker.get_unscanned_files("sessions", all_files)
+            files = files[:max_sessions]
         
         if not files:
             print("💬 All sessions already scanned. Use force=True to rescan.")
             return 0
+        
+        print(f"💬 Scanning {len(files)} session summaries...")
         
         extracted_count = 0
         
@@ -162,8 +204,7 @@ class SessionScanner:
                     source=f"session/{session_path.stem}"
                 )
                 extracted_count += 1
-                print(f"  ✅ {session_path.stem}: {len(preferences)} preferences")
-        
+                
         # Save tracker state
         tracker.save()
         
@@ -171,7 +212,15 @@ class SessionScanner:
         return extracted_count
 
 
-async def scan_sessions(max_sessions: int = 50) -> int:
+async def scan_sessions(max_sessions: int = 50, force: bool = False) -> int:
     """Run session scanner."""
     scanner = SessionScanner()
-    return scanner.scan_all(max_sessions)
+    return scanner.scan_all(max_sessions, force=force)
+
+if __name__ == "__main__":
+    print("Running session scanner debugging...")
+    scanner = SessionScanner()
+    # Force scan top 5 files to debug
+    scanner.scan_all(max_sessions=5, force=True)
+
+

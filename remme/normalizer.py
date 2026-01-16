@@ -181,10 +181,12 @@ class Normalizer:
         
         changes = []
         
+        # Prepare updates for evidence log
+        derived_updates = []
+        
         for mapping in mappings:
             field = mapping.get("field")
             value = mapping.get("value")
-            is_new = mapping.get("is_new", True)
             is_reinforcement = mapping.get("is_reinforcement", False)
             is_contradiction = mapping.get("is_contradiction", False)
             
@@ -197,41 +199,93 @@ class Normalizer:
                     extra_key = field.replace("extras.", "")
                     if not hasattr(soft_hub.data, "extras"):
                         soft_hub.data.extras = {}
+                    
+                    # Update extras with confidence
+                    current_val = soft_hub.data.extras.get(extra_key, {})
+                    current_conf = current_val.get("confidence", 0.5) if isinstance(current_val, dict) else 0.5
+                    
+                    if is_reinforcement:
+                        new_conf = min(0.95, current_conf + 0.1)
+                    elif is_contradiction:
+                        new_conf = max(0.1, current_conf - 0.2)
+                    else:
+                        new_conf = 0.5
+                    
                     soft_hub.data.extras[extra_key] = {
                         "value": value,
-                        "confidence": belief_engine.get_base_confidence("soft_identity"),
-                        "evidence_count": 1,
+                        "confidence": new_conf,
+                        "evidence_count": (current_val.get("evidence_count", 0) + 1) if isinstance(current_val, dict) else 1,
                         "last_updated": datetime.now().isoformat()
                     }
+                    
                     changes.append(f"extras.{extra_key}={value}")
+                    derived_updates.append({
+                        "target_hub": "soft_identity",
+                        "target_path": f"extras.{extra_key}",
+                        "operation": "update",
+                        "new_value": str(value)
+                    })
                     continue
                 
                 # Get field info
                 field_info = KNOWN_FIELDS.get(field)
+                
+                # If field is unknown (and wasn't explicitly marked as extras), treat it as extra
                 if not field_info:
+                    # Treat as extra
+                    extra_key = field.replace("extras.", "")  # just in case
+                    if not hasattr(soft_hub.data, "extras"):
+                        soft_hub.data.extras = {}
+                    
+                    # Update extras with confidence (default low for auto-classified extras)
+                    current_val = soft_hub.data.extras.get(extra_key, {})
+                    current_conf = current_val.get("confidence", 0.4) if isinstance(current_val, dict) else 0.4
+                    
+                    if is_reinforcement:
+                        new_conf = min(0.95, current_conf + 0.1)
+                    else:
+                        new_conf = 0.4
+                    
+                    soft_hub.data.extras[extra_key] = {
+                        "value": value,
+                        "confidence": new_conf,
+                        "evidence_count": (current_val.get("evidence_count", 0) + 1) if isinstance(current_val, dict) else 1,
+                        "last_updated": datetime.now().isoformat()
+                    }
+                    
+                    changes.append(f"extras.{extra_key}={value}")
+                    derived_updates.append({
+                        "target_hub": "soft_identity",
+                        "target_path": f"extras.{extra_key}",
+                        "operation": "update",
+                        "new_value": str(value)
+                    })
                     continue
                 
                 hub_name = field_info["hub"]
+                path = field_info.get("path", field)
                 
                 # Calculate confidence update
+                # TODO: Retrieve actual current confidence from hub if supported
+                base_conf = belief_engine.get_base_confidence(hub_name)
+                
                 if is_reinforcement:
-                    # Boost confidence
-                    current_conf = 0.3  # TODO: Get actual current confidence
-                    new_conf = belief_engine.calculate_confidence_update(
-                        hub_name, current_conf, is_reinforcement=True
-                    )
-                    print(f"📈 Reinforced {field}: conf {current_conf:.2f} → {new_conf:.2f}")
+                    new_conf = belief_engine.calculate_confidence_update(hub_name, base_conf, True)
+                    print(f"📈 Reinforced {field}: conf {base_conf:.2f} → {new_conf:.2f}")
                 elif is_contradiction:
-                    # Decrease confidence
-                    current_conf = 0.5
-                    new_conf = belief_engine.calculate_confidence_update(
-                        hub_name, current_conf, is_reinforcement=False
-                    )
-                    print(f"📉 Contradiction on {field}: conf {current_conf:.2f} → {new_conf:.2f}")
+                    new_conf = belief_engine.calculate_confidence_update(hub_name, base_conf, False)
+                    print(f"📉 Contradiction on {field}: conf {base_conf:.2f} → {new_conf:.2f}")
                 
                 # Apply to appropriate hub
                 self._apply_field_value(field, value, prefs_hub, context_hub, soft_hub)
                 changes.append(f"{field}={value}")
+                
+                derived_updates.append({
+                    "target_hub": hub_name,
+                    "target_path": path,
+                    "operation": "update",
+                    "new_value": str(value)
+                })
                 
             except Exception as e:
                 print(f"⚠️ Failed to apply {field}: {e}")
@@ -242,12 +296,13 @@ class Normalizer:
             context_hub.save()
             soft_hub.save()
             
+            # Log evidence with compliant updates
             evidence_log.add_event(
                 source_type="normalizer",
                 source_reference="batch_normalization",
                 signal_category="normalized_preferences",
                 raw_excerpt=f"Applied {len(changes)} normalized preferences",
-                derived_updates=[{"operation": "batch_apply", "fields": changes}],
+                derived_updates=derived_updates,
                 confidence_impact=0.2
             )
             evidence_log.save()

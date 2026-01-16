@@ -115,4 +115,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Enable reload=True for development if needed, but here we'll just keep it simple
+    # or actually enable it to avoid these restart issues.
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

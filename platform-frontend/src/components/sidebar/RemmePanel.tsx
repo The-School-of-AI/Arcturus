@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '@/store';
-import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe } from 'lucide-react';
+import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe, PawPrint, ListTree, GitPullRequest } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -267,6 +267,7 @@ const PreferencesView: React.FC = () => {
     const [data, setData] = useState<PreferencesData | null>(null);
     const [loading, setLoading] = useState(true);
     const [bootstrapping, setBootstrapping] = useState(false);
+    const [normalizing, setNormalizing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchPreferences = async () => {
@@ -294,7 +295,6 @@ const PreferencesView: React.FC = () => {
         try {
             const response = await axios.post(`${API_BASE}/remme/preferences/bootstrap`);
             if (response.data.status === 'success') {
-                // Refresh data after bootstrap
                 await fetchPreferences();
             } else {
                 setError(response.data.error || 'Bootstrap failed');
@@ -303,6 +303,18 @@ const PreferencesView: React.FC = () => {
             setError(err.message);
         } finally {
             setBootstrapping(false);
+        }
+    };
+
+    const handleNormalize = async () => {
+        setNormalizing(true);
+        try {
+            await axios.post(`${API_BASE}/remme/normalize`);
+            await fetchPreferences();
+        } catch (err: any) {
+            console.error(err);
+        } finally {
+            setNormalizing(false);
         }
     };
 
@@ -334,14 +346,14 @@ const PreferencesView: React.FC = () => {
     return (
         <div className="p-4 space-y-4">
             {/* Bootstrap Button & Confidence */}
-            <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/5">
                 <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-primary" />
+                    <Zap className="w-4 h-4 text-foreground/70" />
                     <div>
-                        <span className="text-xs font-semibold">Model Confidence</span>
+                        <span className="text-xs font-semibold tracking-tight">Model Confidence</span>
                         <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground">Evidence: <span className="font-bold text-foreground">{meta.preferences_evidence_count || 0}</span></span>
-                            <span className="text-[10px] text-muted-foreground">Conf: <span className="font-bold text-primary">{((meta.preferences_confidence || 0) * 100).toFixed(0)}%</span></span>
+                            <span className="text-[10px] text-muted-foreground/70 font-light">Evidence: <span className="font-semibold text-foreground/80">{meta.preferences_evidence_count || 0}</span></span>
+                            <span className="text-[10px] text-muted-foreground/70 font-light">Conf: <span className="font-semibold text-foreground/80">{((meta.preferences_confidence || 0) * 100).toFixed(0)}%</span></span>
                         </div>
                     </div>
                 </div>
@@ -350,7 +362,7 @@ const PreferencesView: React.FC = () => {
                     variant="outline"
                     onClick={handleBootstrap}
                     disabled={bootstrapping}
-                    className="h-8 text-xs gap-1.5 border-primary/30 hover:border-primary hover:bg-primary/10"
+                    className="h-8 text-xs gap-1.5 border-border hover:border-foreground/40 hover:bg-muted/10 transition-all duration-300"
                 >
                     {bootstrapping ? (
                         <RefreshCw className="w-3 h-3 animate-spin" />
@@ -362,308 +374,139 @@ const PreferencesView: React.FC = () => {
             </div>
 
             {/* Operating Context */}
-            <PreferenceSection
-                icon={<Monitor className="w-4 h-4" />}
-                title="Operating Context"
-                color="blue"
-            >
-                <PreferenceGrid items={[
-                    { label: 'OS', value: ctx.os },
-                    { label: 'Shell', value: ctx.shell },
-                    { label: 'CPU', value: ctx.cpu_architecture },
-                    { label: 'GPU', value: ctx.has_gpu ? 'Available' : 'Not detected' },
-                    { label: 'Location', value: ctx.location },
-                ]} />
-                {ctx.primary_languages?.length > 0 && (
-                    <TagList label="Languages" items={ctx.primary_languages} color="blue" />
-                )}
-            </PreferenceSection>
+            <Section title="Operating Context">
+                <Row label="OS" value={ctx.os} />
+                <Row label="Shell" value={ctx.shell} />
+                <Row label="Location" value={ctx.location} />
+                <TagRow label="Stack" items={ctx.primary_languages} />
+            </Section>
+
+            {/* Discovered Traits (Extras) */}
+            {soft.extras && Object.keys(soft.extras).length > 0 && (
+                <Section title="Discovered Traits">
+                    <div className="grid grid-cols-1 gap-1">
+                        {Object.entries(soft.extras).map(([key, item]: [string, any]) => (
+                            <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/5 last:border-0 group">
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
+                                    {key.replace(/_/g, " ")}
+                                </span>
+                                <div className="text-right">
+                                    <span className="text-xs text-foreground/80 font-normal block">{String(item.value || 'None')}</span>
+                                    {item.confidence && (
+                                        <div className="text-[8px] text-muted-foreground/40 font-mono tracking-tighter">
+                                            {Math.round(item.confidence * 100)}% CONF
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Section>
+            )}
 
             {/* Output Contract */}
-            <PreferenceSection
-                icon={<Terminal className="w-4 h-4" />}
-                title="Output Contract"
-                color="green"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Verbosity', value: prefs.output_contract?.verbosity },
-                    { label: 'Format', value: prefs.output_contract?.format },
-                    { label: 'Clarifications', value: prefs.output_contract?.clarifications },
-                ]} />
-                {prefs.output_contract?.tone_constraints?.length > 0 && (
-                    <TagList label="Tone" items={prefs.output_contract.tone_constraints} color="green" />
-                )}
-            </PreferenceSection>
+            <Section title="Output Contract">
+                <Row label="Verbosity" value={prefs.output_contract?.verbosity} />
+                <Row label="Format" value={prefs.output_contract?.format} />
+                <TagRow label="Tone" items={prefs.output_contract?.tone_constraints} />
+            </Section>
 
             {/* Tooling */}
-            <PreferenceSection
-                icon={<Code2 className="w-4 h-4" />}
-                title="Tooling Defaults"
-                color="purple"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Python PM', value: prefs.tooling?.package_manager?.python },
-                    { label: 'JS PM', value: prefs.tooling?.package_manager?.javascript },
-                ]} />
-                {prefs.tooling?.frameworks?.frontend?.length > 0 && (
-                    <TagList label="Frontend" items={prefs.tooling.frameworks.frontend} color="purple" />
-                )}
-                {prefs.tooling?.frameworks?.backend?.length > 0 && (
-                    <TagList label="Backend" items={prefs.tooling.frameworks.backend} color="purple" />
-                )}
-                {prefs.tooling?.testing?.length > 0 && (
-                    <TagList label="Testing" items={prefs.tooling.testing} color="purple" />
-                )}
-            </PreferenceSection>
+            <Section title="Tooling">
+                <Row label="Python" value={prefs.tooling?.package_manager?.python || ctx.package_managers?.python?.value} />
+                <Row label="JavaScript" value={prefs.tooling?.package_manager?.javascript || ctx.package_managers?.javascript?.value} />
+                <TagRow label="Frontend" items={prefs.tooling?.frameworks?.frontend} />
+            </Section>
 
-            {/* Autonomy & Risk */}
-            <PreferenceSection
-                icon={<Shield className="w-4 h-4" />}
-                title="Autonomy & Risk"
-                color="orange"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Create Files', value: prefs.autonomy?.create_files },
-                    { label: 'Run Shell', value: prefs.autonomy?.run_shell },
-                    { label: 'Delete Files', value: prefs.autonomy?.delete_files },
-                    { label: 'Git Ops', value: prefs.autonomy?.git_operations },
-                    { label: 'Risk', value: prefs.risk_tolerance },
-                ]} />
-            </PreferenceSection>
+            {/* Preferences Drill-down */}
+            {soft.food_and_dining?.dietary_style && (
+                <Section title="Food & Dining">
+                    <Row label="Diet" value={soft.food_and_dining?.dietary_style} />
+                    <TagRow label="Likes" items={soft.food_and_dining?.cuisine_affinities?.likes} />
+                </Section>
+            )}
 
-            {/* Food & Dining */}
-            <PreferenceSection
-                icon={<Utensils className="w-4 h-4" />}
-                title="Food & Dining"
-                color="red"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Dietary Style', value: soft.dietary_style },
-                ]} />
-                {soft.cuisine_likes?.length > 0 && (
-                    <TagList label="Likes" items={soft.cuisine_likes} color="green" />
-                )}
-                {soft.cuisine_dislikes?.length > 0 && (
-                    <TagList label="Dislikes" items={soft.cuisine_dislikes} color="red" />
-                )}
-                {soft.favorite_foods?.length > 0 && (
-                    <TagList label="Favorites" items={soft.favorite_foods} color="yellow" />
-                )}
-                {soft.food_allergies?.length > 0 && (
-                    <TagList label="Allergies" items={soft.food_allergies} color="red" />
-                )}
-            </PreferenceSection>
-
-            {/* Pets */}
-            <PreferenceSection
-                icon={<Dog className="w-4 h-4" />}
-                title="Pets & Animals"
-                color="amber"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Pet Affinity', value: soft.pet_affinity },
-                ]} />
-                {soft.pet_names?.length > 0 && (
-                    <TagList label="Pet Names" items={soft.pet_names} color="amber" />
-                )}
-            </PreferenceSection>
-
-            {/* Media & Entertainment */}
-            <PreferenceSection
-                icon={<Film className="w-4 h-4" />}
-                title="Media & Entertainment"
-                color="pink"
-            >
-                {soft.music_genres?.length > 0 && (
-                    <TagList label="Music" items={soft.music_genres} color="pink" icon={<Music className="w-3 h-3" />} />
-                )}
-                {soft.movie_genres?.length > 0 && (
-                    <TagList label="Movies/TV" items={soft.movie_genres} color="pink" icon={<Film className="w-3 h-3" />} />
-                )}
-                {soft.book_genres?.length > 0 && (
-                    <TagList label="Books" items={soft.book_genres} color="pink" icon={<BookOpen className="w-3 h-3" />} />
-                )}
-                {soft.podcast_genres?.length > 0 && (
-                    <TagList label="Podcasts" items={soft.podcast_genres} color="pink" />
-                )}
-                {!soft.music_genres?.length && !soft.movie_genres?.length && !soft.book_genres?.length && (
-                    <p className="text-[10px] text-muted-foreground/50 italic">No media preferences extracted yet</p>
-                )}
-            </PreferenceSection>
-
-            {/* Lifestyle */}
-            <PreferenceSection
-                icon={<Coffee className="w-4 h-4" />}
-                title="Lifestyle & Wellness"
-                color="teal"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Activity Level', value: soft.activity_level },
-                    { label: 'Sleep Rhythm', value: soft.sleep_rhythm },
-                    { label: 'Travel Style', value: soft.travel_style },
-                ]} />
-            </PreferenceSection>
-
-            {/* Communication */}
-            <PreferenceSection
-                icon={<MessageSquare className="w-4 h-4" />}
-                title="Communication Style"
-                color="cyan"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Humor', value: soft.humor_tolerance },
-                    { label: 'Small Talk', value: soft.small_talk_tolerance },
-                    { label: 'Formality', value: soft.formality_preference },
-                ]} />
-            </PreferenceSection>
-
-            {/* Professional Context */}
-            <PreferenceSection
-                icon={<Briefcase className="w-4 h-4" />}
-                title="Professional Context"
-                color="indigo"
-            >
-                <PreferenceGrid items={[
-                    { label: 'Industry', value: soft.industry },
-                    { label: 'Role', value: soft.role_type },
-                    { label: 'Experience', value: soft.experience_level },
-                    { label: 'Company/Org', value: soft.company_or_org },
-                ]} />
-            </PreferenceSection>
+            {soft.pets_and_animals?.affinity && (
+                <Section title="Animals">
+                    <Row label="Affinity" value={soft.pets_and_animals?.affinity} />
+                    <TagRow label="Pets" items={soft.pets_and_animals?.ownership?.pet_names} />
+                </Section>
+            )}
 
             {/* Interests & Hobbies */}
-            <PreferenceSection
-                icon={<Heart className="w-4 h-4" />}
-                title="Interests & Hobbies"
-                color="rose"
-            >
-                {soft.professional_interests?.length > 0 && (
-                    <TagList label="Professional" items={soft.professional_interests} color="indigo" />
-                )}
-                {soft.personal_hobbies?.length > 0 && (
-                    <TagList label="Hobbies" items={soft.personal_hobbies} color="rose" />
-                )}
-                {soft.learning_interests?.length > 0 && (
-                    <TagList label="Learning" items={soft.learning_interests} color="green" />
-                )}
-                {soft.side_projects?.length > 0 && (
-                    <TagList label="Side Projects" items={soft.side_projects} color="blue" />
-                )}
-                {!soft.professional_interests?.length && !soft.personal_hobbies?.length && (
-                    <p className="text-[10px] text-muted-foreground/50 italic">No interests extracted yet</p>
-                )}
-            </PreferenceSection>
-
-            {/* Anti-Preferences */}
-            {(prefs.anti_preferences?.phrases?.length > 0 || prefs.anti_preferences?.moves?.length > 0) && (
-                <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/5">
-                    <div className="flex items-center gap-2 mb-2">
-                        <TriangleAlert className="w-4 h-4 text-red-400" />
-                        <span className="text-xs font-semibold text-red-400">Avoid Patterns</span>
-                    </div>
-                    <div className="space-y-1">
-                        {prefs.anti_preferences?.phrases?.map((phrase: string, i: number) => (
-                            <div key={i} className="text-[11px] text-red-400/70 font-mono">• "{phrase}"</div>
-                        ))}
-                        {prefs.anti_preferences?.moves?.map((move: string, i: number) => (
-                            <div key={i} className="text-[11px] text-red-400/70">• {move}</div>
-                        ))}
-                    </div>
-                </div>
+            {(soft.interests_and_hobbies?.personal_hobbies?.length > 0 || soft.interests_and_hobbies?.professional_interests?.length > 0) && (
+                <Section title="Interests">
+                    <TagRow label="Professional" items={soft.interests_and_hobbies?.professional_interests} />
+                    <TagRow label="Hobbies" items={soft.interests_and_hobbies?.personal_hobbies} />
+                </Section>
             )}
+
+            {/* General Preferences */}
+            <Section title="General Preferences">
+                <Row label="Timezone" value={prefs.general?.timezone} />
+                <Row label="Unit System" value={prefs.general?.unit_system} />
+                <TagRow label="Languages" items={prefs.general?.preferred_languages} />
+            </Section>
+
+            {/* Normalization Button */}
+            <div className="flex justify-center pt-4">
+                <Button
+                    variant="outline"
+                    onClick={handleNormalize}
+                    disabled={normalizing}
+                    className="h-8 text-xs gap-1.5 border-border hover:border-foreground/40 hover:bg-muted/10 transition-all duration-300"
+                >
+                    {normalizing ? (
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                        <GitPullRequest className="w-3 h-3" />
+                    )}
+                    {normalizing ? 'Syncing...' : 'Sync with Remme'}
+                </Button>
+            </div>
         </div>
     );
 };
 
 // ============================================================================
-// Helper Components
+// Minimalist Components
 // ============================================================================
 
-const colorMap: Record<string, string> = {
-    blue: 'text-blue-400 border-blue-500/30 bg-blue-500/5',
-    green: 'text-green-400 border-green-500/30 bg-green-500/5',
-    purple: 'text-purple-400 border-purple-500/30 bg-purple-500/5',
-    orange: 'text-orange-400 border-orange-500/30 bg-orange-500/5',
-    red: 'text-red-400 border-red-500/30 bg-red-500/5',
-    amber: 'text-amber-400 border-amber-500/30 bg-amber-500/5',
-    pink: 'text-pink-400 border-pink-500/30 bg-pink-500/5',
-    teal: 'text-teal-400 border-teal-500/30 bg-teal-500/5',
-    cyan: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/5',
-    indigo: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/5',
-    rose: 'text-rose-400 border-rose-500/30 bg-rose-500/5',
-    yellow: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/5',
-};
-
-const tagColorMap: Record<string, string> = {
-    blue: 'bg-blue-500/20 text-blue-400',
-    green: 'bg-green-500/20 text-green-400',
-    purple: 'bg-purple-500/20 text-purple-400',
-    orange: 'bg-orange-500/20 text-orange-400',
-    red: 'bg-red-500/20 text-red-400',
-    amber: 'bg-amber-500/20 text-amber-400',
-    pink: 'bg-pink-500/20 text-pink-400',
-    teal: 'bg-teal-500/20 text-teal-400',
-    cyan: 'bg-cyan-500/20 text-cyan-400',
-    indigo: 'bg-indigo-500/20 text-indigo-400',
-    rose: 'bg-rose-500/20 text-rose-400',
-    yellow: 'bg-yellow-500/20 text-yellow-400',
-};
-
-const PreferenceSection: React.FC<{
-    icon: React.ReactNode;
-    title: string;
-    color: string;
-    children: React.ReactNode;
-}> = ({ icon, title, color, children }) => (
-    <div className={cn("p-3 rounded-xl border transition-all", colorMap[color] || colorMap.blue)}>
-        <div className="flex items-center gap-2 mb-3">
-            <div className="opacity-80">{icon}</div>
-            <span className="text-xs font-semibold">{title}</span>
-        </div>
-        <div className="space-y-2">
+const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+    <div className="space-y-3">
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 border-l border-foreground/30 pl-2">
+            {title}
+        </h3>
+        <div className="pl-2 space-y-0.5">
             {children}
         </div>
     </div>
 );
 
-const PreferenceGrid: React.FC<{
-    items: { label: string; value: any }[];
-}> = ({ items }) => (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        {items.map((item, i) => (
-            <div key={i} className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">{item.label}</span>
-                <span className="text-[11px] font-medium text-foreground/80">
-                    {item.value || '—'}
-                </span>
-            </div>
-        ))}
-    </div>
-);
+const Row: React.FC<{ label: string; value: any }> = ({ label, value }) => {
+    if (!value) return null;
+    const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
 
-const TagList: React.FC<{
-    label: string;
-    items: string[];
-    color: string;
-    icon?: React.ReactNode;
-}> = ({ label, items, color, icon }) => (
-    <div className="mt-2">
-        <div className="flex items-center gap-1 mb-1">
-            {icon && <span className="opacity-60">{icon}</span>}
-            <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</span>
+    return (
+        <div className="grid grid-cols-[100px_1fr] items-baseline py-1 border-b border-border/10 last:border-0 hover:bg-muted/5 transition-colors">
+            <span className="text-[11px] text-muted-foreground">{label}</span>
+            <span className="text-xs text-foreground/90 font-light">{displayValue}</span>
         </div>
-        <div className="flex flex-wrap gap-1">
-            {items.map((item, i) => (
-                <span
-                    key={i}
-                    className={cn(
-                        "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                        tagColorMap[color] || tagColorMap.blue
-                    )}
-                >
-                    {item}
-                </span>
-            ))}
+    );
+};
+
+const TagRow: React.FC<{ label: string; items: string[] }> = ({ label, items }) => {
+    if (!items || items.length === 0) return null;
+    return (
+        <div className="py-1.5 border-b border-border/10 last:border-0">
+            <span className="text-[11px] text-muted-foreground block mb-1.5">{label}</span>
+            <div className="flex flex-wrap gap-1.5">
+                {items.map((item, i) => (
+                    <span key={i} className="px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground bg-muted/5">
+                        {item}
+                    </span>
+                ))}
+            </div>
         </div>
-    </div>
-);
+    );
+};

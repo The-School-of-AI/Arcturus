@@ -28,8 +28,8 @@ class ConfidenceField(BaseModel):
 
 class ScopedValue(BaseModel):
     """A value that can vary by scope/domain."""
-    default: Optional[str] = None
-    by_scope: Dict[str, str] = Field(default_factory=dict)
+    default: Optional[Any] = None
+    by_scope: Dict[str, Any] = Field(default_factory=dict)
     confidence: float = 0.0
     last_seen_at: Optional[datetime] = None
 
@@ -465,6 +465,7 @@ class SoftIdentityHubSchema(BaseModel):
     interests_and_hobbies: InterestsAndHobbies = Field(default_factory=InterestsAndHobbies)
     professional_context: ProfessionalContext = Field(default_factory=ProfessionalContext)
     usage_rules: SoftIdentityUsageRules = Field(default_factory=SoftIdentityUsageRules)
+    extras: Dict[str, Any] = Field(default_factory=dict)
     meta: HubMeta = Field(default_factory=HubMeta)
 
 
