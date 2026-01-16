@@ -175,6 +175,17 @@ async def rename_rag_item(old_path: str = Form(...), new_path: str = Form(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/absolute_path")
+async def get_rag_absolute_path(path: str):
+    """Get absolute path for a relative RAG path"""
+    try:
+        root = PROJECT_ROOT / "data"
+        target_path = root / path.strip("/").replace("..", "")
+        return {"absolute_path": str(target_path.resolve())}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/move")
 async def move_rag_item(src: str = Form(...), dest: str = Form(...)):
     """Move/Cut-Paste a file or folder"""

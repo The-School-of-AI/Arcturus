@@ -10,6 +10,14 @@ import { API_BASE } from '@/lib/api';
 // Context menu removed due to missing component
 
 
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+
 interface NoteItem {
     name: string;
     path: string;
@@ -23,18 +31,92 @@ const NoteTreeItem: React.FC<{
     onSelect: (item: NoteItem) => void;
     selectedPath: string | undefined;
     onDelete: (path: string) => void;
+    onRename: (path: string, newName: string) => void;
+    onAction: (action: string, path: string, type: string) => void;
     expandedFolders: string[];
     toggleFolder: (path: string) => void;
-}> = ({ item, level, onSelect, selectedPath, onDelete, expandedFolders, toggleFolder }) => {
+    onRefresh: () => void;
+}> = ({ item, level, onSelect, selectedPath, onDelete, onRename, onAction, expandedFolders, toggleFolder, onRefresh }) => {
+    const { clipboard, setClipboard } = useAppStore();
     const isFolder = item.type === 'folder';
     const isOpen = expandedFolders.includes(item.path);
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [renameValue, setRenameValue] = useState(item.name);
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        if (isRenaming && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [isRenaming]);
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
+        if (isRenaming) return;
         if (isFolder) {
             toggleFolder(item.path);
         }
         onSelect(item);
+    };
+
+    const handleRenameSubmit = () => {
+        if (renameValue.trim() && renameValue !== item.name) {
+            onRename(item.path, renameValue.trim());
+        }
+        setIsRenaming(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleRenameSubmit();
+        } else if (e.key === 'Escape') {
+            setRenameValue(item.name);
+            setIsRenaming(false);
+        }
+    };
+
+    const handleContextMenuAction = async (action: string) => {
+        switch (action) {
+            case 'cut':
+                setClipboard({ type: 'cut', path: item.path });
+                break;
+            case 'copy':
+                setClipboard({ type: 'copy', path: item.path });
+                break;
+            case 'paste':
+                onAction('paste', item.path, item.type);
+                break;
+            case 'copy-relative-path':
+                navigator.clipboard.writeText(item.path);
+                break;
+            case 'copy-absolute-path':
+                try {
+                    const res = await axios.get(`${API_BASE}/rag/absolute_path`, { params: { path: item.path } });
+                    if (res.data.absolute_path) {
+                        navigator.clipboard.writeText(res.data.absolute_path);
+                    }
+                } catch (e) {
+                    console.error("Failed to get absolute path", e);
+                }
+                break;
+            case 'rename':
+                setIsRenaming(true);
+                break;
+            case 'reveal':
+                try {
+                    const res = await axios.get(`${API_BASE}/rag/absolute_path`, { params: { path: item.path } });
+                    if (res.data.absolute_path) {
+                        window.electronAPI.send('shell:reveal', res.data.absolute_path);
+                    }
+                } catch (e) {
+                    console.error("Failed to reveal item", e);
+                }
+                break;
+            case 'delete':
+                onDelete(item.path);
+                break;
+        }
     };
 
     const getIcon = () => {
@@ -43,29 +125,73 @@ const NoteTreeItem: React.FC<{
     };
 
     return (
-        <div>
-            <div
-                className={cn(
-                    "group relative flex items-center gap-1.5 py-1.5 px-3 transition-all duration-200 cursor-pointer select-none",
-                    selectedPath === item.path
-                        ? "bg-blue-500/10 text-blue-500 shadow-[inset_2px_0_0_0_#2b7fff]"
-                        : "hover:bg-accent/30 text-muted-foreground hover:text-foreground",
-                )}
-                style={{ paddingLeft: `${level * 12 + 12}px` }}
-                onClick={handleClick}
-            >
-                {getIcon()}
-                <div className="flex-1 truncate text-xs font-medium">
-                    {item.name}
-                </div>
-                {/* Delete button appears on hover or selection */}
+        <ContextMenu>
+            <ContextMenuTrigger disabled={isRenaming}>
                 <div
-                    className={cn("opacity-0 group-hover:opacity-100 flex items-center bg-background/50 rounded p-0.5", selectedPath === item.path && "opacity-100")}
-                    onClick={(e) => { e.stopPropagation(); onDelete(item.path); }}
+                    className={cn(
+                        "group relative flex items-center gap-1.5 py-1.5 px-3 transition-all duration-200 cursor-pointer select-none",
+                        selectedPath === item.path
+                            ? "bg-blue-500/10 text-blue-500 shadow-[inset_2px_0_0_0_#2b7fff]"
+                            : "hover:bg-accent/30 text-muted-foreground hover:text-foreground",
+                        clipboard?.path === item.path && "opacity-50 grayscale-[0.5]"
+                    )}
+                    style={{ paddingLeft: `${level * 12 + 12}px` }}
+                    onClick={handleClick}
                 >
-                    <Trash2 className="w-3 h-3 hover:text-red-500" />
+                    {getIcon()}
+                    <div className="flex-1 truncate text-xs font-medium">
+                        {isRenaming ? (
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onBlur={handleRenameSubmit}
+                                onKeyDown={handleKeyDown}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full bg-background border border-primary h-5 text-xs px-1 outline-none"
+                            />
+                        ) : (
+                            item.name
+                        )}
+                    </div>
+                    {/* Delete button appears on hover or selection */}
+                    <div
+                        className={cn("opacity-0 group-hover:opacity-100 flex items-center bg-background/50 rounded p-0.5", selectedPath === item.path && "opacity-100")}
+                        onClick={(e) => { e.stopPropagation(); onDelete(item.path); }}
+                    >
+                        <Trash2 className="w-3 h-3 hover:text-red-500" />
+                    </div>
                 </div>
-            </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-56">
+                <ContextMenuItem onClick={() => handleContextMenuAction('cut')}>
+                    Cut
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleContextMenuAction('copy')}>
+                    Copy
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleContextMenuAction('paste')} disabled={!clipboard}>
+                    Paste
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => handleContextMenuAction('copy-relative-path')}>
+                    Copy Relative Path
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleContextMenuAction('copy-absolute-path')}>
+                    Copy Absolute Path
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => handleContextMenuAction('reveal')}>
+                    Locate on Computer
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleContextMenuAction('rename')}>
+                    Rename
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleContextMenuAction('delete')} className="text-red-500 hover:text-red-500">
+                    Delete
+                </ContextMenuItem>
+            </ContextMenuContent>
 
             {isFolder && isOpen && item.children && (
                 <div>
@@ -77,13 +203,16 @@ const NoteTreeItem: React.FC<{
                             onSelect={onSelect}
                             selectedPath={selectedPath}
                             onDelete={onDelete}
+                            onRename={onRename}
+                            onAction={onAction}
                             expandedFolders={expandedFolders}
                             toggleFolder={toggleFolder}
+                            onRefresh={onRefresh}
                         />
                     ))}
                 </div>
             )}
-        </div>
+        </ContextMenu>
     );
 };
 
@@ -96,7 +225,9 @@ export const NotesPanel: React.FC = () => {
         fetchNotesFiles,
         isNotesLoading,
         expandedNotesFolders,
-        toggleNoteFolder
+        toggleNoteFolder,
+        clipboard,
+        setClipboard
     } = useAppStore();
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -245,6 +376,48 @@ export const NotesPanel: React.FC = () => {
 
     const displayedFiles = useMemo(() => filterNodes(notesFiles, searchQuery), [notesFiles, searchQuery]);
 
+    const handleRename = async (path: string, newName: string) => {
+        const oldPath = path;
+        const newPath = path.substring(0, path.lastIndexOf('/')) + '/' + newName;
+        try {
+            const formData = new FormData();
+            formData.append('old_path', oldPath);
+            formData.append('new_path', newPath);
+            await axios.post(`${API_BASE}/rag/rename`, formData);
+            fetchNotesFiles();
+        } catch (e) {
+            console.error("Rename failed", e);
+            alert("Rename failed");
+        }
+    };
+
+    const handleAction = async (action: string, targetPath: string, targetType: string) => {
+        if (action === 'paste' && clipboard) {
+            // If target is a folder, paste inside. If file, paste as sibling.
+            let parentDir = targetPath;
+            if (targetType !== 'folder') {
+                const parts = targetPath.split('/');
+                parts.pop();
+                parentDir = parts.join('/');
+            }
+
+            const dest = `${parentDir}/${clipboard.path.split('/').pop()}`;
+
+            const endpoint = clipboard.type === 'cut' ? '/rag/move' : '/rag/copy';
+            try {
+                const formData = new FormData();
+                formData.append('src', clipboard.path);
+                formData.append('dest', dest);
+                await axios.post(`${API_BASE}${endpoint}`, formData);
+                if (clipboard.type === 'cut') setClipboard(null);
+                fetchNotesFiles();
+            } catch (e) {
+                console.error("Paste failed", e);
+                alert("Paste failed");
+            }
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-transparent text-foreground">
             {/* Header */}
@@ -358,8 +531,11 @@ export const NotesPanel: React.FC = () => {
                             }}
                             selectedPath={notesActiveDocumentId || selectedItem?.path}
                             onDelete={handleDelete}
+                            onRename={handleRename}
+                            onAction={handleAction}
                             expandedFolders={expandedNotesFolders}
                             toggleFolder={toggleNoteFolder}
+                            onRefresh={fetchNotesFiles}
                         />
                     ))
                 )}
