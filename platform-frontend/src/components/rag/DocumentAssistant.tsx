@@ -338,27 +338,40 @@ const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file
     );
 };
 
-export const DocumentAssistant: React.FC = () => {
-    const ragActiveDocumentId = useAppStore(state => state.ragActiveDocumentId);
-    const ragOpenDocuments = useAppStore(state => state.ragOpenDocuments);
-    const chatSessions = useAppStore(state => state.chatSessions);
-    const fetchChatSessions = useAppStore(state => state.fetchChatSessions);
-    const loadChatSession = useAppStore(state => state.loadChatSession);
-    const createNewChatSession = useAppStore(state => state.createNewChatSession);
-    const activeChatSessionId = useAppStore(state => state.activeChatSessionId);
-    const addMessageToDocChat = useAppStore(state => state.addMessageToDocChat);
-    const updateMessageContent = useAppStore(state => state.updateMessageContent);
-    const selectedFileContexts = useAppStore(state => state.selectedFileContexts);
-    const addSelectedFileContext = useAppStore(state => state.addSelectedFileContext);
-    const removeSelectedFileContext = useAppStore(state => state.removeSelectedFileContext);
-    const clearSelectedFileContexts = useAppStore(state => state.clearSelectedFileContexts);
-    const selectedContexts = useAppStore(state => state.selectedContexts);
-    const removeSelectedContext = useAppStore(state => state.removeSelectedContext);
-    const clearSelectedContexts = useAppStore(state => state.clearSelectedContexts);
-    const selectedModel = useAppStore(state => state.localModel); // For model selection
-    const setSelectedModel = useAppStore(state => state.setLocalModel);
-    const ollamaModels = useAppStore(state => state.ollamaModels);
-    const fetchOllamaModels = useAppStore(state => state.fetchOllamaModels);
+export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ context = 'rag' }) => {
+    const {
+        ragActiveDocumentId,
+        ragOpenDocuments,
+        notesActiveDocumentId,
+        notesOpenDocuments,
+        chatSessions,
+        fetchChatSessions,
+        loadChatSession,
+        createNewChatSession,
+        activeChatSessionId,
+        addMessageToDocChat,
+        updateMessageContent,
+        selectedFileContexts,
+        addSelectedFileContext,
+        removeSelectedFileContext,
+        clearSelectedFileContexts,
+        selectedContexts,
+        removeSelectedContext,
+        clearSelectedContexts,
+        localModel: selectedModel,
+        setLocalModel: setSelectedModel,
+        ollamaModels,
+        fetchOllamaModels,
+        ideActiveDocumentId,
+        ideOpenDocuments,
+        updateIdeDocumentContent,
+        explorerRootPath,
+        refreshExplorerFiles
+    } = useAppStore();
+
+    const isNotes = context === 'notes';
+    const activeDocId = isNotes ? notesActiveDocumentId : ragActiveDocumentId;
+    const openDocuments = isNotes ? notesOpenDocuments : ragOpenDocuments;
 
 
     const [inputValue, setInputValue] = useState('');
@@ -399,16 +412,16 @@ export const DocumentAssistant: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickAway);
     }, [isHistoryOpen, isModelMenuOpen]);
 
-    // Determine active document (RAG only)
-    const activeDoc = ragOpenDocuments.find(d => d.id === ragActiveDocumentId);
+    // Determine active document
+    const activeDoc = openDocuments.find(d => d.id === activeDocId);
 
     // Fetch sessions and models on mount/doc change
     useEffect(() => {
         if (activeDoc?.id) {
-            fetchChatSessions('rag', activeDoc.id);
+            fetchChatSessions(context, activeDoc.id);
         }
         fetchOllamaModels();
-    }, [activeDoc?.id, fetchChatSessions, fetchOllamaModels]);
+    }, [activeDoc?.id, context, fetchChatSessions, fetchOllamaModels]);
 
     const history = activeDoc?.chatHistory || [];
 

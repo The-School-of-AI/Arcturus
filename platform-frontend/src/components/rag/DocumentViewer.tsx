@@ -42,19 +42,30 @@ const TabButton: React.FC<TabButtonProps> = ({ label, active, onClick }) => (
 
 import { SelectionMenu } from '@/components/common/SelectionMenu';
 
-export const DocumentViewer: React.FC = () => {
+export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ context = 'rag' }) => {
     const {
         ragActiveDocumentId,
         ragOpenDocuments,
-        viewMode,
+        notesActiveDocumentId,
+        notesOpenDocuments,
         addSelectedContext,
         setActiveRagDocument,
+        setActiveNotesDocument,
         closeRagDocument,
+        closeNotesDocument,
         closeAllRagDocuments,
+        closeAllNotesDocuments,
         showRagInsights,
         toggleRagInsights
     } = useAppStore();
     const { theme } = useTheme();
+
+    const isNotes = context === 'notes';
+    const activeDocId = isNotes ? notesActiveDocumentId : ragActiveDocumentId;
+    const openDocuments = isNotes ? notesOpenDocuments : ragOpenDocuments;
+    const setActiveDocument = isNotes ? setActiveNotesDocument : setActiveRagDocument;
+    const closeDocument = isNotes ? closeNotesDocument : closeRagDocument;
+    const closeAllDocuments = isNotes ? closeAllNotesDocuments : closeAllRagDocuments;
 
     const [content, setContent] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -75,7 +86,7 @@ export const DocumentViewer: React.FC = () => {
     const [insightsQuestion, setInsightsQuestion] = useState('');
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
-    const activeDoc = ragOpenDocuments.find(d => d.id === ragActiveDocumentId);
+    const activeDoc = openDocuments.find(d => d.id === activeDocId);
     // ✅ CORRECT: Call the plugin hooks at the top level
     const searchPluginInstance = searchPlugin();
     const { highlight, jumpToNextMatch } = searchPluginInstance;
@@ -341,36 +352,36 @@ export const DocumentViewer: React.FC = () => {
             {/* Tab Bar - Browser Style */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 pr-4 shrink-0 h-12">
                 <div className="flex items-center gap-[1px] px-2 h-full overflow-x-auto no-scrollbar scroll-smooth flex-1 active-tabs-container">
-                    {ragOpenDocuments.map(doc => (
+                    {openDocuments.map(doc => (
                         <div
                             key={doc.id}
-                            onClick={() => setActiveRagDocument(doc.id)}
+                            onClick={() => setActiveDocument(doc.id)}
                             className={cn(
                                 "group flex items-center gap-0 px-2 h-10 mt-auto rounded-t-lg transition-all cursor-pointer min-w-[50px] max-w-[150px] border-x border-t border-transparent relative",
-                                ragActiveDocumentId === doc.id
+                                activeDocId === doc.id
                                     ? "bg-background border-border text-foreground z-10 before:absolute before:bottom-[-2px] before:left-0 before:right-0 before:h-[2px] before:bg-background"
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
                             )}
                         >
-                            {isCodeFile(doc.type) ? <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", ragActiveDocumentId === doc.id ? "text-primary" : "text-muted-foreground")} />}
+                            {isCodeFile(doc.type) ? <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" /> : <FileText className={cn("w-3.5 h-3.5 shrink-0", activeDocId === doc.id ? "text-primary" : "text-muted-foreground")} />}
                             <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
                             <button
-                                onClick={(e) => { e.stopPropagation(); closeRagDocument(doc.id); }}
+                                onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
                                 className="p-1 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <X className="w-3 h-3" />
                             </button>
                         </div>
                     ))}
-                    {ragOpenDocuments.length === 0 && (
-                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/90">Discovery Workspace</div>
+                    {openDocuments.length === 0 && (
+                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/90">{isNotes ? 'Notes Workspace' : 'Discovery Workspace'}</div>
                     )}
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {ragOpenDocuments.length > 0 && (
+                    {openDocuments.length > 0 && (
                         <button
-                            onClick={closeAllRagDocuments}
+                            onClick={closeAllDocuments}
                             className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/10 border border-border/50"
                         >
                             <X className="w-2.5 h-2.5" />
@@ -386,26 +397,30 @@ export const DocumentViewer: React.FC = () => {
                                     active={viewType === 'source'}
                                     onClick={() => setViewType('source')}
                                 />
-                                <TabButton
-                                    label="Chunks"
-                                    active={viewType === 'ai'}
-                                    onClick={() => setViewType('ai')}
-                                />
+                                {!isNotes && (
+                                    <TabButton
+                                        label="Chunks"
+                                        active={viewType === 'ai'}
+                                        onClick={() => setViewType('ai')}
+                                    />
+                                )}
                             </div>
 
-                            <button
-                                onClick={toggleRagInsights}
-                                className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all text-[9px] font-bold uppercase tracking-wider border",
-                                    showRagInsights
-                                        ? "bg-primary text-primary-foreground border-primary shadow-[0_0_12px_rgba(59,130,246,0.3)]"
-                                        : "bg-black/10 text-muted-foreground hover:text-foreground border-border/50 hover:bg-black/20"
-                                )}
-                                title="Toggle Insights Panel"
-                            >
-                                <Sparkles className={cn("w-3.5 h-3.5", showRagInsights ? "animate-pulse" : "opacity-70")} />
-                                Insights
-                            </button>
+                            {!isNotes && (
+                                <button
+                                    onClick={toggleRagInsights}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all text-[9px] font-bold uppercase tracking-wider border",
+                                        showRagInsights
+                                            ? "bg-primary text-primary-foreground border-primary shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+                                            : "bg-black/10 text-muted-foreground hover:text-foreground border-border/50 hover:bg-black/20"
+                                    )}
+                                    title="Toggle Insights Panel"
+                                >
+                                    <Sparkles className={cn("w-3.5 h-3.5", showRagInsights ? "animate-pulse" : "opacity-70")} />
+                                    Insights
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -459,7 +474,7 @@ export const DocumentViewer: React.FC = () => {
                 {content !== null && !isDocx && (
                     <>
                         {/* Insights View (Markdown Extraction) */}
-                        {viewType === 'ai' && activeDoc && canPreview(activeDoc.type) ? (
+                        {viewType === 'ai' && activeDoc && canPreview(activeDoc.type) && !isNotes ? (
                             <div className="absolute inset-0 overflow-y-auto p-12 bg-background select-text">
                                 <div className="max-w-[800px] mx-auto">
                                     {chunks ? (
@@ -607,8 +622,8 @@ export const DocumentViewer: React.FC = () => {
                             </div>
                         </div>
                         <div className="text-center space-y-2">
-                            <h3 className="text-xl font-bold text-foreground tracking-tight">Document Viewer</h3>
-                            <p className="text-sm">Select a document from the library to view</p>
+                            <h3 className="text-xl font-bold text-foreground tracking-tight">{isNotes ? 'Notes Viewer' : 'Document Viewer'}</h3>
+                            <p className="text-sm">Select a document from the {isNotes ? 'notes' : 'library'} to view</p>
                         </div>
                     </div>
                 ) : null}

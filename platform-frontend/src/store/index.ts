@@ -177,10 +177,10 @@ interface ChatSessionSummary {
 interface ChatSlice {
     chatSessions: ChatSessionSummary[];
     activeChatSessionId: string | null;
-    fetchChatSessions: (targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
-    loadChatSession: (sessionId: string, targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
-    createNewChatSession: (targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
-    deleteChatSession: (sessionId: string, targetType: 'rag' | 'ide', targetId: string) => Promise<void>;
+    fetchChatSessions: (targetType: 'rag' | 'ide' | 'notes', targetId: string) => Promise<void>;
+    loadChatSession: (sessionId: string, targetType: 'rag' | 'ide' | 'notes', targetId: string) => Promise<void>;
+    createNewChatSession: (targetType: 'rag' | 'ide' | 'notes', targetId: string) => Promise<void>;
+    deleteChatSession: (sessionId: string, targetType: 'rag' | 'ide' | 'notes', targetId: string) => Promise<void>;
 }
 
 interface NotesSlice {
@@ -704,10 +704,19 @@ export const useAppStore = create<AppState>()(
 
                 const sidebarTab = get().sidebarTab;
                 const isIde = sidebarTab === 'ide';
+                const isNotes = sidebarTab === 'notes';
 
                 if (isIde) {
                     set((state) => ({
                         ideProjectChatHistory: [...(state.ideProjectChatHistory || []), message]
+                    }));
+                } else if (isNotes) {
+                    set((state) => ({
+                        notesOpenDocuments: state.notesOpenDocuments.map((doc) =>
+                            doc.id === docId
+                                ? { ...doc, chatHistory: [...(doc.chatHistory || []), message] }
+                                : doc
+                        )
                     }));
                 } else {
                     set((state) => ({
@@ -720,7 +729,7 @@ export const useAppStore = create<AppState>()(
                 }
 
                 const finalState = get();
-                let type: 'rag' | 'ide' = isIde ? 'ide' : 'rag';
+                let type: 'rag' | 'ide' | 'notes' = isIde ? 'ide' : (isNotes ? 'notes' : 'rag');
                 const targetId = isIde ? finalState.explorerRootPath : docId;
 
                 if (targetId && currentSessionId) {
@@ -729,7 +738,7 @@ export const useAppStore = create<AppState>()(
                         target_type: type,
                         target_id: targetId,
                         title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
-                        messages: isIde ? finalState.ideProjectChatHistory : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || [],
+                        messages: isIde ? finalState.ideProjectChatHistory : (isNotes ? finalState.notesOpenDocuments.find(d => d.id === docId)?.chatHistory || [] : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || []),
                         created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
                         updated_at: Date.now() / 1000
                     };
@@ -744,11 +753,25 @@ export const useAppStore = create<AppState>()(
             updateMessageContent: (docId, messageId, newContent) => {
                 const sidebarTab = get().sidebarTab;
                 const isIde = sidebarTab === 'ide';
+                const isNotes = sidebarTab === 'notes';
 
                 if (isIde) {
                     set((state) => ({
                         ideProjectChatHistory: (state.ideProjectChatHistory || []).map(msg =>
                             msg.id === messageId ? { ...msg, content: newContent } : msg
+                        )
+                    }));
+                } else if (isNotes) {
+                    set((state) => ({
+                        notesOpenDocuments: state.notesOpenDocuments.map((doc) =>
+                            doc.id === docId
+                                ? {
+                                    ...doc,
+                                    chatHistory: (doc.chatHistory || []).map(msg =>
+                                        msg.id === messageId ? { ...msg, content: newContent } : msg
+                                    )
+                                }
+                                : doc
                         )
                     }));
                 } else {
@@ -770,7 +793,7 @@ export const useAppStore = create<AppState>()(
                 const finalState = get();
                 const currentSessionId = finalState.activeChatSessionId;
                 if (currentSessionId) {
-                    let type: 'rag' | 'ide' = isIde ? 'ide' : 'rag';
+                    let type: 'rag' | 'ide' | 'notes' = isIde ? 'ide' : (isNotes ? 'notes' : 'rag');
                     const targetId = isIde ? finalState.explorerRootPath : docId;
 
                     if (targetId) {
@@ -779,7 +802,7 @@ export const useAppStore = create<AppState>()(
                             target_type: type,
                             target_id: targetId,
                             title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
-                            messages: isIde ? finalState.ideProjectChatHistory : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || [],
+                            messages: isIde ? finalState.ideProjectChatHistory : (isNotes ? finalState.notesOpenDocuments.find(d => d.id === docId)?.chatHistory || [] : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || []),
                             created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
                             updated_at: Date.now() / 1000
                         }).catch(console.error);
@@ -968,6 +991,13 @@ export const useAppStore = create<AppState>()(
                             activeChatSessionId: sessionId,
                             ideProjectChatHistory: session.messages
                         });
+                    } else if (targetType === 'notes') {
+                        set(state => ({
+                            activeChatSessionId: sessionId,
+                            notesOpenDocuments: state.notesOpenDocuments.map(d =>
+                                d.id === targetId ? { ...d, chatHistory: session.messages } : d
+                            )
+                        }));
                     } else {
                         set(state => ({
                             activeChatSessionId: sessionId,
@@ -988,6 +1018,21 @@ export const useAppStore = create<AppState>()(
                     set(state => ({
                         activeChatSessionId: newId,
                         ideProjectChatHistory: [],
+                        chatSessions: [{
+                            id: newId,
+                            title: "New Chat",
+                            created_at: Date.now() / 1000,
+                            updated_at: Date.now() / 1000,
+                            preview: "",
+                            model: "default"
+                        }, ...state.chatSessions]
+                    }));
+                } else if (targetType === 'notes') {
+                    set(state => ({
+                        activeChatSessionId: newId,
+                        notesOpenDocuments: state.notesOpenDocuments.map(d =>
+                            d.id === targetId ? { ...d, chatHistory: [] } : d
+                        ),
                         chatSessions: [{
                             id: newId,
                             title: "New Chat",

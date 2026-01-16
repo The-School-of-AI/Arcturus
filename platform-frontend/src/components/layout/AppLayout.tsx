@@ -42,7 +42,8 @@ import { IdeLayout } from '@/features/ide/components/IdeLayout';
 export const AppLayout: React.FC = () => {
     const {
         viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
-        selectedNodeId, selectedAppCardId, selectedExplorerNodeId, activeDocumentId,
+        selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
+        ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode
     } = useAppStore();
@@ -184,8 +185,8 @@ export const AppLayout: React.FC = () => {
                             <DocumentViewer />
                         ) : sidebarTab === 'notes' ? (
                             /* If it's a binary file, show DocumentViewer, else show Editor */
-                            activeDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp)$/i.test(activeDocumentId)
-                                ? <DocumentViewer />
+                            notesActiveDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp|docx?|json)$/i.test(notesActiveDocumentId)
+                                ? <DocumentViewer context="notes" />
                                 : <NotesEditor />
                         ) : sidebarTab === 'remme' ? (
                             <RemMeProfileView />
@@ -226,7 +227,7 @@ export const AppLayout: React.FC = () => {
                             {sidebarTab === 'apps' ? <AppInspector /> :
                                 sidebarTab === 'mcp' ? <McpInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
-                                        (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant /> :
+                                        (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
                                             <WorkspacePanel />}
                         </div>
                     </>
