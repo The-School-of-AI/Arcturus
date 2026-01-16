@@ -1,0 +1,276 @@
+[
+    {
+        "id": "gaia_001",
+        "category": "travel",
+        "difficulty": "easy",
+        "query": "Plan a 3-day trip to Tokyo for a first-time visitor interested in food and culture.",
+        "expected_components": [
+            "itinerary",
+            "food recommendations",
+            "cultural sites",
+            "transportation tips"
+        ],
+        "evaluation_criteria": {
+            "has_itinerary": true,
+            "mentions_specific_places": true,
+            "includes_practical_details": true
+        },
+        "notes": "Tests PlannerAgent coordination and RetrieverAgent web search"
+    },
+    {
+        "id": "gaia_002",
+        "category": "research",
+        "difficulty": "medium",
+        "query": "What are the key differences between transformer and mamba architectures? Which is better for long sequences?",
+        "expected_components": [
+            "attention mechanism comparison",
+            "mamba state space explanation",
+            "long sequence handling",
+            "recommendation"
+        ],
+        "evaluation_criteria": {
+            "explains_attention": true,
+            "explains_mamba": true,
+            "compares_complexity": true,
+            "gives_recommendation": true
+        },
+        "notes": "Tests RetrieverAgent research and DistillerAgent synthesis"
+    },
+    {
+        "id": "gaia_003",
+        "category": "coding",
+        "difficulty": "medium",
+        "query": "Write a Python function that calculates the nth Fibonacci number using memoization, with type hints and docstring.",
+        "expected_components": [
+            "function definition",
+            "memoization",
+            "type hints",
+            "docstring"
+        ],
+        "evaluation_criteria": {
+            "has_function": true,
+            "uses_decorator_or_dict": true,
+            "has_type_hints": true,
+            "has_docstring": true,
+            "is_correct": true
+        },
+        "notes": "Tests CoderAgent capability"
+    },
+    {
+        "id": "gaia_004",
+        "category": "data",
+        "difficulty": "easy",
+        "query": "Create a simple bar chart visualization showing monthly sales: Jan=100, Feb=120, Mar=95, Apr=150, May=180.",
+        "expected_components": [
+            "matplotlib or plotly code",
+            "x-axis labels",
+            "y-axis values",
+            "chart title"
+        ],
+        "evaluation_criteria": {
+            "generates_code": true,
+            "correct_values": true,
+            "has_labels": true
+        },
+        "notes": "Tests CoderAgent visualization capability"
+    },
+    {
+        "id": "gaia_005",
+        "category": "reasoning",
+        "difficulty": "hard",
+        "query": "A farmer has 100 chickens and rabbits. The total number of legs is 340. How many chickens and how many rabbits are there? Show your reasoning step by step.",
+        "expected_components": [
+            "problem setup",
+            "equation formulation",
+            "solving steps",
+            "final answer: 30 chickens, 70 rabbits"
+        ],
+        "evaluation_criteria": {
+            "shows_reasoning": true,
+            "correct_answer": true,
+            "uses_equations": true
+        },
+        "notes": "Tests ThinkerAgent reasoning capability"
+    },
+    {
+        "id": "gaia_006",
+        "category": "travel",
+        "difficulty": "easy",
+        "query": "Plan a romantic 2-day honeymoon itinerary in Kyoto, focusing on quiet temples and high-end dining.",
+        "expected_components": [
+            "temple recommendations",
+            "restaurant names",
+            "transportation advice",
+            "romantic spots"
+        ],
+        "evaluation_criteria": {
+            "is_romantic": true,
+            "mentions_kyoto_places": true,
+            "covers_2_days": true
+        },
+        "notes": "Tests PlannerAgent constraints"
+    },
+    {
+        "id": "gaia_007",
+        "category": "research",
+        "difficulty": "hard",
+        "query": "Compare Mixture of Experts (MoE) models vs Dense models. What are the trade-offs in inference latency vs memory usage?",
+        "expected_components": [
+            "definition of MoE",
+            "definition of Dense",
+            "latency comparison",
+            "memory usage comparison",
+            "trade-off analysis"
+        ],
+        "evaluation_criteria": {
+            "mentions_sparsity": true,
+            "explains_inference_latency": true,
+            "explains_vram_usage": true
+        },
+        "notes": "Tests technical research depth"
+    },
+    {
+        "id": "gaia_008",
+        "category": "coding",
+        "difficulty": "medium",
+        "query": "Write a React component `TodoList` that saves items to LocalStorage. Include add, delete, and toggle complete features.",
+        "expected_components": [
+            "React imports",
+            "useState",
+            "useEffect for localStorage",
+            "map function",
+            "toggle logic"
+        ],
+        "evaluation_criteria": {
+            "is_react_code": true,
+            "uses_local_storage": true,
+            "has_add_delete_toggle": true
+        },
+        "notes": "Tests frontend coding capability"
+    },
+    {
+        "id": "gaia_009",
+        "category": "data",
+        "difficulty": "medium",
+        "query": "Write a Python script using pandas and seaborn to generate a heatmap from a random 10x10 matrix. Save it as 'heatmap.png'.",
+        "expected_components": [
+            "pandas import",
+            "seaborn import",
+            "random data generation",
+            "heatmap plotting",
+            "savefig call"
+        ],
+        "evaluation_criteria": {
+            "imports_correct": true,
+            "generates_data": true,
+            "saves_file": true
+        },
+        "notes": "Tests data visualization code generation"
+    },
+    {
+        "id": "gaia_010",
+        "category": "reasoning",
+        "difficulty": "medium",
+        "query": "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
+        "expected_components": [
+            "rate calculation",
+            "logical steps",
+            "final answer: 5 minutes"
+        ],
+        "evaluation_criteria": {
+            "correct_answer_5_minutes": true,
+            "avoids_100_minutes_trap": true
+        },
+        "notes": "Tests logic/riddle solving"
+    },
+    {
+        "id": "gaia_011",
+        "category": "coding",
+        "difficulty": "hard",
+        "query": "Create a FastAPI endpoint `/register` that accepts email/password, hashes the password with bcrypt, and returns a JWT token. Use Pydantic models.",
+        "expected_components": [
+            "FastAPI app",
+            "Pydantic models",
+            "passlib/bcrypt hashing",
+            "jwt encoding",
+            "post endpoint"
+        ],
+        "evaluation_criteria": {
+            "is_fastapi": true,
+            "secures_password": true,
+            "returns_token": true
+        },
+        "notes": "Tests backend API coding"
+    },
+    {
+        "id": "gaia_012",
+        "category": "research",
+        "difficulty": "medium",
+        "query": "What is the current status of Solid State Battery commercialization as of late 2024? Who are the key players?",
+        "expected_components": [
+            "current status summary",
+            "key companies (Toyota, QuantumScape, etc.)",
+            "timeline estimates"
+        ],
+        "evaluation_criteria": {
+            "mentions_key_companies": true,
+            "gives_realistic_timeline": true
+        },
+        "notes": "Tests up-to-date knowledge retrieval"
+    },
+    {
+        "id": "gaia_013",
+        "category": "travel",
+        "difficulty": "easy",
+        "query": "Create a 2-day itinerary for a foodie in Paris. Include specific famous bakeries and bistros.",
+        "expected_components": [
+            "breakfast spots",
+            "lunch/dinner recommendations",
+            "specific bakery names",
+            "route logic"
+        ],
+        "evaluation_criteria": {
+            "mentions_specific_restaurants": true,
+            "covers_2_days": true,
+            "is_food_focused": true
+        },
+        "notes": "Tests lifestyle planning"
+    },
+    {
+        "id": "gaia_014",
+        "category": "data",
+        "difficulty": "medium",
+        "query": "Write a SQL query to find the top 5 customers by total lifetime spend, joining `users` and `orders` tables.",
+        "expected_components": [
+            "SELECT",
+            "JOIN",
+            "points to users/orders",
+            "SUM(amount)",
+            "GROUP BY",
+            "ORDER BY DESC",
+            "LIMIT 5"
+        ],
+        "evaluation_criteria": {
+            "is_valid_sql": true,
+            "uses_join": true,
+            "aggregates_correctly": true
+        },
+        "notes": "Tests SQL generation"
+    },
+    {
+        "id": "gaia_015",
+        "category": "reasoning",
+        "difficulty": "hard",
+        "query": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost?",
+        "expected_components": [
+            "equation x + (x+1) = 1.10",
+            "solving for x",
+            "final answer: $0.05"
+        ],
+        "evaluation_criteria": {
+            "correct_answer_0_05": true,
+            "avoids_0_10_trap": true
+        },
+        "notes": "Tests cognitive bias resistance"
+    }
+]

@@ -82,7 +82,23 @@ class AgentRunner:
             
             # 3. Build full prompt
             current_date = datetime.now().strftime("%Y-%m-%d")
-            full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2)}\n```"
+            
+            # 3a. Inject user preferences (compact format)
+            try:
+                from remme.preferences import get_compact_policy
+                # Map agent types to scopes for preference lookup
+                scope_map = {
+                    "PlannerAgent": "planning", "CoderAgent": "coding",
+                    "DistillerAgent": "coding", "FormatterAgent": "formatting",
+                    "RetrieverAgent": "research", "ThinkerAgent": "reasoning",
+                }
+                scope = scope_map.get(agent_type, "general")
+                user_prefs_text = f"\n---\n## User Preferences\n{get_compact_policy(scope)}\n---\n"
+            except Exception as e:
+                print(f"⚠️ Could not load user preferences: {e}")
+                user_prefs_text = ""
+            
+            full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2)}\n```"
 
             print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
 

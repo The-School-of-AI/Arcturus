@@ -352,11 +352,32 @@ class MultiMCP:
 
     # Helper to route tool call by finding which server has it
     async def route_tool_call(self, tool_name: str, arguments: dict):
-        for name, tools in self.tools.items():
-            for tool in tools:
-                if tool.name == tool_name:
-                    return await self.call_tool(name, tool_name, arguments)
-        raise ValueError(f"Tool '{tool_name}' not found in any server")
+        from core.circuit_breaker import get_breaker, CircuitOpenError
+        
+        # Get or create circuit breaker for this tool
+        breaker = get_breaker(tool_name, failure_threshold=5, recovery_timeout=60.0)
+        
+        # Check if circuit allows execution
+        if not breaker.can_execute():
+            status = breaker.get_status()
+            raise CircuitOpenError(
+                f"Circuit open for '{tool_name}' - service failing. "
+                f"Retry in {status['time_until_retry']:.0f}s"
+            )
+        
+        try:
+            for name, tools in self.tools.items():
+                for tool in tools:
+                    if tool.name == tool_name:
+                        result = await self.call_tool(name, tool_name, arguments)
+                        breaker.record_success()
+                        return result
+            raise ValueError(f"Tool '{tool_name}' not found in any server")
+        except CircuitOpenError:
+            raise  # Re-raise circuit errors without recording failure
+        except Exception as e:
+            breaker.record_failure()
+            raise
 
     def _load_cache(self) -> dict:
         """Load metadata cache from file"""

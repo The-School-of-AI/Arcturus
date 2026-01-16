@@ -1,0 +1,23 @@
+[
+  {
+    "test_id": "gaia_005",
+    "category": "reasoning",
+    "difficulty": "hard",
+    "query": "A farmer has 100 chickens and rabbits. The total number of legs is 340. How many chickens and how many rabbits are there? Show your reasoning step by step.",
+    "success": false,
+    "duration_seconds": 58.754376,
+    "total_cost": 0,
+    "total_tokens": 0,
+    "completed_steps": 0,
+    "failed_steps": 1,
+    "final_output": null,
+    "expected_components": [
+      "problem setup",
+      "equation formulation",
+      "solving steps",
+      "final answer: 30 chickens, 70 rabbits"
+    ],
+    "timestamp": "2026-01-15T22:07:44.463121",
+    "error": "'ExecutionContextManager' object has no attribute 'G'"
+  }
+]
