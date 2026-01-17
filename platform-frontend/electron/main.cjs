@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell, Menu } = require('electron');
 // Set App Name early for MacOS Dock/Menu
 app.name = "Arcturus";
 app.setName("Arcturus");
@@ -30,6 +30,12 @@ const iconPath = isDev
 let ptyProcess = null;
 let activeTerminalCwd = null;
 let activeTerminalBuffer = ""; // Store terminal history
+
+// Browser View state (WebContentsView-based browser)
+let browserViews = new Map(); // tabId -> { view: WebContentsView, url: string, title: string }
+let activeBrowserTabId = null;
+let browserViewBounds = { x: 0, y: 0, width: 800, height: 600 };
+let browserTabCounter = 0;
 
 function createWindow() {
 
@@ -596,6 +602,330 @@ function setupDialogHandlers() {
     });
 }
 
+// --- Browser View Handlers (WebContentsView-based browser) ---
+function setupBrowserHandlers() {
+    const preloadBrowserPath = path.join(__dirname, 'preload-browser.cjs');
+
+    // Helper to update view bounds
+    const updateActiveBrowserViewBounds = () => {
+        if (activeBrowserTabId && browserViews.has(activeBrowserTabId)) {
+            const { view } = browserViews.get(activeBrowserTabId);
+            console.log('[Arcturus] Applying bounds to active view:', browserViewBounds);
+            view.setBounds(browserViewBounds);
+        }
+    };
+
+    // Create a new browser tab
+    ipcMain.handle('browser:create-tab', async (event, url) => {
+        const tabId = `tab-${++browserTabCounter}`;
+        console.log(`[Arcturus] Creating browser tab ${tabId} with URL: ${url}`);
+
+        const view = new WebContentsView({
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+                preload: preloadBrowserPath,
+                // Shared session for all browser tabs
+                partition: 'persist:arcturus-browser'
+            }
+        });
+
+        // Set initial bounds
+        view.setBounds(browserViewBounds);
+
+        // Store view data
+        browserViews.set(tabId, {
+            view,
+            url: url || 'about:blank',
+            title: 'New Tab',
+            loading: false,
+            canGoBack: false,
+            canGoForward: false
+        });
+
+        // Wire up WebContents events
+        const wc = view.webContents;
+
+        wc.on('did-start-loading', () => {
+            const data = browserViews.get(tabId);
+            if (data) data.loading = true;
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('browser:loading-changed', { tabId, loading: true });
+            }
+        });
+
+        wc.on('did-stop-loading', () => {
+            const data = browserViews.get(tabId);
+            if (data) data.loading = false;
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('browser:loading-changed', { tabId, loading: false });
+            }
+        });
+
+        wc.on('did-navigate', (e, navUrl) => {
+            const data = browserViews.get(tabId);
+            if (data) {
+                data.url = navUrl;
+                data.canGoBack = wc.canGoBack();
+                data.canGoForward = wc.canGoForward();
+            }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('browser:did-navigate', {
+                    tabId,
+                    url: navUrl,
+                    canGoBack: wc.canGoBack(),
+                    canGoForward: wc.canGoForward()
+                });
+            }
+        });
+
+        wc.on('did-navigate-in-page', (e, navUrl) => {
+            const data = browserViews.get(tabId);
+            if (data) {
+                data.url = navUrl;
+                data.canGoBack = wc.canGoBack();
+                data.canGoForward = wc.canGoForward();
+            }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('browser:did-navigate', {
+                    tabId,
+                    url: navUrl,
+                    canGoBack: wc.canGoBack(),
+                    canGoForward: wc.canGoForward()
+                });
+            }
+        });
+
+        wc.on('page-title-updated', (e, title) => {
+            const data = browserViews.get(tabId);
+            if (data) data.title = title;
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('browser:title-updated', { tabId, title });
+            }
+        });
+
+        wc.on('page-favicon-updated', (e, favicons) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('browser:favicon-updated', { tabId, favicon: favicons[0] || null });
+            }
+        });
+
+        // Handle new window requests (popups, OAuth, etc.)
+        wc.setWindowOpenHandler(({ url: popupUrl }) => {
+            // Open OAuth and similar in the same tab
+            wc.loadURL(popupUrl);
+            return { action: 'deny' };
+        });
+
+        // Load URL
+        if (url) {
+            wc.loadURL(url);
+        }
+
+        // Add to window and activate
+        mainWindow.contentView.addChildView(view);
+
+        // Hide any previous active tab
+        if (activeBrowserTabId && browserViews.has(activeBrowserTabId)) {
+            const prevView = browserViews.get(activeBrowserTabId).view;
+            mainWindow.contentView.removeChildView(prevView);
+        }
+
+        activeBrowserTabId = tabId;
+        updateActiveBrowserViewBounds();
+
+        return { tabId, url: url || 'about:blank', title: 'New Tab' };
+    });
+
+    // Close a browser tab
+    ipcMain.handle('browser:close-tab', async (event, tabId) => {
+        console.log(`[Arcturus] Closing browser tab ${tabId}`);
+        if (!browserViews.has(tabId)) return { success: false, error: 'Tab not found' };
+
+        const { view } = browserViews.get(tabId);
+
+        // Remove from window
+        try {
+            mainWindow.contentView.removeChildView(view);
+        } catch (e) { }
+
+        // Destroy webContents
+        view.webContents.close();
+        browserViews.delete(tabId);
+
+        // Activate another tab if this was the active one
+        if (activeBrowserTabId === tabId) {
+            activeBrowserTabId = null;
+            const remaining = Array.from(browserViews.keys());
+            if (remaining.length > 0) {
+                const newActiveId = remaining[remaining.length - 1];
+                activeBrowserTabId = newActiveId;
+                const { view: newView } = browserViews.get(newActiveId);
+                mainWindow.contentView.addChildView(newView);
+                updateActiveBrowserViewBounds();
+            }
+        }
+
+        return { success: true, activeTabId: activeBrowserTabId };
+    });
+
+    // Switch to a different tab
+    ipcMain.handle('browser:switch-tab', async (event, tabId) => {
+        console.log(`[Arcturus] Switching to browser tab ${tabId}`);
+        if (!browserViews.has(tabId)) return { success: false, error: 'Tab not found' };
+
+        // Hide current
+        if (activeBrowserTabId && browserViews.has(activeBrowserTabId)) {
+            const prevView = browserViews.get(activeBrowserTabId).view;
+            try {
+                mainWindow.contentView.removeChildView(prevView);
+            } catch (e) { }
+        }
+
+        // Show new
+        activeBrowserTabId = tabId;
+        const { view, url, title, canGoBack, canGoForward } = browserViews.get(tabId);
+        mainWindow.contentView.addChildView(view);
+        updateActiveBrowserViewBounds();
+
+        return { success: true, tabId, url, title, canGoBack, canGoForward };
+    });
+
+    // Navigate to a URL
+    ipcMain.handle('browser:navigate', async (event, { tabId, url }) => {
+        console.log(`[Arcturus] Navigating tab ${tabId} to ${url}`);
+        if (!browserViews.has(tabId)) return { success: false, error: 'Tab not found' };
+
+        const { view } = browserViews.get(tabId);
+        view.webContents.loadURL(url);
+        return { success: true };
+    });
+
+    // Go back
+    ipcMain.handle('browser:go-back', async (event, tabId) => {
+        if (!browserViews.has(tabId)) return { success: false };
+        const { view } = browserViews.get(tabId);
+        if (view.webContents.canGoBack()) {
+            view.webContents.goBack();
+            return { success: true };
+        }
+        return { success: false };
+    });
+
+    // Go forward
+    ipcMain.handle('browser:go-forward', async (event, tabId) => {
+        if (!browserViews.has(tabId)) return { success: false };
+        const { view } = browserViews.get(tabId);
+        if (view.webContents.canGoForward()) {
+            view.webContents.goForward();
+            return { success: true };
+        }
+        return { success: false };
+    });
+
+    // Reload
+    ipcMain.handle('browser:reload', async (event, tabId) => {
+        if (!browserViews.has(tabId)) return { success: false };
+        const { view } = browserViews.get(tabId);
+        view.webContents.reload();
+        return { success: true };
+    });
+
+    // Set browser view bounds (called from renderer when container resizes)
+    ipcMain.on('browser:set-bounds', (event, bounds) => {
+        console.log('[Arcturus] Setting browser bounds:', bounds);
+        browserViewBounds = bounds;
+        updateActiveBrowserViewBounds();
+    });
+
+    // Hide all browser views (when switching away from News tab)
+    ipcMain.on('browser:hide-all', () => {
+        browserViews.forEach(({ view }) => {
+            try {
+                mainWindow.contentView.removeChildView(view);
+            } catch (e) { }
+        });
+    });
+
+    // Show the active browser view (when returning to News tab)
+    ipcMain.on('browser:show-active', () => {
+        if (activeBrowserTabId && browserViews.has(activeBrowserTabId)) {
+            const { view } = browserViews.get(activeBrowserTabId);
+            try {
+                mainWindow.contentView.addChildView(view);
+                updateActiveBrowserViewBounds();
+            } catch (e) { }
+        }
+    });
+
+    // Get all tabs info
+    ipcMain.handle('browser:get-tabs', async () => {
+        const tabs = [];
+        browserViews.forEach((data, tabId) => {
+            tabs.push({
+                tabId,
+                url: data.url,
+                title: data.title,
+                loading: data.loading,
+                active: tabId === activeBrowserTabId
+            });
+        });
+        return tabs;
+    });
+
+    // Get selected text from active tab
+    ipcMain.handle('browser:get-selection', async (event, tabId) => {
+        if (!browserViews.has(tabId)) return { success: false, text: '' };
+        const { view } = browserViews.get(tabId);
+        try {
+            const text = await view.webContents.executeJavaScript('window.getSelection().toString()');
+            return { success: true, text: text || '' };
+        } catch (e) {
+            return { success: false, text: '' };
+        }
+    });
+
+    // Set zoom level for a tab
+    ipcMain.handle('browser:set-zoom', async (event, { tabId, zoomFactor }) => {
+        if (!browserViews.has(tabId)) return { success: false };
+        const { view } = browserViews.get(tabId);
+        try {
+            view.webContents.setZoomFactor(zoomFactor);
+            return { success: true };
+        } catch (e) {
+            return { success: false };
+        }
+    });
+
+    // Handle window resize - update all view bounds
+    if (mainWindow) {
+        mainWindow.on('resize', () => {
+            updateActiveBrowserViewBounds();
+        });
+
+        // Hide browser views when DevTools is opened (so DevTools isn't covered)
+        mainWindow.webContents.on('devtools-opened', () => {
+            browserViews.forEach(({ view }) => {
+                try {
+                    mainWindow.contentView.removeChildView(view);
+                } catch (e) { }
+            });
+        });
+
+        // Show browser views when DevTools is closed
+        mainWindow.webContents.on('devtools-closed', () => {
+            if (activeBrowserTabId && browserViews.has(activeBrowserTabId)) {
+                const { view } = browserViews.get(activeBrowserTabId);
+                try {
+                    mainWindow.contentView.addChildView(view);
+                    updateActiveBrowserViewBounds();
+                } catch (e) { }
+            }
+        });
+    }
+}
+
 app.on('ready', () => {
     console.log('[Arcturus] App ready, setting up handlers...');
 
@@ -661,6 +991,7 @@ app.on('ready', () => {
     setupFSHandlers();
     setupDialogHandlers();
     createWindow();
+    setupBrowserHandlers(); // Must be after createWindow so mainWindow is available
 });
 
 app.on('window-all-closed', () => {

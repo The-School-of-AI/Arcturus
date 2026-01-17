@@ -35,7 +35,7 @@ import { McpInspector } from '../mcp/McpInspector';
 import { SettingsPage } from '../settings/SettingsPage';
 import { RemMeProfileView } from '../remme/RemmeProfileView';
 import { NewsList } from '@/features/news/components/NewsList';
-import { NewsArticleViewer } from '@/features/news/components/NewsArticleViewer';
+import { ElectronBrowserView } from '@/features/news/components/ElectronBrowserView';
 import { NewsInspector } from '@/features/news/components/NewsInspector';
 import { IdeLayout } from '@/features/ide/components/IdeLayout';
 
@@ -193,7 +193,7 @@ export const AppLayout: React.FC = () => {
                         ) : sidebarTab === 'explorer' ? (
                             <FlowWorkspace />
                         ) : sidebarTab === 'news' ? (
-                            <NewsArticleViewer />
+                            <ElectronBrowserView />
                         ) : sidebarTab === 'ide' ? (
                             <IdeLayout />
                         ) : (

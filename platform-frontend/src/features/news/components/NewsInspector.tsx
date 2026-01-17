@@ -306,7 +306,7 @@ export const NewsInspector: React.FC = () => {
                     <div className="flex flex-wrap gap-2 mb-2">
                         {selectedContexts.map((ctx, i) => (
                             <div key={i} className="flex items-center gap-1 px-2 py-1 bg-cyan-500/20 text-cyan-400 text-[10px] rounded max-w-full">
-                                <span className="truncate max-w-[200px]"><Quote className="w-3 h-3 inline mr-1" />{ctx.substring(0, 30)}...</span>
+                                <span className="truncate max-w-[200px]"><Quote className="w-3 h-3 inline mr-1" />{(typeof ctx === 'string' ? ctx : ctx.text).substring(0, 30)}...</span>
                                 <button onClick={() => removeSelectedContext(i)} className="hover:text-cyan-300"><X className="w-3 h-3" /></button>
                             </div>
                         ))}
