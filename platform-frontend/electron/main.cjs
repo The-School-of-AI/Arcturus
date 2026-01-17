@@ -642,7 +642,9 @@ function setupFSHandlers() {
 
                 // Fallback to standard grep with -E (Extended Regex) for pipes support
                 // Note: -r (recursive), -l (files-with-matches), -I (ignore binary)
-                exec(`grep -r -l -I -E --exclude-dir=.* "${query}" .`, { cwd: searchRoot }, (err, stdout, stderr) => {
+                // We explicitely exclude common directories to avoiding matching '.' with '.*'
+                const excludes = '--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next';
+                exec(`grep -r -l -I -E ${excludes} "${query}" .`, { cwd: searchRoot }, (err, stdout, stderr) => {
                     if (err && err.code !== 1) { // code 1 means no matches
                         resolve({ success: false, error: err.message });
                         return;

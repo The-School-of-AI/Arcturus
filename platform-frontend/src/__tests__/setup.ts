@@ -10,10 +10,12 @@ const mockElectronAPI = {
     confirm: vi.fn(),
 };
 
-Object.defineProperty(window, 'electronAPI', {
-    value: mockElectronAPI,
-    writable: true,
-});
+if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'electronAPI', {
+        value: mockElectronAPI,
+        writable: true,
+    });
+}
 
 // Export for use in tests
 export { mockElectronAPI };
