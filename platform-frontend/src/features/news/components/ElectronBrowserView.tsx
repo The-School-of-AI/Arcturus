@@ -43,10 +43,7 @@ export const ElectronBrowserView: React.FC = () => {
 
     // Update bounds when container size/position changes
     const updateBounds = useCallback(() => {
-        if (!containerRef.current || !window.electronAPI) {
-            console.log('[Browser] updateBounds skipped - no container or API');
-            return;
-        }
+        if (!containerRef.current || !window.electronAPI) return;
 
         const rect = containerRef.current.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
@@ -59,7 +56,6 @@ export const ElectronBrowserView: React.FC = () => {
             height: Math.round(rect.height * dpr)
         };
 
-        console.log('[Browser] Sending bounds (dpr=' + dpr + '):', bounds);
         window.electronAPI.send('browser:set-bounds', bounds);
     }, []);
 
@@ -351,7 +347,7 @@ export const ElectronBrowserView: React.FC = () => {
     return (
         <div className="flex-1 flex flex-col bg-background overflow-hidden">
             {/* Tab Bar */}
-            <div className="h-10 bg-muted/40 flex items-center px-2 gap-1 overflow-x-auto scrollbar-hide border-b border-border/50 shrink-0">
+            <div className="h-8 bg-muted/40 flex items-center px-2 gap-1 overflow-x-auto scrollbar-hide shrink-0">
                 {newsTabs.map((url) => (
                     <div
                         key={url}
@@ -484,11 +480,11 @@ export const ElectronBrowserView: React.FC = () => {
                 </div>
             </div>
 
-            {/* Browser View Container - DEBUG: red border to show container position */}
+            {/* Browser View Container */}
             <div
                 ref={containerRef}
                 className="flex-1 relative"
-                style={{ minHeight: 200, border: '2px solid red', background: 'transparent' }}
+                style={{ minHeight: 200 }}
             />
         </div>
     );

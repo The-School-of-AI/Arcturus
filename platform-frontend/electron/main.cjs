@@ -610,7 +610,6 @@ function setupBrowserHandlers() {
     const updateActiveBrowserViewBounds = () => {
         if (activeBrowserTabId && browserViews.has(activeBrowserTabId)) {
             const { view } = browserViews.get(activeBrowserTabId);
-            console.log('[Arcturus] Applying bounds to active view:', browserViewBounds);
             view.setBounds(browserViewBounds);
         }
     };
@@ -834,7 +833,6 @@ function setupBrowserHandlers() {
 
     // Set browser view bounds (called from renderer when container resizes)
     ipcMain.on('browser:set-bounds', (event, bounds) => {
-        console.log('[Arcturus] Setting browser bounds:', bounds);
         browserViewBounds = bounds;
         updateActiveBrowserViewBounds();
     });
