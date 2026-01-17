@@ -1,10 +1,10 @@
-
 import { describe, it, expect } from 'vitest';
+// @ts-nocheck
 import fs from 'fs';
 import path from 'path';
 
-describe('IDE Agent Prompt Configuration', () => {
-    const promptPath = path.resolve(__dirname, '../../../prompts/ide_agent_prompt.md');
+describe('IDE Agent Prompt Compliance', () => {
+    const promptPath = path.resolve(process.cwd(), '../prompts/ide_agent_prompt.md');
 
     it('should exist', () => {
         expect(fs.existsSync(promptPath)).toBe(true);

@@ -1469,7 +1469,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                 data: getDefaultData(selectedLibraryComponent.type),
                 style: getDefaultStyle()
             };
-            addAppCard(newCard, { x: 0, y: Infinity, ...dims });
+            addAppCard(newCard, { x: 0, y: Infinity, i: crypto.randomUUID(), ...dims });
         };
 
         // Get the usage description from centralized data

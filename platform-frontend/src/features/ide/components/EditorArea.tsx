@@ -21,7 +21,9 @@ export const EditorArea: React.FC = () => {
         setActiveIdeDocument,
         closeIdeDocument,
         closeAllIdeDocuments,
-        addSelectedContext
+        addSelectedContext,
+        reviewRequest,
+        submitReviewDecision
     } = useAppStore();
 
     const { theme } = useTheme();
@@ -269,7 +271,7 @@ export const EditorArea: React.FC = () => {
                         }
                         if (activeDoc.type === 'git_diff') {
                             const filename = activeDoc.id.split(':').pop() || '';
-                            return <DiffEditor height="100%" original={activeDoc.originalContent || ''} modified={activeDoc.modifiedContent || ''} language={getLanguage(filename.split('.').pop() || '')} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} beforeMount={handleBeforeMount} options={{ fontSize: 13, automaticLayout: true }} />;
+                            return <DiffEditor height="100%" original={activeDoc.originalContent || ''} modified={activeDoc.modifiedContent || ''} language={getLanguage(filename.split('.').pop() || '')} theme={theme === 'dark' ? 'arcturus-dark' : 'arcturus-light'} beforeMount={handleBeforeMount} options={{ fontSize: 13, automaticLayout: true, renderSideBySide: false }} />;
                         }
                         return <Editor
                             height="100%"
@@ -303,6 +305,35 @@ export const EditorArea: React.FC = () => {
                     manualPosition={{ x: selectionMenu.x, y: selectionMenu.y }}
                     manualText={selectionMenu.text}
                 />
+
+                {/* Inline Review Controls */}
+                {activeDoc.type === 'git_diff' && reviewRequest && activeDoc.id.includes(reviewRequest.path || '') && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-4 px-4 py-2 bg-[#1e1e1e] border border-[#3e3e3e] shadow-2xl rounded-full animate-in slide-in-from-bottom-2 fade-in duration-300 min-w-[300px]">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                            <span className="text-xs font-medium text-gray-300">
+                                {reviewRequest.operation || "Review Changes"}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-3 text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded-full"
+                                onClick={() => submitReviewDecision('deny')}
+                            >
+                                Reject
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="h-7 px-4 text-xs bg-blue-600 hover:bg-blue-500 text-white border-0 rounded-full shadow-lg shadow-blue-900/20"
+                                onClick={() => submitReviewDecision('allow_once')}
+                            >
+                                Accept Changes
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

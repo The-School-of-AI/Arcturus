@@ -12,6 +12,7 @@ export interface PermissionRequest {
     path?: string;      // File path if applicable
     command?: string;   // Command if applicable
     risk: 'low' | 'medium' | 'high';
+    variant?: 'modal' | 'review';
 }
 
 export interface PermissionDecision {
@@ -83,15 +84,18 @@ export function clearProjectPermissions(projectRoot: string) {
 interface PermissionDialogProps {
     request: PermissionRequest | null;
     projectRoot: string;
-    onDecision: (decision: PermissionDecision['action']) => void;
+    onDecision: (decision: 'allow_once' | 'allow_always' | 'deny') => void;
+    variant?: 'modal' | 'review' | 'review_status';
 }
 
 export const PermissionDialog: React.FC<PermissionDialogProps> = ({
     request,
     projectRoot,
-    onDecision
+    onDecision,
+    variant = 'modal'
 }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const [shouldRemember, setShouldRemember] = useState(false);
 
     useEffect(() => {
         if (request) {
@@ -130,9 +134,18 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
         high: 'bg-red-500/10 border-red-500/30'
     };
 
+    const containerClasses = variant === 'modal'
+        ? "fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+        : "absolute bottom-6 right-6 z-[50] w-[400px] animate-in slide-in-from-right duration-200 shadow-2xl"; // Floating panel
+
+    const cardClasses = cn(
+        "w-full bg-card border border-border rounded-xl shadow-2xl overflow-hidden",
+        variant === 'modal' ? "max-w-md animate-in zoom-in-95 duration-200" : ""
+    );
+
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className={containerClasses}>
+            <div className={cardClasses}>
                 {/* Header */}
                 <div className={cn(
                     "px-5 py-4 flex items-center gap-3 border-b",
@@ -146,7 +159,9 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
                         )}
                     </div>
                     <div>
-                        <h3 className="font-semibold text-foreground">Agent Permission Request</h3>
+                        <h3 className="font-semibold text-foreground">
+                            {variant === 'review' ? 'Review Changes' : 'Agent Permission Request'}
+                        </h3>
                         <p className={cn("text-xs font-medium", riskColors[request.risk])}>
                             {request.risk.toUpperCase()} RISK
                         </p>
@@ -155,31 +170,32 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
 
                 {/* Content */}
                 <div className="px-5 py-4 space-y-4">
-                    <div>
-                        <p className="text-sm text-foreground/90 font-medium mb-2">
-                            The agent wants to:
-                        </p>
-                        <div className="bg-muted/50 rounded-lg p-3 border border-border/50">
-                            <p className="text-sm font-mono text-foreground/80">
-                                {request.operation}
+                    {variant === 'modal' && (
+                        <div>
+                            <p className="text-sm text-foreground/90 font-medium mb-2">
+                                The agent wants to:
                             </p>
+                            <div className="bg-muted/50 rounded-lg p-3 border border-border/50">
+                                <p className="text-sm font-mono text-foreground/80">
+                                    {request.operation}
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    {request.path && (
+                    {variant === 'review' && (
+                        <div className="text-sm text-foreground/90">
+                            The agent has proposed changes to <b>{request.path?.split('/').pop()}</b>.
+                            <br />
+                            Review the diff in the editor and accept or reject.
+                        </div>
+                    )}
+
+                    {variant === 'modal' && request.path && (
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">File:</p>
                             <p className="text-sm font-mono text-foreground/80 truncate bg-muted/30 px-2 py-1 rounded">
                                 {request.path}
-                            </p>
-                        </div>
-                    )}
-
-                    {request.command && (
-                        <div>
-                            <p className="text-xs text-muted-foreground mb-1">Command:</p>
-                            <p className="text-sm font-mono text-foreground/80 truncate bg-muted/30 px-2 py-1 rounded">
-                                {request.command}
                             </p>
                         </div>
                     )}
@@ -192,21 +208,23 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg font-medium text-sm transition-colors"
                     >
                         <X className="w-4 h-4" />
-                        Deny
+                        {variant === 'review' ? 'Reject Changes' : 'Deny'}
                     </button>
+                    {variant === 'modal' && (
+                        <button
+                            onClick={() => handleDecision('allow_once')}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-medium text-sm transition-colors"
+                        >
+                            <Clock className="w-4 h-4" />
+                            Allow Once
+                        </button>
+                    )}
                     <button
-                        onClick={() => handleDecision('allow_once')}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-medium text-sm transition-colors"
-                    >
-                        <Clock className="w-4 h-4" />
-                        Allow Once
-                    </button>
-                    <button
-                        onClick={() => handleDecision('allow_always')}
+                        onClick={() => handleDecision(variant === 'review' ? 'allow_once' : 'allow_always')}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-medium text-sm transition-colors"
                     >
                         <Check className="w-4 h-4" />
-                        Always Allow
+                        {variant === 'review' ? 'Accept Changes' : 'Always Allow'}
                     </button>
                 </div>
             </div>

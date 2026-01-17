@@ -332,6 +332,19 @@ interface AgentTestSlice {
     discardTestResult: () => void;
 }
 
+// --- Review Slice (For Inline Diff Reviews) ---
+interface ReviewSlice {
+    // Current active review request
+    reviewRequest: any | null; // PermissionRequest
+    // Resolver function to unblock the agent
+    reviewResolver: ((decision: 'allow_once' | 'allow_always' | 'deny') => void) | null;
+
+    // Actions
+    startReview: (request: any, resolver: (decision: 'allow_once' | 'allow_always' | 'deny') => void) => void;
+    submitReviewDecision: (decision: 'allow_once' | 'allow_always' | 'deny') => void;
+    cancelReview: () => void;
+}
+
 interface SavedArticle {
     id: string;
     title: string;
@@ -365,11 +378,34 @@ interface NewsSlice {
     clearSelection: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
         (set, get) => ({
+            // Review Slice
+            reviewRequest: null,
+            reviewResolver: null,
+            startReview: (request, resolver) => set({
+                reviewRequest: request,
+                reviewResolver: resolver
+            }),
+            submitReviewDecision: (decision) => {
+                const resolver = get().reviewResolver;
+                if (resolver) {
+                    resolver(decision);
+                }
+                // Clear state
+                set({ reviewRequest: null, reviewResolver: null });
+            },
+            cancelReview: () => {
+                const resolver = get().reviewResolver;
+                if (resolver) {
+                    resolver('deny');
+                }
+                set({ reviewRequest: null, reviewResolver: null });
+            },
+
             // Runs
             runs: [],
             currentRun: null,

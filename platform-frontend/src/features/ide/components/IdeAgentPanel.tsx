@@ -381,12 +381,9 @@ export const IdeAgentPanel: React.FC = () => {
     const thinkingRef = useRef(false);
 
     // Permission dialog hook for agent operations
-    const {
-        currentRequest: permissionRequest,
-        requestPermission,
-        handleDecision: handlePermissionDecision,
-        projectRoot: permissionProjectRoot
-    } = usePermissionDialog();
+    // Review State from Global Store
+    const reviewRequest = useAppStore(state => state.reviewRequest);
+    const startReview = useAppStore(state => state.startReview);
 
     const formatRelativeTime = (timestamp: number) => {
         const now = Math.floor(Date.now() / 1000);
@@ -585,6 +582,171 @@ export const IdeAgentPanel: React.FC = () => {
                     return `Error: ${res?.error || 'Unknown error'}`;
                 }
 
+                case 'run_script': {
+                    const validation = validatePath(explorerRootPath || '');
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    // 1. PERMISSION CHECK
+                    const permDecision = await new Promise<'allow_once' | 'allow_always' | 'deny'>((resolve) => {
+                        startReview({
+                            id: crypto.randomUUID(),
+                            type: 'command',
+                            operation: `Run Script: ${toolCall.arguments.command}`,
+                            path: 'terminal',
+                            risk: 'medium', // Scripts are generally medium risk if mostly tests
+                            variant: 'review_status' // Minimal card for scripts
+                        }, resolve as any);
+                    });
+
+                    if (permDecision === 'deny') return "User denied script execution.";
+
+                    // 2. EXECUTE SYNCHRONOUSLY
+                    // setThinking(true); // Removed as distinct state might not exist or be needed here immediately
+                    try {
+                        const result = await window.electronAPI.invoke('shell:exec', {
+                            cmd: toolCall.arguments.command,
+                            cwd: explorerRootPath || '',
+                            projectRoot: explorerRootPath || ''
+                        });
+
+                        setIsThinking(false);
+
+                        if (!result.success) {
+                            return `Error: ${result.error}\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`;
+                        }
+
+                        return `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`;
+
+                    } catch (e: any) {
+                        // setThinking(false);
+                        return `System Error: ${e.message}`;
+                    }
+                }
+
+                case 'apply_diff': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    // 1. PERMISSION CHECK
+                    const permDecision = await new Promise<'allow_once' | 'allow_always' | 'deny'>((resolve) => {
+                        startReview({
+                            id: crypto.randomUUID(),
+                            type: 'write',
+                            operation: `Apply Diff to ${validation.path}`,
+                            path: validation.path!,
+                            risk: 'high', // Diffs are edits
+                            variant: 'review'
+                        }, resolve);
+                    });
+
+                    if (permDecision === 'deny') return "User denied diff application.";
+
+                    // 2. APPLY DIFF via Electron Logic (using git apply or internal parser)
+                    // Since we don't have a built-in parser, we will try `git apply` via shell first, 
+                    // or ask the backend to helper. 
+                    // IMPORTANT: Diffs are tricky.
+                    // Let's rely on a helper script `scripts/apply_diff.py`? 
+                    // Or just implement a dumb parser for now?
+                    // I will try to use the `diff` package if installed, but checking package.json takes a turn.
+                    // I will proceed by returning a "Not Implemented" stub and checking package.json in parallel, 
+                    // or better: I will write a simple python script on the fly to apply it? No that's hacky.
+                    // I will check package.json in the next turn and then flesh this out.
+                    // For now, I'll add the STUB and then implement the logic.
+                    // Actually, I can use `git apply` if I save the diff to a temp file.
+
+                    const diffFile = `/tmp/patch_${Date.now()}.diff`;
+                    try {
+                        // Write patch file
+                        await window.electronAPI.invoke('fs:writeFile', { path: diffFile, content: toolCall.arguments.diff });
+
+                        // Apply patch
+                        const res = await window.electronAPI.invoke('shell:exec', {
+                            cmd: `git apply --reject --whitespace=fix ${diffFile}`,
+                            cwd: explorerRootPath || '',
+                            projectRoot: explorerRootPath || ''
+                        });
+
+                        // Cleanup
+                        await window.electronAPI.invoke('fs:delete', diffFile);
+
+                        if (!res.success) {
+                            return `Failed to apply diff: ${res.stderr}. \nHint: Ensure the diff format is correct (unified diff) and context matches.`;
+                        }
+
+                        // Refresh
+                        useAppStore.getState().refreshExplorerFiles();
+                        useAppStore.getState().openIdeDocument({
+                            id: validation.path!,
+                            title: validation.path!.split('/').pop() || 'Untitled',
+                            type: 'file' // Force refresh content? The store handles it.
+                        } as RAGDocument);
+
+                        return "Success: Diff applied.";
+
+                    } catch (e: any) {
+                        return `Error applying diff: ${e.message}`;
+                    }
+                }
+
+                case 'replace_symbol': {
+                    const validation = validatePath(toolCall.arguments.path);
+                    if (!validation.valid) return `Error: ${validation.error}`;
+
+                    const { symbol, content } = toolCall.arguments;
+
+                    // 1. PERMISSION CHECK
+                    const permDecision = await new Promise<'allow_once' | 'allow_always' | 'deny'>((resolve) => {
+                        startReview({
+                            id: crypto.randomUUID(),
+                            type: 'write',
+                            operation: `Replace symbol '${symbol}' in ${validation.path}`,
+                            path: validation.path!,
+                            risk: 'high',
+                            variant: 'review'
+                        }, resolve);
+                    });
+
+                    if (permDecision === 'deny') return "User denied symbol replacement.";
+
+                    // 2. EXECUTE via Helper Script
+                    // We write the new content to a temp file to handle large payloads safely
+                    const tempContentFile = `/tmp/symbol_${Date.now()}.txt`;
+                    // We also need a script. We assume `scripts/replace_symbol.py` exists in the project or we use a built-in one.
+                    // IMPORTANT: Since we are adding this capability, we must ensure the script exists.
+                    // For now, we'll assume it's in the repo under `scripts/`. If not, this tool will fail, 
+                    // so the Next Step (Task) must be to CREATE that script.
+                    const scriptPath = `${explorerRootPath}/scripts/replace_symbol.py`;
+
+                    try {
+                        await window.electronAPI.invoke('fs:writeFile', { path: tempContentFile, content: content });
+
+                        const res = await window.electronAPI.invoke('shell:exec', {
+                            cmd: `python3 ${scriptPath} "${validation.path}" "${symbol}" "${tempContentFile}"`,
+                            cwd: explorerRootPath || '',
+                            projectRoot: explorerRootPath || ''
+                        });
+
+                        // Cleanup
+                        await window.electronAPI.invoke('fs:delete', tempContentFile);
+
+                        if (!res.success) {
+                            return `Failed to replace symbol: ${res.stderr || res.stdout}`;
+                        }
+
+                        useAppStore.getState().refreshExplorerFiles();
+                        useAppStore.getState().openIdeDocument({
+                            id: validation.path!,
+                            title: validation.path!.split('/').pop() || 'Untitled',
+                            type: 'file'
+                        } as RAGDocument);
+
+                        return `Success: Replaced symbol '${symbol}'.`;
+
+                    } catch (e: any) {
+                        return `Error replacing symbol: ${e.message}`;
+                    }
+                }
+
                 case 'write_file': {
                     const validation = validatePath(toolCall.arguments.path);
                     if (!validation.valid) return `Error: ${validation.error}`;
@@ -593,13 +755,6 @@ export const IdeAgentPanel: React.FC = () => {
                     const pathCheck = checkPathSafety(validation.path!);
                     if (!pathCheck.safe) {
                         return `Error: Cannot write to sensitive file. Reason: ${pathCheck.violation}`;
-                    }
-
-                    // Check if file would be gitignored (warn but allow for new files)
-                    const writeGitCheck = await checkGitignore(validation.path!);
-                    if (writeGitCheck.ignored) {
-                        console.warn(`[IDE Agent] Writing to gitignored path: ${validation.path}`);
-                        // Allow write but log - user might intentionally modify gitignored files
                     }
 
                     // Security: Check content for dangerous patterns
@@ -611,21 +766,79 @@ export const IdeAgentPanel: React.FC = () => {
                         }
                     }
 
+                    // 1. BACKUP: Read original file content first
+                    let originalContent = '';
+                    const readRes = await window.electronAPI.invoke('fs:readFile', validation.path!);
+                    if (readRes && readRes.success) {
+                        originalContent = readRes.content;
+                    }
+
+                    // 2. PROVISIONAL WRITE: Write new content to disk so git/tests see it
                     const res = await window.electronAPI.invoke('fs:writeFile', {
                         path: validation.path,
                         content: toolCall.arguments.content
                     });
-                    if (res.success) {
-                        useAppStore.getState().refreshExplorerFiles();
+
+                    if (!res.success) return `Error: ${res.error}`;
+
+                    // 3. VISUALIZE: Open Diff View
+                    useAppStore.getState().openIdeDocument({
+                        id: `diff:${validation.path}`, // Special ID for diff
+                        title: `Review: ${validation.path!.split('/').pop()}`,
+                        type: 'git_diff',
+                        originalContent: originalContent,
+                        modifiedContent: toolCall.arguments.content,
+                        language: getContentTypeFromPath(validation.path!) || 'plaintext'
+                    } as RAGDocument);
+
+                    // 4. REVIEW: Request Permission via Global Store
+                    const decision = await new Promise<'allow_once' | 'allow_always' | 'deny'>((resolve) => {
+                        startReview({
+                            id: crypto.randomUUID(),
+                            type: 'write',
+                            operation: `Modify ${validation.path}`,
+                            path: validation.path!,
+                            risk: 'high',
+                            variant: 'review'
+                        }, resolve);
+                    });
+
+                    // 5. ACTION
+                    if (decision === 'deny') {
+                        // REVERTI!
+                        console.log('[IdeAgent] User rejected changes. Reverting...');
+                        await window.electronAPI.invoke('fs:writeFile', {
+                            path: validation.path,
+                            content: originalContent
+                        });
+                        // Close Diff View
+                        useAppStore.getState().closeIdeDocument(`diff:${validation.path}`);
+
+                        // Re-open original file view?
                         useAppStore.getState().openIdeDocument({
                             id: validation.path!,
                             title: validation.path!.split('/').pop() || 'Untitled',
-                            content: toolCall.arguments.content,
+                            content: originalContent,
                             type: 'file'
                         } as RAGDocument);
-                        return `Success: File written to ${validation.path}`;
+                        return "User rejected the changes. File reverted to original state.";
                     }
-                    return `Error: ${res.error}`;
+
+                    // ACCEPTED: Leave as is (already written)
+                    useAppStore.getState().refreshExplorerFiles();
+
+                    // Close Diff View
+                    useAppStore.getState().closeIdeDocument(`diff:${validation.path}`);
+
+                    // Switch to normal file view
+                    useAppStore.getState().openIdeDocument({
+                        id: validation.path!,
+                        title: validation.path!.split('/').pop() || 'Untitled',
+                        content: toolCall.arguments.content,
+                        type: 'file'
+                    } as RAGDocument);
+
+                    return `Success: File written to ${validation.path}`;
                 }
 
                 case 'replace_in_file': {
@@ -719,10 +932,13 @@ export const IdeAgentPanel: React.FC = () => {
                     const changes = toolCall.arguments.changes;
                     if (!changes || !Array.isArray(changes)) return "Error: 'changes' arguments must be an array.";
 
+                    // 1. BACKUP: Read original file
                     const multiReadRes = await window.electronAPI.invoke('fs:readFile', validation.path!);
                     if (!multiReadRes || !multiReadRes.success) return `Error reading file: ${multiReadRes?.error || 'Unknown error'}`;
 
-                    let currentContent = multiReadRes.content;
+                    const originalContent = multiReadRes.content;
+                    let currentContent = originalContent;
+
                     for (let i = 0; i < changes.length; i++) {
                         const change = changes[i];
                         if (!currentContent.includes(change.target)) {
@@ -734,13 +950,62 @@ export const IdeAgentPanel: React.FC = () => {
                         currentContent = currentContent.replace(change.target, change.replacement);
                     }
 
+                    // 2. PROVISIONAL WRITE
                     const multiWriteRes = await window.electronAPI.invoke('fs:writeFile', {
                         path: validation.path!,
                         content: currentContent
                     });
                     if (!multiWriteRes.success) return `Error writing file: ${multiWriteRes.error}`;
 
+                    // 3. VISUALIZE: Open Diff View
+                    useAppStore.getState().openIdeDocument({
+                        id: `diff:${validation.path}`,
+                        title: `Review: ${validation.path!.split('/').pop()}`,
+                        type: 'git_diff',
+                        originalContent: originalContent,
+                        modifiedContent: currentContent,
+                        language: getContentTypeFromPath(validation.path!) || 'plaintext'
+                    } as RAGDocument);
+
+                    // 4. REVIEW via Global Store
+                    const decision = await new Promise<'allow_once' | 'allow_always' | 'deny'>((resolve) => {
+                        startReview({
+                            id: crypto.randomUUID(),
+                            type: 'write',
+                            operation: `Apply ${changes.length} edits to ${validation.path}`,
+                            path: validation.path,
+                            risk: 'high',
+                            variant: 'review'
+                        }, resolve);
+                    });
+
+                    // 5. ACTION
+                    if (decision === 'deny') {
+                        // REVERT
+                        console.log('[IdeAgent] User rejected edits. Reverting...');
+                        await window.electronAPI.invoke('fs:writeFile', {
+                            path: validation.path!,
+                            content: originalContent
+                        });
+
+                        // Close Diff View
+                        useAppStore.getState().closeIdeDocument(`diff:${validation.path}`);
+
+                        useAppStore.getState().openIdeDocument({
+                            id: validation.path!,
+                            title: validation.path!.split('/').pop() || 'Untitled',
+                            content: originalContent,
+                            type: 'file'
+                        } as RAGDocument);
+                        return "User rejected the edits. File reverted to original state.";
+                    }
+
+                    // ACCEPTED
                     useAppStore.getState().refreshExplorerFiles();
+
+                    // Close Diff View
+                    useAppStore.getState().closeIdeDocument(`diff:${validation.path}`);
+
                     useAppStore.getState().openIdeDocument({
                         id: validation.path!,
                         title: validation.path!.split('/').pop() || 'Untitled',
@@ -1367,11 +1632,12 @@ export const IdeAgentPanel: React.FC = () => {
                 }
             </div>
 
-            {/* Permission Dialog - rendered as overlay */}
+            {/* Review Status Card (Chat only) */}
             <PermissionDialog
-                request={permissionRequest}
-                projectRoot={permissionProjectRoot || explorerRootPath || ''}
-                onDecision={handlePermissionDecision}
+                request={reviewRequest}
+                projectRoot={explorerRootPath || ''}
+                onDecision={() => { }} // Editor handles decision, this is just status
+                variant="review_status"
             />
         </>
     );

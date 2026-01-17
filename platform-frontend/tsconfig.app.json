@@ -35,6 +35,12 @@
     }
   },
   "include": [
-    "src"
+    "src/env.d.ts",
+    "src/**/*",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "src/__tests__",
+    "src/setupTests.ts"
   ]
 }

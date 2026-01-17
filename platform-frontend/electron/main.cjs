@@ -628,16 +628,29 @@ function setupFSHandlers() {
         console.log(`[Arcturus] fs:grep '${query}' in '${searchRoot}'`);
 
         return new Promise((resolve) => {
-            // ripgrep is preferred but grep -r is more universal
-            const grep = spawn('grep', ['-r', '-l', '--exclude-dir=.*', query, '.'], { cwd: searchRoot });
+            // ARC-FIX: Use `git grep` first as it honors .gitignore and handles regex better
+            // Fallback to `grep -r -E` if git fails or not in repo.
+            const { exec } = require('child_process');
 
-            let stdout = '';
-            grep.stdout.on('data', data => { stdout += data; });
-            grep.on('close', () => {
-                const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
-                resolve({ success: true, files: files.slice(0, 50) });
+            // Try git grep first
+            exec(`git grep -I -l -E "${query}"`, { cwd: searchRoot }, (err, stdout, stderr) => {
+                if (!err) {
+                    const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
+                    resolve({ success: true, files: files.slice(0, 50) });
+                    return;
+                }
+
+                // Fallback to standard grep with -E (Extended Regex) for pipes support
+                // Note: -r (recursive), -l (files-with-matches), -I (ignore binary)
+                exec(`grep -r -l -I -E --exclude-dir=.* "${query}" .`, { cwd: searchRoot }, (err, stdout, stderr) => {
+                    if (err && err.code !== 1) { // code 1 means no matches
+                        resolve({ success: false, error: err.message });
+                        return;
+                    }
+                    const files = stdout ? stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, '')) : [];
+                    resolve({ success: true, files: files.slice(0, 50) });
+                });
             });
-            grep.on('error', err => resolve({ success: false, error: err.message }));
         });
     });
 }
