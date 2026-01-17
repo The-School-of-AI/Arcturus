@@ -497,19 +497,9 @@ export const NewsPanel: React.FC = () => {
                                                     )}>
                                                         {item.title}
                                                     </h4>
-                                                    <div className="flex items-center gap-2 mt-1.5">
-                                                        <span className="text-[10px] font-mono text-muted-foreground/50">
-                                                            {(index + 1).toString().padStart(2, '0')}
-                                                        </span>
-                                                        {(item.published_at || item.snippet) && (
-                                                            <span className="text-[10px] text-muted-foreground/40 font-mono truncate max-w-[150px]">
-                                                                {item.published_at ? new Date(item.published_at).toLocaleDateString() : (item.snippet ? item.snippet.slice(0, 30) + '...' : '')}
-                                                            </span>
-                                                        )}
-                                                    </div>
                                                 </div>
 
-                                                <div className="flex flex-col gap-1 -mr-1">
+                                                <div className="flex flex-col items-end gap-0.5 -mr-1 shrink-0">
                                                     {/* Bookmark Button */}
                                                     <button
                                                         onClick={(e) => {
@@ -526,6 +516,10 @@ export const NewsPanel: React.FC = () => {
                                                     >
                                                         {isSaved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
                                                     </button>
+                                                    {/* Index number */}
+                                                    <span className="text-[10px] font-sans text-muted-foreground/50 pr-1">
+                                                        {(index + 1).toString().padStart(2, '0')}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>

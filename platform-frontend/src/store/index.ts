@@ -1826,7 +1826,8 @@ export const useAppStore = create<AppState>()(
             },
 
             fetchNewsFeed: async (sourceId) => {
-                set({ isNewsLoading: true });
+                // Clear old items immediately to avoid showing stale content
+                set({ isNewsLoading: true, newsItems: [] });
                 try {
                     const endpoint = sourceId
                         ? `${API_BASE}/news/feed?source_id=${sourceId}`
