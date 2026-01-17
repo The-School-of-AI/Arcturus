@@ -199,6 +199,7 @@ async def process_run(run_id: str, query: str):
 
                 for node_id in context.plan_graph.nodes:
                     node = context.plan_graph.nodes[node_id]
+                    agent_type = node.get("agent", "")
                     output = node.get("output", {})
                     if not output: continue
 
@@ -210,20 +211,28 @@ async def process_run(run_id: str, query: str):
                                  markdown = v
                                  break
                     
+                    # Log FormatterAgent outputs for debugging
+                    if agent_type == "FormatterAgent" and markdown:
+                        print(f"[Notes Auto-Save] Found FormatterAgent {node_id}: markdown_report length={len(markdown)}, title preview={markdown[:60]}...")
+                    
                     if markdown and len(markdown) > 100:
                          title = extract_title(markdown)
                          filename = sanitize_filename(title) + ".md"
                          target_path = notes_dir / filename
                          
-                         # Check if file exists and content is identical to avoid IO churn
+                         # Check if file exists
                          if target_path.exists():
-                             if target_path.read_text(encoding='utf-8') == markdown:
+                             existing_content = target_path.read_text(encoding='utf-8')
+                             # Skip if content is identical
+                             if existing_content == markdown:
+                                 continue
+                             # PROTECTION: Only overwrite if new content is longer
+                             # This prevents intermediate/truncated saves from clobbering full reports
+                             if len(existing_content) >= len(markdown):
+                                 print(f"⚠️ Skipped overwriting {filename}: existing content is longer ({len(existing_content)} >= {len(markdown)})")
                                  continue
 
-                         header = f"<!-- Source: session_{run_id}.json -->\n"
                          with open(target_path, 'w', encoding='utf-8') as f:
-                                # We strip the header if it was already there (from backfill) to be clean, 
-                                # but actually pure markdown is better. Let's just write the content.
                              f.write(markdown)
                          print(f"✅ Auto-Saved Report to Notes: {filename}")
 
@@ -830,6 +839,46 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         graph_data = nx.node_link_data(G, edges="edges")
         with open(found_file, 'w', encoding='utf-8') as f:
             json.dump(graph_data, f, indent=2, default=str, ensure_ascii=False)
+        
+        # 7. AUTO-SAVE TO NOTES (for FormatterAgent "Run Again" saves)
+        agent_type = G.nodes[node_id].get("agent", "")
+        if agent_type == "FormatterAgent" and isinstance(new_output, dict):
+            try:
+                import re
+                notes_dir = PROJECT_ROOT / "data" / "Notes" / "Arcturus"
+                notes_dir.mkdir(parents=True, exist_ok=True)
+                
+                def sanitize_filename(title):
+                    title = re.sub(r'[\\/*?:"<>|#]', "", title)
+                    title = title.replace("\n", " ").strip()
+                    return title[:60].strip()
+
+                def extract_title(content):
+                    match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
+                    if match:
+                        return match.group(1).strip()
+                    lines = [l.strip() for l in content.split('\n') if l.strip()]
+                    return lines[0] if lines else "Untitled Report"
+                
+                markdown = new_output.get("markdown_report")
+                if not markdown:
+                    for k, v in new_output.items():
+                        if k.startswith("formatted_report") and isinstance(v, str):
+                            markdown = v
+                            break
+                
+                if markdown and len(markdown) > 100:
+                    title = extract_title(markdown)
+                    filename = sanitize_filename(title) + ".md"
+                    target_path = notes_dir / filename
+                    
+                    # Write or overwrite (Run Again means user explicitly wants new version)
+                    with open(target_path, 'w', encoding='utf-8') as f:
+                        f.write(markdown)
+                    print(f"✅ Auto-Saved (Run Again) to Notes: {filename}")
+                    
+            except Exception as e:
+                print(f"⚠️ Failed to auto-save to Notes: {e}")
         
         return {
             "status": "success",
