@@ -200,6 +200,7 @@ class AgentLoop4:
                     
                     # Get the first step ID from the plan
                     first_step = plan_result["output"].get("next_step_id", "T001")
+                    clarification_write_key = "user_clarification_T000"
                     
                     # Create clarification node
                     clarification_node = {
@@ -208,7 +209,7 @@ class AgentLoop4:
                         "description": "Clarify ambiguous requirements before proceeding",
                         "agent_prompt": f"The system has identified ambiguities in the user's request. Please ask for clarification on: {'; '.join(ambiguity_notes)}",
                         "reads": [],
-                        "writes": ["user_clarification_T000"],
+                        "writes": [clarification_write_key],
                         "status": "pending"
                     }
                     
@@ -220,6 +221,17 @@ class AgentLoop4:
                         "source": "T000_AutoClarify",
                         "target": first_step
                     })
+                    
+                    # 🔧 CRITICAL FIX: Wire clarification output into the downstream node's reads
+                    # Find the first_step node and add clarification_write_key to its reads
+                    for node in plan_result["output"]["plan_graph"]["nodes"]:
+                        if node.get("id") == first_step:
+                            if "reads" not in node:
+                                node["reads"] = []
+                            if clarification_write_key not in node["reads"]:
+                                node["reads"].append(clarification_write_key)
+                                log_step(f"Wired {clarification_write_key} into {first_step}'s reads", symbol="🔗")
+                            break
                     
                     # Update next_step_id to start with clarification
                     plan_result["output"]["next_step_id"] = "T000_AutoClarify"
@@ -360,6 +372,42 @@ class AgentLoop4:
             if node["id"] not in nodes_with_incoming_edges:
                 log_step(f"🔗 Auto-connected orphan node {node['id']} to Query", symbol="🔗")
                 self.context.plan_graph.add_edge("Query", node["id"])
+        
+        # 🔧 SAFETY NET: Ensure ClarificationAgent outputs are wired to successor nodes
+        # This fixes cases where Planner adds a ClarificationAgent but forgets to wire reads
+        for node in new_nodes:
+            if node.get("agent") == "ClarificationAgent":
+                clarification_node_id = node["id"]
+                clarification_writes = node.get("writes", [])
+                
+                if not clarification_writes:
+                    continue
+                    
+                # Find all successor nodes (nodes that this ClarificationAgent points to)
+                for edge in new_edges:
+                    if edge.get("source") == clarification_node_id:
+                        successor_id = edge.get("target")
+                        if not successor_id:
+                            continue
+                        
+                        # Find the successor node and ensure it reads from clarification
+                        for succ_node in new_nodes:
+                            if succ_node.get("id") == successor_id:
+                                if "reads" not in succ_node:
+                                    succ_node["reads"] = []
+                                
+                                for write_key in clarification_writes:
+                                    if write_key not in succ_node["reads"]:
+                                        succ_node["reads"].append(write_key)
+                                        log_step(f"🔗 Auto-wired {write_key} into {successor_id}'s reads", symbol="🔗")
+                                        
+                                        # Also update the node in the graph if already added
+                                        if successor_id in self.context.plan_graph:
+                                            if "reads" not in self.context.plan_graph.nodes[successor_id]:
+                                                self.context.plan_graph.nodes[successor_id]["reads"] = []
+                                            if write_key not in self.context.plan_graph.nodes[successor_id]["reads"]:
+                                                self.context.plan_graph.nodes[successor_id]["reads"].append(write_key)
+                                break
         
         self.context._save_session()
         log_step("✅ Plan merged into execution context", symbol="🌳")
