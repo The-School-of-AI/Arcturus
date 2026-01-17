@@ -379,3 +379,114 @@
 .dark .monaco-editor .scrollbar .slider {
   background: rgba(255, 255, 255, 0.1) !important;
 }
+
+/* ============================================
+   TipTap Task List / Checkbox Styles
+   Minimalist grey design with inline layout
+   ============================================ */
+
+/* Task List Container */
+ul[data-type="taskList"] {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0.5rem 0 !important;
+}
+
+ul[data-type="taskList"] li.task-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  padding: 0.125rem 0 !important;
+}
+
+/* Custom Checkbox Styling - Minimalist */
+ul[data-type="taskList"] li.task-item>label {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-top: 2px !important;
+}
+
+ul[data-type="taskList"] li.task-item>label>input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  border: 2px solid hsl(var(--muted-foreground) / 0.4) !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  position: relative !important;
+  margin: 0 !important;
+}
+
+/* Hover state */
+ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:hover {
+  border-color: hsl(var(--muted-foreground) / 0.7) !important;
+}
+
+/* Checked state [x] - grey checkmark */
+ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:checked {
+  background: hsl(var(--muted-foreground) / 0.3) !important;
+  border-color: hsl(var(--muted-foreground) / 0.5) !important;
+}
+
+ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:checked::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 4px !important;
+  top: 1px !important;
+  width: 5px !important;
+  height: 9px !important;
+  border: solid hsl(var(--muted-foreground)) !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) !important;
+}
+
+/* Content wrapper - inline with checkbox */
+ul[data-type="taskList"] li.task-item>div {
+  flex: 1 !important;
+  line-height: 1.4 !important;
+}
+
+/* Remove margins from paragraphs inside task items */
+ul[data-type="taskList"] li.task-item>div>p {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline !important;
+}
+
+/* Completed task - muted text */
+ul[data-type="taskList"] li.task-item[data-checked="true"]>div {
+  color: hsl(var(--muted-foreground) / 0.7) !important;
+}
+
+/* In-progress state [/] - filled grey circle inside */
+ul[data-type="taskList"] li.task-item[data-state="in-progress"]>label>input[type="checkbox"] {
+  background: transparent !important;
+  border-color: hsl(var(--muted-foreground) / 0.4) !important;
+}
+
+ul[data-type="taskList"] li.task-item[data-state="in-progress"]>label>input[type="checkbox"]::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: hsl(var(--muted-foreground) / 0.6) !important;
+  border: none !important;
+}
+
+/* Nested task lists */
+ul[data-type="taskList"] ul[data-type="taskList"] {
+  margin-left: 1.5rem !important;
+  margin-top: 0.25rem !important;
+}

@@ -43,11 +43,30 @@ import { cn } from '@/lib/utils';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Mention from '@tiptap/extension-mention';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import tippy from 'tippy.js';
 import type { Instance as TippyInstance } from 'tippy.js';
 import { ReactRenderer } from '@tiptap/react';
 import { WikiLinkList } from './WikiLinkList';
 import { gfm } from 'turndown-plugin-gfm';
+
+// Custom TaskItem with 'state' attribute for in-progress items
+const CustomTaskItem = TaskItem.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            state: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-state'),
+                renderHTML: attributes => {
+                    if (!attributes.state) return {};
+                    return { 'data-state': attributes.state };
+                },
+            },
+        };
+    },
+});
 
 // Initialize Turndown service
 const turndownService = new TurndownService({
@@ -147,6 +166,31 @@ turndownService.addRule('wikilinks', {
             return `[[${path}|${alias}]]`;
         }
         return `[[${path}]]`;
+    }
+});
+
+// Task List rules for Turndown - convert HTML back to markdown checkboxes
+turndownService.addRule('taskList', {
+    filter: (node) => node.nodeName === 'UL' && node.getAttribute('data-type') === 'taskList',
+    replacement: (content) => content
+});
+
+turndownService.addRule('taskItem', {
+    filter: (node) => node.nodeName === 'LI' && node.getAttribute('data-type') === 'taskItem',
+    replacement: (content, node: any) => {
+        const checked = node.getAttribute('data-checked');
+        const state = node.getAttribute('data-state');
+
+        let checkbox = '[ ]'; // default unchecked
+        if (checked === 'true') {
+            checkbox = '[x]';
+        } else if (checked === 'partial' || state === 'in-progress') {
+            checkbox = '[/]';
+        }
+
+        // Clean up content - remove leading/trailing whitespace
+        const cleanContent = content.trim();
+        return `- ${checkbox} ${cleanContent}\n`;
     }
 });
 
@@ -531,6 +575,17 @@ export const NotesEditor: React.FC = () => {
             Details,
             DetailsSummary,
             DetailsContent,
+            TaskList.configure({
+                HTMLAttributes: {
+                    class: 'task-list not-prose',
+                },
+            }),
+            CustomTaskItem.configure({
+                nested: true,
+                HTMLAttributes: {
+                    class: 'task-item',
+                },
+            }),
             ScaledImage.configure({
                 HTMLAttributes: {
                     class: 'rounded-lg border border-border/50 max-w-full h-auto my-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow',
@@ -687,10 +742,27 @@ export const NotesEditor: React.FC = () => {
             const styleAttr = styles.length > 0 ? `style="${styles.join('; ')}"` : '';
             return `<img src="${resolvedSrc}" alt="${text || ''}" ${title ? `title="${title}"` : ''} ${styleAttr} />`;
         };
+
+        // Task List / Checkbox rendering: handles both `- [ ]` and `[ ]` formats
+        // Convert markdown checkboxes to TipTap task list HTML format
+        let finalContent = content
+            // Handle checked items [x] or [X] - with or without leading dash/bullet
+            .replace(/^(\s*)(?:[-*]\s+)?\[x\]\s+(.+)$/gim, (match, indent, text) => {
+                return `${indent}<ul data-type="taskList"><li data-type="taskItem" data-checked="true">${text}</li></ul>`;
+            })
+            // Handle in-progress items [/] - with or without leading dash/bullet
+            .replace(/^(\s*)(?:[-*]\s+)?\[\/\]\s+(.+)$/gim, (match, indent, text) => {
+                return `${indent}<ul data-type="taskList"><li data-type="taskItem" data-checked="partial" data-state="in-progress">${text}</li></ul>`;
+            })
+            // Handle unchecked items [ ] - with or without leading dash/bullet
+            .replace(/^(\s*)(?:[-*]\s+)?\[\s?\]\s+(.+)$/gim, (match, indent, text) => {
+                return `${indent}<ul data-type="taskList"><li data-type="taskItem" data-checked="false">${text}</li></ul>`;
+            });
+
         // WikiLink rendering: [[Path]] or [[Path|Alias]]
         // Using a more precise regex to avoid capturing trailing artifacts
         const wikiLinkRegex = /\[\[([^\[\]]+?)\]\]/g;
-        let finalContent = content.replace(wikiLinkRegex, (match, inner) => {
+        finalContent = finalContent.replace(wikiLinkRegex, (match, inner) => {
             const parts = inner.split('|');
             const path = parts[0].trim();
             const alias = parts[1] ? parts[1].trim() : path.split('/').pop()?.replace('.md', '');
