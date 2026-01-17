@@ -11,6 +11,9 @@ import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/
 import { useTheme } from '@/components/theme';
 import { availableTools, type ToolCall } from '@/lib/agent-tools';
 import permissions from '@/config/agent_permissions.json'; // Direct import assuming resolveJsonModule is on
+import { checkContentSafety, checkPathSafety, getContentTypeFromPath, BLOCKED_PATTERNS } from '@/config/blocked_patterns';
+import { PermissionDialog } from '@/components/dialogs/PermissionDialog';
+import { usePermissionDialog, determineRiskLevel } from '@/hooks/usePermissionDialog';
 
 // --- Reused Components (To be extracted later) ---
 
@@ -377,6 +380,14 @@ export const IdeAgentPanel: React.FC = () => {
     const [copiedImage, setCopiedImage] = useState(false);
     const thinkingRef = useRef(false);
 
+    // Permission dialog hook for agent operations
+    const {
+        currentRequest: permissionRequest,
+        requestPermission,
+        handleDecision: handlePermissionDecision,
+        projectRoot: permissionProjectRoot
+    } = usePermissionDialog();
+
     const formatRelativeTime = (timestamp: number) => {
         const now = Math.floor(Date.now() / 1000);
         const diff = now - timestamp;
@@ -514,6 +525,11 @@ export const IdeAgentPanel: React.FC = () => {
             if (permissions.blocked_commands.includes(cmdName)) {
                 return `Error: Command '${cmdName}' is BLOCKED by security policy.`;
             }
+            // Check shell command patterns
+            const shellCheck = checkContentSafety(toolCall.arguments.command || '', 'shell');
+            if (!shellCheck.safe) {
+                return `Error: Command blocked by security policy. Reason: ${shellCheck.violations.join(', ')}`;
+            }
         }
         if ((toolCall.name === 'fs:delete' || toolCall.name === 'write_file') && permissions.require_confirmation) {
             // For now, valid unless we implement UI confirmation interception.
@@ -532,14 +548,32 @@ export const IdeAgentPanel: React.FC = () => {
             return { valid: true, path: fullPath };
         };
 
+        // Helper to check if a path is gitignored
+        const checkGitignore = async (filePath: string): Promise<{ ignored: boolean; error?: string }> => {
+            if (!projectRoot || !window.electronAPI) return { ignored: false };
+            try {
+                const result = await window.electronAPI.invoke('fs:isGitignored', { filePath, projectRoot });
+                return { ignored: result?.ignored || false };
+            } catch (e) {
+                console.warn('[IDE Agent] Gitignore check failed:', e);
+                return { ignored: false };
+            }
+        };
+
         try {
             switch (toolCall.name) {
                 case 'read_file': {
                     const validation = validatePath(toolCall.arguments.path);
                     if (!validation.valid) return `Error: ${validation.error}`;
 
-                    const res = await window.electronAPI.invoke('fs:readFile', validation.path!);
-                    if (res.success) {
+                    // Check if file is gitignored
+                    const gitCheck = await checkGitignore(validation.path!);
+                    if (gitCheck.ignored) {
+                        return `Error: Cannot read gitignored file. File is excluded by .gitignore.`;
+                    }
+
+                    const res = await window.electronAPI?.invoke('fs:readFile', validation.path!);
+                    if (res?.success) {
                         useAppStore.getState().openIdeDocument({
                             id: validation.path!,
                             title: validation.path!.split('/').pop() || 'Untitled',
@@ -548,12 +582,34 @@ export const IdeAgentPanel: React.FC = () => {
                         } as RAGDocument);
                         return res.content;
                     }
-                    return `Error: ${res.error}`;
+                    return `Error: ${res?.error || 'Unknown error'}`;
                 }
 
                 case 'write_file': {
                     const validation = validatePath(toolCall.arguments.path);
                     if (!validation.valid) return `Error: ${validation.error}`;
+
+                    // Security: Check path for sensitive files
+                    const pathCheck = checkPathSafety(validation.path!);
+                    if (!pathCheck.safe) {
+                        return `Error: Cannot write to sensitive file. Reason: ${pathCheck.violation}`;
+                    }
+
+                    // Check if file would be gitignored (warn but allow for new files)
+                    const writeGitCheck = await checkGitignore(validation.path!);
+                    if (writeGitCheck.ignored) {
+                        console.warn(`[IDE Agent] Writing to gitignored path: ${validation.path}`);
+                        // Allow write but log - user might intentionally modify gitignored files
+                    }
+
+                    // Security: Check content for dangerous patterns
+                    const contentType = getContentTypeFromPath(validation.path!);
+                    if (contentType) {
+                        const contentCheck = checkContentSafety(toolCall.arguments.content || '', contentType);
+                        if (!contentCheck.safe) {
+                            return `Error: Content blocked by security policy. Patterns detected: ${contentCheck.violations.join(', ')}`;
+                        }
+                    }
 
                     const res = await window.electronAPI.invoke('fs:writeFile', {
                         path: validation.path,
@@ -672,6 +728,9 @@ export const IdeAgentPanel: React.FC = () => {
                         if (!currentContent.includes(change.target)) {
                             return `Error: Change ${i + 1}/${changes.length} failed. Target text not found.`;
                         }
+                        if (currentContent.indexOf(change.target) !== currentContent.lastIndexOf(change.target)) {
+                            return `Error: Change ${i + 1}/${changes.length} failed. Target text found multiple times. Provide more unique context.`;
+                        }
                         currentContent = currentContent.replace(change.target, change.replacement);
                     }
 
@@ -701,9 +760,11 @@ export const IdeAgentPanel: React.FC = () => {
                     }
 
                     // Use shell:spawn for background support
+                    // FIXED: Pass projectRoot so Electron validates against user's project, not Arcturus
                     const res = await window.electronAPI.invoke('shell:spawn', {
                         cmd: toolCall.arguments.command,
-                        cwd: cwd
+                        cwd: cwd,
+                        projectRoot: projectRoot
                     });
 
                     if (res.success) {
@@ -885,424 +946,433 @@ export const IdeAgentPanel: React.FC = () => {
 
     // Render Logic...
     return (
-        <div
-            className="h-full flex flex-col bg-white dark:bg-card relative"
-            onDragEnter={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dragCounter.current += 1;
-                setIsDragging(true);
-            }}
-            onDragLeave={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dragCounter.current -= 1;
-                if (dragCounter.current === 0) {
-                    setIsDragging(false);
-                }
-            }}
-            onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            }}
-            onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDragging(false);
-                dragCounter.current = 0;
-                const fileData = e.dataTransfer.getData('application/arcturus-file');
-                if (fileData) {
-                    try {
-                        const file = JSON.parse(fileData);
-                        if (!selectedFileContexts.some(f => f.path === file.path)) {
-                            addSelectedFileContext(file);
-                        }
-                    } catch (e) { console.error("Drop parse error", e); }
-                }
-            }}
-        >
-            {/* Full Panel Drop Overlay */}
-            {isDragging && (
-                <div className="absolute inset-0 z-[100] bg-primary/5 backdrop-blur-[2px] border-2 border-dashed border-primary/40 rounded-lg flex flex-col items-center justify-center p-8 pointer-events-none animate-in fade-in duration-200">
-                    <div className="bg-background/80 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-primary/20 scale-110">
-                        <div className="p-4 bg-primary/10 rounded-full">
-                            <Plus className="w-8 h-8 text-primary animate-bounce" />
-                        </div>
-                        <p className="text-sm font-bold text-primary">Drop file to add as context</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
-                <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">IDE Agent</span>
-                        <span className="text-xs font-medium truncate text-foreground">
-                            {explorerRootPath?.split('/').pop() || 'No Project'}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => {
-                            if (explorerRootPath) createNewChatSession('ide', explorerRootPath);
-                        }}
-                        className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                        title="New Chat"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </button>
-
-                    <div className="relative history-menu-container">
-                        <button
-                            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                            className={cn(
-                                "p-2 hover:bg-muted rounded-md transition-colors",
-                                isHistoryOpen ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
-                            )}
-                            title="Chat History"
-                        >
-                            <History className="w-4 h-4" />
-                        </button>
-
-                        {isHistoryOpen && (
-                            <div className="absolute top-full right-0 mt-2 w-64 bg-background border border-border shadow-xl rounded-lg z-50 p-2 max-h-60 overflow-y-auto">
-                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1 mb-1">Previous Chats</p>
-                                {chatSessions.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground px-2 py-4 text-center italic">No history yet</p>
-                                ) : (
-                                    chatSessions.map(session => (
-                                        <button
-                                            key={session.id}
-                                            onClick={() => {
-                                                if (explorerRootPath) loadChatSession(session.id, 'ide', explorerRootPath);
-                                                setIsHistoryOpen(false);
-                                            }}
-                                            className={cn(
-                                                "w-full text-left px-2 py-2 rounded-md hover:bg-muted transition-colors text-xs mb-1 flex items-center justify-between group",
-                                                activeChatSessionId === session.id ? "bg-muted" : ""
-                                            )}
-                                        >
-                                            <div className="truncate flex-1 pr-2">
-                                                <span className="block truncate font-medium">{session.title}</span>
-                                                <span className="block text-[9px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                    <Clock className="w-2 h-2" />
-                                                    {new Date(session.updated_at * 1000).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        </button>
-                                    ))
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Chat History */}
+        <>
             <div
-                ref={scrollRef}
-                onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth"
+                className="h-full flex flex-col bg-white dark:bg-card relative"
+                onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current += 1;
+                    setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current -= 1;
+                    if (dragCounter.current === 0) {
+                        setIsDragging(false);
+                    }
+                }}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
+                    dragCounter.current = 0;
+                    const fileData = e.dataTransfer.getData('application/arcturus-file');
+                    if (fileData) {
+                        try {
+                            const file = JSON.parse(fileData);
+                            if (!selectedFileContexts.some(f => f.path === file.path)) {
+                                addSelectedFileContext(file);
+                            }
+                        } catch (e) { console.error("Drop parse error", e); }
+                    }
+                }}
             >
-                {/* Empty State */}
-                {ideProjectChatHistory.length === 0 && (
-                    <div className="flex flex-col justify-end min-h-[500px] h-full pb-12 animate-in fade-in duration-700">
-                        <div className="flex-1" />
-
-                        {/* Title */}
-                        <div className="mb-12 text-center">
-                            <h1 className="text-3xl font-semibold opacity-30 tracking-tight text-foreground select-none">Arcturus</h1>
-                        </div>
-
-                        {/* Recent Chats */}
-                        {chatSessions.length > 0 && (
-                            <div className="w-full max-w-md mx-auto px-4 mb-8 space-y-1">
-                                {chatSessions.slice(0, 3).map((session) => (
-                                    <button
-                                        key={session.id}
-                                        onClick={() => explorerRootPath && loadChatSession(session.id, 'ide', explorerRootPath)}
-                                        className="w-full flex items-center justify-between py-2 group hover:opacity-70 transition-all text-left"
-                                    >
-                                        <span className="text-sm text-foreground/60 group-hover:text-foreground transition-colors truncate pr-4">
-                                            {session.title}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground/40 font-mono shrink-0">
-                                            {formatRelativeTime(session.updated_at)}
-                                        </span>
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setIsHistoryOpen(true)}
-                                    className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors pt-2 block"
-                                >
-                                    See all
-                                </button>
+                {/* Full Panel Drop Overlay */}
+                {isDragging && (
+                    <div className="absolute inset-0 z-[100] bg-primary/5 backdrop-blur-[2px] border-2 border-dashed border-primary/40 rounded-lg flex flex-col items-center justify-center p-8 pointer-events-none animate-in fade-in duration-200">
+                        <div className="bg-background/80 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-primary/20 scale-110">
+                            <div className="p-4 bg-primary/10 rounded-full">
+                                <Plus className="w-8 h-8 text-primary animate-bounce" />
                             </div>
-                        )}
-
-                        {/* Quick Actions - Minimal version */}
-                        <div className="flex flex-col gap-1 w-full max-w-md mx-auto px-4 opacity-40 hover:opacity-100 transition-opacity">
-                            <button
-                                onClick={() => handleSend('Summarize this project structure and key components.')}
-                                className="flex items-center gap-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-all text-left"
-                            >
-                                <ScrollText className="w-3 h-3 shrink-0" />
-                                <span>Summarize Project Structure</span>
-                            </button>
-                            <button
-                                onClick={() => handleSend('What are the key takeaways and main features of this codebase?')}
-                                className="flex items-center gap-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-all text-left"
-                            >
-                                <Quote className="w-3 h-3 shrink-0" />
-                                <span>Key Takeaways</span>
-                            </button>
+                            <p className="text-sm font-bold text-primary">Drop file to add as context</p>
                         </div>
                     </div>
                 )}
 
-                {ideProjectChatHistory.map((msg) => (
-                    <div key={msg.id} className={cn(
-                        "flex flex-col w-full mb-6",
-                        msg.role === 'user' ? "items-end" : "items-start"
-                    )}>
-                        {/* Message Header (Role Name) */}
-                        {msg.role === 'assistant' && (
-                            <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">RESPONSE</span>
-                            </div>
-                        )}
-
-                        <div className={cn(
-                            "max-w-full min-w-0 overflow-hidden"
-                        )}>
-                            {msg.role === 'user' && (
-                                (msg.contexts && msg.contexts.length > 0) ||
-                                (msg.fileContexts && msg.fileContexts.length > 0) ||
-                                (msg.images && msg.images.length > 0)
-                            ) && (
-                                    <div className="flex flex-col items-end w-full mb-1 space-y-1">
-                                        {msg.fileContexts?.map((file, idx) => (
-                                            <FilePill key={`file-${idx}`} file={file} />
-                                        ))}
-                                        {msg.contexts?.map((ctx, idx) => (
-                                            /* @ts-ignore */
-                                            <ContextPill key={`ctx-${idx}`} item={ctx} />
-                                        ))}
-                                        {msg.images?.map((img, idx) => (
-                                            <div key={`img-${idx}`} className="relative group max-w-[200px] mb-1">
-                                                <img src={img} className="rounded-md border border-border/50 shadow-sm" alt="User upload" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                        </div>
-
-                        <div className={cn(
-                            "text-sm",
-                            msg.role === 'user'
-                                ? ((msg.content && msg.content.includes && msg.content.includes('[System Tool Output]'))
-                                    ? "w-full"
-                                    : "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
-                                : "text-foreground leading-relaxed"
-                        )}>
-                            <MessageContent content={msg.content} role={msg.role as any} />
-                        </div>
-                    </div>
-                ))}
-
-                {isThinking && (
-                    <div className="flex flex-col w-full mb-4">
-                        <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                            <span className="text-[10px] font-bold uppercase tracking-widest">Assistant</span>
-                        </div>
-                        <div className="pl-1 text-sm text-foreground">
-                            <span className="flex items-center gap-2 text-muted-foreground italic text-xs">
-                                Thinking <span className="flex gap-1"><span className="animate-bounce">.</span><span className="animate-bounce delay-100">.</span><span className="animate-bounce delay-200">.</span></span>
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">IDE Agent</span>
+                            <span className="text-xs font-medium truncate text-foreground">
+                                {explorerRootPath?.split('/').pop() || 'No Project'}
                             </span>
                         </div>
                     </div>
-                )}
-            </div>
 
-            {/* Input Area */}
-            <div className="p-3 border-t border-border/50 bg-background/50 backdrop-blur-sm">
-                {/* Context Pills (Text & File) & Image Previews */}
-                {(selectedContexts.length > 0 || selectedFileContexts.length > 0 || pastedImages.length > 0) && (
-                    <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-muted">
-                        {/* Text Contexts */}
-                        {selectedContexts.map((ctx, i) => {
-                            const text = typeof ctx === 'string' ? ctx : ctx.text;
-                            return (
-                                <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
-                                    <Quote className="w-3 h-3 shrink-0 opacity-70" />
-                                    <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
-                                    <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
-                                </div>
-                            );
-                        })}
-                        {/* File Contexts */}
-                        {selectedFileContexts.map((f, i) => <FilePill key={`file-${i}`} file={f} onRemove={() => removeSelectedFileContext(i)} />)}
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => {
+                                if (explorerRootPath) createNewChatSession('ide', explorerRootPath);
+                            }}
+                            className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                            title="New Chat"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
 
-                        {/* Image Previews */}
-                        {pastedImages.map((img, i) => (
-                            <div key={`img-${i}`} className="relative group animate-in fade-in zoom-in duration-200">
-                                <img src={img} alt={`Pasted ${i}`} className="w-12 h-12 object-cover rounded-md border border-border shadow-sm" />
-                                <button
-                                    onClick={() => removePastedImage(i)}
-                                    className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                >
-                                    <X className="w-2.5 h-2.5" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                <div className={cn(
-                    "relative bg-muted/40 border border-border/50 rounded-xl focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-sm",
-                    isThinking ? "opacity-80" : ""
-                )}>
-                    <textarea
-                        ref={textareaRef}
-                        value={inputValue}
-                        onChange={e => setInputValue(e.target.value)}
-                        onPaste={handlePaste}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter' && !e.shiftKey && !isThinking) {
-                                e.preventDefault();
-                                handleSend();
-                            }
-                        }}
-                        placeholder={selectedContexts.length > 0 ? "Ask about selected text..." : "Ask anything..."}
-                        readOnly={isThinking}
-                        className={cn(
-                            "w-full bg-transparent p-3 text-sm focus:outline-none resize-none min-h-[44px] max-h-[50vh] overflow-y-auto",
-                            isThinking ? "cursor-not-allowed opacity-50" : ""
-                        )}
-                        rows={1}
-                        style={{ minHeight: '44px' }}
-                    />
-
-                    <div className="flex items-center justify-between p-2 border-t border-border/10">
-                        {/* Model Selector */}
-                        <div className="relative model-menu-container">
+                        <div className="relative history-menu-container">
                             <button
-                                onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-                                disabled={isThinking}
+                                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30",
-                                    isThinking ? "opacity-50 cursor-not-allowed" : ""
+                                    "p-2 hover:bg-muted rounded-md transition-colors",
+                                    isHistoryOpen ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
                                 )}
+                                title="Chat History"
                             >
-                                <Cpu className="w-3 h-3" />
-                                <span>{ollamaModels.find(m => m.name === selectedModel)?.name || selectedModel}</span>
-                                <ChevronDown className="w-3 h-3 opacity-50" />
+                                <History className="w-4 h-4" />
                             </button>
 
-                            {isModelMenuOpen && (
-                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-popover border border-border shadow-xl rounded-lg z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-1 p-1">
-                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5">Select Model</p>
-                                    {ollamaModels.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground italic">No models found</p>}
-                                    {ollamaModels.map(model => (
-                                        <button
-                                            key={model.name}
-                                            onClick={() => {
-                                                setSelectedModel(model.name);
-                                                setIsModelMenuOpen(false);
-                                            }}
-                                            className={cn(
-                                                "w-full text-left px-2 py-1.5 rounded-md text-xs flex items-center gap-2 transition-colors",
-                                                selectedModel === model.name ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
-                                            )}
-                                        >
-                                            {selectedModel === model.name && <Check className="w-3 h-3 shrink-0" />}
-                                            <span className={cn("truncate", selectedModel !== model.name && "pl-5")}>
-                                                {model.name}
-                                            </span>
-                                        </button>
-                                    ))}
+                            {isHistoryOpen && (
+                                <div className="absolute top-full right-0 mt-2 w-64 bg-background border border-border shadow-xl rounded-lg z-50 p-2 max-h-60 overflow-y-auto">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1 mb-1">Previous Chats</p>
+                                    {chatSessions.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground px-2 py-4 text-center italic">No history yet</p>
+                                    ) : (
+                                        chatSessions.map(session => (
+                                            <button
+                                                key={session.id}
+                                                onClick={() => {
+                                                    if (explorerRootPath) loadChatSession(session.id, 'ide', explorerRootPath);
+                                                    setIsHistoryOpen(false);
+                                                }}
+                                                className={cn(
+                                                    "w-full text-left px-2 py-2 rounded-md hover:bg-muted transition-colors text-xs mb-1 flex items-center justify-between group",
+                                                    activeChatSessionId === session.id ? "bg-muted" : ""
+                                                )}
+                                            >
+                                                <div className="truncate flex-1 pr-2">
+                                                    <span className="block truncate font-medium">{session.title}</span>
+                                                    <span className="block text-[9px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                        <Clock className="w-2 h-2" />
+                                                        {new Date(session.updated_at * 1000).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="flex">
-                            {isThinking ? (
-                                <button
-                                    onClick={stopAgent}
-                                    className="p-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all shadow-sm flex items-center gap-1.5 animate-in fade-in zoom-in duration-200"
-                                    title="Stop generating"
-                                >
-                                    <Square className="w-3.5 h-3.5 fill-current" />
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => handleSend()}
-                                    disabled={!inputValue.trim() && selectedFileContexts.length === 0 && pastedImages.length === 0}
-                                    className="p-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                </button>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* Chat History */}
+                <div
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth"
+                >
+                    {/* Empty State */}
+                    {ideProjectChatHistory.length === 0 && (
+                        <div className="flex flex-col justify-end min-h-[500px] h-full pb-12 animate-in fade-in duration-700">
+                            <div className="flex-1" />
+
+                            {/* Title */}
+                            <div className="mb-12 text-center">
+                                <h1 className="text-3xl font-semibold opacity-30 tracking-tight text-foreground select-none">Arcturus</h1>
+                            </div>
+
+                            {/* Recent Chats */}
+                            {chatSessions.length > 0 && (
+                                <div className="w-full max-w-md mx-auto px-4 mb-8 space-y-1">
+                                    {chatSessions.slice(0, 3).map((session) => (
+                                        <button
+                                            key={session.id}
+                                            onClick={() => explorerRootPath && loadChatSession(session.id, 'ide', explorerRootPath)}
+                                            className="w-full flex items-center justify-between py-2 group hover:opacity-70 transition-all text-left"
+                                        >
+                                            <span className="text-sm text-foreground/60 group-hover:text-foreground transition-colors truncate pr-4">
+                                                {session.title}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground/40 font-mono shrink-0">
+                                                {formatRelativeTime(session.updated_at)}
+                                            </span>
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setIsHistoryOpen(true)}
+                                        className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors pt-2 block"
+                                    >
+                                        See all
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Quick Actions - Minimal version */}
+                            <div className="flex flex-col gap-1 w-full max-w-md mx-auto px-4 opacity-40 hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={() => handleSend('Summarize this project structure and key components.')}
+                                    className="flex items-center gap-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-all text-left"
+                                >
+                                    <ScrollText className="w-3 h-3 shrink-0" />
+                                    <span>Summarize Project Structure</span>
+                                </button>
+                                <button
+                                    onClick={() => handleSend('What are the key takeaways and main features of this codebase?')}
+                                    className="flex items-center gap-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-all text-left"
+                                >
+                                    <Quote className="w-3 h-3 shrink-0" />
+                                    <span>Key Takeaways</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {ideProjectChatHistory.map((msg) => (
+                        <div key={msg.id} className={cn(
+                            "flex flex-col w-full mb-6",
+                            msg.role === 'user' ? "items-end" : "items-start"
+                        )}>
+                            {/* Message Header (Role Name) */}
+                            {msg.role === 'assistant' && (
+                                <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">RESPONSE</span>
+                                </div>
+                            )}
+
+                            <div className={cn(
+                                "max-w-full min-w-0 overflow-hidden"
+                            )}>
+                                {msg.role === 'user' && (
+                                    (msg.contexts && msg.contexts.length > 0) ||
+                                    (msg.fileContexts && msg.fileContexts.length > 0) ||
+                                    (msg.images && msg.images.length > 0)
+                                ) && (
+                                        <div className="flex flex-col items-end w-full mb-1 space-y-1">
+                                            {msg.fileContexts?.map((file, idx) => (
+                                                <FilePill key={`file-${idx}`} file={file} />
+                                            ))}
+                                            {msg.contexts?.map((ctx, idx) => (
+                                                /* @ts-ignore */
+                                                <ContextPill key={`ctx-${idx}`} item={ctx} />
+                                            ))}
+                                            {msg.images?.map((img, idx) => (
+                                                <div key={`img-${idx}`} className="relative group max-w-[200px] mb-1">
+                                                    <img src={img} className="rounded-md border border-border/50 shadow-sm" alt="User upload" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                            </div>
+
+                            <div className={cn(
+                                "text-sm",
+                                msg.role === 'user'
+                                    ? ((msg.content && msg.content.includes && msg.content.includes('[System Tool Output]'))
+                                        ? "w-full"
+                                        : "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
+                                    : "text-foreground leading-relaxed"
+                            )}>
+                                <MessageContent content={msg.content} role={msg.role as any} />
+                            </div>
+                        </div>
+                    ))}
+
+                    {isThinking && (
+                        <div className="flex flex-col w-full mb-4">
+                            <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Assistant</span>
+                            </div>
+                            <div className="pl-1 text-sm text-foreground">
+                                <span className="flex items-center gap-2 text-muted-foreground italic text-xs">
+                                    Thinking <span className="flex gap-1"><span className="animate-bounce">.</span><span className="animate-bounce delay-100">.</span><span className="animate-bounce delay-200">.</span></span>
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Input Area */}
+                <div className="p-3 border-t border-border/50 bg-background/50 backdrop-blur-sm">
+                    {/* Context Pills (Text & File) & Image Previews */}
+                    {(selectedContexts.length > 0 || selectedFileContexts.length > 0 || pastedImages.length > 0) && (
+                        <div className="flex flex-wrap gap-2 mb-2 max-h-[100px] overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-muted">
+                            {/* Text Contexts */}
+                            {selectedContexts.map((ctx, i) => {
+                                const text = typeof ctx === 'string' ? ctx : ctx.text;
+                                return (
+                                    <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                                        <Quote className="w-3 h-3 shrink-0 opacity-70" />
+                                        <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
+                                        <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
+                                    </div>
+                                );
+                            })}
+                            {/* File Contexts */}
+                            {selectedFileContexts.map((f, i) => <FilePill key={`file-${i}`} file={f} onRemove={() => removeSelectedFileContext(i)} />)}
+
+                            {/* Image Previews */}
+                            {pastedImages.map((img, i) => (
+                                <div key={`img-${i}`} className="relative group animate-in fade-in zoom-in duration-200">
+                                    <img src={img} alt={`Pasted ${i}`} className="w-12 h-12 object-cover rounded-md border border-border shadow-sm" />
+                                    <button
+                                        onClick={() => removePastedImage(i)}
+                                        className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                    >
+                                        <X className="w-2.5 h-2.5" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className={cn(
+                        "relative bg-muted/40 border border-border/50 rounded-xl focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-sm",
+                        isThinking ? "opacity-80" : ""
+                    )}>
+                        <textarea
+                            ref={textareaRef}
+                            value={inputValue}
+                            onChange={e => setInputValue(e.target.value)}
+                            onPaste={handlePaste}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey && !isThinking) {
+                                    e.preventDefault();
+                                    handleSend();
+                                }
+                            }}
+                            placeholder={selectedContexts.length > 0 ? "Ask about selected text..." : "Ask anything..."}
+                            readOnly={isThinking}
+                            className={cn(
+                                "w-full bg-transparent p-3 text-sm focus:outline-none resize-none min-h-[44px] max-h-[50vh] overflow-y-auto",
+                                isThinking ? "cursor-not-allowed opacity-50" : ""
+                            )}
+                            rows={1}
+                            style={{ minHeight: '44px' }}
+                        />
+
+                        <div className="flex items-center justify-between p-2 border-t border-border/10">
+                            {/* Model Selector */}
+                            <div className="relative model-menu-container">
+                                <button
+                                    onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                                    disabled={isThinking}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30",
+                                        isThinking ? "opacity-50 cursor-not-allowed" : ""
+                                    )}
+                                >
+                                    <Cpu className="w-3 h-3" />
+                                    <span>{ollamaModels.find(m => m.name === selectedModel)?.name || selectedModel}</span>
+                                    <ChevronDown className="w-3 h-3 opacity-50" />
+                                </button>
+
+                                {isModelMenuOpen && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-popover border border-border shadow-xl rounded-lg z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-1 p-1">
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5">Select Model</p>
+                                        {ollamaModels.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground italic">No models found</p>}
+                                        {ollamaModels.map(model => (
+                                            <button
+                                                key={model.name}
+                                                onClick={() => {
+                                                    setSelectedModel(model.name);
+                                                    setIsModelMenuOpen(false);
+                                                }}
+                                                className={cn(
+                                                    "w-full text-left px-2 py-1.5 rounded-md text-xs flex items-center gap-2 transition-colors",
+                                                    selectedModel === model.name ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
+                                                )}
+                                            >
+                                                {selectedModel === model.name && <Check className="w-3 h-3 shrink-0" />}
+                                                <span className={cn("truncate", selectedModel !== model.name && "pl-5")}>
+                                                    {model.name}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex">
+                                {isThinking ? (
+                                    <button
+                                        onClick={stopAgent}
+                                        className="p-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all shadow-sm flex items-center gap-1.5 animate-in fade-in zoom-in duration-200"
+                                        title="Stop generating"
+                                    >
+                                        <Square className="w-3.5 h-3.5 fill-current" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleSend()}
+                                        disabled={!inputValue.trim() && selectedFileContexts.length === 0 && pastedImages.length === 0}
+                                        className="p-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <ArrowRight className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Image Lightbox */}
+                {
+                    selectedImage && (
+                        <div
+                            className="fixed inset-0 z-[200] bg-black/10 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <div className="absolute top-6 right-6 flex items-center gap-3">
+                                <button
+                                    className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (selectedImage) copyImageToClipboard(selectedImage);
+                                    }}
+                                    title="Copy to clipboard"
+                                >
+                                    {copiedImage ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                                    <span className="text-xs font-bold">{copiedImage ? 'COPIED' : 'COPY'}</span>
+                                </button>
+                                <button
+                                    className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!selectedImage) return;
+                                        const link = document.createElement('a');
+                                        link.href = selectedImage;
+                                        link.download = `pasted_image_${Date.now()}.png`;
+                                        link.click();
+                                    }}
+                                    title="Download image"
+                                >
+                                    <Download className="w-5 h-5" />
+                                    <span className="text-xs font-bold">SAVE</span>
+                                </button>
+                                <button
+                                    className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
+                                    onClick={() => setSelectedImage(null)}
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                            {selectedImage && (
+                                <img
+                                    src={selectedImage}
+                                    alt="Zoomed"
+                                    className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            )}
+                        </div>
+                    )
+                }
             </div>
 
-            {/* Image Lightbox */}
-            {
-                selectedImage && (
-                    <div
-                        className="fixed inset-0 z-[200] bg-black/10 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200"
-                        onClick={() => setSelectedImage(null)}
-                    >
-                        <div className="absolute top-6 right-6 flex items-center gap-3">
-                            <button
-                                className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (selectedImage) copyImageToClipboard(selectedImage);
-                                }}
-                                title="Copy to clipboard"
-                            >
-                                {copiedImage ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
-                                <span className="text-xs font-bold">{copiedImage ? 'COPIED' : 'COPY'}</span>
-                            </button>
-                            <button
-                                className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!selectedImage) return;
-                                    const link = document.createElement('a');
-                                    link.href = selectedImage;
-                                    link.download = `pasted_image_${Date.now()}.png`;
-                                    link.click();
-                                }}
-                                title="Download image"
-                            >
-                                <Download className="w-5 h-5" />
-                                <span className="text-xs font-bold">SAVE</span>
-                            </button>
-                            <button
-                                className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
-                                onClick={() => setSelectedImage(null)}
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        {selectedImage && (
-                            <img
-                                src={selectedImage}
-                                alt="Zoomed"
-                                className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                        )}
-                    </div>
-                )
-            }
-        </div >
+            {/* Permission Dialog - rendered as overlay */}
+            <PermissionDialog
+                request={permissionRequest}
+                projectRoot={permissionProjectRoot || explorerRootPath || ''}
+                onDecision={handlePermissionDecision}
+            />
+        </>
     );
 };

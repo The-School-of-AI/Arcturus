@@ -37,6 +37,76 @@ let activeBrowserTabId = null;
 let browserViewBounds = { x: 0, y: 0, width: 800, height: 600 };
 let browserTabCounter = 0;
 
+// ===== GITIGNORE INTEGRATION =====
+// Load the 'ignore' library for gitignore parsing
+const ignore = require('ignore');
+
+// Cache gitignore patterns per project to avoid re-reading
+const gitignoreCache = new Map(); // projectRoot -> ignore instance
+
+/**
+ * Load and parse .gitignore for a project
+ * @param {string} projectRoot - The project root directory
+ * @returns {object} ignore instance
+ */
+function loadGitignore(projectRoot) {
+    if (!projectRoot) return ignore();
+
+    // Return cached instance if available
+    if (gitignoreCache.has(projectRoot)) {
+        return gitignoreCache.get(projectRoot);
+    }
+
+    const ig = ignore();
+    const gitignorePath = path.join(projectRoot, '.gitignore');
+
+    try {
+        if (fs.existsSync(gitignorePath)) {
+            const patterns = fs.readFileSync(gitignorePath, 'utf-8');
+            ig.add(patterns);
+            console.log(`[Arcturus] Loaded .gitignore for ${projectRoot}`);
+        }
+    } catch (e) {
+        console.warn(`[Arcturus] Failed to load .gitignore: ${e.message}`);
+    }
+
+    // Always ignore common patterns
+    ig.add(['.git', 'node_modules', '__pycache__', '.DS_Store']);
+
+    gitignoreCache.set(projectRoot, ig);
+    return ig;
+}
+
+/**
+ * Check if a file path is gitignored
+ * @param {string} filePath - Absolute path to check
+ * @param {string} projectRoot - Project root directory
+ * @returns {boolean} true if ignored
+ */
+function isGitignored(filePath, projectRoot) {
+    if (!projectRoot || !filePath) return false;
+
+    const ig = loadGitignore(projectRoot);
+    const relativePath = path.relative(projectRoot, filePath);
+
+    // Don't check paths outside project
+    if (relativePath.startsWith('..')) return false;
+
+    return ig.ignores(relativePath);
+}
+
+/**
+ * Clear gitignore cache for a project (useful if .gitignore changes)
+ */
+function clearGitignoreCache(projectRoot) {
+    if (projectRoot) {
+        gitignoreCache.delete(projectRoot);
+    } else {
+        gitignoreCache.clear();
+    }
+}
+// ===== END GITIGNORE INTEGRATION =====
+
 function createWindow() {
 
     // Set Dock Icon for macOS
@@ -248,20 +318,22 @@ function setupFSHandlers() {
     // Shell Execution for Agent
 
     // Helper to validate and resolve CWD
-    const validateCwd = (requestedCwd) => {
-        const rootPath = path.resolve(__dirname, '..', '..'); // Project Root
+    // FIXED: Now accepts projectRoot from renderer instead of hardcoded path
+    const validateCwd = (requestedCwd, projectRoot) => {
+        // If no projectRoot provided, use Arcturus root as fallback (for internal tools)
+        const rootPath = projectRoot ? path.resolve(projectRoot) : path.resolve(__dirname, '..', '..');
         const targetCwd = requestedCwd ? path.resolve(requestedCwd) : rootPath;
 
         // Strict Security Check: Enforce CWD is within Project Root
         if (!targetCwd.startsWith(rootPath)) {
-            console.warn(`[Arcturus] Security Block: Attempted CWD escape to ${targetCwd}`);
+            console.warn(`[Arcturus] Security Block: Attempted CWD escape to ${targetCwd} (root: ${rootPath})`);
             return { valid: false, reason: "Access denied: Execution outside project root is prohibited." };
         }
         return { valid: true, path: targetCwd };
     };
 
-    ipcMain.handle('shell:exec', async (event, { cmd, cwd }) => {
-        const cwdValidation = validateCwd(cwd);
+    ipcMain.handle('shell:exec', async (event, { cmd, cwd, projectRoot }) => {
+        const cwdValidation = validateCwd(cwd, projectRoot);
         if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
 
         console.log(`[Arcturus] shell:exec '${cmd}' in '${cwdValidation.path}'`);
@@ -292,8 +364,8 @@ function setupFSHandlers() {
     });
 
     // NEW: Background Spawn with PID tracking
-    ipcMain.handle('shell:spawn', async (event, { cmd, cwd }) => {
-        const cwdValidation = validateCwd(cwd);
+    ipcMain.handle('shell:spawn', async (event, { cmd, cwd, projectRoot }) => {
+        const cwdValidation = validateCwd(cwd, projectRoot);
         if (!cwdValidation.valid) return { success: false, error: cwdValidation.reason };
 
         const { spawn } = require('child_process');
@@ -437,6 +509,23 @@ function setupFSHandlers() {
             console.error('[Arcturus] fs:writeFile failed', error);
             return { success: false, error: error.message };
         }
+    });
+
+    // === GITIGNORE CHECK HANDLER ===
+    ipcMain.handle('fs:isGitignored', async (event, { filePath, projectRoot }) => {
+        try {
+            const ignored = isGitignored(filePath, projectRoot);
+            return { success: true, ignored };
+        } catch (error) {
+            console.error('[Arcturus] fs:isGitignored failed', error);
+            return { success: false, error: error.message, ignored: false };
+        }
+    });
+
+    // Clear gitignore cache when .gitignore changes
+    ipcMain.handle('fs:clearGitignoreCache', async (event, projectRoot) => {
+        clearGitignoreCache(projectRoot);
+        return { success: true };
     });
 
     ipcMain.handle('fs:readFile', async (event, targetPath) => {

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld(
             "dialog:openDirectory", "dialog:confirm", "dialog:alert",
             "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile",
             "fs:copy", "fs:move", "fs:readDir", "fs:find", "fs:grep", "fs:viewOutline",
+            "fs:isGitignored", "fs:clearGitignoreCache",
             "shell:exec", "shell:spawn", "shell:status", "shell:kill",
             "terminal:read",
             // Browser APIs
