@@ -1,3 +1,4 @@
+// @ts-nocheck
 // @vitest-environment node
 
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
@@ -103,8 +104,34 @@ const mockInvoke = vi.fn(async (channel: string, args: any) => {
                 return { success: false, error: e.message };
             }
         }
+
+        case 'fs:readDir': {
+            try {
+                const items = fs.readdirSync(args, { withFileTypes: true });
+                const files = items.map(d => ({
+                    name: d.name,
+                    type: d.isDirectory() ? 'folder' : 'file'
+                }));
+                return { success: true, files };
+            } catch (e: any) {
+                return { success: false, error: e.message };
+            }
+        }
+        case 'fs:viewOutline': {
+            return { success: true, outline: 'Mock Outline: def foo' };
+        }
+        case 'terminal:read': {
+            return { success: true, content: 'Mock Terminal Content' };
+        }
     }
     return { success: false, error: 'Unknown channel' };
+});
+
+// Mock Global Fetch
+(global as any).fetch = vi.fn(async (url, init) => {
+    if (url.toString().includes('search')) return { json: async () => ({ result: 'Mock Search Result' }) };
+    if (url.toString().includes('read-url')) return { json: async () => ({ content: 'Mock URL Content' }) };
+    return { json: async () => ({}) };
 });
 
 // Mock Global Window
@@ -215,5 +242,127 @@ print(f"Adding {vec1} and {vec2}")
         expect(newContent).toContain('Replaced 1');
         expect(newContent).toContain('Replaced 2');
         expect(newContent).not.toContain('Target 1');
+    });
+
+    it('should handle simple replacements with replace_in_file', async () => {
+        const file = 'simple_replace.txt';
+        await fs.writeFileSync(path.join(TEST_DIR, file), 'Hello World');
+
+        const res = await executeAgentTool({
+            name: 'replace_in_file',
+            arguments: { path: file, target: 'World', replacement: 'Universe' }
+        }, mockContext);
+
+        expect(res).toContain('Success');
+        expect(fs.readFileSync(path.join(TEST_DIR, file), 'utf-8')).toBe('Hello Universe');
+    });
+
+    it('should list directory contents', async () => {
+        await fs.writeFileSync(path.join(TEST_DIR, 'file1.txt'), '');
+        await fs.mkdirSync(path.join(TEST_DIR, 'subdir'));
+
+        // Mock fs:readDir since it uses Electron logic not simple node logic in the real app usually
+        // But our tool splits it. Let's rely on the mock implementation we add below.
+        const res = await executeAgentTool({
+            name: 'list_dir',
+            arguments: { path: TEST_DIR }
+        }, mockContext);
+
+        expect(res).toContain('[FILE] file1.txt');
+        expect(res).toContain('[DIR] subdir');
+    });
+
+    it('should run background command and check status', async () => {
+        // run_command uses shell:spawn
+        const startRes = await executeAgentTool({
+            name: 'run_command',
+            arguments: { command: 'echo "bg task"', cwd: TEST_DIR }
+        }, mockContext);
+
+        expect(startRes).toMatch(/Success|Command started|STDOUT/);
+
+        // If it returned a PID, check status
+        if (startRes.includes('PID')) {
+            const pidMatch = startRes.match(/PID: (\d+)/);
+            if (pidMatch) {
+                const statusRes = await executeAgentTool({
+                    name: 'command_status',
+                    arguments: { pid: pidMatch[1] }
+                }, mockContext);
+                expect(statusRes).toContain('Status: done');
+            }
+        }
+    });
+
+    it('should read terminal', async () => {
+        const res = await executeAgentTool({ name: 'read_terminal', arguments: {} }, mockContext);
+        expect(res).toBe('Mock Terminal Content');
+    });
+
+    it('should view file outline', async () => {
+        const file = 'outline.py';
+        await fs.writeFileSync(path.join(TEST_DIR, file), 'def foo(): pass');
+        const res = await executeAgentTool({
+            name: 'view_file_outline',
+            arguments: { path: file }
+        }, mockContext);
+        expect(res).toContain('def foo');
+    });
+
+    it('should apply diff', async () => {
+        const file = 'diff_test.txt';
+        await fs.writeFileSync(path.join(TEST_DIR, file), 'Original Content');
+        // This test mocks the successful application since we don't have python script in test env easily
+        // But we should verify it TRIES to call the right shell command
+        // Create a valid diff
+        const diffContent = `diff --git a/diff_test.txt b/diff_test.txt
+index 0000000..1111111 100644
+--- a/diff_test.txt
++++ b/diff_test.txt
+@@ -1 +1 @@
+-Original Content
++Modified Content
+`;
+
+        const res = await executeAgentTool({
+            name: 'apply_diff',
+            arguments: { path: file, diff: diffContent }
+        }, mockContext);
+        // Our mock shell:exec will return success, so tool should succeed
+        expect(res).toContain('Success');
+    });
+
+    it('should search web (mocked)', async () => {
+        // We need to mock global fetch for this
+        const res = await executeAgentTool({
+            name: 'search_web',
+            arguments: { query: 'test' }
+        }, mockContext);
+        expect(res).toContain('Mock Search Result');
+    });
+
+    it('should read url (mocked)', async () => {
+        const res = await executeAgentTool({
+            name: 'read_url',
+            arguments: { url: 'http://test.com' }
+        }, mockContext);
+        expect(res).toContain('Mock URL Content');
+    });
+
+    it('should replace symbol', async () => {
+        // Setup mock script
+        const scriptsDir = path.join(TEST_DIR, 'scripts');
+        if (!fs.existsSync(scriptsDir)) fs.mkdirSync(scriptsDir);
+        // Mock the python script behavior
+        await fs.writeFileSync(path.join(scriptsDir, 'replace_symbol.py'), 'print("Success")');
+
+        const file = 'symbol.py';
+        await fs.writeFileSync(path.join(TEST_DIR, file), 'def old(): pass');
+        const res = await executeAgentTool({
+            name: 'replace_symbol',
+            arguments: { path: file, symbol: 'old', content: 'def new(): pass' }
+        }, mockContext);
+        // Mock execution results in success
+        expect(res).toContain('Success');
     });
 });

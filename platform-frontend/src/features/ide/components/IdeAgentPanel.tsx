@@ -11,6 +11,7 @@ import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/
 import { useTheme } from '@/components/theme';
 import { availableTools, type ToolCall } from '@/lib/agent-tools';
 import { executeAgentTool } from '@/features/ide/utils/agentTools';
+import { parseToolCalls } from '@/features/ide/utils/responseParser';
 import permissions from '@/config/agent_permissions.json'; // Direct import assuming resolveJsonModule is on
 import { checkContentSafety, checkPathSafety, getContentTypeFromPath, BLOCKED_PATTERNS } from '@/config/blocked_patterns';
 import { PermissionDialog } from '@/components/dialogs/PermissionDialog';
@@ -490,11 +491,12 @@ export const IdeAgentPanel: React.FC = () => {
             setInputValue('');
             const currentImages = [...pastedImages];
             const currentContexts = [...selectedContexts];
+            const currentFileContexts = [...selectedFileContexts];
             setPastedImages([]);
             clearSelectedFileContexts();
             clearSelectedContexts();
 
-            callAgent(ideProjectChatHistory, fullContent, currentImages, currentContexts);
+            callAgent(ideProjectChatHistory, fullContent, currentImages, currentContexts, currentFileContexts);
         }
     };
 
@@ -538,7 +540,7 @@ export const IdeAgentPanel: React.FC = () => {
     // Full Implementation of executeTool needed to work
     // I will overwrite `executeTool` above with the COMPLETE one in the actual file write.
 
-    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[]) => {
+    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[], fileContexts?: { name: string, path: string }[]) => {
         if (!explorerRootPath) return;
         setIsThinking(true);
         thinkingRef.current = true;
@@ -580,6 +582,14 @@ export const IdeAgentPanel: React.FC = () => {
                 }).join('');
             }
 
+            if (fileContexts && fileContexts.length > 0) {
+                const fileStr = fileContexts.map(f =>
+                    `\n\n> Active File Context (User Selected): [${f.name}](${f.path})\n` +
+                    `> Note: This is the primary file for the current request. Please read it using read_file if needed (though it should be provided in context if small enough, currently we just point to it).`
+                ).join('');
+                currentContextStr += fileStr;
+            }
+
             const payload = {
                 query: (userMessage || "Continue...") + currentContextStr,
                 history: effectiveHistory,
@@ -618,16 +628,8 @@ export const IdeAgentPanel: React.FC = () => {
                 }
             }
 
-            // Tool Execution Logic (Same as before)
-            const toolRegex = /```json\s*(\{[\s\S]*?"tool":[\s\S]*?\})\s*```/g;
-            let match;
-            let toolCalls: ToolCall[] = [];
-            while ((match = toolRegex.exec(accumulatedContent)) !== null) {
-                try {
-                    const jsonCall = JSON.parse(match[1]);
-                    toolCalls.push({ name: jsonCall.tool || jsonCall.name, arguments: jsonCall.args || jsonCall.arguments || {} });
-                } catch (e) { }
-            }
+            // Tool Execution Logic
+            const toolCalls = parseToolCalls(accumulatedContent);
 
             if (toolCalls.length > 0 && thinkingRef.current) {
                 let toolOutputs = "";

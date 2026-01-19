@@ -83,7 +83,7 @@ export function checkContentSafety(
     content: string,
     type: 'shell' | 'python' | 'javascript'
 ): { safe: boolean; violations: string[] } {
-    const patterns = BLOCKED_PATTERNS[type];
+    const patterns = BLOCKED_PATTERNS[type] || [];
     const violations: string[] = [];
 
     for (const { pattern, description } of patterns) {

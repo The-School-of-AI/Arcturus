@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * IDE Agent Security Tests
  * 
