@@ -87,6 +87,51 @@ export const EditorArea: React.FC = () => {
         });
     };
 
+    const runLinting = useCallback(async (docId: string, content: string) => {
+        if (!docId.endsWith('.py') || !explorerRootPath || !monacoRef.current || !editorRef.current) return;
+
+        const relPath = docId.replace(explorerRootPath, '').replace(/^\//, '');
+
+        try {
+            // 1. Lint (Ruff)
+            const res = await axios.post(`${API_BASE}/python/lint`, {
+                path: explorerRootPath,
+                file_path: relPath
+            });
+
+            if (res.data.success) {
+                const diagnostics = res.data.diagnostics || [];
+                const markers = diagnostics.map((d: any) => ({
+                    startLineNumber: d.location.row,
+                    startColumn: d.location.column,
+                    endLineNumber: d.end_location.row,
+                    endColumn: d.end_location.column,
+                    message: `[Ruff] ${d.message} (${d.code})`,
+                    severity: monacoRef.current.MarkerSeverity.Warning
+                }));
+
+                const model = editorRef.current.getModel();
+                if (model) { // Ensure model matches? Usually editorRef points to current
+                    monacoRef.current.editor.setModelMarkers(model, 'ruff', markers);
+                }
+            }
+        } catch (e) {
+            console.error("[Lint] Failed:", e);
+        }
+    }, [explorerRootPath]);
+
+    // Initial Lint on Reference/Doc Change
+    useEffect(() => {
+        if (activeDoc?.content && activeDoc.id.endsWith('.py')) {
+            // Small delay to ensure editor model is ready
+            const timer = setTimeout(() => {
+                runLinting(activeDoc.id, activeDoc.content!);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [activeDoc?.id, activeDoc?.content, runLinting]);
+
+
     const handleSave = useCallback(async () => {
         if (!activeDoc || activeDoc.content === undefined) return;
 
@@ -132,41 +177,14 @@ export const EditorArea: React.FC = () => {
                 }
 
                 // Run Linting & Type Checking (Python)
-                if (activeDoc.id.endsWith('.py') && explorerRootPath && monacoRef.current && editorRef.current) {
-                    const relPath = activeDoc.id.replace(explorerRootPath, '').replace(/^\//, '');
-
-                    // 1. Lint (Ruff)
-                    axios.post(`${API_BASE}/python/lint`, { path: explorerRootPath, file_path: relPath })
-                        .then(res => {
-                            if (res.data.success) {
-                                const diagnostics = res.data.diagnostics || [];
-                                const markers = diagnostics.map((d: any) => ({
-                                    startLineNumber: d.location.row,
-                                    startColumn: d.location.column,
-                                    endLineNumber: d.end_location.row,
-                                    endColumn: d.end_location.column,
-                                    message: `[Ruff] ${d.message} (${d.code})`,
-                                    severity: monacoRef.current.MarkerSeverity.Warning
-                                }));
-
-                                const model = editorRef.current.getModel();
-                                if (model) {
-                                    monacoRef.current.editor.setModelMarkers(model, 'ruff', markers);
-                                }
-                            }
-                        }).catch(e => console.error("Lint failed", e));
-
-                    // 2. Type Check (Pyright) - Optional / Async
-                    // Pyright output parsing is complex, omitting for now to keep it simple or adding placeholder
-                    // ...
-                }
+                await runLinting(activeDoc.id, contentToSave);
             }
         } catch (error) {
             console.error('Failed to save file:', error);
         } finally {
             setIsSaving(false);
         }
-    }, [activeDoc, activeDoc?.id, activeDoc?.content, explorerRootPath]);
+    }, [activeDoc, activeDoc?.id, activeDoc?.content, explorerRootPath, arcturusTimer.countdown, startArcturusTimer, resetArcturusTimer, markIdeDocumentSaved, updateIdeDocumentContent, runLinting]);
 
     // Keyboard shortcut for saving
     useEffect(() => {

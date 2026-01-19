@@ -169,7 +169,10 @@ const ArcturusController = () => {
         const checkPendingChanges = async () => {
             try {
                 const statusRes = await axios.get(`${API_BASE}/git/status`, { params: { path: explorerRootPath } });
-                if (!statusRes.data.clean && arcturusTimer.countdown === null && !arcturusTimer.isPaused) {
+                const { staged, unstaged, untracked } = statusRes.data;
+                const isDirty = (staged?.length || 0) + (unstaged?.length || 0) + (untracked?.length || 0) > 0;
+
+                if (isDirty && arcturusTimer.countdown === null && !arcturusTimer.isPaused) {
                     console.log("[Arcturus] Pending changes detected, starting timer.");
                     startArcturusTimer();
                 }
@@ -186,19 +189,22 @@ const ArcturusController = () => {
 
         init();
 
-        // Poll every 10s
+        // Poll every 30s
         const interval = setInterval(() => {
             fetchManifest();
             // Also check status periodically to ensure we don't miss external changes
             axios.get(`${API_BASE}/git/status`, { params: { path: explorerRootPath } })
                 .then(res => {
                     const { countdown, isPaused } = useIdeStore.getState().arcturusTimer;
-                    if (!res.data.clean && countdown === null && !isPaused) {
+                    const { staged, unstaged, untracked } = res.data;
+                    const isDirty = (staged?.length || 0) + (unstaged?.length || 0) + (untracked?.length || 0) > 0;
+
+                    if (isDirty && countdown === null && !isPaused) {
                         console.log("[Arcturus] Pending changes detected (poll), starting timer.");
                         useIdeStore.getState().startArcturusTimer();
                     }
                 }).catch(() => { });
-        }, 10000);
+        }, 30000); // Check slower (30s) to reduce noise
         return () => clearInterval(interval);
     }, [explorerRootPath, setTestFiles, arcturusTimer.countdown, startArcturusTimer]);
 
