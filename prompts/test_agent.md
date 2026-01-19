@@ -60,3 +60,6 @@ Example Output:
   "summary": "Generated 2 tests for add function covering happy path and error handling"
 }
 ```
+
+# REMINDER
+!!! ARE YOU TESTING SOME CODE WITHOUT IMPORTING THAT LIBRARY? LIKE NUMPY, TORCH, ETC? THEN TEST WOULD FAIL AND MISLEAD THE USER RIGHT!!! SO DO NOT FORGET PROPER IMPORTS!!!

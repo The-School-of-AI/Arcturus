@@ -96,10 +96,26 @@ export const EditorArea: React.FC = () => {
     };
 
     // React to activeDoc changes for scrolling (e.g. clicking same file but different test)
+    const decorationsRef = useRef<string[]>([]);
+
     useEffect(() => {
-        if (editorRef.current && (activeDoc as any)?.initialLine) {
-            editorRef.current.revealLineInCenter((activeDoc as any).initialLine);
-            editorRef.current.setPosition({ lineNumber: (activeDoc as any).initialLine, column: 1 });
+        if (editorRef.current && (activeDoc as any)?.initialLine && monacoRef.current) {
+            const line = (activeDoc as any).initialLine;
+            editorRef.current.revealLineInCenter(line);
+            editorRef.current.setPosition({ lineNumber: line, column: 1 });
+
+            // Apply strong highlight decoration
+            const newDecorations = [
+                {
+                    range: new monacoRef.current.Range(line, 1, line, 1),
+                    options: {
+                        isWholeLine: true,
+                        className: 'bg-green-500/20 border-l-4 border-green-600', // Git diff style
+                    }
+                }
+            ];
+
+            decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, newDecorations);
         }
     }, [activeDoc?.id, (activeDoc as any)?.initialLine]);
 

@@ -156,6 +156,7 @@ async def get_tests_for_file(path: str, file_path: str):
     
     # Check if file has changed semantically since last generation
     has_changes = False
+    analysis = None
     try:
         abs_file_path = os.path.join(path, file_path) if not file_path.startswith('/') else file_path
         if os.path.exists(abs_file_path):
@@ -223,15 +224,21 @@ async def get_tests_for_file(path: str, file_path: str):
         if test_id in seen_tests: continue
         seen_tests.add(test_id)
         
-        status = "pending"
+        # Read persisted status/timestamp
+        stored_status = file_data.get("test_statuses", {}).get(test_id, {})
+        status = stored_status.get("status", "pending")
+        last_run = stored_status.get("last_run", None)
+        message = stored_status.get("message", None)
+        
         if has_changes: status = "stale"
             
         tests.append({
             "id": test_id,
             "name": test_id.replace("test_", "").replace("_", " ").title(),
             "status": status,
-            "type": "behavior", # Default for top-level
-            "lastRun": None,
+            "type": "behavior", 
+            "lastRun": last_run,
+            "message": message,
             "code": get_test_source(test_id, test_file_content),
             "target_line": resolve_target_line(test_id)
         })
@@ -252,8 +259,8 @@ async def get_tests_for_file(path: str, file_path: str):
                 "name": test_id.replace("test_", "").replace("_", " ").title(),
                 "status": status,
                 "type": func_data.get("type", "behavior"),
-                "type": func_data.get("type", "behavior"),
                 "lastRun": func_data.get("last_run"),
+                "message": func_data.get("message"),
                 "code": get_test_source(test_id, test_file_content),
                 "target_line": resolve_target_line(test_id)
             })
@@ -805,6 +812,8 @@ async def run_tests(request: RunTestsRequest, background_tasks: BackgroundTasks)
             "--json-report-indent=2"
         ]
         
+        print(f"[DEBUG] Running pytest command: {' '.join(cmd)}")
+        
         result = subprocess.run(
             cmd,
             cwd=request.path,
@@ -812,6 +821,9 @@ async def run_tests(request: RunTestsRequest, background_tasks: BackgroundTasks)
             text=True,
             timeout=120  # 2 min timeout
         )
+        
+        print(f"[DEBUG] Pytest stdout:\n{result.stdout}")
+        print(f"[DEBUG] Pytest stderr:\n{result.stderr}")
         
         # Parse JSON output
         results = []
@@ -827,11 +839,15 @@ async def run_tests(request: RunTestsRequest, background_tasks: BackgroundTasks)
                     test_name = test.get("nodeid", "")
                     outcome = test.get("outcome", "unknown")
                     
-                    status = "passing" if outcome == "passed" else "failing" if outcome == "failed" else outcome
+                    # Map 'error' outcome to 'failed' for consistent handling
+                    if outcome == "error":
+                        outcome = "failed"
                     
-                    if outcome == "passed":
+                    status = "passing" if outcome == "passed" else "failing"
+                    
+                    if status == "passing":
                         passed += 1
-                    elif outcome == "failed":
+                    else:
                         failed += 1
                     
                     results.append({
@@ -882,7 +898,7 @@ async def run_tests(request: RunTestsRequest, background_tasks: BackgroundTasks)
         # Update manifest with results
         manifest = load_manifest(request.path)
         for res in results:
-            test_id = res["test_id"] # e.g., tests/test_foo.py::test_bar
+            test_id = res["test_id"]
             timestamp = datetime.now().isoformat()
             
             # Helper to match loose test IDs
@@ -890,18 +906,29 @@ async def run_tests(request: RunTestsRequest, background_tasks: BackgroundTasks)
                 return stored_id == incoming_id or incoming_id.endswith("::" + stored_id) or stored_id in incoming_id
 
             for file_path, file_data in manifest.items():
-                # Check top-level tests
-                # Note: Top-level tests list is just strings, we can't store status there easily without changing schema
-                # But get_tests_for_file logic seems to handle "status" only for functions.
-                # Let's see... get_tests_for_file line 215 uses "pending" hardcoded for top-level unless I change it.
-                # Actually, duplicate storing status in manifest is complex if schema doesn't support it for top-level.
-                # Let's focus on functions for now, as that's the primary verified path.
+                match_found = False
                 
+                # Check top-level tests
+                for t in file_data.get("tests", []):
+                    if match_id(t, test_id):
+                        if "test_statuses" not in file_data:
+                            file_data["test_statuses"] = {}
+                        file_data["test_statuses"][t] = {
+                            "status": res["status"],
+                            "last_run": timestamp,
+                            "message": res.get("message")
+                        }
+                        match_found = True
+                
+                # Check function-level tests
                 for func_name, func_info in file_data.get("functions", {}).items():
-                    # func_info["tests"] is a list of strings
                     if any(match_id(t, test_id) for t in func_info.get("tests", [])):
                         func_info["status"] = res["status"]
                         func_info["last_run"] = timestamp
+                        func_info["message"] = res.get("message")
+                        match_found = True
+                        
+        save_manifest(request.path, manifest)
                         
         save_manifest(request.path, manifest)
         

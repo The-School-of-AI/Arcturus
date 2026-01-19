@@ -16,6 +16,7 @@ interface TestItem {
 
     code?: string;
     target_line?: number;
+    message?: string; // Persisted failure message
 }
 
 interface FileTests {
@@ -119,9 +120,23 @@ export const TestsSidebar: React.FC = () => {
                 // Update test statuses locally
                 if (res.data.results) {
                     setTests(prevTests => prevTests.map(t => {
-                        const result = res.data.results.find((r: any) => r.test_id === t.id || r.test_id.endsWith("::" + t.id) || r.name === t.name);
+                        // More robust matching:
+                        // 1. Exact ID match
+                        // 2. Pytest ID ending with ::test_name (standard)
+                        // 3. Result ID contains the test name (fallback)
+                        const result = res.data.results.find((r: any) =>
+                            r.test_id === t.id ||
+                            r.test_id.endsWith("::" + t.id) ||
+                            r.test_id.includes(t.name)
+                        );
+
                         if (result) {
-                            return { ...t, status: result.status };
+                            return {
+                                ...t,
+                                status: result.status,
+                                // If failing, update the failure state implicitly via the failures set,
+                                // but here we just ensure the status is visually correct immediately
+                            };
                         }
                         return t;
                     }));
@@ -273,11 +288,11 @@ export const TestsSidebar: React.FC = () => {
 
     const getStatusIcon = (status: TestItem['status']) => {
         switch (status) {
-            case 'passing': return <Check className="w-3 h-3 text-green-400" />;
-            case 'failing': return <X className="w-3 h-3 text-red-400" />;
-            case 'stale': return <AlertTriangle className="w-3 h-3 text-amber-400" />;
-            case 'orphaned': return <Trash2 className="w-3 h-3 text-muted-foreground/50" />;
-            default: return <div className="w-3 h-3 rounded-full bg-muted border border-border" />;
+            case 'passing': return <Check className="w-3.5 h-3.5 text-green-400" />;
+            case 'failing': return <X className="w-3.5 h-3.5 text-red-500" />; // Increased visibility
+            case 'stale': return <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />;
+            case 'orphaned': return <Trash2 className="w-3.5 h-3.5 text-muted-foreground/50" />;
+            default: return <div className="w-3.5 h-3.5 rounded-full bg-muted border border-border" />;
         }
     };
 
@@ -407,7 +422,7 @@ export const TestsSidebar: React.FC = () => {
                                                 isActive={currentActiveTests.includes(test.id)}
                                                 onToggle={() => currentFile && toggleTest(currentFile, test.id)}
                                                 getStatusIcon={getStatusIcon}
-                                                failure={failedTests.find(f => f.test_id === test.id || f.name === test.name)}
+                                                failure={failedTests.find(f => f.test_id === test.id || f.test_id.endsWith("::" + test.id) || f.test_id.includes(test.id)) || (test.message ? { test_id: test.id, name: test.name, message: test.message, status: 'failing' } : undefined)}
                                                 onOpenTest={() => {
                                                     if (explorerRootPath && currentFile) {
                                                         const testFile1 = `${explorerRootPath}/.arcturus/tests/test_${currentFile}`;
@@ -469,7 +484,7 @@ export const TestsSidebar: React.FC = () => {
                                                 isActive={currentActiveTests.includes(test.id)}
                                                 onToggle={() => currentFile && toggleTest(currentFile, test.id)}
                                                 getStatusIcon={getStatusIcon}
-                                                failure={failedTests.find(f => f.test_id === test.id || f.name === test.name)}
+                                                failure={failedTests.find(f => f.test_id === test.id || f.test_id.endsWith("::" + test.id) || f.test_id.includes(test.id)) || (test.message ? { test_id: test.id, name: test.name, message: test.message, status: 'failing' } : undefined)}
                                                 onOpenTest={() => {
                                                     if (explorerRootPath && currentFile) {
                                                         const specFile = `${explorerRootPath}/.arcturus/tests/test_${currentFile}`;
@@ -597,11 +612,22 @@ const TestItemRow: React.FC<{
     onExpand?: () => void;
 }> = ({ test, isActive, onToggle, getStatusIcon, failure, onOpenTest, onExpand }) => {
     const [expanded, setExpanded] = useState(false);
+    const prevStatus = React.useRef(test.status);
 
-    // Auto expand if failure exists
+    // Auto expand only on NEW failure
     useEffect(() => {
-        if (failure) setExpanded(true);
-    }, [failure]);
+        if (test.status === 'failing' && prevStatus.current !== 'failing') {
+            setExpanded(true);
+        }
+        prevStatus.current = test.status;
+    }, [test.status]);
+
+    // Initial expand if failing and loaded first time
+    useEffect(() => {
+        if (test.status === 'failing' && !prevStatus.current) {
+            setExpanded(true);
+        }
+    }, []); // Run once
 
     const handleRowClick = () => {
         const newExpanded = !expanded;
