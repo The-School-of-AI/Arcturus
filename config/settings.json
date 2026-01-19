@@ -19,19 +19,19 @@
   },
   "agent": {
     "model_provider": "ollama",
-    "default_model": "gemma3:4b",
+    "default_model": "phi4:latest",
     "overrides": {
       "PlannerAgent": {
         "model_provider": "gemini",
         "model": "gemini-2.5-flash-lite"
       },
       "FormatterAgent": {
-        "model_provider": "ollama",
-        "model": "gemma3:4b"
+        "model_provider": "gemini",
+        "model": "gemini-2.5-flash-lite"
       },
       "TestAgent": {
         "model_provider": "ollama",
-        "model": "gemma3:4b"
+        "model": "phi4:latest"
       }
     },
     "max_steps": 3,

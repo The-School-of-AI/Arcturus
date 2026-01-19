@@ -12,10 +12,21 @@ import { useTheme } from '@/components/theme';
 import { availableTools, type ToolCall } from '@/lib/agent-tools';
 import { executeAgentTool } from '@/features/ide/utils/agentTools';
 import { parseToolCalls } from '@/features/ide/utils/responseParser';
+import axios from 'axios';
 import permissions from '@/config/agent_permissions.json'; // Direct import assuming resolveJsonModule is on
 import { checkContentSafety, checkPathSafety, getContentTypeFromPath, BLOCKED_PATTERNS } from '@/config/blocked_patterns';
 import { PermissionDialog } from '@/components/dialogs/PermissionDialog';
 import { usePermissionDialog, determineRiskLevel } from '@/hooks/usePermissionDialog';
+
+// --- Gemini Models (Shared with Settings) ---
+const GEMINI_MODELS = [
+    { value: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash', description: 'Latest, fast (Dec 2025)' },
+    { value: 'gemini-3.0-pro', label: 'Gemini 3.0 Pro', description: 'Best multimodal (Nov 2025)' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, grounded' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Advanced reasoning' },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Low cost' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
+];
 
 // --- Reused Components (To be extracted later) ---
 
@@ -439,6 +450,35 @@ export const IdeAgentPanel: React.FC = () => {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [ideProjectChatHistory, isThinking]);
+
+    const syncModelChange = async (modelName: string) => {
+        // Find if it's an Ollama model to determine provider
+        const isOllama = ollamaModels.some(m => m.name === modelName);
+        const provider = isOllama ? 'ollama' : 'gemini';
+
+        // 1. Update global store for immediate UI effect
+        setSelectedModel(modelName);
+        setIsModelMenuOpen(false);
+
+        // 2. Persist to backend settings
+        try {
+            // Fetch current settings first
+            const settingsRes = await axios.get(`${API_BASE}/settings`);
+            const settings = settingsRes.data.settings;
+
+            // Add/Update override for IDEAgent
+            const overrides = { ...(settings.agent.overrides || {}) };
+            overrides['IDEAgent'] = { model_provider: provider, model: modelName };
+
+            settings.agent.overrides = overrides;
+
+            // Save back to server
+            await axios.put(`${API_BASE}/settings`, { settings });
+            console.log('IDE Agent model persisted to settings:', modelName);
+        } catch (err) {
+            console.error('Failed to persist IDE Agent model setting:', err);
+        }
+    };
 
     const handlePaste = (e: React.ClipboardEvent) => {
         const items = e.clipboardData.items;
@@ -1008,27 +1048,39 @@ export const IdeAgentPanel: React.FC = () => {
                                 </button>
 
                                 {isModelMenuOpen && (
-                                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-popover border border-border shadow-xl rounded-lg z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-1 p-1">
-                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5">Select Model</p>
-                                        {ollamaModels.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground italic">No models found</p>}
-                                        {ollamaModels.map(model => (
-                                            <button
-                                                key={model.name}
-                                                onClick={() => {
-                                                    setSelectedModel(model.name);
-                                                    setIsModelMenuOpen(false);
-                                                }}
-                                                className={cn(
-                                                    "w-full text-left px-2 py-1.5 rounded-md text-xs flex items-center gap-2 transition-colors",
-                                                    selectedModel === model.name ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
-                                                )}
-                                            >
-                                                {selectedModel === model.name && <Check className="w-3 h-3 shrink-0" />}
-                                                <span className={cn("truncate", selectedModel !== model.name && "pl-5")}>
-                                                    {model.name}
-                                                </span>
-                                            </button>
-                                        ))}
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-popover border border-border shadow-xl rounded-lg z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-1 p-1">
+                                        <div className="max-h-[300px] overflow-y-auto">
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 border-b border-border/30 mb-1">Gemini Cloud</p>
+                                            {GEMINI_MODELS.map(m => (
+                                                <button
+                                                    key={m.value}
+                                                    onClick={() => syncModelChange(m.value)}
+                                                    className={cn(
+                                                        "w-full text-left px-2 py-1.5 rounded-md text-[11px] flex items-center gap-2 transition-colors",
+                                                        selectedModel === m.value ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
+                                                    )}
+                                                >
+                                                    {selectedModel === m.value ? <Check className="w-3 h-3 shrink-0" /> : <div className="w-3 h-3" />}
+                                                    <span className="truncate">{m.label}</span>
+                                                </button>
+                                            ))}
+
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-2 border-b border-border/30 my-1">Ollama Local</p>
+                                            {ollamaModels.length === 0 && <p className="px-2 py-2 text-[10px] text-muted-foreground italic">No local models found</p>}
+                                            {ollamaModels.map(model => (
+                                                <button
+                                                    key={model.name}
+                                                    onClick={() => syncModelChange(model.name)}
+                                                    className={cn(
+                                                        "w-full text-left px-2 py-1.5 rounded-md text-[11px] flex items-center gap-2 transition-colors",
+                                                        selectedModel === model.name ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
+                                                    )}
+                                                >
+                                                    {selectedModel === model.name ? <Check className="w-3 h-3 shrink-0" /> : <div className="w-3 h-3" />}
+                                                    <span className="truncate">{model.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>

@@ -60,7 +60,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                             <span className="font-bold tracking-wider uppercase text-[9px]">Active Task</span>
                         </div>
                         <div className="overflow-hidden relative h-4">
-                            <div className=" whitespace-nowrap">
+                            <div className="animate-ticker whitespace-nowrap">
                                 {data.agent_prompt || data.prompt || data.description}
                             </div>
                         </div>

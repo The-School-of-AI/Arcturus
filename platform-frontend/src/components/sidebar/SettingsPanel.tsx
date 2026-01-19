@@ -1,14 +1,15 @@
 import React from 'react';
-import { Cpu, FileText, Brain, Terminal, Wrench, Settings, ChevronRight } from 'lucide-react';
+import { Cpu, FileText, Brain, Terminal, Wrench, Settings, ChevronRight, Layout } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
-type SettingsTabId = 'models' | 'rag' | 'agent' | 'prompts' | 'advanced';
+type SettingsTabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
 
 const SETTINGS_TABS: { id: SettingsTabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini models' },
     { id: 'rag', label: 'RAG Pipeline', icon: FileText, description: 'Chunking & search' },
     { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution & Gemini' },
+    { id: 'ide', label: 'IDE', icon: Layout, description: 'IDE, Test, & Debugging' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Agent prompts' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs & restart' },
 ];

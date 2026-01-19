@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Settings, Cpu, FileText, Brain, Wrench, RotateCcw, Save, AlertTriangle,
     Loader2, RefreshCw, Download, Check, X, Terminal, Code, Play, Bot, CheckCircle2,
-    Search, LayoutList, ShieldAlert, MessageSquare, Clock
+    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -65,18 +65,19 @@ interface SettingsData {
     gemini: { api_key_env: string };
 }
 
-type TabId = 'models' | 'rag' | 'agent' | 'prompts' | 'advanced';
+type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
 
 const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini model selection' },
     { id: 'rag', label: 'RAG Pipeline', icon: FileText, description: 'Document chunking and search' },
     { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution & Model (Gemini/Ollama)' },
+    { id: 'ide', label: 'IDE', icon: Layout, description: 'IDE, Test, and Debugging Agents' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Edit agent system prompts' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs, timeouts, restart' },
 ];
 
 export const SettingsPage: React.FC = () => {
-    const { settingsActiveTab: activeTab, ollamaModels, fetchOllamaModels } = useAppStore();
+    const { settingsActiveTab: activeTab, ollamaModels, fetchOllamaModels, setLocalModel } = useAppStore();
     const [settings, setSettings] = useState<SettingsData | null>(null);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
@@ -207,6 +208,36 @@ export const SettingsPage: React.FC = () => {
     const updateSetting = (section: keyof SettingsData, key: string, value: any) => {
         if (!settings) return;
         setSettings({ ...settings, [section]: { ...settings[section], [key]: value } });
+        setHasChanges(true);
+    };
+
+    const updateOverride = (agentType: string, provider: 'gemini' | 'ollama', model: string) => {
+        if (!settings) return;
+        const overrides = { ...(settings.agent.overrides || {}) };
+        overrides[agentType] = { model_provider: provider, model };
+
+        setSettings({
+            ...settings,
+            agent: {
+                ...settings.agent,
+                overrides
+            }
+        });
+        setHasChanges(true);
+    };
+
+    const resetOverride = (agentType: string) => {
+        if (!settings || !settings.agent.overrides) return;
+        const overrides = { ...settings.agent.overrides };
+        delete overrides[agentType];
+
+        setSettings({
+            ...settings,
+            agent: {
+                ...settings.agent,
+                overrides
+            }
+        });
         setHasChanges(true);
     };
 
@@ -600,6 +631,113 @@ export const SettingsPage: React.FC = () => {
         );
     };
 
+    const renderIdeTab = () => {
+        const ollamaTextModels = ollamaModels.filter(m =>
+            m.capabilities.includes('text') && !m.capabilities.includes('embedding')
+        );
+
+        const handleOverrideChange = (agentType: string, value: string) => {
+            const colonIndex = value.indexOf(':');
+            if (colonIndex === -1) return;
+
+            const provider = value.substring(0, colonIndex) as 'gemini' | 'ollama';
+            const modelName = value.substring(colonIndex + 1);
+
+            updateOverride(agentType, provider, modelName);
+
+            // Special case for IDEAgent: Sync with global store for immediate IDE effect
+            if (agentType === 'IDEAgent') {
+                setLocalModel(modelName);
+            }
+        };
+
+        const renderAgentSelector = (agentType: string, label: string, description: string) => {
+            const override = settings?.agent.overrides?.[agentType];
+            const currentValue = override
+                ? `${override.model_provider}:${override.model}`
+                : `${settings?.agent.model_provider || 'gemini'}:${settings?.agent.default_model || 'gemini-3.0-flash'}`;
+
+            return (
+                <div className="space-y-3 p-4 bg-muted/30 border border-border/50 rounded-xl transition-all hover:bg-muted/40 group">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <label className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{label}</label>
+                            <p className="text-xs text-muted-foreground">{description}</p>
+                        </div>
+                        {override && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => resetOverride(agentType)}
+                                className="h-7 text-[10px] text-muted-foreground hover:text-foreground"
+                            >
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                                Reset to Default
+                            </Button>
+                        )}
+                    </div>
+                    <select
+                        value={currentValue}
+                        onChange={(e) => handleOverrideChange(agentType, e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-shadow"
+                    >
+                        <option disabled value="" className="text-muted-foreground font-semibold">Gemini (Cloud)</option>
+                        {GEMINI_MODELS.map((m) => (
+                            <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                {m.label} — {m.description}
+                            </option>
+                        ))}
+                        {ollamaTextModels.length > 0 && (
+                            <>
+                                <option disabled value="" className="mt-2 text-muted-foreground font-semibold">Ollama (Local)</option>
+                                {ollamaTextModels.map((m) => (
+                                    <option key={`ollama:${m.name}`} value={`ollama:${m.name}`}>
+                                        {m.name} — Local ({m.size_gb}GB)
+                                    </option>
+                                ))}
+                            </>
+                        )}
+                    </select>
+                </div>
+            );
+        };
+
+        return (
+            <div className="space-y-6 max-w">
+                <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                    <Layout className="w-5 h-5 text-primary" />
+                    <h3 className="font-bold text-lg">IDE Agent Settings</h3>
+                </div>
+
+                <div className="grid gap-4">
+                    {renderAgentSelector(
+                        "IDEAgent",
+                        "IDE Interaction Agent",
+                        "The primary model for code chat and file operations in the Right Sidebar."
+                    )}
+                    {renderAgentSelector(
+                        "TestAgent",
+                        "Test Generation Agent",
+                        "The model responsible for creating and updating unit tests (Pytest)."
+                    )}
+                    {renderAgentSelector(
+                        "DebuggerAgent",
+                        "Fix & Debug Agent",
+                        "The model used to analyze test failures and automatically suggest/apply fixes."
+                    )}
+                </div>
+
+                <div className="mt-8 p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 flex gap-3">
+                    <Bot className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div className="text-xs text-muted-foreground leading-relaxed">
+                        <strong className="text-blue-400 block mb-1">How it works</strong>
+                        Each task can use its own optimized model. If no override is set, the <strong>Default Agent Model</strong> (from the Agent tab) will be used. Changes to the IDE Interaction Agent are reflected instantly in the sidebar.
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderPromptsTab = () => {
         const agentPrompts = prompts.filter(p => !['remme_extraction', 'rag_semantic_chunking'].includes(p.name));
         const otherPrompts = prompts.filter(p => ['remme_extraction', 'rag_semantic_chunking'].includes(p.name));
@@ -713,6 +851,7 @@ export const SettingsPage: React.FC = () => {
             case 'models': return renderModelsTab();
             case 'rag': return renderRagTab();
             case 'agent': return renderAgentTab();
+            case 'ide': return renderIdeTab();
             case 'prompts': return renderPromptsTab();
             case 'advanced': return renderAdvancedTab();
         }
