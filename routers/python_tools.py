@@ -154,3 +154,80 @@ async def typecheck_python_code(request: TypeCheckRequest):
         return {"success": True, "diagnostics": result.get("generalDiagnostics", [])}
     except Exception:
         return {"success": False, "error": stderr or "Failed to parse pyright output", "raw": stdout}
+
+
+class QualityPipelineRequest(BaseModel):
+    path: str
+    file_path: str
+    content: Optional[str] = None  # Current unsaved content
+    run_format: bool = True
+    run_lint: bool = True
+    run_typecheck: bool = True
+
+
+@router.post("/quality-pipeline")
+async def run_quality_pipeline(request: QualityPipelineRequest):
+    """
+    Run the full quality pipeline: format → lint → typecheck.
+    Returns aggregated results from all steps.
+    This is the primary endpoint for on-save quality checks.
+    """
+    results = {
+        "success": True,
+        "format": None,
+        "lint": None,
+        "typecheck": None,
+        "all_diagnostics": [],
+        "formatted_content": None
+    }
+    
+    current_content = request.content
+    
+    # Step 1: Format
+    if request.run_format:
+        format_req = FormatRequest(
+            path=request.path,
+            file_path=request.file_path,
+            content=current_content
+        )
+        format_result = await format_python_code(format_req)
+        results["format"] = format_result
+        
+        if format_result.get("success"):
+            results["formatted_content"] = format_result.get("formatted_content")
+            current_content = format_result.get("formatted_content")
+        else:
+            # Format failed (likely syntax error), still continue with lint/typecheck
+            results["success"] = False
+    
+    # Step 2: Lint
+    if request.run_lint:
+        lint_req = LintRequest(path=request.path, file_path=request.file_path)
+        lint_result = await lint_python_code(lint_req)
+        results["lint"] = lint_result
+        
+        if lint_result.get("success"):
+            diagnostics = lint_result.get("diagnostics", [])
+            results["all_diagnostics"].extend([
+                {**d, "source": "ruff"} for d in diagnostics
+            ])
+    
+    # Step 3: Type Check
+    if request.run_typecheck:
+        typecheck_req = TypeCheckRequest(path=request.path, file_path=request.file_path)
+        typecheck_result = await typecheck_python_code(typecheck_req)
+        results["typecheck"] = typecheck_result
+        
+        if typecheck_result.get("success"):
+            diagnostics = typecheck_result.get("diagnostics", [])
+            results["all_diagnostics"].extend([
+                {**d, "source": "pyright"} for d in diagnostics
+            ])
+    
+    # Summary counts
+    results["error_count"] = len([d for d in results["all_diagnostics"] 
+                                   if d.get("severity") in ["error", "Error"]])
+    results["warning_count"] = len([d for d in results["all_diagnostics"] 
+                                     if d.get("severity") in ["warning", "Warning"]])
+    
+    return results

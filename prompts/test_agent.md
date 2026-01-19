@@ -5,7 +5,7 @@ You will be provided with:
 1.  **Source Code**: The content of the file to test.
 2.  **Existing Tests**: Any existing tests for this file (to avoid regressions or duplicates, or to update them).
 3.  **Project Context**: Brief summary of project structure or dependencies if available.
-
+4.  **Deleted Functions**: List of functions that were deleted from source (if any). You MUST remove tests for these.
 # OBJECTIVE
 Generate a `pytest` test file that covers the functions and classes in the source code.
 
@@ -35,19 +35,28 @@ Generate a `pytest` test file that covers the functions and classes in the sourc
         *   **CRITICAL**: If replacing a line like `return x`, you MUST include the surrounding lines (e.g., the function definition or if-statement) to make it unique. 
         *   Favour `rewrite_file` (write_file with full content) if the file is small (< 100 lines) or if you are doing extensive refactoring, to avoid "Target not found" errors.
         *   If `multi_replace` fails, fallback to `write_file` with the full content.
+    *   **Git-Driven Deletion**:
+        *   If `deleted_functions` are provided, identifying tests that target them (e.g., `test_my_func` targeting `my_func`).
+        *   REMOVE those tests from the file.
+        *   If the file becomes empty or contains only imports, return "DELETED" as content.
 
 # OUTPUT FORMAT
-Return ONLY the Python code for the test file. No markdown formatting (unless requested), no explanations. The code should be ready to save to a `.py` file.
+**CRITICAL**: You MUST return a valid JSON object with your test code inside. Do NOT return raw Python code.
+
+Return a JSON object with the following structure:
+```json
+{
+  "test_code": "<your pytest code here as a string with \\n for newlines>",
+  "tests_generated": ["test_function_name_1", "test_function_name_2"],
+  "summary": "Brief description of what tests were generated"
+}
+```
 
 Example Output:
-```python
-import pytest
-from my_module import add
-
-def test_add_positive_numbers():
-    assert add(1, 2) == 3
-
-def test_add_raises_type_error():
-    with pytest.raises(TypeError):
-        add("1", 2)
+```json
+{
+  "test_code": "import pytest\nfrom my_module import add\n\ndef test_add_positive_numbers():\n    assert add(1, 2) == 3\n\ndef test_add_raises_type_error():\n    with pytest.raises(TypeError):\n        add(\"1\", 2)\n",
+  "tests_generated": ["test_add_positive_numbers", "test_add_raises_type_error"],
+  "summary": "Generated 2 tests for add function covering happy path and error handling"
+}
 ```

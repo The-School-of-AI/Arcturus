@@ -228,41 +228,25 @@ const ArcturusController = () => {
                     }));
 
                     // 2. Commit to arcturus branch
-                    // We rely on the backend to stage all changes (including new files)
-                    await axios.post(`${API_BASE}/git/arcturus/commit`, {
+                    // Backend now triggers test generation automatically for changed Python files
+                    const commitRes = await axios.post(`${API_BASE}/git/arcturus/commit`, {
                         path: explorerRootPath,
                     });
 
                     // 3. Advance tier (backoff)
                     advanceArcturusTier();
 
-                    // 4. Trigger Intelligent Test Generation
-                    // We fire this for every saved file. The backend uses AST hashing to determine if actual generation is needed.
-                    // We run this in background (don't await strictly for the UI to unblock)
-                    dirtyDocs.forEach(doc => {
-                        // Extract relative path
-                        let relativePath = doc.id;
-                        if (relativePath.startsWith(explorerRootPath)) {
-                            relativePath = relativePath.substring(explorerRootPath.length);
-                            if (relativePath.startsWith('/')) relativePath = relativePath.substring(1);
-                        }
-
-                        // Only check python files for now
-                        if (relativePath.endsWith('.py')) {
-                            console.log(`[Arcturus] Triggering smart test check for: ${relativePath}`);
-                            axios.post(`${API_BASE}/tests/generate`, {
-                                path: explorerRootPath,
-                                file_path: relativePath,
-                                force: false // Respect semantic hashing
-                            }).then(res => {
-                                if (res.data?.success && res.data?.message) {
-                                    console.log(`[Arcturus] Tests updated for ${relativePath}:`, res.data.message);
-                                }
-                            }).catch(e => {
-                                console.error(`[Arcturus] Test generation failed for ${relativePath}`, e);
-                            });
-                        }
-                    });
+                    // 4. Dispatch event for TestsSidebar to show generation status
+                    // Backend returns: { test_generation_triggered, python_files_changed }
+                    if (commitRes.data.test_generation_triggered) {
+                        window.dispatchEvent(new CustomEvent('arcturus-commit', {
+                            detail: {
+                                test_generation_triggered: commitRes.data.test_generation_triggered,
+                                python_files_changed: commitRes.data.python_files_changed || []
+                            }
+                        }));
+                        console.log(`[Arcturus] 🧪 Test generation triggered for: ${commitRes.data.python_files_changed?.join(', ')}`);
+                    }
 
                 } catch (e) {
                     console.error("Auto-commit failed", e);

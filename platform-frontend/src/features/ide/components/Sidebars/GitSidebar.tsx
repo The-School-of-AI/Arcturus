@@ -25,6 +25,8 @@ interface GitStatus {
 
 export const GitSidebar: React.FC = () => {
     const { explorerRootPath, openIdeDocument } = useAppStore();
+    const { activeGitView, setActiveGitView } = useIdeStore();
+    const [userBranch, setUserBranch] = useState<string>('main');
     const [status, setStatus] = useState<GitStatus | null>(null);
     const [history, setHistory] = useState<GitHistory[]>([]);
     const [loading, setLoading] = useState(false);
@@ -37,9 +39,10 @@ export const GitSidebar: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
+            const targetBranch = activeGitView === 'arcturus' ? 'arcturus' : userBranch;
             const [statusRes, historyRes] = await Promise.all([
                 axios.get(`${API_BASE}/git/status`, { params: { path: explorerRootPath } }).catch(e => e),
-                axios.get(`${API_BASE}/git/history`, { params: { path: explorerRootPath } }).catch(e => ({ data: [] }))
+                axios.get(`${API_BASE}/git/history`, { params: { path: explorerRootPath, branch: targetBranch } }).catch(e => ({ data: [] }))
             ]);
 
             if (statusRes.data) {
@@ -56,6 +59,16 @@ export const GitSidebar: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    }, [explorerRootPath, activeGitView, userBranch]);
+
+    // Fetch user branch name
+    useEffect(() => {
+        if (!explorerRootPath) return;
+        axios.get(`${API_BASE}/git/arcturus/branches`, { params: { path: explorerRootPath } })
+            .then(res => {
+                if (res.data.user_branch) setUserBranch(res.data.user_branch);
+            })
+            .catch(e => console.error(e));
     }, [explorerRootPath]);
 
     useEffect(() => {
@@ -164,7 +177,7 @@ export const GitSidebar: React.FC = () => {
     const totalChanges = (status?.staged.length || 0) + (status?.unstaged.length || 0) + (status?.untracked.length || 0);
     const hasChanges = totalChanges > 0;
 
-    const { activeGitView, setActiveGitView } = useIdeStore();
+
 
     return (
         <div className="h-full flex flex-col bg-transparent">

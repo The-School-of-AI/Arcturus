@@ -65,3 +65,9 @@ agents:
     mcp_servers: []
     description: "Generates Pytest tests for Python code."
 
+  DebuggerAgent:
+    prompt_file: "prompts/debugger_agent.md"
+    model: "ollama"
+    mcp_servers: []
+    description: "Fixes code based on test failures."
+

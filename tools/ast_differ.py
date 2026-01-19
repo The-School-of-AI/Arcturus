@@ -107,3 +107,41 @@ def analyze_file(file_path: str) -> Optional[FileAnalysis]:
     except Exception as e:
         print(f"Error analyzing file {file_path}: {e}")
         return None
+
+def find_affected_functions(content: str, changed_ranges: List[tuple[int, int]]) -> List[str]:
+    """
+    Find functions that intersect with the given line ranges (1-based).
+    changed_ranges: List of (start_line, end_line) inclusive.
+    Returns names like 'func_name' or 'ClassName.method_name'.
+    """
+    if not content:
+        return []
+
+    try:
+        tree = ast.parse(content)
+        analyzer = CodeAnalyzer(content)
+        analyzer.visit(tree)
+        
+        affected = set()
+        
+        # Helper to check intersection
+        def intersects(f_start, f_end, r_start, r_end):
+            return hasattr(analyzer, 'functions') # dummy check
+        
+        for name, info in analyzer.functions.items():
+            for r_start, r_end in changed_ranges:
+                if info.start_line <= r_end and info.end_line >= r_start:
+                    affected.add(name)
+                    break
+                    
+        for cls_name, methods in analyzer.classes.items():
+            for name, info in methods.items():
+                for r_start, r_end in changed_ranges:
+                    if info.start_line <= r_end and info.end_line >= r_start:
+                        affected.add(f"{cls_name}.{name}")
+                        break
+                        
+        return list(affected)
+    except Exception as e:
+        print(f"Error extracting affected functions: {e}")
+        return []

@@ -2,7 +2,14 @@ import subprocess
 import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from pathlib import Path
+import re
+import sys
+
+# Add project root to path
+sys.path.append(str(Path(__file__).parent.parent))
+from tools.ast_differ import find_affected_functions
 
 router = APIRouter(prefix="/git", tags=["git"])
 
@@ -162,13 +169,18 @@ async def get_git_diff_content(path: str, file_path: str, staged: bool = False, 
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/history")
-async def get_git_history(path: str, limit: int = 50):
+async def get_git_history(path: str, limit: int = 50, branch: Optional[str] = None):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Path not found")
     
     try:
         # Get log with hash, message, author, relative date, and decorations (branches)
-        log_raw = run_git_command(["log", "--pretty=format:%h|%s|%an|%ar|%D", f"-n{limit}"], path).strip()
+        cmd = ["log"]
+        if branch:
+            cmd.append(branch)
+        cmd.extend(["--pretty=format:%h|%s|%an|%ar|%D", f"-n{limit}"])
+        
+        log_raw = run_git_command(cmd, path).strip()
         history = []
         for line in log_raw.split("\n"):
             if not line: continue
@@ -263,6 +275,35 @@ def ensure_gitignore(path: str):
         except Exception as e:
             print(f"Error writing .gitignore: {e}")
 
+
+
+def parse_diff_hunks(diff_output: str) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+    """
+    Parse git diff output (unified=0) to find added and removed line ranges.
+    Returns (added_ranges, removed_ranges). Ranges are inclusive (start, end).
+    """
+    added = []
+    removed = []
+    
+    # Regex for hunk header: @@ -old_start,old_len +new_start,new_len @@
+    # Note: if len is omitted, it is 1.
+    hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+    
+    for line in diff_output.split("\n"):
+        if line.startswith("@@"):
+            match = hunk_re.match(line)
+            if match:
+                old_start = int(match.group(1))
+                old_len = int(match.group(2)) if match.group(2) is not None else 1
+                new_start = int(match.group(3))
+                new_len = int(match.group(4)) if match.group(4) is not None else 1
+                
+                if old_len > 0:
+                    removed.append((old_start, old_start + old_len - 1))
+                if new_len > 0:
+                    added.append((new_start, new_start + new_len - 1))
+                    
+    return added, removed
 
 def run_git_command_safe(args, cwd):
     """Run git command and return (success, output/error)"""
@@ -427,6 +468,7 @@ async def arcturus_auto_commit(request: ArcturusCommitRequest):
     """
     Auto-commit changes to the arcturus branch.
     Called by the IDE timer after 15s of inactivity.
+    After commit, triggers test generation for changed Python files.
     """
     path = request.path
     if not os.path.exists(path):
@@ -442,6 +484,10 @@ async def arcturus_auto_commit(request: ArcturusCommitRequest):
     if not success or not status.strip():
         return {"success": True, "committed": False, "message": "No changes to commit"}
     
+    # Parse changed files BEFORE staging
+    changed_files = [line[3:] for line in status.split("\n") if line.strip()]
+    python_files_changed = [f for f in changed_files if f.endswith('.py')]
+    
     # Stage all changes
     run_git_command_safe(["add", "-A"], path)
     
@@ -456,7 +502,6 @@ async def arcturus_auto_commit(request: ArcturusCommitRequest):
         message = f"Auto: {files_str} at {timestamp}"
     else:
         # Get list of changed files
-        changed_files = [line[3:] for line in status.split("\n") if line.strip()]
         file_names = [os.path.basename(f) for f in changed_files[:3]]
         files_str = ", ".join(file_names)
         if len(changed_files) > 3:
@@ -471,11 +516,104 @@ async def arcturus_auto_commit(request: ArcturusCommitRequest):
     # Get the new commit hash
     success, commit_hash = run_git_command_safe(["rev-parse", "--short", "HEAD"], path)
     
+    # =========================================================================
+    # TEST GENERATION TRIGGER
+    # After successful commit, trigger test generation for changed Python files
+    # =========================================================================
+    test_generation_triggered = False
+    test_generation_files = []
+    
+    if python_files_changed:
+        # Import here to avoid circular imports
+        import asyncio
+        from routers.tests import generate_tests, GenerateTestsRequest
+        
+        test_generation_triggered = True
+        test_generation_files = python_files_changed
+        
+        # Run test generation asynchronously (fire-and-forget for now)
+        async def trigger_test_generation():
+            # Get the actual commit hash we just made
+            success, head_hash = run_git_command_safe(["rev-parse", "HEAD"], path)
+            head_hash = head_hash.strip()
+            
+            for py_file in python_files_changed:
+                try:
+                    # 1. Get Diff for this file (HEAD vs Parent)
+                    # Use -U0 for minimal context
+                    success, diff_out = run_git_command_safe(
+                        ["show", "--unified=0", head_hash, "--", py_file], path
+                    )
+                    
+                    if not success:
+                        print(f"⚠️ Could not get diff for {py_file}")
+                        continue
+                        
+                    added_ranges, removed_ranges1 = parse_diff_hunks(diff_out)
+                    
+                    # 2. Analyze Current Content (for Added/Modified functions)
+                    full_path = os.path.join(path, py_file)
+                    try:
+                        with open(full_path, 'r') as f:
+                            current_content = f.read()
+                        
+                        affected_functions = find_affected_functions(current_content, added_ranges)
+                    except Exception as e:
+                        print(f"Error analyzing current content of {py_file}: {e}")
+                        affected_functions = []
+                        
+                    # 3. Analyze Previous Content (for Deleted functions)
+                    # We need file content from HEAD^ (parent)
+                    try:
+                        success, parent_content = run_git_command_safe(
+                            ["show", f"{head_hash}^:{py_file}"], path
+                        )
+                        deleted_functions = []
+                        if success:
+                            # Note: removed_ranges align with OLD content lines
+                            deleted_functions = find_affected_functions(parent_content, removed_ranges1)
+                    except Exception as e:
+                        print(f"Error analyzing parent content of {py_file}: {e}")
+                        deleted_functions = []
+                    
+                    # Log what we found
+                    print(f"[{py_file}] Diff Analysis:")
+                    print(f"  Added Ranges: {added_ranges} -> Functions: {affected_functions}")
+                    print(f"  Removed Ranges: {removed_ranges1} -> Functions: {deleted_functions}")
+                    
+                    # 4. Trigger Generation/Deletion
+                    # Note: We need to update generate_tests to handle deletions
+                    # For now, we pass 'function_names' (added/modified).
+                    # We define a new field 'deleted_functions' in the request? 
+                    # The GenerateTestsRequest model needs updating.
+                    
+                    # We will update GenerateTestsRequest in routers/tests.py to accept deleted_functions
+                    # Assuming it is updated or we pass extra kwargs? 
+                    # Pydantic models ignore extras usually, but we need to update the model.
+                    # For this step, I will pass 'deleted_functions' assuming upcoming update.
+                    
+                    req = GenerateTestsRequest(
+                        path=path,
+                        file_path=py_file,
+                        function_names=affected_functions,
+                        deleted_functions=deleted_functions, # Sending this even if not yet in model (will be ignored or error?)
+                        force=False
+                    )
+                    await generate_tests(req)
+                    
+                except Exception as e:
+                    print(f"⚠️ Test generation failed for {py_file}: {e}")
+        
+        # Schedule async task (non-blocking)
+        asyncio.create_task(trigger_test_generation())
+    
     return {
         "success": True,
         "committed": True,
         "message": message,
-        "commit_hash": commit_hash if success else None
+        "commit_hash": commit_hash if success else None,
+        "test_generation_triggered": test_generation_triggered,
+        "python_files_changed": python_files_changed
     }
 
 

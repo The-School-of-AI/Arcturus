@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FlaskConical, Check, AlertTriangle, X, Trash2, ChevronDown, ChevronRight, RefreshCw, Play, CheckSquare, Square } from 'lucide-react';
+import { FlaskConical, Check, AlertTriangle, X, Trash2, ChevronDown, ChevronRight, RefreshCw, Play, CheckSquare, Square, Loader2, Zap, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store';
 import { useIdeStore } from '../../store/ideStore';
@@ -13,6 +13,7 @@ interface TestItem {
     status: 'passing' | 'failing' | 'stale' | 'orphaned' | 'pending';
     type: 'behavior' | 'spec';
     lastRun?: string;
+    code?: string;
 }
 
 interface FileTests {
@@ -20,16 +21,31 @@ interface FileTests {
     tests: TestItem[];
 }
 
+interface TestFailure {
+    test_id: string;
+    name: string;
+    message: string;
+    status: string;
+}
+
 type FilterType = 'all' | 'today' | 'verified';
 
 export const TestsSidebar: React.FC = () => {
-    const { explorerRootPath, ideActiveDocumentId, ideOpenDocuments } = useAppStore();
+    const { explorerRootPath, ideActiveDocumentId, ideOpenDocuments, openIdeDocument } = useAppStore();
     const { selectedTestFile, setSelectedTestFile, activeTests, toggleTest, toggleAllTests } = useIdeStore();
 
     const [tests, setTests] = useState<TestItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isRunning, setIsRunning] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationStatus, setGenerationStatus] = useState<string | null>(null);
+    const [lastResults, setLastResults] = useState<{ passed: number; failed: number; total: number } | null>(null);
+    const [failedTests, setFailedTests] = useState<TestFailure[]>([]);
+    const [feedbackMode, setFeedbackMode] = useState<'always' | 'with_permission' | 'never'>('with_permission');
+    const [isFixing, setIsFixing] = useState(false);
     const [filter, setFilter] = useState<FilterType>('all');
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['behavior', 'spec']));
+    const [autoRunPending, setAutoRunPending] = useState(false);
 
     // Determine the current file to show tests for
     const currentFile = React.useMemo(() => {
@@ -67,9 +83,156 @@ export const TestsSidebar: React.FC = () => {
         }
     };
 
+    // Get active tests for current file
+    const currentActiveTests = currentFile ? (activeTests[currentFile] || []) : [];
+
+    // Run selected tests
+    const handleRunTests = async () => {
+        if (!explorerRootPath || currentActiveTests.length === 0) return;
+
+        setIsRunning(true);
+        setLastResults(null);
+
+        try {
+            const res = await axios.post(`${API_BASE}/tests/run`, {
+                path: explorerRootPath,
+                test_ids: currentActiveTests
+            });
+
+            if (res.data.success) {
+                setLastResults({
+                    passed: res.data.passed,
+                    failed: res.data.failed,
+                    total: res.data.total
+                });
+
+                // Store failures for potential fixing
+                if (res.data.results) {
+                    const failures = res.data.results.filter((r: any) => r.status === 'failing');
+                    setFailedTests(failures);
+                }
+
+                setFeedbackMode(res.data.feedback_mode || 'with_permission');
+
+                // Update test statuses locally
+                if (res.data.results) {
+                    setTests(prevTests => prevTests.map(t => {
+                        const result = res.data.results.find((r: any) => r.test_id === t.id || r.test_id.endsWith("::" + t.id) || r.name === t.name);
+                        if (result) {
+                            return { ...t, status: result.status };
+                        }
+                        return t;
+                    }));
+                }
+            } else {
+                // Handle Execution Error (returned by backend)
+                setGenerationStatus(`✗ ${res.data.error || "Execution failed"}`);
+                setTimeout(() => setGenerationStatus(null), 5000);
+            }
+        } catch (e) {
+            console.error("Failed to run tests:", e);
+        } finally {
+            setIsRunning(false);
+        }
+    };
+
+    // Fix failed tests
+    const handleFixFailures = async () => {
+        if (!explorerRootPath || failedTests.length === 0) return;
+
+        setIsFixing(true);
+        try {
+            const res = await axios.post(`${API_BASE}/tests/fix`, {
+                path: explorerRootPath,
+                failures: failedTests
+            });
+
+            if (res.data.success) {
+                setGenerationStatus(`✓ Fixed ${res.data.fixed_files?.length || 0} files`);
+                setFailedTests([]); // Clear failures after fix attempted
+                // Re-run tests after fix? Maybe let user do it
+                setTimeout(() => setGenerationStatus(null), 3000);
+            }
+        } catch (e: any) {
+            console.error("Fix failed", e);
+            setGenerationStatus(`✗ Fix failed: ${e.message}`);
+        } finally {
+            setIsFixing(false);
+        }
+    };
+
+    // Listen for arcturus commit events to show auto-generation status
+    useEffect(() => {
+        const handleArcturusCommit = (event: CustomEvent<{
+            test_generation_triggered: boolean;
+            python_files_changed: string[];
+        }>) => {
+            if (event.detail.test_generation_triggered) {
+                setIsGenerating(true);
+                const files = event.detail.python_files_changed;
+                setGenerationStatus(`🧪 Auto-generating tests for ${files.length} file${files.length > 1 ? 's' : ''}...`);
+
+                // Poll for completion (tests endpoint will return updated list)
+                const pollInterval = setInterval(async () => {
+                    await fetchTests();
+                }, 3000);
+
+                // Stop polling after 30s max
+                setTimeout(() => {
+                    clearInterval(pollInterval);
+                    setIsGenerating(false);
+                    if (generationStatus?.includes('Auto-generating')) {
+                        setGenerationStatus('✓ Test generation complete');
+                        setTimeout(() => setGenerationStatus(null), 3000);
+                        // Trigger auto-run if tests exist
+                        setAutoRunPending(true);
+                    }
+                }, 30000);
+            }
+        };
+
+        window.addEventListener('arcturus-commit', handleArcturusCommit as EventListener);
+        return () => window.removeEventListener('arcturus-commit', handleArcturusCommit as EventListener);
+    }, [explorerRootPath, currentFile]);
+
     useEffect(() => {
         fetchTests();
     }, [explorerRootPath, currentFile]);
+
+    // Sync missing tests on project load
+    useEffect(() => {
+        if (!explorerRootPath) return;
+
+        axios.post(`${API_BASE}/tests/sync`, { path: explorerRootPath })
+            .then(res => {
+                if (res.data.success && res.data.triggered && res.data.triggered.length > 0) {
+                    setIsGenerating(true);
+                    setGenerationStatus(`Queued generation for ${res.data.triggered.length} pending files`);
+
+                    // Poll for updates
+                    const interval = setInterval(fetchTests, 3000);
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        setIsGenerating(false);
+                        setGenerationStatus(null);
+                        setAutoRunPending(true);
+                    }, 30000);
+                } else if (res.data.repaired && res.data.repaired.length > 0) {
+                    setGenerationStatus(`✓ Repaired manifest for ${res.data.repaired.length} files`);
+                    fetchTests();
+                }
+            })
+            .catch(e => console.error("Sync failed", e));
+    }, [explorerRootPath]);
+
+    // Auto Run Effect
+    useEffect(() => {
+        if (autoRunPending && tests.length > 0 && !isRunning && !isGenerating && explorerRootPath) {
+            console.log("🚀 Auto-running tests...");
+            handleRunTests();
+            setAutoRunPending(false);
+        }
+    }, [autoRunPending, tests, isRunning, isGenerating, explorerRootPath]);
 
     // Group tests by type
     const groupedTests = React.useMemo(() => {
@@ -85,8 +248,7 @@ export const TestsSidebar: React.FC = () => {
         return groups;
     }, [tests]);
 
-    // Get active tests for current file
-    const currentActiveTests = currentFile ? (activeTests[currentFile] || []) : [];
+
 
     const toggleGroup = (group: string) => {
         setExpandedGroups(prev => {
@@ -243,6 +405,29 @@ export const TestsSidebar: React.FC = () => {
                                                 isActive={currentActiveTests.includes(test.id)}
                                                 onToggle={() => currentFile && toggleTest(currentFile, test.id)}
                                                 getStatusIcon={getStatusIcon}
+                                                failure={failedTests.find(f => f.test_id === test.id || f.name === test.name)}
+                                                onOpenTest={() => {
+                                                    if (explorerRootPath && currentFile) {
+                                                        const testFile1 = `${explorerRootPath}/.arcturus/tests/test_${currentFile}`;
+                                                        openIdeDocument({
+                                                            id: testFile1,
+                                                            title: `test_${currentFile}`,
+                                                            file_path: testFile1,
+                                                            type: 'code'
+                                                        } as any);
+                                                    }
+                                                }}
+                                                onExpand={() => {
+                                                    if (explorerRootPath && currentFile) {
+                                                        const sutPath = `${explorerRootPath}/${currentFile}`;
+                                                        openIdeDocument({
+                                                            id: sutPath,
+                                                            title: currentFile,
+                                                            file_path: sutPath,
+                                                            type: 'code'
+                                                        } as any);
+                                                    }
+                                                }}
                                             />
                                         ))}
                                     </div>
@@ -281,6 +466,29 @@ export const TestsSidebar: React.FC = () => {
                                                 isActive={currentActiveTests.includes(test.id)}
                                                 onToggle={() => currentFile && toggleTest(currentFile, test.id)}
                                                 getStatusIcon={getStatusIcon}
+                                                failure={failedTests.find(f => f.test_id === test.id || f.name === test.name)}
+                                                onOpenTest={() => {
+                                                    if (explorerRootPath && currentFile) {
+                                                        const specFile = `${explorerRootPath}/.arcturus/tests/test_${currentFile}`;
+                                                        openIdeDocument({
+                                                            id: specFile,
+                                                            title: `test_${currentFile}`,
+                                                            file_path: specFile,
+                                                            type: 'code'
+                                                        } as any);
+                                                    }
+                                                }}
+                                                onExpand={() => {
+                                                    if (explorerRootPath && currentFile) {
+                                                        const sutPath = `${explorerRootPath}/${currentFile}`;
+                                                        openIdeDocument({
+                                                            id: sutPath,
+                                                            title: currentFile,
+                                                            file_path: sutPath,
+                                                            type: 'code'
+                                                        } as any);
+                                                    }
+                                                }}
                                             />
                                         ))}
                                     </div>
@@ -292,14 +500,84 @@ export const TestsSidebar: React.FC = () => {
             </div>
 
             {/* Footer Actions */}
-            <div className="px-3 py-2 border-t border-border/50 bg-muted/5 shrink-0">
+            <div className="px-3 py-2 border-t border-border/50 bg-muted/5 shrink-0 space-y-2">
+                {/* Generation Status */}
+                {generationStatus && (
+                    <div className={cn(
+                        "flex items-center gap-2 text-[10px] px-2 py-1.5 rounded",
+                        generationStatus.startsWith('✓') ? "bg-green-500/10 text-green-400" :
+                            generationStatus.startsWith('✗') ? "bg-red-500/10 text-red-400" :
+                                generationStatus.startsWith('⚠') ? "bg-amber-500/10 text-amber-400" :
+                                    "bg-blue-500/10 text-blue-400"
+                    )}>
+                        {isGenerating && <Loader2 className="w-3 h-3 animate-spin" />}
+                        <span>{generationStatus}</span>
+                    </div>
+                )}
+
+                {/* Last Run Results */}
+                {lastResults && (
+                    <div className="flex items-center justify-between text-[10px] px-2 py-1 bg-muted/30 rounded">
+                        <span className="text-muted-foreground">Last Run:</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-green-400">{lastResults.passed} passed</span>
+                            {lastResults.failed > 0 && (
+                                <span className="text-red-400">{lastResults.failed} failed</span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Auto-generation indicator (no manual button - tests generate on commit) */}
+                {isGenerating && (
+                    <div className="flex items-center gap-2 text-[10px] px-2 py-1.5 bg-blue-500/10 text-blue-400 rounded">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <Zap className="w-3 h-3" />
+                        <span>Tests auto-generating on commit...</span>
+                    </div>
+                )}
+
+                {/* Fix Failures Button */}
+                {!isGenerating && failedTests.length > 0 && feedbackMode === 'with_permission' && (
+                    <Button
+                        variant="outline"
+                        className="w-full h-8 text-[11px] font-bold tracking-wider border-dashed border-red-500/30 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        disabled={isFixing}
+                        onClick={handleFixFailures}
+                        title="Attempt to fix code based on test failures"
+                    >
+                        {isFixing ? (
+                            <>
+                                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                                Fixing...
+                            </>
+                        ) : (
+                            <>
+                                <Wrench className="w-3.5 h-3.5 mr-2" />
+                                Fix {failedTests.length} Failure{failedTests.length !== 1 ? 's' : ''}
+                            </>
+                        )}
+                    </Button>
+                )}
+
+                {/* Run Tests Button */}
                 <Button
                     className="w-full h-8 text-[11px] font-bold tracking-wider"
-                    disabled={currentActiveTests.length === 0}
+                    disabled={currentActiveTests.length === 0 || isRunning}
+                    onClick={handleRunTests}
                     title="Run selected tests"
                 >
-                    <Play className="w-3.5 h-3.5 mr-2" />
-                    Run {currentActiveTests.length} Test{currentActiveTests.length !== 1 ? 's' : ''}
+                    {isRunning ? (
+                        <>
+                            <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
+                            Running...
+                        </>
+                    ) : (
+                        <>
+                            <Play className="w-3.5 h-3.5 mr-2" />
+                            Run {currentActiveTests.length} Test{currentActiveTests.length !== 1 ? 's' : ''}
+                        </>
+                    )}
                 </Button>
             </div>
         </div>
@@ -311,31 +589,90 @@ const TestItemRow: React.FC<{
     isActive: boolean;
     onToggle: () => void;
     getStatusIcon: (status: TestItem['status']) => React.ReactNode;
-}> = ({ test, isActive, onToggle, getStatusIcon }) => {
+    failure?: TestFailure;
+    onOpenTest?: () => void;
+    onExpand?: () => void;
+}> = ({ test, isActive, onToggle, getStatusIcon, failure, onOpenTest, onExpand }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    // Auto expand if failure exists
+    useEffect(() => {
+        if (failure) setExpanded(true);
+    }, [failure]);
+
+    const handleRowClick = () => {
+        const newExpanded = !expanded;
+        setExpanded(newExpanded);
+        if (newExpanded && onExpand) {
+            onExpand();
+        }
+    };
+
     return (
-        <div
-            className="group flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 transition-all cursor-pointer select-none"
-            onClick={onToggle}
-        >
-            <button
-                className="shrink-0"
-                onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        <div className="flex flex-col border-b border-border/10 last:border-0">
+            <div
+                className="group flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 transition-all cursor-pointer select-none"
+                onClick={handleRowClick}
             >
-                {isActive ? (
-                    <CheckSquare className="w-3.5 h-3.5 text-primary" />
-                ) : (
-                    <Square className="w-3.5 h-3.5 text-muted-foreground/50" />
-                )}
-            </button>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <button
+                        className="shrink-0"
+                        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                    >
+                        {isActive ? (
+                            <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                        ) : (
+                            <Square className="w-3.5 h-3.5 text-muted-foreground/50" />
+                        )}
+                    </button>
 
-            {getStatusIcon(test.status)}
+                    {getStatusIcon(test.status)}
 
-            <span className={cn(
-                "flex-1 text-[10px] truncate",
-                test.status === 'orphaned' ? "text-muted-foreground/50 line-through" : "text-foreground/80"
-            )}>
-                {test.name}
-            </span>
+                    <span
+                        className={cn(
+                            "truncate transition-colors text-[10px]",
+                            test.status === 'orphaned' ? "text-muted-foreground/50 line-through" : "text-foreground/80"
+                        )}
+                        title={test.name}
+                    >
+                        {test.name}
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                    {onOpenTest && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onOpenTest(); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                            title="Open test file"
+                        >
+                            <FlaskConical className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                    )}
+                    <ChevronRight className={cn("w-3 h-3 text-muted-foreground/50 transition-transform", expanded && "rotate-90")} />
+                </div>
+            </div>
+
+            {/* Accordion Content */}
+            {expanded && (
+                <div className="bg-muted/5 pb-2">
+                    {/* Failure Message */}
+                    {failure && (
+                        <div className="mx-3 mt-1 mb-2 p-2 text-[10px] bg-red-500/10 border-l-2 border-red-500/30 rounded-r font-mono whitespace-pre-wrap overflow-x-auto text-red-300">
+                            {failure.message}
+                        </div>
+                    )}
+
+                    {/* Test Code */}
+                    {test.code && (
+                        <div className="mx-3 mt-1 relative group/code">
+                            <div className="text-[10px] font-mono text-muted-foreground bg-muted/30 p-2 rounded overflow-x-auto whitespace-pre border border-border/20">
+                                {test.code}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
