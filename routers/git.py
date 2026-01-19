@@ -207,3 +207,351 @@ async def get_with_commit_files(path: str, commit_hash: str):
         return {"files": files_changed}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# ARCTURUS GIT - Auto-commit system with dual-branch management
+# =============================================================================
+
+ARCTURUS_BRANCH = "arcturus"
+
+def run_git_command_safe(args, cwd):
+    """Run git command and return (success, output/error)"""
+    try:
+        result = subprocess.run(
+            ["git"] + args,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return True, result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        return False, e.stderr or e.stdout or str(e)
+
+
+class ArcturusInitRequest(BaseModel):
+    path: str
+
+
+class ArcturusCommitRequest(BaseModel):
+    path: str
+    files_changed: Optional[List[str]] = None  # For auto-generated commit message
+
+
+class ArcturusUserCommitRequest(BaseModel):
+    path: str
+    message: str
+
+
+@router.post("/arcturus/init")
+async def init_arcturus_branch(request: ArcturusInitRequest):
+    """
+    Initialize ArcturusGit for a project:
+    1. If not a git repo, initialize one
+    2. Create 'arcturus' branch if it doesn't exist
+    3. Switch to arcturus branch for editing
+    """
+    path = request.path
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    # Check if it's a git repo
+    git_dir = os.path.join(path, ".git")
+    if not os.path.exists(git_dir):
+        # Initialize git repo
+        success, output = run_git_command_safe(["init"], path)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to init git: {output}")
+        
+        # Create initial commit so we have a valid HEAD
+        run_git_command_safe(["add", "-A"], path)
+        run_git_command_safe(["commit", "-m", "Initial commit (Arcturus)", "--allow-empty"], path)
+    
+    # Get current branch (this is the "user" branch)
+    success, current_branch = run_git_command_safe(["rev-parse", "--abbrev-ref", "HEAD"], path)
+    if not success:
+        current_branch = "main"
+    
+    # Check if arcturus branch exists
+    success, branches = run_git_command_safe(["branch", "--list", ARCTURUS_BRANCH], path)
+    arcturus_exists = ARCTURUS_BRANCH in branches if success else False
+    
+    if not arcturus_exists:
+        # Create arcturus branch from current HEAD
+        success, output = run_git_command_safe(["branch", ARCTURUS_BRANCH], path)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to create arcturus branch: {output}")
+    
+    # Switch to arcturus branch
+    success, output = run_git_command_safe(["checkout", ARCTURUS_BRANCH], path)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Failed to switch to arcturus branch: {output}")
+    
+    return {
+        "success": True,
+        "arcturus_branch": ARCTURUS_BRANCH,
+        "user_branch": current_branch if current_branch != ARCTURUS_BRANCH else "main",
+        "message": f"Arcturus branch initialized. Now on '{ARCTURUS_BRANCH}' branch."
+    }
+
+
+@router.get("/arcturus/branches")
+async def get_arcturus_branches(path: str):
+    """
+    Get information about both arcturus and user branches.
+    """
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    # Get current branch
+    success, current_branch = run_git_command_safe(["rev-parse", "--abbrev-ref", "HEAD"], path)
+    if not success:
+        return {
+            "is_git_repo": False,
+            "arcturus_exists": False,
+            "current_branch": None,
+            "user_branch": None
+        }
+    
+    # Check if arcturus branch exists
+    success, branches_raw = run_git_command_safe(["branch", "--list"], path)
+    branches = [b.strip().lstrip("* ") for b in branches_raw.split("\n") if b.strip()] if success else []
+    
+    arcturus_exists = ARCTURUS_BRANCH in branches
+    
+    # Determine user branch (first non-arcturus branch, preferring main/master)
+    user_branch = None
+    for preferred in ["main", "master", "develop"]:
+        if preferred in branches and preferred != ARCTURUS_BRANCH:
+            user_branch = preferred
+            break
+    if not user_branch:
+        for b in branches:
+            if b != ARCTURUS_BRANCH:
+                user_branch = b
+                break
+    
+    # Get commit counts for each branch
+    arcturus_commits = 0
+    user_commits = 0
+    
+    if arcturus_exists:
+        success, count = run_git_command_safe(["rev-list", "--count", ARCTURUS_BRANCH], path)
+        arcturus_commits = int(count) if success and count.isdigit() else 0
+    
+    if user_branch:
+        success, count = run_git_command_safe(["rev-list", "--count", user_branch], path)
+        user_commits = int(count) if success and count.isdigit() else 0
+    
+    # Get ahead/behind between arcturus and user branch
+    ahead = 0
+    behind = 0
+    if arcturus_exists and user_branch:
+        success, ahead_behind = run_git_command_safe(
+            ["rev-list", "--left-right", "--count", f"{user_branch}...{ARCTURUS_BRANCH}"], 
+            path
+        )
+        if success:
+            parts = ahead_behind.split()
+            if len(parts) == 2:
+                behind = int(parts[0])  # commits in user not in arcturus
+                ahead = int(parts[1])   # commits in arcturus not in user
+    
+    return {
+        "is_git_repo": True,
+        "arcturus_exists": arcturus_exists,
+        "current_branch": current_branch,
+        "user_branch": user_branch,
+        "arcturus_commits": arcturus_commits,
+        "user_commits": user_commits,
+        "arcturus_ahead": ahead,
+        "arcturus_behind": behind
+    }
+
+
+@router.post("/arcturus/commit")
+async def arcturus_auto_commit(request: ArcturusCommitRequest):
+    """
+    Auto-commit changes to the arcturus branch.
+    Called by the IDE timer after 15s of inactivity.
+    """
+    path = request.path
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    # Ensure we're on arcturus branch
+    success, current = run_git_command_safe(["rev-parse", "--abbrev-ref", "HEAD"], path)
+    if not success or current != ARCTURUS_BRANCH:
+        raise HTTPException(status_code=400, detail=f"Not on arcturus branch. Current: {current}")
+    
+    # Check if there are changes to commit
+    success, status = run_git_command_safe(["status", "--porcelain"], path)
+    if not success or not status.strip():
+        return {"success": True, "committed": False, "message": "No changes to commit"}
+    
+    # Stage all changes
+    run_git_command_safe(["add", "-A"], path)
+    
+    # Generate commit message
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if request.files_changed:
+        files_str = ", ".join(request.files_changed[:3])
+        if len(request.files_changed) > 3:
+            files_str += f" +{len(request.files_changed) - 3} more"
+        message = f"Auto: {files_str} at {timestamp}"
+    else:
+        # Get list of changed files
+        changed_files = [line[3:] for line in status.split("\n") if line.strip()]
+        file_names = [os.path.basename(f) for f in changed_files[:3]]
+        files_str = ", ".join(file_names)
+        if len(changed_files) > 3:
+            files_str += f" +{len(changed_files) - 3} more"
+        message = f"Auto: {files_str} at {timestamp}"
+    
+    # Commit
+    success, output = run_git_command_safe(["commit", "-m", message], path)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Commit failed: {output}")
+    
+    # Get the new commit hash
+    success, commit_hash = run_git_command_safe(["rev-parse", "--short", "HEAD"], path)
+    
+    return {
+        "success": True,
+        "committed": True,
+        "message": message,
+        "commit_hash": commit_hash if success else None
+    }
+
+
+@router.post("/arcturus/user-commit")
+async def arcturus_user_commit(request: ArcturusUserCommitRequest):
+    """
+    Squash all arcturus commits since last user commit and apply to user branch.
+    This is called when user explicitly wants to "commit for real".
+    """
+    path = request.path
+    message = request.message
+    
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    if not message or not message.strip():
+        raise HTTPException(status_code=400, detail="Commit message required")
+    
+    # Get branch info
+    success, branches_raw = run_git_command_safe(["branch", "--list"], path)
+    branches = [b.strip().lstrip("* ") for b in branches_raw.split("\n") if b.strip()] if success else []
+    
+    # Find user branch
+    user_branch = None
+    for preferred in ["main", "master", "develop"]:
+        if preferred in branches and preferred != ARCTURUS_BRANCH:
+            user_branch = preferred
+            break
+    if not user_branch:
+        for b in branches:
+            if b != ARCTURUS_BRANCH:
+                user_branch = b
+                break
+    
+    if not user_branch:
+        # Create main branch if none exists
+        user_branch = "main"
+        success, output = run_git_command_safe(["branch", user_branch], path)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to create user branch: {output}")
+    
+    # Get current arcturus state (we'll apply this to user branch)
+    success, current = run_git_command_safe(["rev-parse", "--abbrev-ref", "HEAD"], path)
+    
+    # Switch to user branch
+    success, output = run_git_command_safe(["checkout", user_branch], path)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Failed to switch to user branch: {output}")
+    
+    try:
+        # Merge arcturus with squash
+        success, output = run_git_command_safe(["merge", "--squash", ARCTURUS_BRANCH], path)
+        if not success:
+            # Revert to arcturus branch on failure
+            run_git_command_safe(["checkout", ARCTURUS_BRANCH], path)
+            raise HTTPException(status_code=500, detail=f"Merge failed: {output}")
+        
+        # Commit the squashed changes
+        success, output = run_git_command_safe(["commit", "-m", message], path)
+        if not success:
+            # May fail if no changes (already up to date)
+            if "nothing to commit" in output.lower():
+                run_git_command_safe(["checkout", ARCTURUS_BRANCH], path)
+                return {
+                    "success": True,
+                    "committed": False,
+                    "message": "No new changes to commit to user branch"
+                }
+            run_git_command_safe(["checkout", ARCTURUS_BRANCH], path)
+            raise HTTPException(status_code=500, detail=f"Commit failed: {output}")
+        
+        # Get commit hash
+        success, commit_hash = run_git_command_safe(["rev-parse", "--short", "HEAD"], path)
+        
+        # Switch back to arcturus branch
+        run_git_command_safe(["checkout", ARCTURUS_BRANCH], path)
+        
+        return {
+            "success": True,
+            "committed": True,
+            "user_branch": user_branch,
+            "commit_hash": commit_hash if success else None,
+            "message": message
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Ensure we're back on arcturus branch
+        run_git_command_safe(["checkout", ARCTURUS_BRANCH], path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/arcturus/history")
+async def get_arcturus_history(path: str, branch: str = "arcturus", limit: int = 50):
+    """
+    Get commit history for a specific branch (arcturus or user).
+    """
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    try:
+        log_raw = run_git_command([
+            "log", branch,
+            "--pretty=format:%h|%s|%an|%ar|%D", 
+            f"-n{limit}"
+        ], path).strip()
+        
+        history = []
+        for line in log_raw.split("\n"):
+            if not line: 
+                continue
+            parts = line.split("|")
+            if len(parts) >= 4:
+                decorations = parts[4] if len(parts) > 4 else ""
+                branches = []
+                if decorations:
+                    clean_dec = decorations.replace("HEAD -> ", "")
+                    branches = [b.strip() for b in clean_dec.split(",") if b.strip()]
+                
+                history.append({
+                    "hash": parts[0],
+                    "message": parts[1],
+                    "author": parts[2],
+                    "date": parts[3],
+                    "branches": branches,
+                    "files": []
+                })
+        return history
+    except Exception:
+        return []

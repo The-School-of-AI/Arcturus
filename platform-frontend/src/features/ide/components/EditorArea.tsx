@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Editor, { loader, DiffEditor } from '@monaco-editor/react';
 import { useAppStore } from '@/store';
+import { useIdeStore } from '../store/ideStore';
 import { FileCode, Loader2, X, FileText, Code2, ExternalLink, Save, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
@@ -25,6 +26,9 @@ export const EditorArea: React.FC = () => {
         reviewRequest,
         submitReviewDecision
     } = useAppStore();
+
+    // Arcturus Timer Hook
+    const { resetArcturusTimer, startArcturusTimer, arcturusTimer } = useIdeStore();
 
     const { theme } = useTheme();
     const [isSaving, setIsSaving] = useState(false);

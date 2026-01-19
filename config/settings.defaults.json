@@ -20,7 +20,12 @@
     "agent": {
         "model_provider": "gemini",
         "default_model": "gemini-2.5-flash",
-        "overrides": {},
+        "overrides": {
+            "TestAgent": {
+                "model_provider": "ollama",
+                "model": "gemma3:4b"
+            }
+        },
         "max_steps": 3,
         "max_lifelines_per_step": 3,
         "planning_mode": "conservative",

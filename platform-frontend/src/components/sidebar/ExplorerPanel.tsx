@@ -5,11 +5,12 @@ import {
     FileCode, Folder, ChevronRight, ChevronDown, FileText, File,
     Plus, Github, Loader2, RefreshCw, X, MoreHorizontal,
     FilePlus, FolderPlus, Copy, Scissors, Clipboard, Trash2,
-    ExternalLink, Terminal as TerminalIcon
+    ExternalLink, Terminal as TerminalIcon, FlaskConical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
+import { useIdeStore } from '@/features/ide/store/ideStore';
 import {
     ContextMenu,
     ContextMenuContent,
@@ -46,7 +47,8 @@ const FileTreeItem: React.FC<{
     onRename: (path: string, newName: string) => void;
     onRefresh: () => void;
     onAction: (action: string, path: string, type?: 'file' | 'folder') => void;
-}> = ({ item, level, expandedFolders, toggleFolder, onSelect, selectedPath, onRename, onRefresh, onAction }) => {
+    hasTests?: boolean;
+}> = ({ item, level, expandedFolders, toggleFolder, onSelect, selectedPath, onRename, onRefresh, onAction, hasTests }) => {
     const { clipboard, setClipboard, explorerRootPath } = useAppStore();
     const isFolder = item.type === 'folder';
     const isOpen = expandedFolders[item.path];
@@ -189,7 +191,14 @@ const FileTreeItem: React.FC<{
                                 className="flex-1 bg-background border border-primary h-6 text-xs px-1 outline-none"
                             />
                         ) : (
-                            <span className="truncate text-[13px] leading-none py-1">{item.name}</span>
+                            <span className="truncate text-[13px] leading-none py-1 flex items-center gap-2">
+                                {item.name}
+                                {hasTests && (
+                                    <span title="Has Tests">
+                                        <FlaskConical className="w-3 h-3 text-green-500/60" />
+                                    </span>
+                                )}
+                            </span>
                         )}
                     </div>
                 </div>
@@ -256,6 +265,7 @@ const FileTreeItem: React.FC<{
                             onRename={onRename}
                             onRefresh={onRefresh}
                             onAction={onAction}
+                            hasTests={useIdeStore.getState().testFiles.includes(child.path)}
                         />
                     ))}
                 </div>
@@ -275,6 +285,8 @@ export const ExplorerPanel: React.FC = () => {
         ideActiveDocumentId,
         clipboard, setClipboard
     } = useAppStore();
+
+    const { testFiles } = useIdeStore();
 
     const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
     const [creating, setCreating] = useState<{ parentPath: string; type: 'file' | 'folder' } | null>(null);
@@ -495,6 +507,7 @@ export const ExplorerPanel: React.FC = () => {
                     onRename={handleRename}
                     onRefresh={refreshFiles}
                     onAction={handleAction}
+                    hasTests={testFiles.includes(node.path)}
                 />
                 {isExpanded[node.path] && node.type === 'folder' && renderCreationInput(node.path, level)}
             </React.Fragment>

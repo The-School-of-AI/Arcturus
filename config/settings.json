@@ -28,6 +28,10 @@
       "FormatterAgent": {
         "model_provider": "ollama",
         "model": "gemma3:4b"
+      },
+      "TestAgent": {
+        "model_provider": "ollama",
+        "model": "gemma3:4b"
       }
     },
     "max_steps": 3,

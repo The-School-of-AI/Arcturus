@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GitBranch, GitCommit, AlertCircle, Plus, Minus, RefreshCw, Send, Trash2, FileCode, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { GitBranch, GitCommit, AlertCircle, Plus, Minus, RefreshCw, Send, Trash2, FileCode, Check, ChevronDown, ChevronRight, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store';
+import { useIdeStore } from '../../store/ideStore';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,10 @@ export const GitSidebar: React.FC = () => {
 
     useEffect(() => {
         fetchStatus();
+
+        const handleRefresh = () => fetchStatus();
+        window.addEventListener('arcturus:git-init', handleRefresh);
+        return () => window.removeEventListener('arcturus:git-init', handleRefresh);
     }, [fetchStatus]);
 
     const handleAction = async (action: 'stage' | 'unstage', fileName: string) => {
@@ -159,6 +164,8 @@ export const GitSidebar: React.FC = () => {
     const totalChanges = (status?.staged.length || 0) + (status?.unstaged.length || 0) + (status?.untracked.length || 0);
     const hasChanges = totalChanges > 0;
 
+    const { activeGitView, setActiveGitView } = useIdeStore();
+
     return (
         <div className="h-full flex flex-col bg-transparent">
             {/* Header */}
@@ -178,6 +185,36 @@ export const GitSidebar: React.FC = () => {
                 >
                     <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
                 </Button>
+            </div>
+
+            {/* Arcturus / User Branch Toggle */}
+            <div className="flex items-center gap-1 px-3 py-2 border-b border-border/30 bg-muted/10">
+                <button
+                    onClick={() => setActiveGitView('arcturus')}
+                    className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-all",
+                        activeGitView === 'arcturus'
+                            ? "bg-primary/20 text-primary border border-primary/30"
+                            : "text-muted-foreground hover:bg-white/5"
+                    )}
+                >
+                    <span>Arcturus</span>
+                    {hasChanges && activeGitView === 'arcturus' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    )}
+                </button>
+                <button
+                    onClick={() => setActiveGitView('user')}
+                    className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-all",
+                        activeGitView === 'user'
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "text-muted-foreground hover:bg-white/5"
+                    )}
+                >
+                    <span>User</span>
+                    <ArrowUpRight className="w-2.5 h-2.5" />
+                </button>
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-thin">

@@ -59,3 +59,9 @@ agents:
     mcp_servers: []
     description: "Quality assurance and validation."
 
+  TestAgent:
+    prompt_file: "prompts/test_agent.md"
+    model: "ollama"
+    mcp_servers: []
+    description: "Generates Pytest tests for Python code."
+

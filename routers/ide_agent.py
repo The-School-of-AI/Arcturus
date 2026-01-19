@@ -186,7 +186,7 @@ Available Tools:
                                     yield f"data: {json.dumps({'content': chunk})}\n\n"
                                 if data.get("done"):
                                     break
-                            except:
+                            except Exception:
                                 continue
             except Exception as e:
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
