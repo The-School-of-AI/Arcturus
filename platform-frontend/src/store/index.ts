@@ -98,6 +98,10 @@ interface RagViewerSlice {
     ragKeywordMatches: string[];
     setRagKeywordMatches: (matches: string[]) => void;
     addMessageToDocChat: (docId: string, message: ChatMessage) => void;
+    setSessionSystemPrompt: (docId: string, systemPrompt: string, model?: string, tools?: any[]) => void;
+    ideSessionSystemPrompt: string | null;
+    ideSessionModel: string | null;
+    ideSessionTools: any[] | null;
     updateMessageContent: (docId: string, messageId: string, newContent: string) => void;
     selectedContexts: ContextItem[];
     addSelectedContext: (item: string | ContextItem) => void;
@@ -776,7 +780,11 @@ export const useAppStore = create<AppState>()(
                         title: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.title || "New Chat",
                         messages: isIde ? finalState.ideProjectChatHistory : (isNotes ? finalState.notesOpenDocuments.find(d => d.id === docId)?.chatHistory || [] : finalState.ragOpenDocuments.find(d => d.id === docId)?.chatHistory || []),
                         created_at: finalState.chatSessions.find((s: any) => s.id === currentSessionId)?.created_at || Date.now() / 1000,
-                        updated_at: Date.now() / 1000
+                        updated_at: Date.now() / 1000,
+                        // Include full prompt details for debugging
+                        system_prompt: (finalState as any).ideSessionSystemPrompt || null,
+                        model: (finalState as any).ideSessionModel || null,
+                        tools: (finalState as any).ideSessionTools || null,
                     };
 
                     api.saveChatSession(sessionData).then(() => {
@@ -785,6 +793,17 @@ export const useAppStore = create<AppState>()(
                         }
                     }).catch(console.error);
                 }
+            },
+            // Store session debug info (system prompt, model, tools)
+            ideSessionSystemPrompt: null as string | null,
+            ideSessionModel: null as string | null,
+            ideSessionTools: null as any[] | null,
+            setSessionSystemPrompt: (docId: string, systemPrompt: string, model?: string, tools?: any[]) => {
+                set({
+                    ideSessionSystemPrompt: systemPrompt,
+                    ideSessionModel: model || null,
+                    ideSessionTools: tools || null,
+                });
             },
             updateMessageContent: (docId, messageId, newContent) => {
                 const sidebarTab = get().sidebarTab;
@@ -909,11 +928,22 @@ export const useAppStore = create<AppState>()(
                         ideActiveDocumentId: doc.id
                     }));
                 } else {
-                    // Update if already open (e.g. navigation params OR agent file write)
+                    // Update if already open (e.g. navigation params OR agent file write OR diff mode switch)
                     set(state => ({
                         ideOpenDocuments: state.ideOpenDocuments.map(d =>
                             d.id === doc.id
-                                ? { ...d, content: doc.content || d.content, targetPage: doc.targetPage, searchText: doc.searchText, language: docWithLang.language }
+                                ? {
+                                    ...d,
+                                    content: doc.content !== undefined ? doc.content : d.content,
+                                    targetPage: doc.targetPage,
+                                    searchText: doc.searchText,
+                                    language: docWithLang.language,
+                                    // Enable inline diff mode switching
+                                    type: doc.type || d.type,
+                                    originalContent: doc.originalContent !== undefined ? doc.originalContent : d.originalContent,
+                                    modifiedContent: doc.modifiedContent !== undefined ? doc.modifiedContent : d.modifiedContent,
+                                    title: doc.title || d.title,
+                                }
                                 : d
                         ),
                         ideActiveDocumentId: doc.id

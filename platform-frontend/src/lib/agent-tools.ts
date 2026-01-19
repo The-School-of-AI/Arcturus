@@ -39,13 +39,13 @@ export const availableTools: ToolDefinition[] = [
     },
     {
         name: "replace_in_file",
-        description: "Replace a specific block of text in a file. Path MUST be relative to project root.",
+        description: "Replace ONE occurrence of a text block in a file. CRITICAL: target MUST be unique! If target appears multiple times, this will fail. Include surrounding context to make it unique. Example: target='def hello():' not just 'hello'. Path MUST be relative to project root. This is NOT a 'replace all' tool.",
         parameters: {
             type: "object",
             properties: {
                 path: { type: "string", description: "Relative path to the file." },
-                target: { type: "string", description: "The exact text block to replace. Must be unique in the file." },
-                replacement: { type: "string", description: "The new text to insert." }
+                target: { type: "string", description: "The EXACT and UNIQUE text block to replace. Include enough context (e.g. full line or multiline) to ensure uniqueness." },
+                replacement: { type: "string", description: "The new text to insert in place of target." }
             },
             required: ["path", "target", "replacement"]
         }
@@ -130,7 +130,7 @@ export const availableTools: ToolDefinition[] = [
     },
     {
         name: "multi_replace_file_content",
-        description: "Perform multiple replace operations in a single file. Path MUST be relative to project root.",
+        description: "Perform MULTIPLE separate replacements in a single file. CRITICAL: Each target MUST be unique in the file! This is NOT 'replace all' - each target replaces exactly ONE occurrence. If a target appears multiple times, include more context (e.g. the full line). For bulk renaming, use write_file to rewrite the entire file instead.",
         parameters: {
             type: "object",
             properties: {
@@ -140,12 +140,12 @@ export const availableTools: ToolDefinition[] = [
                     items: {
                         type: "object",
                         properties: {
-                            target: { type: "string", description: "Text to find." },
+                            target: { type: "string", description: "UNIQUE text to find (include enough context)." },
                             replacement: { type: "string", description: "Text to replace it with." }
                         },
                         required: ["target", "replacement"]
                     },
-                    description: "List of replacement pairs."
+                    description: "List of replacement pairs. Each target MUST be unique!"
                 }
             },
             required: ["path", "changes"]

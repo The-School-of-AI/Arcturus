@@ -32,7 +32,8 @@ export function parseToolCalls(content: string): ToolCall[] {
 
     // 2. Extract Tool Calls
     // We iterate again to find the actual JSON blocks
-    const toolRegex = /```\s*(?:json)?\s*([\s\S]*?)\s*```/g;
+    // Regex that handles any language identifier (json, tool_code, etc.) or none
+    const toolRegex = /```\s*(?:\w+)?\s*([\s\S]*?)\s*```/g;
     const toolCalls: ToolCall[] = [];
     let match;
 

@@ -601,7 +601,10 @@ function setupFSHandlers() {
             let stdout = '';
             find.stdout.on('data', data => { stdout += data; });
             find.on('close', () => {
-                const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
+                const files = stdout.split('\n')
+                    .filter(Boolean)
+                    .map(f => f.replace(/^\.\//, ''))
+                    .filter(f => !f.startsWith('.arcturus') && !f.includes('/.arcturus')); // Exclude .arcturus
                 resolve({ success: true, files: files.slice(0, 50) }); // Limit results
             });
             find.on('error', err => resolve({ success: false, error: err.message }));
@@ -635,7 +638,10 @@ function setupFSHandlers() {
             // Try git grep first
             exec(`git grep -I -l -E "${query}"`, { cwd: searchRoot }, (err, stdout, stderr) => {
                 if (!err) {
-                    const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
+                    const files = stdout.split('\n')
+                        .filter(Boolean)
+                        .map(f => f.replace(/^\.\//, ''))
+                        .filter(f => !f.startsWith('.arcturus') && !f.includes('/.arcturus')); // Exclude .arcturus
                     resolve({ success: true, files: files.slice(0, 50) });
                     return;
                 }
@@ -643,7 +649,7 @@ function setupFSHandlers() {
                 // Fallback to standard grep with -E (Extended Regex) for pipes support
                 // Note: -r (recursive), -l (files-with-matches), -I (ignore binary)
                 // We explicitely exclude common directories to avoiding matching '.' with '.*'
-                const excludes = '--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next';
+                const excludes = '--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next --exclude-dir=.arcturus';
                 exec(`grep -r -l -I -E ${excludes} "${query}" .`, { cwd: searchRoot }, (err, stdout, stderr) => {
                     if (err && err.code !== 1) { // code 1 means no matches
                         resolve({ success: false, error: err.message });

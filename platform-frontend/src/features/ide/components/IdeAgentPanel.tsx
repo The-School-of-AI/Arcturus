@@ -609,6 +609,7 @@ export const IdeAgentPanel: React.FC = () => {
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
+            let capturedSystemPrompt: string | null = null;
 
             while (true) {
                 const { done, value } = await reader!.read();
@@ -619,6 +620,18 @@ export const IdeAgentPanel: React.FC = () => {
                     if (line.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(line.slice(6));
+
+                            // Capture system prompt from first chunk (for debugging/logging)
+                            if (data.system_prompt && !capturedSystemPrompt) {
+                                capturedSystemPrompt = data.system_prompt;
+                                console.log('[IDE Agent] Captured system_prompt:', data.system_prompt.substring(0, 100) + '...');
+                                console.log('[IDE Agent] Model:', data.model);
+                                // Store in session for debugging
+                                if (explorerRootPath) {
+                                    useAppStore.getState().setSessionSystemPrompt(explorerRootPath, data.system_prompt, data.model, data.tools);
+                                }
+                            }
+
                             if (data.content) {
                                 accumulatedContent += data.content;
                                 useAppStore.getState().updateMessageContent(explorerRootPath, botMsgId, accumulatedContent);
@@ -630,6 +643,10 @@ export const IdeAgentPanel: React.FC = () => {
 
             // Tool Execution Logic
             const toolCalls = parseToolCalls(accumulatedContent);
+
+            // Check if parsing might have failed (response looks like a tool call but nothing parsed)
+            const looksLikeToolCall = accumulatedContent.includes('```') &&
+                (accumulatedContent.includes('"tool"') || accumulatedContent.includes('"name"'));
 
             if (toolCalls.length > 0 && thinkingRef.current) {
                 let toolOutputs = "";
@@ -650,6 +667,14 @@ export const IdeAgentPanel: React.FC = () => {
                     addMessageToDocChat(explorerRootPath, toolMsg);
                     await callAgent([...currentHistory, { role: 'assistant', content: accumulatedContent }, { role: 'user', content: toolMsg.content }], null);
                 }
+            } else if (looksLikeToolCall && toolCalls.length === 0) {
+                // Parsing failed - notify the user
+                console.warn('[IDE Agent] Tool parsing failed. Response looked like a tool call but nothing was extracted.');
+                useAppStore.getState().updateMessageContent(
+                    explorerRootPath,
+                    botMsgId,
+                    accumulatedContent + '\n\n---\n⚠️ **System Note:** The agent attempted to use a tool, but the format was not recognized. Please try again or rephrase your request.'
+                );
             }
 
         } catch (e) {
@@ -1085,12 +1110,12 @@ export const IdeAgentPanel: React.FC = () => {
                 }
             </div>
 
-            {/* Review Status Card (Chat only) */}
+            {/* Review Status Card / Permission Dialog */}
             <PermissionDialog
                 request={reviewRequest}
                 projectRoot={explorerRootPath || ''}
-                onDecision={() => { }} // Editor handles decision, this is just status
-                variant="review_status"
+                onDecision={(decision) => useAppStore.getState().submitReviewDecision(decision)}
+                variant="modal"
             />
         </>
     );

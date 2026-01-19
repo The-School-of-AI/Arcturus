@@ -46,9 +46,11 @@ export const executeAgentTool = async (
         if (!path.startsWith('/') && !path.startsWith('C:') && !path.startsWith('file://')) {
             fullPath = `${projectRoot}/${path}`.replace(/\/+/g, '/');
         }
-        // Simple security checks
+        // Security checks
         if (fullPath.includes('/../') || fullPath.endsWith('/..')) return { valid: false, error: "Access denied (..)" };
         if (!fullPath.startsWith(projectRoot)) return { valid: false, error: "Access denied (Outside Project)" };
+        // Block .arcturus internal storage directory
+        if (fullPath.includes('/.arcturus') || fullPath.includes('.arcturus/')) return { valid: false, error: "Access denied (.arcturus is internal storage)" };
         return { valid: true, path: fullPath };
     };
 
@@ -198,21 +200,91 @@ export const executeAgentTool = async (
                 if (permDecision === 'deny') return "User denied symbol replacement.";
 
                 const tempContentFile = `/tmp/symbol_${Date.now()}.txt`;
-                // Assumes script exists. IdeAgentPanel logic ensures this prompt-side or user ensures it.
-                // In a perfect world we bundle this script. 
-                const scriptPath = `${projectRoot}/scripts/replace_symbol.py`;
+                const tempScriptFile = `/tmp/replace_symbol_${Date.now()}.py`;
+
+                // Python script content (inlined for portability)
+                const pythonScript = `
+import sys
+import os
+import ast
+
+def replace_symbol_in_file(file_path, symbol_name, new_content_file):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            source = f.read()
+        
+        with open(new_content_file, 'r', encoding='utf-8') as f:
+            new_code = f.read()
+
+        tree = ast.parse(source)
+        
+        target_node = None
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name == symbol_name:
+                    target_node = node
+                    break
+        
+        if not target_node:
+            print(f"Error: Symbol '{symbol_name}' not found in {file_path}")
+            sys.exit(1)
+
+        # Calculate start and end byte offsets
+        # ast.get_source_segment is available in Python 3.8+
+        segment = ast.get_source_segment(source, target_node)
+        if not segment:
+             # Fallback if get_source_segment fails (rare but possible)
+             lines = source.splitlines(keepends=True)
+             start_line = target_node.lineno - 1
+             end_line = target_node.end_lineno
+             original_code = "".join(lines[start_line:end_line])
+        else:
+             original_code = segment
+
+        # Perform replacement
+        # We use string replacement on the exact segement found
+        # This preserves surrounding whitespace better than rebuilding lines
+        new_source = source.replace(original_code, new_code + '\\n', 1)
+
+        # Write back
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_source)
+
+        print(f"Successfully replaced symbol '{symbol_name}'")
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print("Usage: python3 replace_symbol.py <file_path> <symbol_name> <new_content_file>")
+        sys.exit(1)
+    
+    replace_symbol_in_file(sys.argv[1], sys.argv[2], sys.argv[3])
+`;
 
                 try {
-                    await window.electronAPI.invoke('fs:writeFile', { path: tempContentFile, content: content });
+                    // Write temp files - check for success
+                    const contentWriteResult = await window.electronAPI.invoke('fs:writeFile', { path: tempContentFile, content: content });
+                    if (!contentWriteResult?.success) {
+                        return `Error: Failed to write temp content file: ${contentWriteResult?.error || 'Unknown error'}`;
+                    }
+
+                    const scriptWriteResult = await window.electronAPI.invoke('fs:writeFile', { path: tempScriptFile, content: pythonScript });
+                    if (!scriptWriteResult?.success) {
+                        return `Error: Failed to write temp script file: ${scriptWriteResult?.error || 'Unknown error'}`;
+                    }
 
                     const res = await window.electronAPI.invoke('shell:exec', {
-                        cmd: `python3 ${scriptPath} "${validation.path}" "${symbol}" "${tempContentFile}"`,
+                        cmd: `python3 ${tempScriptFile} "${validation.path}" "${symbol}" "${tempContentFile}"`,
                         cwd: projectRoot || '',
                         projectRoot: projectRoot || ''
                     });
 
                     // Cleanup
                     await window.electronAPI.invoke('fs:delete', tempContentFile);
+                    await window.electronAPI.invoke('fs:delete', tempScriptFile);
 
                     if (!res.success) {
                         return `Failed to replace symbol: ${res.stderr || res.stdout}`;
@@ -257,10 +329,10 @@ export const executeAgentTool = async (
                 });
                 if (!res.success) return `Error: ${res.error}`;
 
-                // 3. VISUALIZE
+                // 3. VISUALIZE (inline diff - same tab)
                 openIdeDocument({
-                    id: `diff:${validation.path}`,
-                    title: `Review: ${validation.path!.split('/').pop()}`,
+                    id: validation.path!,
+                    title: validation.path!.split('/').pop() || 'Untitled',
                     type: 'git_diff',
                     originalContent: originalContent,
                     modifiedContent: toolCall.arguments.content,
@@ -283,23 +355,27 @@ export const executeAgentTool = async (
                 if (decision === 'deny') {
                     // Revert
                     await window.electronAPI.invoke('fs:writeFile', { path: validation.path, content: originalContent });
-                    closeIdeDocument(`diff:${validation.path}`);
+                    // Switch back to normal file mode
                     openIdeDocument({
                         id: validation.path!,
                         title: validation.path!.split('/').pop() || 'Untitled',
                         content: originalContent,
-                        type: 'file'
+                        type: 'file',
+                        originalContent: undefined,
+                        modifiedContent: undefined,
                     });
                     return "User rejected the changes. File reverted to original state.";
                 }
 
                 refreshExplorerFiles();
-                closeIdeDocument(`diff:${validation.path}`);
+                // Switch back to normal file mode with new content
                 openIdeDocument({
                     id: validation.path!,
                     title: validation.path!.split('/').pop() || 'Untitled',
                     content: toolCall.arguments.content,
-                    type: 'file'
+                    type: 'file',
+                    originalContent: undefined,
+                    modifiedContent: undefined,
                 });
 
                 return `Success: File written to ${validation.path}`;
@@ -409,10 +485,10 @@ export const executeAgentTool = async (
                 const writeRes = await window.electronAPI.invoke('fs:writeFile', { path: validation.path, content: currentContent });
                 if (!writeRes.success) return `Error: ${writeRes.error}`;
 
-                // 3. VISUALIZE
+                // 3. VISUALIZE (inline diff - same tab)
                 openIdeDocument({
-                    id: `diff:${validation.path}`,
-                    title: `Review: ${validation.path!.split('/').pop()}`,
+                    id: validation.path!,
+                    title: validation.path!.split('/').pop() || 'Untitled',
                     type: 'git_diff',
                     originalContent: originalContent,
                     modifiedContent: currentContent,
@@ -433,23 +509,27 @@ export const executeAgentTool = async (
 
                 if (decision === 'deny') {
                     await window.electronAPI.invoke('fs:writeFile', { path: validation.path, content: originalContent });
-                    closeIdeDocument(`diff:${validation.path}`);
+                    // Switch back to normal file mode
                     openIdeDocument({
                         id: validation.path!,
                         title: validation.path!.split('/').pop() || 'Untitled',
                         content: originalContent,
-                        type: 'file'
+                        type: 'file',
+                        originalContent: undefined,
+                        modifiedContent: undefined,
                     });
                     return "User rejected the edits. File reverted to original state.";
                 }
 
                 refreshExplorerFiles();
-                closeIdeDocument(`diff:${validation.path}`);
+                // Switch back to normal file mode with new content
                 openIdeDocument({
                     id: validation.path!,
                     title: validation.path!.split('/').pop() || 'Untitled',
                     content: currentContent,
-                    type: 'file'
+                    type: 'file',
+                    originalContent: undefined,
+                    modifiedContent: undefined,
                 });
 
                 return `Success: Applied ${changes.length} changes to ${validation.path}`;

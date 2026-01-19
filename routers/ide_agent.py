@@ -165,6 +165,9 @@ Available Tools:
         # 4. Stream Response
         async def token_generator():
             try:
+                # FIRST: Send the full system prompt for debugging/logging
+                yield f"data: {json.dumps({'system_prompt': system_prompt, 'model': model, 'tools': tools})}\n\n"
+                
                 async with httpx.AsyncClient(timeout=300) as client:
                     async with client.stream("POST", "http://127.0.0.1:11434/api/chat", json={
                         "model": model, 

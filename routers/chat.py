@@ -24,13 +24,16 @@ class ChatMessage(BaseModel):
 
 class ChatSession(BaseModel):
     id: str
-    target_type: Literal['rag', 'ide']
+    target_type: Literal['rag', 'ide', 'notes']
     target_id: str
     title: str
     messages: List[ChatMessage]
     created_at: float
     updated_at: float
     model: Optional[str] = None
+    # Debug/logging fields for agent troubleshooting
+    system_prompt: Optional[str] = None
+    tools: Optional[List[dict]] = None
 
 # --- Helpers ---
 
