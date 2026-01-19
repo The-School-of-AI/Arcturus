@@ -40,12 +40,16 @@ export const EditorArea: React.FC = () => {
         text: string,
         metadata?: { file: string, range: { startLine: number, endLine: number } }
     }>({ visible: false, x: 0, y: 0, text: '' });
+
     const editorRef = useRef<any>(null);
+    const monacoRef = useRef<any>(null);
+    const { explorerRootPath } = useAppStore();
 
     const activeDoc = ideOpenDocuments.find(d => d.id === ideActiveDocumentId);
 
     const handleEditorDidMount = (editor: any, monaco: any) => {
         editorRef.current = editor;
+        monacoRef.current = monaco;
 
         editor.onDidChangeCursorSelection((e: any) => {
             const selection = editor.getSelection();
@@ -88,22 +92,81 @@ export const EditorArea: React.FC = () => {
 
         setIsSaving(true);
         try {
+            let contentToSave = activeDoc.content;
+
+            // Python Formatting
+            if (activeDoc.id.endsWith('.py') && explorerRootPath) {
+                try {
+                    const res = await axios.post(`${API_BASE}/python/format`, {
+                        path: explorerRootPath,
+                        file_path: activeDoc.id.replace(explorerRootPath, '').replace(/^\//, ''),
+                        content: contentToSave
+                    });
+                    if (res.data.success && res.data.formatted_content) {
+                        contentToSave = res.data.formatted_content;
+                        // Update editor content immediately if changed
+                        if (contentToSave !== activeDoc.content) {
+                            updateIdeDocumentContent(activeDoc.id, contentToSave, true);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Format failed", e);
+                }
+            }
+
             const result = await window.electronAPI.invoke('fs:writeFile', {
                 path: activeDoc.id,
-                content: activeDoc.content
+                content: contentToSave
             });
 
             if (result) {
                 markIdeDocumentSaved(activeDoc.id);
                 setLastSaved(activeDoc.id);
                 setTimeout(() => setLastSaved(null), 2000);
+
+                // Trigger Arcturus Timer (Start or Reset)
+                if (arcturusTimer.countdown === null) {
+                    startArcturusTimer();
+                } else {
+                    resetArcturusTimer();
+                }
+
+                // Run Linting & Type Checking (Python)
+                if (activeDoc.id.endsWith('.py') && explorerRootPath && monacoRef.current && editorRef.current) {
+                    const relPath = activeDoc.id.replace(explorerRootPath, '').replace(/^\//, '');
+
+                    // 1. Lint (Ruff)
+                    axios.post(`${API_BASE}/python/lint`, { path: explorerRootPath, file_path: relPath })
+                        .then(res => {
+                            if (res.data.success) {
+                                const diagnostics = res.data.diagnostics || [];
+                                const markers = diagnostics.map((d: any) => ({
+                                    startLineNumber: d.location.row,
+                                    startColumn: d.location.column,
+                                    endLineNumber: d.end_location.row,
+                                    endColumn: d.end_location.column,
+                                    message: `[Ruff] ${d.message} (${d.code})`,
+                                    severity: monacoRef.current.MarkerSeverity.Warning
+                                }));
+
+                                const model = editorRef.current.getModel();
+                                if (model) {
+                                    monacoRef.current.editor.setModelMarkers(model, 'ruff', markers);
+                                }
+                            }
+                        }).catch(e => console.error("Lint failed", e));
+
+                    // 2. Type Check (Pyright) - Optional / Async
+                    // Pyright output parsing is complex, omitting for now to keep it simple or adding placeholder
+                    // ...
+                }
             }
         } catch (error) {
             console.error('Failed to save file:', error);
         } finally {
             setIsSaving(false);
         }
-    }, [activeDoc, activeDoc?.id, activeDoc?.content]);
+    }, [activeDoc, activeDoc?.id, activeDoc?.content, explorerRootPath]);
 
     // Keyboard shortcut for saving
     useEffect(() => {

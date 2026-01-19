@@ -128,10 +128,12 @@ export const useIdeStore = create<IdeState>()(
                     return state;
                 }
                 const newCountdown = state.arcturusTimer.countdown - 1;
+                // Stick at 0 so the controller can react to it.
+                // The controller calls advanceArcturusTier which sets it to null.
                 return {
                     arcturusTimer: {
                         ...state.arcturusTimer,
-                        countdown: newCountdown <= 0 ? null : newCountdown,
+                        countdown: newCountdown < 0 ? 0 : newCountdown,
                     }
                 };
             }),

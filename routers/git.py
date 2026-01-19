@@ -215,6 +215,55 @@ async def get_with_commit_files(path: str, commit_hash: str):
 
 ARCTURUS_BRANCH = "arcturus"
 
+def ensure_gitignore(path: str):
+    """
+    Ensure .gitignore exists and contains standard exclusions.
+    """
+    gitignore_path = os.path.join(path, ".gitignore")
+    
+    # Standard defaults for Python, Node, and Arcturus
+    defaults = [
+        ".arcturus/",
+        ".arcturus",
+        "__pycache__/",
+        "*.pyc",
+        "node_modules/",
+        ".DS_Store",
+        ".venv/",
+        "venv/",
+        "env/",
+        ".env"
+    ]
+    
+    existing_lines = set()
+    if os.path.exists(gitignore_path):
+        try:
+            with open(gitignore_path, "r") as f:
+                # Strip logical lines to check presence
+                existing_lines = {line.strip() for line in f.readlines()}
+        except Exception as e:
+            print(f"Error reading .gitignore: {e}")
+            
+    # Determine what's missing
+    missing = []
+    for d in defaults:
+        if d not in existing_lines:
+            missing.append(d)
+            
+    if missing:
+        try:
+            # Append missing rules
+            with open(gitignore_path, "a") as f:
+                if os.path.exists(gitignore_path) and os.path.getsize(gitignore_path) > 0:
+                    f.write("\n")
+                
+                f.write("# Added by Arcturus\n")
+                for m in missing:
+                    f.write(f"{m}\n")
+        except Exception as e:
+            print(f"Error writing .gitignore: {e}")
+
+
 def run_git_command_safe(args, cwd):
     """Run git command and return (success, output/error)"""
     try:
@@ -255,6 +304,9 @@ async def init_arcturus_branch(request: ArcturusInitRequest):
     path = request.path
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Path not found")
+    
+    # Ensure .gitignore exists and has defaults
+    ensure_gitignore(path)
     
     # Check if it's a git repo
     git_dir = os.path.join(path, ".git")

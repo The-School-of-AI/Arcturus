@@ -83,3 +83,7 @@ benchmark_results.txt
 !platform-frontend/public/*.ico
 !platform-frontend/public/*.png
 !platform-frontend/public/*.jpg
+
+# Added by Arcturus
+.arcturus/
+.arcturus

@@ -111,7 +111,7 @@ const ArcturusTimerDisplay = () => {
 // Headless controller to manage Arcturus logic
 const ArcturusController = () => {
     const { explorerRootPath, ideOpenDocuments, markIdeDocumentSaved } = useAppStore();
-    const { arcturusTimer, tickArcturusTimer, advanceArcturusTier, setTestFiles } = useIdeStore();
+    const { arcturusTimer, tickArcturusTimer, advanceArcturusTier, setTestFiles, startArcturusTimer } = useIdeStore();
     const [isCommitting, setIsCommitting] = React.useState(false);
 
     // Timer Tick
@@ -166,13 +166,41 @@ const ArcturusController = () => {
             }
         };
 
-        initArcturus();
-        fetchManifest();
+        const checkPendingChanges = async () => {
+            try {
+                const statusRes = await axios.get(`${API_BASE}/git/status`, { params: { path: explorerRootPath } });
+                if (!statusRes.data.clean && arcturusTimer.countdown === null && !arcturusTimer.isPaused) {
+                    console.log("[Arcturus] Pending changes detected, starting timer.");
+                    startArcturusTimer();
+                }
+            } catch (e) {
+                console.error("[Arcturus] Failed to check status for timer", e);
+            }
+        };
 
-        // Poll every 30s
-        const interval = setInterval(fetchManifest, 30000);
+        const init = async () => {
+            await initArcturus();
+            await fetchManifest();
+            await checkPendingChanges();
+        };
+
+        init();
+
+        // Poll every 10s
+        const interval = setInterval(() => {
+            fetchManifest();
+            // Also check status periodically to ensure we don't miss external changes
+            axios.get(`${API_BASE}/git/status`, { params: { path: explorerRootPath } })
+                .then(res => {
+                    const { countdown, isPaused } = useIdeStore.getState().arcturusTimer;
+                    if (!res.data.clean && countdown === null && !isPaused) {
+                        console.log("[Arcturus] Pending changes detected (poll), starting timer.");
+                        useIdeStore.getState().startArcturusTimer();
+                    }
+                }).catch(() => { });
+        }, 10000);
         return () => clearInterval(interval);
-    }, [explorerRootPath, setTestFiles]);
+    }, [explorerRootPath, setTestFiles, arcturusTimer.countdown, startArcturusTimer]);
 
     // Auto-Commit Trigger
     React.useEffect(() => {
@@ -180,6 +208,7 @@ const ArcturusController = () => {
             if (arcturusTimer.countdown === 0 && !isCommitting && explorerRootPath) {
                 setIsCommitting(true);
                 try {
+                    console.log("[Arcturus] Timer expired. Auto-committing...");
                     // 1. Save all dirty files
                     const dirtyDocs = ideOpenDocuments.filter(doc => doc.isDirty);
                     await Promise.all(dirtyDocs.map(async (doc) => {
@@ -233,6 +262,7 @@ const ArcturusController = () => {
                     console.error("Auto-commit failed", e);
                 } finally {
                     setIsCommitting(false);
+                    // Clear timer logic is handled by advanceArcturusTier (sets countdown to null)
                 }
             }
         };

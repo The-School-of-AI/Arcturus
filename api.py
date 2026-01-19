@@ -99,6 +99,10 @@ from routers import ide_agent as ide_agent_router
 app.include_router(ide_agent_router.router)
 from routers import metrics as metrics_router
 app.include_router(metrics_router.router)
+from routers import python_tools
+app.include_router(python_tools.router)
+from routers import tests as tests_router
+app.include_router(tests_router.router)
 # Chat router included
 
 
