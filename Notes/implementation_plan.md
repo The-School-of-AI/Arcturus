@@ -35,7 +35,7 @@ Update `generate_tests`:
 
 ---
 
-### Phase 2: Code Highlighting & Navigation (Backend + Frontend)
+### Phase 2: Code Highlighting & Navigation (Backend + Frontend) [COMPLETED]
 
 Enable "Click Test -> Highlight Function".
 
@@ -50,7 +50,7 @@ Enable "Click Test -> Highlight Function".
 
 ---
 
-### Phase 3: Enhanced Failure UX
+### Phase 3: Enhanced Failure UX [COMPLETED]
 
 Show the full, ugly error details so the user knows *why* it failed.
 

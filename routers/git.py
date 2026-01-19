@@ -484,8 +484,32 @@ async def arcturus_auto_commit(request: ArcturusCommitRequest):
     if not success or not status.strip():
         return {"success": True, "committed": False, "message": "No changes to commit"}
     
+    # DEBUG: Log raw status to investigate truncation
+    print(f"[DEBUG] git status output:\n{status}")
+
     # Parse changed files BEFORE staging
-    changed_files = [line[3:] for line in status.split("\n") if line.strip()]
+    import re
+    changed_files = []
+    
+    # Debug raw output again just to be sure
+    print(f"[DEBUG] Raw git status:\n{status}")
+    
+    for line in status.split("\n"):
+        if not line.strip(): continue
+        
+        # Robust parsing using split (handles leading spaces of porcelain)
+        # Format: "XY PATH" or " XY PATH"
+        # strip() removes leading spaces, so we get "XY PATH" or "M PATH"
+        parts = line.strip().split(maxsplit=1)
+        if len(parts) >= 2:
+            raw_path = parts[1]
+            
+            # Remove quotes if present
+            if raw_path.startswith('"') and raw_path.endswith('"'):
+                raw_path = raw_path[1:-1]
+                
+            changed_files.append(raw_path)
+            
     python_files_changed = [f for f in changed_files if f.endswith('.py')]
     
     # Stage all changes

@@ -943,6 +943,8 @@ export const useAppStore = create<AppState>()(
                                     originalContent: doc.originalContent !== undefined ? doc.originalContent : d.originalContent,
                                     modifiedContent: doc.modifiedContent !== undefined ? doc.modifiedContent : d.modifiedContent,
                                     title: doc.title || d.title,
+                                    // Always update initialLine to allow re-navigation
+                                    initialLine: doc.initialLine
                                 }
                                 : d
                         ),

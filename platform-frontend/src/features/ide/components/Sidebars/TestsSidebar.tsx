@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FlaskConical, Check, AlertTriangle, X, Trash2, ChevronDown, ChevronRight, RefreshCw, Play, CheckSquare, Square, Loader2, Zap, Wrench } from 'lucide-react';
+import { FlaskConical, Check, AlertTriangle, X, Trash2, ChevronDown, ChevronRight, RefreshCw, Play, CheckSquare, Square, Loader2, Zap, Wrench, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store';
 import { useIdeStore } from '../../store/ideStore';
@@ -13,7 +13,9 @@ interface TestItem {
     status: 'passing' | 'failing' | 'stale' | 'orphaned' | 'pending';
     type: 'behavior' | 'spec';
     lastRun?: string;
+
     code?: string;
+    target_line?: number;
 }
 
 interface FileTests {
@@ -424,7 +426,8 @@ export const TestsSidebar: React.FC = () => {
                                                             id: sutPath,
                                                             title: currentFile,
                                                             file_path: sutPath,
-                                                            type: 'code'
+                                                            type: 'code',
+                                                            initialLine: test.target_line
                                                         } as any);
                                                     }
                                                 }}
@@ -649,6 +652,17 @@ const TestItemRow: React.FC<{
                             <FlaskConical className="w-3 h-3 text-muted-foreground" />
                         </button>
                     )}
+                    {/* Go to SUT Code Button */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onExpand) onExpand();
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                        title="Go to source code"
+                    >
+                        <Code2 className="w-3 h-3 text-muted-foreground" />
+                    </button>
                     <ChevronRight className={cn("w-3 h-3 text-muted-foreground/50 transition-transform", expanded && "rotate-90")} />
                 </div>
             </div>

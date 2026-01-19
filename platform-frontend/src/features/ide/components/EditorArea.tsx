@@ -85,7 +85,23 @@ export const EditorArea: React.FC = () => {
                 setSelectionMenu(prev => ({ ...prev, visible: false }));
             }
         });
+
+        // Handle Initial Scroll if provided
+        if ((activeDoc as any)?.initialLine) {
+            setTimeout(() => {
+                editor.revealLineInCenter((activeDoc as any).initialLine);
+                editor.setPosition({ lineNumber: (activeDoc as any).initialLine, column: 1 });
+            }, 100);
+        }
     };
+
+    // React to activeDoc changes for scrolling (e.g. clicking same file but different test)
+    useEffect(() => {
+        if (editorRef.current && (activeDoc as any)?.initialLine) {
+            editorRef.current.revealLineInCenter((activeDoc as any).initialLine);
+            editorRef.current.setPosition({ lineNumber: (activeDoc as any).initialLine, column: 1 });
+        }
+    }, [activeDoc?.id, (activeDoc as any)?.initialLine]);
 
     const runLinting = useCallback(async (docId: string, content: string) => {
         if (!docId.endsWith('.py') || !explorerRootPath || !monacoRef.current || !editorRef.current) return;
@@ -146,7 +162,7 @@ export const EditorArea: React.FC = () => {
                         path: explorerRootPath,
                         file_path: activeDoc.id.replace(explorerRootPath, '').replace(/^\//, ''),
                         content: contentToSave
-                    });
+                    }, { timeout: 2000 }); // 2s timeout to prevent blocking save
                     if (res.data.success && res.data.formatted_content) {
                         contentToSave = res.data.formatted_content;
                         // Update editor content immediately if changed
@@ -164,7 +180,7 @@ export const EditorArea: React.FC = () => {
                 content: contentToSave
             });
 
-            if (result) {
+            if (result && result.success) {
                 markIdeDocumentSaved(activeDoc.id);
                 setLastSaved(activeDoc.id);
                 setTimeout(() => setLastSaved(null), 2000);
@@ -178,6 +194,13 @@ export const EditorArea: React.FC = () => {
 
                 // Run Linting & Type Checking (Python)
                 await runLinting(activeDoc.id, contentToSave);
+            } else {
+                console.error("Save operation returned failure:", result);
+                // Alert the user
+                await window.electronAPI.invoke('dialog:alert', {
+                    title: "Save Failed",
+                    message: `Could not save file: ${result?.error || 'Unknown error'}`
+                });
             }
         } catch (error) {
             console.error('Failed to save file:', error);

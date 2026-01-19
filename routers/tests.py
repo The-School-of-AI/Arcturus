@@ -33,6 +33,7 @@ class TestItem(BaseModel):
     type: str    # 'behavior' | 'spec'
     lastRun: Optional[str] = None
     code: Optional[str] = None
+    target_line: Optional[int] = None
 
 
 class FileTests(BaseModel):
@@ -167,18 +168,32 @@ async def get_tests_for_file(path: str, file_path: str):
     except Exception as e:
         print(f"Error checking file changes: {e}")
 
-    seen_tests = set()
-
-    # Helper to extract code (caches file content)
-    test_filename = f"test_{Path(file_path).name}"
-    test_path = get_arcturus_tests_dir(path) / test_filename
-    test_file_content = None
-    if test_path.exists():
-        try:
-            test_file_content = test_path.read_text()
-        except: pass
+    # Build function line map from analysis
+    function_lines = {}
+    if analysis:
+         for name, info in analysis.functions.items():
+            function_lines[name] = info.start_line
+         for class_name, methods in analysis.classes.items():
+            for name, info in methods.items():
+                function_lines[f"{class_name}.{name}"] = info.start_line
+                function_lines[name] = info.start_line # Allow short match
 
     import ast
+    
+    def resolve_target_line(test_name: str) -> Optional[int]:
+         # 1. Exact match (test_foo -> foo)
+         target = test_name.replace("test_", "")
+         if target in function_lines:
+             return function_lines[target]
+             
+         # 2. Contains match (test_vector_multiply_empty -> vector_multiply)
+         # Find longest key in function_lines that is a substring of target
+         matches = [k for k in function_lines.keys() if k in target]
+         if matches:
+             best_match = max(matches, key=len)
+             return function_lines[best_match]
+             
+         return None
 
     def get_test_source(func_name, content):
         if not content: return None
@@ -192,7 +207,18 @@ async def get_tests_for_file(path: str, file_path: str):
             pass
         return None
 
+    # Load test file content for code extraction
+    test_filename = f"test_{Path(file_path).name}"
+    test_path = get_arcturus_tests_dir(path) / test_filename
+    test_file_content = ""
+    if test_path.exists():
+        try:
+            test_file_content = test_path.read_text()
+        except:
+            pass
+
     # 1. Add top-level tests (from file-level generation)
+    seen_tests = set()
     for test_id in file_data.get("tests", []):
         if test_id in seen_tests: continue
         seen_tests.add(test_id)
@@ -206,7 +232,8 @@ async def get_tests_for_file(path: str, file_path: str):
             "status": status,
             "type": "behavior", # Default for top-level
             "lastRun": None,
-            "code": get_test_source(test_id, test_file_content)
+            "code": get_test_source(test_id, test_file_content),
+            "target_line": resolve_target_line(test_id)
         })
 
     # 2. Add function-level tests
@@ -227,7 +254,8 @@ async def get_tests_for_file(path: str, file_path: str):
                 "type": func_data.get("type", "behavior"),
                 "type": func_data.get("type", "behavior"),
                 "lastRun": func_data.get("last_run"),
-                "code": get_test_source(test_id, test_file_content)
+                "code": get_test_source(test_id, test_file_content),
+                "target_line": resolve_target_line(test_id)
             })
     
     return {"tests": tests, "file": file_path, "has_changes": has_changes}
@@ -854,12 +882,27 @@ async def run_tests(request: RunTestsRequest, background_tasks: BackgroundTasks)
         # Update manifest with results
         manifest = load_manifest(request.path)
         for res in results:
-            # Find the test in manifest and update status
+            test_id = res["test_id"] # e.g., tests/test_foo.py::test_bar
+            timestamp = datetime.now().isoformat()
+            
+            # Helper to match loose test IDs
+            def match_id(stored_id, incoming_id):
+                return stored_id == incoming_id or incoming_id.endswith("::" + stored_id) or stored_id in incoming_id
+
             for file_path, file_data in manifest.items():
+                # Check top-level tests
+                # Note: Top-level tests list is just strings, we can't store status there easily without changing schema
+                # But get_tests_for_file logic seems to handle "status" only for functions.
+                # Let's see... get_tests_for_file line 215 uses "pending" hardcoded for top-level unless I change it.
+                # Actually, duplicate storing status in manifest is complex if schema doesn't support it for top-level.
+                # Let's focus on functions for now, as that's the primary verified path.
+                
                 for func_name, func_info in file_data.get("functions", {}).items():
-                    if res["test_id"] in func_info.get("tests", []):
+                    # func_info["tests"] is a list of strings
+                    if any(match_id(t, test_id) for t in func_info.get("tests", [])):
                         func_info["status"] = res["status"]
-                        func_info["last_run"] = datetime.now().isoformat()
+                        func_info["last_run"] = timestamp
+                        
         save_manifest(request.path, manifest)
         
         # Check feedback mode and trigger auto-fix if needed
