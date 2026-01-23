@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from '@/store';
 import {
-    Bell, Check, Trash2, X, Clock, MailOpen,
+    Terminal, Pause, Play, Trash2, X,
+    Filter, Download, ChevronDown, Activity, Bell, Check, Clock, MailOpen,
     AlertTriangle, Info, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
     });
 
     return (
-        <div className="w-[400px] h-[calc(100vh-80px)] glass-panel flex flex-col border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 absolute right-0 top-14 z-50 rounded-l-xl overflow-hidden bg-background/95 backdrop-blur-xl">
+        <div className="w-[400px] h-[calc(100vh-80px)] flex flex-col border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 absolute right-0 top-14 z-50 rounded-l-xl overflow-hidden bg-[#09090b] border-l border-white/10 shadow-black/50">
             <div className="p-4 border-b border-border/50 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-neon-yellow" />
@@ -128,6 +129,44 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
 
                                 <div className="text-xs text-muted-foreground prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/30 prose-pre:p-2 prose-pre:rounded-md">
                                     <ReactMarkdown>{notification.body}</ReactMarkdown>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="mt-3 flex gap-2">
+                                    {notification.metadata?.run_id && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-[10px] gap-1.5 border-neon-yellow/30 bg-neon-yellow/5 hover:bg-neon-yellow/10"
+                                            onClick={() => {
+                                                useAppStore.getState().setSidebarTab('runs');
+                                                useAppStore.getState().setCurrentRun(notification.metadata.run_id);
+                                                onClose();
+                                            }}
+                                        >
+                                            <Activity className="w-3 h-3" />
+                                            View Run
+                                        </Button>
+                                    )}
+                                    {notification.metadata?.file_path && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-[10px] gap-1.5 border-neon-cyan/30 bg-neon-cyan/5 hover:bg-neon-cyan/10"
+                                            onClick={() => {
+                                                const path = notification.metadata.file_path;
+                                                // Map to relative if needed or just use as is
+                                                const filename = path.split('/').pop();
+                                                useAppStore.getState().setSidebarTab('notes');
+                                                // Assuming we can select the node by filename or path
+                                                // For now, let's at least switch to the tab
+                                                onClose();
+                                            }}
+                                        >
+                                            <Clock className="w-3 h-3" />
+                                            Open Report
+                                        </Button>
+                                    )}
                                 </div>
 
                                 <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-background/80 backdrop-blur-sm rounded-md shadow-sm">

@@ -49,8 +49,8 @@ export const MissionControl: React.FC = () => {
             <div className="flex items-center justify-between p-3 border-b border-white/10 bg-black/40 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 text-neon-green">
-                        <Terminal className="w-4 h-4" />
-                        <h2 className="font-bold tracking-wider uppercase text-sm">Mission Control</h2>
+                        <Terminal className="w-4 h-4 text-white" />
+                        <h2 className="font-bold tracking-wider text-white uppercase text-sm">Mission Control</h2>
                     </div>
 
                     <div className="h-4 w-px bg-white/10" />
@@ -104,7 +104,7 @@ export const MissionControl: React.FC = () => {
 
             {/* Log Area */}
             <ScrollArea className="flex-1" ref={scrollRef}>
-                <div className="flex flex-col p-2 font-mono">
+                <div className="flex flex-col p-2 font-mono text-white">
                     {filteredEvents.length === 0 ? (
                         <div className="py-20 text-center opacity-30 select-none">
                             <Terminal className="w-12 h-12 mx-auto mb-2" />
@@ -114,8 +114,8 @@ export const MissionControl: React.FC = () => {
                         filteredEvents.map((event, i) => (
                             <div key={i} className="flex gap-3 px-2 py-1 hover:bg-white/5 rounded-sm group leading-relaxed">
                                 {/* Timestamp */}
-                                <span className="opacity-40 shrink-0 select-none">
-                                    {event.timestamp.split('T')[1].split('.')[0]}
+                                <span className="opacity-40 shrink-0 select-none font-mono text-[10px] w-16 text-right">
+                                    {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                                 </span>
 
                                 {/* Source */}

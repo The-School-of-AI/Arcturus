@@ -30,6 +30,17 @@ async def create_job(request: CreateJobRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/jobs/{job_id}/trigger")
+async def trigger_job(job_id: str):
+    """Force run a job immediately."""
+    try:
+        scheduler_service.trigger_job(job_id)
+        return {"status": "triggered", "id": job_id}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Job not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str):
     """Delete a scheduled task."""

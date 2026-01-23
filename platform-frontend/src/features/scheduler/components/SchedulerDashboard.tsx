@@ -18,9 +18,15 @@ export const SchedulerDashboard: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     // Form State
+    const [editingJobId, setEditingJobId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [newCron, setNewCron] = useState('0 9 * * *');
     const [newQuery, setNewQuery] = useState('');
+
+    // Simple Mode State
+    const [mode, setMode] = useState<'simple' | 'advanced'>('simple');
+    const [simpleFrequency, setSimpleFrequency] = useState('daily');
+    const [simpleTime, setSimpleTime] = useState('09:00');
 
     useEffect(() => {
         fetchJobs();
@@ -28,20 +34,63 @@ export const SchedulerDashboard: React.FC = () => {
         return () => clearInterval(interval);
     }, [fetchJobs]);
 
-    const handleCreate = async () => {
-        if (!newName || !newCron || !newQuery) return;
+    const generateCronFromSimple = () => {
+        if (simpleFrequency === 'every_10_min') return '*/10 * * * *';
+        if (simpleFrequency === 'hourly') return '0 * * * *';
+
+        const [hours, mins] = simpleTime.split(':').map(Number);
+
+        if (simpleFrequency === 'daily') {
+            return `${mins || 0} ${hours || 0} * * *`;
+        }
+
+        if (simpleFrequency === 'weekly') {
+            return `${mins || 0} ${hours || 0} * * 1`; // Monday default
+        }
+
+        return '0 9 * * *';
+    };
+
+    const openCreateDialog = () => {
+        setEditingJobId(null);
+        setNewName('');
+        setNewQuery('');
+        setNewCron('0 9 * * *');
+        setMode('simple');
+        setSimpleFrequency('daily');
+        setSimpleTime('09:00');
+        setIsCreateOpen(true);
+    };
+
+    const openEditDialog = (job: any) => {
+        setEditingJobId(job.id);
+        setNewName(job.name);
+        setNewQuery(job.query);
+        setNewCron(job.cron_expression);
+        setMode('advanced'); // Default to advanced for editing existing
+        setIsCreateOpen(true);
+    };
+
+    const handleSave = async () => {
+        const finalCron = mode === 'simple' ? generateCronFromSimple() : newCron;
+
+        if (!newName || !finalCron || !newQuery) return;
+
         setIsLoading(true);
         try {
+            if (editingJobId) {
+                // Delete old and create new (MVP approach since update API might vary)
+                await deleteJob(editingJobId);
+            }
+
             await createJob({
                 name: newName,
-                cron: newCron,
+                cron: finalCron,
                 query: newQuery,
                 agent_type: 'PlannerAgent'
             });
+
             setIsCreateOpen(false);
-            setNewName('');
-            setNewQuery('');
-            setNewCron('0 9 * * *');
         } catch (e) {
             console.error(e);
         } finally {
@@ -76,7 +125,7 @@ export const SchedulerDashboard: React.FC = () => {
                     </Button>
                     <Button
                         size="sm"
-                        onClick={() => setIsCreateOpen(true)}
+                        onClick={() => openCreateDialog()}
                         className="bg-neon-cyan text-black hover:bg-neon-cyan/90 gap-2 font-semibold"
                     >
                         <Plus className="w-4 h-4" />
@@ -100,17 +149,32 @@ export const SchedulerDashboard: React.FC = () => {
                                         <Badge variant="outline" className="font-mono text-[10px] bg-muted/50">
                                             {job.cron_expression}
                                         </Badge>
-                                        <Badge variant="outline" className="font-mono text-[10px] bg-muted/50 text-muted-foreground">
-                                            ID: {job.id}
+                                        <Badge variant="outline" className={cn(
+                                            "font-mono text-[10px]",
+                                            job.status === 'running' ? "bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30" :
+                                                job.status === 'failed' ? "bg-red-500/10 text-red-500 border-red-500/30" :
+                                                    "bg-green-500/10 text-green-500 border-green-500/30"
+                                        )}>
+                                            {job.status || 'SCHEDULED'}
                                         </Badge>
                                     </div>
                                 </div>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="hidden group-hover:flex gap-1 transition-opacity">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 hover:bg-white/10"
+                                        onClick={() => openEditDialog(job)}
+                                        title="Edit Job"
+                                    >
+                                        <MoreVertical className="w-4 h-4" />
+                                    </Button>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 hover:text-red-400 hover:bg-red-500/10"
                                         onClick={() => confirm('Delete job?') && deleteJob(job.id)}
+                                        title="Delete Job"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
@@ -122,6 +186,18 @@ export const SchedulerDashboard: React.FC = () => {
                                     "{job.query}"
                                 </p>
                             </div>
+
+                            {/* Latest Result Preview */}
+                            {job.last_output && (
+                                <div className="p-2.5 bg-neon-cyan/5 rounded-lg border border-neon-cyan/10 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[9px] font-bold uppercase text-neon-cyan/70 tracking-tighter">Latest Result</span>
+                                    </div>
+                                    <p className="text-[10px] text-foreground/70 line-clamp-2 leading-tight">
+                                        {job.last_output}
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between text-xs text-muted-foreground">
                                 <div className="flex flex-col gap-0.5">
@@ -158,11 +234,11 @@ export const SchedulerDashboard: React.FC = () => {
                 </div>
             </ScrollArea>
 
-            {/* Create Dialog */}
+            {/* Create/Edit Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create Scheduled Task</DialogTitle>
+                        <DialogTitle>{editingJobId ? 'Edit Scheduled Task' : 'Create Scheduled Task'}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
@@ -173,21 +249,83 @@ export const SchedulerDashboard: React.FC = () => {
                                 onChange={(e) => setNewName(e.target.value)}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase text-muted-foreground">Cron Expression</label>
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="* * * * *"
-                                    className="font-mono bg-muted/50"
-                                    value={newCron}
-                                    onChange={(e) => setNewCron(e.target.value)}
-                                />
-                                <div className="text-[10px] text-muted-foreground flex flex-col justify-center min-w-[100px]">
-                                    <div>* * * * *</div>
-                                    <div>min hr day mo wkd</div>
+
+                        {/* Mode Toggle */}
+                        <div className="flex items-center gap-4 border-b border-border/50 pb-2">
+                            <button
+                                onClick={() => setMode('simple')}
+                                className={cn(
+                                    "text-xs font-bold uppercase transition-colors hover:text-white",
+                                    mode === 'simple' ? "text-neon-cyan border-b-2 border-neon-cyan" : "text-muted-foreground"
+                                )}
+                            >
+                                Simple Mode
+                            </button>
+                            <button
+                                onClick={() => setMode('advanced')}
+                                className={cn(
+                                    "text-xs font-bold uppercase transition-colors hover:text-white",
+                                    mode === 'advanced' ? "text-neon-cyan border-b-2 border-neon-cyan" : "text-muted-foreground"
+                                )}
+                            >
+                                Advanced (Cron)
+                            </button>
+                        </div>
+
+                        {/* Simple Mode UI */}
+                        {mode === 'simple' && (
+                            <div className="space-y-3 bg-white/5 p-3 rounded-md border border-white/10">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium uppercase text-muted-foreground">Frequency</label>
+                                    <select
+                                        className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-sm text-white focus:outline-none focus:border-neon-cyan"
+                                        value={simpleFrequency}
+                                        onChange={(e) => setSimpleFrequency(e.target.value)}
+                                    >
+                                        <option value="every_10_min">Every 10 Minutes</option>
+                                        <option value="hourly">Hourly</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                    </select>
+                                </div>
+
+                                {(simpleFrequency === 'daily' || simpleFrequency === 'weekly') && (
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-medium uppercase text-muted-foreground">Time</label>
+                                        <Input
+                                            type="time"
+                                            value={simpleTime}
+                                            onChange={(e) => setSimpleTime(e.target.value)}
+                                            className="bg-black/50"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="text-[10px] text-muted-foreground pt-1">
+                                    Will run as: <code className="text-neon-cyan">{generateCronFromSimple()}</code>
                                 </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* Advanced Mode UI */}
+                        {mode === 'advanced' && (
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium uppercase text-muted-foreground">Cron Expression</label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="* * * * *"
+                                        className="font-mono bg-muted/50"
+                                        value={newCron}
+                                        onChange={(e) => setNewCron(e.target.value)}
+                                    />
+                                    <div className="text-[10px] text-muted-foreground flex flex-col justify-center min-w-[100px]">
+                                        <div>* * * * *</div>
+                                        <div>min hr day mo wkd</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-xs font-medium uppercase text-muted-foreground">Agent Instructions</label>
                             <div className="relative">
@@ -205,9 +343,9 @@ export const SchedulerDashboard: React.FC = () => {
                         <Button
                             className="bg-neon-cyan text-black hover:bg-neon-cyan/90"
                             disabled={isLoading}
-                            onClick={handleCreate}
+                            onClick={handleSave}
                         >
-                            {isLoading ? 'Scheduling...' : 'Schedule Task'}
+                            {isLoading ? 'Saving...' : (editingJobId ? 'Update Task' : 'Schedule Task')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

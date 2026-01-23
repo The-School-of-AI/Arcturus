@@ -41,6 +41,7 @@ import { NewsInspector } from '@/features/news/components/NewsInspector';
 import { IdeLayout } from '@/features/ide/components/IdeLayout';
 import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
 import { MissionControl } from '@/features/console/components/MissionControl';
+import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
 
 export const AppLayout: React.FC = () => {
     const {
@@ -209,6 +210,8 @@ export const AppLayout: React.FC = () => {
                             <IdeLayout />
                         ) : sidebarTab === 'scheduler' ? (
                             <SchedulerDashboard />
+                        ) : sidebarTab === 'skills' ? (
+                            <SkillsDashboard />
                         ) : sidebarTab === 'console' ? (
                             <MissionControl />
                         ) : (

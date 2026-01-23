@@ -38,6 +38,7 @@ remme_store = get_remme_store()
 remme_extractor = get_remme_extractor()
 
 @asynccontextmanager
+async def lifespan(app: FastAPI):
     print("🚀 API Starting up...")
     scheduler_service.initialize()
     persistence_manager.load_snapshot()
@@ -115,6 +116,8 @@ from routers import cron
 app.include_router(cron.router)
 from routers import stream
 app.include_router(stream.router)
+from routers import skills
+app.include_router(skills.router)
 
 
 

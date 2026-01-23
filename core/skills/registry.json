@@ -1,0 +1,47 @@
+{
+  "web_clipper": {
+    "path": "core/skills/library/web_clipper",
+    "version": "1.0.0",
+    "description": "Downloads and archives web pages to Notes",
+    "intent_triggers": [
+      "clip url",
+      "archive page",
+      "save website",
+      "download html"
+    ],
+    "class_name": "WebClipperSkill"
+  },
+  "market_analyst": {
+    "path": "core/skills/library/market_analyst",
+    "version": "1.0.0",
+    "description": "Analyzes stock markets and news using Yahoo Finance and Web Search",
+    "intent_triggers": [
+      "stock price",
+      "market analysis",
+      "news briefing",
+      "finance update",
+      "price",
+      "news",
+      "value",
+      "funding",
+      "market"
+    ],
+    "class_name": "MarketAnalystSkill"
+  },
+  "system_monitor": {
+    "path": "core/skills/library/system_monitor",
+    "version": "1.0.0",
+    "description": "Checks system resources (CPU, RAM, Disk)",
+    "intent_triggers": [
+      "check system",
+      "cpu usage",
+      "disk space",
+      "system health",
+      "cpu",
+      "ram",
+      "memory",
+      "disk"
+    ],
+    "class_name": "SystemMonitorSkill"
+  }
+}

@@ -21,9 +21,11 @@ class JobDefinition(BaseModel):
     cron_expression: str
     agent_type: str
     query: str
+    skill_id: Optional[str] = None  # Link to a specific skill
     enabled: bool = True
     last_run: Optional[str] = None
     next_run: Optional[str] = None
+    last_output: Optional[str] = None
 
 class SchedulerService:
     _instance = None
@@ -77,20 +79,113 @@ class SchedulerService:
         async def job_wrapper():
             # Lazy import to avoid circular dependency
             from routers.runs import process_run
+            from .skills.manager import skill_manager
+            from core.event_bus import event_bus
+            from routers.inbox import send_to_inbox
             
             run_id = f"auto_{job.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            logger.info(f"⏰ Triggering Scheduled Job: {job.name} ({run_id})")
+            
+            # Emit Start Event
+            log_msg = f"⏰ Triggering Scheduled Job: {job.name} ({run_id})"
+            logger.info(log_msg)
+            await event_bus.publish(
+                "log",
+                "scheduler",
+                {
+                    "message": log_msg,
+                    "metadata": {"job_id": job.id, "run_id": run_id}
+                }
+            )
             
             # Update last run
             job.last_run = datetime.now().isoformat()
             self.save_jobs()
             
             try:
-                # We reuse the process_run logic from routers/runs.py
-                # But we might need to await it or fire-and-forget
-                await process_run(run_id, job.query)
+                # Skill Lifecycle Execution
+                skill = None
+                effective_query = job.query
+
+                if job.skill_id:
+                    skill = skill_manager.get_skill(job.skill_id)
+                    if skill:
+                        # 1. Update Context
+                        skill.context.run_id = run_id
+                        skill.context.agent_id = job.agent_type
+                        skill.context.config = {"query": job.query}
+                        
+                        # 2. Hook: On Start (Prompt modification)
+                        effective_query = await skill.on_run_start(job.query)
+                        
+                        msg = f"🧠 Skill '{job.skill_id}' modified prompt: {effective_query[:50]}..."
+                        logger.info(msg)
+                        await event_bus.publish("log", "scheduler", {"message": msg})
+
+                # 3. Execution (The standard run)
+                result = await process_run(run_id, effective_query)
+                
+                # 4. Hook: On Success (The "Doing")
+                skill_result = None
+                if skill and result:
+                     skill_result = await skill.on_run_success(result if isinstance(result, dict) else {"output": str(result)})
+
+                # Notify Success
+                success_msg = f"✅ Job '{job.name}' completed successfully."
+                await event_bus.publish(
+                    "success", 
+                    "scheduler", 
+                    {
+                        "message": success_msg,
+                        "metadata": {"job_id": job.id, "run_id": run_id}
+                    }
+                )
+                
+                # Update job with result
+                job.last_output = skill_result.get("summary") if skill_result else (result.get("summary") if result else "Success")
+                self.save_jobs()
+
+                # Build rich notification body
+                notif_body = f"Job '{job.name}' finished.\n\n"
+                if skill_result and skill_result.get("summary"):
+                    notif_body += f"**Summary**: {skill_result['summary']}\n\n"
+                elif result and result.get("summary"):
+                    notif_body += f"**Summary**: {result['summary'][:200]}...\n\n"
+                
+                notif_body += f"*Run ID: {run_id}*"
+                
+                send_to_inbox(
+                    source="Scheduler",
+                    title=f"Completed: {job.name}",
+                    body=notif_body,
+                    priority=1,
+                    metadata={
+                        "job_id": job.id, 
+                        "run_id": run_id,
+                        "file_path": skill_result.get("file_path") if skill_result else None
+                    }
+                )
+
             except Exception as e:
-                logger.error(f"❌ Job {job.name} failed: {e}")
+                error_msg = f"❌ Job {job.name} failed: {e}"
+                logger.error(error_msg)
+                
+                await event_bus.publish(
+                    "error",
+                    "scheduler",
+                    {
+                        "message": error_msg
+                    }
+                )
+
+                send_to_inbox(
+                    source="Scheduler",
+                    title=f"Job Failed: {job.name}",
+                    body=f"Error: {str(e)}",
+                    priority=2 # High priority for failures
+                )
+
+                if skill:
+                    await skill.on_run_failure(str(e))
 
         # Parse cron expression (simple space-separated 5 fields)
         try:
@@ -112,18 +207,43 @@ class SchedulerService:
 
     def add_job(self, name: str, cron_expression: str, agent_type: str, query: str) -> JobDefinition:
         """Add a new scheduled job."""
+        # Auto-detect skill
+        from .skills.manager import skill_manager
+        # Ensure registry is loaded
+        if not skill_manager.skill_classes:
+            skill_manager.initialize()
+            
+        skill_id = skill_manager.match_intent(query)
+        if skill_id:
+            logger.info(f"🧠 Smart Scheduler: Matched query '{query}' to Skill '{skill_id}'")
+
         job_id = str(uuid.uuid4())[:8]
         job = JobDefinition(
             id=job_id,
             name=name,
             cron_expression=cron_expression,
             agent_type=agent_type,
-            query=query
+            query=query,
+            skill_id=skill_id
         )
         self.jobs[job_id] = job
         self._schedule_job(job)
         self.save_jobs()
         return job
+
+    def trigger_job(self, job_id: str):
+        """Force a job to run immediately."""
+        if job_id not in self.jobs:
+            logger.warning(f"Trigger failed: Job {job_id} not found in registry")
+            return
+            
+        if self.scheduler.get_job(job_id):
+             self.scheduler.modify_job(job_id, next_run_time=datetime.now())
+             logger.info(f"👉 Setup immediate execution for {job_id}")
+        else:
+             # If it was paused or missing
+             self._schedule_job(self.jobs[job_id])
+             self.scheduler.modify_job(job_id, next_run_time=datetime.now())
 
     def delete_job(self, job_id: str):
         """Remove a job."""

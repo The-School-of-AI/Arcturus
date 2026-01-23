@@ -175,6 +175,7 @@ async def process_run(run_id: str, query: str):
             traceback.print_exc()
 
         # 3. AUTO-SAVE REPORTS TO NOTES
+            # 3. AUTO-SAVE REPORTS TO NOTES
         try:
              if context and context.plan_graph:
                 import re
@@ -211,26 +212,13 @@ async def process_run(run_id: str, query: str):
                                  markdown = v
                                  break
                     
-                    # Log FormatterAgent outputs for debugging
-                    if agent_type == "FormatterAgent" and markdown:
-                        print(f"[Notes Auto-Save] Found FormatterAgent {node_id}: markdown_report length={len(markdown)}, title preview={markdown[:60]}...")
-                    
                     if markdown and len(markdown) > 100:
                          title = extract_title(markdown)
                          filename = sanitize_filename(title) + ".md"
                          target_path = notes_dir / filename
                          
-                         # Check if file exists
-                         if target_path.exists():
-                             existing_content = target_path.read_text(encoding='utf-8')
-                             # Skip if content is identical
-                             if existing_content == markdown:
-                                 continue
-                             # PROTECTION: Only overwrite if new content is longer
-                             # This prevents intermediate/truncated saves from clobbering full reports
-                             if len(existing_content) >= len(markdown):
-                                 print(f"⚠️ Skipped overwriting {filename}: existing content is longer ({len(existing_content)} >= {len(markdown)})")
-                                 continue
+                         if target_path.exists() and len(target_path.read_text(encoding='utf-8')) >= len(markdown):
+                             continue
 
                          with open(target_path, 'w', encoding='utf-8') as f:
                              f.write(markdown)
@@ -238,6 +226,108 @@ async def process_run(run_id: str, query: str):
 
         except Exception as e:
             print(f"⚠️ Failed to auto-save report: {e}")
+            
+        # Return result for Scheduler/Skills
+        final_result = {"status": "completed", "run_id": run_id}
+        if context and context.plan_graph:
+            # Check for any failed nodes
+            for node_id in context.plan_graph.nodes:
+                node = context.plan_graph.nodes[node_id]
+                if node.get("status") == "failed":
+                    final_result["status"] = "failed"
+                    final_result["error"] = node.get("error")
+                    break
+        
+        if context:
+             try:
+                 output_str = ""
+                 if context.plan_graph:
+                     # 1. Look for FormatterAgent output first (The Final Report)
+                     for node_id in context.plan_graph.nodes:
+                         node = context.plan_graph.nodes[node_id]
+                         node_agent = node.get("agent", "")
+                         out = node.get("output", {})
+                         
+                         if node_agent == "FormatterAgent" or "Format" in node_agent:
+                             if isinstance(out, dict):
+                                 md = out.get("markdown_report")
+                                 if not md:
+                                     # Try all keys for something that looks like a report
+                                     for k, v in out.items():
+                                         if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
+                                             md = v
+                                             break
+                                 
+                                 if md:
+                                     output_str = md
+                                     break
+                                 
+                                 # Fallback: if 'output' is a long string
+                                 if isinstance(out.get("output"), str) and len(out["output"]) > 100:
+                                     output_str = out["output"]
+                                     break
+                     
+                     # 2. Fallback: Find any node with a substantial string output
+                     if not output_str:
+                         for node_id in reversed(list(context.plan_graph.nodes)):
+                             if node_id == "ROOT": continue
+                             node = context.plan_graph.nodes[node_id]
+                             out = node.get("output", {})
+                             
+                             if isinstance(out, dict):
+                                 # Try to find the largest string value in the dict (recursive search)
+                                 def find_largest_string(d):
+                                     largest = ""
+                                     for v in d.values():
+                                         if isinstance(v, str):
+                                             if len(v) > len(largest):
+                                                 largest = v
+                                         elif isinstance(v, dict):
+                                             sub = find_largest_string(v)
+                                             if len(sub) > len(largest):
+                                                 largest = sub
+                                     return largest
+                                 
+                                 largest_str = find_largest_string(out)
+                                 if len(largest_str) > 50:
+                                     output_str = largest_str
+                                     break
+                                     
+                             elif isinstance(out, str) and len(out) > 50:
+                                 output_str = out
+                                 break
+
+                 # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
+                 if output_str:
+                     import re
+                     # If the output starts and ends with {} or [], it might be a JSON dump 
+                     # that contains a markdown_report field.
+                     if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
+                         try:
+                             # Try to parse it and extract the report field
+                             data = json.loads(output_str)
+                             if isinstance(data, dict):
+                                 # Look for report-like keys
+                                 for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
+                                     if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
+                                         output_str = data[k]
+                                         break
+                         except:
+                             pass
+                     
+                     # Final check: remove block delimiters if LLM wrapped them in ```markdown
+                     output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
+                     output_str = re.sub(r'\n```$', '', output_str)
+
+                 final_result["output"] = output_str.strip() if output_str else "No substantial output found."
+                 if final_result.get("status") == "failed":
+                     final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
+                 else:
+                     final_result["summary"] = output_str.strip() if output_str else "Completed."
+             except Exception as e:
+                 print(f"⚠️ Extraction Error: {e}")
+        
+        return final_result
 
 
 # === Endpoints ===
