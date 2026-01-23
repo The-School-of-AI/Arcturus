@@ -6,6 +6,7 @@ import time
 from memory.context import ExecutionContextManager
 from agents.base_agent import AgentRunner
 from core.utils import log_step, log_error
+from core.event_bus import event_bus
 from core.model_manager import ModelManager
 from ui.visualizer import ExecutionVisualizer
 from rich.live import Live
@@ -589,6 +590,8 @@ class AgentLoop4:
 
     async def _execute_step(self, step_id, context):
         """Execute a single step with call_self support"""
+        # 📡 EMIT EVENT
+        await event_bus.publish("step_start", "AgentLoop4", {"step_id": step_id})
         step_data = context.get_step_data(step_id)
         agent_type = step_data["agent"]
         

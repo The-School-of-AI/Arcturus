@@ -78,8 +78,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide') => void;
+    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console') => void;
 
     // --- RAG Document Management ---
     ragOpenDocuments: RAGDocument[];
@@ -382,7 +382,37 @@ interface NewsSlice {
     clearSelection: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice { }
+// --- Inbox Slice ---
+interface InboxSlice {
+    notifications: any[];
+    unreadCount: number;
+    isInboxOpen: boolean;
+    setIsInboxOpen: (open: boolean) => void;
+    fetchNotifications: () => Promise<void>;
+    markAsRead: (id: string) => Promise<void>;
+    deleteNotification: (id: string) => Promise<void>;
+    markAllAsRead: () => Promise<void>;
+}
+
+// --- Scheduler Slice ---
+interface SchedulerSlice {
+    jobs: any[];
+    fetchJobs: () => Promise<void>;
+    createJob: (job: { name: string, cron: string, query: string, agent_type?: string }) => Promise<void>;
+    deleteJob: (id: string) => Promise<void>;
+}
+
+// --- Event Bus Slice ---
+interface EventBusSlice {
+    events: any[];
+    isStreaming: boolean;
+    streamConnection: EventSource | null;
+    startEventStream: () => void;
+    stopEventStream: () => void;
+    clearEvents: () => void;
+}
+
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -409,6 +439,120 @@ export const useAppStore = create<AppState>()(
                 }
                 set({ reviewRequest: null, reviewResolver: null });
             },
+
+            // --- Inbox Slice Implementation ---
+            notifications: [],
+            unreadCount: 0,
+            isInboxOpen: false,
+            setIsInboxOpen: (open) => set({ isInboxOpen: open }),
+            fetchNotifications: async () => {
+                try {
+                    const res = await api.get(`${API_BASE}/inbox`);
+                    const notifications = res.data;
+                    const unreadCount = notifications.filter((n: any) => !n.is_read).length;
+                    set({ notifications, unreadCount });
+                } catch (e) {
+                    console.error("Failed to fetch notifications", e);
+                }
+            },
+            markAsRead: async (id) => {
+                try {
+                    await api.patch(`${API_BASE}/inbox/${id}/read`);
+                    const notifications = get().notifications.map(n => n.id === id ? { ...n, is_read: true } : n);
+                    const unreadCount = notifications.filter((n: any) => !n.is_read).length;
+                    set({ notifications, unreadCount });
+                } catch (e) {
+                    console.error("Failed to mark as read", e);
+                }
+            },
+            deleteNotification: async (id) => {
+                try {
+                    await api.delete(`${API_BASE}/inbox/${id}`);
+                    const notifications = get().notifications.filter(n => n.id !== id);
+                    const unreadCount = notifications.filter((n: any) => !n.is_read).length;
+                    set({ notifications, unreadCount });
+                } catch (e) {
+                    console.error("Failed to delete notification", e);
+                }
+            },
+            markAllAsRead: async () => {
+                // Optimistic update
+                const notifications = get().notifications.map(n => ({ ...n, is_read: true }));
+                set({ notifications, unreadCount: 0 });
+                // We'd need a backend endpoint for this or loop through them, 
+                // for now let's just loop in background if needed or rely on individual clicks
+                // Assuming we might add bulk endpoint later.
+            },
+
+            // --- Scheduler Slice Implementation ---
+            jobs: [],
+            fetchJobs: async () => {
+                try {
+                    const res = await api.get(`${API_BASE}/cron/jobs`);
+                    set({ jobs: res.data });
+                } catch (e) {
+                    console.error("Failed to fetch jobs", e);
+                }
+            },
+            createJob: async (jobData) => {
+                try {
+                    await api.post(`${API_BASE}/cron/jobs`, jobData);
+                    await get().fetchJobs();
+                } catch (e) {
+                    console.error("Failed to create job", e);
+                    throw e;
+                }
+            },
+            deleteJob: async (id) => {
+                try {
+                    await api.delete(`${API_BASE}/cron/jobs/${id}`);
+                    await get().fetchJobs();
+                } catch (e) {
+                    console.error("Failed to delete job", e);
+                }
+            },
+
+            // --- Event Bus Slice Implementation ---
+            events: [],
+            isStreaming: false,
+            streamConnection: null,
+            startEventStream: () => {
+                if (get().streamConnection) return;
+
+                console.log("🔌 Connecting to Event Bus...");
+                const eventSource = new EventSource(`${API_BASE}/events`);
+
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        // Add to events list (keep last 200)
+                        set(state => {
+                            const newEvents = [...state.events, data];
+                            if (newEvents.length > 200) newEvents.shift();
+                            return { events: newEvents };
+                        });
+                    } catch (e) {
+                        console.error("Failed to parse event", e);
+                    }
+                };
+
+                eventSource.onerror = (err) => {
+                    console.error("EventSource failed:", err);
+                    eventSource.close();
+                    set({ isStreaming: false, streamConnection: null });
+                };
+
+                set({ streamConnection: eventSource, isStreaming: true });
+            },
+            stopEventStream: () => {
+                const es = get().streamConnection;
+                if (es) {
+                    es.close();
+                    console.log("🔌 Disconnected from Event Bus");
+                }
+                set({ streamConnection: null, isStreaming: false });
+            },
+            clearEvents: () => set({ events: [] }),
 
             // Runs
             runs: [],

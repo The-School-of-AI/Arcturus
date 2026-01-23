@@ -3,8 +3,10 @@ import {
     Box, Square, Circle, PlayCircle, Database, Brain, Code2,
     LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
     RefreshCw, Zap, Sparkles, X, FolderPlus, UploadCloud, Search,
-    Loader2, ChevronLeft, Notebook, LayoutDashboard
+    Loader2, ChevronLeft, Notebook, LayoutDashboard, Bell,
+    CalendarClock, Terminal
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -24,7 +26,9 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
     learn: { label: 'Learning', icon: GraduationCap, color: 'text-neon-yellow', subtitleSuffix: 'COURSES' },
     notes: { label: 'Notes', icon: Notebook, color: 'text-blue-400', subtitleSuffix: 'NOTES' },
     settings: { label: 'Settings', icon: Settings, color: 'text-neon-yellow', subtitleSuffix: 'CONFIG' },
-    ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' }
+    ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' },
+    scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-neon-cyan', subtitleSuffix: 'JOBS' },
+    console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' }
 };
 
 export const Header: React.FC = () => {
@@ -37,7 +41,8 @@ export const Header: React.FC = () => {
         fetchApps, fetchMemories, fetchRuns, fetchMcpServers,
         newsViewMode, setNewsViewMode, setNewsSearchQuery, setSearchResults,
         notesFiles, fetchNotesFiles, isNotesLoading,
-        gitSummary, fetchGitSummary
+        gitSummary, fetchGitSummary,
+        unreadCount, isInboxOpen, setIsInboxOpen
     } = useAppStore();
     const { theme } = useTheme();
 
@@ -285,7 +290,23 @@ export const Header: React.FC = () => {
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ollama</span>
                     </div>
 
-                    <div className="no-drag">
+                    <div className="flex items-center gap-3 no-drag z-50">
+                        {/* Inbox Toggle */}
+                        <button
+                            onClick={() => setIsInboxOpen(!isInboxOpen)}
+                            className={cn(
+                                "relative p-2 rounded-full transition-all duration-200",
+                                isInboxOpen
+                                    ? "bg-neon-yellow/10 text-neon-yellow"
+                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Bell className="w-4 h-4" />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-neon-yellow rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                            )}
+                        </button>
+
                         <ThemeToggle />
                     </div>
                 </div>

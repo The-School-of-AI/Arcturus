@@ -97,6 +97,7 @@ export interface RAGDocument {
     chatHistory?: ChatMessage[];
     targetPage?: number;
     targetLine?: number;  // NEW: Support ripgrep line jumping
+    initialLine?: number; // Helper for opening at specific line
     searchText?: string;  // Text to auto-search when opening from SEEK result
     language?: string;    // Programming language for syntax highlighting
     originalContent?: string; // For Git Diffs

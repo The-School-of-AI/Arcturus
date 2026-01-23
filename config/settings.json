@@ -18,22 +18,9 @@
     "top_k": 3
   },
   "agent": {
-    "model_provider": "ollama",
-    "default_model": "phi4:latest",
-    "overrides": {
-      "PlannerAgent": {
-        "model_provider": "gemini",
-        "model": "gemini-2.5-flash-lite"
-      },
-      "FormatterAgent": {
-        "model_provider": "gemini",
-        "model": "gemini-2.5-flash-lite"
-      },
-      "TestAgent": {
-        "model_provider": "ollama",
-        "model": "phi4:latest"
-      }
-    },
+    "model_provider": "gemini",
+    "default_model": "gemini-2.5-flash-lite",
+    "overrides": {},
     "max_steps": 3,
     "max_lifelines_per_step": 3,
     "planning_mode": "conservative",

@@ -96,8 +96,10 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     if (type === 'line' || type === 'area') {
         if (data.series?.length > 0) {
             // Auto-assign colors to series if not provided
+            // Normalize: series items may have `points` instead of `data`
             series = data.series.map((s: any, idx: number) => ({
                 ...s,
+                data: s.data || s.points || [],
                 color: s.color || DEFAULT_CHART_COLORS[idx % DEFAULT_CHART_COLORS.length]
             }));
         } else if (data.points?.length > 0) {

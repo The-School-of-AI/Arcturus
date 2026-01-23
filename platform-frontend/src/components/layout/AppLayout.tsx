@@ -12,6 +12,7 @@ import { NotesEditor } from '../notes/NotesEditor';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
+import { InboxPanel } from '../inbox/InboxPanel';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -38,6 +39,8 @@ import { NewsList } from '@/features/news/components/NewsList';
 import { ElectronBrowserView } from '@/features/news/components/ElectronBrowserView';
 import { NewsInspector } from '@/features/news/components/NewsInspector';
 import { IdeLayout } from '@/features/ide/components/IdeLayout';
+import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
+import { MissionControl } from '@/features/console/components/MissionControl';
 
 export const AppLayout: React.FC = () => {
     const {
@@ -45,8 +48,10 @@ export const AppLayout: React.FC = () => {
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
         ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
-        isZenMode
+        isZenMode, isInboxOpen, setIsInboxOpen
     } = useAppStore();
+
+    // Moved isInspectorOpen definition down to include new tabs context
 
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
@@ -58,7 +63,8 @@ export const AppLayout: React.FC = () => {
         return false;
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
-    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide';
+    // Scheduler and Console take up full width, no sidebar subpanel needed
+    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console';
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -153,6 +159,11 @@ export const AppLayout: React.FC = () => {
             {/* Hide header when in App View Mode */}
             {!isAppViewMode && <Header />}
 
+            {/* Inbox Overlay */}
+            {isInboxOpen && (
+                <InboxPanel onClose={() => setIsInboxOpen(false)} />
+            )}
+
             <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3 relative z-20">
                 {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown OR Zen Mode */}
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && !isZenMode && (
@@ -196,6 +207,10 @@ export const AppLayout: React.FC = () => {
                             <ElectronBrowserView />
                         ) : sidebarTab === 'ide' ? (
                             <IdeLayout />
+                        ) : sidebarTab === 'scheduler' ? (
+                            <SchedulerDashboard />
+                        ) : sidebarTab === 'console' ? (
+                            <MissionControl />
                         ) : (
                             <>
                                 <GraphCanvas />

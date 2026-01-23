@@ -1,0 +1,611 @@
+{
+  "id": "app-1768881363305",
+  "name": "Generated App 09:25:38",
+  "description": "Construction Project Manager",
+  "cards": [
+    {
+      "id": "dashboard-header",
+      "type": "header",
+      "label": "Project Overview",
+      "context": "Main title for the construction project manager dashboard.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Construction Project Dashboard"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-project-status",
+      "type": "metric",
+      "label": "Project Status",
+      "context": "Overall status of the current construction project (e.g., On Track, Delayed, At Risk).",
+      "config": {},
+      "data": {
+        "value": "On Track",
+        "change": 0,
+        "trend": "neutral"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-budget-adherence",
+      "type": "metric",
+      "label": "Budget Adherence",
+      "context": "Percentage of budget adherence for the current construction project.",
+      "config": {},
+      "data": {
+        "value": "95%",
+        "change": -2.5,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-schedule-variance",
+      "type": "metric",
+      "label": "Schedule Variance",
+      "context": "Current schedule variance for the construction project in days.",
+      "config": {},
+      "data": {
+        "value": "+5 Days",
+        "change": 1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-safety-incidents",
+      "type": "metric",
+      "label": "Safety Incidents",
+      "context": "Number of safety incidents reported on the construction site this month.",
+      "config": {},
+      "data": {
+        "value": "2",
+        "change": 1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "chart-project-progress",
+      "type": "line_chart",
+      "label": "Overall Project Progress",
+      "context": "Cumulative percentage completion of the construction project over time.",
+      "config": {},
+      "data": {
+        "title": "Project Completion Trend",
+        "xLabel": "Month",
+        "yLabel": "Completion (%)",
+        "series": [
+          {
+            "name": "Planned",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 10
+              },
+              {
+                "x": "Feb",
+                "y": 25
+              },
+              {
+                "x": "Mar",
+                "y": 40
+              },
+              {
+                "x": "Apr",
+                "y": 55
+              },
+              {
+                "x": "May",
+                "y": 70
+              },
+              {
+                "x": "Jun",
+                "y": 85
+              }
+            ]
+          },
+          {
+            "name": "Actual",
+            "color": "#F5C542",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 8
+              },
+              {
+                "x": "Feb",
+                "y": 22
+              },
+              {
+                "x": "Mar",
+                "y": 38
+              },
+              {
+                "x": "Apr",
+                "y": 52
+              },
+              {
+                "x": "May",
+                "y": 68
+              },
+              {
+                "x": "Jun",
+                "y": 80
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chart-task-completion-by-phase",
+      "type": "bar_chart",
+      "label": "Task Completion by Phase",
+      "context": "Number of completed tasks versus total tasks for each phase of the construction project.",
+      "config": {},
+      "data": {
+        "title": "Tasks by Phase",
+        "xLabel": "Phase",
+        "yLabel": "Tasks",
+        "points": [
+          {
+            "x": "Planning",
+            "y": 100,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Foundation",
+            "y": 85,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Structure",
+            "y": 60,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Finishing",
+            "y": 30,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "trend-budget-variance",
+      "type": "trend",
+      "label": "Budget Variance",
+      "context": "Current budget variance for the construction project, showing percentage change.",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "-$15K",
+        "change": -3.2
+      },
+      "style": {}
+    },
+    {
+      "id": "trend-cost-performance",
+      "type": "trend",
+      "label": "Cost Performance Index",
+      "context": "Cost Performance Index (CPI) for the construction project.",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "0.97",
+        "change": -0.01
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-remaining-budget",
+      "type": "metric",
+      "label": "Remaining Budget",
+      "context": "Total remaining budget for the construction project.",
+      "config": {},
+      "data": {
+        "value": "$1.2M",
+        "change": -0.5,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-earned-value",
+      "type": "metric",
+      "label": "Earned Value",
+      "context": "Earned Value (EV) for the construction project.",
+      "config": {},
+      "data": {
+        "value": "$3.5M",
+        "change": 0.8,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "table-open-risks",
+      "type": "table",
+      "label": "Open Risks",
+      "context": "List of open risks for the construction project, including severity and mitigation.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Risk ID",
+          "Description",
+          "Severity",
+          "Status"
+        ],
+        "rows": [
+          [
+            "R001",
+            "Material delays",
+            "High",
+            "Open"
+          ],
+          [
+            "R002",
+            "Weather impact",
+            "Medium",
+            "Monitoring"
+          ],
+          [
+            "R003",
+            "Labor shortage",
+            "High",
+            "Open"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "table-open-issues",
+      "type": "table",
+      "label": "Open Issues",
+      "context": "List of open issues for the construction project, including assignee and priority.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Issue ID",
+          "Description",
+          "Priority",
+          "Assignee"
+        ],
+        "rows": [
+          [
+            "I001",
+            "Design clarification",
+            "High",
+            "Architect"
+          ],
+          [
+            "I002",
+            "Equipment malfunction",
+            "Medium",
+            "Site Manager"
+          ],
+          [
+            "I003",
+            "Permit delay",
+            "High",
+            "Legal"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chart-resource-allocation",
+      "type": "pie_chart",
+      "label": "Resource Allocation",
+      "context": "Distribution of resources (e.g., labor, equipment, materials) across the construction project.",
+      "config": {},
+      "data": {
+        "title": "Resource Allocation",
+        "slices": [
+          {
+            "name": "Labor",
+            "value": 45,
+            "color": "#4ecdc4"
+          },
+          {
+            "name": "Equipment",
+            "value": 25,
+            "color": "#ff6b6b"
+          },
+          {
+            "name": "Materials",
+            "value": 20,
+            "color": "#F5C542"
+          },
+          {
+            "name": "Subcontractors",
+            "value": 10,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chart-schedule-variance-trend",
+      "type": "line_chart",
+      "label": "Schedule Variance Trend",
+      "context": "Trend of schedule variance (Planned vs. Actual) for the construction project over recent months.",
+      "config": {},
+      "data": {
+        "title": "Schedule Variance Trend",
+        "xLabel": "Month",
+        "yLabel": "Variance (Days)",
+        "series": [
+          {
+            "name": "Variance",
+            "color": "#00cec9",
+            "data": [
+              {
+                "x": "Jan",
+                "y": -2
+              },
+              {
+                "x": "Feb",
+                "y": 0
+              },
+              {
+                "x": "Mar",
+                "y": 3
+              },
+              {
+                "x": "Apr",
+                "y": 5
+              },
+              {
+                "x": "May",
+                "y": 4
+              },
+              {
+                "x": "Jun",
+                "y": 5
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed-project-activity-log",
+      "type": "feed",
+      "label": "Project Activity Log",
+      "context": "Latest activity and updates from the construction project, including task completions and new issues.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Task 'Foundation Pour' completed",
+            "time": "1h ago"
+          },
+          {
+            "title": "New issue: Equipment malfunction",
+            "time": "3h ago"
+          },
+          {
+            "title": "Daily site report submitted",
+            "time": "5h ago"
+          },
+          {
+            "title": "Meeting with architect scheduled",
+            "time": "1d ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "markdown-important-announcements",
+      "type": "markdown",
+      "label": "Important Announcements",
+      "context": "Key announcements and notices for the construction project team.",
+      "config": {},
+      "data": {
+        "content": "## Weekly Safety Briefing\n\n**Date:** Friday, Jan 24, 2026\n**Time:** 8:00 AM\n**Location:** Site Office\n\n*All personnel must attend.*"
+      },
+      "style": {}
+    },
+    {
+      "id": "date-picker-filter",
+      "type": "date_picker",
+      "label": "Filter by Date Range",
+      "context": "Allows filtering dashboard data by a specific date range.",
+      "config": {},
+      "data": {
+        "startDate": "2025-01-01",
+        "endDate": "2025-12-31"
+      },
+      "style": {}
+    },
+    {
+      "id": "select-project-phase",
+      "type": "select",
+      "label": "Select Project Phase",
+      "context": "Dropdown to select and filter data by different project phases.",
+      "config": {},
+      "data": {
+        "label": "Project Phase",
+        "options": [
+          "All Phases",
+          "Planning",
+          "Foundation",
+          "Structure",
+          "Finishing"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "button-apply-filters",
+      "type": "button",
+      "label": "Apply Filters",
+      "context": "Button to apply the selected date range and project phase filters.",
+      "config": {},
+      "data": {
+        "label": "Apply Filters"
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "dashboard-header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "metric-project-status",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-budget-adherence",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-schedule-variance",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-safety-incidents",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "chart-project-progress",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "chart-task-completion-by-phase",
+      "x": 12,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "trend-budget-variance",
+      "x": 0,
+      "y": 13,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "trend-cost-performance",
+      "x": 6,
+      "y": 13,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-remaining-budget",
+      "x": 12,
+      "y": 13,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-earned-value",
+      "x": 18,
+      "y": 13,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "table-open-risks",
+      "x": 0,
+      "y": 16,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "table-open-issues",
+      "x": 12,
+      "y": 16,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "chart-resource-allocation",
+      "x": 0,
+      "y": 21,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "chart-schedule-variance-trend",
+      "x": 12,
+      "y": 21,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "feed-project-activity-log",
+      "x": 0,
+      "y": 27,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "markdown-important-announcements",
+      "x": 12,
+      "y": 27,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "date-picker-filter",
+      "x": 0,
+      "y": 33,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "i": "select-project-phase",
+      "x": 8,
+      "y": 33,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "i": "button-apply-filters",
+      "x": 16,
+      "y": 33,
+      "w": 8,
+      "h": 2
+    }
+  ],
+  "lastModified": 1768881363305,
+  "lastHydrated": 1768881363305
+}

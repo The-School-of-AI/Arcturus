@@ -1,0 +1,401 @@
+{
+  "name": "India's Banking Sector: GNPA Trends and Outlook",
+  "description": "Generated from report",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Report Header",
+      "config": {
+        "centered": true
+      },
+      "data": {
+        "text": "India's Banking Sector: A Deep Dive into Gross Non-Performing Assets (GNPA) Trends and Future Outlook"
+      },
+      "style": {}
+    },
+    {
+      "id": "executive_summary",
+      "type": "summary",
+      "label": "Executive Summary",
+      "config": {},
+      "data": {
+        "text": "The Indian banking sector has shown remarkable resilience and significant improvement in asset quality. Gross Non-Performing Assets (GNPA) have reached multi-decade lows, driven by robust risk management, effective recovery strategies, and a favorable economic environment. The GNPA ratio stood at 2.6% in September 2024, further declining to 2.1% by September 2025. The Net NPA (NNPA) ratio also remained low at 0.6% in September 2024. This positive trajectory is expected to continue, with projections indicating a GNPA range of 1.8% to 2.3% for 2026-2027. Key drivers include sustained economic growth, proactive RBI regulations, ongoing banking sector reforms, and healthy credit appetite.",
+        "bullets": [
+          "GNPA ratio at multi-decade low of 2.1% by Sep 2025.",
+          "NNPA ratio commendably low at 0.6% as of Sep 2024.",
+          "Projected GNPA range of 1.8% to 2.3% for 2026-2027.",
+          "Strong profitability and capital adequacy for Scheduled Commercial Banks (SCBs)."
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_gnpa_sep25",
+      "type": "metric",
+      "label": "GNPA Ratio (Sep 2025)",
+      "config": {},
+      "data": {
+        "value": "2.1%",
+        "change": -0.5,
+        "trend": "down",
+        "unit": "%",
+        "description": "Multi-decadal low"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_nnpa_sep24",
+      "type": "metric",
+      "label": "NNPA Ratio (Sep 2024)",
+      "config": {},
+      "data": {
+        "value": "0.6%",
+        "change": 0,
+        "trend": "stable",
+        "unit": "%",
+        "description": "Commendably low"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_pat_h1_2425",
+      "type": "metric",
+      "label": "PAT Growth (H1 FY25)",
+      "config": {},
+      "data": {
+        "value": "22.2%",
+        "change": 22.2,
+        "trend": "up",
+        "unit": "%",
+        "description": "YoY Profit After Tax"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_crar_sep25",
+      "type": "metric",
+      "label": "CRAR (Sep 2025)",
+      "config": {},
+      "data": {
+        "value": "17.2%",
+        "change": -0.2,
+        "trend": "down",
+        "unit": "%",
+        "description": "Capital-to-Risk-Weighted Assets Ratio"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_gnpa_forecast",
+      "type": "metric",
+      "label": "GNPA Forecast (2026-2027)",
+      "config": {},
+      "data": {
+        "value": "1.8% - 2.3%",
+        "change": 0,
+        "trend": "stable",
+        "unit": "%",
+        "description": "Projected range"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_large_borrower_gnpa_decline",
+      "type": "metric",
+      "label": "Large Borrower GNPA (Sep 2024)",
+      "config": {},
+      "data": {
+        "value": "2.4%",
+        "change": -2.1,
+        "trend": "down",
+        "unit": "%",
+        "description": "From 4.5% in Mar 2023"
+      },
+      "style": {}
+    },
+    {
+      "id": "chart_gnpa_trend",
+      "type": "line_chart",
+      "label": "GNPA Ratio Trend",
+      "config": {
+        "title": "Gross NPA Ratio Over Time"
+      },
+      "data": {
+        "series": [
+          {
+            "name": "GNPA Ratio",
+            "points": [
+              {
+                "x": "Sep 2024",
+                "y": 2.6
+              },
+              {
+                "x": "Mar 2025",
+                "y": 2.2
+              },
+              {
+                "x": "Sep 2025",
+                "y": 2.1
+              }
+            ]
+          }
+        ],
+        "x_axis_label": "Date",
+        "y_axis_label": "GNPA Ratio (%)"
+      },
+      "style": {}
+    },
+    {
+      "id": "chart_large_borrower_gnpa_trend",
+      "type": "line_chart",
+      "label": "Large Borrower GNPA Trend",
+      "config": {
+        "title": "Large Borrower GNPA Ratio"
+      },
+      "data": {
+        "series": [
+          {
+            "name": "Large Borrower GNPA",
+            "points": [
+              {
+                "x": "Mar 2023",
+                "y": 4.5
+              },
+              {
+                "x": "Sep 2024",
+                "y": 2.4
+              }
+            ]
+          }
+        ],
+        "x_axis_label": "Date",
+        "y_axis_label": "GNPA Ratio (%)"
+      },
+      "style": {}
+    },
+    {
+      "id": "chart_pat_growth_by_bank",
+      "type": "bar_chart",
+      "label": "Profit After Tax Growth",
+      "config": {
+        "title": "PAT Growth (H1 FY25) by Bank Type"
+      },
+      "data": {
+        "points": [
+          {
+            "x": "PSBs",
+            "y": 30.2,
+            "color": "#4CAF50"
+          },
+          {
+            "x": "PVBs",
+            "y": 20.2,
+            "color": "#2196F3"
+          },
+          {
+            "x": "Foreign Banks",
+            "y": 5.0,
+            "color": "#FFC107"
+          }
+        ],
+        "x_axis_label": "Bank Type",
+        "y_axis_label": "Growth (%)"
+      },
+      "style": {}
+    },
+    {
+      "id": "chart_crar_trend",
+      "type": "line_chart",
+      "label": "CRAR Trend",
+      "config": {
+        "title": "Capital-to-Risk-Weighted Assets Ratio (CRAR)"
+      },
+      "data": {
+        "series": [
+          {
+            "name": "CRAR",
+            "points": [
+              {
+                "x": "Mar 2025",
+                "y": 17.4
+              },
+              {
+                "x": "Sep 2025",
+                "y": 17.2
+              }
+            ]
+          }
+        ],
+        "x_axis_label": "Date",
+        "y_axis_label": "CRAR (%)"
+      },
+      "style": {}
+    },
+    {
+      "id": "markdown_historical_trends",
+      "type": "markdown",
+      "label": "Historical GNPA Trends",
+      "config": {
+        "title": "2. Historical GNPA Trends: A Journey of Recovery and Resilience (Past 3-5 Years)"
+      },
+      "data": {
+        "content": "The past three to five years have seen a consistent and significant decline in the GNPA ratio across the Indian banking sector. This improvement is not isolated but a sector-wide phenomenon, driven by enhanced recovery efforts, strategic write-offs, and improved credit appraisal processes. The absolute quantum of problematic loans has reduced due to better economic conditions, proactive identification of stress, and stronger legal/regulatory frameworks for asset resolution. Banks have invested in advanced risk assessment capabilities and specialized recovery teams, while the RBI's guidelines have pushed for balance sheet clean-up and prudent lending. This has curtailed new NPA accumulation and effectively resolved existing ones."
+      },
+      "style": {}
+    },
+    {
+      "id": "markdown_forecast_rationale",
+      "type": "markdown",
+      "label": "Rationale for GNPA Forecast",
+      "config": {
+        "title": "3.2 Rationale for the Forecast"
+      },
+      "data": {
+        "content": "The projected stability and potential further decline in GNPA are supported by several positive developments:\n\n*   **Continued Economic Stability and Growth:** Robust GDP growth, controlled inflation, and stable domestic demand are expected to improve borrower repayment capacity.\n*   **Supportive Regulatory Measures:** RBI's proactive approach, including initiatives on cybersecurity, fraud prevention, and climate risk, enhances financial system resilience and asset quality.\n*   **Ongoing Banking Sector Reforms:** Reforms strengthening capital adequacy, operational efficiency, and market dynamics contribute to a healthier banking system.\n*   **Growing Credit Appetite Among Medium-Sized Borrowers:** Diversified lending reduces concentration risk.\n*   **Sustained Low Slippages and Effective Write-offs:** Prudent practices are critical for maintaining the positive trend.\n*   **Strong Capital Buffers:** Banks' resilience to absorb shocks and support credit flow."
+      },
+      "style": {}
+    },
+    {
+      "id": "markdown_uncertainties_risks",
+      "type": "markdown",
+      "label": "Uncertainties and Risks",
+      "config": {
+        "title": "3.3 Uncertainties and Risks"
+      },
+      "data": {
+        "content": "Despite the positive outlook, several uncertainties and risks require continuous monitoring:\n\n*   **Global Economic Slowdown:** Could impact India's export sector and overall growth, leading to increased borrower stress.\n*   **Sudden Interest Rate Changes:** Abrupt changes could affect borrowing costs and debt servicing ability.\n*   **Geopolitical Events:** Tensions can disrupt supply chains, fuel inflation, and create economic uncertainty.\n*   **Sector-Specific Stress:** Particular industries might face unique challenges leading to localized NPA rises.\n*   **Effectiveness of Asset Resolution Mechanisms:** Any slowdown in mechanisms like the IBC could lead to a buildup of legacy NPAs."
+      },
+      "style": {}
+    },
+    {
+      "id": "markdown_key_takeaways",
+      "type": "markdown",
+      "label": "Key Takeaways",
+      "config": {
+        "title": "4. Key Takeaways"
+      },
+      "data": {
+        "content": "*   **Record Low GNPA:** Indian banks have achieved multi-decade lows in GNPA, reflecting robust asset quality and a stronger banking sector.\n*   **Positive Future Outlook:** The positive trend is projected to continue, with GNPA expected to remain within a low range of 1.8% to 2.3% for 2026-2027.\n*   **Foundational Pillars:** Sustained economic stability, prudent RBI regulatory measures, and ongoing banking sector reforms are crucial for the continued health of the Indian financial system."
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "executive_summary",
+      "x": 0,
+      "y": 2,
+      "w": 24,
+      "h": 5
+    },
+    {
+      "i": "metric_gnpa_sep25",
+      "x": 0,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_nnpa_sep24",
+      "x": 6,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_pat_h1_2425",
+      "x": 12,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_crar_sep25",
+      "x": 18,
+      "y": 7,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric_gnpa_forecast",
+      "x": 0,
+      "y": 10,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "i": "metric_large_borrower_gnpa_decline",
+      "x": 12,
+      "y": 10,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "i": "chart_gnpa_trend",
+      "x": 0,
+      "y": 13,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "chart_large_borrower_gnpa_trend",
+      "x": 12,
+      "y": 13,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "chart_pat_growth_by_bank",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "chart_crar_trend",
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "markdown_historical_trends",
+      "x": 0,
+      "y": 25,
+      "w": 24,
+      "h": 6
+    },
+    {
+      "i": "markdown_forecast_rationale",
+      "x": 0,
+      "y": 31,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "markdown_uncertainties_risks",
+      "x": 12,
+      "y": 31,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "markdown_key_takeaways",
+      "x": 0,
+      "y": 39,
+      "w": 24,
+      "h": 6
+    }
+  ],
+  "id": "app-1768981483526",
+  "lastModified": 1768981483526,
+  "lastHydrated": 1768981483526
+}

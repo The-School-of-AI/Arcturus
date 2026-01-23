@@ -12,6 +12,8 @@ from typing import List, Optional
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.loop import AgentLoop4
+from core.scheduler import scheduler_service
+from core.persistence import persistence_manager
 from core.graph_adapter import nx_to_reactflow
 from memory.context import ExecutionContextManager
 from remme.utils import get_embedding
@@ -36,8 +38,9 @@ remme_store = get_remme_store()
 remme_extractor = get_remme_extractor()
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
     print("🚀 API Starting up...")
+    scheduler_service.initialize()
+    persistence_manager.load_snapshot()
     await multi_mcp.start()
     
     # Check git
@@ -52,6 +55,8 @@ async def lifespan(app: FastAPI):
     
     yield
     
+    print("🛑 API Shutting down...")
+    persistence_manager.save_snapshot()
     await multi_mcp.stop()
 
 app = FastAPI(lifespan=lifespan)
@@ -104,6 +109,12 @@ app.include_router(python_tools.router)
 from routers import tests as tests_router
 app.include_router(tests_router.router)
 # Chat router included
+from routers import inbox
+app.include_router(inbox.router)
+from routers import cron
+app.include_router(cron.router)
+from routers import stream
+app.include_router(stream.router)
 
 
 
