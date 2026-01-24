@@ -114,7 +114,7 @@ class MultiMCP:
 
         try:
             cmd = config.get("command", "uv")
-            args = config.get("args", [])
+            args = list(config.get("args", [])) # Create copy to prevent in-place mutation
             server_type = config.get("type", "local-script")
             env = config.get("env", None) # Optional env vars
 

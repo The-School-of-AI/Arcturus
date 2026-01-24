@@ -46,8 +46,8 @@ class SchedulerService:
         if not JOBS_FILE.parent.exists():
             JOBS_FILE.parent.mkdir(parents=True, exist_ok=True)
             
-        self.load_jobs()
         self.scheduler.start()
+        self.load_jobs()
         logger.info("✅ Scheduler Service Started")
         self.initialized = True
 

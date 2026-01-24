@@ -32,10 +32,6 @@
     "command": "uv",
     "args": [
       "run",
-      "--directory",
-      "/Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance",
-      "--with-requirements",
-      "/Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance/requirements.txt",
       "yfinance_mcp_server.py"
     ],
     "enabled": true

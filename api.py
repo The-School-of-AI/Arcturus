@@ -50,6 +50,15 @@ async def lifespan(app: FastAPI):
         print("✅ Git found.")
     except Exception:
         print("⚠️ Git NOT found. GitHub explorer features will fail.")
+
+    # Check Ollama
+    try:
+        import requests
+        from config.settings_loader import get_ollama_url
+        requests.get(get_ollama_url("base"), timeout=1)  # Usually http://localhost:11434/
+        print("✅ Ollama found.")
+    except Exception:
+        print("⚠️ Ollama NOT found. AI features may fail.")
     
     # 🧠 Start Smart Sync in background
     asyncio.create_task(background_smart_scan())

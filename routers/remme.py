@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
+import requests
 
 from shared.state import (
     get_remme_store,
@@ -145,6 +146,9 @@ async def background_smart_scan():
                 # Mark session as scanned
                 remme_store.mark_run_scanned(run_id)
                 
+            except requests.exceptions.ConnectionError:
+                print(f"⚠️ Ollama unreachable. Pausing Smart Scan for now.")
+                break # Stop the loop, retry next time
             except Exception as e:
                 print(f"❌ Failed to scan session {sess_path}: {e}")
                 

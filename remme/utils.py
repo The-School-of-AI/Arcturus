@@ -35,6 +35,11 @@ def get_embedding(text: str, task_type: str = "search_document") -> np.ndarray:
             vec = vec / norm
             
         return vec
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+        # Re-raise connection issues so the caller can decide to abort/pause
+        # This prevents spamming logs if Ollama is down
+        print(f"⚠️ Ollama Connection Error: {e}", file=sys.stderr)
+        raise e
     except Exception as e:
         print(f"Error generating embedding: {e}", file=sys.stderr)
         return np.zeros(768, dtype=np.float32) # Fallback to empty vector

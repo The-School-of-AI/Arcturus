@@ -56,7 +56,16 @@ async def get_rag_documents():
         def build_tree(path: Path):
             items = []
             # Sort: directories first, then files
-            for p in sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+            try:
+                entries = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+            except PermissionError:
+                print(f"⚠️ Access denied: {path}")
+                return []
+            except Exception as e:
+                print(f"⚠️ Error listing {path}: {e}")
+                return []
+
+            for p in entries:
                 if p.name.startswith('.') or p.name in ["__pycache__", "mcp_repos", "faiss_index"]:
                     continue
                 
@@ -84,6 +93,8 @@ async def get_rag_documents():
         files = build_tree(doc_path) if doc_path.exists() else []
         return {"files": files}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
