@@ -30,7 +30,7 @@ const MeteorsInner = ({
                 top,
                 left,
                 "--duration": `${3 + Math.random() * 5}s`,
-                "--delay": `${Math.random() * 10}s`,
+                "--delay": `${Math.random() * 5}s`,
                 "--color": color,
                 "--glow": glow,
                 "--size": `${1 + Math.random() * 1.5}px`,
@@ -60,6 +60,7 @@ const MeteorsInner = ({
         .animate-meteor-precision {
           animation: meteor-to-left var(--duration) linear infinite;
           animation-delay: var(--delay);
+          animation-fill-mode: both;
           will-change: transform;
         }
       `}</style>
