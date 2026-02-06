@@ -103,6 +103,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const setIsNewRunOpen = useAppStore(state => state.setIsNewRunOpen);
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
+    const [isOptimizing, setIsOptimizing] = React.useState(false);
 
     // Filter runs
     const filteredRuns = React.useMemo(() => {
@@ -181,14 +182,43 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                         <div className="space-y-4 py-4">
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium text-muted-foreground">What should the agent do?</label>
-                                                <Input
-                                                    placeholder="e.g., Research latest AI trends..."
-                                                    value={newQuery}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
-                                                    className="bg-muted border-input text-foreground placeholder:text-muted-foreground"
-                                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
-                                                    autoFocus
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        placeholder="e.g., Research latest AI trends..."
+                                                        value={newQuery}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
+                                                        className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24" // Extra padding for button
+                                                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
+                                                        autoFocus
+                                                        disabled={isOptimizing}
+                                                    />
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                                    <span>Tip: Be specific about tools and outputs.</span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={isOptimizing || !newQuery.trim()}
+                                                        className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
+                                                        onClick={async () => {
+                                                            if (!newQuery) return;
+                                                            setIsOptimizing(true);
+                                                            try {
+                                                                const res = await axios.post(`${API_BASE}/optimizer/preview`, { query: newQuery });
+                                                                if (res.data && res.data.optimized) {
+                                                                    setNewQuery(res.data.optimized);
+                                                                }
+                                                            } catch (e) {
+                                                                console.error("Optimization failed", e);
+                                                            } finally {
+                                                                setIsOptimizing(false);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {isOptimizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                                                        {isOptimizing ? "Optimizing..." : "Optimize"}
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                         <DialogFooter>
