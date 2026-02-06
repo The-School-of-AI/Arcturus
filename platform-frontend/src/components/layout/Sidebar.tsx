@@ -7,8 +7,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { API_BASE } from '@/lib/api';
+import axios from 'axios';
 import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';

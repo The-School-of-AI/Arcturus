@@ -9,6 +9,7 @@ import 'reactflow/dist/style.css';
 import AgentNode from './AgentNode';
 import CustomEdge from './CustomEdge';
 import { useAppStore } from '@/store';
+import { API_BASE } from '@/lib/api';
 
 // Helper component to handle auto-fitting inside the ReactFlow context
 const AutoFitter = ({ nodeCount }: { nodeCount: number }) => {
@@ -94,6 +95,15 @@ export const GraphCanvas: React.FC = () => {
             >
                 <Background color="#888" gap={20} size={1} className="opacity-20" />
                 <Controls className="glass-panel border-border fill-white" />
+                <div className="absolute top-4 right-4 z-50">
+                    <button
+                        onClick={() => window.open(`${API_BASE}/optimizer/skeletons`, '_blank')}
+                        className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-md border border-white/10 hover:bg-black transition-colors flex items-center gap-2"
+                    >
+                        <span>💀</span>
+                        {/* View Skeleton */}
+                    </button>
+                </div>
                 <AutoFitter nodeCount={visibleNodes.length} />
             </ReactFlow>
         </div>

@@ -65,7 +65,7 @@ export const AppLayout: React.FC = () => {
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
-    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console';
+    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills';
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
     Settings, Cpu, FileText, Brain, Wrench, RotateCcw, Save, AlertTriangle,
     Loader2, RefreshCw, Download, Check, X, Terminal, Code, Play, Bot, CheckCircle2,
-    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout
+    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { API_BASE } from '@/lib/api';
@@ -60,12 +61,13 @@ interface SettingsData {
         max_lifelines_per_step: number;
         planning_mode: string;
         rate_limit_interval: number;
+        enforce_local_verifier?: boolean;
     };
     remme: { extraction_prompt: string };
     gemini: { api_key_env: string };
 }
 
-type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
+type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'advanced';
 
 const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini model selection' },
@@ -73,6 +75,7 @@ const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[
     { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution & Model (Gemini/Ollama)' },
     { id: 'ide', label: 'IDE', icon: Layout, description: 'IDE, Test, and Debugging Agents' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Edit agent system prompts' },
+    { id: 'skills', label: 'Skills', icon: Zap, description: 'Manage agent skills' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs, timeouts, restart' },
 ];
 
@@ -92,6 +95,9 @@ export const SettingsPage: React.FC = () => {
     const [warnings, setWarnings] = useState<string[]>([]);
     const [hasChanges, setHasChanges] = useState(false);
 
+    const [skills, setSkills] = useState<any[]>([]);
+    const [assignments, setAssignments] = useState<Record<string, string[]>>({});
+
     useEffect(() => {
         fetchAll();
     }, []);
@@ -100,21 +106,65 @@ export const SettingsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const [settingsRes, promptsRes, geminiRes] = await Promise.all([
+            const [settingsRes, promptsRes, geminiRes, skillsRes, assignRes] = await Promise.all([
                 axios.get(`${API_BASE}/settings`),
                 axios.get(`${API_BASE}/prompts`),
-                axios.get(`${API_BASE}/gemini/status`).catch(() => ({ data: { configured: false, key_preview: null } }))
+                axios.get(`${API_BASE}/gemini/status`).catch(() => ({ data: { configured: false, key_preview: null } })),
+                axios.get(`${API_BASE}/skills/list`).catch(() => ({ data: { skills: [] } })),
+                axios.get(`${API_BASE}/skills/assignments`).catch(() => ({ data: {} }))
             ]);
             await fetchOllamaModels();
             setSettings(settingsRes.data.settings);
             setPrompts(promptsRes.data.prompts || []);
             setGeminiStatus(geminiRes.data);
+            setSkills(Array.isArray(skillsRes.data) ? skillsRes.data : []);
+            setAssignments(assignRes.data || {});
         } catch (e: any) {
             setError(e.response?.data?.detail || 'Failed to load settings');
         } finally {
             setLoading(false);
         }
     };
+
+    const renderSkillsTab = () => (
+        <div className="space-y-6">
+            <div className="p-4 rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center gap-2 mb-2">
+                    <Brain className="w-5 h-5 text-purple-400" />
+                    <h3 className="font-bold text-lg">Skill Registry</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                    Skills are specialized capabilities (e.g., Python Coding, Market Analysis) injected into agents based on the task.
+                    Add them to <code>config/agent_config.yaml</code> to enable them.
+                </p>
+                <div className="grid gap-3">
+                    {skills.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic">No skills discovered in <code>core/skills/library</code></p>
+                    ) : (
+                        skills.map((skill: any) => (
+                            <div key={skill.name} className="flex items-center justify-between p-3 bg-background border border-border rounded-lg">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-sm">{skill.name}</span>
+                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">v{skill.version}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-[10px] text-muted-foreground">Triggers:</span>
+                                    <div className="flex gap-1">
+                                        {skill.intent_triggers.map((t: string) => (
+                                            <span key={t} className="text-[9px] bg-muted px-1.5 py-0.5 rounded border border-border">{t}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 
     const saveSettings = async () => {
         if (!settings) return;
@@ -499,6 +549,19 @@ export const SettingsPage: React.FC = () => {
                             <option value="exploratory">Exploratory</option>
                         </select>
                     </SettingGroup>
+
+                    <div className="flex items-center space-x-2 pt-8">
+                        <input
+                            type="checkbox"
+                            checked={settings?.agent.enforce_local_verifier || false}
+                            onChange={(e) => updateSetting('agent', 'enforce_local_verifier', e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <div>
+                            <label className="text-sm font-medium text-foreground">Enforce Local Verifier</label>
+                            <p className="text-xs text-muted-foreground">Force "Verifier" role to use local model (Ollama) to save cloud costs.</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Per-Agent Overrides */}
@@ -541,7 +604,8 @@ export const SettingsPage: React.FC = () => {
                             { id: "FormatterAgent", icon: LayoutList, color: "text-indigo-500" },
                             { id: "QAAgent", icon: ShieldAlert, color: "text-red-500" },
                             { id: "ClarificationAgent", icon: MessageSquare, color: "text-yellow-500" },
-                            { id: "SchedulerAgent", icon: Clock, color: "text-cyan-500" }
+                            { id: "SchedulerAgent", icon: Clock, color: "text-cyan-500" },
+                            { id: "optimizer", icon: Zap, color: "text-yellow-600" }
                         ].map(({ id: agentType, icon: Icon, color }) => {
                             const override = settings?.agent.overrides?.[agentType];
                             const overrideValue = override ? `${override.model_provider}:${override.model}` : 'default';
@@ -622,12 +686,60 @@ export const SettingsPage: React.FC = () => {
                                             </optgroup>
                                         )}
                                     </select>
+
+                                    <div className="pt-4 border-t border-border mt-4">
+                                        <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Capabilities & Skills</h4>
+                                        <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+                                            {skills.map(skill => {
+                                                const assigned = assignments[agentType]?.includes(skill.name);
+                                                return (
+                                                    <div key={skill.name} className="flex items-center space-x-2 bg-muted/20 p-2 rounded border border-transparent hover:border-border transition-colors">
+                                                        <Checkbox
+                                                            id={`${agentType}-${skill.name}`}
+                                                            checked={!!assigned}
+                                                            onCheckedChange={async (checked) => {
+                                                                // Optimistic update
+                                                                const newAssign = { ...assignments };
+                                                                if (!newAssign[agentType]) newAssign[agentType] = [];
+
+                                                                if (checked) {
+                                                                    if (!newAssign[agentType].includes(skill.name)) newAssign[agentType].push(skill.name);
+                                                                } else {
+                                                                    newAssign[agentType] = newAssign[agentType].filter(s => s !== skill.name);
+                                                                }
+                                                                setAssignments(newAssign);
+
+                                                                try {
+                                                                    await axios.post(`${API_BASE}/skills/toggle`, {
+                                                                        agent_name: agentType,
+                                                                        skill_name: skill.name,
+                                                                        active: !!checked
+                                                                    });
+                                                                } catch (e) {
+                                                                    console.error("Failed", e);
+                                                                    fetchAll(); // Revert
+                                                                }
+                                                            }}
+                                                        />
+                                                        <label
+                                                            htmlFor={`${agentType}-${skill.name}`}
+                                                            className="text-xs font-medium leading-none cursor-pointer select-none truncate"
+                                                            title={skill.description}
+                                                        >
+                                                            {skill.name.replace(/_/g, ' ')}
+                                                        </label>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                        {skills.length === 0 && <p className="text-xs text-muted-foreground italic">No skills installed.</p>}
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
                 </div>
-            </div>
+            </div >
         );
     };
 
