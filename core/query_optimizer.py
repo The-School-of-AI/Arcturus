@@ -13,16 +13,31 @@ class QueryOptimizer:
     def __init__(self):
         self.model_manager = ModelManager(role="optimizer")
         self.metrics = MetricsAggregator()
+        from core.episodic_memory import EpisodicMemory
+        self.memory = EpisodicMemory()
         
     async def optimize_query(self, query: str) -> Dict[str, str]:
         """
         Rewrite query to be more precise, decomposed, and agent-friendly.
         Returns: { "original": ..., "optimized": ..., "reasoning": ... }
         """
+        # 1. Retrieve Past Successes (JitRL)
+        past_skeletons = self.memory.search(query, limit=2)
+        past_context = ""
+        if past_skeletons:
+            past_context = "\n[PAST SUCCESSFUL RECIPES (LEARNINGS)]\n"
+            for s in past_skeletons:
+                # Format the recipe briefly
+                plan = " -> ".join([n.get("agent", "Unknown") for n in s.get("nodes", []) if n.get("agent") != "System"])
+                past_context += f"- Task: '{s['original_query']}'\n  Strategy: {plan}\n  Learning: {s.get('nodes', [{}])[1].get('system2_summary', 'N/A')[:100]}...\n"
+            past_context += "\nUser Request is similar. ADAPT this successful strategy.\n"
+
         prompt = f"""
         [TASK]
         You are an Expert Prompt Engineer. Optimize the following user query for an Agentic AI System.
         
+        {past_context}
+
         [USER QUERY]
         {query}
         

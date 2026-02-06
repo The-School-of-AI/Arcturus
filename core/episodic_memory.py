@@ -148,7 +148,41 @@ class EpisodicMemory:
         except Exception as e:
             log_error(f"Failed to save episodic memory: {e}")
             
-    def search(self, query: str, limit=3):
-        # Placeholder for vector search or keyword match on skeletons
-        # In full implementation, we'd embed 'original_query' and retrieve recipes.
-        pass
+    def search(self, query: str, limit=3) -> List[Dict]:
+        """
+        Find relevant past skeletons based on query similarity.
+        Uses simple Jaccard similarity on tokens.
+        """
+        if not self.directory.exists():
+            return []
+            
+        query_tokens = set(query.lower().split())
+        candidates = []
+        
+        for f in self.directory.glob("skeleton_*.json"):
+            try:
+                data = json.loads(f.read_text())
+                original_q = data.get("original_query", "")
+                if not original_q:
+                    continue
+                    
+                target_tokens = set(original_q.lower().split())
+                
+                # Jaccard Similarity: Intersection / Union
+                intersection = query_tokens.intersection(target_tokens)
+                union = query_tokens.union(target_tokens)
+                
+                if not union:
+                    score = 0
+                else:
+                    score = len(intersection) / len(union)
+                
+                if score > 0.1: # Threshold to avoid noise
+                    candidates.append((score, data))
+            except Exception:
+                continue
+                
+        # Sort by score desc
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        
+        return [c[1] for c in candidates[:limit]]
