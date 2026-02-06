@@ -12,22 +12,37 @@ load_dotenv()
 
 ROOT = Path(__file__).parent.parent
 MODELS_JSON = ROOT / "config" / "models.json"
+MODELS_YAML = ROOT / "config" / "models.yaml"
 PROFILE_YAML = ROOT / "config" / "profiles.yaml"
 
 class ModelManager:
-    def __init__(self, model_name: str = None, provider: str = None):
+    def __init__(self, model_name: str = None, provider: str = None, role: str = None):
         """
         Initialize ModelManager with flexible model specification.
         
         Args:
-            model_name: The model to use. Can be:
-                - A key from models.json (e.g., "gemini", "phi4")
-                - An actual model name (e.g., "gemini-2.5-flash", "llama3:8b")
+            model_name: The model to use (key from models.json or raw name).
             provider: Optional explicit provider ("gemini" or "ollama").
-                      If provided, bypasses models.json lookup.
+            role: Optional role ("planner", "verifier") from models.yaml.
         """
         self.config = json.loads(MODELS_JSON.read_text())
         self.profile = yaml.safe_load(PROFILE_YAML.read_text())
+        
+        # Load Role Config
+        if MODELS_YAML.exists():
+            self.role_config = yaml.safe_load(MODELS_YAML.read_text())
+        else:
+            self.role_config = {"roles": {}, "settings": {}}
+
+        # Resolve Role if provided
+        if role:
+            if role not in self.role_config.get("roles", {}):
+                raise ValueError(f"Unknown role: '{role}'. Available: {list(self.role_config.get('roles', {}).keys())}")
+            
+            # Override model_name with the one defined for the role
+            model_name = self.role_config["roles"][role]
+            # Verify explicit provider setting isn't conflicting? 
+            # We assume role config implies the correct provider via the model definition or name.
 
         # Load settings for Ollama URL
         try:
@@ -77,12 +92,23 @@ class ModelManager:
                 
             self.model_info = self.config["models"][self.text_model_key]
             self.model_type = self.model_info["type"]
+            self.config_from_file = True # Flag to indicate this came from models.json
 
             # Initialize client based on model type
             if self.model_type == "gemini":
                 api_key = os.getenv("GEMINI_API_KEY")
                 self.client = genai.Client(api_key=api_key)
             # Ollama doesn't need a persistent client
+
+        # 🔒 STRICT MODE ENFORCEMENT
+        if role == "verifier":
+            enforce_local = self.role_config.get("settings", {}).get("enforce_local_verifier", False)
+            if enforce_local and self.model_type != "ollama":
+                raise PermissionError(
+                    f"SECURITY VIOLATION: Role 'verifier' is configured to STRICT LOCAL ONLY. "
+                    f"Attempted to use provider '{self.model_type}'. "
+                    f"Please check config/models.yaml."
+                )
 
     async def generate_text(self, prompt: str) -> str:
         if self.model_type == "gemini":

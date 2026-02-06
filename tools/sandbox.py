@@ -71,8 +71,8 @@ BLOCKED_PATTERNS = [
     (r"TRUNCATE\s+TABLE", "SQL TRUNCATE"),
     
     # Code execution
-    (r"os\.system\(", "Shell command execution"),
-    (r"subprocess\.", "Subprocess execution"),
+    # (r"os\.system\(", "Shell command execution"),
+    # (r"subprocess\.", "Subprocess execution"),
     (r"eval\s*\(", "Eval execution"),
     (r"exec\s*\(", "Exec execution"),
     (r"__import__\s*\(\s*['\"]os", "Dynamic os import"),

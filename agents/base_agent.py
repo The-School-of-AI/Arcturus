@@ -43,8 +43,8 @@ class AgentRunner:
             "total_tokens": input_tokens + output_tokens
         }
 
-    async def run_agent(self, agent_type: str, input_data: dict, image_path: Optional[str] = None) -> dict:
-        """Run a specific agent with input data and optional image"""
+    async def run_agent(self, agent_type: str, input_data: dict, image_path: Optional[str] = None, use_system2: bool = False) -> dict:
+        """Run a specific agent with input data and optional image. use_system2=True enables Reasoning Loop."""
         
         if agent_type not in self.agent_configs:
             raise ValueError(f"Unknown agent type: {agent_type}")
@@ -78,7 +78,6 @@ class AgentRunner:
                         tool_descriptions.append(f"- `{tool.name}({signature_str})` # {tool.description}")
                     
                     tools_text = "\n\n### Available Tools\n\n" + "\n".join(tool_descriptions)
-
             
             # 3. Build full prompt
             current_date = datetime.now().strftime("%Y-%m-%d")
@@ -95,12 +94,34 @@ class AgentRunner:
                 scope = scope_map.get(agent_type, "general")
                 user_prefs_text = f"\n---\n## User Preferences\n{get_compact_policy(scope)}\n---\n"
             except Exception as e:
-                print(f"⚠️ Could not load user preferences: {e}")
+                # print(f"⚠️ Could not load user preferences: {e}")
                 user_prefs_text = ""
             
             full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2)}\n```"
 
             print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
+
+            # 🧩 SKILLS INJECTION
+            try:
+                from shared.state import get_skill_manager
+                skill_manager = get_skill_manager()
+                
+                # 1. Load Configured Skills
+                active_skills = []
+                for skill_name in config.get("skills", []):
+                    skill = skill_manager.get_skill(skill_name)
+                    if skill:
+                        active_skills.append(skill)
+                        
+                # 2. Apply Skills (Allow them to modify prompt)
+                for skill in active_skills:
+                    meta = skill.get_metadata()
+                    # We await on_run_start to allow async operations (like fetching context)
+                    full_prompt = await skill.on_run_start(full_prompt)
+                    log_step(f"🧩 Applied Skill: {meta.name} v{meta.version}", symbol="🧩")
+                    
+            except Exception as e:
+                log_error(f"Failed to inject skills: {e}")
 
             # 📝 LOGGING: Save prompt to file for debugging
             debug_log_dir = Path(__file__).parent.parent / "memory" / "debug_logs"
@@ -128,13 +149,27 @@ class AgentRunner:
             log_step(f"📡 Using {model_provider}:{model_name}", symbol="🔌")
             model_manager = ModelManager(model_name, provider=model_provider)
             
-            # 5. Generate response (with or without image)
-            if image_path and os.path.exists(image_path):
-                log_step(f"🖼️ {agent_type} (with image)")
-                image = Image.open(image_path)
-                response = await model_manager.generate_content([full_prompt, image])
+            # 5. Generate response (System 1 vs System 2)
+            async def generate_draft():
+                if image_path and os.path.exists(image_path):
+                    image = Image.open(image_path)
+                    return await model_manager.generate_content([full_prompt, image])
+                return await model_manager.generate_text(full_prompt)
+
+            if use_system2:
+                from core.reasoning import ReasoningEngine
+                log_step("🧠 System 2 Reasoning Activated", symbol="🧠")
+                engine = ReasoningEngine(model_manager)
+                # We use the original query from input_data, or fallback to 'Task'
+                query_context = input_data.get("original_query") or input_data.get("task") or "Complex Task"
+                response, reasoning_history = await engine.run_loop(
+                    query=query_context,
+                    generate_func=generate_draft,
+                    context=full_prompt[:1000] # Truncate context to save verification tokens
+                )
             else:
-                response = await model_manager.generate_text(full_prompt)
+                response = await generate_draft()
+                reasoning_history = []
             
             # 📝 LOGGING: Save raw response
             timestamp = datetime.now().strftime("%H%M%S")
@@ -165,11 +200,14 @@ class AgentRunner:
             if isinstance(output, dict):
                 output.update(cost_data)
                 output["executed_model"] = f"{model_provider}:{model_name}"
+                if reasoning_history:
+                     output["_reasoning_trace"] = reasoning_history
             
             return {
                 "success": True,
                 "agent_type": agent_type,
-                "output": output
+                "output": output,
+                "agent_prompt": full_prompt # For Episodic Memory
             }
             
         except Exception as e:

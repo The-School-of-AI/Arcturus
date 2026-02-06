@@ -160,7 +160,10 @@ class AgentLoop4:
                     break
 
                 # Note: The "Query" node is already 'running' in our bootstrap context
+                
                 async def run_planner():
+                    # 🧠 Enable System 2 Reasoning for the Planner
+                    # This ensures the plan is Verified and Refined before execution
                     return await self.agent_runner.run_agent(
                         "PlannerAgent",
                         {
@@ -170,8 +173,10 @@ class AgentLoop4:
                             "file_manifest": file_manifest,
                             "file_profiles": file_profiles,
                             "memory_context": memory_context
-                        }
+                        },
+                        use_system2=True
                     )
+                
                 plan_result = await self._track_task(retry_with_backoff(run_planner))
 
                 if self.context.stop_requested:
@@ -586,6 +591,17 @@ class AgentLoop4:
         context._auto_save()
         
         if context.all_done():
+            # 🧠 Save Episodic Memory (Skeleton)
+            try:
+                from core.episodic_memory import EpisodicMemory
+                import networkx as nx
+                mem = EpisodicMemory()
+                graph_data = nx.node_link_data(context.plan_graph)
+                session_data = {"graph": graph_data}
+                await mem.save_episode(session_data)
+            except Exception as e:
+                print(f"⚠️ Failed to save episodic memory: {e}")
+
             console.print("🎉 All tasks completed!")
 
     async def _execute_step(self, step_id, context):

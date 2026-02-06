@@ -11,7 +11,7 @@
         "centered": true
       },
       "data": {
-        "text": "Dhurandhar Movie Revenue Report (as of January 20, 2026)"
+        "text": "Dhurandhar Movie Revenue Report (as of February 4, 2026)"
       },
       "style": {}
     },
@@ -20,10 +20,10 @@
       "type": "summary",
       "label": "Executive Summary",
       "data": {
-        "text": "Dhurandhar continues its remarkable box office success. As of January 20, 2026, the film has achieved an estimated worldwide gross of Rs 1,245 crore. The film's estimated India net collection stands at Rs 800 crore, with overseas markets contributing significantly to its total earnings.",
+        "text": "Dhurandhar continues its remarkable box office success. As of February 4, 2026, the film has achieved an estimated worldwide gross of Rs 1,352.88 crore. The film's estimated India net collection stands at Rs 893.12 crore, with overseas markets contributing significantly to its total earnings.",
         "bullets": [
-          "Estimated worldwide gross: Rs 1,245 crore",
-          "Estimated India net collection: Rs 800 crore"
+          "Estimated worldwide gross: Rs 1,352.88 crore",
+          "Estimated India net collection: Rs 893.12 crore"
         ]
       },
       "style": {}
@@ -33,8 +33,8 @@
       "type": "metric",
       "label": "Worldwide Gross Revenue",
       "data": {
-        "value": "Rs 1,245 crore",
-        "change": 0.55,
+        "value": "Rs 1,352.88 crore",
+        "change": 8.66,
         "trend": "up"
       },
       "style": {}
@@ -44,8 +44,8 @@
       "type": "metric",
       "label": "India Net Collection",
       "data": {
-        "value": "Rs 800 crore",
-        "change": 0.78,
+        "value": "Rs 893.12 crore",
+        "change": 11.64,
         "trend": "up"
       },
       "style": {}
@@ -55,7 +55,7 @@
       "type": "markdown",
       "label": "Regional Performance",
       "data": {
-        "content": "### Regional Performance\n\n\"Dhurandhar\" has shown strong regional performance, particularly in major cities such as Mumbai, Bengaluru, Chennai, and Pune. These cities have recorded above 10 percent occupancy, highlighting the film's widespread appeal across different regions in India. For example, Chennai recorded an occupancy rate of 24.5 percent on Wednesday, January 7, 2026, while Bengaluru reached 15.75 percent."
+        "content": "### Regional Performance\n\n\"Dhurandhar\" has shown strong regional performance, particularly in major cities such as Mumbai, Bengaluru, Chennai, and Pune. These cities have recorded above 10 percent occupancy, highlighting the film's widespread appeal across different regions in India. For example, Chennai recorded an occupancy rate of 24.5 percent on Tuesday, February 3, 2026, while Bengaluru reached 15.75 percent."
       },
       "style": {}
     },
@@ -71,7 +71,7 @@
           },
           {
             "ticker": "Jawan",
-            "metric": "Rs 1,159 crore gross"
+            "metric": "Rs 1,160.00 crore gross"
           },
           {
             "ticker": "Stree 2",
@@ -156,6 +156,6 @@
       "static": false
     }
   ],
-  "lastModified": 1768881421147,
-  "lastHydrated": 1768881421147
+  "lastModified": 1770183722933,
+  "lastHydrated": 1770183722933
 }

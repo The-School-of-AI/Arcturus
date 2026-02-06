@@ -9,7 +9,35 @@
       "save website",
       "download html"
     ],
-    "class_name": "WebClipperSkill"
+    "class_name": "WebClipperSkill",
+    "type": "python"
+  },
+  "planning-with-files": {
+    "path": "core/skills/library/planning-with-files",
+    "version": "2.1.2",
+    "description": "Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls.",
+    "intent_triggers": [],
+    "class_name": "GenericSkill",
+    "type": "markdown",
+    "name": "planning-with-files"
+  },
+  "browser-extension-builder": {
+    "path": "core/skills/library/browser-extension-builder",
+    "version": "1.0.0",
+    "description": "Expert in building browser extensions that solve real problems - Chrome, Firefox, and cross-browser extensions. Covers extension architecture, manifest v3, content scripts, popup UIs, monetization strategies, and Chrome Web Store publishing. Use when: browser extension, chrome extension, firefox addon, extension, manifest v3.",
+    "intent_triggers": [],
+    "class_name": "GenericSkill",
+    "type": "markdown",
+    "name": "browser-extension-builder"
+  },
+  "agent-manager-skill": {
+    "path": "core/skills/library/agent-manager-skill",
+    "version": "1.0.0",
+    "description": "Manage multiple local CLI agents via tmux sessions (start/stop/monitor/assign) with cron-friendly scheduling.",
+    "intent_triggers": [],
+    "class_name": "GenericSkill",
+    "type": "markdown",
+    "name": "agent-manager-skill"
   },
   "market_analyst": {
     "path": "core/skills/library/market_analyst",
@@ -26,7 +54,17 @@
       "funding",
       "market"
     ],
-    "class_name": "MarketAnalystSkill"
+    "class_name": "MarketAnalystSkill",
+    "type": "python"
+  },
+  "firecrawl-scraper": {
+    "path": "core/skills/library/firecrawl-scraper",
+    "version": "1.0.0",
+    "description": "Deep web scraping, screenshots, PDF parsing, and website crawling using Firecrawl API",
+    "intent_triggers": [],
+    "class_name": "GenericSkill",
+    "type": "markdown",
+    "name": "firecrawl-scraper"
   },
   "system_monitor": {
     "path": "core/skills/library/system_monitor",
@@ -42,6 +80,7 @@
       "memory",
       "disk"
     ],
-    "class_name": "SystemMonitorSkill"
+    "class_name": "SystemMonitorSkill",
+    "type": "python"
   }
 }

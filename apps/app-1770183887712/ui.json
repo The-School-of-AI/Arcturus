@@ -1,0 +1,605 @@
+{
+  "id": "app-1770183887712",
+  "name": "Generated App 11:14:19",
+  "description": "Head of Electronics Design",
+  "cards": [
+    {
+      "id": "header-title",
+      "type": "header",
+      "label": "Electronics Design Overview",
+      "context": "Main title for the dashboard",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Electronics Design Overview"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-active-projects",
+      "type": "metric",
+      "label": "Active Projects",
+      "context": "Number of currently active electronics design projects",
+      "config": {},
+      "data": {
+        "value": "18",
+        "change": 10.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "trend-design-cycle",
+      "type": "trend",
+      "label": "Avg. Design Cycle Time",
+      "context": "Average time taken for a complete electronics design cycle over the last year",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "45 Days",
+        "change": -5.2,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-defect-rate",
+      "type": "metric",
+      "label": "Defect Rate (Last Q)",
+      "context": "Percentage of design defects reported in the last quarter",
+      "config": {},
+      "data": {
+        "value": "0.8%",
+        "change": -0.1,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "trend-time-to-market",
+      "type": "trend",
+      "label": "Avg. Time to Market",
+      "context": "Average time from project start to product launch for electronics products",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "180 Days",
+        "change": -3.0,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "table-active-projects",
+      "type": "table",
+      "label": "Active Projects & Milestones",
+      "context": "List of active electronics design projects with their current status, lead engineer, and next milestone",
+      "config": {},
+      "data": {
+        "headers": [
+          "Project",
+          "Status",
+          "Lead",
+          "Next Milestone"
+        ],
+        "rows": [
+          [
+            "Project Alpha",
+            "In Progress",
+            "J. Doe",
+            "Schematic Review (02/15)"
+          ],
+          [
+            "Project Beta",
+            "Testing",
+            "A. Smith",
+            "Final QA (02/20)"
+          ],
+          [
+            "Project Gamma",
+            "On Hold",
+            "M. Lee",
+            "Budget Approval"
+          ],
+          [
+            "Project Delta",
+            "Design Complete",
+            "S. Khan",
+            "Manufacturing Handoff (02/10)"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "bar-chart-project-status",
+      "type": "bar_chart",
+      "label": "Project Status Breakdown",
+      "context": "Distribution of active projects by their current status (e.g., In Progress, Review, Testing, On Hold)",
+      "config": {},
+      "data": {
+        "title": "Project Status",
+        "xLabel": "Status",
+        "yLabel": "Number of Projects",
+        "points": [
+          {
+            "x": "In Progress",
+            "y": 8,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Review",
+            "y": 4,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Testing",
+            "y": 3,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "On Hold",
+            "y": 2,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Complete",
+            "y": 5,
+            "color": "#00b894"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "line-chart-design-cycle-trend",
+      "type": "line_chart",
+      "label": "Design Cycle Time Trend",
+      "context": "Trend of average design cycle time over the past 12 months",
+      "config": {},
+      "data": {
+        "title": "Design Cycle Time (Months)",
+        "xLabel": "Month",
+        "yLabel": "Days",
+        "series": [
+          {
+            "name": "Avg. Cycle Time",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 50
+              },
+              {
+                "x": "Feb",
+                "y": 48
+              },
+              {
+                "x": "Mar",
+                "y": 45
+              },
+              {
+                "x": "Apr",
+                "y": 47
+              },
+              {
+                "x": "May",
+                "y": 42
+              },
+              {
+                "x": "Jun",
+                "y": 40
+              },
+              {
+                "x": "Jul",
+                "y": 43
+              },
+              {
+                "x": "Aug",
+                "y": 41
+              },
+              {
+                "x": "Sep",
+                "y": 39
+              },
+              {
+                "x": "Oct",
+                "y": 40
+              },
+              {
+                "x": "Nov",
+                "y": 38
+              },
+              {
+                "x": "Dec",
+                "y": 37
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "area-chart-budget-utilization",
+      "type": "area_chart",
+      "label": "Budget Utilization Trend",
+      "context": "Monthly budget utilization percentage for the electronics design department over the last year",
+      "config": {},
+      "data": {
+        "title": "Budget Utilization (%)",
+        "xLabel": "Month",
+        "yLabel": "Utilization",
+        "series": [
+          {
+            "name": "Utilization",
+            "color": "#a29bfe",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 85
+              },
+              {
+                "x": "Feb",
+                "y": 90
+              },
+              {
+                "x": "Mar",
+                "y": 88
+              },
+              {
+                "x": "Apr",
+                "y": 92
+              },
+              {
+                "x": "May",
+                "y": 87
+              },
+              {
+                "x": "Jun",
+                "y": 95
+              },
+              {
+                "x": "Jul",
+                "y": 91
+              },
+              {
+                "x": "Aug",
+                "y": 89
+              },
+              {
+                "x": "Sep",
+                "y": 93
+              },
+              {
+                "x": "Oct",
+                "y": 90
+              },
+              {
+                "x": "Nov",
+                "y": 94
+              },
+              {
+                "x": "Dec",
+                "y": 88
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "table-critical-components",
+      "type": "table",
+      "label": "Critical Component Inventory",
+      "context": "Current stock levels and lead times for critical electronic components",
+      "config": {},
+      "data": {
+        "headers": [
+          "Component",
+          "Part No.",
+          "Stock",
+          "Lead Time (Weeks)"
+        ],
+        "rows": [
+          [
+            "Microcontroller X",
+            "MCU-001",
+            "1500",
+            "4"
+          ],
+          [
+            "Power IC Y",
+            "PWR-005",
+            "800",
+            "6"
+          ],
+          [
+            "RF Module Z",
+            "RFM-010",
+            "300",
+            "8"
+          ],
+          [
+            "Memory Chip A",
+            "MEM-002",
+            "2500",
+            "3"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "pie-chart-component-categories",
+      "type": "pie_chart",
+      "label": "Component Category Distribution",
+      "context": "Distribution of electronic components by category (e.g., ICs, Passives, Connectors, Sensors)",
+      "config": {},
+      "data": {
+        "slices": [
+          {
+            "name": "Integrated Circuits",
+            "value": 40,
+            "color": "#4ecdc4"
+          },
+          {
+            "name": "Passives",
+            "value": 25,
+            "color": "#ff6b6b"
+          },
+          {
+            "name": "Connectors",
+            "value": 15,
+            "color": "#F5C542"
+          },
+          {
+            "name": "Sensors",
+            "value": 10,
+            "color": "#a29bfe"
+          },
+          {
+            "name": "Other",
+            "value": 10,
+            "color": "#00cec9"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "bar-chart-test-rates",
+      "type": "bar_chart",
+      "label": "Test Pass/Fail Rates",
+      "context": "Pass and fail rates for recent product testing cycles",
+      "config": {},
+      "data": {
+        "title": "Last Month's Test Results",
+        "xLabel": "Test Batch",
+        "yLabel": "Percentage",
+        "points": [
+          {
+            "x": "Batch 001",
+            "y": 95,
+            "color": "#00b894"
+          },
+          {
+            "x": "Batch 002",
+            "y": 92,
+            "color": "#00b894"
+          },
+          {
+            "x": "Batch 003",
+            "y": 88,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Batch 004",
+            "y": 96,
+            "color": "#00b894"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "score-card-quality",
+      "type": "score_card",
+      "label": "Overall Quality Score",
+      "context": "Aggregate quality score based on design reviews, testing, and field performance",
+      "config": {},
+      "data": {
+        "score": 88,
+        "subtext": "Excellent"
+      },
+      "style": {}
+    },
+    {
+      "id": "grade-card-compliance",
+      "type": "grade_card",
+      "label": "Compliance Grade",
+      "context": "Compliance grade for regulatory and industry standards",
+      "config": {},
+      "data": {
+        "grade": "A",
+        "subtext": "Fully Compliant"
+      },
+      "style": {}
+    },
+    {
+      "id": "usage-stats-team-utilization",
+      "type": "usage_stats",
+      "label": "Team Utilization",
+      "context": "Current utilization percentage of the electronics design engineering team",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "name": "Design Engineers",
+            "percent": 85,
+            "color": "#4ecdc4"
+          },
+          {
+            "name": "Test Engineers",
+            "percent": 70,
+            "color": "#F5C542"
+          },
+          {
+            "name": "CAD Specialists",
+            "percent": 90,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed-design-updates",
+      "type": "feed",
+      "label": "Recent Design Reviews & Updates",
+      "context": "Latest updates and outcomes from design reviews and team meetings",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Project Alpha: Schematic Review Complete",
+            "time": "2 hours ago",
+            "description": "Minor revisions requested for power delivery network."
+          },
+          {
+            "title": "New Component Vendor Approved",
+            "time": "1 day ago",
+            "description": "Added 'ElectroSupply Co.' for passive components."
+          },
+          {
+            "title": "Firmware Update for Project Beta",
+            "time": "3 days ago",
+            "description": "New firmware version 1.2 released for testing."
+          }
+        ]
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header-title",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "metric-active-projects",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "trend-design-cycle",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-defect-rate",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "trend-time-to-market",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "table-active-projects",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "bar-chart-project-status",
+      "x": 12,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "line-chart-design-cycle-trend",
+      "x": 0,
+      "y": 13,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "area-chart-budget-utilization",
+      "x": 12,
+      "y": 13,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "table-critical-components",
+      "x": 0,
+      "y": 21,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "pie-chart-component-categories",
+      "x": 12,
+      "y": 21,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "bar-chart-test-rates",
+      "x": 0,
+      "y": 26,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "score-card-quality",
+      "x": 12,
+      "y": 26,
+      "w": 6,
+      "h": 6
+    },
+    {
+      "i": "grade-card-compliance",
+      "x": 18,
+      "y": 26,
+      "w": 6,
+      "h": 6
+    },
+    {
+      "i": "usage-stats-team-utilization",
+      "x": 0,
+      "y": 32,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "feed-design-updates",
+      "x": 12,
+      "y": 32,
+      "w": 12,
+      "h": 6
+    }
+  ],
+  "lastModified": 1770183887712,
+  "lastHydrated": 1770183887712
+}

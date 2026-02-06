@@ -1,73 +1,92 @@
 agents:
   PlannerAgent:
-    prompt_file: "prompts/planner.md"
-    model: "gemini"
+    prompt_file: prompts/planner.md
+    model: gemini
     mcp_servers: []
-    description: "Generates the execution plan graph."
-
+    skills:
+    - web_clipper
+    - research_scientist
+    - research-scientist
+    - agent-manager-skill
+    description: Generates the execution plan graph.
   BrowserAgent:
-    prompt_file: "prompts/browser.md"
-    model: "gemini"
-    mcp_servers: ["browser"]
-    description: "Browses the web using text search or vision."
-
+    prompt_file: prompts/browser.md
+    model: gemini
+    mcp_servers:
+    - browser
+    skills:
+    - browser-extension-builder
+    description: Browses the web using text search or vision.
   CoderAgent:
-    prompt_file: "prompts/coder.md"
-    model: "gemini"
-    mcp_servers: ["sandbox", "browser", "rag", "yahoo_finance"]
-    description: "Writes Python code to analyze data or solve problems."
-
+    prompt_file: prompts/coder.md
+    model: gemini
+    mcp_servers:
+    - sandbox
+    - browser
+    - rag
+    - yahoo_finance
+    skills:
+    - python_coding
+    - debugging
+    - git_commit
+    - firecrawl-scraper
+    description: Writes Python code to analyze data or solve problems.
   RetrieverAgent:
-    prompt_file: "prompts/retriever.md"
-    model: "gemini"
-    mcp_servers: ["rag", "browser", "yahoo_finance"]
-    description: "Searches local documents and web."
-
+    prompt_file: prompts/retriever.md
+    model: gemini
+    mcp_servers:
+    - rag
+    - browser
+    - yahoo_finance
+    skills: []
+    description: Searches local documents and web.
   SummarizerAgent:
-    prompt_file: "prompts/summarizer.md"
-    model: "gemini"
-    mcp_servers: ["browser", "rag"]
-    description: "Synthesizes final answers."
-
+    prompt_file: prompts/summarizer.md
+    model: gemini
+    mcp_servers:
+    - browser
+    - rag
+    skills: []
+    description: Synthesizes final answers.
   DistillerAgent:
-    prompt_file: "prompts/distiller.md"
-    model: "gemini"
+    prompt_file: prompts/distiller.md
+    model: gemini
     mcp_servers: []
-    description: "Distills complex content into structured summaries."
-
+    skills: []
+    description: Distills complex content into structured summaries.
   ThinkerAgent:
-    prompt_file: "prompts/thinker.md"
-    model: "gemini"
+    prompt_file: prompts/thinker.md
+    model: gemini
     mcp_servers: []
-    description: "Reasoning and logical inference engine."
-
+    skills: []
+    description: Reasoning and logical inference engine.
   FormatterAgent:
-    prompt_file: "prompts/formatter.md"
-    model: "gemini"
+    prompt_file: prompts/formatter.md
+    model: gemini
     mcp_servers: []
-    description: "Formats final reports to high standards."
-
+    skills: []
+    description: Formats final reports to high standards.
   ClarificationAgent:
-    prompt_file: "prompts/clarification.md"
-    model: "gemini"
+    prompt_file: prompts/clarification.md
+    model: gemini
     mcp_servers: []
-    description: "Interacts with user for clarifications."
-
+    skills: []
+    description: Interacts with user for clarifications.
   QAAgent:
-    prompt_file: "prompts/qa.md"
-    model: "gemini"
+    prompt_file: prompts/qa.md
+    model: gemini
     mcp_servers: []
-    description: "Quality assurance and validation."
-
+    skills: []
+    description: Quality assurance and validation.
   TestAgent:
-    prompt_file: "prompts/test_agent.md"
-    model: "ollama"
+    prompt_file: prompts/test_agent.md
+    model: ollama
     mcp_servers: []
-    description: "Generates Pytest tests for Python code."
-
+    skills: []
+    description: Generates Pytest tests for Python code.
   DebuggerAgent:
-    prompt_file: "prompts/debugger_agent.md"
-    model: "ollama"
+    prompt_file: prompts/debugger_agent.md
+    model: ollama
     mcp_servers: []
-    description: "Fixes code based on test failures."
-
+    skills: []
+    description: Fixes code based on test failures.

@@ -45,5 +45,17 @@ def get_remme_extractor():
         _remme_extractor = RemmeExtractor()
     return _remme_extractor
 
+# Skill Manager instance
+_skill_manager = None
+
+def get_skill_manager():
+    """Get the SkillManager instance, creating/initializing it if needed."""
+    global _skill_manager
+    if _skill_manager is None:
+        from core.skills.manager import SkillManager
+        _skill_manager = SkillManager()
+        _skill_manager.initialize()
+    return _skill_manager
+
 # Global settings state
 settings = {}

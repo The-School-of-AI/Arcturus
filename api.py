@@ -92,41 +92,43 @@ from routers import apps as apps_router
 from routers import settings as settings_router
 from routers import explorer as explorer_router
 from routers import mcp as mcp_router
-app.include_router(runs_router.router)
-app.include_router(rag_router.router)
-app.include_router(remme_router.router)
-app.include_router(apps_router.router)
-app.include_router(settings_router.router)
-app.include_router(explorer_router.router)
-app.include_router(mcp_router.router)
+app.include_router(runs_router.router, prefix="/api")
+app.include_router(rag_router.router, prefix="/api")
+app.include_router(remme_router.router, prefix="/api")
+app.include_router(apps_router.router, prefix="/api")
+app.include_router(settings_router.router, prefix="/api")
+app.include_router(explorer_router.router, prefix="/api")
+app.include_router(mcp_router.router, prefix="/api")
 from routers import prompts as prompts_router
 from routers import news as news_router
 from routers import git as git_router
-app.include_router(prompts_router.router)
-app.include_router(news_router.router)
-app.include_router(git_router.router)
+app.include_router(prompts_router.router, prefix="/api")
+app.include_router(news_router.router, prefix="/api")
+app.include_router(git_router.router, prefix="/api")
 
 from routers import chat as chat_router
-app.include_router(chat_router.router)
+app.include_router(chat_router.router, prefix="/api")
 from routers import agent as agent_router
-app.include_router(agent_router.router)
+app.include_router(agent_router.router, prefix="/api")
 from routers import ide_agent as ide_agent_router
-app.include_router(ide_agent_router.router)
+app.include_router(ide_agent_router.router, prefix="/api")
 from routers import metrics as metrics_router
-app.include_router(metrics_router.router)
+app.include_router(metrics_router.router, prefix="/api")
 from routers import python_tools
-app.include_router(python_tools.router)
+app.include_router(python_tools.router, prefix="/api")
 from routers import tests as tests_router
-app.include_router(tests_router.router)
+app.include_router(tests_router.router, prefix="/api")
 # Chat router included
 from routers import inbox
-app.include_router(inbox.router)
+app.include_router(inbox.router, prefix="/api")
 from routers import cron
-app.include_router(cron.router)
+app.include_router(cron.router, prefix="/api")
 from routers import stream
-app.include_router(stream.router)
+app.include_router(stream.router, prefix="/api")
 from routers import skills
-app.include_router(skills.router)
+app.include_router(skills.router, prefix="/api")
+from routers import optimizer
+app.include_router(optimizer.router, prefix="/api")
 
 
 

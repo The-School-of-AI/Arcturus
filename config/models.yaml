@@ -1,0 +1,10 @@
+roles:
+  planner: "gemini"               # Maps to 'gemini' key in models.json
+  coder: "gemini"                 # Maps to 'gemini' key in models.json
+  verifier: "phi4-reasoning:14b"  # Maps to 'phi4-reasoning:14b' key in models.json
+  optimizer: "gemini"             # Maps to 'gemini' key in models.json
+  retriever: "gemini"             # Maps to 'gemini' key in models.json
+
+settings:
+  enforce_local_verifier: true    # If true, verifier MUST be an Ollama model
+  default_provider: "gemini"      # Fallback provider
