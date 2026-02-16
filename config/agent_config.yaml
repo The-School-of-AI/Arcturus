@@ -8,6 +8,7 @@ agents:
     - research_scientist
     - research-scientist
     - agent-manager-skill
+    - startup-business-analyst-market-opportunity
     description: Generates the execution plan graph.
   BrowserAgent:
     prompt_file: prompts/browser.md

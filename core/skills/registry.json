@@ -21,6 +21,15 @@
     "type": "markdown",
     "name": "planning-with-files"
   },
+  "startup-business-analyst-market-opportunity": {
+    "path": "core/skills/library/startup-business-analyst-market-opportunity",
+    "version": "1.0.0",
+    "description": "Generate comprehensive market opportunity analysis with TAM/SAM/SOM calculations",
+    "intent_triggers": [],
+    "class_name": "GenericSkill",
+    "type": "markdown",
+    "name": "startup-business-analyst-market-opportunity"
+  },
   "browser-extension-builder": {
     "path": "core/skills/library/browser-extension-builder",
     "version": "1.0.0",
