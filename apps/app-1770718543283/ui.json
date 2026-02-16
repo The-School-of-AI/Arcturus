@@ -1,6 +1,6 @@
 {
-  "name": "Abhi Kumar's Potential Interests & Tracking Priorities",
-  "description": "Generated from report",
+  "name": "Abhi Kumar's Potential Interests & Tracking Priorities (Redesigned)",
+  "description": "Generated from report - Visualized",
   "cards": [
     {
       "id": "header_card",
@@ -16,31 +16,107 @@
     },
     {
       "id": "executive_summary_card",
-      "type": "summary",
+      "type": "text",
       "label": "Executive Summary",
       "config": {},
       "data": {
-        "text": "This report attempts to outline the potential interests and tracking priorities for Abhi Kumar, assuming the role of Founder General Partner at Horizon5 Capital. However, due to a significant lack of specific data regarding Mr. Kumar's explicit interests, preferred tracking metrics, and detailed sector trends relevant to Horizon5 Capital, a comprehensive and definitive analysis is not currently possible. The available information indicates a need for further input to accurately delineate his strategic focus areas and investment landscape."
+        "text": "This report provides a high-level overview of Abhi Kumar's potential interests and tracking priorities as Founder General Partner at Horizon5 Capital. Due to limited specific data, this analysis is generalized, highlighting key areas common in venture capital. Further input is needed for a comprehensive strategic focus."
+      },
+      "style": {}
+    },
+    {
+      "id": "data_completeness_metric",
+      "type": "metric",
+      "label": "Data Completeness",
+      "config": {},
+      "data": {
+        "value": "Low",
+        "description": "Requires more specific input",
+        "color": "#FFC107"
       },
       "style": {}
     },
     {
       "id": "founder_interests_card",
-      "type": "markdown",
+      "type": "stats_grid",
       "label": "Hypothetical Founder Interests",
       "config": {},
       "data": {
-        "content": "### Hypothetical Founder Interests\n\nGiven the general nature of venture capital, Abhi Kumar's interests would likely span across several key areas:\n\n*   **Emerging Technologies:** A keen eye for disruptive technologies that have the potential to reshape industries. This could include advancements in Artificial Intelligence (AI), Machine Learning (ML), biotechnology, sustainable technologies, and advanced materials.\n*   **Scalable Business Models:** Identification of companies with robust, scalable business models capable of rapid growth and significant market penetration.\n*   **Market Disruption:** A focus on sectors ripe for disruption, where new entrants can challenge established players with innovative products or services.\n*   **Impact Investing:** Increasingly, VC leaders are looking for investments that offer not only financial returns but also positive societal or environmental impact. This could involve areas like climate tech, edtech, or healthtech.\n*   **Global Market Dynamics:** Understanding macroeconomic trends, geopolitical shifts, and regulatory environments that could impact investment strategies and portfolio company performance."
+        "title": "Hypothetical Founder Interests",
+        "stats": [
+          {
+            "label": "Emerging Technologies",
+            "value": "",
+            "icon": "sparkles",
+            "description": "Disruptive tech (AI, ML, Biotech, Sustainable)"
+          },
+          {
+            "label": "Scalable Business Models",
+            "value": "",
+            "icon": "scale",
+            "description": "Rapid growth & market penetration potential"
+          },
+          {
+            "label": "Market Disruption",
+            "value": "",
+            "icon": "zap",
+            "description": "Sectors ripe for innovative challenges"
+          },
+          {
+            "label": "Impact Investing",
+            "value": "",
+            "icon": "leaf",
+            "description": "Financial returns + societal/environmental impact"
+          },
+          {
+            "label": "Global Market Dynamics",
+            "value": "",
+            "icon": "globe",
+            "description": "Macro trends, geopolitics, regulatory shifts"
+          }
+        ]
       },
       "style": {}
     },
     {
       "id": "tracking_priorities_card",
-      "type": "markdown",
+      "type": "stats_grid",
       "label": "Potential Tracking Priorities",
       "config": {},
       "data": {
-        "content": "### Potential Tracking Priorities\n\nTo effectively manage investments and identify new opportunities, Abhi Kumar would likely track a variety of metrics and trends:\n\n*   **Portfolio Performance Metrics:** Key Performance Indicators (KPIs) such as Internal Rate of Return (IRR), Multiple on Invested Capital (MOIC), Net Asset Value (NAV), and cash flow.\n*   **Market Intelligence:** Continuous monitoring of venture capital deal flow, funding rounds, valuations, and exits across various sectors.\n*   **Sector-Specific Trends:** Deep dives into the growth trajectories, competitive landscapes, and technological advancements within sectors Horizon5 Capital actively invests in or is considering.\n*   **Macroeconomic Indicators:** Tracking inflation rates, interest rates, GDP growth, and employment figures, as these can influence investment appetite and the performance of portfolio companies.\n*   **Competitive Landscape:** Understanding the strategies and activities of other VC firms and strategic investors."
+        "title": "Potential Tracking Priorities",
+        "stats": [
+          {
+            "label": "Portfolio Performance",
+            "value": "",
+            "icon": "chart",
+            "description": "IRR, MOIC, NAV, cash flow KPIs"
+          },
+          {
+            "label": "Market Intelligence",
+            "value": "",
+            "icon": "eye",
+            "description": "Deal flow, funding rounds, valuations, exits"
+          },
+          {
+            "label": "Sector Trends",
+            "value": "",
+            "icon": "arrow-up-right",
+            "description": "Growth, competitive landscape, tech advancements"
+          },
+          {
+            "label": "Macro Indicators",
+            "value": "",
+            "icon": "banknotes",
+            "description": "Inflation, interest rates, GDP, employment"
+          },
+          {
+            "label": "Competitive Landscape",
+            "value": "",
+            "icon": "users",
+            "description": "Strategies of other VC firms and investors"
+          }
+        ]
       },
       "style": {}
     },
@@ -77,22 +153,12 @@
       "style": {}
     },
     {
-      "id": "sector_analysis_details_card",
-      "type": "markdown",
-      "label": "Sector Analysis Details",
-      "config": {},
-      "data": {
-        "content": "### Sector Analysis (Limited Scope)\n\nHowever, based on general venture capital activity and a hypothetical interest in AI, several emerging sectors are likely of interest:\n\n*   **Artificial Intelligence (AI) & Machine Learning (ML):** This remains a dominant area. Focus could be on AI infrastructure, AI-powered SaaS solutions, generative AI applications across various industries (content creation, software development, drug discovery), and AI ethics/governance. The societal impact of AI, including job displacement and ethical considerations, would also be a critical area of monitoring.\n*   **Climate Technology (Climate Tech):** With increasing global focus on sustainability, investments in renewable energy, carbon capture, battery technology, sustainable agriculture, and circular economy solutions are gaining traction.\n*   **Biotechnology and Healthtech:** Advancements in areas like personalized medicine, gene editing, digital therapeutics, and AI-driven drug discovery continue to present significant investment opportunities.\n*   **Future of Work:** Technologies enabling remote collaboration, automation, upskilling platforms, and the gig economy are likely to be of interest as societal work patterns evolve."
-      },
-      "style": {}
-    },
-    {
       "id": "data_gaps_card",
       "type": "markdown",
       "label": "Data Gaps and Next Steps",
       "config": {},
       "data": {
-        "content": "### Data Gaps and Next Steps\n\nTo provide a truly comprehensive report, further input is critically needed regarding:\n\n1.  **Specific Investment Thesis of Horizon5 Capital:** Understanding the firm's defined areas of focus (e.g., early-stage, growth-stage, specific industries).\n2.  **Abhi Kumar's Past Investments and Public Statements:** Reviewing his previous ventures and any public commentary on market trends or investment strategies.\n3.  **Detailed Sector Research:** Explicitly identifying the sectors Horizon5 Capital is targeting for investment.\n\nWithout this granular information, this report remains a high-level, generalized overview based on common venture capital practices."
+        "content": "### Data Gaps and Next Steps\n\nTo provide a truly comprehensive report, further input is critically needed regarding:\n\n*   **Horizon5 Capital's Investment Thesis:** Specific focus areas (e.g., early-stage, growth-stage, industries).\n*   **Abhi Kumar's Past Investments & Public Statements:** Review of previous ventures and commentary.\n*   **Detailed Sector Research:** Explicit identification of target investment sectors.\n\nWithout this granular information, this report remains a high-level, generalized overview based on common venture capital practices."
       },
       "style": {}
     }
@@ -109,46 +175,46 @@
       "i": "executive_summary_card",
       "x": 0,
       "y": 2,
-      "w": 24,
-      "h": 5
+      "w": 18,
+      "h": 3
+    },
+    {
+      "i": "data_completeness_metric",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
     },
     {
       "i": "founder_interests_card",
       "x": 0,
-      "y": 7,
-      "w": 12,
+      "y": 5,
+      "w": 24,
       "h": 6
     },
     {
       "i": "tracking_priorities_card",
-      "x": 12,
-      "y": 7,
-      "w": 12,
+      "x": 0,
+      "y": 11,
+      "w": 24,
       "h": 6
     },
     {
       "i": "emerging_sectors_chart",
       "x": 0,
-      "y": 13,
-      "w": 12,
-      "h": 6
-    },
-    {
-      "i": "sector_analysis_details_card",
-      "x": 12,
-      "y": 13,
-      "w": 12,
-      "h": 6
+      "y": 17,
+      "w": 24,
+      "h": 8
     },
     {
       "i": "data_gaps_card",
       "x": 0,
-      "y": 19,
+      "y": 25,
       "w": 24,
-      "h": 6
+      "h": 4
     }
   ],
   "id": "app-1770718543283",
-  "lastModified": 1770718543283,
-  "lastHydrated": 1770718543283
+  "lastModified": 1771235106551,
+  "lastHydrated": 1771235106551
 }

@@ -21,7 +21,7 @@ load_dotenv()
 
 # Browser Use Imports
 try:
-    from browser_use import Agent
+    from browser_use import Agent, Browser, BrowserConfig
     from langchain_google_genai import ChatGoogleGenerativeAI
     BROWSER_USE_AVAILABLE = True
 except ImportError:
@@ -33,7 +33,31 @@ load_dotenv()
 # Initialize FastMCP server
 mcp = FastMCP("hybrid-browser")
 
-# --- Tool 1: Fast Text Search (DuckDuckGo + Extraction) ---
+# Global Browser Instance for Persistence
+GLOBAL_BROWSER = None
+
+async def get_shared_browser():
+    global GLOBAL_BROWSER
+    if not BROWSER_USE_AVAILABLE:
+        return None
+        
+    if GLOBAL_BROWSER is None:
+        try:
+            # Try connecting to local Chrome first
+            # We use CDP to verify connection before init
+            if await CDPClient.get_active_tab():
+                print("Reusing existing Chrome instance on port 9222")
+                GLOBAL_BROWSER = Browser(config=BrowserConfig(cdp_url="http://localhost:9222"))
+            else:
+                print("Launching new Chrome instance (headless=True)")
+                GLOBAL_BROWSER = Browser()
+        except Exception as e:
+            print(f"Failed to init shared browser: {e}")
+            return None
+            
+    return GLOBAL_BROWSER
+
+# --- Tool 1: Fast Robust Search (DuckDuckGo + Fallbacks) ---
 
 # --- Robust Tools Imports ---
 try:
@@ -43,8 +67,6 @@ except ImportError:
     # Try relative import if running as module
     from .tools.switch_search_method import smart_search
     from .tools.web_tools_async import smart_web_extract
-
-# --- Tool 1: Fast Robust Search (DuckDuckGo + Fallbacks) ---
 
 @mcp.tool()
 async def web_search(string: str, integer: int = 5) -> str:
@@ -166,7 +188,7 @@ async def webpage_url_to_raw_text(string: str) -> dict:
             ]
         }
 
-# --- Tool 2: Deep Vision Browsing (Browser Use) ---
+# ... (rest of file) ...
 
 @mcp.tool()
 async def browser_use_action(string: str, headless: bool = True) -> str:
@@ -204,20 +226,127 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
             llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=os.getenv("GEMINI_API_KEY"))
             print(f"☁️ Browser Use: Using Gemini model {model_name}")
         
+        # Get shared browser
+        browser = await get_shared_browser()
+        
         # Initialize Agent
-        agent = Agent(
-            task=string,
-            llm=llm,
-        )
+        if browser:
+             agent = Agent(task=string, llm=llm, browser=browser)
+        else:
+             agent = Agent(task=string, llm=llm) # Fallback to default
         
         # Run
         history = await agent.run()
         result = history.final_result()
         return result if result else "Task completed but returned no text result."
 
+
     except Exception as e:
         traceback.print_exc()
         return f"Browser Action Failed: {str(e)}"
 
+# --- Tool 3: Chrome DevTools Protocol (CDP) ---
+# Connects to local Chrome/Edge instance running with --remote-debugging-port=9222
+
+class CDPClient:
+    BASE_URL = "http://localhost:9222"
+    
+    @classmethod
+    async def get_active_tab(cls):
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"{cls.BASE_URL}/json/list", timeout=2.0)
+                pages = resp.json()
+                # Prioritize 'page' type and active ones
+                for p in pages:
+                    if p.get("type") == "page":
+                        return p
+                return pages[0] if pages else None
+        except httpx.ConnectError:
+            return None
+        except Exception as e:
+            print(f"CDP Error: {e}")
+            return None
+
+@mcp.tool()
+async def get_current_url() -> str:
+    """Get the URL of the currently active tab in local Chrome (port 9222)."""
+    tab = await CDPClient.get_active_tab()
+    if not tab:
+        return "Error: Could not connect to Chrome on port 9222. Is it running with --remote-debugging-port=9222?"
+    return tab.get("url", "Unknown URL")
+
+@mcp.tool()
+async def navigate(url: str) -> str:
+    """Navigate the active Chrome tab to a URL."""
+    import websockets
+    
+    if not url.startswith("http"):
+        url = "https://" + url
+        
+    tab = await CDPClient.get_active_tab()
+    if not tab:
+        return "Error: Could not connect to Chrome."
+        
+    ws_url = tab.get("webSocketDebuggerUrl")
+    if not ws_url:
+        return "Error: No WebSocket URL found for tab."
+        
+    try:
+        async with websockets.connect(ws_url) as ws:
+            # Navigate
+            await ws.send(json.dumps({
+                "id": 1,
+                "method": "Page.navigate",
+                "params": {"url": url}
+            }))
+            resp = await ws.recv()
+            return f"Navigated to {url}. Response: {resp}"
+    except Exception as e:
+        return f"Navigation failed: {e}"
+
+@mcp.tool()
+async def screenshot() -> str:
+    """Take a screenshot of the active tab and return base64 string (truncated or saved)."""
+    # Simply return a message for now as returning huge base64 to LLM is bad
+    # Better to save to file and return path
+    import websockets
+    import base64
+    
+    tab = await CDPClient.get_active_tab()
+    if not tab: return "Error: No Chrome connection."
+    
+    ws_url = tab.get("webSocketDebuggerUrl")
+    if not ws_url: return "Error: No WebSocket."
+    
+    try:
+        async with websockets.connect(ws_url) as ws:
+            await ws.send(json.dumps({
+                "id": 2,
+                "method": "Page.captureScreenshot",
+                "params": {"format": "png"}
+            }))
+            
+            # Wait for response (might be large)
+            while True:
+                resp = json.loads(await ws.recv())
+                if resp.get("id") == 2:
+                    break
+            
+            data = resp.get("result", {}).get("data")
+            if data:
+                # Save to file
+                filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                path = os.path.join(os.getcwd(), "data", "screenshots", filename)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                
+                with open(path, "wb") as f:
+                    f.write(base64.b64decode(data))
+                return f"Screenshot saved to {path}"
+            return "Error: No data in response"
+    except Exception as e:
+        return f"Screenshot failed: {e}"
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
+

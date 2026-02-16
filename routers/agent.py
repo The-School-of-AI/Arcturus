@@ -24,6 +24,44 @@ class SearchRequest(BaseModel):
 class UrlRequest(BaseModel):
     url: str
 
+class AgentInjectionRequest(BaseModel):
+    name: str
+    config: dict
+    description: Optional[str] = "Dynamically injected agent"
+
+@router.post("/inject")
+async def inject_agent(request: AgentInjectionRequest):
+    """
+    Injects a new agent configuration into the runtime registry.
+    This allows adding new capabilities without restarting the server.
+    """
+    try:
+        from core.registry import AgentRegistry
+        # Register the agent configuration
+        AgentRegistry.register(request.name, request.config, description=request.description)
+        
+        return {
+            "status": "success",
+            "message": f"Agent '{request.name}' registered successfully.",
+            "agent": request.name
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/list")
+async def list_agents():
+    """Lists all currently registered agents."""
+    try:
+        from core.registry import AgentRegistry
+        agents = AgentRegistry.list_agents()
+        return {
+            "status": "success",
+            "count": len(agents),
+            "agents": agents
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/search")
 async def agent_search(request: SearchRequest):
     """
@@ -88,3 +126,38 @@ async def agent_read_url(request: UrlRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read URL: {str(e)}")
+@router.post("/toggle_skill")
+async def toggle_skill(request: dict):
+    """
+    Toggles a skill for an existing agent.
+    Expected payload: {"agent_name": str, "skill_name": str, "enabled": bool}
+    """
+    try:
+        from core.registry import AgentRegistry
+        agent_name = request.get("agent_name")
+        skill_name = request.get("skill_name")
+        enabled = request.get("enabled", True)
+        
+        config = AgentRegistry.get_config(agent_name)
+        if not config:
+            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found.")
+        
+        skills = config.get("skills", [])
+        if enabled:
+            if skill_name not in skills:
+                skills.append(skill_name)
+        else:
+            if skill_name in skills:
+                skills.remove(skill_name)
+        
+        config["skills"] = skills
+        # Re-register with updated config
+        AgentRegistry.register(agent_name, config)
+        
+        return {
+            "status": "success",
+            "message": f"Skill '{skill_name}' {'enabled' if enabled else 'disabled'} for agent '{agent_name}'.",
+            "active_skills": skills
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

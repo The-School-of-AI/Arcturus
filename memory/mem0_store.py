@@ -28,12 +28,29 @@ class MemoryStore:
         # mem0 .add takes messages or text.
         self.m.add(text, user_id=target_user)
 
-    def search(self, query: str, user_id: str = None) -> list:
+    def search(self, query: str, user_id: str = None, limit: int = 5) -> list:
         """Search memories"""
-        if not self.m: return []
-        target_user = user_id or self.user_id
-        results = self.m.search(query, user_id=target_user)
-        return results
+        if self.m:
+            target_user = user_id or self.user_id
+            return self.m.search(query, user_id=target_user, limit=limit)
+        
+        # Fallback to local user_memory.json if mem0 is missing
+        try:
+            from pathlib import Path
+            import json
+            memory_file = Path("data/user_memory.json")
+            if memory_file.exists():
+                memories = json.loads(memory_file.read_text())
+                query_terms = query.lower().split()
+                results = []
+                for mem in memories:
+                    content = mem.get("content", "").lower()
+                    if any(term in content for term in query_terms):
+                        results.append({"memory": mem.get("content")})
+                return results[:limit]
+        except Exception:
+            pass
+        return []
 
     def get_all(self, user_id: str = None) -> list:
         """Get all memories"""

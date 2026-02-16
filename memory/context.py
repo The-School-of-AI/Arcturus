@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 import asyncio
-from tools.sandbox import run_user_code
+from core.sandbox.executor import UniversalSandbox
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
@@ -225,19 +225,30 @@ class ExecutionContextManager:
                 
                 enhanced_code = globals_injection + code
                 
-                result = await run_user_code(
-                    enhanced_code,
-                    self.multi_mcp if hasattr(self, 'multi_mcp') else None,
-                    self.plan_graph.graph['session_id']
+                # Use UniversalSandbox
+                sandbox = UniversalSandbox(
+                    multi_mcp=self.multi_mcp if hasattr(self, 'multi_mcp') else None,
+                    session_id=self.plan_graph.graph['session_id']
                 )
+                result_obj = await sandbox.run(enhanced_code)
                 
-                if result.get("status") == "success":
-                    result["executed_variant"] = code_key
-                    return result
+                # Convert SandboxResult to expected dict format
+                if result_obj.get("status") == "success":
+                    return {
+                        "status": "success",
+                        "result": result_obj.get("result"),
+                        "logs": result_obj.get("logs"),
+                        "execution_time": result_obj.get("execution_time"),
+                        "executed_variant": code_key
+                    }
                 else:
                     # Keep track of the failure to return if nothing succeeds
-                    result["executed_variant"] = code_key
-                    last_failure = result
+                    last_failure = {
+                        "status": "error",
+                        "error": result_obj.get("error"),
+                        "logs": result_obj.get("logs"),
+                        "executed_variant": code_key
+                    }
                 
             except Exception as e:
                 # Capture exception as a structured failure result
@@ -627,7 +638,7 @@ class ExecutionContextManager:
         with open(session_file, 'r', encoding='utf-8') as f:
             graph_data = json.load(f)
         
-        plan_graph = nx.node_link_graph(graph_data, edges="links")
+        plan_graph = nx.node_link_graph(graph_data)
         
         context = cls.__new__(cls)
         context.plan_graph = plan_graph

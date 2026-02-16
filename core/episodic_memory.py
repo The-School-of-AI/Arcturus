@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 from core.utils import log_step, log_error
 
-MEMORY_DIR = Path(__file__).parent.parent / "memory" / "episodes"
-MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+from memory.episodic import MEMORY_DIR, search_episodes, get_recent_episodes
 
 class MemorySkeletonizer:
     """
@@ -126,6 +125,7 @@ class MemoryMiner:
         # ... logic to mine specific tool successes ...
         return events
 
+
 class EpisodicMemory:
     def __init__(self):
         self.directory = MEMORY_DIR
@@ -135,8 +135,7 @@ class EpisodicMemory:
         try:
             skeleton = MemorySkeletonizer.skeletonize(session_data)
             
-            # Save as JSON
-            session_id = skeleton["id"]
+            session_id = skeleton.get("id")
             if not session_id:
                 return
                 
@@ -151,38 +150,6 @@ class EpisodicMemory:
     def search(self, query: str, limit=3) -> List[Dict]:
         """
         Find relevant past skeletons based on query similarity.
-        Uses simple Jaccard similarity on tokens.
+        Delegates to memory.episodic.search_episodes.
         """
-        if not self.directory.exists():
-            return []
-            
-        query_tokens = set(query.lower().split())
-        candidates = []
-        
-        for f in self.directory.glob("skeleton_*.json"):
-            try:
-                data = json.loads(f.read_text())
-                original_q = data.get("original_query", "")
-                if not original_q:
-                    continue
-                    
-                target_tokens = set(original_q.lower().split())
-                
-                # Jaccard Similarity: Intersection / Union
-                intersection = query_tokens.intersection(target_tokens)
-                union = query_tokens.union(target_tokens)
-                
-                if not union:
-                    score = 0
-                else:
-                    score = len(intersection) / len(union)
-                
-                if score > 0.1: # Threshold to avoid noise
-                    candidates.append((score, data))
-            except Exception:
-                continue
-                
-        # Sort by score desc
-        candidates.sort(key=lambda x: x[0], reverse=True)
-        
-        return [c[1] for c in candidates[:limit]]
+        return search_episodes(query, limit)

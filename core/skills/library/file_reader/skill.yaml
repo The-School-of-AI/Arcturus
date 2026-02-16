@@ -1,0 +1,5 @@
+name: file_reader
+description: "Interrogate and explore local files."
+version: "1.0.0"
+author: "Arcturus Core"
+active: true

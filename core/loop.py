@@ -67,10 +67,15 @@ async def retry_with_backoff(
 class AgentLoop4:
     def __init__(self, multi_mcp, strategy="conservative"):
         self.multi_mcp = multi_mcp
-        self.strategy = strategy
+        self.strategy_name = strategy
         self.agent_runner = AgentRunner(multi_mcp)
         self.context = None  # Reference for external stopping
         self._tasks = set()  # Track active async tasks for immediate cancellation
+        
+        # Load profile for strategy settings
+        from core.profile_loader import get_profile
+        self.profile = get_profile()
+        self.max_steps = self.profile.get("strategy.max_steps", 20)
 
     def stop(self):
         """Request execution stop"""
@@ -96,6 +101,45 @@ class AgentLoop4:
             raise
         finally:
             self._tasks.discard(task)
+
+    async def resume(self, session_path: str):
+        """Resume execution from a saved session file"""
+        from pathlib import Path
+        
+        session_file = Path(session_path)
+        if not session_file.exists():
+            raise FileNotFoundError(f"Session file not found: {session_file}")
+            
+        try:
+            # 1. Load Context
+            self.context = ExecutionContextManager.load_session(session_file)
+            self.context.multi_mcp = self.multi_mcp
+            
+            # 2. Reset Interrupted Nodes
+            # Any node that was 'running' or 'stopped' when last saved should be reset to 'pending'
+            # so it can be re-executed.
+            
+            reset_count = 0
+            for node_id in self.context.plan_graph.nodes:
+                node_data = self.context.plan_graph.nodes[node_id]
+                status = node_data.get("status")
+                
+                if status in ["running", "stopped", "waiting_input"]:
+                    node_data["status"] = "pending"
+                    log_step(f"🔄 Resetting {node_id} from {status} to pending", symbol="Tg")
+                    reset_count += 1
+            
+            if reset_count > 0:
+                self.context._save_session()
+                
+            log_step(f"✅ Resuming session {self.context.plan_graph.graph['session_id']} ({reset_count} steps reset)", symbol="▶️")
+            
+            # 3. Execute DAG
+            return await self._execute_dag(self.context)
+            
+        except Exception as e:
+            log_error(f"Failed to resume session: {e}")
+            raise
 
     async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None):
         # 🟢 PHASE 0: BOOTSTRAP CONTEXT (Immediate VS Code feedback)
@@ -134,6 +178,7 @@ class AgentLoop4:
             print(f"❌ ERROR initializing context: {e}")
             raise
 
+
         # Phase 1: File Profiling (if files exist)
         file_profiles = {}
         if uploaded_files:
@@ -168,7 +213,7 @@ class AgentLoop4:
                         "PlannerAgent",
                         {
                             "original_query": query,
-                            "planning_strategy": self.strategy,
+                            "planning_strategy": self.strategy_name,
                             "globals_schema": self.context.plan_graph.graph.get("globals_schema", {}),
                             "file_manifest": file_manifest,
                             "file_profiles": file_profiles,
@@ -438,7 +483,7 @@ class AgentLoop4:
         console = Console()
         
         # 🔧 DEBUGGING MODE: No Live display, just regular prints
-        max_iterations = 20
+        max_iterations = self.max_steps
         iteration = 0
         
         # ===== COST THRESHOLD ENFORCEMENT =====
@@ -573,6 +618,12 @@ class AgentLoop4:
                 context.plan_graph.graph['status'] = 'cost_exceeded'
                 context.plan_graph.graph['final_cost'] = accumulated_cost
                 break
+                
+            iteration += 1
+            if iteration >= max_iterations:
+                log_error(f"🛑 Max Iterations Reached: {iteration}/{max_iterations}")
+                context.plan_graph.graph['status'] = 'failed'
+                break
 
         # Final state
         console.print(visualizer.get_layout())
@@ -682,7 +733,7 @@ class AgentLoop4:
             step_data = context.get_step_data(step_id)
             step_data['iterations'] = iterations_data
             
-            # 1. Check for 'call_tool' (ReAct)
+                # 1. Check for 'call_tool' (ReAct)
             if output.get("call_tool"):
                 tool_call = output["call_tool"]
                 tool_name = tool_call.get("name")
@@ -690,43 +741,83 @@ class AgentLoop4:
                 
                 log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
                 
+                # 1a. Try LOCAL SKILL TOOLS first
+                tool_executed = False
+                skill_tool_result = None
+                
                 try:
-                    # Execute tool via MultiMCP
-                    tool_result = await self.multi_mcp.route_tool_call(tool_name, tool_args)
+                    from core.registry import AgentRegistry
+                    from shared.state import get_skill_manager
                     
-                    # Serialize result content
-                    if isinstance(tool_result.content, list):
-                        result_str = "\n".join([str(item.text) for item in tool_result.content if hasattr(item, "text")])
-                    else:
-                        result_str = str(tool_result.content)
-
-                    # ✅ SAVE RESULT TO HISTORY
-                    iterations_data[-1]["tool_result"] = result_str
-
-                    # Log result (truncated)
-                    log_step(f"✅ Tool Result", payload={"result_preview": result_str[:200] + "..."}, symbol="🔌")
+                    agent_config = AgentRegistry.get(agent_type)
+                    skill_mgr = get_skill_manager()
                     
-                    # Prepare input for next iteration
-                    instruction = output.get("thought", "Use the tool result to generate the final output.")
-                    if turn == max_turns - 1:
-                         instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
-
-                    current_input = build_agent_input(
-                        instruction=instruction,
-                        previous_output=output,
-                        iteration_context={"tool_result": result_str}
-                    )
-                    continue # Loop to next turn
+                    if agent_config and "skills" in agent_config:
+                        possible_skills = agent_config["skills"]
+                        for skill_name in possible_skills:
+                            skill = skill_mgr.get_skill(skill_name)
+                            if skill:
+                                for tool in skill.get_tools():
+                                    if getattr(tool, 'name', None) == tool_name:
+                                        log_step(f"🧩 Executing Local Skill Tool: {tool_name}", symbol="🧩")
+                                        if asyncio.iscoroutinefunction(tool.func):
+                                            skill_tool_result = await tool.func(**tool_args)
+                                        else:
+                                            skill_tool_result = tool.func(**tool_args)
+                                        tool_executed = True
+                                        break
+                            if tool_executed: break
 
                 except Exception as e:
-                    log_error(f"Tool Execution Failed: {e}")
-                    # Feed error back to agent
-                    current_input = build_agent_input(
-                        instruction="The tool execution failed. Try a different approach or tool.",
-                        previous_output=output,
-                        iteration_context={"tool_result": f"Error: {str(e)}"}
-                    )
-                    continue
+                    log_error(f"Local Skill Tool Execution Failed: {e}")
+                    tool_executed = True # Failed but found
+                    skill_tool_result = f"Error executing local skill tool: {str(e)}"
+
+                # 1b. Fallback to MultiMCP
+                if not tool_executed:
+                    try:
+                        # Execute tool via MultiMCP
+                        mcp_result = await self.multi_mcp.route_tool_call(tool_name, tool_args)
+                        
+                        # Serialize result content
+                        if hasattr(mcp_result, 'content'):
+                            if isinstance(mcp_result.content, list):
+                                skill_tool_result = "\n".join([str(item.text) for item in mcp_result.content if hasattr(item, "text")])
+                            else:
+                                skill_tool_result = str(mcp_result.content)
+                        else:
+                            skill_tool_result = str(mcp_result)
+                            
+                    except Exception as e:
+                        log_error(f"Tool Execution Failed: {e}")
+                        # Feed error back to agent
+                        current_input = build_agent_input(
+                            instruction="The tool execution failed. Try a different approach or tool.",
+                            previous_output=output,
+                            iteration_context={"tool_result": f"Error: {str(e)}"}
+                        )
+                        continue
+                
+                # Common success path
+                result_str = str(skill_tool_result)
+
+                # ✅ SAVE RESULT TO HISTORY
+                iterations_data[-1]["tool_result"] = result_str
+
+                # Log result (truncated)
+                log_step(f"✅ Tool Result", payload={"result_preview": result_str[:200] + "..."}, symbol="🔌")
+                
+                # Prepare input for next iteration
+                instruction = output.get("thought", "Use the tool result to generate the final output.")
+                if turn == max_turns - 1:
+                        instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
+
+                current_input = build_agent_input(
+                    instruction=instruction,
+                    previous_output=output,
+                    iteration_context={"tool_result": result_str}
+                )
+                continue # Loop to next turn
 
             # 2. Check for call_self (Legacy/Advanced recursion)
             elif output.get("call_self"):

@@ -21,6 +21,7 @@
             "deliverables_numbered"
         ],
         "tone_constraints": [
+            "Always start every response with 'Captain:'",
             "no_motivational",
             "direct"
         ],

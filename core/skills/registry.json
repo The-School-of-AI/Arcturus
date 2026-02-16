@@ -12,41 +12,77 @@
     "class_name": "WebClipperSkill",
     "type": "python"
   },
-  "planning-with-files": {
-    "path": "core/skills/library/planning-with-files",
-    "version": "2.1.2",
-    "description": "Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls.",
-    "intent_triggers": [],
-    "class_name": "GenericSkill",
-    "type": "markdown",
-    "name": "planning-with-files"
-  },
-  "startup-business-analyst-market-opportunity": {
-    "path": "core/skills/library/startup-business-analyst-market-opportunity",
+  "reporttoappprompt": {
+    "path": "core/skills/library/reporttoappprompt",
     "version": "1.0.0",
-    "description": "Generate comprehensive market opportunity analysis with TAM/SAM/SOM calculations",
+    "description": "Skill derived from ReportToAppPrompt.md",
     "intent_triggers": [],
-    "class_name": "GenericSkill",
-    "type": "markdown",
-    "name": "startup-business-analyst-market-opportunity"
+    "class_name": "ReporttoapppromptSkill",
+    "type": "python"
   },
-  "browser-extension-builder": {
-    "path": "core/skills/library/browser-extension-builder",
+  "distiller": {
+    "path": "core/skills/library/distiller",
     "version": "1.0.0",
-    "description": "Expert in building browser extensions that solve real problems - Chrome, Firefox, and cross-browser extensions. Covers extension architecture, manifest v3, content scripts, popup UIs, monetization strategies, and Chrome Web Store publishing. Use when: browser extension, chrome extension, firefox addon, extension, manifest v3.",
+    "description": "Skill derived from distiller.md",
     "intent_triggers": [],
-    "class_name": "GenericSkill",
-    "type": "markdown",
-    "name": "browser-extension-builder"
+    "class_name": "DistillerSkill",
+    "type": "python"
   },
-  "agent-manager-skill": {
-    "path": "core/skills/library/agent-manager-skill",
+  "remme_extraction": {
+    "path": "core/skills/library/remme_extraction",
     "version": "1.0.0",
-    "description": "Manage multiple local CLI agents via tmux sessions (start/stop/monitor/assign) with cron-friendly scheduling.",
+    "description": "Skill derived from remme_extraction.md",
     "intent_triggers": [],
-    "class_name": "GenericSkill",
-    "type": "markdown",
-    "name": "agent-manager-skill"
+    "class_name": "RemmeExtractionSkill",
+    "type": "python"
+  },
+  "clarification": {
+    "path": "core/skills/library/clarification",
+    "version": "1.0.0",
+    "description": "Skill derived from clarification.md",
+    "intent_triggers": [],
+    "class_name": "ClarificationSkill",
+    "type": "python"
+  },
+  "ide_agent_prompt": {
+    "path": "core/skills/library/ide_agent_prompt",
+    "version": "1.0.0",
+    "description": "Skill derived from ide_agent_prompt.md",
+    "intent_triggers": [],
+    "class_name": "IdeAgentPromptSkill",
+    "type": "python"
+  },
+  "apprefinementprompt": {
+    "path": "core/skills/library/apprefinementprompt",
+    "version": "1.0.0",
+    "description": "Skill for refining existing app UI based on user input",
+    "intent_triggers": [],
+    "class_name": "ApprefinementpromptSkill",
+    "type": "python"
+  },
+  "planner": {
+    "path": "core/skills/library/planner",
+    "version": "1.0.0",
+    "description": "Skill derived from planner.md",
+    "intent_triggers": [],
+    "class_name": "PlannerSkill",
+    "type": "python"
+  },
+  "test_agent": {
+    "path": "core/skills/library/test_agent",
+    "version": "1.0.0",
+    "description": "Skill derived from test_agent.md",
+    "intent_triggers": [],
+    "class_name": "TestAgentSkill",
+    "type": "python"
+  },
+  "scheduler": {
+    "path": "core/skills/library/scheduler",
+    "version": "1.0.0",
+    "description": "Skill derived from scheduler.md",
+    "intent_triggers": [],
+    "class_name": "SchedulerSkill",
+    "type": "python"
   },
   "market_analyst": {
     "path": "core/skills/library/market_analyst",
@@ -66,14 +102,69 @@
     "class_name": "MarketAnalystSkill",
     "type": "python"
   },
-  "firecrawl-scraper": {
-    "path": "core/skills/library/firecrawl-scraper",
+  "qa": {
+    "path": "core/skills/library/qa",
     "version": "1.0.0",
-    "description": "Deep web scraping, screenshots, PDF parsing, and website crawling using Firecrawl API",
+    "description": "Skill derived from qa.md",
     "intent_triggers": [],
-    "class_name": "GenericSkill",
-    "type": "markdown",
-    "name": "firecrawl-scraper"
+    "class_name": "QaSkill",
+    "type": "python"
+  },
+  "retriever": {
+    "path": "core/skills/library/retriever",
+    "version": "1.0.0",
+    "description": "Skill derived from retriever.md",
+    "intent_triggers": [],
+    "class_name": "RetrieverSkill",
+    "type": "python"
+  },
+  "rag_semantic_chunking": {
+    "path": "core/skills/library/rag_semantic_chunking",
+    "version": "1.0.0",
+    "description": "Skill derived from rag_semantic_chunking.md",
+    "intent_triggers": [],
+    "class_name": "RagSemanticChunkingSkill",
+    "type": "python"
+  },
+  "rag": {
+    "path": "core/skills/library/rag",
+    "version": "1.0.0",
+    "description": "Provides RAG capabilities and the search_knowledge_base tool.",
+    "intent_triggers": [],
+    "class_name": "RAGSkill",
+    "type": "python"
+  },
+  "formatter_old_with_html": {
+    "path": "core/skills/library/formatter_old_with_html",
+    "version": "1.0.0",
+    "description": "Skill derived from formatter_old_with_html.md",
+    "intent_triggers": [],
+    "class_name": "FormatterOldWithHtmlSkill",
+    "type": "python"
+  },
+  "browser": {
+    "path": "core/skills/library/browser",
+    "version": "1.0.0",
+    "description": "Skill derived from browser.md",
+    "intent_triggers": [],
+    "class_name": "BrowserSkill",
+    "type": "python"
+  },
+  "debugger_agent": {
+    "path": "core/skills/library/debugger_agent",
+    "version": "1.0.0",
+    "description": "Skill derived from debugger_agent.md",
+    "intent_triggers": [],
+    "class_name": "DebuggerAgentSkill",
+    "type": "python"
+  },
+  "formatter": {
+    "path": "core/skills/library/formatter",
+    "version": "1.0.0",
+    "description": "Skill derived from formatter.md",
+    "intent_triggers": [],
+    "class_name": "FormatterSkill",
+    "type": "python"
   },
   "system_monitor": {
     "path": "core/skills/library/system_monitor",
@@ -90,6 +181,62 @@
       "disk"
     ],
     "class_name": "SystemMonitorSkill",
+    "type": "python"
+  },
+  "appgenerationprompt": {
+    "path": "core/skills/library/appgenerationprompt",
+    "version": "1.0.0",
+    "description": "Skill derived from AppGenerationPrompt.md",
+    "intent_triggers": [],
+    "class_name": "AppgenerationpromptSkill",
+    "type": "python"
+  },
+  "decision": {
+    "path": "core/skills/library/decision",
+    "version": "1.0.0",
+    "description": "Skill derived from decision.md",
+    "intent_triggers": [],
+    "class_name": "DecisionSkill",
+    "type": "python"
+  },
+  "coder": {
+    "path": "core/skills/library/coder",
+    "version": "1.0.0",
+    "description": "Skill derived from coder.md",
+    "intent_triggers": [],
+    "class_name": "CoderSkill",
+    "type": "python"
+  },
+  "summarizer": {
+    "path": "core/skills/library/summarizer",
+    "version": "1.0.0",
+    "description": "Skill derived from summarizer.md",
+    "intent_triggers": [],
+    "class_name": "SummarizerSkill",
+    "type": "python"
+  },
+  "thinker": {
+    "path": "core/skills/library/thinker",
+    "version": "1.0.0",
+    "description": "Skill derived from thinker.md",
+    "intent_triggers": [],
+    "class_name": "ThinkerSkill",
+    "type": "python"
+  },
+  "apphydrationprompt": {
+    "path": "core/skills/library/apphydrationprompt",
+    "version": "1.0.0",
+    "description": "Skill derived from AppHydrationPrompt.md",
+    "intent_triggers": [],
+    "class_name": "ApphydrationpromptSkill",
+    "type": "python"
+  },
+  "backendgenerationprompt": {
+    "path": "core/skills/library/backendgenerationprompt",
+    "version": "1.0.0",
+    "description": "Skill derived from BackendGenerationPrompt.md",
+    "intent_triggers": [],
+    "class_name": "BackendgenerationpromptSkill",
     "type": "python"
   }
 }

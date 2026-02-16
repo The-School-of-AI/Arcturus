@@ -9,23 +9,11 @@ from pathlib import Path
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
-# DEBUG
-sys.stderr.write(f"DEBUG: Added to path: {root_dir}\n")
-sys.stderr.write(f"DEBUG: Contents of root: {os.listdir(root_dir)}\n")
-import importlib.util
-
-# Use importlib to avoid conflict with 'mcp_servers.tools'
-sandbox_path = root_dir / "tools/sandbox.py"
-spec = importlib.util.spec_from_file_location("tools.sandbox", sandbox_path)
-sandbox_mod = importlib.util.module_from_spec(spec)
-# We need to register it so internal imports (if any) work?
-# sandbox.py imports core.utils. 
-# We already added root_dir to sys.path so core.utils should work.
-spec.loader.exec_module(sandbox_mod)
-
-run_user_code = sandbox_mod.run_user_code
+# Removed legacy sandbox tool dependency
 
 from mcp.server.fastmcp import FastMCP
+
+from core.sandbox.executor import UniversalSandbox
 
 # Initialize FastMCP server
 mcp = FastMCP("sandbox")
@@ -37,18 +25,29 @@ async def run_python_script(code: str) -> str:
     Use this for math, data processing, and logic.
     Returns the stdout and result of the execution.
     """
-    # We pass multi_mcp=None for now, limiting the sandbox to pure Python logic
-    # without ability to call other MCP tools recursively.
-    result = await run_user_code(code, multi_mcp=None, session_id="mcp_worker")
+    # Disabled recursive MultiMCP to prevent hang
+    # from shared.state import get_multi_mcp
+    # multi_mcp = get_multi_mcp()
+    
+    sandbox = UniversalSandbox(multi_mcp=None, session_id="mcp_worker")
+    result = await sandbox.run(code)
     
     # Format the output for the agent
     if result.get("status") == "success":
-        # Return the 'result' key or raw stdout captured
+        # Return the 'result' key and logs
         val = result.get("result", "")
-        return f"Execution Successful:\n{val}"
+        logs = result.get("logs", "")
+        out = f"Execution Successful:\nResult: {val}"
+        if logs.strip():
+            out += f"\nLogs:\n{logs}"
+        return out
     else:
         err = result.get("error", "Unknown error")
-        return f"Execution Failed:\n{err}"
+        trace = result.get("traceback", "")
+        out = f"Execution Failed:\n{err}"
+        if trace:
+            out += f"\nTraceback:\n{trace}"
+        return out
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

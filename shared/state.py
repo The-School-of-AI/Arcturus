@@ -57,5 +57,16 @@ def get_skill_manager():
         _skill_manager.initialize()
     return _skill_manager
 
+# Agent Runner instance
+_agent_runner = None
+
+def get_agent_runner():
+    """Get the AgentRunner instance, creating it if needed."""
+    global _agent_runner
+    if _agent_runner is None:
+        from agents.base_agent import AgentRunner
+        _agent_runner = AgentRunner(get_multi_mcp())
+    return _agent_runner
+
 # Global settings state
 settings = {}

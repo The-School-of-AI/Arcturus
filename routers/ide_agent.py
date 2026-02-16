@@ -34,166 +34,93 @@ async def tool_read_url(request: Request):
 async def ask_ide_agent(request: Request):
     """
     Interactive chat with the IDE Agent.
-    - Loads system prompt from `prompts/ide_agent_prompt.md`
-    - Injects project context
-    - Streams response from Ollama
+    - Uses the standard AgentRunner with 'IDEAgent' profile.
+    - Respects centralized model settings.
     """
     try:
         body = await request.json()
         query = body.get("query")
         history = body.get("history", [])
         images = body.get("images", [])
-        image = body.get("image") # Data URI
-        if image:
-            images.append(image)
-
-        tools = body.get("tools")
-        project_root = body.get("project_root", str(PROJECT_ROOT))
-        model = body.get("model", "qwen3-vl:8b")
+        
+        from shared.state import get_agent_runner, PROJECT_ROOT
+        runner = get_agent_runner()
 
         if not query:
             raise HTTPException(status_code=400, detail="Missing query")
 
-        # Save images to .arcturus/images
+        # Prepare input data for the agent
+        input_data = {
+            "task": query,
+            "history": history,
+            "project_root": str(PROJECT_ROOT)
+        }
+
+        # Handle images if provided
+        image_path = None
         if images:
+            img_dir = PROJECT_ROOT / ".arcturus" / "images"
+            img_dir.mkdir(parents=True, exist_ok=True)
             import base64
             import time
             
-            try:
-                images_dir = Path(project_root) / ".arcturus" / "images"
-                images_dir.mkdir(parents=True, exist_ok=True)
+            img_data = images[0]
+            if "," in img_data:
+                _, b64_str = img_data.split(",", 1)
+            else:
+                b64_str = img_data
                 
-                for i, img_data in enumerate(images):
-                    if "," in img_data:
-                        header, b64_str = img_data.split(",", 1)
-                        ext = "png"
-                        if "jpeg" in header: ext = "jpg"
-                        elif "webp" in header: ext = "webp"
-                    else:
-                        b64_str = img_data
-                        ext = "png"
-                        
-                    # Save file
-                    timestamp = int(time.time() * 1000)
-                    filename = f"image_{timestamp}_{i}.{ext}"
-                    (images_dir / filename).write_bytes(base64.b64decode(b64_str))
-            except Exception as e:
-                print(f"Failed to save images: {e}")
+            image_path = str(img_dir / f"ide_input_{int(time.time())}.png")
+            Path(image_path).write_bytes(base64.b64decode(b64_str))
 
-        # 1. Load System Prompt
-        prompt_path = PROJECT_ROOT / "prompts" / "ide_agent_prompt.md"
-        base_system_prompt = prompt_path.read_text() if prompt_path.exists() else "You are a helpful coding assistant."
-
-        # 2. Augment System Prompt
-        system_prompt = f"""{base_system_prompt}
-
-CRITICAL: Your current working directory (project root) is: {project_root}
-All file operations MUST be relative to this root.
-
-SHELL ENVIRONMENT:
-- You are in a NON-INTERACTIVE shell. 
-- NEVER use commands that wait for user input (e.g., `input()` in Python, `read` in bash). 
-- If you write scripts, use `sys.argv` to accept arguments.
-  Example: `script.py arg1 arg2` instead of interactive prompts.
-- Prefer `python3` over `python` for execution.
-- If a command hangs, it will be killed after 60 seconds.
-
-CRITICAL: Always start your response with a thinking process enclosed in <think> tags. 
-Analyze the user request (including any provided images), checks the tools available, and plan your answer before providing the final response or tool call.
-
-VISION CAPABILITIES:
-- If images are provided in the user message, you CAN see and analyze them. 
-- Use the images to understand UI issues, code screenshots, or any visual context provided by the user.
-
-TOOL USAGE RULES:
-- EXPLORATION: To see what's in a directory, ALWAYS use `list_dir`. NEVER use `read_file` on a folder (it will fail with EISDIR).
-- PATHS: All paths MUST be relative to the project root (e.g. 'src/App.tsx').
-- ACCURACY: Only use tools when necessary. If you know the answer from context, provide it directly.
-- ERROR HANDLING: If a tool fails (e.g. file not found), check your path and try again or use `find_by_name` to locate it.
-
-"""
-        if tools:
-            tools_desc = json.dumps(tools, indent=2)
-            system_prompt += f"""
-### AGENT TOOLS
-To use a tool, you MUST output a valid JSON block enclosed in markdown code fences:
-
-```json
-{{
-  "tool": "tool_name",
-  "args": {{ "arg_name": "value" }}
-}}
-```
-
-Available Tools:
-{tools_desc}
-"""
-
-        # 3. Construct Messages
-        messages = [{"role": "system", "content": system_prompt}]
+        # Run the agent
+        result = await runner.run_agent("IDEAgent", input_data, image_path=image_path)
         
-        # Add history (limit to last 10 turns to save context)
-        for msg in history[-10:]: 
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            m = {"role": role, "content": content}
-            
-            # Support images in history
-            hist_images = msg.get("images", [])
-            if hist_images:
-                clean_hist = []
-                for img in hist_images:
-                    if isinstance(img, str):
-                        if "," in img: clean_hist.append(img.split(",")[1])
-                        else: clean_hist.append(img)
-                m["images"] = clean_hist
-            
-            messages.append(m)
-            
-        user_msg = {"role": "user", "content": query}
-        if images:
-            # Ollama expects pure base64
-            clean_images = []
-            for img in images:
-                if "," in img:
-                    clean_images.append(img.split(",")[1])
-                else:
-                    clean_images.append(img)
-            user_msg["images"] = clean_images
-        messages.append(user_msg)
+        if not result["success"]:
+            return {"response": f"Error: {result.get('error', 'Unknown failure')}", "status": "failed"}
 
-        # 4. Stream Response
-        async def token_generator():
-            try:
-                # FIRST: Send the full system prompt for debugging/logging
-                yield f"data: {json.dumps({'system_prompt': system_prompt, 'model': model, 'tools': tools})}\n\n"
-                
-                async with httpx.AsyncClient(timeout=300) as client:
-                    async with client.stream("POST", "http://127.0.0.1:11434/api/chat", json={
-                        "model": model, 
-                        "messages": messages,
-                        "stream": True,
-                        "options": {
-                            "temperature": 0.3 # Lower temperature for coding
-                        }
-                    }) as response:
-                        async for line in response.aiter_lines():
-                            if not line: continue
-                            try:
-                                data = json.loads(line)
-                                chunk = data.get("message", {}).get("content", "")
-                                if chunk:
-                                    yield f"data: {json.dumps({'content': chunk})}\n\n"
-                                if data.get("done"):
-                                    break
-                            except Exception:
-                                continue
-            except Exception as e:
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        output = result["output"]
+        if isinstance(output, str):
+            response_text = output
+        else:
+            response_text = output.get("response", output.get("answer", output.get("output", str(output))))
+        
+        # ✅ 46. Memory Stream Integration
+        try:
+            from core.episodic_memory import EpisodicMemory
+            import time
+            session_id = f"ide_{int(time.time())}"
+            session_data = {
+                "graph": {
+                    "session_id": session_id,
+                    "original_query": query,
+                    "status": "completed",
+                    "final_cost": output.get("cost", 0) if isinstance(output, dict) else 0
+                },
+                "nodes": [
+                    {
+                        "id": "chat_0",
+                        "agent": "IDEAgent",
+                        "description": query,
+                        "status": "completed",
+                        "output": output,
+                        "agent_prompt": "Standard IDE Chat"
+                    }
+                ]
+            }
+            await EpisodicMemory().save_episode(session_data)
+        except Exception as e:
+            print(f"Failed to save IDE episode: {e}")
 
-        return StreamingResponse(token_generator(), media_type="text/event-stream")
+        return {
+            "response": response_text,
+            "status": "success",
+            "metadata": {
+                "model": output.get("executed_model", "unknown") if isinstance(output, dict) else "unknown",
+                "cost": output.get("cost", 0) if isinstance(output, dict) else 0,
+                "session_id": session_id
+            }
+        }
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

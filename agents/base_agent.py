@@ -12,11 +12,8 @@ import os
 class AgentRunner:
     def __init__(self, multi_mcp):
         self.multi_mcp = multi_mcp
-        
-        # Load agent configurations
-        config_path = Path(__file__).parent.parent / "config/agent_config.yaml"
-        with open(config_path, "r") as f:
-            self.agent_configs = yaml.safe_load(f)["agents"]
+        # Config loading is now handled by core.bootstrap and AgentRegistry
+        # We lazy-load on first run if needed.
     
     def calculate_cost(self, input_text: str, output_text: str) -> dict:
         """Calculate cost and token usage"""
@@ -46,62 +43,29 @@ class AgentRunner:
     async def run_agent(self, agent_type: str, input_data: dict, image_path: Optional[str] = None, use_system2: bool = False) -> dict:
         """Run a specific agent with input data and optional image. use_system2=True enables Reasoning Loop."""
         
-        if agent_type not in self.agent_configs:
-            raise ValueError(f"Unknown agent type: {agent_type}")
+        from core.registry import AgentRegistry
+        config = AgentRegistry.get(agent_type)
+        
+        if not config:
+            # Lazy bootstrap if registry is empty or agent missing
+            from core.bootstrap import bootstrap_agents
+            bootstrap_agents()
+            config = AgentRegistry.get(agent_type)
             
-        config = self.agent_configs[agent_type]
+        if not config:
+            raise ValueError(f"Unknown agent type: {agent_type} (Not found in Registry)")
         
         try:
             # 1. Load prompt template
-            prompt_template = Path(config["prompt_file"]).read_text(encoding="utf-8")
-            
-            # 2. Get tools from specified MCP servers (if any)
-            tools_text = ""
-            if config.get("mcp_servers"):
-                tools = self.multi_mcp.get_tools_from_servers(config["mcp_servers"])
-                if tools:
-                    tool_descriptions = []
-                    for tool in tools:
-                        schema = tool.inputSchema
-                        if "input" in schema.get("properties", {}):
-                            inner_key = next(iter(schema.get("$defs", {})), None)
-                            props = schema["$defs"][inner_key]["properties"]
-                        else:
-                            props = schema["properties"]
-
-                        arg_types = []
-                        for k, v in props.items():
-                            t = v.get("type", "any")
-                            arg_types.append(t)
-
-                        signature_str = ", ".join(arg_types)
-                        tool_descriptions.append(f"- `{tool.name}({signature_str})` # {tool.description}")
-                    
-                    tools_text = "\n\n### Available Tools\n\n" + "\n".join(tool_descriptions)
-            
-            # 3. Build full prompt
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            
-            # 3a. Inject user preferences (compact format)
-            try:
-                from remme.preferences import get_compact_policy
-                # Map agent types to scopes for preference lookup
-                scope_map = {
-                    "PlannerAgent": "planning", "CoderAgent": "coding",
-                    "DistillerAgent": "coding", "FormatterAgent": "formatting",
-                    "RetrieverAgent": "research", "ThinkerAgent": "reasoning",
-                }
-                scope = scope_map.get(agent_type, "general")
-                user_prefs_text = f"\n---\n## User Preferences\n{get_compact_policy(scope)}\n---\n"
-            except Exception as e:
-                # print(f"⚠️ Could not load user preferences: {e}")
-                user_prefs_text = ""
-            
-            full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2)}\n```"
-
-            print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
+            if "prompt_text" in config:
+                prompt_template = config["prompt_text"]
+            elif "prompt_file" in config:
+                prompt_template = Path(config["prompt_file"]).read_text(encoding="utf-8")
+            else:
+                 prompt_template = f"You are {agent_type}. No specific prompt provided."
 
             # 🧩 SKILLS INJECTION
+            skill_tools_list = []
             try:
                 from shared.state import get_skill_manager
                 skill_manager = get_skill_manager()
@@ -113,21 +77,160 @@ class AgentRunner:
                     if skill:
                         active_skills.append(skill)
                         
-                # 2. Apply Skills (Allow them to modify prompt)
+                # 2. Apply Skills
+                skill_prompts = []
                 for skill in active_skills:
                     meta = skill.get_metadata()
-                    # We await on_run_start to allow async operations (like fetching context)
-                    full_prompt = await skill.on_run_start(full_prompt)
-                    log_step(f"🧩 Applied Skill: {meta.name} v{meta.version}", symbol="🧩")
+                    
+                    # Get prompt additions
+                    additions = skill.get_system_prompt_additions()
+                    if additions:
+                        skill_prompts.append(additions)
+                    
+                    # Get tools from skill
+                    skill_tools_list.extend(skill.get_tools())
+                    
+                    log_step(f"🧩 Applied Skill: {meta.name}", symbol="🧩")
+                
+                if skill_prompts:
+                    # Append skill prompts to the main prompt template
+                    prompt_template = prompt_template.strip() + "\n\n" + "\n\n".join(skill_prompts)
                     
             except Exception as e:
                 log_error(f"Failed to inject skills: {e}")
 
-            # 📝 LOGGING: Save prompt to file for debugging
+            # 2. Get tools from specified MCP servers (if any)
+            tools_text = ""
+            all_tools = []
+            
+            if config.get("mcp_servers"):
+                mcp_tools = self.multi_mcp.get_tools_from_servers(config["mcp_servers"])
+                if mcp_tools:
+                    all_tools.extend(mcp_tools)
+            
+            # Combine with skill tools
+            if skill_tools_list:
+                all_tools.extend(skill_tools_list)
+
+            if all_tools:
+                tool_descriptions = []
+                for tool in all_tools:
+                    # Simple documentation of tool
+                    # Check if it has a schema or is a simple func
+                    if hasattr(tool, 'inputSchema'):
+                        schema = tool.inputSchema
+                        # ... existing parsing logic ...
+                        if "input" in schema.get("properties", {}):
+                            inner_key = next(iter(schema.get("$defs", {})), None)
+                            props = schema["$defs"][inner_key]["properties"] if inner_key else {}
+                        else:
+                            props = schema.get("properties", {})
+
+                        arg_types = []
+                        for k, v in props.items():
+                            t = v.get("type", "any")
+                            arg_types.append(t)
+                        signature_str = ", ".join(arg_types)
+                        tool_descriptions.append(f"- `{tool.name}({signature_str})` # {tool.description}")
+                    else:
+                        # Fallback for non-MCP tools
+                        tool_descriptions.append(f"- `{getattr(tool, 'name', 'tool')}` # {getattr(tool, 'description', 'No description')}")
+                
+                tools_text = "\n\n### Available Tools\n\n" + "\n".join(tool_descriptions)
+
+            # 3. Build context (Date, Preferences, Registry)
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            
+            # 3a. Inject user preferences (compact format)
+            try:
+                from remme.preferences import get_compact_policy
+                scope_map = {
+                    "PlannerAgent": "planning", "CoderAgent": "coding",
+                    "DistillerAgent": "coding", "FormatterAgent": "formatting",
+                    "RetrieverAgent": "research", "ThinkerAgent": "reasoning",
+                }
+                scope = scope_map.get(agent_type, "general")
+                user_prefs_text = f"\n---\n## User Preferences\n{get_compact_policy(scope)}\n---\n"
+            except Exception:
+                user_prefs_text = ""
+            
+            # 3b. Inject Available Agents (for Planner abstraction)
+            if "{available_agents_enum}" in prompt_template or "{available_agents_description}" in prompt_template:
+                from core.registry import AgentRegistry
+                agents_dict = AgentRegistry.list_agents()
+                enum_str = ' | '.join([f'"{name}"' for name in agents_dict.keys()])
+                desc_lines = []
+                for name, desc in agents_dict.items():
+                    clean_desc = desc.strip()
+                    if "\n" in clean_desc:
+                         lines = clean_desc.split("\n")
+                         formatted_desc = lines[0] + "\n" + "\n".join([f"  {line}" for line in lines[1:]])
+                         desc_lines.append(f"* **{name}**: {formatted_desc}")
+                    else:
+                         desc_lines.append(f"* **{name}**: {clean_desc}")
+                desc_str = "\n".join(desc_lines)
+                prompt_template = prompt_template.replace("{available_agents_enum}", enum_str)
+                prompt_template = prompt_template.replace("{available_agents_description}", desc_str)
+
+            # 3c. Inject Episodic Memory (JitRL) for PlannerAgent
+            episodic_context = ""
+            if agent_type == "PlannerAgent":
+                try:
+                    from memory.episodic import search_episodes
+                    # Handle different input key possibilities
+                    query = input_data.get("task") or input_data.get("original_query") or ""
+                    if query:
+                        log_step(f"🧠 Searching episodic memory for: '{query[:50]}...'", symbol="🔍")
+                        past_episodes = search_episodes(query, limit=2)
+                        if past_episodes:
+                            episodic_context = "\n\n## Relevant Past Experiences (Recipes)\n"
+                            episodic_context += "Use these successful past workflows as inspiration for your new plan:\n"
+                            for ep in past_episodes:
+                                steps = " -> ".join([n.get("agent", "??") for n in ep.get("nodes", []) if n.get("agent") != "System"])
+                                episodic_context += f"- **Task**: \"{ep['original_query']}\"\n  **Workflow**: {steps}\n"
+                            log_step(f"📈 Found {len(past_episodes)} relevant past episodes.", symbol="💡")
+                except Exception as e:
+                    log_error(f"Episodic retrieval hook failed: {e}")
+
+            # 3d. Inject Factual Memory (Semantic Injection)
+            factual_context = ""
+            if agent_type in ["SummarizerAgent", "RetrieverAgent", "CoderAgent"]:
+                try:
+                    from memory.mem0_store import MemoryStore
+                    store = MemoryStore()
+                    query = input_data.get("task") or input_data.get("original_query") or ""
+                    if query:
+                        facts = store.search(query, limit=3)
+                        if facts:
+                            factual_context = "\n\n## Memories of User Preferences & Facts\n"
+                            factual_context += "Use these stored facts to inform your response:\n"
+                            for f in facts:
+                                if isinstance(f, dict):
+                                    factual_context += f"- {f.get('memory', f.get('content', str(f)))}\n"
+                                else:
+                                    factual_context += f"- {str(f)}\n"
+                except Exception as e:
+                    log_error(f"Factual memory hook failed: {e}")
+
+            # 3e. Inject System Profile (Cortex-R settings)
+            profile_context = ""
+            try:
+                from core.profile_loader import get_profile
+                profile = get_profile()
+                biases = profile.biases
+                profile_context = f"\n---\n## System Profile\n- Tone: {biases['tone']}\n- Verbosity: {biases['verbosity']}\n---\n"
+            except Exception as e:
+                log_error(f"Profile injection failed: {e}")
+
+            # 4. Final Prompt Construction
+            full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
+            
+            print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
+
             debug_log_dir = Path(__file__).parent.parent / "memory" / "debug_logs"
             debug_log_dir.mkdir(parents=True, exist_ok=True)
-            (debug_log_dir / "latest_prompt.txt").write_text(f"AGENT: {agent_type}\nCONFIG: {config['prompt_file']}\n\n{full_prompt}", encoding="utf-8")
-            log_step(f"🤖 {agent_type} invoked", payload={"prompt_file": config['prompt_file'], "input_keys": list(input_data.keys())}, symbol="🟦")
+            (debug_log_dir / "latest_prompt.txt").write_text(f"AGENT: {agent_type}\nCONFIG: {config.get('prompt_file', 'Dynamic Injection')}\n\n{full_prompt}", encoding="utf-8")
+            log_step(f"🤖 {agent_type} invoked", payload={"prompt_file": config.get('prompt_file', 'Dynamic'), "input_keys": list(input_data.keys())}, symbol="🟦")
 
             # 4. Create model manager with user's selected model from settings
             # IMPORTANT: Use reload_settings() to get fresh settings from disk
@@ -224,4 +327,10 @@ class AgentRunner:
 
     def get_available_agents(self) -> list:
         """Return list of available agent types"""
-        return list(self.agent_configs.keys())
+        from core.registry import AgentRegistry
+        agents = list(AgentRegistry.list_agents().keys())
+        if not agents:
+            from core.bootstrap import bootstrap_agents
+            bootstrap_agents()
+            agents = list(AgentRegistry.list_agents().keys())
+        return agents

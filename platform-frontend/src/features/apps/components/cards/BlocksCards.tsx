@@ -18,11 +18,18 @@ import { AutoHeightWrapper } from './AutoHeightWrapper';
 // Source: https://blocks.so/stats#stats-01
 // ============================================================================
 
+// Enhanced StatItem with flexible schema support
+// Enhanced StatItem with flexible schema support
 interface StatItem {
-    name: string;
-    value: string;
-    change: string;
-    changeType: 'positive' | 'negative' | 'neutral';
+    name?: string;
+    label?: string; // AI often generates 'label'
+    value?: string;
+    change?: string;
+    changeType?: 'positive' | 'negative' | 'neutral';
+    description?: string; // AI often generates 'description'
+    icon?: string; // AI often generates 'icon'
+    status?: 'success' | 'warning' | 'error' | 'info'; // For status cards
+    statusText?: string;
 }
 
 interface StatsTrendingCardProps {
@@ -31,6 +38,7 @@ interface StatsTrendingCardProps {
         title?: string;
         description?: string;
         stats?: StatItem[];
+        items?: StatItem[]; // AI sometimes uses 'items'
     };
     config?: {
         showTitle?: boolean;
@@ -48,6 +56,19 @@ const defaultStats: StatItem[] = [
     { name: 'Pending orders', value: '$173,229', change: '+2.87%', changeType: 'positive' },
 ];
 
+// Helper to normalize stat item
+const normalizeStat = (item: any): StatItem => ({
+    ...item,
+    name: item.name || item.label || 'Unknown',
+    value: item.value || '', // Allow empty value
+    change: item.change || '',
+    changeType: item.changeType || 'neutral',
+    description: item.description || '',
+    icon: item.icon || '',
+    status: item.status || 'info',
+    statusText: item.statusText || item.status || 'Info'
+});
+
 export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
     title: propTitle,
     data = {},
@@ -60,7 +81,9 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
     const titleVal = data.title || propTitle || 'Key Metrics';
     const showTitle = config.showTitle !== false;
     const showChange = config.showChange !== false;
-    const stats = data.stats || defaultStats;
+    // Handle both 'stats' and 'items'
+    const rawStats = data.stats || data.items || defaultStats;
+    const stats = rawStats.map(normalizeStat);
 
     const content = (
         <div className="h-full flex flex-col p-4">
@@ -70,17 +93,22 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
                     {titleVal}
                 </h3>
             )}
-            <div className="grid grid-cols-1 gap-3 flex-1">
+            <div className="grid grid-cols-1 gap-3 flex-1 overflow-auto">
                 {stats.map((stat, index) => (
                     <div
                         key={index}
                         className="p-3 rounded-lg bg-muted border border-border"
                     >
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="text-xs font-medium text-muted-foreground">{stat.name}</span>
-                            {showChange && (
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-medium text-muted-foreground">{stat.name}</span>
+                                {stat.description && (
+                                    <span className="text-[10px] text-muted-foreground/70 mt-0.5 line-clamp-2">{stat.description}</span>
+                                )}
+                            </div>
+                            {showChange && stat.change && (
                                 <span className={cn(
-                                    "text-xs font-medium",
+                                    "text-xs font-medium shrink-0",
                                     stat.changeType === 'positive' ? "text-green-400" :
                                         stat.changeType === 'negative' ? "text-red-400" : "text-muted-foreground"
                                 )}>
@@ -88,7 +116,9 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
                                 </span>
                             )}
                         </div>
-                        <div className="text-xl font-bold text-foreground">{stat.value}</div>
+                        {stat.value && (
+                            <div className="text-xl font-bold text-foreground mt-1">{stat.value}</div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -113,6 +143,7 @@ interface StatsGridCardProps {
         title?: string;
         description?: string;
         stats?: StatItem[];
+        items?: StatItem[];
     };
     config?: {
         showTitle?: boolean;
@@ -143,7 +174,8 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
     const titleVal = data.title || propTitle || 'Analytics Overview';
     const showTitle = config.showTitle !== false;
     const columns = config.columns || 2;
-    const stats = data.stats || defaultGridStats;
+    const rawStats = data.stats || data.items || defaultGridStats;
+    const stats = rawStats.map(normalizeStat);
 
     const content = (
         <div className="h-full flex flex-col p-4">
@@ -153,7 +185,7 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
                 </h3>
             )}
             <div className={cn(
-                "grid gap-3 flex-1",
+                "grid gap-3 flex-1 overflow-auto",
                 columns === 2 && "grid-cols-2",
                 columns === 3 && "grid-cols-3",
                 columns === 4 && "grid-cols-4"
@@ -161,17 +193,26 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
                 {stats.map((item, index) => (
                     <Card key={index} className="p-4 py-3 bg-muted border-border">
                         <CardContent className="p-0">
-                            <dt className="text-xs font-medium text-muted-foreground">{item.name}</dt>
-                            <dd className="mt-1 flex items-baseline space-x-2">
-                                <span className="text-2xl font-semibold text-foreground">{item.value}</span>
-                                <span className={cn(
-                                    "text-xs font-medium",
-                                    item.changeType === 'positive' ? "text-green-400" :
-                                        item.changeType === 'negative' ? "text-red-400" : "text-muted-foreground"
-                                )}>
-                                    {item.change}
-                                </span>
-                            </dd>
+                            <div className="flex flex-col h-full justify-between">
+                                <div>
+                                    <dt className="text-xs font-medium text-muted-foreground mb-1">{item.name}</dt>
+                                    {item.description && (
+                                        <p className="text-[10px] text-muted-foreground/70 mb-2 line-clamp-2">{item.description}</p>
+                                    )}
+                                </div>
+                                <dd className="flex items-baseline space-x-2 mt-auto">
+                                    {item.value && <span className="text-2xl font-semibold text-foreground">{item.value}</span>}
+                                    {item.change && (
+                                        <span className={cn(
+                                            "text-xs font-medium",
+                                            item.changeType === 'positive' ? "text-green-400" :
+                                                item.changeType === 'negative' ? "text-red-400" : "text-muted-foreground"
+                                        )}>
+                                            {item.change}
+                                        </span>
+                                    )}
+                                </dd>
+                            </div>
                         </CardContent>
                     </Card>
                 ))}
@@ -191,19 +232,13 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
 // Source: https://blocks.so/stats#stats-06
 // ============================================================================
 
-interface StatusStatItem {
-    name: string;
-    value: string;
-    status: 'success' | 'warning' | 'error' | 'info';
-    statusText: string;
-}
-
 interface StatsStatusCardProps {
     title?: string;
     data?: {
         title?: string;
         description?: string;
-        stats?: StatusStatItem[];
+        stats?: StatItem[];
+        items?: StatItem[];
     };
     config?: {
         showTitle?: boolean;
@@ -214,7 +249,7 @@ interface StatsStatusCardProps {
     context?: string;
 }
 
-const defaultStatusStats: StatusStatItem[] = [
+const defaultStatusStats: StatItem[] = [
     { name: 'API Uptime', value: '99.9%', status: 'success', statusText: 'Operational' },
     { name: 'Response Time', value: '142ms', status: 'success', statusText: 'Normal' },
     { name: 'Error Rate', value: '0.4%', status: 'warning', statusText: 'Elevated' },
@@ -239,7 +274,8 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
 }) => {
     const titleVal = data.title || propTitle || 'System Status';
     const showTitle = config.showTitle !== false;
-    const stats = data.stats || defaultStatusStats;
+    const rawStats = data.stats || data.items || defaultStatusStats;
+    const stats = rawStats.map(normalizeStat);
 
     const content = (
         <div className="h-full flex flex-col p-4">
@@ -248,16 +284,18 @@ export const StatsStatusCard: React.FC<StatsStatusCardProps> = ({
                     {titleVal}
                 </h3>
             )}
-            <div className="grid grid-cols-2 gap-3 flex-1">
+            <div className="grid grid-cols-2 gap-3 flex-1 overflow-auto">
                 {stats.map((item, index) => (
                     <div key={index} className="p-3 rounded-lg bg-muted border border-border">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-muted-foreground">{item.name}</span>
-                            <Badge variant="outline" className={statusStyles[item.status]}>
-                                {item.statusText}
-                            </Badge>
+                            {item.status && (
+                                <Badge variant="outline" className={statusStyles[item.status as keyof typeof statusStyles] || statusStyles['info']}>
+                                    {item.statusText}
+                                </Badge>
+                            )}
                         </div>
-                        <div className="text-2xl font-bold text-foreground">{item.value}</div>
+                        {item.value && <div className="text-2xl font-bold text-foreground">{item.value}</div>}
                     </div>
                 ))}
             </div>
@@ -472,19 +510,15 @@ export const StatsLinksCard: React.FC<StatsLinksCardProps> = ({
 // STATS-01 CARD: Horizontal Stats Row (adapted from blocks.so stats-01)
 // ============================================================================
 
-interface Stats01Stat {
-    name: string;
-    value: string;
-    change: string;
-    changeType: 'positive' | 'negative';
-}
+interface Stats01Stat extends StatItem { }
 
 interface Stats01CardProps {
     title?: string;
     data?: {
         title?: string;
         description?: string;
-        stats?: Stats01Stat[];
+        stats?: StatItem[];
+        items?: StatItem[];
     };
     config?: {
         showTitle?: boolean;
@@ -495,7 +529,7 @@ interface Stats01CardProps {
     context?: string;
 }
 
-const defaultStats01: Stats01Stat[] = [
+const defaultStats01: StatItem[] = [
     { name: 'Profit', value: '$287,654', change: '+8.32%', changeType: 'positive' },
     { name: 'Late payments', value: '$9,435', change: '-12.64%', changeType: 'negative' },
     { name: 'Pending orders', value: '$173,229', change: '+2.87%', changeType: 'positive' },
@@ -513,7 +547,8 @@ export const Stats01Card: React.FC<Stats01CardProps> = ({
 }) => {
     const titleVal = data.title || propTitle || 'Financial Overview';
     const showTitle = config.showTitle !== false;
-    const stats = data?.stats || defaultStats01;
+    const rawStats = data.stats || data.items || defaultStats01;
+    const stats = rawStats.map(normalizeStat);
 
     const content = (
         <div className="h-full flex flex-col">
@@ -529,14 +564,18 @@ export const Stats01Card: React.FC<Stats01CardProps> = ({
                     <div key={index} className="p-4 bg-background flex flex-col">
                         <div className="flex items-center justify-between gap-2 mb-1">
                             <span className="text-xs font-medium text-muted-foreground">{stat.name}</span>
-                            <span className={cn(
-                                "text-xs font-medium",
-                                stat.changeType === 'positive' ? "text-green-400" : "text-red-400"
-                            )}>
-                                {stat.change}
-                            </span>
+                            {stat.change && (
+                                <span className={cn(
+                                    "text-xs font-medium",
+                                    stat.changeType === 'positive' ? "text-green-400" :
+                                        stat.changeType === 'negative' ? "text-red-400" : "text-muted-foreground"
+                                )}>
+                                    {stat.change}
+                                </span>
+                            )}
                         </div>
-                        <div className="text-2xl font-bold text-foreground mt-auto">{stat.value}</div>
+                        {stat.value && <div className="text-2xl font-bold text-foreground mt-auto">{stat.value}</div>}
+                        {stat.description && <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{stat.description}</div>}
                     </div>
                 ))}
             </div>
@@ -910,20 +949,30 @@ export const AccordionTableCard: React.FC<AccordionTableCardProps> = ({
 
 interface StatsRowCardProps {
     title?: string;
-    data?: { stats?: Array<{ name: string; value: string; change: string; changeType: 'positive' | 'negative' }> };
+    data?: {
+        stats?: StatItem[];
+        items?: StatItem[];
+    };
     config?: { showTitle?: boolean };
     style?: any;
 }
 
 export const StatsRowCard: React.FC<StatsRowCardProps> = ({ title, data = {}, config = {}, style = {} }) => {
-    const stats = data.stats || [];
+    // Use normalizeStat for robustness
+    const rawStats = data.stats || data.items || [];
+    const stats = rawStats.map(normalizeStat);
+
     return (
         <div className="h-full p-4 grid grid-cols-4 gap-4">
             {stats.map((s, i) => (
                 <div key={i} className="text-center">
                     <div className="text-xs text-muted-foreground">{s.name}</div>
-                    <div className="text-lg font-bold text-foreground">{s.value}</div>
-                    <div className={`text-xs ${s.changeType === 'positive' ? 'text-green-400' : 'text-red-400'}`}>{s.change}</div>
+                    {s.value && <div className="text-lg font-bold text-foreground">{s.value}</div>}
+                    {s.change && (
+                        <div className={`text-xs ${s.changeType === 'positive' ? 'text-green-400' : s.changeType === 'negative' ? 'text-red-400' : 'text-muted-foreground'}`}>
+                            {s.change}
+                        </div>
+                    )}
                 </div>
             ))}
         </div>

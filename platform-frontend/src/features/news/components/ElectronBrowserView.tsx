@@ -46,14 +46,14 @@ export const ElectronBrowserView: React.FC = () => {
         if (!containerRef.current || !window.electronAPI) return;
 
         const rect = containerRef.current.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
 
-        // Bounds need to account for device pixel ratio on Retina displays
+        // Electron's setBounds uses logical pixels (DIPs), same as getBoundingClientRect.
+        // We do NOT need to multiply by devicePixelRatio.
         const bounds = {
-            x: Math.round(rect.left * dpr),
-            y: Math.round(rect.top * dpr),
-            width: Math.round(rect.width * dpr),
-            height: Math.round(rect.height * dpr)
+            x: Math.round(rect.left),
+            y: Math.round(rect.top),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
         };
 
         window.electronAPI.send('browser:set-bounds', bounds);

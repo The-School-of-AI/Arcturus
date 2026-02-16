@@ -1,0 +1,171 @@
+{
+  "name": "Arcturus Platform",
+  "theme": {
+    "colors": {
+      "primary": "hsl(200, 70%, 60%)",
+      "secondary": "hsl(280, 70%, 70%)",
+      "background": "hsl(250, 60%, 15%)",
+      "text": "hsl(230, 20%, 85%)"
+    },
+    "glassmorphism": true
+  },
+  "pages": [
+    {
+      "title": "Home",
+      "path": "/",
+      "components": [
+        {
+          "id": "hero-arcturus",
+          "type": "hero",
+          "title": "Arcturus: Navigate the Future of Data",
+          "content": {
+            "subtitle": "Unlock insights with our cutting-edge analytics platform. Intuitive, powerful, and designed for your success.",
+            "primary_button_text": "Get Started",
+            "primary_button_link": "/analytics",
+            "secondary_button_text": "Learn More",
+            "secondary_button_link": "#features"
+          }
+        },
+        {
+          "id": "features-arcturus",
+          "type": "feature_grid",
+          "title": "Key Features",
+          "content": {
+            "features": [
+              {
+                "icon": "\u2728",
+                "title": "Intuitive Interface",
+                "description": "Navigate complex data with ease through our user-friendly design."
+              },
+              {
+                "icon": "\ud83d\udcc8",
+                "title": "Advanced Analytics",
+                "description": "Leverage powerful tools for deep data exploration and actionable insights."
+              },
+              {
+                "icon": "\ud83d\ude80",
+                "title": "Scalable Performance",
+                "description": "Handles vast datasets with speed and efficiency, growing with your needs."
+              },
+              {
+                "icon": "\ud83d\udd12",
+                "title": "Secure Data Handling",
+                "description": "Your data is protected with industry-leading security protocols."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Analytics",
+      "path": "/analytics",
+      "components": [
+        {
+          "id": "analytics-overview-chart",
+          "type": "chart",
+          "title": "Performance Trends",
+          "content": {
+            "chart_type": "line",
+            "data": {
+              "labels": [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun"
+              ],
+              "datasets": [
+                {
+                  "label": "Revenue",
+                  "data": [
+                    120,
+                    150,
+                    170,
+                    200,
+                    220,
+                    250
+                  ],
+                  "borderColor": "hsl(200, 70%, 60%)",
+                  "fill": false
+                },
+                {
+                  "label": "Costs",
+                  "data": [
+                    80,
+                    90,
+                    100,
+                    110,
+                    120,
+                    130
+                  ],
+                  "borderColor": "hsl(280, 70%, 70%)",
+                  "fill": false
+                }
+              ]
+            },
+            "options": {
+              "responsive": true,
+              "plugins": {
+                "legend": {
+                  "position": "top"
+                },
+                "title": {
+                  "display": true,
+                  "text": "Monthly Performance Overview"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "analytics-segment-chart",
+          "type": "chart",
+          "title": "Customer Segmentation",
+          "content": {
+            "chart_type": "pie",
+            "data": {
+              "labels": [
+                "Segment A",
+                "Segment B",
+                "Segment C",
+                "Segment D"
+              ],
+              "datasets": [
+                {
+                  "label": "Market Share",
+                  "data": [
+                    30,
+                    25,
+                    20,
+                    25
+                  ],
+                  "backgroundColor": [
+                    "hsl(200, 70%, 60%)",
+                    "hsl(280, 70%, 70%)",
+                    "hsl(230, 40%, 50%)",
+                    "hsl(150, 50%, 50%)"
+                  ]
+                }
+              ]
+            },
+            "options": {
+              "responsive": true,
+              "plugins": {
+                "legend": {
+                  "position": "right"
+                },
+                "title": {
+                  "display": true,
+                  "text": "Customer Distribution by Segment"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

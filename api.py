@@ -40,6 +40,17 @@ remme_extractor = get_remme_extractor()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 API Starting up...")
+    
+    # Bootstrap & Validate Registry
+    from core.bootstrap import bootstrap_agents
+    from core.registry import registry
+    try:
+        bootstrap_agents()
+        registry.validate()
+    except Exception as e:
+        print(f"❌ Registry Validation Failed: {e}")
+        # We don't necessarily exit, but log big error
+        
     scheduler_service.initialize()
     persistence_manager.load_snapshot()
     await multi_mcp.start()

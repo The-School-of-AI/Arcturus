@@ -41,6 +41,13 @@ def load_settings() -> dict:
             save_settings()  # Create settings.json from defaults
         else:
             raise FileNotFoundError(f"No settings files found in {CONFIG_DIR}")
+        
+        # ✅ Validation Step
+        required_keys = ["models", "ollama", "rag"]
+        missing = [k for k in required_keys if k not in _settings_cache]
+        if missing:
+            raise KeyError(f"Missing required settings keys: {missing}")
+            
     return _settings_cache
 
 def save_settings() -> None:

@@ -16,6 +16,10 @@ class MultiMCP:
         self.exit_stack = AsyncExitStack()
         self.sessions = {}  # server_name -> session
         self.tools = {}     # server_name -> [Tool]
+        self.server_pids = {} # server_name -> PID
+        
+        from collections import defaultdict
+        self.active_calls = defaultdict(int) # server_name -> count
         
         # Robust path resolution
         self.base_dir = Path(__file__).parent
@@ -94,6 +98,9 @@ class MultiMCP:
                 # For now, just removing it prevents further routing.
                 print(f"  🗑️ Removed server '{name}' from sessions")
                 del self.sessions[name]
+                
+            if name in self.server_pids:
+                del self.server_pids[name]
                 
             if name in self.tools:
                 del self.tools[name]
@@ -242,9 +249,25 @@ class MultiMCP:
                 env=final_env
             )
             
+            # PID Tracking Setup
+            import psutil
+            parent_proc = psutil.Process()
+            children_before = set(p.pid for p in parent_proc.children(recursive=False))
+
             # Connect with timeout
             async with asyncio.timeout(20): # 20s timeout (increased for installations)
                 read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
+                
+                # Detect new PID
+                children_after = set(p.pid for p in parent_proc.children(recursive=False))
+                new_pids = children_after - children_before
+                if new_pids:
+                    # We assume the new process is the server
+                    # Just take the first one found
+                    pid = list(new_pids)[0]
+                    self.server_pids[name] = pid
+                    print(f"  🆔 Server '{name}' started with PID: {pid}")
+                
                 session = await self.exit_stack.enter_async_context(ClientSession(read, write))
                 await session.initialize()
                 
@@ -344,11 +367,33 @@ class MultiMCP:
         return all_tools
 
     async def call_tool(self, server_name: str, tool_name: str, arguments: dict):
-        """Call a tool on a specific server"""
+        """Call a tool on a specific server with active call tracking"""
         if server_name not in self.sessions:
             raise ValueError(f"Server '{server_name}' not connected")
         
-        return await self.sessions[server_name].call_tool(tool_name, arguments)
+        # Track active call
+        self.active_calls[server_name] += 1
+        try:
+            return await self.sessions[server_name].call_tool(tool_name, arguments)
+        finally:
+            self.active_calls[server_name] -= 1
+
+    async def drain_server(self, name: str, timeout: float = 30.0) -> bool:
+        """Wait for active calls to finish before stopping"""
+        if self.active_calls[name] == 0:
+            return True
+            
+        print(f"  ⏳ Draining '{name}' ({self.active_calls[name]} active calls)...")
+        start_time = asyncio.get_running_loop().time()
+        
+        while self.active_calls[name] > 0:
+            if asyncio.get_running_loop().time() - start_time > timeout:
+                print(f"  ⚠️ Drain timeout for '{name}' ({self.active_calls[name]} remaining)")
+                return False
+            await asyncio.sleep(0.5)
+            
+        print(f"  ✅ Drained '{name}'")
+        return True
 
     # Helper to route tool call by finding which server has it
     async def route_tool_call(self, tool_name: str, arguments: dict):
@@ -457,4 +502,49 @@ class MultiMCP:
                     return p.read_text(encoding="utf-8", errors="replace")
         
         return None
+
+    def list_active_servers(self) -> list:
+        """Return list of active servers with PIDs"""
+        active = []
+        for name, session in self.sessions.items():
+            pid = self.server_pids.get(name)
+            active.append({
+                "name": name,
+                "status": "connected",
+                "pid": pid,
+                "type": self.server_configs.get(name, {}).get("type", "unknown")
+            })
+        return active
+
+    async def kill_server(self, name: str) -> bool:
+        """Force kill a server process"""
+        import signal
+        import os
+        
+        pid = self.server_pids.get(name)
+        if not pid:
+            print(f"  ⚠️ No PID known for server '{name}'")
+            return False
+            
+        try:
+            os.kill(pid, signal.SIGKILL) # Force kill
+            print(f"  💀 Killed server '{name}' (PID {pid})")
+            
+            # Clean up session (best effort)
+            if name in self.sessions:
+                del self.sessions[name]
+            
+            if name in self.server_pids:
+                del self.server_pids[name]
+                
+            return True
+        except ProcessLookupError:
+            print(f"  ⚠️ Process {pid} for '{name}' not found (already dead?)")
+            if name in self.sessions: del self.sessions[name]
+            if name in self.server_pids: del self.server_pids[name]
+            return True
+        except Exception as e:
+            print(f"  ❌ Failed to kill '{name}': {e}")
+            return False
+
 
