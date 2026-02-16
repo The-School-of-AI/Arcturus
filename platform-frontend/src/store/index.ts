@@ -29,6 +29,7 @@ interface RunSlice {
     startPolling: (runId: string) => void;
     stopPolling: () => void;
     deleteRun: (runId: string) => Promise<void>;
+    executeNode: (runId: string, nodeId: string, mode: 'remaining' | 'all_from_here' | 'single' | 'all', input?: string) => Promise<void>;
 }
 
 interface GraphSlice {
@@ -588,6 +589,16 @@ export const useAppStore = create<AppState>()(
                     }));
                 } catch (e) {
                     console.error("Failed to delete run", e);
+                }
+            },
+
+            executeNode: async (runId, nodeId, mode, input) => {
+                try {
+                    await api.executeNode(runId, nodeId, mode, input);
+                    // Start polling immediately to see status changes
+                    get().startPolling(runId);
+                } catch (e) {
+                    console.error("Failed to execute node", e);
                 }
             },
 

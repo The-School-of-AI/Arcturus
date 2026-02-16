@@ -61,6 +61,11 @@ export const api = {
         await axios.post(`${API_BASE}/runs/${runId}/stop`);
     },
 
+    executeNode: async (runId: string, nodeId: string, mode: 'remaining' | 'all_from_here' | 'single' | 'all', input?: string): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/runs/${runId}/nodes/${nodeId}/execute`, { mode, input });
+        return res.data;
+    },
+
     // Delete run
     deleteRun: async (runId: string): Promise<void> => {
         await axios.delete(`${API_BASE}/runs/${runId}`);

@@ -1,8 +1,14 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle, RefreshCw, LayoutGrid, Edit3 } from 'lucide-react';
+import { Code2, Terminal, Globe, FileCode, CheckCircle2, Eye, Clock, Brain, Maximize2, Minimize2, Play, Save, X, Loader2, AlertTriangle, RefreshCw, LayoutGrid, Edit3, ChevronDown, FastForward, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from 'react-markdown';
 import DOMPurify from 'dompurify';
@@ -138,6 +144,21 @@ export const WorkspacePanel: React.FC = () => {
         }
     }, [testMode.active, testMode.isLoading, testMode.testOutput, testMode.error, testMode.executionResult, testMode.nodeId, selectedNode?.id, activeTab]);
 
+    const [showSaveConfirm, setShowSaveConfirm] = React.useState(false);
+
+    const handleSaveAndRun = async (runRemaining: boolean) => {
+        setShowSaveConfirm(false);
+        if (currentRun?.id && selectedNode?.id) {
+            await saveTestResult(currentRun.id, selectedNode.id);
+            if (runRemaining) {
+                // Add slight delay to allow save to propagate if needed (though store handles it)
+                setTimeout(() => {
+                    useAppStore.getState().executeNode(currentRun.id, selectedNode.id, 'remaining');
+                }, 100);
+            }
+        }
+    };
+
     const handleRerunFormatter = () => {
         if (currentRun?.id && selectedNode?.id) {
             runAgentTest(currentRun.id, selectedNode.id);
@@ -171,9 +192,35 @@ export const WorkspacePanel: React.FC = () => {
 
     const panelContent = (
         <div className={cn(
-            "h-full flex flex-col transition-all duration-300",
+            "h-full flex flex-col transition-all duration-300 relative",
             isZenMode ? "fixed inset-0 z-[9999] w-screen h-screen glass-panel" : ""
         )}>
+            {/* Save Confirmation Modal */}
+            {showSaveConfirm && (
+                <div className="absolute inset-x-0 top-16 z-[50] flex justify-center px-4">
+                    <div className="bg-popover border border-border rounded-lg shadow-2xl p-4 max-w-sm w-full space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="space-y-1">
+                            <h3 className="font-bold text-sm text-foreground">Save & Continue?</h3>
+                            <p className="text-xs text-muted-foreground">
+                                Saving will update the session. Do you want to run the remaining nodes immediately?
+                            </p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Button onClick={() => handleSaveAndRun(true)} size="sm" className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                                <FastForward className="w-3.5 h-3.5" /> Save & Run Remaining
+                            </Button>
+                            <Button onClick={() => handleSaveAndRun(false)} size="sm" variant="secondary" className="w-full justify-start gap-2">
+                                <Save className="w-3.5 h-3.5" /> Save Only
+                            </Button>
+                            <Button onClick={() => setShowSaveConfirm(false)} size="sm" variant="ghost" className="w-full text-muted-foreground hover:text-foreground">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                    {/* Backdrop */}
+                    <div className="fixed inset-0 bg-black/20 z-[-1] backdrop-blur-[1px]" onClick={() => setShowSaveConfirm(false)} />
+                </div>
+            )}
             {/* Sticky Header - Hidden in Zen Mode */}
             {!isZenMode && (
                 <div className="p-4 border-b border-border glass backdrop-blur z-10 flex flex-col gap-2">
@@ -224,31 +271,49 @@ export const WorkspacePanel: React.FC = () => {
 
                         {/* RUN / RUN AGAIN Button - For idle/completed/failed/stale nodes */}
                         {selectedNode?.data.status && ['idle', 'completed', 'failed', 'stale'].includes(selectedNode.data.status) && currentRun?.id && !isExplorer && (
-                            <button
-                                onClick={() => runAgentTest(currentRun.id, selectedNode.id, isEditingInput ? editedInput : undefined)}
-                                disabled={testMode.isLoading}
-                                className={cn(
-                                    "flex items-center ml-2 gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
-                                    testMode.isLoading
-                                        ? "bg-muted text-muted-foreground cursor-wait"
-                                        : selectedNode.data.status === 'idle'
-                                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50"
-                                            : "bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50"
-                                )}
-                                title={selectedNode.data.status === 'idle' ? "Run this agent" : "Re-run this agent with current inputs (test mode)"}
-                            >
-                                {testMode.isLoading && testMode.nodeId === selectedNode.id ? (
-                                    <>
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        {selectedNode.data.status === 'idle' ? 'Running...' : 'Testing...'}
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play className="w-3.5 h-3.5" />
-                                        {selectedNode.data.status === 'idle' ? 'RUN' : 'RUN AGAIN'}
-                                    </>
-                                )}
-                            </button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        disabled={testMode.isLoading}
+                                        className={cn(
+                                            "flex items-center ml-2 gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
+                                            testMode.isLoading
+                                                ? "bg-muted text-muted-foreground cursor-wait"
+                                                : selectedNode.data.status === 'idle'
+                                                    ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50"
+                                                    : "bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50"
+                                        )}
+                                        title="Run Options"
+                                    >
+                                        {testMode.isLoading && testMode.nodeId === selectedNode.id ? (
+                                            <>
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                Running...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Play className="w-3.5 h-3.5" />
+                                                {selectedNode.data.status === 'idle' ? 'RUN' : 'RUN AGAIN'}
+                                                <ChevronDown className="w-3 h-3 ml-1 opacity-50" />
+                                            </>
+                                        )}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[200px]">
+                                    <DropdownMenuItem onClick={() => runAgentTest(currentRun.id, selectedNode.id, isEditingInput ? editedInput : undefined)}>
+                                        <Play className="w-3.5 h-3.5 mr-2" />
+                                        Run again (Test Mode)
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => useAppStore.getState().executeNode(currentRun.id, selectedNode.id, 'remaining')}>
+                                        <FastForward className="w-3.5 h-3.5 mr-2" />
+                                        Run Remaining again
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => useAppStore.getState().executeNode(currentRun.id, selectedNode.id, 'all_from_here')}>
+                                        <Layers className="w-3.5 h-3.5 mr-2" />
+                                        Run All again
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         )}
 
                         {/* Zen Mode Toggle */}
@@ -289,7 +354,7 @@ export const WorkspacePanel: React.FC = () => {
                             </div>
                             <div className="ml-auto flex items-center gap-2">
                                 <button
-                                    onClick={() => currentRun?.id && saveTestResult(currentRun.id, selectedNode.id)}
+                                    onClick={() => setShowSaveConfirm(true)}
                                     disabled={!testMode.testOutput}
                                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >

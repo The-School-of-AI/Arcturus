@@ -56,7 +56,32 @@ class AgentTestRequest(BaseModel):
     pass
 
 
+class ExecuteNodeRequest(BaseModel):
+    mode: str = "remaining"  # "remaining", "all_from_here", "single", "all"
+    input: Optional[str] = None
+
+
 # === Background Tasks ===
+
+async def process_resume(run_id: str, session_path: Path):
+    """Background task to resume agent loop from a file"""
+    try:
+        loop = AgentLoop4(multi_mcp=multi_mcp)
+        # Register the LOOP instance immediately so we can stop it
+        active_loops[run_id] = loop
+        
+        print(f"[{run_id}] Resuming run from {session_path}")
+        await loop.resume(str(session_path))
+        
+    except Exception as e:
+        print(f"Run {run_id} resume failed: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # Clean up
+        if run_id in active_loops:
+            del active_loops[run_id]
+
 
 async def process_run(run_id: str, query: str):
     """Background task to execute the agent loop"""
@@ -976,6 +1001,110 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
             "message": "Test results saved to session"
         }
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/runs/{run_id}/nodes/{node_id}/execute")
+async def execute_node(run_id: str, node_id: str, request: ExecuteNodeRequest, background_tasks: BackgroundTasks):
+    """
+    Execute graph starting from a specific node or just remaining nodes.
+    Updates the session file and triggers background resume.
+    """
+    try:
+        # 1. Find the session file
+        summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+        found_file = None
+        for path in summaries_dir.rglob(f"session_{run_id}.json"):
+            found_file = path
+            break
+        
+        if not found_file:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # 2. Load session data
+        import networkx as nx
+        session_data = json.loads(found_file.read_text())
+        
+        # Determine edge key
+        edge_key = "edges"
+        if "links" in session_data: edge_key = "links"
+        elif "link" in session_data: edge_key = "link"
+        
+        if edge_key not in session_data:
+            session_data[edge_key] = []
+            
+        G = nx.node_link_graph(session_data, edges=edge_key)
+        
+        if node_id not in G.nodes and request.mode != "remaining":
+             # If mode is remaining, node_id might just be context, but let's be strict
+             if node_id != "ROOT":
+                 raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
+
+        # 3. Determine nodes to reset
+        nodes_to_reset = set()
+        
+        if request.mode == "remaining":
+            # Find all descendants of the current node (if provided) that are NOT completed?
+            # actually "remaining" usually implies "pending" nodes.
+            # But here we want to force re-run of downstream nodes.
+            # So find descendants of node_id
+            if node_id and node_id != "ROOT":
+                descendants = nx.descendants(G, node_id)
+                nodes_to_reset.update(descendants)
+            else:
+                 # If no node_id, just resume (no reset)? Or reset failed/interrupted?
+                 pass
+
+        elif request.mode == "all_from_here":
+            # Reset this node AND all descendants
+            nodes_to_reset.add(node_id)
+            descendants = nx.descendants(G, node_id)
+            nodes_to_reset.update(descendants)
+            
+        elif request.mode == "single":
+            # Just reset this node
+            nodes_to_reset.add(node_id)
+            
+        elif request.mode == "all":
+            # Reset ALL nodes except ROOT/Query? Or just restart?
+            # Better to just mark all as pending
+            nodes_to_reset.update(G.nodes)
+            if "ROOT" in nodes_to_reset: nodes_to_reset.remove("ROOT")
+
+        # 4. Apply Resets
+        reset_count = 0
+        for n_id in nodes_to_reset:
+            if n_id in G.nodes:
+                G.nodes[n_id]["status"] = "pending"
+                # Clear output? Maybe not strictly required as it will be overwritten, 
+                # but good to clear error states
+                if "error" in G.nodes[n_id]:
+                    del G.nodes[n_id]["error"]
+                reset_count += 1
+                
+        # 5. Save Session
+        updated_data = nx.node_link_data(G, edges=edge_key)
+        # Ensure top-level metadata persists
+        for k, v in session_data.items():
+            if k not in updated_data:
+                updated_data[k] = v
+                
+        found_file.write_text(json.dumps(updated_data, indent=2))
+        
+        # 6. Trigger Background Resume
+        background_tasks.add_task(process_resume, run_id, found_file)
+        
+        return {
+            "status": "resuming", 
+            "reset_count": reset_count,
+            "mode": request.mode
+        }
+
     except HTTPException:
         raise
     except Exception as e:
