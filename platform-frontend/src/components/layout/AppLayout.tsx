@@ -186,40 +186,52 @@ export const AppLayout: React.FC = () => {
                 {/* Center Canvas or Document Viewer - Main visual area */}
                 <div className="flex-1 flex flex-col min-w-0 glass-panel rounded-2xl relative overflow-hidden shadow-2xl transition-all duration-300">
                     {/* Content Logic */}
+                    {/* Content Logic */}
                     {!isAppViewMode && (
-                        sidebarTab === 'apps' ? (
-                            <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
-                        ) : sidebarTab === 'mcp' ? (
-                            <McpBrowser />
-                        ) : sidebarTab === 'settings' ? (
-                            <SettingsPage />
-                        ) : sidebarTab === 'rag' ? (
-                            <DocumentViewer />
-                        ) : sidebarTab === 'notes' ? (
-                            /* If it's a binary file, show DocumentViewer, else show Editor */
-                            notesActiveDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp|docx?|json)$/i.test(notesActiveDocumentId)
-                                ? <DocumentViewer context="notes" />
-                                : <NotesEditor />
-                        ) : sidebarTab === 'remme' ? (
-                            <RemMeProfileView />
-                        ) : sidebarTab === 'explorer' ? (
-                            <FlowWorkspace />
-                        ) : sidebarTab === 'news' ? (
-                            <ElectronBrowserView />
-                        ) : sidebarTab === 'ide' ? (
-                            <IdeLayout />
-                        ) : sidebarTab === 'scheduler' ? (
-                            <SchedulerDashboard />
-                        ) : sidebarTab === 'skills' ? (
-                            <SkillsDashboard />
-                        ) : sidebarTab === 'console' ? (
-                            <MissionControl />
-                        ) : (
-                            <>
-                                <GraphCanvas />
-                                <RunTimeline />
-                            </>
-                        )
+                        <>
+                            {/* Persistent App Grid */}
+                            <div className={cn("w-full h-full", sidebarTab === 'apps' ? "block" : "hidden")}>
+                                <AppGrid isFullScreen={isFullScreen} onToggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
+                            </div>
+
+                            {/* Persistent News Browser */}
+                            <div className={cn("w-full h-full", sidebarTab === 'news' ? "block" : "hidden")}>
+                                <ElectronBrowserView />
+                            </div>
+
+                            {/* Transient Views */}
+                            {sidebarTab !== 'apps' && sidebarTab !== 'news' && (
+                                sidebarTab === 'mcp' ? (
+                                    <McpBrowser />
+                                ) : sidebarTab === 'settings' ? (
+                                    <SettingsPage />
+                                ) : sidebarTab === 'rag' ? (
+                                    <DocumentViewer />
+                                ) : sidebarTab === 'notes' ? (
+                                    /* If it's a binary file, show DocumentViewer, else show Editor */
+                                    notesActiveDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp|docx?|json)$/i.test(notesActiveDocumentId)
+                                        ? <DocumentViewer context="notes" />
+                                        : <NotesEditor />
+                                ) : sidebarTab === 'remme' ? (
+                                    <RemMeProfileView />
+                                ) : sidebarTab === 'explorer' ? (
+                                    <FlowWorkspace />
+                                ) : sidebarTab === 'ide' ? (
+                                    <IdeLayout />
+                                ) : sidebarTab === 'scheduler' ? (
+                                    <SchedulerDashboard />
+                                ) : sidebarTab === 'skills' ? (
+                                    <SkillsDashboard />
+                                ) : sidebarTab === 'console' ? (
+                                    <MissionControl />
+                                ) : (
+                                    <>
+                                        <GraphCanvas />
+                                        <RunTimeline />
+                                    </>
+                                )
+                            )}
+                        </>
                     )}
 
                     {/* APP RUNTIME VIEW (When "View App" is clicked) */}

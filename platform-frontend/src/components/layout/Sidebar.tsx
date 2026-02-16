@@ -335,8 +335,16 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'mcp' && <McpPanel />}
                     {sidebarTab === 'remme' && <RemmePanel />}
                     {sidebarTab === 'explorer' && <ExplorerPanel />}
-                    {sidebarTab === 'apps' && <AppsSidebar />}
-                    {sidebarTab === 'news' && <NewsPanel />}
+
+                    {/* Persist AppsSidebar to prevent reloading app components */}
+                    <div style={{ display: sidebarTab === 'apps' ? 'block' : 'none', height: '100%' }}>
+                        <AppsSidebar />
+                    </div>
+
+                    {/* Persist NewsPanel to prevent reloading feed */}
+                    <div style={{ display: sidebarTab === 'news' ? 'block' : 'none', height: '100%' }}>
+                        <NewsPanel />
+                    </div>
                     {sidebarTab === 'learn' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
                             <div className="p-6 bg-muted/50 rounded-full ring-1 ring-white/10">
