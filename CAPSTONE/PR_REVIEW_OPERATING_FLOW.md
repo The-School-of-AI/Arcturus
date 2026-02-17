@@ -5,7 +5,7 @@ Use this workflow each day to triage, approve, or request changes.
 ## 1) Generate Queue
 
 ```bash
-scripts/github/pr_review_queue.sh theschoolofai/Arcturus
+scripts/github/pr_review_queue.sh The-School-of-AI/Arcturus
 ```
 
 Output file:
@@ -26,13 +26,13 @@ Output file:
 Approve:
 
 ```bash
-gh pr review <PR_NUMBER> -R theschoolofai/Arcturus --approve -b "Project gate and charter requirements satisfied."
+gh pr review <PR_NUMBER> -R The-School-of-AI/Arcturus --approve -b "Project gate and charter requirements satisfied."
 ```
 
 Request changes:
 
 ```bash
-gh pr review <PR_NUMBER> -R theschoolofai/Arcturus --request-changes -b "Please address failing gates and update delivery README sections 4/5/10 with evidence."
+gh pr review <PR_NUMBER> -R The-School-of-AI/Arcturus --request-changes -b "Please address failing gates and update delivery README sections 4/5/10 with evidence."
 ```
 
 ## 5) Non-Negotiable Reject Conditions
