@@ -1,0 +1,15 @@
+p01-nexus-gateway
+p02-oracle-research
+p03-spark-pages
+p04-forge-studio
+p05-chronicle-replay
+p06-canvas-runtime
+p07-echo-voice
+p08-legion-swarm
+p09-bazaar-marketplace
+p10-phantom-browser
+p11-mnemo-memory
+p12-aegis-safety
+p13-orbit-mobile
+p14-watchtower-ops
+p15-gateway-api

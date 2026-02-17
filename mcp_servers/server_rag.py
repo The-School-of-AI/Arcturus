@@ -1175,7 +1175,8 @@ def file_hash(path):
 
 def log_debug(msg):
     try:
-        debug_log = Path(__file__).parent / "rag_debug.log"
+        debug_log = Path("data") / "runtime_logs" / "rag_debug.log"
+        debug_log.parent.mkdir(parents=True, exist_ok=True)
         with open(debug_log, "a") as f:
             f.write(f"{msg}\n")
     except:

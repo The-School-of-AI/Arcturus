@@ -1,0 +1,89 @@
+name: project-gates
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate-project-gate-manifest:
+    name: validate-project-gate-manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify check-name synchronization
+        run: python ci/verify_project_gate_manifest.py
+
+  project-gates:
+    needs: validate-project-gate-manifest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check_name: p01-nexus-gateway
+            acceptance: tests/acceptance/p01_nexus/test_multichannel_roundtrip.py
+            integration: tests/integration/test_nexus_session_affinity.py
+          - check_name: p02-oracle-research
+            acceptance: tests/acceptance/p02_oracle/test_citations_back_all_claims.py
+            integration: tests/integration/test_oracle_source_diversity.py
+          - check_name: p03-spark-pages
+            acceptance: tests/acceptance/p03_spark/test_structured_page_not_text_wall.py
+            integration: tests/integration/test_spark_oracle_data_pipeline.py
+          - check_name: p04-forge-studio
+            acceptance: tests/acceptance/p04_forge/test_exports_open_and_render.py
+            integration: tests/integration/test_forge_research_to_slides.py
+          - check_name: p05-chronicle-replay
+            acceptance: tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py
+            integration: tests/integration/test_chronicle_git_checkpoint_alignment.py
+          - check_name: p06-canvas-runtime
+            acceptance: tests/acceptance/p06_canvas/test_generated_ui_schema_is_safe.py
+            integration: tests/integration/test_canvas_preview_router_coverage.py
+          - check_name: p07-echo-voice
+            acceptance: tests/acceptance/p07_echo/test_voice_command_roundtrip.py
+            integration: tests/integration/test_echo_with_gateway_and_agentloop.py
+          - check_name: p08-legion-swarm
+            acceptance: tests/acceptance/p08_legion/test_swarm_completes_with_worker_failure.py
+            integration: tests/integration/test_legion_chronicle_capture.py
+          - check_name: p09-bazaar-marketplace
+            acceptance: tests/acceptance/p09_bazaar/test_tampered_skill_is_blocked.py
+            integration: tests/integration/test_bazaar_skill_install_execution.py
+          - check_name: p10-phantom-browser
+            acceptance: tests/acceptance/p10_phantom/test_multistep_workflow_completes.py
+            integration: tests/integration/test_phantom_oracle_data_capture.py
+          - check_name: p11-mnemo-memory
+            acceptance: tests/acceptance/p11_mnemo/test_memory_influences_planner_output.py
+            integration: tests/integration/test_mnemo_oracle_cross_project_retrieval.py
+          - check_name: p12-aegis-safety
+            acceptance: tests/acceptance/p12_aegis/test_injection_attempts_blocked.py
+            integration: tests/integration/test_aegis_enforcement_on_oracle_and_legion.py
+          - check_name: p13-orbit-mobile
+            acceptance: tests/acceptance/p13_orbit/test_mobile_sync_and_action.py
+            integration: tests/integration/test_orbit_with_nexus_echo_mnemo.py
+          - check_name: p14-watchtower-ops
+            acceptance: tests/acceptance/p14_watchtower/test_trace_path_is_complete.py
+            integration: tests/integration/test_watchtower_with_gateway_api_usage.py
+          - check_name: p15-gateway-api
+            acceptance: tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py
+            integration: tests/integration/test_gateway_to_oracle_spark_forge.py
+    name: ${{ matrix.check_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: platform-frontend
+      - name: Run gate
+        run: ./ci/run_project_gate.sh "${{ matrix.check_name }}" "${{ matrix.acceptance }}" "${{ matrix.integration }}"
