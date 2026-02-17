@@ -15,6 +15,9 @@ from core.ui_generator import ViteAppGenerator
 
 class TestProductionBundle(unittest.IsolatedAsyncioTestCase):
     async def test_build_and_assets(self):
+        if os.getenv("RUN_BUILD_TESTS") != "1":
+            self.skipTest("Set RUN_BUILD_TESTS=1 to run production build/ffmpeg test")
+
         output_dir = "production_app"
         generator = ViteAppGenerator(output_dir=output_dir)
         

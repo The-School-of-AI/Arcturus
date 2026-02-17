@@ -16,6 +16,9 @@ from mcp_servers.multi_mcp import MultiMCP
 
 class TestSelfCorrection(unittest.IsolatedAsyncioTestCase):
     async def test_ui_self_correction(self):
+        if os.getenv("RUN_EXTERNAL_TESTS") != "1":
+            self.skipTest("Set RUN_EXTERNAL_TESTS=1 to run external LLM-dependent test")
+
         # 1. Bootstrap
         bootstrap_agents()
         

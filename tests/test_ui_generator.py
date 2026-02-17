@@ -9,15 +9,15 @@ from pathlib import Path
 sys.path.append(os.getcwd())
 
 from core.schemas.ui_schema import AppSchema, Style, Page, Component
-from core.ui_generator import DynamicPageGenerator
+from core.ui_generator import ViteAppGenerator
 
 class TestUIGenerator(unittest.TestCase):
-    def test_full_app_generation(self):
+    def test_project_generation(self):
         output_dir = "test_generated_site"
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir)
             
-        generator = DynamicPageGenerator(output_dir=output_dir)
+        generator = ViteAppGenerator(output_dir=output_dir)
         
         config = AppSchema(
             name="Test App",
@@ -29,29 +29,24 @@ class TestUIGenerator(unittest.TestCase):
                     components=[
                         Component(id="h1", type="hero", title="Welcome", content={"subtitle": "Hello world", "cta": "Click Me"})
                     ]
-                ),
-                Page(
-                    title="About",
-                    path="/about",
-                    components=[
-                        Component(id="h2", type="hero", title="About Us")
-                    ]
                 )
             ]
         )
         
-        generator.generate_app(config)
+        generator.generate_project_structure(config)
         
         # Verify files
         self.assertTrue(os.path.exists(f"{output_dir}/index.html"))
-        self.assertTrue(os.path.exists(f"{output_dir}/about.html"))
+        self.assertTrue(os.path.exists(f"{output_dir}/src/App.jsx"))
+        self.assertTrue(os.path.exists(f"{output_dir}/src/index.css"))
         
         # Verify content briefly
-        index_content = Path(f"{output_dir}/index.html").read_text()
-        self.assertIn("Welcome", index_content)
-        self.assertIn("#ff0000", index_content) # Primary color should be there
+        app_content = Path(f"{output_dir}/src/App.jsx").read_text()
+        css_content = Path(f"{output_dir}/src/index.css").read_text()
+        self.assertIn("Welcome", app_content)
+        self.assertIn("#000000", css_content)
         
-        print("✅ Dynamic Page Generator (multi-page) passed!")
+        print("✅ Vite app generator project structure passed!")
         
         # Cleanup
         if os.path.exists(output_dir):

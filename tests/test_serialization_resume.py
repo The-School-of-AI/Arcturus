@@ -12,16 +12,16 @@ from unittest.mock import MagicMock, AsyncMock
 
 class TestLoopResume(unittest.TestCase):
     def setUp(self):
-        # Setup temp directory for sessions
-        self.test_dir = Path("memory/session_summaries_index/2026/02/16")
-        self.test_dir.mkdir(parents=True, exist_ok=True)
+        # Sessions are stored under date-based subfolders by ExecutionContextManager.
+        self.base_dir = Path("memory/session_summaries_index")
+        self.base_dir.mkdir(parents=True, exist_ok=True)
         self.session_id = "test_resume_session"
-        self.session_file = self.test_dir / f"session_{self.session_id}.json"
+        self.session_filename = f"session_{self.session_id}.json"
 
     def tearDown(self):
-        # Clean up
-        if self.session_file.exists():
-            self.session_file.unlink()
+        # Clean up any generated session file for this test ID.
+        for session_file in self.base_dir.glob(f"**/{self.session_filename}"):
+            session_file.unlink()
 
     def test_resume_logic(self):
         # 1. Create a "stopped" session file
@@ -47,9 +47,14 @@ class TestLoopResume(unittest.TestCase):
         context.plan_graph.nodes["Step2"]["status"] = "stopped" # Force stopped status
         context._save_session()
         
+        # Resolve the generated file path from date-based folder structure.
+        session_matches = sorted(self.base_dir.glob(f"**/{self.session_filename}"))
+        self.assertTrue(session_matches, "Expected session file was not created")
+        session_file = session_matches[-1]
+
         # DEBUG: Read file and check keys
         import json
-        with open(self.session_file, 'r') as f:
+        with open(session_file, 'r') as f:
             saved_data = json.load(f)
             print(f"DEBUG: Saved JSON keys: {list(saved_data.keys())}")
             if "links" in saved_data:
@@ -71,7 +76,7 @@ class TestLoopResume(unittest.TestCase):
         # but we want to verify it was called with corrected context.
         loop._execute_dag = AsyncMock(return_value=None)
         
-        asyncio.run(loop.resume(self.session_file))
+        asyncio.run(loop.resume(str(session_file)))
         
         # 4. Verify "stopped" node was reset to "pending"
         # We need to inspect the context passed to _execute_dag

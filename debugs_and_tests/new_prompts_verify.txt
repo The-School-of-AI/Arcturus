@@ -1,9 +1,0 @@
-Consider using the pymupdf_layout package for a greatly improved page layout analysis.
-INFO: Re-indexing request received (target: pdfs/1706.03762v7.pdf)
-INFO: Indexing documents... (Target: pdfs/1706.03762v7.pdf)
-INFO: Loaded cache with 35 files
-INFO: Starting parallel ingestion with 2 workers on 1 files
-Indexing:   0%|          | 0/1 [00:00<?, ?it/s]INFO: New file: pdfs/1706.03762v7.pdf
-PROC: Processing: pdfs/1706.03762v7.pdf
-INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/pdfs/1706.03762v7.pdf. Images are saved.
-IMG: Found 6 images in pdfs/1706.03762v7.pdf, captioning inline...

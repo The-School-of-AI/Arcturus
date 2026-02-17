@@ -1,15 +1,14 @@
 
 import asyncio
-import sys
-import os
-from pathlib import Path
-
-# Add project root to path
-sys.path.append(os.getcwd())
-
+import pytest
 from mcp_servers.multi_mcp import MultiMCP
+from .conftest import require_stress_opt_in, require_integration_opt_in
 
-async def test_hot_reload():
+
+pytestmark = [pytest.mark.stress, pytest.mark.integration]
+
+
+async def _hot_reload():
     """
     Test recovery from MCP server failure.
     1. Start MultiMCP.
@@ -46,15 +45,21 @@ async def test_hot_reload():
             await m._start_server(server_name, config)
             
             res2 = await m.route_tool_call(tool_name, args)
-            print(f"✅ Recovery Call: {res2.content[0].text[:50]}")
-            return True
+            text = res2.content[0].text if getattr(res2, "content", None) else ""
+            assert "Alive" in text
+            return
         except Exception as e:
-            print(f"❌ Recovery Failed: {e}")
-            return False
+            pytest.fail(f"Recovery Failed: {e}")
 
     finally:
         await m.stop()
 
+
+def test_hot_reload():
+    require_stress_opt_in()
+    require_integration_opt_in()
+    asyncio.run(_hot_reload())
+
+
 if __name__ == "__main__":
-    success = asyncio.run(test_hot_reload())
-    sys.exit(0 if success else 1)
+    asyncio.run(_hot_reload())

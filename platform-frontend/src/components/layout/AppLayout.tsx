@@ -49,7 +49,8 @@ export const AppLayout: React.FC = () => {
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
         ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
-        isZenMode, isInboxOpen, setIsInboxOpen
+        isZenMode, isInboxOpen, setIsInboxOpen,
+        isSidebarSubPanelOpen
     } = useAppStore();
 
     // Moved isInspectorOpen definition down to include new tabs context
@@ -65,7 +66,7 @@ export const AppLayout: React.FC = () => {
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
-    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills';
+    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px

@@ -20,9 +20,8 @@ class TestDynamicInjection(unittest.TestCase):
             "model": "gemini-1.5-flash"
         }
         
-        # Run async function in sync test
-        loop = asyncio.get_event_loop()
-        response = loop.run_until_complete(inject_agent(
+        # Run async endpoints in a sync test.
+        response = asyncio.run(inject_agent(
             AgentInjectionRequest(name=new_agent_name, config=initial_config)
         ))
         
@@ -30,14 +29,14 @@ class TestDynamicInjection(unittest.TestCase):
         self.assertEqual(AgentRegistry.get(new_agent_name), initial_config)
         
         # 2. Verify List
-        list_response = loop.run_until_complete(list_agents())
+        list_response = asyncio.run(list_agents())
         self.assertIn(new_agent_name, list_response["agents"])
         
         # 3. Hot-Swap (Update existing agent)
         updated_config = initial_config.copy()
         updated_config["prompt_text"] = "You are version 2"
         
-        response = loop.run_until_complete(inject_agent(
+        response = asyncio.run(inject_agent(
             AgentInjectionRequest(name=new_agent_name, config=updated_config, description="Updated version")
         ))
         

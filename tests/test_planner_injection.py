@@ -4,7 +4,7 @@ import os
 sys.path.append(os.getcwd())
 import asyncio
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from core.registry import AgentRegistry
 from agents.base_agent import AgentRunner
 
@@ -23,18 +23,12 @@ class TestPlannerInjection(unittest.TestCase):
     def test_prompt_injection(self, MockModelManager):
         # Setup mock model
         mock_instance = MockModelManager.return_value
-        
-        # Create a future for the async result
-        f = asyncio.Future()
-        f.set_result('{"plan_graph": {}}')
-        mock_instance.generate_text.return_value = f
+        mock_instance.generate_text = AsyncMock(return_value='{"plan_graph": {}}')
         
         runner = AgentRunner(None)
         
         # Run agent
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(runner.run_agent("PlannerAgent", {"task": "test"}))
+        result = asyncio.run(runner.run_agent("PlannerAgent", {"task": "test"}))
         
         # Verify result success
         self.assertTrue(result["success"])

@@ -81,6 +81,9 @@ interface RagViewerSlice {
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
     sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills';
     setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills') => void;
+    isSidebarSubPanelOpen: boolean;
+    setSidebarSubPanelOpen: (open: boolean) => void;
+    toggleSidebarSubPanel: () => void;
 
     // --- RAG Document Management ---
     ragOpenDocuments: RAGDocument[];
@@ -878,7 +881,10 @@ export const useAppStore = create<AppState>()(
             })),
 
             sidebarTab: 'runs',
-            setSidebarTab: (tab) => set({ sidebarTab: tab }),
+            setSidebarTab: (tab) => set({ sidebarTab: tab, isSidebarSubPanelOpen: true }),
+            isSidebarSubPanelOpen: true,
+            setSidebarSubPanelOpen: (open) => set({ isSidebarSubPanelOpen: open }),
+            toggleSidebarSubPanel: () => set(state => ({ isSidebarSubPanelOpen: !state.isSidebarSubPanelOpen })),
             settingsActiveTab: 'models',
             setSettingsActiveTab: (tab) => set({ settingsActiveTab: tab }),
             ragSearchQuery: '',

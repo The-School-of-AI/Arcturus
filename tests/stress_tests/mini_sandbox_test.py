@@ -1,11 +1,16 @@
 
+import os
 import asyncio
+import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-import sys
-import os
+from .conftest import require_stress_opt_in, require_integration_opt_in
 
-async def test_sandbox_direct():
+
+pytestmark = [pytest.mark.stress, pytest.mark.integration]
+
+
+async def _sandbox_direct():
     server_params = StdioServerParameters(
         command="uv",
         args=["run", "mcp_servers/server_sandbox.py"],
@@ -19,9 +24,18 @@ async def test_sandbox_direct():
             print("Connected. Calling tool...")
             try:
                 result = await session.call_tool("run_python_script", {"code": "print('Direct Test Success'); 1+1"})
-                print(f"Result: {result}")
+                text = ""
+                if getattr(result, "content", None):
+                    text = result.content[0].text
+                assert "Direct Test Success" in text
             except Exception as e:
-                print(f"Error: {e}")
+                pytest.fail(f"Sandbox tool call failed: {e}")
+
+
+def test_sandbox_direct():
+    require_stress_opt_in()
+    require_integration_opt_in()
+    asyncio.run(_sandbox_direct())
 
 if __name__ == "__main__":
-    asyncio.run(test_sandbox_direct())
+    asyncio.run(_sandbox_direct())

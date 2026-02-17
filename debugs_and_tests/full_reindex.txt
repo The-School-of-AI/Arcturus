@@ -1,154 +1,0 @@
-Consider using the pymupdf_layout package for a greatly improved page layout analysis.
-INFO: Re-indexing request received (target: None)
-INFO: Use Trace: Force Rescan - Wiping existing index...
-INFO: Indexing documents... 
-INFO: Loaded cache with 0 files
-INFO: Starting parallel ingestion with 2 workers on 39 files
-INFO: New file: cricket.txt
-PROC: Processing: cricket.txt
-INFO: New file: Experience Letter.docx
-PROC: Processing: Experience Letter.docx
-Indexing:   0%|          | 0/39 [00:00<?, ?it/s]INFO: New file: markitdown.md
-PROC: Processing: markitdown.md
-DONE: Indexed Experience Letter.docx (1 chunks)
-Indexing:   3%|▎         | 1/39 [00:01<00:51,  1.36s/it]IMG: Found 3 images in markitdown.md, captioning inline...
-INFO: New file: .DS_Store
-PROC: Processing: .DS_Store
-DONE: Indexed cricket.txt (3 chunks)
-Indexing:   5%|▌         | 2/39 [00:01<00:32,  1.12it/s]ERROR: Failed /Users/rohanshravan/TSAI/Arcturus/data/.DS_Store: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported.
-INFO: New file: dlf.md
-PROC: Processing: dlf.md
-DONE: Indexed dlf.md (3 chunks)
-Indexing:  10%|█         | 4/39 [00:06<01:01,  1.75s/it]INFO: New file: DLF_13072023190044_BRSR.pdf
-PROC: Processing: DLF_13072023190044_BRSR.pdf
-INFO: New file: SAMPLE-Indian-Policies-and-Procedures-January-2023.docx
-PROC: Processing: SAMPLE-Indian-Policies-and-Procedures-January-2023.docx
-DONE: Indexed markitdown.md (9 chunks)
-Indexing:  13%|█▎        | 5/39 [00:10<01:25,  2.53s/it]INFO: New file: deekseek_moe_moh_v2_continue_with_hicra.py
-PROC: Processing: deekseek_moe_moh_v2_continue_with_hicra.py
-DONE: Indexed SAMPLE-Indian-Policies-and-Procedures-January-2023.docx (4 chunks)
-Indexing:  15%|█▌        | 6/39 [00:16<01:53,  3.45s/it]INFO: New file: INVG67564.pdf
-PROC: Processing: INVG67564.pdf
-DONE: Indexed deekseek_moe_moh_v2_continue_with_hicra.py (12 chunks)
-Indexing:  18%|█▊        | 7/39 [00:30<03:37,  6.81s/it]INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/DLF_13072023190044_BRSR.pdf. Images are saved.
-IMG: Found 1 images in DLF_13072023190044_BRSR.pdf, captioning inline...
-CAPTION: Attempting to caption image: images/DLF_13072023190044_BRSR.pdf-0-0.png
-CAPTION: Caption generated: Here's a description of the image:
-
-The image is a formal letter addressed to the Vice-President of the National Stock Exchange of India, detailing the location of BSE Limited’s corporate services department. It’s a printed letter with addresses and the type of visual is a standard business letter format. Key terms for searching would include "National Stock Exchange," "BSE Limited," and "corporate services."
-INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/INVG67564.pdf. Images are saved.
-IMG: Found 18 images in INVG67564.pdf, captioning inline...
-INFO: New file: AppLayout.tsx
-PROC: Processing: AppLayout.tsx
-DONE: Indexed INVG67564.pdf (54 chunks)
-Indexing:  21%|██        | 8/39 [01:59<16:24, 31.77s/it]INFO: New file: economic.md
-PROC: Processing: economic.md
-DONE: Indexed AppLayout.tsx (1 chunks)
-Indexing:  23%|██▎       | 9/39 [02:01<11:18, 22.62s/it]INFO: New file: How to use Canvas LMS.pdf
-PROC: Processing: How to use Canvas LMS.pdf
-DONE: Indexed economic.md (2 chunks)
-Indexing:  26%|██▌       | 10/39 [02:05<08:11, 16.96s/it]INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/How to use Canvas LMS.pdf. Images are saved.
-IMG: Found 28 images in How to use Canvas LMS.pdf, captioning inline...
-INFO: New file: DELETE_IMAGES.pdf
-PROC: Processing: DELETE_IMAGES.pdf
-DONE: Indexed How to use Canvas LMS.pdf (3 chunks)
-Indexing:  28%|██▊       | 11/39 [02:12<06:34, 14.08s/it]INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/DELETE_IMAGES.pdf. Images are saved.
-IMG: Found 1 images in DELETE_IMAGES.pdf, captioning inline...
-CAPTION: Attempting to caption image: images/DELETE_IMAGES.pdf-0-0.png
-CAPTION: Caption generated: Here's a description of the image:
-
-The image is a Python code snippet that appears to be an attempt to process a file named "src." It includes error handling to deal with the file not existing or a potential exception during processing. Key terms for searching include "Python code," "file processing," and "error handling."
-INFO: New file: conversation_history/session_1766550691.json
-PROC: Processing: conversation_history/session_1766550691.json
-DONE: Indexed DELETE_IMAGES.pdf (1 chunks)
-Indexing:  31%|███       | 12/39 [02:18<05:10, 11.49s/it]INFO: New file: pdfs/Receipt-2050-9059.pdf
-PROC: Processing: pdfs/Receipt-2050-9059.pdf
-DONE: Indexed conversation_history/session_1766550691.json (14 chunks)
-Indexing:  33%|███▎      | 13/39 [02:54<08:12, 18.93s/it]INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/pdfs/Receipt-2050-9059.pdf. Images are saved.
-IMG: Found 1 images in pdfs/Receipt-2050-9059.pdf, captioning inline...
-CAPTION: Attempting to caption image: images/Receipt-2050-9059.pdf-0-0.png
-CAPTION: Caption generated: Here’s a description of the image:
-
-The image is a 3D rendering of a tetrahedron (a triangular pyramid) with a white shape against a dark gray background. It appears to be a diagram or illustrative representation, likely related to geometry or spatial visualization. 
-
-Keywords for searching: 3D tetrahedron, geometric diagram, white pyramid, spatial visualization.
-DONE: Indexed pdfs/Receipt-2050-9059.pdf (2 chunks)
-Indexing:  36%|███▌      | 14/39 [03:00<06:18, 15.15s/it]INFO: New file: pdfs/2507.04239v1.pdf
-PROC: Processing: pdfs/2507.04239v1.pdf
-INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/pdfs/2507.04239v1.pdf. Images are saved.
-IMG: Found 25 images in pdfs/2507.04239v1.pdf, captioning inline...
-INFO: New file: pdfs/2-Pager_BME_Ghana_-_DE.pdf
-PROC: Processing: pdfs/2-Pager_BME_Ghana_-_DE.pdf
-DONE: Indexed DLF_13072023190044_BRSR.pdf (155 chunks)
-Indexing:  38%|███▊      | 15/39 [05:11<19:56, 49.83s/it]INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/pdfs/2-Pager_BME_Ghana_-_DE.pdf. Images are saved.
-IMG: Found 5 images in pdfs/2-Pager_BME_Ghana_-_DE.pdf, captioning inline...
-DONE: Indexed pdfs/2-Pager_BME_Ghana_-_DE.pdf (5 chunks)
-Indexing:  41%|████      | 16/39 [05:19<14:19, 37.38s/it]INFO: New file: pdfs/1706.03762v7.pdf
-PROC: Processing: pdfs/1706.03762v7.pdf
-INFO: Skipped inline captioning for /Users/rohanshravan/TSAI/Arcturus/data/pdfs/1706.03762v7.pdf. Images are saved.
-IMG: Found 6 images in pdfs/1706.03762v7.pdf, captioning inline...
-INFO: New file: mcp_repos/yahoo_finance/yfinance_mcp_server.py
-PROC: Processing: mcp_repos/yahoo_finance/yfinance_mcp_server.py
-DONE: Indexed pdfs/2507.04239v1.pdf (103 chunks)
-Indexing:  44%|████▎     | 17/39 [05:44<12:18, 33.55s/it]INFO: New file: mcp_repos/yahoo_finance/requirements.txt
-PROC: Processing: mcp_repos/yahoo_finance/requirements.txt
-DONE: Indexed mcp_repos/yahoo_finance/yfinance_mcp_server.py (3 chunks)
-Indexing:  46%|████▌     | 18/39 [05:47<08:32, 24.39s/it]INFO: New file: mcp_repos/yahoo_finance/README.md
-PROC: Processing: mcp_repos/yahoo_finance/README.md
-DONE: Indexed mcp_repos/yahoo_finance/requirements.txt (1 chunks)
-Indexing:  49%|████▊     | 19/39 [05:48<05:45, 17.28s/it]INFO: New file: mcp_repos/yahoo_finance/.gitignore
-PROC: Processing: mcp_repos/yahoo_finance/.gitignore
-DONE: Indexed mcp_repos/yahoo_finance/README.md (5 chunks)
-Indexing:  51%|█████▏    | 20/39 [05:52<04:16, 13.49s/it]INFO: New file: mcp_repos/yahoo_finance/yfinance_mcp_server copy.py
-PROC: Processing: mcp_repos/yahoo_finance/yfinance_mcp_server copy.py
-DONE: Indexed mcp_repos/yahoo_finance/.gitignore (3 chunks)
-Indexing:  54%|█████▍    | 21/39 [05:55<03:03, 10.20s/it]INFO: New file: mcp_repos/yahoo_finance/.git/objects/pack/pack-bc84d9380eee6c83a6dde1fe03eadbc6680bb769.pack
-PROC: Processing: mcp_repos/yahoo_finance/.git/objects/pack/pack-bc84d9380eee6c83a6dde1fe03eadbc6680bb769.pack
-DONE: Indexed mcp_repos/yahoo_finance/yfinance_mcp_server copy.py (4 chunks)
-Indexing:  56%|█████▋    | 22/39 [06:00<02:30,  8.86s/it]ERROR: Failed /Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance/.git: [Errno 21] Is a directory: '/Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance/.git'
-ERROR: Failed /Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance/.git/objects/pack/pack-bc84d9380eee6c83a6dde1fe03eadbc6680bb769.pack: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported.
-INFO: New file: mcp_repos/yahoo_finance/.git/objects/pack/pack-bc84d9380eee6c83a6dde1fe03eadbc6680bb769.idx
-PROC: Processing: mcp_repos/yahoo_finance/.git/objects/pack/pack-bc84d9380eee6c83a6dde1fe03eadbc6680bb769.idx
-ERROR: Failed /Users/rohanshravan/TSAI/Arcturus/data/mcp_repos/yahoo_finance/.git/objects/pack/pack-bc84d9380eee6c83a6dde1fe03eadbc6680bb769.idx: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported.
-INFO: New file: mcp_repos/yahoo_finance/.git/hooks/commit-msg.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/commit-msg.sample
-INFO: New file: mcp_repos/yahoo_finance/.git/hooks/pre-rebase.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/pre-rebase.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/commit-msg.sample (2 chunks)
-Indexing:  67%|██████▋   | 26/39 [06:02<00:45,  3.52s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/pre-commit.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/pre-commit.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-rebase.sample (6 chunks)
-Indexing:  69%|██████▉   | 27/39 [06:10<00:51,  4.29s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/applypatch-msg.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/applypatch-msg.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-commit.sample (3 chunks)
-Indexing:  72%|███████▏  | 28/39 [06:11<00:40,  3.72s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/fsmonitor-watchman.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/fsmonitor-watchman.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/applypatch-msg.sample (1 chunks)
-Indexing:  74%|███████▍  | 29/39 [06:12<00:29,  2.99s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/pre-receive.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/pre-receive.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/fsmonitor-watchman.sample (4 chunks)
-Indexing:  77%|███████▋  | 30/39 [06:16<00:29,  3.32s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/prepare-commit-msg.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/prepare-commit-msg.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-receive.sample (1 chunks)
-Indexing:  79%|███████▉  | 31/39 [06:17<00:20,  2.58s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/post-update.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/post-update.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/prepare-commit-msg.sample (3 chunks)
-Indexing:  82%|████████▏ | 32/39 [06:19<00:18,  2.58s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/pre-merge-commit.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/pre-merge-commit.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/post-update.sample (1 chunks)
-INFO: New file: mcp_repos/yahoo_finance/.git/hooks/pre-applypatch.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/pre-applypatch.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-merge-commit.sample (1 chunks)
-Indexing:  87%|████████▋ | 34/39 [06:20<00:07,  1.57s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/pre-push.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/pre-push.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-applypatch.sample (1 chunks)
-Indexing:  90%|████████▉ | 35/39 [06:20<00:05,  1.35s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/update.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/update.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/pre-push.sample (1 chunks)
-Indexing:  92%|█████████▏| 36/39 [06:21<00:03,  1.22s/it]INFO: New file: mcp_repos/yahoo_finance/.git/hooks/push-to-checkout.sample
-PROC: Processing: mcp_repos/yahoo_finance/.git/hooks/push-to-checkout.sample
-DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/update.sample (2 chunks)
-Indexing:  95%|█████████▍| 37/39 [06:24<00:03,  1.74s/it]DONE: Indexed mcp_repos/yahoo_finance/.git/hooks/push-to-checkout.sample (3 chunks)
-Indexing:  97%|█████████▋| 38/39 [06:27<00:01,  1.99s/it]DONE: Indexed pdfs/1706.03762v7.pdf (52 chunks)
-Indexing: 100%|██████████| 39/39 [06:29<00:00,  1.90s/it]Indexing: 100%|██████████| 39/39 [06:29<00:00,  9.98s/it]
-INFO: READY

@@ -49,12 +49,16 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
         return false;
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel]);
 
+    const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
+
     const handleIconClick = () => {
         if (active && isInspectorOpen) {
             // MCP should be persistent as per user request
             if (sidebarTab === 'mcp') return;
 
             clearSelection();
+        } else if (active) {
+            toggleSidebarSubPanel();
         } else {
             onClick();
         }
