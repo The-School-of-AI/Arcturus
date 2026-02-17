@@ -53,9 +53,15 @@ create_field() {
   local data_type="$2"
   local options="${3:-}"
   if [[ -n "$options" ]]; then
-    gh project field-create "$PROJECT_NUMBER" --owner "$OWNER" --name "$name" --data-type "$data_type" --single-select-options "$options" >/dev/null
+    if ! gh project field-create "$PROJECT_NUMBER" --owner "$OWNER" --name "$name" --data-type "$data_type" --single-select-options "$options" >/dev/null 2>&1; then
+      echo "Skipping field (already exists or reserved): $name"
+      return
+    fi
   else
-    gh project field-create "$PROJECT_NUMBER" --owner "$OWNER" --name "$name" --data-type "$data_type" >/dev/null
+    if ! gh project field-create "$PROJECT_NUMBER" --owner "$OWNER" --name "$name" --data-type "$data_type" >/dev/null 2>&1; then
+      echo "Skipping field (already exists or reserved): $name"
+      return
+    fi
   fi
   echo "Added field: $name"
 }
