@@ -46,6 +46,7 @@ export const ElectronBrowserView: React.FC = () => {
         if (!containerRef.current || !window.electronAPI) return;
 
         const rect = containerRef.current.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
 
         // Electron's setBounds uses logical pixels (DIPs), same as getBoundingClientRect.
         // We do NOT need to multiply by devicePixelRatio.
@@ -323,7 +324,7 @@ export const ElectronBrowserView: React.FC = () => {
     // Empty state - no tabs
     if (newsTabs.length === 0) {
         return (
-            <div className="flex-1 flex flex-col bg-background overflow-hidden">
+            <div className="h-full flex flex-col bg-background overflow-hidden">
                 <div className="h-10 bg-muted/40 flex items-center px-2 gap-1 border-b border-border/50 shrink-0">
                     <button
                         onClick={handleNewTab}
@@ -345,7 +346,7 @@ export const ElectronBrowserView: React.FC = () => {
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-background overflow-hidden">
+        <div className="h-full flex flex-col bg-background overflow-hidden">
             {/* Tab Bar */}
             <div className="h-8 bg-muted/40 flex items-center px-2 gap-1 overflow-x-auto scrollbar-hide shrink-0">
                 {newsTabs.map((url) => (
@@ -483,8 +484,7 @@ export const ElectronBrowserView: React.FC = () => {
             {/* Browser View Container */}
             <div
                 ref={containerRef}
-                className="flex-1 relative"
-                style={{ minHeight: 200 }}
+                className="flex-1 min-h-0 relative"
             />
         </div>
     );

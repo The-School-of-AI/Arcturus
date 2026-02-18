@@ -10,7 +10,7 @@ This runbook sets up the capstone project board and required CI checks.
 ## Step 1: Create/Seed GitHub Project (15 Tracks)
 
 ```bash
-scripts/github/bootstrap_capstone_project.sh theschoolofai theschoolofai/Arcturus "Arcturus Capstone 15 Projects"
+scripts/github/bootstrap_capstone_project.sh The-School-of-AI The-School-of-AI/Arcturus "Arcturus Capstone 15 Projects"
 ```
 
 This creates:
@@ -22,7 +22,7 @@ This creates:
 ## Step 2: Apply Required Branch Checks
 
 ```bash
-scripts/github/set_branch_protection_checks.sh theschoolofai/Arcturus main ci/project_required_checks.txt
+scripts/github/set_branch_protection_checks.sh The-School-of-AI/Arcturus master ci/project_required_checks.txt
 ```
 
 Required checks source:
@@ -40,7 +40,7 @@ Expected:
 ## Step 4: Daily PR Queue
 
 ```bash
-scripts/github/pr_review_queue.sh theschoolofai/Arcturus
+scripts/github/pr_review_queue.sh The-School-of-AI/Arcturus
 ```
 
 Output:

@@ -5,7 +5,7 @@ This folder contains the execution system for capstone delivery.
 ## Program Overview
 - Scope: 15 project tracks (P01-P15), each with charter, tests, CI gates, and delivery evidence.
 - Timeline: 20-day execution plan with daily PR-based progress.
-- Tracking board: [Arcturus Capstone 15 Projects](https://github.com/users/theschoolofai/projects/3)
+- Tracking board: [Arcturus Capstone 15 Projects](https://github.com/orgs/The-School-of-AI/projects/3)
 
 ## Core Documents
 - [MASTER_20_DAY_PLAN.md](MASTER_20_DAY_PLAN.md) - 20-day execution cadence and quality gates.

@@ -14,7 +14,7 @@ The capstone program is designed to:
 - Project charters (P01-P15): [CAPSTONE/project_charters/](CAPSTONE/project_charters/)
 - PR review workflow: [CAPSTONE/PR_REVIEW_OPERATING_FLOW.md](CAPSTONE/PR_REVIEW_OPERATING_FLOW.md)
 - Student assignment template: [CAPSTONE/STUDENT_TEAM_ASSIGNMENTS_TEMPLATE.md](CAPSTONE/STUDENT_TEAM_ASSIGNMENTS_TEMPLATE.md)
-- Live GitHub project board: [Arcturus Capstone 15 Projects](https://github.com/users/theschoolofai/projects/3)
+- Live GitHub project board: [Arcturus Capstone 15 Projects](https://github.com/orgs/The-School-of-AI/projects/3)
 
 ## Repository Layout
 - [core/](core/) - agent loop, orchestration, reasoning, sandbox integration.
@@ -50,6 +50,14 @@ uv sync --python 3.11
 cd platform-frontend
 npm ci
 ```
+
+### Run Desktop App (Students)
+```bash
+cd platform-frontend
+npm run electron:dev:all
+```
+
+This starts the Vite frontend, Electron shell, and backend services needed for local development.
 
 ### Baseline Tests
 ```bash

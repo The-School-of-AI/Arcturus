@@ -31,11 +31,11 @@ Prerequisites:
 Command:
 
 ```bash
-scripts/github/set_branch_protection_checks.sh <owner/repo> main
+scripts/github/set_branch_protection_checks.sh <owner/repo> master
 ```
 
 Example:
 
 ```bash
-scripts/github/set_branch_protection_checks.sh your-org/arcturus main
+scripts/github/set_branch_protection_checks.sh The-School-of-AI/Arcturus master
 ```

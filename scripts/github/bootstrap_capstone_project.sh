@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [[ $# -lt 2 || $# -gt 3 ]]; then
   echo "Usage: scripts/github/bootstrap_capstone_project.sh <owner> <owner/repo> [project_title]"
-  echo "Example: scripts/github/bootstrap_capstone_project.sh theschoolofai theschoolofai/Arcturus \"Arcturus Capstone 15 Projects\""
+  echo "Example: scripts/github/bootstrap_capstone_project.sh The-School-of-AI The-School-of-AI/Arcturus \"Arcturus Capstone 15 Projects\""
   exit 1
 fi
 
