@@ -40,7 +40,9 @@ Notes/
 !Notes/
 
 # Logs & Runtime State
-memory/
+tmp/
+memory/episodes/
+memory/session_summaries_index/
 *.log
 server.log
 benchmark_results.txt
