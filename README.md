@@ -51,6 +51,14 @@ cd platform-frontend
 npm ci
 ```
 
+### Run Desktop App (Students)
+```bash
+cd platform-frontend
+npm run electron:dev:all
+```
+
+This starts the Vite frontend, Electron shell, and backend services needed for local development.
+
 ### Baseline Tests
 ```bash
 cd /path/to/Arcturus
