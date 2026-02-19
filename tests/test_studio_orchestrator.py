@@ -158,6 +158,32 @@ def mock_llm_invalid_content_tree(monkeypatch):
     monkeypatch.setattr("core.model_manager.ModelManager.generate_text", fake_generate)
 
 
+@pytest.fixture
+def mock_llm_outline_null_children(monkeypatch):
+    """Mock LLM that returns an outline with children set to null."""
+    async def fake_generate(self, prompt):
+        return json.dumps({
+            "title": "Null Children Outline",
+            "items": [
+                {"id": "1", "title": "Intro", "description": "desc", "children": None}
+            ],
+        })
+    monkeypatch.setattr("core.model_manager.ModelManager.generate_text", fake_generate)
+
+
+@pytest.fixture
+def mock_llm_outline_bad_children_type(monkeypatch):
+    """Mock LLM that returns an outline with invalid children type."""
+    async def fake_generate(self, prompt):
+        return json.dumps({
+            "title": "Bad Children Outline",
+            "items": [
+                {"id": "1", "title": "Intro", "description": "desc", "children": "invalid"}
+            ],
+        })
+    monkeypatch.setattr("core.model_manager.ModelManager.generate_text", fake_generate)
+
+
 # === Outline Generation Tests ===
 
 class TestGenerateOutline:
@@ -204,6 +230,23 @@ class TestGenerateOutline:
 
     def test_malformed_json_raises(self, orchestrator, mock_llm_malformed):
         with pytest.raises(JsonParsingError):
+            _run(orchestrator.generate_outline(
+                prompt="Create slides",
+                artifact_type=ArtifactType.slides,
+            ))
+
+    def test_null_children_is_supported(self, orchestrator, storage, mock_llm_outline_null_children):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+        ))
+        loaded = storage.load_artifact(result["artifact_id"])
+        assert loaded is not None
+        assert loaded.outline is not None
+        assert loaded.outline.items[0].children == []
+
+    def test_bad_children_type_raises(self, orchestrator, mock_llm_outline_bad_children_type):
+        with pytest.raises(ValueError, match="children"):
             _run(orchestrator.generate_outline(
                 prompt="Create slides",
                 artifact_type=ArtifactType.slides,

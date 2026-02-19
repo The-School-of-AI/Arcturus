@@ -2193,11 +2193,16 @@ export const useAppStore = create<AppState>()(
                 set({ isGenerating: true });
                 try {
                     const data = await api.createArtifact(type, { prompt, title });
-                    // The response is the artifact with outline
-                    set({ activeArtifact: data, activeArtifactId: data.id, isStudioModalOpen: false });
+                    const createdArtifactId = data?.id ?? data?.artifact_id;
+                    if (!createdArtifactId) {
+                        throw new Error("Create artifact response missing artifact id");
+                    }
+                    const artifact = data?.id ? data : await api.getArtifact(createdArtifactId);
+                    set({ activeArtifact: artifact, activeArtifactId: createdArtifactId, isStudioModalOpen: false });
                     await get().fetchArtifacts();
                 } catch (e) {
                     console.error("Failed to create artifact", e);
+                    throw e;
                 } finally {
                     set({ isGenerating: false });
                 }

@@ -156,7 +156,18 @@ class ForgeOrchestrator:
 
 def _parse_outline_item(data: dict) -> OutlineItem:
     """Recursively parse an outline item dict into an OutlineItem model."""
-    children = [_parse_outline_item(child) for child in data.get("children", [])]
+    if not isinstance(data, dict):
+        raise ValueError("Outline item must be an object")
+
+    raw_children = data.get("children")
+    if raw_children is None:
+        child_items = []
+    elif isinstance(raw_children, list):
+        child_items = raw_children
+    else:
+        raise ValueError("Outline item 'children' must be a list")
+
+    children = [_parse_outline_item(child) for child in child_items]
     return OutlineItem(
         id=str(data.get("id", "")),
         title=data.get("title", ""),
