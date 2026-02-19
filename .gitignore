@@ -40,7 +40,11 @@ Notes/
 !Notes/
 
 # Logs & Runtime State
-memory/
+# Ignore memory data/runtime dirs but track memory/*.py package
+memory/remme_index/
+memory/session_summaries_index/
+memory/episodic_skeletons/
+memory/factual_memory.json
 *.log
 server.log
 benchmark_results.txt
