@@ -40,7 +40,11 @@ Notes/
 !Notes/
 
 # Logs & Runtime State
-memory/
+# Ignore memory data directories but allow Python source files
+memory/episodic/
+memory/session_summaries_index/
+memory/debug_logs/
+!memory/*.py
 *.log
 server.log
 benchmark_results.txt
