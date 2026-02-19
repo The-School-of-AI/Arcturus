@@ -2,10 +2,21 @@
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 MEMORY_DIR = Path(__file__).resolve().parent / "episodes"
 MEMORY_DIR.mkdir(exist_ok=True)
+
+
+def _extract_searchable_text(data: Any) -> str:
+    """Recursively extract string values from a nested structure, ignoring dict keys."""
+    if isinstance(data, str):
+        return data
+    if isinstance(data, dict):
+        return " ".join(_extract_searchable_text(v) for v in data.values())
+    if isinstance(data, list):
+        return " ".join(_extract_searchable_text(item) for item in data)
+    return str(data) if data is not None else ""
 
 
 def search_episodes(query: str, limit: int = 3) -> List[Dict]:
@@ -20,7 +31,7 @@ def search_episodes(query: str, limit: int = 3) -> List[Dict]:
     for f in sorted(MEMORY_DIR.glob("skeleton_*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         try:
             data = json.loads(f.read_text())
-            text = json.dumps(data).lower()
+            text = _extract_searchable_text(data).lower()
             if any(term in text for term in query_terms):
                 results.append(data)
                 if len(results) >= limit:
