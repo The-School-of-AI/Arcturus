@@ -1,59 +1,43 @@
+"""Factual/semantic memory store for user preferences and facts (stub compatible with mem0-style API)."""
+from pathlib import Path
+from typing import Any
 
-import os
-from rich import print
-try:
-    from mem0 import Memory
-except ImportError:
-    Memory = None
-    print("[yellow]⚠️ mem0 not installed. Memory features will be disabled.[/yellow]")
+from shared.state import PROJECT_ROOT
+
 
 class MemoryStore:
-    def __init__(self, user_id="default_user", local_path=None):
-        self.user_id = user_id
-        if Memory:
-            # Local mode by default if no config provided, handles ~/.mem0 internally or custom path
-            config = {}
-            if local_path:
-                config["db_path"] = local_path
-            
-            self.m = Memory(config=config) if config else Memory()
-            print(f"[green] Mem0 initialized for user: {user_id}[/green]")
-        else:
-            self.m = None
+    """
+    Minimal factual memory store: search returns stored facts (e.g. from remme or JSON).
+    Compatible with base_agent's expectation: .search(query, limit=3) -> list of dicts with 'memory' or 'content'.
+    """
 
-    def add(self, text: str, user_id: str = None):
-        """Add a memory/fact"""
-        if not self.m: return
-        target_user = user_id or self.user_id
-        # mem0 .add takes messages or text.
-        self.m.add(text, user_id=target_user)
+    def __init__(self, data_path: Path | None = None):
+        self._path = data_path or (PROJECT_ROOT / "memory" / "factual_memory.json")
+        self._memories: list[dict[str, Any]] = []
+        self._load()
 
-    def search(self, query: str, user_id: str = None, limit: int = 5) -> list:
-        """Search memories"""
-        if self.m:
-            target_user = user_id or self.user_id
-            return self.m.search(query, user_id=target_user, limit=limit)
-        
-        # Fallback to local user_memory.json if mem0 is missing
-        try:
-            from pathlib import Path
-            import json
-            memory_file = Path("data/user_memory.json")
-            if memory_file.exists():
-                memories = json.loads(memory_file.read_text())
-                query_terms = query.lower().split()
-                results = []
-                for mem in memories:
-                    content = mem.get("content", "").lower()
-                    if any(term in content for term in query_terms):
-                        results.append({"memory": mem.get("content")})
-                return results[:limit]
-        except Exception:
-            pass
-        return []
+    def _load(self) -> None:
+        if self._path.exists():
+            try:
+                import json
+                raw = json.loads(self._path.read_text(encoding="utf-8"))
+                self._memories = raw if isinstance(raw, list) else raw.get("memories", [])
+            except Exception:
+                self._memories = []
 
-    def get_all(self, user_id: str = None) -> list:
-        """Get all memories"""
-        if not self.m: return []
-        target_user = user_id or self.user_id
-        return self.m.get_all(user_id=target_user)
+    def search(self, query: str, limit: int = 5) -> list[dict[str, Any] | str]:
+        """
+        Return facts that match the query (simple keyword match).
+        Each item is a dict with 'memory' or 'content' key, or a string.
+        """
+        if not query or not self._memories:
+            return []
+        q = query.lower().split()
+        scored: list[tuple[int, dict]] = []
+        for m in self._memories:
+            text = (m.get("memory") or m.get("content") or str(m)).lower()
+            score = sum(1 for w in q if w in text)
+            if score > 0:
+                scored.append((score, m))
+        scored.sort(key=lambda x: -x[0])
+        return [m for _, m in scored[:limit]]
