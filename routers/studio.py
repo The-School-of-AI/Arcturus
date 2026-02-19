@@ -57,6 +57,7 @@ async def _create_artifact(request: CreateArtifactRequest, artifact_type: Artifa
             prompt=request.prompt,
             artifact_type=artifact_type,
             parameters=request.parameters,
+            title=request.title,
             model=request.model,
         )
         return result
@@ -76,10 +77,16 @@ async def approve_outline(artifact_id: str, request: ApproveOutlineRequest):
     """Approve an outline and generate the draft content tree."""
     try:
         orchestrator = _get_orchestrator()
-        result = await orchestrator.approve_and_generate_draft(
-            artifact_id=artifact_id,
-            modifications=request.modifications,
-        )
+        if request.approved:
+            result = await orchestrator.approve_and_generate_draft(
+                artifact_id=artifact_id,
+                modifications=request.modifications,
+            )
+        else:
+            result = orchestrator.reject_outline(
+                artifact_id=artifact_id,
+                modifications=request.modifications,
+            )
         return result
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e))

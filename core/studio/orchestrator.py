@@ -29,6 +29,7 @@ class ForgeOrchestrator:
         prompt: str,
         artifact_type: ArtifactType,
         parameters: Optional[Dict[str, Any]] = None,
+        title: Optional[str] = None,
         model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Generate an outline for a new artifact.
@@ -50,9 +51,11 @@ class ForgeOrchestrator:
             _parse_outline_item(item) for item in parsed["items"]
         ]
 
+        outline_title = title.strip() if title and title.strip() else parsed["title"]
+
         outline = Outline(
             artifact_type=artifact_type,
-            title=parsed["title"],
+            title=outline_title,
             items=outline_items,
             status=OutlineStatus.pending,
             parameters=parameters,
@@ -97,12 +100,7 @@ class ForgeOrchestrator:
 
         # Apply optional modifications
         if modifications:
-            if "title" in modifications:
-                artifact.outline.title = modifications["title"]
-            if "items" in modifications:
-                artifact.outline.items = [
-                    _parse_outline_item(item) for item in modifications["items"]
-                ]
+            _apply_outline_modifications(artifact, modifications)
 
         # Mark outline as approved
         artifact.outline.status = OutlineStatus.approved
@@ -118,7 +116,7 @@ class ForgeOrchestrator:
         content_tree = content_tree_model.model_dump(mode="json")
 
         # Create revision
-        change_summary = compute_change_summary(None, content_tree)
+        change_summary = compute_change_summary(artifact.content_tree, content_tree)
         revision = self.revision_manager.create_revision(
             artifact_id=artifact_id,
             content_tree=content_tree,
@@ -134,6 +132,27 @@ class ForgeOrchestrator:
 
         return artifact.model_dump(mode="json")
 
+    def reject_outline(
+        self,
+        artifact_id: str,
+        modifications: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
+        """Reject an outline without generating draft content."""
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is None:
+            raise ValueError(f"Artifact not found: {artifact_id}")
+        if artifact.outline is None:
+            raise ValueError(f"Artifact {artifact_id} has no outline")
+
+        if modifications:
+            _apply_outline_modifications(artifact, modifications)
+
+        artifact.outline.status = OutlineStatus.rejected
+        artifact.updated_at = datetime.now(timezone.utc)
+        self.storage.save_artifact(artifact)
+
+        return artifact.model_dump(mode="json")
+
 
 def _parse_outline_item(data: dict) -> OutlineItem:
     """Recursively parse an outline item dict into an OutlineItem model."""
@@ -144,3 +163,18 @@ def _parse_outline_item(data: dict) -> OutlineItem:
         description=data.get("description"),
         children=children,
     )
+
+
+def _apply_outline_modifications(artifact: Artifact, modifications: Dict[str, Any]) -> None:
+    """Apply user-provided outline modifications and keep artifact metadata aligned."""
+    if "title" in modifications:
+        title_value = modifications["title"]
+        if title_value is not None:
+            new_title = str(title_value).strip()
+            if new_title:
+                artifact.outline.title = new_title
+                artifact.title = new_title
+    if "items" in modifications:
+        artifact.outline.items = [
+            _parse_outline_item(item) for item in modifications["items"]
+        ]

@@ -191,6 +191,17 @@ class TestGenerateOutline:
         loaded = storage.load_artifact(result["artifact_id"])
         assert loaded.outline.parameters == {"slide_count": 5, "tone": "casual"}
 
+    def test_with_title_override(self, orchestrator, storage, mock_llm_slides):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+            title="Founder Update Q1",
+        ))
+        loaded = storage.load_artifact(result["artifact_id"])
+        assert result["outline"]["title"] == "Founder Update Q1"
+        assert loaded.title == "Founder Update Q1"
+        assert loaded.outline.title == "Founder Update Q1"
+
     def test_malformed_json_raises(self, orchestrator, mock_llm_malformed):
         with pytest.raises(JsonParsingError):
             _run(orchestrator.generate_outline(
@@ -267,6 +278,21 @@ class TestApproveAndGenerateDraft:
         assert artifact_data["content_tree"] is not None
         revisions = storage.list_revisions(artifact_id)
         assert len(revisions) == 2
+        assert revisions[0]["change_summary"] == "No changes"
+        assert revisions[1]["change_summary"] == "Initial draft"
+
+    def test_title_modification_updates_artifact_title(self, orchestrator, storage, mock_llm_slides):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+        ))
+        artifact_data = _run(orchestrator.approve_and_generate_draft(
+            result["artifact_id"],
+            modifications={"title": "Board Review Deck"},
+        ))
+
+        assert artifact_data["title"] == "Board Review Deck"
+        assert artifact_data["outline"]["title"] == "Board Review Deck"
 
     def test_document_draft(self, orchestrator, storage, mock_llm_document):
         result = _run(orchestrator.generate_outline(
@@ -283,3 +309,29 @@ class TestApproveAndGenerateDraft:
         ))
         artifact_data = _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
         assert artifact_data["content_tree"]["workbook_title"] == "Financial Model"
+
+
+class TestRejectOutline:
+    def test_reject_marks_outline_rejected(self, orchestrator, storage, mock_llm_slides):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+        ))
+
+        artifact_data = orchestrator.reject_outline(result["artifact_id"])
+        assert artifact_data["outline"]["status"] == "rejected"
+        assert artifact_data["content_tree"] is None
+        assert artifact_data["revision_head_id"] is None
+
+    def test_reject_applies_title_modification(self, orchestrator, storage, mock_llm_slides):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+        ))
+
+        artifact_data = orchestrator.reject_outline(
+            result["artifact_id"],
+            modifications={"title": "Needs Rework"},
+        )
+        assert artifact_data["title"] == "Needs Rework"
+        assert artifact_data["outline"]["title"] == "Needs Rework"
