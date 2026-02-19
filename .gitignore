@@ -86,6 +86,9 @@ benchmark_results.txt
 !platform-frontend/public/*.png
 !platform-frontend/public/*.jpg
 
+# Forge studio runtime data (root-level only, not core/studio/)
+/studio/
+
 # Added by Arcturus
 .arcturus/
 .arcturus

@@ -140,6 +140,8 @@ from routers import skills
 app.include_router(skills.router, prefix="/api")
 from routers import optimizer
 app.include_router(optimizer.router, prefix="/api")
+from routers import studio as studio_router
+app.include_router(studio_router.router, prefix="/api")
 
 
 
