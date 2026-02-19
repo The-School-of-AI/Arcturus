@@ -141,6 +141,9 @@ app.include_router(skills.router, prefix="/api")
 from routers import optimizer
 app.include_router(optimizer.router, prefix="/api")
 
+# Gateway API v1 (P15)
+from gateway_api.v1 import router as gateway_v1_router
+app.include_router(gateway_v1_router.router)
 
 
 
