@@ -79,8 +79,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills') => void;
+    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'studio';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'studio') => void;
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
@@ -416,7 +416,24 @@ interface EventBusSlice {
     clearEvents: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice { }
+// --- Studio Slice ---
+interface StudioSlice {
+    studioArtifacts: any[];
+    activeArtifactId: string | null;
+    activeArtifact: any | null;
+    isGenerating: boolean;
+    isApproving: boolean;
+    isStudioModalOpen: boolean;
+    fetchArtifacts: () => Promise<void>;
+    loadArtifact: (id: string) => Promise<void>;
+    createArtifact: (type: 'slides' | 'documents' | 'sheets', prompt: string, title?: string) => Promise<void>;
+    approveOutline: (id: string) => Promise<void>;
+    rejectOutline: (id: string) => Promise<void>;
+    setActiveArtifactId: (id: string | null) => void;
+    setIsStudioModalOpen: (open: boolean) => void;
+}
+
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -2142,6 +2159,69 @@ export const useAppStore = create<AppState>()(
             },
             deleteSavedArticle: (id) => {
                 set({ savedArticles: get().savedArticles.filter(a => a.id !== id) });
+            },
+
+            // --- Studio Slice Implementation ---
+            studioArtifacts: [],
+            activeArtifactId: null,
+            activeArtifact: null,
+            isGenerating: false,
+            isApproving: false,
+            isStudioModalOpen: false,
+            setIsStudioModalOpen: (open) => set({ isStudioModalOpen: open }),
+            setActiveArtifactId: (id) => {
+                set({ activeArtifactId: id, activeArtifact: null });
+                if (id) get().loadArtifact(id);
+            },
+            fetchArtifacts: async () => {
+                try {
+                    const data = await api.listArtifacts();
+                    set({ studioArtifacts: data });
+                } catch (e) {
+                    console.error("Failed to fetch studio artifacts", e);
+                }
+            },
+            loadArtifact: async (id) => {
+                try {
+                    const data = await api.getArtifact(id);
+                    set({ activeArtifact: data, activeArtifactId: id });
+                } catch (e) {
+                    console.error("Failed to load artifact", e);
+                }
+            },
+            createArtifact: async (type, prompt, title) => {
+                set({ isGenerating: true });
+                try {
+                    const data = await api.createArtifact(type, { prompt, title });
+                    // The response is the artifact with outline
+                    set({ activeArtifact: data, activeArtifactId: data.id, isStudioModalOpen: false });
+                    await get().fetchArtifacts();
+                } catch (e) {
+                    console.error("Failed to create artifact", e);
+                } finally {
+                    set({ isGenerating: false });
+                }
+            },
+            approveOutline: async (id) => {
+                set({ isApproving: true });
+                try {
+                    const data = await api.approveOutline(id, true);
+                    set({ activeArtifact: data, activeArtifactId: data.id });
+                    await get().fetchArtifacts();
+                } catch (e) {
+                    console.error("Failed to approve outline", e);
+                } finally {
+                    set({ isApproving: false });
+                }
+            },
+            rejectOutline: async (id) => {
+                try {
+                    const data = await api.approveOutline(id, false);
+                    set({ activeArtifact: data, activeArtifactId: data.id });
+                    await get().fetchArtifacts();
+                } catch (e) {
+                    console.error("Failed to reject outline", e);
+                }
             },
         }),
         {
