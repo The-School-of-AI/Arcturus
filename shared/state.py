@@ -70,3 +70,23 @@ def get_agent_runner():
 
 # Global settings state
 settings = {}
+
+# Canvas components
+_canvas_ws = None
+_canvas_runtime = None
+
+def get_canvas_ws():
+    """Get the CanvasWSHandler instance."""
+    global _canvas_ws
+    if _canvas_ws is None:
+        from canvas.ws_handler import CanvasWSHandler
+        _canvas_ws = CanvasWSHandler()
+    return _canvas_ws
+
+def get_canvas_runtime():
+    """Get the CanvasRuntime instance."""
+    global _canvas_runtime
+    if _canvas_runtime is None:
+        from canvas.runtime import CanvasRuntime
+        _canvas_runtime = CanvasRuntime(get_canvas_ws())
+    return _canvas_runtime

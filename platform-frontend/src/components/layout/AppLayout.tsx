@@ -13,6 +13,7 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
 import { InboxPanel } from '../inbox/InboxPanel';
+import CanvasHost from '@/features/canvas/CanvasHost';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -225,6 +226,8 @@ export const AppLayout: React.FC = () => {
                                     <SkillsDashboard />
                                 ) : sidebarTab === 'console' ? (
                                     <MissionControl />
+                                ) : sidebarTab === 'canvas' ? (
+                                    <CanvasHost surfaceId="main-canvas" />
                                 ) : (
                                     <>
                                         <GraphCanvas />
