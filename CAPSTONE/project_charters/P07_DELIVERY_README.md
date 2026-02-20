@@ -12,6 +12,9 @@
 
 ## 2. Architecture
 
+The Arcturus Voice Architecture is a state-driven pipeline designed for low-latency, interruptible interactions. It is integrated directly into the FastAPI backend to leverage shared resources (like the Agent Loop) while maintaining a dedicated service for audio processing.
+
+
 ### 2.1 End-to-End Pipeline
 
 ```
@@ -45,6 +48,14 @@
      ↓
   🔊 Speaker
 ```
+
+The system follows a synchronous state-machine pattern:
+1. **Orchestration**: The `Orchestrator` manages the lifecycle of a voice interaction. It transitions between `IDLE`, `LISTENING` (transcribing), and `SPEAKING` (synthesizing) states, ensuring that only one phase is active at a time while allowing for immediate cancellation/preemption.
+2. **Perception**:
+    - **Wake Word**: The `VoiceWakeService` (Porcupine-based) listens for the "Hey Arcturus" trigger.
+    - **STT**: Once triggered, the `STTService` captures the live audio stream and converts it to text.
+3. **Reasoning**: The `Orchestrator` passes the transcribed text to the `AgentLoop4` (the core agentic engine), which processes the query using its planning and tool-calling capabilities.
+4. **Action**: The agent's text output is piped to the `TTSService` for audio synthesis and playback.
 
 ### 2.2 Design Principles
 
@@ -123,8 +134,9 @@ main.py
 
 ## 4. API and UI Changes
 
-- No REST API changes; voice pipeline is a standalone service
-- `wake_word.py` provides CLI entry point for testing
+- **FastAPI Integration**: The voice pipeline is now part of the central API. It is initialized in the `lifespan` event of `api.py`.
+- **Voice Router**: Added `/api/voice/start` (POST) to allow triggering the voice listening state via the web UI or external events.
+- **Shared State**: The `Orchestrator` uses the same `AgentLoop4` instance as the REST API, ensuring consistent memory and context across voice and text interfaces.
 
 ---
 
