@@ -34,7 +34,7 @@
 3. Keep backward compatibility layer (Keep the same API so existing code doesn't break)
 
 **Tech Selection**
-1. Planning to go with Qdrant initially, but we may built Weaviate as well to compare performance
+1. Planning to go with Qdrant initially, but we may built Weaviate as well to compare performance (if time permits)
 
 
 ---
