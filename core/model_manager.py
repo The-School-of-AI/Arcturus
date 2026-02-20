@@ -5,6 +5,8 @@ import json
 import yaml
 from pathlib import Path
 from google import genai
+from ops.tracing import get_tracer
+from opentelemetry.trace import Status, StatusCode
 from google.genai.errors import ServerError
 from dotenv import load_dotenv
 
@@ -111,29 +113,61 @@ class ModelManager:
                 )
 
     async def generate_text(self, prompt: str) -> str:
-        if self.model_type == "gemini":
-            return await self._gemini_generate(prompt)
-
-        elif self.model_type == "ollama":
-            return await self._ollama_generate(prompt)
-
-        raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+        """
+        Generate text via Gemini or Ollama API.
+        WATCHTOWER: Span for each LLM API call (Gemini, Ollama).
+        - Span name: llm.generate
+        - Attributes: model, provider, prompt_length, output_length
+        - Used for latency breakdown and cost tracking (Days 6-10)
+        """
+        tracer = get_tracer("model_manager")
+        with tracer.start_as_current_span("llm.generate") as span:
+            span.set_attribute("model", self.text_model_key)
+            span.set_attribute("provider", self.model_type)
+            span.set_attribute("prompt_length", len(prompt))
+            try:
+                # Route to provider-specific implementation
+                if self.model_type == "gemini":
+                    result = await self._gemini_generate(prompt)
+                elif self.model_type == "ollama":
+                    result = await self._ollama_generate(prompt)
+                else:
+                    raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+                span.set_attribute("output_length", len(result))
+                return result
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                raise
 
     async def generate_content(self, contents: list) -> str:
-        """Generate content with support for text and images.
-        
-        Contents can contain:
-        - str: Text content
-        - PIL.Image: Image to process (will be base64-encoded for Ollama)
         """
-        if self.model_type == "gemini":
-            await self._wait_for_rate_limit()
-            return await self._gemini_generate_content(contents)
-        elif self.model_type == "ollama":
-            # Ollama multimodal: extract text and images separately
-            return await self._ollama_generate_content(contents)
-        
-        raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+        Generate content with multimodal input (text + images) via Gemini or Ollama.
+        WATCHTOWER: Span for each LLM API call with multimodal content.
+        - Span name: llm.generate
+        - Attributes: model, provider, prompt_length, output_length
+        """
+        tracer = get_tracer("model_manager")
+        prompt_len = sum(len(c) if isinstance(c, str) else 0 for c in contents)
+        with tracer.start_as_current_span("llm.generate") as span:
+            span.set_attribute("model", self.text_model_key)
+            span.set_attribute("provider", self.model_type)
+            span.set_attribute("prompt_length", prompt_len)
+            try:
+                # Route to provider-specific implementation (multimodal)
+                if self.model_type == "gemini":
+                    await self._wait_for_rate_limit()
+                    result = await self._gemini_generate_content(contents)
+                elif self.model_type == "ollama":
+                    result = await self._ollama_generate_content(contents)
+                else:
+                    raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+                span.set_attribute("output_length", len(result))
+                return result
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                raise
 
     async def _ollama_generate_content(self, contents: list) -> str:
         """Generate content with Ollama, supporting multimodal models like gemma3, llava, etc."""

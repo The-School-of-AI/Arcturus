@@ -53,6 +53,20 @@ async def lifespan(app: FastAPI):
         
     scheduler_service.initialize()
     persistence_manager.load_snapshot()
+    # ========== WATCHTOWER: OpenTelemetry bootstrap ==========
+    # Initializes tracing and exports spans to MongoDB + Jaeger.
+    # FastAPIInstrumentor auto-creates an HTTP span for every request.
+    # =========================================================
+    watchtower = settings.get("watchtower", {})
+    if watchtower.get("enabled", True):
+        # Bootstrap TracerProvider with MongoDB + optional Jaeger OTLP exporters
+        from ops.tracing import init_tracing
+        init_tracing(
+            mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
+            jaeger_endpoint=watchtower.get("jaeger_endpoint")
+        )
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        FastAPIInstrumentor.instrument_app(app)
     await multi_mcp.start()
     
     # Check git
@@ -145,7 +159,9 @@ app.include_router(canvas_router.router, prefix="/api")
 from routers import optimizer
 app.include_router(optimizer.router, prefix="/api")
 from routers import studio as studio_router
+from routers import admin as admin_router
 app.include_router(studio_router.router, prefix="/api")
+app.include_router(admin_router.router, prefix="/api")
 
 
 

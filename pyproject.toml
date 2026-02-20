@@ -41,7 +41,12 @@ dependencies = [
     "apscheduler>=3.11.2",
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
+    "opentelemetry-api>=1.28.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.28.0",
+    "opentelemetry-instrumentation-fastapi>=0.49b0",
+    "pymongo>=4.10.0",
 ]
 
 [tool.setuptools.packages.find]
-include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "remme*", "routers*", "shared*", "tools*", "ui*"]
+include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "ops*", "remme*", "routers*", "shared*", "tools*", "ui*"]
