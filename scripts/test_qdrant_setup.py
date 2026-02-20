@@ -13,15 +13,15 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import numpy as np
-from memory.vector_store import QdrantVectorStore
+from memory.vector_store import get_vector_store, VectorStoreProtocol
 from core.utils import log_step, log_error
 
 
 def test_connection():
-    """Test basic connection to Qdrant."""
-    print("\n🔍 Testing Qdrant Connection...")
+    """Test basic connection to Qdrant via provider-agnostic factory."""
+    print("\n🔍 Testing Qdrant Connection (via get_vector_store)...")
     try:
-        store = QdrantVectorStore()
+        store: VectorStoreProtocol = get_vector_store(provider="qdrant")
         print("✅ Successfully connected to Qdrant!")
         return store
     except Exception as e:
@@ -31,7 +31,7 @@ def test_connection():
         return None
 
 
-def test_add_and_search(store: QdrantVectorStore):
+def test_add_and_search(store: VectorStoreProtocol):
     """Test adding memories and searching."""
     print("\n📝 Testing Add and Search Operations...")
     
@@ -88,7 +88,7 @@ def test_add_and_search(store: QdrantVectorStore):
     return added_ids
 
 
-def test_get_and_update(store: QdrantVectorStore, memory_id: str):
+def test_get_and_update(store: VectorStoreProtocol, memory_id: str):
     """Test getting and updating a memory."""
     print("\n✏️ Testing Get and Update Operations...")
     
@@ -114,7 +114,7 @@ def test_get_and_update(store: QdrantVectorStore, memory_id: str):
         print(f"  ❌ Failed to update memory")
 
 
-def test_filtering(store: QdrantVectorStore):
+def test_filtering(store: VectorStoreProtocol):
     """Test metadata filtering."""
     print("\n🔍 Testing Metadata Filtering...")
     
@@ -133,7 +133,7 @@ def test_filtering(store: QdrantVectorStore):
     print("  ✅ Filtering works correctly!")
 
 
-def test_count_and_get_all(store: QdrantVectorStore):
+def test_count_and_get_all(store: VectorStoreProtocol):
     """Test counting and getting all memories."""
     print("\n📊 Testing Count and Get All Operations...")
     
@@ -144,7 +144,7 @@ def test_count_and_get_all(store: QdrantVectorStore):
     print(f"  ✅ Retrieved {len(all_memories)} memories (limited to 10)")
 
 
-def test_delete(store: QdrantVectorStore, memory_id: str):
+def test_delete(store: VectorStoreProtocol, memory_id: str):
     """Test deleting a memory."""
     print("\n🗑️ Testing Delete Operation...")
     

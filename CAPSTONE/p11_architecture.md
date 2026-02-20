@@ -36,6 +36,12 @@
 **Tech Selection**
 1. Planning to go with Qdrant initially, but we may built Weaviate as well to compare performance (if time permits)
 
+**Provider Abstraction**
+- `VectorStoreProtocol` in `memory/backends/base.py` defines the standard interface
+- Use `get_vector_store(provider="qdrant")` in application code — switch providers via config
+- Implementations: `QdrantVectorStore`, `FaissVectorStore` (wraps RemmeStore)
+- To add Weaviate: create `memory/backends/weaviate_store.py` implementing the protocol, then add a branch in `get_vector_store()`
+
 
 ---
 
@@ -173,7 +179,7 @@ add_relationship("John", "works_at", "Google")
 ## 📋 Implementation Checklist
 
 ### **Week 1: Foundation**
-- [ ] Set up Qdrant instance (local or cloud)
+- [v] Set up Qdrant instance (local or cloud)
 - [ ] Create `memory/vector_store.py` with basic CRUD
 - [ ] Migrate existing FAISS data
 - [ ] Write tests for vector operations
@@ -206,6 +212,9 @@ add_relationship("John", "works_at", "Google")
 - [ ] Add contradiction detection
 - [ ] Create privacy controls
 - [ ] Add UI for memory management
+
+### **Week 4: Hardening and Evaluation**
+- [] benchmark
 
 ## 🧪 Testing Requirements
 
@@ -241,5 +250,6 @@ Must have at least 5 scenarios covering:
 2. **Backward Compatibility:** Existing `episodic_memory.py` code still works
 3. **Test Coverage:** All mandatory tests pass
 4. **User Experience:** Can create spaces, see knowledge graph, sync across devices
+5. **Benchmark Integration:**  Benchmark from https://arxiv.org/html/2602.16313v1 to P11 and evaluate Arcturus performance against it
 
 ---
