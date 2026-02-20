@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Box, Square, Circle, PlayCircle, Database, Brain, Code2,
     LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
@@ -26,6 +26,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
     learn: { label: 'Learning', icon: GraduationCap, color: 'text-neon-yellow', subtitleSuffix: 'COURSES' },
     notes: { label: 'Notes', icon: Notebook, color: 'text-blue-400', subtitleSuffix: 'NOTES' },
     settings: { label: 'Settings', icon: Settings, color: 'text-neon-yellow', subtitleSuffix: 'CONFIG' },
+    skills: { label: 'Skill Store', icon: Zap, color: 'text-neon-cyan', subtitleSuffix: 'INSTALLED' },
     ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' },
     scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-neon-cyan', subtitleSuffix: 'JOBS' },
     console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' }
@@ -48,6 +49,22 @@ export const Header: React.FC = () => {
 
     const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [isStatsOpen, setIsStatsOpen] = useState(false);
+    const [skillsCount, setSkillsCount] = useState(0);
+    const [isSkillsLoading, setIsSkillsLoading] = useState(false);
+
+    const fetchSkillsCount = useCallback(async () => {
+        setIsSkillsLoading(true);
+        try {
+            const res = await api.get(`${API_BASE}/skills/list`);
+            const skills = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.skills) ? res.data.skills : []);
+            setSkillsCount(skills.length);
+        } catch (e) {
+            console.error("Failed to fetch skills count", e);
+            setSkillsCount(0);
+        } finally {
+            setIsSkillsLoading(false);
+        }
+    }, []);
 
     // Check Ollama status on mount and periodically
     useEffect(() => {
@@ -76,6 +93,12 @@ export const Header: React.FC = () => {
             return () => clearInterval(interval);
         }
     }, [sidebarTab, fetchGitSummary]);
+
+    useEffect(() => {
+        if (sidebarTab === 'skills') {
+            fetchSkillsCount();
+        }
+    }, [sidebarTab, fetchSkillsCount]);
 
     const handleStop = async () => {
         if (!currentRun) return;
@@ -111,6 +134,7 @@ export const Header: React.FC = () => {
             case 'rag': return ragFiles.length;
             case 'mcp': return mcpServers.length;
             case 'notes': return countFilesRecursively(notesFiles);
+            case 'skills': return skillsCount;
             default: return 0;
         }
     };
@@ -246,17 +270,22 @@ export const Header: React.FC = () => {
                                 </>
                             )}
 
-                            {(sidebarTab === 'runs' || sidebarTab === 'apps' || sidebarTab === 'explorer' || sidebarTab === 'notes') && (
+                            {(sidebarTab === 'runs' || sidebarTab === 'apps' || sidebarTab === 'explorer' || sidebarTab === 'notes' || sidebarTab === 'skills') && (
                                 <button
                                     onClick={() => {
                                         if (sidebarTab === 'runs') fetchRuns();
                                         if (sidebarTab === 'apps') fetchApps();
                                         if (sidebarTab === 'notes') fetchNotesFiles();
+                                        if (sidebarTab === 'skills') fetchSkillsCount();
                                     }}
                                     className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground no-drag"
                                     title="Refresh"
                                 >
-                                    <RefreshCw className={cn("w-4 h-4", sidebarTab === 'notes' && isNotesLoading && "animate-spin")} />
+                                    <RefreshCw className={cn(
+                                        "w-4 h-4",
+                                        sidebarTab === 'notes' && isNotesLoading && "animate-spin",
+                                        sidebarTab === 'skills' && isSkillsLoading && "animate-spin"
+                                    )} />
                                 </button>
                             )}
                         </div>
