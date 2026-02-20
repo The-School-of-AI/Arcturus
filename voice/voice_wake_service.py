@@ -8,6 +8,7 @@ from voice.audio_input import AudioInput
 from voice.wake_engine import create_wake_engine
 from voice.config import VOICE_CONFIG
 
+
 class VoiceWakeService:
     def __init__(self, on_wake_callback):
         self.engine = create_wake_engine()
@@ -41,10 +42,20 @@ class VoiceWakeService:
                     "timestamp": datetime.now().isoformat(),
                     "wake_word": VOICE_CONFIG["wake_word"]
                 })
-                time.sleep(1)  # debounce
+
+                # 🔴 critical: drop old audio frames
+                self._flush_audio()
+
+                # short debounce (not 1s!)
+                time.sleep(0.25)
+
+    def _flush_audio(self):
+        q = self.audio.q
+        with q.mutex:
+            q.queue.clear()
 
     def stop(self):
         self._running = False
-        time.sleep(0.1)
+        time.sleep(0.05)
         self.audio.stop()
         self.engine.close()
