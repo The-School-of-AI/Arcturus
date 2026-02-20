@@ -5,6 +5,7 @@ from typing import Optional
 from core.model_manager import ModelManager
 from core.json_parser import parse_llm_json
 from core.utils import log_step, log_error
+from core.episodic_memory import *
 from PIL import Image
 from datetime import datetime
 import os
