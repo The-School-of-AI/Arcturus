@@ -68,6 +68,17 @@ def get_agent_runner():
         _agent_runner = AgentRunner(get_multi_mcp())
     return _agent_runner
 
+# Studio Storage instance
+_studio_storage = None
+
+def get_studio_storage():
+    """Get the StudioStorage instance, creating it if needed."""
+    global _studio_storage
+    if _studio_storage is None:
+        from core.studio.storage import StudioStorage
+        _studio_storage = StudioStorage()
+    return _studio_storage
+
 # Global settings state
 settings = {}
 
