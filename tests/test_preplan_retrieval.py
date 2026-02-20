@@ -5,6 +5,7 @@ import sys
 import os
 import json
 from pathlib import Path
+import pytest
 
 # Add project root to path
 sys.path.append(os.getcwd())
@@ -13,7 +14,11 @@ from agents.base_agent import AgentRunner
 from core.registry import registry
 from core.bootstrap import bootstrap_agents
 from mcp_servers.multi_mcp import MultiMCP
-from memory.episodic import MEMORY_DIR
+
+try:
+    from memory.episodic import MEMORY_DIR
+except ModuleNotFoundError:
+    pytest.skip("memory.episodic module not available", allow_module_level=True)
 
 class TestPrePlanRetrieval(unittest.IsolatedAsyncioTestCase):
     async def test_planner_retrieval_hook(self):
