@@ -5,7 +5,7 @@ Implement this protocol to add new providers (Qdrant, Weaviate, FAISS, etc.)
 without changing application code. All methods use provider-agnostic types.
 """
 
-from typing import Protocol, Dict, List, Any, Optional, runtime_checkable
+from typing import Protocol, Dict, List, Any, Optional, Set, runtime_checkable
 import numpy as np
 
 
@@ -79,4 +79,12 @@ class VectorStoreProtocol(Protocol):
 
     def count(self) -> int:
         """Return total number of memories."""
+        ...
+
+    def get_scanned_run_ids(self) -> Set[str]:
+        """Return run IDs that have already been scanned for memory extraction."""
+        ...
+
+    def mark_run_scanned(self, run_id: str) -> None:
+        """Mark a run as scanned to avoid re-processing."""
         ...

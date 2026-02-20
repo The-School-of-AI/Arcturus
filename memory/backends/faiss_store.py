@@ -109,3 +109,9 @@ class FaissVectorStore:
 
     def count(self) -> int:
         return len(self._store.memories)
+
+    def get_scanned_run_ids(self) -> set:
+        return self._store.get_scanned_run_ids()
+
+    def mark_run_scanned(self, run_id: str) -> None:
+        self._store.mark_run_scanned(run_id)

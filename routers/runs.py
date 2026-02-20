@@ -176,7 +176,7 @@ async def process_run(run_id: str, query: str):
                             print(f"✅ Remme: Added new fact: {text}")
                         elif action == "update" and target_id and text:
                             emb = get_embedding(text, task_type="search_document")
-                            remme_store.update_text(target_id, text, emb)
+                            remme_store.update(target_id, text=text, embedding=emb)
                             print(f"🔄 Remme: Updated fact {target_id}: {text}")
                         elif action == "delete" and target_id:
                             remme_store.delete(target_id)

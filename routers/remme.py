@@ -99,8 +99,9 @@ async def background_smart_scan():
                 # Search Context
                 existing = []
                 try:
-                    existing = remme_store.search(query, limit=5)
-                except:
+                    emb = get_embedding(query, task_type="search_document")
+                    existing = remme_store.search(query_vector=emb, query_text=query, k=5)
+                except Exception:
                     pass
                 
                 # Extract memories AND preferences using new format
@@ -128,7 +129,7 @@ async def background_smart_scan():
                                 processed_count += 1
                             elif action == "update" and tid and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                remme_store.update_text(tid, text, emb)
+                                remme_store.update(tid, text=text, embedding=emb)
                                 processed_count += 1
                         except Exception as e:
                             print(f"❌ RemMe Action Failed: {e}")
@@ -306,10 +307,6 @@ async def get_remme_profile():
         # 2. Generate New Profile
         print("🧠 RemMe Profile: Generating NEW profile via Gemini...")
         
-        # Load all memories
-        if not remme_store.index:
-            remme_store.load_index()
-            
         memories = remme_store.get_all()
         
         if not memories:

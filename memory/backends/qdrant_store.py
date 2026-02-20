@@ -2,10 +2,12 @@
 Qdrant-backed implementation of VectorStoreProtocol.
 """
 
+import json
 import re
 import uuid
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Set
 import numpy as np
 
 try:
@@ -42,11 +44,13 @@ class QdrantVectorStore:
         collection_name: str = DEFAULT_COLLECTION,
         dimension: int = DEFAULT_DIMENSION,
         api_key: Optional[str] = None,
+        scanned_runs_path: Optional[Path] = None,
     ):
         self.url = url
         self.collection_name = collection_name
         self.dimension = dimension
         self.client = QdrantClient(url=url, api_key=api_key, timeout=10.0)
+        self._scanned_runs_path = Path(scanned_runs_path) if scanned_runs_path else Path(__file__).parent.parent.parent / "memory" / "remme_index" / "scanned_runs.json"
         self._ensure_collection()
         log_step(f"✅ QdrantVectorStore initialized: {url}/{collection_name}", symbol="🔧")
 
@@ -299,6 +303,24 @@ class QdrantVectorStore:
         except Exception as e:
             log_error(f"Failed to get collection count: {e}")
             return 0
+
+    def get_scanned_run_ids(self) -> Set[str]:
+        """Return run IDs already scanned (stored in sidecar JSON)."""
+        if not self._scanned_runs_path.exists():
+            return set()
+        try:
+            data = json.loads(self._scanned_runs_path.read_text())
+            return set(data) if isinstance(data, list) else set(data.get("ids", []))
+        except Exception:
+            return set()
+
+    def mark_run_scanned(self, run_id: str) -> None:
+        """Persist scanned run ID to sidecar JSON."""
+        ids = self.get_scanned_run_ids()
+        if run_id not in ids:
+            ids.add(run_id)
+            self._scanned_runs_path.parent.mkdir(parents=True, exist_ok=True)
+            self._scanned_runs_path.write_text(json.dumps(list(ids), indent=2))
 
     def _update_timestamp(self, memory_id: str, source: str) -> None:
         existing = self.get(memory_id)
