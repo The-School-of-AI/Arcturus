@@ -40,13 +40,7 @@ Notes/
 !Notes/
 
 # Logs & Runtime State
-tmp/
-memory/episodes/
-memory/session_summaries_index/
-memory/debug_logs/
-memory/remme_index/
-memory/user_model/
-memory/__pycache__/
+memory/
 *.log
 server.log
 benchmark_results.txt
@@ -89,9 +83,6 @@ benchmark_results.txt
 !platform-frontend/public/*.ico
 !platform-frontend/public/*.png
 !platform-frontend/public/*.jpg
-
-# Forge studio runtime data (root-level only, not core/studio/)
-/studio/
 
 # Added by Arcturus
 .arcturus/
