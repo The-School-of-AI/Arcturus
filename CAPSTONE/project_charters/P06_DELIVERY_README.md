@@ -78,10 +78,15 @@ Server response: 200
 - **Concurrency**: Basic support for multiple surfaces, but locking mechanisms for simultaneous agent edits are not yet implemented.
 
 ## 9. Rollback Plan
-- **Backend**: Remove `canvas/` folder and revert `api.py` router inclusion.
 - **Frontend**: Revert `AppLayout.tsx` and `Sidebar.tsx` changes.
 
-## 10. Demo Steps
+## 10. Extended Scope: Phase 3 Infrastructure
+This PR also delivers groundwork for Advanced Agentic Capabilities verified via `scripts/verify_phase3.py`:
+- **Task 46: Episodic Memory**: Automatic skeleton generation for session persistence (`memory/episodes/`). Verified via IDE Agent chat simulation (new skeletons present in storage).
+- **Task 47: FileReader Skill**: Extracted robust file access tool. Verified via General Agent (Phase3Tester) successfully reading `README.md`.
+- **Task 48: Snake Game E2E**: Verified "Plan-to-Code" pipeline with a functional game at `output/snake.html` (Preview link generated).
+
+## 11. Demo Steps
 1. Start API: `uv run uvicorn api:app --reload`
 2. Start Frontend: `npm run dev`
 3. Open `http://localhost:5173/` and click **Canvas icon**.
