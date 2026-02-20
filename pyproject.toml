@@ -41,7 +41,22 @@ dependencies = [
     "apscheduler>=3.11.2",
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
+    "pytest>=9.0.2",
 ]
 
 [tool.setuptools.packages.find]
-include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "remme*", "routers*", "shared*", "tools*", "ui*"]
+include = [
+    "agents",
+    "channels",
+    "config",
+    "core",
+    "gateway",
+    "mcp_servers",
+    "memory",
+    "remme",
+    "routers",
+    "shared",
+    "tools",
+    "ui",
+]
+exclude = ["tests", "tests.*"]
