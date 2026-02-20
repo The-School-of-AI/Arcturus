@@ -68,6 +68,17 @@ def get_agent_runner():
         _agent_runner = AgentRunner(get_multi_mcp())
     return _agent_runner
 
+# Studio Storage instance
+_studio_storage = None
+
+def get_studio_storage():
+    """Get the StudioStorage instance, creating it if needed."""
+    global _studio_storage
+    if _studio_storage is None:
+        from core.studio.storage import StudioStorage
+        _studio_storage = StudioStorage()
+    return _studio_storage
+
 # Global settings state
 settings = {}
 
@@ -98,3 +109,23 @@ def get_message_bus():
             },
         )
     return _message_bus
+
+# Canvas components
+_canvas_ws = None
+_canvas_runtime = None
+
+def get_canvas_ws():
+    """Get the CanvasWSHandler instance."""
+    global _canvas_ws
+    if _canvas_ws is None:
+        from canvas.ws_handler import CanvasWSHandler
+        _canvas_ws = CanvasWSHandler()
+    return _canvas_ws
+
+def get_canvas_runtime():
+    """Get the CanvasRuntime instance."""
+    global _canvas_runtime
+    if _canvas_runtime is None:
+        from canvas.runtime import CanvasRuntime
+        _canvas_runtime = CanvasRuntime(get_canvas_ws())
+    return _canvas_runtime

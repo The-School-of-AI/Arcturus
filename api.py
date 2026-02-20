@@ -77,6 +77,8 @@ async def lifespan(app: FastAPI):
     yield
     
     print("🛑 API Shutting down...")
+    from shared.state import get_canvas_runtime
+    get_canvas_runtime().save_snapshots()
     persistence_manager.save_snapshot()
     await multi_mcp.stop()
 
@@ -138,10 +140,14 @@ from routers import stream
 app.include_router(stream.router, prefix="/api")
 from routers import skills
 app.include_router(skills.router, prefix="/api")
+from routers import canvas as canvas_router
+app.include_router(canvas_router.router, prefix="/api")
 from routers import optimizer
 app.include_router(optimizer.router, prefix="/api")
 from routers import nexus as nexus_router
 app.include_router(nexus_router.router, prefix="/api")
+from routers import studio as studio_router
+app.include_router(studio_router.router, prefix="/api")
 
 
 
