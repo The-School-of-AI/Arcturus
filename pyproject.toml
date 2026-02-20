@@ -41,3 +41,19 @@ dependencies = [
     "apscheduler>=3.11.2",
     "pytest>=9.0.2",
 ]
+
+[tool.setuptools.packages.find]
+include = [
+    "agents",
+    "channels",
+    "core",
+    "gateway",
+    "mcp_servers",
+    "memory",
+    "remme",
+    "routers",
+    "shared",
+    "tools",
+    "ui",
+]
+exclude = ["tests", "tests.*"]
