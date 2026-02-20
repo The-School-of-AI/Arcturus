@@ -42,6 +42,7 @@ Notes/
 # Logs & Runtime State
 memory/session_summaries_index/
 memory/debug_logs/
+!memory/*.py
 *.log
 server.log
 benchmark_results.txt

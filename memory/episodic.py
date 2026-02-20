@@ -1,54 +1,88 @@
-"""Episodic memory: skeleton storage and search (recipe retrieval)."""
+"""Episodic memory module: stores and retrieves session skeleton recipes."""
+
+from __future__ import annotations
+
 import json
+import re
 from pathlib import Path
+from typing import Any
 
 from shared.state import PROJECT_ROOT
 
-
-# Directory for skeleton_*.json files (under project root data area to avoid cluttering package)
+# Directory where skeleton files are stored
 MEMORY_DIR = PROJECT_ROOT / "memory" / "episodic_skeletons"
 MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def search_episodes(query: str, limit: int = 5) -> list[dict]:
-    """
-    Search saved episode skeletons by text similarity (keyword overlap).
-    Returns list of skeleton dicts with "id", "original_query", "nodes", etc., best matches first.
-    """
+def _load_skeleton(file_path: Path) -> dict[str, Any]:
+    """Load a skeleton JSON file."""
+    try:
+        return json.loads(file_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _calculate_relevance_score(skeleton: dict[str, Any], query: str) -> float:
+    """Compute keyword relevance score for an episode skeleton."""
+    query_words = set(re.findall(r"\w+", query.lower()))
+    if not query_words:
+        return 0.0
+
+    score = 0.0
+
+    original_query = str(skeleton.get("original_query", "")).lower()
+    if original_query:
+        original_words = set(re.findall(r"\w+", original_query))
+        score += len(query_words & original_words) * 3.0
+
+    for node in skeleton.get("nodes", []):
+        task_goal = str(node.get("task_goal", "")).lower()
+        if task_goal:
+            task_words = set(re.findall(r"\w+", task_goal))
+            score += len(query_words & task_words) * 2.0
+
+        instruction = str(node.get("instruction", "")).lower()
+        if instruction:
+            inst_words = set(re.findall(r"\w+", instruction))
+            score += len(query_words & inst_words)
+
+    return score / len(query_words)
+
+
+def search_episodes(query: str, limit: int = 5) -> list[dict[str, Any]]:
+    """Search relevant past episodes by query similarity."""
     if not MEMORY_DIR.exists():
         return []
-    query_lower = query.lower().split()
-    scored: list[tuple[float, dict]] = []
-    for path in MEMORY_DIR.glob("skeleton_*.json"):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+
+    scored_episodes: list[tuple[float, dict[str, Any]]] = []
+    for file_path in MEMORY_DIR.glob("skeleton_*.json"):
+        skeleton = _load_skeleton(file_path)
+        if not skeleton:
             continue
-        text = (data.get("original_query") or "") + " " + " ".join(
-            (n.get("task_goal") or n.get("description") or "")
-            for n in data.get("nodes", [])
-        )
-        text_lower = text.lower()
-        score = sum(1 for w in query_lower if w in text_lower)
+
+        score = _calculate_relevance_score(skeleton, query)
         if score > 0:
-            scored.append((score, data))
-    scored.sort(key=lambda x: -x[0])
-    return [d for _, d in scored[:limit]]
+            scored_episodes.append((score, skeleton))
+
+    scored_episodes.sort(key=lambda x: x[0], reverse=True)
+    return [episode for _, episode in scored_episodes[:limit]]
 
 
-def get_recent_episodes(limit: int = 10) -> list[dict]:
-    """Return the most recently modified episode skeletons."""
+def get_recent_episodes(limit: int = 10) -> list[dict[str, Any]]:
+    """Return most recently modified episode skeletons."""
     if not MEMORY_DIR.exists():
         return []
-    paths = sorted(
+
+    skeleton_files = sorted(
         MEMORY_DIR.glob("skeleton_*.json"),
-        key=lambda p: p.stat().st_mtime,
+        key=lambda f: f.stat().st_mtime,
         reverse=True,
     )
-    out = []
-    for path in paths[:limit]:
-        try:
-            out.append(json.loads(path.read_text(encoding="utf-8")))
-        except Exception:
-            continue
-    return out
+
+    episodes: list[dict[str, Any]] = []
+    for file_path in skeleton_files[:limit]:
+        skeleton = _load_skeleton(file_path)
+        if skeleton:
+            episodes.append(skeleton)
+
+    return episodes
