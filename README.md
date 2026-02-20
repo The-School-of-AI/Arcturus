@@ -69,3 +69,4 @@ scripts/test_all.sh quick
 - `.env` is intentionally untracked.
 - Use `.env.example` as template for local secrets.
 - Never commit real API keys.
+- Gateway admin endpoints (`/api/v1/keys*`) require `ARCTURUS_GATEWAY_ADMIN_KEY` to be explicitly configured; when unset, admin auth fails closed (`503` `admin_key_not_configured`).

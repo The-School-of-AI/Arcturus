@@ -147,6 +147,9 @@ app.include_router(optimizer.router, prefix="/api")
 from routers import studio as studio_router
 app.include_router(studio_router.router, prefix="/api")
 
+# Gateway API v1 (P15)
+from gateway_api.v1 import router as gateway_v1_router
+app.include_router(gateway_v1_router.router)
 
 
 
