@@ -95,6 +95,12 @@ class TestArtifactStorage:
         assert result[0]["id"] == "art-newer"
         assert result[1]["id"] == "art-older"
 
+    def test_list_artifacts_includes_outline_status(self, storage, sample_artifact):
+        storage.save_artifact(sample_artifact)
+        result = storage.list_artifacts()
+        assert len(result) == 1
+        assert result[0]["outline"]["status"] == "pending"
+
     def test_delete_artifact(self, storage, sample_artifact):
         storage.save_artifact(sample_artifact)
         assert storage.load_artifact(sample_artifact.id) is not None

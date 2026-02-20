@@ -70,6 +70,7 @@ class ForgeOrchestrator:
             title=outline.title,
             created_at=now,
             updated_at=now,
+            model=model,
             outline=outline,
             content_tree=None,
         )
@@ -107,7 +108,7 @@ class ForgeOrchestrator:
 
         # Generate draft via LLM
         llm_prompt = get_draft_prompt(artifact.type, artifact.outline)
-        mm = ModelManager()
+        mm = ModelManager(model_name=artifact.model) if artifact.model else ModelManager()
         raw = await mm.generate_text(llm_prompt)
 
         # Parse and validate content tree
@@ -186,6 +187,9 @@ def _apply_outline_modifications(artifact: Artifact, modifications: Dict[str, An
                 artifact.outline.title = new_title
                 artifact.title = new_title
     if "items" in modifications:
+        items_value = modifications["items"]
+        if not isinstance(items_value, list):
+            raise ValueError("Outline modification 'items' must be a list")
         artifact.outline.items = [
-            _parse_outline_item(item) for item in modifications["items"]
+            _parse_outline_item(item) for item in items_value
         ]

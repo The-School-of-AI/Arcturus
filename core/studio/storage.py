@@ -57,11 +57,16 @@ class StudioStorage:
                 if artifact_file.exists():
                     try:
                         data = json.loads(artifact_file.read_text())
+                        outline_data = data.get("outline")
+                        outline_status = None
+                        if isinstance(outline_data, dict):
+                            outline_status = outline_data.get("status")
                         artifacts.append({
                             "id": data.get("id", entry.name),
                             "type": data.get("type"),
                             "title": data.get("title", "Untitled"),
                             "updated_at": data.get("updated_at"),
+                            "outline": {"status": outline_status} if outline_status else None,
                         })
                     except (json.JSONDecodeError, KeyError):
                         continue

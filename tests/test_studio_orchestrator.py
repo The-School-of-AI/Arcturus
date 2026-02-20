@@ -362,6 +362,43 @@ class TestApproveAndGenerateDraft:
         artifact_data = _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
         assert artifact_data["content_tree"]["workbook_title"] == "Financial Model"
 
+    def test_reuses_selected_model_for_draft(self, orchestrator, monkeypatch):
+        init_models = []
+
+        def capture_init(self, model_name=None, provider=None, role=None):
+            init_models.append(model_name)
+            self.model_type = "gemini"
+            self.client = None
+
+        async def fake_generate(self, prompt):
+            if "content architect" in prompt.lower():
+                return OUTLINE_RESPONSE
+            return SLIDES_DRAFT_RESPONSE
+
+        monkeypatch.setattr("core.model_manager.ModelManager.__init__", capture_init)
+        monkeypatch.setattr("core.model_manager.ModelManager.generate_text", fake_generate)
+
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+            model="gpt-4o-mini",
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        assert init_models == ["gpt-4o-mini", "gpt-4o-mini"]
+
+    def test_invalid_items_modification_raises(self, orchestrator, mock_llm_slides):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create slides",
+            artifact_type=ArtifactType.slides,
+        ))
+
+        with pytest.raises(ValueError, match="items.*list"):
+            _run(orchestrator.approve_and_generate_draft(
+                result["artifact_id"],
+                modifications={"items": None},
+            ))
+
 
 class TestRejectOutline:
     def test_reject_marks_outline_rejected(self, orchestrator, storage, mock_llm_slides):

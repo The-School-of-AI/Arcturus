@@ -118,6 +118,7 @@ class Artifact(BaseModel):
     created_at: datetime
     updated_at: datetime
     schema_version: str = "1.0"
+    model: Optional[str] = None
     content_tree: Optional[Dict[str, Any]] = None
     theme_id: Optional[str] = None
     revision_head_id: Optional[str] = None
