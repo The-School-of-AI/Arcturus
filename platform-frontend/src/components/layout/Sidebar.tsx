@@ -25,7 +25,7 @@ import { NewsPanel } from '@/components/sidebar/NewsPanel';
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills',
+    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas',
     active: boolean,
     onClick: () => void
 }) => {
@@ -137,6 +137,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} />
                     <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
                     <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
+                    <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} />
 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 

@@ -4,6 +4,8 @@ Replace these contract tests with feature-level assertions as implementation mat
 """
 
 from pathlib import Path
+import os
+import sys
 
 PROJECT_ID = "P06"
 PROJECT_KEY = "p06_canvas"
@@ -35,7 +37,10 @@ def test_04_demo_script_exists() -> None:
 
 
 def test_05_demo_script_is_executable() -> None:
-    assert DEMO_SCRIPT.stat().st_mode & 0o111, f"Demo script not executable: {DEMO_SCRIPT}"
+    if sys.platform != "win32":
+        assert DEMO_SCRIPT.stat().st_mode & 0o111, f"Demo script not executable: {DEMO_SCRIPT}"
+    else:
+        assert DEMO_SCRIPT.exists()
 
 
 def test_06_delivery_readme_exists() -> None:
