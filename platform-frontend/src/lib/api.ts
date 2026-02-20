@@ -128,5 +128,36 @@ export const api = {
 
     deleteChatSession: async (sessionId: string, targetType: string, targetId: string): Promise<void> => {
         await axios.delete(`${API_BASE}/chat/session/${sessionId}`, { params: { target_type: targetType, target_id: targetId } });
-    }
+    },
+
+    // Studio (Forge)
+    listArtifacts: async (): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio`);
+        return res.data;
+    },
+
+    getArtifact: async (id: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/studio/${id}`);
+        return res.data;
+    },
+
+    createArtifact: async (type: 'slides' | 'documents' | 'sheets', payload: { prompt: string; title?: string; parameters?: Record<string, any> }): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/studio/${type}`, payload);
+        return res.data;
+    },
+
+    approveOutline: async (id: string, approved: boolean, modifications?: Record<string, any>): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/studio/${id}/outline/approve`, { approved, modifications });
+        return res.data;
+    },
+
+    listRevisions: async (id: string): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio/${id}/revisions`);
+        return res.data;
+    },
+
+    getRevision: async (artifactId: string, revisionId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/studio/${artifactId}/revisions/${revisionId}`);
+        return res.data;
+    },
 };
