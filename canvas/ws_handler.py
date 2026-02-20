@@ -48,7 +48,8 @@ class CanvasWSHandler:
     async def handle_user_event(self, surface_id: str, data: dict):
         """
         Handle incoming events from the user (e.g., clicks).
-        In a real app, this would route to the Agent Core's event loop.
+        Broadcast the event to all listeners so agents can react.
         """
         logger.info(f"User event on {surface_id}: {data}")
-        # Implementation hook: Route this to core/loop.py or a callback
+        # Broadcast the user event to all other clients on this surface
+        await self.broadcast_to_surface(surface_id, data)

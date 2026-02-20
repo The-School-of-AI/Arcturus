@@ -27,26 +27,42 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
             const msg = lastJsonMessage as any;
             console.log('[Canvas] Received:', msg);
 
-            switch (msg.type) {
-                case 'updateComponents':
-                    setComponents(msg.components);
-                    setIsSandbox(false); // Switch to widget mode if components are sent
-                    break;
-                case 'updateDataModel':
-                    setDataModel((prev: any) => ({ ...prev, ...msg.data }));
-                    break;
-                case 'createSurface':
-                    // Initialization if needed
-                    break;
-                case 'evalJS':
-                    // If we are in sandbox mode, we'd forward this. 
-                    // For widget mode, we might handle it differently.
-                    break;
-                default:
-                    console.warn('Unknown message type:', msg.type);
-            }
+            (async () => {
+                switch (msg.type) {
+                    case 'updateComponents':
+                        setComponents(msg.components);
+                        setIsSandbox(false);
+                        break;
+                    case 'updateDataModel':
+                        setDataModel((prev: any) => ({ ...prev, ...msg.data }));
+                        break;
+                    case 'captureSnapshot':
+                        await handleCaptureSnapshot();
+                        break;
+                }
+            })();
         }
     }, [lastJsonMessage]);
+
+    const handleCaptureSnapshot = async () => {
+        try {
+            const { toPng } = await import('html-to-image');
+            const node = document.getElementById(`canvas-surface-${surfaceId}`);
+            if (node) {
+                const dataUrl = await toPng(node, {
+                    backgroundColor: '#111827',
+                    style: { transform: 'scale(1)' } // Ensure no scaling distortion
+                });
+                sendJsonMessage({
+                    type: 'snapshotResult',
+                    surfaceId,
+                    snapshot: dataUrl
+                });
+            }
+        } catch (error) {
+            console.error('[Canvas] Snapshot failed:', error);
+        }
+    };
 
     const handleUserEvent = useCallback((componentId: string, eventType: string, data: any = {}) => {
         sendJsonMessage({
@@ -76,6 +92,8 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                 key={comp.id}
                 {...resolvedProps}
                 onClick={() => handleUserEvent(comp.id, 'click')}
+                onCodeChange={(code: string) => handleUserEvent(comp.id, 'change', { code })}
+                onDrawingChange={(elements: any, appState: any) => handleUserEvent(comp.id, 'drawing_change', { elements, appState })}
             >
                 {comp.children?.map((childId: string) => {
                     const child = components.find(c => c.id === childId);
@@ -101,7 +119,10 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                 </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-auto">
+            <div
+                id={`canvas-surface-${surfaceId}`}
+                className="flex-1 p-4 overflow-auto bg-gray-900"
+            >
                 {isSandbox ? (
                     <SandboxFrame
                         html={htmlContent}
