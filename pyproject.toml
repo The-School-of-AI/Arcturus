@@ -39,9 +39,13 @@ dependencies = [
     "langchain-google-genai>=2.1.2",
     "rank_bm25>=0.2.2",
     "apscheduler>=3.11.2",
-    "pytest>=9.0.2",
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
 ]
 
 [tool.setuptools.packages.find]
