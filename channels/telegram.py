@@ -69,6 +69,10 @@ class TelegramAdapter(ChannelAdapter):
             await self.initialize()
 
         url = f"{self.TELEGRAM_API_URL}{self.token}/sendMessage"
+        # Default to MarkdownV2 so the formatter's output renders correctly.
+        # Callers can override by passing parse_mode=None or another value.
+        if "parse_mode" not in kwargs:
+            kwargs["parse_mode"] = "MarkdownV2"
         payload = {
             "chat_id": recipient_id,
             "text": content,

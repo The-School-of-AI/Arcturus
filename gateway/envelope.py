@@ -5,6 +5,7 @@ inbound messages from any channel (Telegram, WebChat, Slack, etc.)
 into a common format for agent processing.
 """
 
+import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -72,6 +73,17 @@ class MessageEnvelope:
             raise ValueError("sender_id is required")
         if not self.content:
             raise ValueError("content is required")
+        if self.message_hash is None:
+            self.message_hash = self._compute_hash()
+
+    def _compute_hash(self) -> str:
+        """Compute a deduplication hash from channel, sender, content, and timestamp.
+
+        Returns:
+            First 16 hex characters of SHA-256 over key fields.
+        """
+        raw = f"{self.channel}:{self.sender_id}:{self.content}:{self.timestamp.isoformat()}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
     @staticmethod
     def normalize_text(text: str) -> str:
@@ -161,6 +173,84 @@ class MessageEnvelope:
             conversation_id=session_id,
             session_id=session_id,
             metadata=kwargs,
+        )
+
+    @classmethod
+    def from_slack(
+        cls,
+        channel_id: str,
+        sender_id: str,
+        sender_name: str,
+        text: str,
+        message_id: str,
+        is_bot: bool = False,
+        thread_ts: Optional[str] = None,
+        **kwargs,
+    ) -> "MessageEnvelope":
+        """Create a MessageEnvelope from a Slack event payload.
+
+        Args:
+            channel_id: Slack channel or DM ID (C…, D…)
+            sender_id: Slack user ID (U…)
+            sender_name: User display name
+            text: Message text (mrkdwn)
+            message_id: Slack event ``ts`` field
+            is_bot: Whether sender is a bot/app
+            thread_ts: Parent ``ts`` for threaded messages
+            **kwargs: Additional metadata to store
+
+        Returns:
+            MessageEnvelope instance
+        """
+        return cls(
+            channel="slack",
+            channel_message_id=str(message_id),
+            sender_id=str(sender_id),
+            sender_name=sender_name,
+            content=cls.normalize_text(text),
+            thread_id=thread_ts or str(channel_id),
+            conversation_id=str(channel_id),
+            sender_is_bot=is_bot,
+            metadata={"channel_id": channel_id, "thread_ts": thread_ts, **kwargs},
+        )
+
+    @classmethod
+    def from_discord(
+        cls,
+        guild_id: str,
+        channel_id: str,
+        sender_id: str,
+        sender_name: str,
+        text: str,
+        message_id: str,
+        is_bot: bool = False,
+        **kwargs,
+    ) -> "MessageEnvelope":
+        """Create a MessageEnvelope from a Discord message event.
+
+        Args:
+            guild_id: Discord server (guild) ID
+            channel_id: Discord channel ID
+            sender_id: Discord user ID
+            sender_name: User display name
+            text: Message content
+            message_id: Discord message snowflake ID
+            is_bot: Whether sender is a bot
+            **kwargs: Additional metadata to store
+
+        Returns:
+            MessageEnvelope instance
+        """
+        return cls(
+            channel="discord",
+            channel_message_id=str(message_id),
+            sender_id=str(sender_id),
+            sender_name=sender_name,
+            content=cls.normalize_text(text),
+            thread_id=str(channel_id),
+            conversation_id=f"{guild_id}:{channel_id}",
+            sender_is_bot=is_bot,
+            metadata={"guild_id": guild_id, "channel_id": channel_id, **kwargs},
         )
 
     def to_dict(self) -> Dict[str, Any]:

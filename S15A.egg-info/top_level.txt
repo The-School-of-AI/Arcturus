@@ -1,0 +1,11 @@
+agents
+channels
+core
+gateway
+mcp_servers
+memory
+remme
+routers
+shared
+tools
+ui

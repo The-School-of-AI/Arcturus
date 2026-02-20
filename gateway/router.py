@@ -5,9 +5,12 @@ based on channel, conversation ID, and session affinity policies.
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 from gateway.envelope import MessageEnvelope
+
+if TYPE_CHECKING:
+    from gateway.formatter import MessageFormatter
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +22,21 @@ class MessageRouter:
     are routed to the same agent instance for continuity.
     """
 
-    def __init__(self, agent_factory: Callable[..., Any]):
+    def __init__(
+        self,
+        agent_factory: Callable[..., Any],
+        formatter: Optional["MessageFormatter"] = None,
+    ):
         """Initialize the message router.
 
         Args:
             agent_factory: Callable that creates or retrieves an agent instance
                           (e.g., async function that takes session_id and returns agent)
+            formatter: Optional MessageFormatter; if provided, the agent reply text
+                       in the routing result will be formatted for the envelope's channel.
         """
         self.agent_factory = agent_factory
+        self.formatter = formatter
         self.sessions: Dict[str, Any] = {}  # In-memory session map
 
     async def route(self, envelope: MessageEnvelope) -> Dict[str, Any]:
@@ -53,6 +63,10 @@ class MessageRouter:
 
         # Process message through agent
         result = await self._process_message(agent, envelope)
+
+        # Format the reply text for the envelope's channel if a formatter is wired in
+        if self.formatter and isinstance(result, dict) and "reply" in result:
+            result["reply"] = self.formatter.format(result["reply"], envelope.channel)
 
         return {
             "routed": True,

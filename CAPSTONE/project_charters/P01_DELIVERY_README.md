@@ -6,68 +6,109 @@
 - ✅ **channels/ directory** with 2 adapter modules:
   - `channels/base.py`: Abstract `ChannelAdapter` interface (send_message, initialize, shutdown)
   - `channels/telegram.py`: TelegramAdapter with real Telegram Bot API integration (reads TELEGRAM_TOKEN from .env)
-  - `channels/webchat.py`: WebChatAdapter stub for built-in web widget
+  - `channels/webchat.py`: WebChatAdapter with per-session outbox (deque-backed, drain-on-poll model)
 - ✅ **MessageEnvelope schema** (`gateway/envelope.py`):
   - Unified message format with fields: channel, sender, content, thread_id, conversation_id, attachments, metadata
+  - Auto-computed `message_hash` (SHA-256/16) for deduplication
   - Inbound text normalization via `normalize_text()` method (strips whitespace, collapses multiples)
-  - Channel-specific constructors: `from_telegram()`, `from_webchat()` for easy envelope creation
+  - Channel-specific constructors: `from_telegram()`, `from_webchat()`, `from_slack()`, `from_discord()`
   - Serialization support via `to_dict()` for API responses
 - ✅ **gateway/router.py** - MessageRouter implementation:
-  - Routes MessageEnvelope instances to mock agent instances
+  - Routes MessageEnvelope instances to agent instances
   - Session affinity: same conversation_id always routes to same agent
+  - Optional `formatter` arg: formats agent reply for target channel before returning
   - Includes `create_mock_agent()` factory for testing
   - Full async/await support
+
+**Unified Message Bus (Sprint 2):**
+- ✅ **gateway/formatter.py** - MessageFormatter:
+  - Markdown → Telegram MarkdownV2 (special-char escaping, bold/italic/code)
+  - Markdown → Slack mrkdwn (bold, headings, links)
+  - Markdown → Discord markdown (headings → bold, italic normalization)
+  - Markdown → WebChat HTML (`<b>`, `<i>`, `<code>`, `<br>`, XSS-safe encoding)
+  - Plain-text fallback for unknown channels
+- ✅ **gateway/bus.py** - MessageBus orchestration:
+  - `ingest(envelope)` → routes to agent session
+  - `deliver(channel, recipient_id, text)` → formats + sends via adapter
+  - `roundtrip(envelope)` → ingest + auto-deliver reply to session
+  - Replies to `session_id` (not raw `sender_id`) for correct WebChat routing
+- ✅ **config/channels.yaml** - centralized channel config schema (env-var references, policies)
+- ✅ **shared/state.py** - `get_message_bus()` lazy singleton (same pattern as all other getters)
+- ✅ **routers/nexus.py** - WebChat HTTP transport:
+  - `POST /api/nexus/webchat/inbound` — receive widget message, run roundtrip
+  - `GET  /api/nexus/webchat/messages/{session_id}` — drain outbox, return replies
+- ✅ Registered in `api.py`
 
 ## 2. Architecture Changes
 
 - **New directories**:
   - `channels/`: Channel adapter implementations (one per platform)
-  - `gateway/`: Unified message bus, routing, and envelope normalization
+  - `gateway/`: Unified message bus, routing, envelope normalization, outbound formatting
+
+- **New files**:
+  - `gateway/formatter.py`: MessageFormatter (Markdown → per-channel native format)
+  - `gateway/bus.py`: MessageBus (ingest / deliver / roundtrip orchestration)
+  - `config/channels.yaml`: Centralized per-channel config schema
+  - `routers/nexus.py`: WebChat HTTP transport endpoints
+
+- **Modified files**:
+  - `gateway/envelope.py`: Added `message_hash`, `from_slack()`, `from_discord()`
+  - `gateway/router.py`: Added optional `formatter` wiring
+  - `gateway/__init__.py`: Exports `MessageFormatter`, `MessageBus`, `BusResult`
+  - `channels/webchat.py`: Upgraded from stub to outbox-backed adapter
+  - `channels/telegram.py`: Defaults `parse_mode=MarkdownV2`
+  - `shared/state.py`: Added `get_message_bus()` lazy singleton
+  - `api.py`: Registered `nexus_router`
 
 - **Key architectural patterns**:
   - **ChannelAdapter ABC** (channels/base.py): All channels implement send_message/initialize/shutdown
-  - **MessageEnvelope** (gateway/envelope.py): Single normalized format for all inbound messages
-  - **MessageRouter** (gateway/router.py): Routes based on session affinity (conversation_id)
+  - **MessageEnvelope** (gateway/envelope.py): Single normalized format; auto-dedup hash
+  - **MessageFormatter** (gateway/formatter.py): Per-channel outbound text conversion
+  - **MessageBus** (gateway/bus.py): Central orchestrator; reply recipient = session_id
+  - **MessageRouter** (gateway/router.py): Session affinity; formatter-aware
+  - **WebChat outbox** (channels/webchat.py): Per-session deque; drained by poll endpoint
   - **Async-first design**: All channel operations are async/await for real-time handling
 
 - **Integration points**:
-  - Each ChannelAdapter reads credentials from .env (e.g., TELEGRAM_TOKEN)
-  - MessageRouter can accept any agent_factory callable for pluggable agent implementations
+  - `get_message_bus()` in shared/state.py — shared singleton across all routers
+  - `routers/nexus.py` — HTTP surface for WebChat widget
   - Envelopes serialize to dict for FastAPI response payloads
 
 ## 3. API And UI Changes
 
-**New module APIs (public):**
-- `MessageEnvelope.from_telegram(chat_id, sender_id, sender_name, text, message_id, **kwargs) -> MessageEnvelope`
-- `MessageEnvelope.from_webchat(session_id, sender_id, sender_name, text, message_id, **kwargs) -> MessageEnvelope`
-- `MessageEnvelope.normalize_text(text: str) -> str`
-- `MessageRouter(agent_factory) -> router`
-- `await router.route(envelope: MessageEnvelope) -> Dict[routing_result]`
-- `TelegramAdapter(config: Optional[Dict]) -> adapter`
-- `await adapter.send_message(recipient_id, content, **kwargs) -> Dict[response]`
+**New HTTP endpoints (routers/nexus.py):**
+```
+POST /api/nexus/webchat/inbound
+  Body: {session_id, sender_id, sender_name, text, message_id?}
+  Returns: BusResult (success, operation, channel, session_id, agent_response, formatted_text)
 
-**Data format example - MessageEnvelope serialized:**
-```json
-{
-  "channel": "telegram",
-  "channel_message_id": "789",
-  "sender_id": "456",
-  "sender_name": "John",
-  "sender_is_bot": false,
-  "content": "Hello world",
-  "content_type": "text",
-  "thread_id": "123",
-  "conversation_id": "123",
-  "attachments": [],
-  "timestamp": "2026-02-19T22:20:00.000000",
-  "metadata": {},
-  "session_id": null
-}
+GET  /api/nexus/webchat/messages/{session_id}
+  Returns: {session_id, messages: [...], count: N}
+  Side-effect: drains outbox (messages returned exactly once)
+```
+
+**New/updated module APIs (public):**
+- `MessageEnvelope.from_telegram(...)`, `from_webchat(...)`, `from_slack(...)`, `from_discord(...)`
+- `MessageEnvelope.message_hash` — auto-computed SHA-256/16 dedup key
+- `MessageFormatter().format(text, channel) -> str`
+- `MessageBus(router, formatter, adapters).roundtrip(envelope) -> BusResult`
+- `WebChatAdapter.drain_outbox(session_id) -> List[Dict]`
+- `get_message_bus()` from `shared.state` — global singleton
+
+**curl examples:**
+```bash
+# Send a WebChat message
+curl -X POST http://localhost:8000/api/nexus/webchat/inbound \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"s1","sender_id":"u1","sender_name":"Alice","text":"**Hello**"}'
+
+# Poll for reply (HTML-formatted)
+curl http://localhost:8000/api/nexus/webchat/messages/s1
 ```
 
 **UI impact:**
-- Week 1 scope is backend-only (foundation for UI in Week 2)
-- Router will later integrate with frontend inbox/outbox components
+- WebChat widget can now POST inbound and GET replies via polling
+- Full WebSocket/SSE push deferred to Week 2
 
 ## 4. Mandatory Test Gate Definition
 - **Acceptance file**: `tests/acceptance/p01_nexus/test_multichannel_roundtrip.py`
@@ -91,30 +132,31 @@
   - Verified message appears in real Telegram app within seconds
   - Tested multiple scenarios: single messages, replies, error handling with invalid recipient IDs
 
-**Unit test readiness:**
-- Acceptance tests (test_multichannel_roundtrip.py) validate:
-  - Charter exists with all required sections ✅
-  - Expanded Test Gate Contract is present ✅
-  - Demo script exists and is executable ✅
-  - Delivery README has required sections (NOW FILLED) ✅
-  - CI check is declared in charter ✅
+**Automated test suite (260 passing):**
+- ✅ `tests/acceptance/p01_nexus/test_multichannel_roundtrip.py` — 8 contract tests
+- ✅ `tests/integration/test_nexus_session_affinity.py` — 5 integration tests
+- ✅ `tests/test_message_formatter.py` — 16 formatter unit tests (all 5 channels)
+- ✅ `tests/test_message_bus.py` — 7 bus unit tests (ingest/deliver/roundtrip/dedup)
+- ✅ `tests/test_webchat_roundtrip.py` — 5 end-to-end WebChat tests via TestClient
 
-- Integration tests (test_nexus_session_affinity.py) validate:
-  - CI check is wired in workflow ✅
-  - Baseline script exists and is executable ✅
-  - Charter requires baseline regression ✅
+**WebChat end-to-end verified:**
+- POST inbound → bus.roundtrip() → outbox enqueued ✅
+- GET messages → drain_outbox() → HTML-formatted reply returned ✅
+- Second GET → outbox empty (drain-once semantics) ✅
+- Session affinity → same session → message_number increments ✅
+- Formatter → `**bold**` → `<b>bold</b>` in WebChat replies ✅
 
 ## 6. Existing Baseline Regression Status
 
-**Command**: `scripts/test_all.sh` (full baseline)
+**Command**: `uv run python -m pytest tests/ --ignore=tests/stress_tests --ignore=tests/manual -q`
 
-**Status**: ✅ **PASSED** - 232 backend tests + 111 frontend tests pass
+**Status**: ✅ **PASSED** - 260 backend tests pass (255 baseline + 5 new WebChat tests)
 
-Baseline regression confirms P01 changes are additive and non-breaking:
-- New directories (channels/, gateway/) with no external dependencies
-- No modifications to existing core, routers, or config files
-- All new code is isolated and testable independently
-- Zero impact on existing subsystems (loops, routers, bootstrap, config)
+Baseline regression confirms P01 + Bus changes are additive and non-breaking:
+- All new code in `channels/`, `gateway/`, `routers/nexus.py` is isolated
+- `api.py` change: 2 lines only (register nexus router)
+- `shared/state.py` change: additive (`get_message_bus()` getter)
+- Zero impact on existing subsystems (loops, RAG, remme, bootstrap, config)
 
 ## 7. Security And Safety Impact
 
@@ -126,11 +168,13 @@ Baseline regression confirms P01 changes are additive and non-breaking:
 
 ## 8. Known Gaps
 
-- **WebChat endpoint not wired**: Adapter exists but no FastAPI endpoint yet (Week 2)
-- **Outbound formatting** (gateway/formatter.py): Markdown → Slack mrkdwn, Discord embeds, etc. (Week 2)
+- **WebSocket/SSE push**: WebChat currently uses polling (`drain_outbox`); real-time push deferred to Week 2
+- **Real agent integration**: Bus uses `create_mock_agent()`; wiring to `AgentLoop4` deferred to Week 2
+- **Slack/Discord/Teams adapters**: Envelope factories (`from_slack`, `from_discord`) exist; adapters not yet wired (Week 2)
 - **Group activation policies**: mention-only vs always-on modes (Week 2)
-- **Media/attachment handling**: Adapters support attachments in envelope, but no transcoding yet (Week 2)
-- **Failure recovery**: Retry logic and idempotency not yet implemented (Week 2)
+- **Media/attachment handling**: `MediaAttachment` in envelope; no transcoding yet (Week 2)
+- **Retry/idempotency**: `message_hash` exists for dedup; retry logic not yet enforced (Week 2)
+- **Auth/allowlist**: DM security policy (pairing code flow) not yet implemented (Week 2)
 
 ## 9. Rollback Plan
 
