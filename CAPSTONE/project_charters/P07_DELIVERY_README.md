@@ -10,7 +10,7 @@
 
 ---
 
-## 2. Architecture
+## 2. Architecture Changes
 
 The Arcturus Voice Architecture is a state-driven pipeline designed for low-latency, interruptible interactions. It is integrated directly into the FastAPI backend to leverage shared resources (like the Agent Loop) while maintaining a dedicated service for audio processing.
 
@@ -132,7 +132,7 @@ main.py
 
 ---
 
-## 4. API and UI Changes
+## 4. API/UI Changes
 
 - **FastAPI Integration**: The voice pipeline is now part of the central API. It is initialized in the `lifespan` event of `api.py`.
 - **Voice Router**: Added `/api/voice/start` (POST) to allow triggering the voice listening state via the web UI or external events.
