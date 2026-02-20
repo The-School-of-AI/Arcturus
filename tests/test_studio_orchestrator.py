@@ -108,6 +108,15 @@ SHEET_DRAFT_RESPONSE = json.dumps({
 })
 
 
+@pytest.fixture(autouse=True)
+def _patch_model_manager_init(monkeypatch):
+    """Prevent ModelManager.__init__ from calling real API clients."""
+    def noop_init(self, model_name=None, provider=None, role=None):
+        self.model_type = "gemini"
+        self.client = None
+    monkeypatch.setattr("core.model_manager.ModelManager.__init__", noop_init)
+
+
 @pytest.fixture
 def mock_llm_slides(monkeypatch):
     """Mock LLM that returns outline or slides draft based on prompt content."""
