@@ -44,6 +44,7 @@
 - API changes:
   - Added public `/api/v1` gateway endpoints listed in Scope Delivered.
   - Added admin-only key management via `x-gateway-admin-key`.
+  - Admin key management routes (`/api/v1/keys*`) fail closed unless `ARCTURUS_GATEWAY_ADMIN_KEY` is explicitly configured; unset config returns `503` with `admin_key_not_configured`.
   - Added scope enforcement (`search:read`, `chat:write`, `embeddings:write`, `memory:*`, `agents:run`, `cron:*`, `webhooks:write`, `usage:read`, etc.).
   - Added rate-limit response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After`.
 - UI changes:
@@ -80,6 +81,7 @@
 - Scope-based authorization added per endpoint.
 - Rate-limiting and usage metering added to reduce abuse exposure and improve observability.
 - Admin key protection added for key lifecycle endpoints.
+- No default admin secret is accepted; if `ARCTURUS_GATEWAY_ADMIN_KEY` is unset, `/api/v1/keys*` remains unavailable (`503` fail-closed response).
 - Webhook delivery execution is intentionally not enabled yet (contract-only skeleton), limiting external side effects at this stage.
 
 ## 8. Known Gaps
@@ -97,7 +99,7 @@
 
 ## 10. Demo Steps
 - Script: scripts/demos/p15_gateway.sh
-- Generate admin API key via `x-gateway-admin-key` using `POST /api/v1/keys`.
+- Set `ARCTURUS_GATEWAY_ADMIN_KEY` in the environment, then generate an API key via `x-gateway-admin-key` using `POST /api/v1/keys`.
 - Call `POST /api/v1/search` and `POST /api/v1/chat/completions` with `x-api-key`.
 - Create cron job via `POST /api/v1/cron/jobs`, list via `GET /api/v1/cron/jobs`.
 - Create webhook subscription via `POST /api/v1/webhooks`, trigger with `POST /api/v1/webhooks/trigger`.

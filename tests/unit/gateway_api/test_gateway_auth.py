@@ -3,7 +3,13 @@ import asyncio
 import pytest
 from fastapi import HTTPException
 
-from gateway_api.auth import AuthContext, _extract_api_key, ensure_scope, require_api_key
+from gateway_api.auth import (
+    AuthContext,
+    _extract_api_key,
+    ensure_scope,
+    require_admin,
+    require_api_key,
+)
 
 
 class _DummyStore:
@@ -54,3 +60,13 @@ def test_gateway_scope_enforcement_returns_403_for_missing_scope():
         ensure_scope(context, "memory:write")
 
     assert exc.value.status_code == 403
+
+
+def test_require_admin_fails_closed_when_admin_key_not_configured(monkeypatch):
+    monkeypatch.delenv("ARCTURUS_GATEWAY_ADMIN_KEY", raising=False)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(require_admin(x_gateway_admin_key="anything"))
+
+    assert exc.value.status_code == 503
+    assert exc.value.detail["error"]["code"] == "admin_key_not_configured"

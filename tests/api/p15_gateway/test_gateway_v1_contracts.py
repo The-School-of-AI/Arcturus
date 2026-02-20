@@ -123,3 +123,17 @@ def test_webhook_routes_exist_and_return_contract_shape(gateway_test_client):
     )
     assert trigger_response.status_code == 200
     assert trigger_response.json()["status"] == "queued"
+
+
+def test_admin_routes_fail_closed_when_admin_key_not_configured(gateway_test_client, monkeypatch):
+    monkeypatch.delenv("ARCTURUS_GATEWAY_ADMIN_KEY", raising=False)
+    client, _ = gateway_test_client
+
+    response = client.get(
+        "/api/v1/keys",
+        headers={"x-gateway-admin-key": "dev-admin-key-change-me"},
+    )
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["detail"]["error"]["code"] == "admin_key_not_configured"

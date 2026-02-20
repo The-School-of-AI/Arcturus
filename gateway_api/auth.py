@@ -81,14 +81,31 @@ def require_scope(required_scope: str) -> Callable[..., AuthContext]:
 ADMIN_HEADER_NAME = "x-gateway-admin-key"
 
 
-def _expected_admin_key() -> str:
-    return os.getenv("ARCTURUS_GATEWAY_ADMIN_KEY", "dev-admin-key-change-me")
+def _expected_admin_key() -> str | None:
+    value = os.getenv("ARCTURUS_GATEWAY_ADMIN_KEY")
+    if value is None:
+        return None
+
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+
+    return cleaned
 
 
 async def require_admin(
     x_gateway_admin_key: Optional[str] = Header(default=None, alias=ADMIN_HEADER_NAME),
 ) -> None:
     expected = _expected_admin_key()
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_error_payload(
+                "admin_key_not_configured",
+                "Gateway admin key is not configured",
+            ),
+        )
+
     if not x_gateway_admin_key or x_gateway_admin_key != expected:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
