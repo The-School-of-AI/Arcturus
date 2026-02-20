@@ -184,23 +184,6 @@
     "class_name": "FormatterSkill",
     "type": "python"
   },
-  "system_monitor": {
-    "path": "core/skills/library/system_monitor",
-    "version": "1.0.0",
-    "description": "Checks system resources (CPU, RAM, Disk)",
-    "intent_triggers": [
-      "check system",
-      "cpu usage",
-      "disk space",
-      "system health",
-      "cpu",
-      "ram",
-      "memory",
-      "disk"
-    ],
-    "class_name": "SystemMonitorSkill",
-    "type": "python"
-  },
   "appgenerationprompt": {
     "path": "core/skills/library/appgenerationprompt",
     "version": "1.0.0",

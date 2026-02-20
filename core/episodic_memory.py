@@ -12,7 +12,6 @@ class MemorySkeletonizer:
     Removes heavy payloads (HTML, huge text) but preserves Logic (Prompts, Tool Calls).
     """
     @staticmethod
-    @staticmethod
     def skeletonize(session_data: Dict) -> Dict:
         # Robust extraction: 'nodes' might be at root or inside 'graph' wrapper
         graph_data = session_data.get("graph", session_data)

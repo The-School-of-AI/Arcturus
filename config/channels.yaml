@@ -1,0 +1,59 @@
+# Arcturus Nexus Gateway — Channel Configuration
+# -----------------------------------------------
+# Credentials are NEVER stored here; use environment variables.
+# Reference env-var names under `token_env` / `webhook_secret_env`, etc.
+#
+# Schema version: 1.0
+
+channels:
+
+  telegram:
+    enabled: true
+    # Env-var that holds the Telegram Bot API token
+    token_env: TELEGRAM_TOKEN
+    # Default parse mode for outbound messages
+    parse_mode: MarkdownV2
+    policies:
+      # "mention-only" | "always-on"
+      group_activation: mention-only
+      # Allowlist of numeric Telegram user IDs that may DM the bot.
+      # Empty list = open (anyone can DM).
+      dm_allowlist: []
+      # Retry policy for failed sends
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  webchat:
+    enabled: true
+    # WebChat runs embedded in the Arcturus frontend; no external token needed.
+    policies:
+      group_activation: always-on
+      max_retries: 2
+      retry_backoff_seconds: 0.5
+
+  # Slack — not yet wired (Week 2)
+  slack:
+    enabled: false
+    token_env: SLACK_BOT_TOKEN
+    signing_secret_env: SLACK_SIGNING_SECRET
+    parse_mode: mrkdwn
+    policies:
+      group_activation: mention-only
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # Discord — not yet wired (Week 2)
+  discord:
+    enabled: false
+    token_env: DISCORD_BOT_TOKEN
+    parse_mode: markdown
+    policies:
+      group_activation: mention-only
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+# Global routing defaults (overridden per channel above)
+routing:
+  default_queue_mode: serial   # "serial" | "parallel"
+  session_ttl_seconds: 3600    # How long an idle session is kept alive

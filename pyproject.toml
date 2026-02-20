@@ -43,5 +43,24 @@ dependencies = [
     "qdrant-client>=1.7.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+]
+
 [tool.setuptools.packages.find]
-include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "remme*", "routers*", "shared*", "tools*", "ui*"]
+include = [
+    "agents",
+    "channels",
+    "config",
+    "core",
+    "gateway",
+    "mcp_servers",
+    "memory",
+    "remme",
+    "routers",
+    "shared",
+    "tools",
+    "ui",
+]
+exclude = ["tests", "tests.*"]
