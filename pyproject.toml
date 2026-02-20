@@ -46,7 +46,6 @@ dependencies = [
     "sounddevice>=0.5.5",
     "pvporcupine>=4.0.2",
     "openwakeword>=0.6.0",
-    "pyaudio>=0.2.14",
     "tensorflow>=2.20.0",
     "pytest>=9.0.2",
 ]
