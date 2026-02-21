@@ -434,6 +434,12 @@ Use only the following tools (in positional form):
 *   `webpage_url_to_raw_text(url)`
 *   `search_stored_documents_rag(query)`  <-- USE THIS FOR "RAG" or "LOCAL DATA" REQUESTS
 
+### **Deep Research Citation Preservation (CRITICAL)**
+When your agent_prompt mentions "deep research", "citations", "sources with URLs", or requests
+data for synthesis/citation purposes, you MUST use `search_web_with_text_content` (NOT `fetch_search_urls`).
+This ensures each result contains `{url, content, rank}` — the URL is required for downstream
+citation generation by SummarizerAgent. Always pass `integer=10` or higher for deep research tasks.
+
 ---
 
 ## 🎯 COMPLETE INPUT/OUTPUT EXAMPLES WITH WRITES FIELD

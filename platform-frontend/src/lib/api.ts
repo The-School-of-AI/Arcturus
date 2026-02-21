@@ -37,9 +37,11 @@ export const api = {
     },
 
     // Trigger new run (model optional - backend uses settings default if not provided)
-    createRun: async (query: string, model?: string): Promise<API_Run> => {
-        const payload: { query: string; model?: string } = { query };
+    createRun: async (query: string, model?: string, mode?: string, focusMode?: string): Promise<API_Run> => {
+        const payload: { query: string; model?: string; mode?: string; focus_mode?: string } = { query };
         if (model) payload.model = model;
+        if (mode) payload.mode = mode;
+        if (focusMode) payload.focus_mode = focusMode;
         const res = await axios.post(`${API_BASE}/runs`, payload);
         return res.data;
     },

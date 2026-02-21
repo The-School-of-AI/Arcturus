@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
@@ -109,6 +110,8 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isOptimizing, setIsOptimizing] = React.useState(false);
+    const [researchMode, setResearchMode] = React.useState<"standard" | "deep_research">("standard");
+    const [focusMode, setFocusMode] = React.useState("general");
 
     // Filter runs
     const filteredRuns = React.useMemo(() => {
@@ -122,8 +125,11 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const handleStartRun = async () => {
         if (!newQuery.trim()) return;
         setIsNewRunOpen(false);
-        await createNewRun(newQuery);
+        const fm = researchMode === 'deep_research' ? focusMode : undefined;
+        await createNewRun(newQuery, undefined, researchMode, fm);
         setNewQuery("");
+        setResearchMode("standard");
+        setFocusMode("general");
     };
 
     return (
@@ -227,6 +233,41 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                     </Button>
                                                 </div>
                                             </div>
+                                            {/* Research Mode Selector */}
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-muted-foreground">Research Mode</label>
+                                                <Select value={researchMode} onValueChange={(v: "standard" | "deep_research") => setResearchMode(v)}>
+                                                    <SelectTrigger className="bg-muted border-input text-foreground">
+                                                        <SelectValue placeholder="Standard" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="standard">Standard Research</SelectItem>
+                                                        <SelectItem value="deep_research">Deep Research</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            {/* Focus Mode — only visible for Deep Research */}
+                                            {researchMode === 'deep_research' && (
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-muted-foreground">Focus Mode</label>
+                                                    <Select value={focusMode} onValueChange={setFocusMode}>
+                                                        <SelectTrigger className="bg-muted border-input text-foreground">
+                                                            <SelectValue placeholder="General" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="general">General</SelectItem>
+                                                            <SelectItem value="academic">Academic</SelectItem>
+                                                            <SelectItem value="news">News</SelectItem>
+                                                            <SelectItem value="code">Code</SelectItem>
+                                                            <SelectItem value="finance">Finance</SelectItem>
+                                                            <SelectItem value="writing">Writing</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-xs text-muted-foreground/70">
+                                                        Deep Research performs iterative multi-step research with gap analysis, confidence scoring, and comprehensive citations.
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                         <DialogFooter>
                                             <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>

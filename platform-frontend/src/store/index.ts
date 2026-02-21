@@ -23,7 +23,7 @@ interface RunSlice {
     setCurrentRun: (runId: string) => void;
     updateRunStatus: (input: { id: string, status: Run['status'] }) => void;
     fetchRuns: () => Promise<void>;
-    createNewRun: (query: string, model?: string) => Promise<void>;
+    createNewRun: (query: string, model?: string, mode?: string, focusMode?: string) => Promise<void>;
     refreshCurrentRun: () => Promise<void>;
     pollingInterval: ReturnType<typeof setInterval> | null;
     startPolling: (runId: string) => void;
@@ -642,9 +642,9 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            createNewRun: async (query, model) => {
+            createNewRun: async (query, model, mode, focusMode) => {
                 try {
-                    const res = await api.createRun(query, model);
+                    const res = await api.createRun(query, model, mode, focusMode);
                     const newRun: Run = {
                         id: res.id,
                         name: res.query,

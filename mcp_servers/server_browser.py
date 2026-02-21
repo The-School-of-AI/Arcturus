@@ -93,13 +93,14 @@ async def web_extract_text(string: str) -> str:
 from mcp.types import TextContent
 
 @mcp.tool()
-async def search_web_with_text_content(string: str) -> dict:
-    """Search web and return URLs with extracted text content. Gets both URLs and readable text from top search results. Ideal for exhaustive research."""
-    
+async def search_web_with_text_content(string: str, integer: int = 5) -> dict:
+    """Search web and return URLs with extracted text content. Gets both URLs and readable text from top search results. Ideal for exhaustive research. Use integer parameter to control how many results to fetch (default 5, max 20)."""
+
     try:
+        limit = min(max(integer, 1), 20)  # Clamp between 1 and 20
         # Step 1: Get URLs
-        urls = await smart_search(string, 5) # Default to 5
-        
+        urls = await smart_search(string, limit)
+
         if not urls:
             return {
                 "content": [
@@ -109,10 +110,10 @@ async def search_web_with_text_content(string: str) -> dict:
                     )
                 ]
             }
-        
+
         # Step 2: Extract text content from each URL
         results = []
-        max_extracts = min(len(urls), 5)
+        max_extracts = min(len(urls), limit)
         
         for i, url in enumerate(urls[:max_extracts]):
             try:
@@ -205,14 +206,14 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
         try:
             from config.settings_loader import settings
             agent_settings = settings.get("agent", {})
-            model_provider = agent_settings.get("model_provider", "gemini")
-            model_name = agent_settings.get("default_model", "gemini-2.5-flash")
+            model_provider = agent_settings.get("model_provider", "ollama")
+            model_name = agent_settings.get("default_model", "gemma3:12b")
             ollama_base_url = settings.get("ollama", {}).get("base_url", "http://127.0.0.1:11434")
         except:
-            model_provider = "gemini"
-            model_name = "gemini-2.5-flash"
+            model_provider = "ollama"
+            model_name = "gemma3:12b"
             ollama_base_url = "http://127.0.0.1:11434"
-        
+
         # Initialize LLM based on provider
         if model_provider == "ollama":
             try:
@@ -220,8 +221,8 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
                 llm = ChatOllama(model=model_name, base_url=ollama_base_url)
                 print(f"🖥️ Browser Use: Using Ollama model {model_name}")
             except ImportError:
-                print("⚠️ langchain_ollama not installed, falling back to Gemini")
-                llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
+                print("⚠️ langchain_ollama not installed")
+                return "Error: langchain_ollama not installed for Ollama provider"
         else:
             llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=os.getenv("GEMINI_API_KEY"))
             print(f"☁️ Browser Use: Using Gemini model {model_name}")

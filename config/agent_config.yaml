@@ -4,6 +4,7 @@ agents:
     mcp_servers: []
     skills:
     - planner
+    - deep_research
     - web_clipper
     - research_scientist
     - agent-manager-skill
