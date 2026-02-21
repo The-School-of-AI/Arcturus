@@ -147,8 +147,15 @@ For production deployment:
 
 Example:
 ```python
-store = QdrantVectorStore(
-    url=os.getenv("QDRANT_URL", "http://localhost:6333"),
+# Via factory (recommended) - uses config/qdrant_config.yaml
+from memory.vector_store import get_vector_store
+store = get_vector_store(provider="qdrant", url=os.getenv("QDRANT_URL"))
+
+# Or with explicit collection
+store = get_vector_store(
+    provider="qdrant",
+    collection_name="arcturus_memories",
+    url=os.getenv("QDRANT_URL"),
     api_key=os.getenv("QDRANT_API_KEY"),
 )
 ```

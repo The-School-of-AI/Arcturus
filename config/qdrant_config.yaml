@@ -1,0 +1,11 @@
+# Qdrant collection configurations
+# Add new collections here as we migrate more data to Qdrant.
+# Each collection can have dimension, indexed fields, and other settings.
+
+default_collection: arcturus_memories
+
+collections:
+  arcturus_memories:
+    dimension: 768          # matches nomic-embed-text
+    distance: cosine        # cosine | euclidean | dot
+    # Future: fields_to_index, payload schema, etc.

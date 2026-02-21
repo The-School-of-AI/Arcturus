@@ -42,6 +42,11 @@
 - Implementations: `QdrantVectorStore`, `FaissVectorStore` (wraps RemmeStore)
 - To add Weaviate: create `memory/backends/weaviate_store.py` implementing the protocol, then add a branch in `get_vector_store()`
 
+**Collection Config** (`config/qdrant_config.yaml`)
+- Collection name, dimension, distance, and future fields (e.g. indexed fields) are defined per collection
+- `memory/qdrant_config.py` loads and exposes `get_collection_config(name)`, `get_default_collection()`
+- `QdrantVectorStore` takes `collection_name` as argument and uses config for dimension/distance
+
 
 ---
 

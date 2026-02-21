@@ -52,6 +52,10 @@ def get_vector_store(
 
     if p == "qdrant":
         from memory.backends.qdrant_store import QdrantVectorStore
+        from memory.qdrant_config import get_default_collection
+        # Use collection_name from kwargs or default from config
+        if "collection_name" not in kwargs:
+            kwargs["collection_name"] = get_default_collection()
         return QdrantVectorStore(**kwargs)
     if p == "faiss":
         from memory.backends.faiss_store import FaissVectorStore

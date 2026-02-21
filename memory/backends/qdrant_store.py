@@ -28,40 +28,47 @@ except ImportError:
 from core.utils import log_step, log_error
 
 from memory.backends.base import VectorStoreProtocol
+from memory.qdrant_config import get_collection_config, get_default_collection
+
+
+def _distance_from_str(s: str):
+    m = {"cosine": Distance.COSINE, "euclidean": Distance.EUCLID, "dot": Distance.DOT}
+    return m.get((s or "cosine").lower(), Distance.COSINE)
 
 
 class QdrantVectorStore:
     """
     Qdrant-backed vector store. Implements VectorStoreProtocol.
+    Collection config (dimension, distance, etc.) is loaded from config/qdrant_config.yaml.
     """
-
-    DEFAULT_COLLECTION = "arcturus_memories"
-    DEFAULT_DIMENSION = 768
 
     def __init__(
         self,
+        collection_name: Optional[str] = None,
         url: str = "http://localhost:6333",
-        collection_name: str = DEFAULT_COLLECTION,
-        dimension: int = DEFAULT_DIMENSION,
+        dimension: Optional[int] = None,
         api_key: Optional[str] = None,
         scanned_runs_path: Optional[Path] = None,
     ):
+        self.collection_name = collection_name or get_default_collection()
+        cfg = get_collection_config(self.collection_name)
+        self.dimension = dimension if dimension is not None else cfg.get("dimension", 768)
+        self._distance = _distance_from_str(cfg.get("distance", "cosine"))
         self.url = url
-        self.collection_name = collection_name
-        self.dimension = dimension
         self.client = QdrantClient(url=url, api_key=api_key, timeout=10.0)
         self._scanned_runs_path = Path(scanned_runs_path) if scanned_runs_path else Path(__file__).parent.parent.parent / "memory" / "remme_index" / "scanned_runs.json"
         self._ensure_collection()
-        log_step(f"✅ QdrantVectorStore initialized: {url}/{collection_name}", symbol="🔧")
+        log_step(f"✅ QdrantVectorStore initialized: {url}/{self.collection_name}", symbol="🔧")
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
         if self.collection_name not in [c.name for c in collections.collections]:
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=VectorParams(size=self.dimension, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=self.dimension, distance=self._distance),
             )
             log_step(f"📦 Created collection: {self.collection_name}", symbol="✨")
+        # TODO ggrover: Add index if not exists
 
     def add(
         self,
