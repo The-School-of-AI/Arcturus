@@ -102,6 +102,14 @@
     "class_name": "SchedulerSkill",
     "type": "python"
   },
+  "manager": {
+    "path": "core\\skills\\library\\manager",
+    "version": "1.0.0",
+    "description": "Decomposer prompt for the ManagerAgent \u2014 breaks user requests into DAG sub-tasks.",
+    "intent_triggers": [],
+    "class_name": "ManagerSkill",
+    "type": "python"
+  },
   "market_analyst": {
     "path": "core/skills/library/market_analyst",
     "version": "1.0.0",
