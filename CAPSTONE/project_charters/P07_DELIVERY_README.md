@@ -3,6 +3,7 @@
 ## 1. Scope Delivered
 
 - **Wake word detection** via Porcupine (primary) and OpenWakeWord (alternate)
+- **30-second follow-up window**: No wake word required for 30 seconds after agent response
 - Configurable engine selection through `voice/config.py`
 - Always-on microphone listener with threaded audio processing
 - Placeholder hook for STT pipeline trigger on wake word detection
@@ -99,9 +100,8 @@ main.py
 
 ---
 
-## 3. Tech Stack
 
-### 3.1 Wake Word Detection (offline, fast)
+### 2.5 Wake Word Detection (offline, fast)
 
 | | Primary | Alternate |
 |---|---|---|
@@ -113,18 +113,18 @@ main.py
 
 **Rule:** Wake word thread only does detection. No audio routing, no cleverness.
 
-### 3.2 STT — Speech-to-Text (🔲 placeholder)
+### 2.6 STT — Speech-to-Text (🔲 placeholder)
 
 - **Choice:** `faster-whisper` (tiny or small model)
 - **Config:** `vad_filter=True`, streaming chunks (200–300ms), CPU first
 - **Hard rule:** STT is NOT agentic. It streams text → that's it.
 
-### 3.3 TTS — Text-to-Speech (🔲 placeholder)
+### 2.7 TTS — Text-to-Speech (🔲 placeholder)
 
-- **Choice:** `piper-tts` (local), fallback: Coqui TTS
+- **Choice:** Azure Speech  | `piper-tts` (local), fallback: Coqui TTS
 - **Rule:** TTS must obey hard stop within <50ms on interrupt.
 
-### 3.4 Agent (🔲 placeholder)
+### 2.8 Agent (🔲 placeholder)
 
 - **Choice:** One LLM-backed agent with fixed prompt
 - No tools. No memory. No planning.
@@ -132,7 +132,7 @@ main.py
 
 ---
 
-## 4. API/UI Changes
+## 3. API And UI Changes
 
 - **FastAPI Integration**: The voice pipeline is now part of the central API. It is initialized in the `lifespan` event of `api.py`.
 - **Voice Router**: Added `/api/voice/start` (POST) to allow triggering the voice listening state via the web UI or external events.
@@ -140,7 +140,7 @@ main.py
 
 ---
 
-## 5. Mandatory Test Gate Definition
+## 4. Mandatory Test Gate Definition
 
 - Acceptance file: `tests/acceptance/p07_echo/test_voice_command_roundtrip.py`
 - Integration file: `tests/integration/test_echo_with_gateway_and_agentloop.py`
@@ -148,7 +148,7 @@ main.py
 
 ---
 
-## 6. Test Evidence
+## 5. Test Evidence
 
 - ✅ Wake word detection tested manually (`uv run wake_word.py`)
 - ✅ "Hey Arcturus" wake event fires with correct event payload
@@ -156,14 +156,14 @@ main.py
 
 ---
 
-## 7. Existing Baseline Regression Status
+## 6. Existing Baseline Regression Status
 
 - Command: `scripts/test_all.sh quick`
 - No regressions expected — voice module is additive, no existing modules modified
 
 ---
 
-## 8. Security and Safety Impact
+## 7. Security And Safety Impact
 
 - Microphone access requires user consent (OS-level permission)
 - Porcupine requires `PICOVOICE_ACCESS_KEY` stored in `.env` (not committed)
@@ -172,7 +172,7 @@ main.py
 
 ---
 
-## 9. Known Gaps
+## 8. Known Gaps
 
 | Gap | Status | Notes |
 |---|---|---|
@@ -184,7 +184,7 @@ main.py
 
 ---
 
-## 10. Rollback Plan
+## 9. Rollback Plan
 
 - Remove `voice/` directory
 - Remove voice-related dependencies from `pyproject.toml` (`pvporcupine`, `openwakeword`, `pyaudio`, `sounddevice`)
@@ -192,7 +192,7 @@ main.py
 
 ---
 
-## 11. Demo Steps
+## 10. Demo Steps
 
 1. Ensure `PICOVOICE_ACCESS_KEY` is set in `voice/.env`
 2. Run: `uv run wake_word.py`
