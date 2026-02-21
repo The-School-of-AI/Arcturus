@@ -162,14 +162,19 @@ export const api = {
     },
 
     // Studio Phase 2 — Export & Themes
-    listThemes: async (): Promise<any[]> => {
-        const res = await axios.get(`${API_BASE}/studio/themes`);
+    listThemes: async (params?: {
+        include_variants?: boolean;
+        base_id?: string;
+        limit?: number;
+    }): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio/themes`, { params });
         return res.data;
     },
 
-    exportArtifact: async (id: string, format: string, themeId?: string): Promise<any> => {
-        const payload: { format: string; theme_id?: string } = { format };
+    exportArtifact: async (id: string, format: string, themeId?: string, strictLayout?: boolean): Promise<any> => {
+        const payload: { format: string; theme_id?: string; strict_layout?: boolean } = { format };
         if (themeId) payload.theme_id = themeId;
+        if (strictLayout !== undefined) payload.strict_layout = strictLayout;
         const res = await axios.post(`${API_BASE}/studio/${id}/export`, payload);
         return res.data;
     },

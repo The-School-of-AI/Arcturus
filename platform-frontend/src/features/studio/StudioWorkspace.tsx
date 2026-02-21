@@ -73,6 +73,48 @@ function OutlineItemRow({ item, depth, index }: { item: any; depth: number; inde
     );
 }
 
+// === Chart Summary Helper ===
+
+function ChartSummary({ content }: { content: any }) {
+    if (!content || typeof content !== 'object') return null;
+    const chartType = content.chart_type || content.type || 'chart';
+    const title = content.title || '';
+    const categories = content.categories?.length || content.data?.categories?.length || 0;
+    const series = content.series?.length || content.data?.series?.length || 0;
+    const points = content.points?.length || 0;
+    const xAxis = content.x_label || '';
+    const yAxis = content.y_label || '';
+
+    const typeColors: Record<string, string> = {
+        bar: 'text-blue-400', column: 'text-blue-400',
+        line: 'text-emerald-400', area: 'text-emerald-400',
+        pie: 'text-amber-400', doughnut: 'text-amber-400',
+        scatter: 'text-purple-400',
+    };
+    const color = typeColors[chartType.toLowerCase()] || 'text-primary';
+
+    return (
+        <span>
+            <span className={cn("font-semibold", color)}>{chartType}</span>
+            {title && <> &mdash; {title}</>}
+            {(categories > 0 || series > 0 || points > 0) && (
+                <span className="text-muted-foreground ml-1">
+                    ({[
+                        categories > 0 && `${categories} categories`,
+                        series > 0 && `${series} series`,
+                        points > 0 && `${points} points`,
+                    ].filter(Boolean).join(', ')})
+                </span>
+            )}
+            {(xAxis || yAxis) && (
+                <span className="text-muted-foreground/60 ml-1">
+                    {[xAxis && `x: ${xAxis}`, yAxis && `y: ${yAxis}`].filter(Boolean).join(', ')}
+                </span>
+            )}
+        </span>
+    );
+}
+
 // === Content Tree Viewers ===
 
 function SlidesViewer({ tree }: { tree: any }) {
@@ -95,7 +137,9 @@ function SlidesViewer({ tree }: { tree: any }) {
                         {slide.elements?.map((el: any, ei: number) => (
                             <div key={el.id || ei} className="text-xs text-foreground/80 pl-3 border-l-2 border-border/40">
                                 <span className="text-muted-foreground font-mono text-[10px]">[{el.type}]</span>{' '}
-                                {typeof el.content === 'string' ? el.content : Array.isArray(el.content) ? el.content.join(', ') : JSON.stringify(el.content)}
+                                {el.type === 'chart' && el.content && typeof el.content === 'object' && !Array.isArray(el.content)
+                                    ? <ChartSummary content={el.content} />
+                                    : typeof el.content === 'string' ? el.content : Array.isArray(el.content) ? el.content.join(', ') : JSON.stringify(el.content)}
                             </div>
                         ))}
                     </div>

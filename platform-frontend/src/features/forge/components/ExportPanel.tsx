@@ -1,15 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Download, Loader2, CheckCircle, AlertCircle, Palette, FileDown
+    Download, Loader2, CheckCircle, AlertCircle, Palette, FileDown, ChevronDown
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+
+// --- Quality Score Badge ---
+
+function QualityScoreBadge({ score }: { score: number }) {
+    const color = score >= 90
+        ? 'bg-green-500/10 text-green-400 border-green-500/20'
+        : score >= 70
+            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+            : 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+    return (
+        <Badge variant="outline" className={cn("text-[10px] font-bold gap-0.5", color)}>
+            Q{score}
+        </Badge>
+    );
+}
+
+// --- Validation Summary ---
+
+function ValidationSummary({ results }: { results: any }) {
+    const [expanded, setExpanded] = useState(false);
+    if (!results) return null;
+
+    const warnings = results.layout_warnings || [];
+    const notesValid = results.notes_quality_valid;
+    const chartValid = results.chart_quality_valid;
+    const hasIssues = warnings.length > 0 || notesValid === false || chartValid === false;
+
+    if (!hasIssues) return null;
+
+    return (
+        <div className="mt-1.5">
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+                <ChevronDown className={cn("w-3 h-3 transition-transform", expanded && "rotate-180")} />
+                {warnings.length + (notesValid === false ? 1 : 0) + (chartValid === false ? 1 : 0)} issue{(warnings.length + (notesValid === false ? 1 : 0) + (chartValid === false ? 1 : 0)) !== 1 ? 's' : ''}
+            </button>
+            {expanded && (
+                <div className="mt-1 pl-4 space-y-0.5 text-[10px] text-muted-foreground">
+                    {notesValid === false && (
+                        <p className="text-amber-400">Speaker notes quality check failed</p>
+                    )}
+                    {chartValid === false && (
+                        <p className="text-amber-400">Chart quality check failed</p>
+                    )}
+                    {warnings.map((w: string, i: number) => (
+                        <p key={i} className="text-amber-400/80">{w}</p>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 // --- Theme Picker Dialog ---
 
@@ -20,26 +75,60 @@ function ThemePickerDialog({
 }: {
     open: boolean;
     onOpenChange: (v: boolean) => void;
-    onSelect: (themeId: string) => void;
+    onSelect: (themeId: string, strictLayout?: boolean) => void;
 }) {
     const themes = useAppStore(s => s.studioThemes);
     const fetchThemes = useAppStore(s => s.fetchThemes);
     const [selected, setSelected] = useState<string | null>(null);
+    const [strictLayout, setStrictLayout] = useState(false);
+    const [expandedBase, setExpandedBase] = useState<string | null>(null);
+    const [variants, setVariants] = useState<Record<string, any[]>>({});
+    const [loadingVariants, setLoadingVariants] = useState<string | null>(null);
 
     useEffect(() => {
         if (open) fetchThemes();
     }, [open, fetchThemes]);
 
-    const handleConfirm = () => {
-        if (selected) {
-            onSelect(selected);
-            onOpenChange(false);
-            setSelected(null);
+    const handleExpandVariants = async (baseId: string) => {
+        if (expandedBase === baseId) {
+            setExpandedBase(null);
+            return;
+        }
+        setExpandedBase(baseId);
+        if (variants[baseId]) return;
+        setLoadingVariants(baseId);
+        try {
+            const data = await api.listThemes({ base_id: baseId, include_variants: true });
+            const variantOnly = data.filter((t: any) => t.id !== baseId);
+            setVariants(prev => ({ ...prev, [baseId]: variantOnly }));
+        } catch (e) {
+            console.error("Failed to fetch variants", e);
+        } finally {
+            setLoadingVariants(null);
         }
     };
 
+    const handleConfirm = () => {
+        if (selected) {
+            onSelect(selected, strictLayout || undefined);
+            onOpenChange(false);
+            setSelected(null);
+            setStrictLayout(false);
+            setExpandedBase(null);
+        }
+    };
+
+    const handleOpenChange = (v: boolean) => {
+        if (!v) {
+            setSelected(null);
+            setStrictLayout(false);
+            setExpandedBase(null);
+        }
+        onOpenChange(v);
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="bg-card border-border sm:max-w-xl text-foreground">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -51,41 +140,98 @@ function ThemePickerDialog({
                 <ScrollArea className="max-h-[400px]">
                     <div className="grid grid-cols-2 gap-3 p-1">
                         {themes.map((theme: any) => (
-                            <button
-                                key={theme.id}
-                                onClick={() => setSelected(theme.id)}
-                                className={cn(
-                                    "text-left p-3 rounded-lg border transition-all duration-150",
-                                    selected === theme.id
-                                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                                        : "border-border/50 hover:border-primary/40 hover:bg-muted/30"
-                                )}
-                            >
-                                {/* Color swatches */}
-                                <div className="flex items-center gap-1.5 mb-2">
-                                    {[
-                                        theme.colors?.primary,
-                                        theme.colors?.secondary,
-                                        theme.colors?.accent,
-                                        theme.colors?.background,
-                                        theme.colors?.text,
-                                    ].map((color: string, i: number) => (
-                                        <div
-                                            key={i}
-                                            className="w-5 h-5 rounded-full border border-border/40 shrink-0"
-                                            style={{ backgroundColor: color }}
-                                            title={['Primary', 'Secondary', 'Accent', 'Background', 'Text'][i]}
-                                        />
-                                    ))}
+                            <React.Fragment key={theme.id}>
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => setSelected(theme.id)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(theme.id); } }}
+                                    className={cn(
+                                        "cursor-pointer text-left p-3 rounded-lg border transition-all duration-150",
+                                        selected === theme.id
+                                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                                            : "border-border/50 hover:border-primary/40 hover:bg-muted/30"
+                                    )}
+                                >
+                                    {/* Color swatches */}
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        {[
+                                            theme.colors?.primary,
+                                            theme.colors?.secondary,
+                                            theme.colors?.accent,
+                                            theme.colors?.background,
+                                            theme.colors?.text,
+                                        ].map((color: string, i: number) => (
+                                            <div
+                                                key={i}
+                                                className="w-5 h-5 rounded-full border border-border/40 shrink-0"
+                                                style={{ backgroundColor: color }}
+                                                title={['Primary', 'Secondary', 'Accent', 'Background', 'Text'][i]}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="text-sm font-medium text-foreground">{theme.name}</p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                                        {theme.description}
+                                    </p>
+                                    <div className="flex items-center justify-between mt-1">
+                                        <p className="text-[10px] text-muted-foreground/60">
+                                            {theme.font_heading} / {theme.font_body}
+                                        </p>
+                                        {!theme.base_theme_id && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleExpandVariants(theme.id);
+                                                }}
+                                                className="text-[10px] text-primary/70 hover:text-primary transition-colors flex items-center gap-0.5"
+                                            >
+                                                Variants
+                                                <ChevronDown className={cn(
+                                                    "w-3 h-3 transition-transform",
+                                                    expandedBase === theme.id && "rotate-180"
+                                                )} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                                <p className="text-sm font-medium text-foreground">{theme.name}</p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
-                                    {theme.description}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                    {theme.font_heading} / {theme.font_body}
-                                </p>
-                            </button>
+
+                                {/* Variant strip */}
+                                {expandedBase === theme.id && (
+                                    <div className="col-span-2 flex gap-2 overflow-x-auto py-1 px-1">
+                                        {loadingVariants === theme.id && (
+                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground py-2 px-3">
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                Loading variants...
+                                            </div>
+                                        )}
+                                        {variants[theme.id]?.map((v: any) => (
+                                            <button
+                                                key={v.id}
+                                                onClick={() => setSelected(v.id)}
+                                                className={cn(
+                                                    "shrink-0 text-left p-2 rounded-lg border transition-all duration-150 w-44",
+                                                    selected === v.id
+                                                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                                                        : "border-border/50 hover:border-primary/40 hover:bg-muted/30"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    {[v.colors?.primary, v.colors?.secondary, v.colors?.accent].map((c: string, ci: number) => (
+                                                        <div key={ci} className="w-3.5 h-3.5 rounded-full border border-border/40" style={{ backgroundColor: c }} />
+                                                    ))}
+                                                </div>
+                                                <p className="text-[11px] font-medium text-foreground truncate">{v.name}</p>
+                                                <p className="text-[9px] text-muted-foreground/60 truncate">{v.font_heading} / {v.font_body}</p>
+                                            </button>
+                                        ))}
+                                        {!loadingVariants && variants[theme.id]?.length === 0 && (
+                                            <p className="text-[10px] text-muted-foreground py-2 px-3">No variants found</p>
+                                        )}
+                                    </div>
+                                )}
+                            </React.Fragment>
                         ))}
                     </div>
                     {themes.length === 0 && (
@@ -96,14 +242,23 @@ function ThemePickerDialog({
                     )}
                 </ScrollArea>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
-                    <Button onClick={handleConfirm} disabled={!selected}>
-                        <FileDown className="w-4 h-4 mr-2" />
-                        Export with Theme
-                    </Button>
+                <DialogFooter className="flex items-center sm:justify-between">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                        <Switch
+                            checked={strictLayout}
+                            onCheckedChange={setStrictLayout}
+                        />
+                        Strict layout validation
+                    </label>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => handleOpenChange(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleConfirm} disabled={!selected}>
+                            <FileDown className="w-4 h-4 mr-2" />
+                            Export with Theme
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -139,8 +294,8 @@ export function ExportPanel({ artifact }: { artifact: any }) {
     // Only show for slides with content_tree
     if (artifact.type !== 'slides' || !artifact.content_tree) return null;
 
-    const handleThemeSelected = (themeId: string) => {
-        startExport(artifact.id, themeId);
+    const handleThemeSelected = (themeId: string, strictLayout?: boolean) => {
+        startExport(artifact.id, themeId, strictLayout);
     };
 
     const handleDownload = async (job: any) => {
@@ -215,36 +370,51 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                     {exportJobs.map((job: any) => (
                         <div
                             key={job.id}
-                            className="rounded-lg border border-border/50 bg-muted/20 p-3 flex items-center gap-3"
+                            className="rounded-lg border border-border/50 bg-muted/20 p-3"
                         >
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <StatusBadge status={job.status} />
-                                    <span className="text-[10px] text-muted-foreground uppercase">
-                                        {job.format || 'pptx'}
-                                    </span>
-                                    {job.file_size_bytes && (
-                                        <span className="text-[10px] text-muted-foreground">
-                                            {formatSize(job.file_size_bytes)}
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <StatusBadge status={job.status} />
+                                        <span className="text-[10px] text-muted-foreground uppercase">
+                                            {job.format || 'pptx'}
+                                        </span>
+                                        {job.file_size_bytes && (
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {formatSize(job.file_size_bytes)}
+                                            </span>
+                                        )}
+                                        {job.status === 'completed' && job.validator_results?.quality_score != null && (
+                                            <QualityScoreBadge score={job.validator_results.quality_score} />
+                                        )}
+                                    </div>
+                                    {job.created_at && (
+                                        <span className="text-[10px] text-muted-foreground/60 mt-0.5 block">
+                                            {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                                         </span>
                                     )}
                                 </div>
-                                {job.created_at && (
-                                    <span className="text-[10px] text-muted-foreground/60 mt-0.5 block">
-                                        {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
-                                    </span>
+                                {job.status === 'completed' && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-primary hover:text-primary/80"
+                                        onClick={() => handleDownload(job)}
+                                        title="Download PPTX"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </Button>
                                 )}
                             </div>
-                            {job.status === 'completed' && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-primary hover:text-primary/80"
-                                    onClick={() => handleDownload(job)}
-                                    title="Download PPTX"
-                                >
-                                    <Download className="w-4 h-4" />
-                                </Button>
+                            {/* Failed export error */}
+                            {job.status === 'failed' && job.error && (
+                                <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20 text-[11px] text-red-400">
+                                    {job.error}
+                                </div>
+                            )}
+                            {/* Validation details */}
+                            {job.status === 'completed' && job.validator_results && (
+                                <ValidationSummary results={job.validator_results} />
                             )}
                         </div>
                     ))}
@@ -267,8 +437,8 @@ export function ExportButton({ artifactId }: { artifactId: string }) {
     const startExport = useAppStore(s => s.startExport);
     const [themePickerOpen, setThemePickerOpen] = useState(false);
 
-    const handleThemeSelected = (themeId: string) => {
-        startExport(artifactId, themeId);
+    const handleThemeSelected = (themeId: string, strictLayout?: boolean) => {
+        startExport(artifactId, themeId, strictLayout);
     };
 
     return (

@@ -437,8 +437,8 @@ interface StudioSlice {
     exportJobs: any[];
     activeExportJobId: string | null;
     exportPollingInterval: ReturnType<typeof setInterval> | null;
-    fetchThemes: () => Promise<void>;
-    startExport: (artifactId: string, themeId?: string) => Promise<void>;
+    fetchThemes: (params?: { include_variants?: boolean; base_id?: string; limit?: number }) => Promise<void>;
+    startExport: (artifactId: string, themeId?: string, strictLayout?: boolean) => Promise<void>;
     fetchExportJobs: (artifactId: string) => Promise<void>;
     pollExportJob: (artifactId: string, jobId: string) => void;
     stopExportPolling: () => void;
@@ -2255,20 +2255,20 @@ export const useAppStore = create<AppState>()(
             activeExportJobId: null,
             exportPollingInterval: null,
 
-            fetchThemes: async () => {
-                if (get().studioThemes.length > 0) return;
+            fetchThemes: async (params) => {
+                if (!params && get().studioThemes.length > 0) return;
                 try {
-                    const data = await api.listThemes();
-                    set({ studioThemes: data });
+                    const data = await api.listThemes(params);
+                    if (!params) set({ studioThemes: data });
                 } catch (e) {
                     console.error("Failed to fetch themes", e);
                 }
             },
 
-            startExport: async (artifactId, themeId) => {
+            startExport: async (artifactId, themeId, strictLayout) => {
                 set({ isExporting: true });
                 try {
-                    const job = await api.exportArtifact(artifactId, 'pptx', themeId);
+                    const job = await api.exportArtifact(artifactId, 'pptx', themeId, strictLayout);
                     const jobId = job.job_id || job.id;
                     set({ activeExportJobId: jobId });
                     get().pollExportJob(artifactId, jobId);
