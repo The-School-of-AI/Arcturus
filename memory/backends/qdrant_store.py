@@ -12,6 +12,7 @@ import numpy as np
 
 try:
     from qdrant_client import QdrantClient
+    from qdrant_client.http import models as http_models
     from qdrant_client.models import (
         Distance,
         VectorParams,
@@ -29,6 +30,7 @@ from core.utils import log_step, log_error
 
 from memory.backends.base import VectorStoreProtocol
 from memory.qdrant_config import get_collection_config, get_default_collection
+from memory.user_id import get_user_id
 
 
 def _distance_from_str(s: str):
@@ -54,6 +56,9 @@ class QdrantVectorStore:
         cfg = get_collection_config(self.collection_name)
         self.dimension = dimension if dimension is not None else cfg.get("dimension", 768)
         self._distance = _distance_from_str(cfg.get("distance", "cosine"))
+        self._is_tenant = cfg.get("is_tenant", False)
+        self._tenant_keyword_field = cfg.get("tenant_keyword_field", "user_id")
+        self._user_id = get_user_id() if self._is_tenant else None
         self.url = url
         self.client = QdrantClient(url=url, api_key=api_key, timeout=10.0)
         self._scanned_runs_path = Path(scanned_runs_path) if scanned_runs_path else Path(__file__).parent.parent.parent / "memory" / "remme_index" / "scanned_runs.json"
@@ -62,13 +67,38 @@ class QdrantVectorStore:
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
-        if self.collection_name not in [c.name for c in collections.collections]:
+        collection_names = [c.name for c in collections.collections]
+        created = False
+        if self.collection_name not in collection_names:
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(size=self.dimension, distance=self._distance),
             )
             log_step(f"📦 Created collection: {self.collection_name}", symbol="✨")
-        # TODO ggrover: Add index if not exists
+            created = True
+        if self._is_tenant and self._tenant_keyword_field:
+            try:
+                self.client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name=self._tenant_keyword_field,
+                    field_schema=http_models.KeywordIndexParams(
+                        type=http_models.KeywordIndexType.KEYWORD,
+                        is_tenant=True,
+                    ),
+                )
+                log_step(f"🔑 Created tenant index on {self._tenant_keyword_field}", symbol="✨")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
+                    pass
+                else:
+                    log_error(f"Failed to create tenant payload index: {e}")
+
+    def _tenant_filter(self, filter_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Merge tenant user_id into filter metadata."""
+        base: Dict[str, Any] = {self._tenant_keyword_field: self._user_id} if self._is_tenant and self._user_id else {}
+        if filter_metadata:
+            base.update(filter_metadata)
+        return base
 
     def add(
         self,
@@ -85,6 +115,7 @@ class QdrantVectorStore:
                 query_vector=np.array(embedding_list),
                 k=1,
                 score_threshold=1.0 - deduplication_threshold,
+                filter_metadata=self._tenant_filter() if self._is_tenant else None,
             )
             if similar:
                 memory_id = similar[0]["id"]
@@ -99,6 +130,8 @@ class QdrantVectorStore:
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
         }
+        if self._is_tenant and self._user_id:
+            payload[self._tenant_keyword_field] = self._user_id
         if metadata:
             payload.update(metadata)
 
@@ -116,11 +149,12 @@ class QdrantVectorStore:
         filter_metadata: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         query_vector = query_vector.tolist() if isinstance(query_vector, np.ndarray) else list(query_vector)
+        merged_filter = self._tenant_filter(filter_metadata)
         search_filter = None
-        if filter_metadata:
+        if merged_filter:
             conditions = [
                 FieldCondition(key=key, match=MatchValue(value=value))
-                for key, value in filter_metadata.items()
+                for key, value in merged_filter.items()
             ]
             if conditions:
                 search_filter = Filter(must=conditions)
@@ -215,7 +249,11 @@ class QdrantVectorStore:
             )
             if result:
                 p = result[0]
-                return {"id": str(p.id), **p.payload}
+                payload = dict(p.payload)
+                if self._is_tenant and self._user_id:
+                    if payload.get(self._tenant_keyword_field) != self._user_id:
+                        return None
+                return {"id": str(p.id), **payload}
             return None
         except Exception as e:
             log_error(f"Failed to get memory {memory_id}: {e}")
@@ -266,6 +304,8 @@ class QdrantVectorStore:
         return None
 
     def delete(self, memory_id: str) -> bool:
+        if self._is_tenant and self.get(memory_id) is None:
+            return False
         try:
             self.client.delete(
                 collection_name=self.collection_name,
@@ -283,11 +323,12 @@ class QdrantVectorStore:
         filter_metadata: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         try:
+            merged_filter = self._tenant_filter(filter_metadata)
             search_filter = None
-            if filter_metadata:
+            if merged_filter:
                 conditions = [
                     FieldCondition(key=key, match=MatchValue(value=value))
-                    for key, value in filter_metadata.items()
+                    for key, value in merged_filter.items()
                 ]
                 if conditions:
                     search_filter = Filter(must=conditions)
@@ -312,6 +353,9 @@ class QdrantVectorStore:
 
     def count(self) -> int:
         try:
+            if self._is_tenant and self._user_id:
+                results = self.get_all(limit=2**31 - 1)
+                return len(results)
             info = self.client.get_collection(self.collection_name)
             return info.points_count
         except Exception as e:
@@ -337,7 +381,7 @@ class QdrantVectorStore:
             self._scanned_runs_path.write_text(json.dumps(list(ids), indent=2))
 
     def _update_timestamp(self, memory_id: str, source: str) -> None:
-        existing = self.get(memory_id)
+        existing = self.get(memory_id)  # already tenant-scoped
         if existing:
             updated = existing.copy()
             updated.pop("id", None)

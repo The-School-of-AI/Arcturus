@@ -3,6 +3,7 @@ FAISS-backed implementation of VectorStoreProtocol.
 
 Wraps RemmeStore to provide the standard interface. Use for local-only,
 file-based storage when Qdrant is not available.
+User ID is not used (single-user local); kept for API consistency with Qdrant.
 """
 
 from typing import Dict, List, Any, Optional
@@ -26,6 +27,7 @@ class FaissVectorStore:
 
     def __init__(self, persistence_dir: str = "memory/remme_index", **kwargs: Any):
         self._store = RemmeStore(persistence_dir=persistence_dir)
+        # user_id from get_user_id() is ignored for FAISS (single-user local)
 
     def add(
         self,

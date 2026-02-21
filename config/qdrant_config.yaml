@@ -8,4 +8,5 @@ collections:
   arcturus_memories:
     dimension: 768          # matches nomic-embed-text
     distance: cosine        # cosine | euclidean | dot
-    # Future: fields_to_index, payload schema, etc.
+    is_tenant: true              # multi-tenant; scope by tenant field
+    tenant_keyword_field: user_id # payload field for tenant isolation (keyword index)
