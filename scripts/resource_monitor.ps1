@@ -1,7 +1,7 @@
 # Arcturus Lightweight Resource Monitor
 Write-Host "--- Arcturus Resource Monitor ---" -ForegroundColor Cyan
 
-$processNames = @("python", "node", "ollama", "curl", "git", "language_server_windows_x64")
+$processNames = @("python", "pythonw", "node", "ollama", "ollama_llama_server", "curl", "git", "language_server_windows_x64", "uv", "uvicorn", "powershell")
 $heavyProcesses = Get-Process | Where-Object { $processNames -contains $_.ProcessName } | Sort-Object CPU -Descending
 
 if ($heavyProcesses) {

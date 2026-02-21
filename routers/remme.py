@@ -68,7 +68,7 @@ async def background_smart_scan():
                 run_id = sess_path.stem.replace("session_", "")
                 print(f"🧠 RemMe: Auto-Scanning Run {run_id}...")
                 
-                data = json.loads(sess_path.read_text())
+                data = json.loads(sess_path.read_text(encoding='utf-8'))
                 # Fix: Query is deeply nested in graph attributes for NetworkX adjacency format
                 query = data.get("graph", {}).get("original_query", "")
                 if not query:
@@ -301,7 +301,7 @@ async def get_remme_profile():
             # 7 days in seconds = 604800
             if (current_time - modified_time) < 604800:
                 print(f"🧠 RemMe Profile: Loading cached profile (Age: {(current_time - modified_time) / 86400:.1f} days)")
-                return {"content": profile_path.read_text()}
+                return {"content": profile_path.read_text(encoding='utf-8')}
                 
         # 2. Generate New Profile
         print("🧠 RemMe Profile: Generating NEW profile via Gemini...")
@@ -442,7 +442,7 @@ A high-level overview of who the user appears to be, their primary drivers, and 
         profile_content = await model_manager.generate_text(prompt)
         
         # Save to Cache
-        profile_path.write_text(profile_content)
+        profile_path.write_text(profile_content, encoding='utf-8')
         
         return {
             "content": profile_content,

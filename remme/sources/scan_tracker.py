@@ -31,7 +31,7 @@ class ScanTracker:
         """Load tracking data from disk."""
         if self.path.exists():
             try:
-                return json.loads(self.path.read_text())
+                return json.loads(self.path.read_text(encoding='utf-8'))
             except Exception as e:
                 print(f"⚠️ Failed to load scan tracker: {e}")
         return {
@@ -43,7 +43,7 @@ class ScanTracker:
     def save(self):
         """Save tracking data to disk."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(self.data, indent=2, default=str))
+        self.path.write_text(json.dumps(self.data, indent=2, default=str), encoding='utf-8')
     
     def is_scanned(self, source_type: str, file_path: Path) -> bool:
         """

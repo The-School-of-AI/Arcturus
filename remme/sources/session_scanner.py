@@ -63,7 +63,7 @@ class SessionScanner:
     def extract_from_session(self, session_path: Path) -> Dict:
         """Extract preferences from a session summary."""
         try:
-            session_data = json.loads(session_path.read_text())
+            session_data = json.loads(session_path.read_text(encoding='utf-8'))
             
             content_parts = []
             
