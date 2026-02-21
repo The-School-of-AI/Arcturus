@@ -431,6 +431,17 @@ interface StudioSlice {
     rejectOutline: (id: string) => Promise<void>;
     setActiveArtifactId: (id: string | null) => void;
     setIsStudioModalOpen: (open: boolean) => void;
+    // Phase 2: Export & Themes
+    studioThemes: any[];
+    isExporting: boolean;
+    exportJobs: any[];
+    activeExportJobId: string | null;
+    exportPollingInterval: ReturnType<typeof setInterval> | null;
+    fetchThemes: () => Promise<void>;
+    startExport: (artifactId: string, themeId?: string) => Promise<void>;
+    fetchExportJobs: (artifactId: string) => Promise<void>;
+    pollExportJob: (artifactId: string, jobId: string) => void;
+    stopExportPolling: () => void;
 }
 
 interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
@@ -2185,6 +2196,7 @@ export const useAppStore = create<AppState>()(
                 try {
                     const data = await api.getArtifact(id);
                     set({ activeArtifact: data, activeArtifactId: id });
+                    get().fetchExportJobs(id);
                 } catch (e) {
                     console.error("Failed to load artifact", e);
                 }
@@ -2226,6 +2238,76 @@ export const useAppStore = create<AppState>()(
                     await get().fetchArtifacts();
                 } catch (e) {
                     console.error("Failed to reject outline", e);
+                }
+            },
+
+            // Phase 2: Export & Themes
+            studioThemes: [],
+            isExporting: false,
+            exportJobs: [],
+            activeExportJobId: null,
+            exportPollingInterval: null,
+
+            fetchThemes: async () => {
+                if (get().studioThemes.length > 0) return;
+                try {
+                    const data = await api.listThemes();
+                    set({ studioThemes: data });
+                } catch (e) {
+                    console.error("Failed to fetch themes", e);
+                }
+            },
+
+            startExport: async (artifactId, themeId) => {
+                set({ isExporting: true });
+                try {
+                    const job = await api.exportArtifact(artifactId, 'pptx', themeId);
+                    const jobId = job.job_id || job.id;
+                    set({ activeExportJobId: jobId });
+                    get().pollExportJob(artifactId, jobId);
+                } catch (e) {
+                    console.error("Failed to start export", e);
+                    set({ isExporting: false });
+                }
+            },
+
+            fetchExportJobs: async (artifactId) => {
+                try {
+                    const data = await api.listExportJobs(artifactId);
+                    if (get().activeArtifactId === artifactId) {
+                        set({ exportJobs: data });
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch export jobs", e);
+                }
+            },
+
+            pollExportJob: (artifactId, jobId) => {
+                get().stopExportPolling();
+                const interval = setInterval(async () => {
+                    try {
+                        const job = await api.getExportJob(artifactId, jobId);
+                        const status = job.status;
+                        if (status === 'completed' || status === 'failed') {
+                            get().stopExportPolling();
+                            set({ isExporting: false });
+                            if (get().activeArtifactId === artifactId) {
+                                get().fetchExportJobs(artifactId);
+                            }
+                        }
+                    } catch {
+                        get().stopExportPolling();
+                        set({ isExporting: false });
+                    }
+                }, 1500);
+                set({ exportPollingInterval: interval });
+            },
+
+            stopExportPolling: () => {
+                const interval = get().exportPollingInterval;
+                if (interval) {
+                    clearInterval(interval);
+                    set({ exportPollingInterval: null });
                 }
             },
         }),

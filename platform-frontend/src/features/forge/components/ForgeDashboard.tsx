@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { ExportPanel } from './ExportPanel';
 
 // --- Type helpers ---
 
@@ -310,6 +311,9 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                         )}
                     </div>
                 )}
+
+                {/* Export */}
+                <ExportPanel artifact={artifact} />
 
                 {/* Revisions */}
                 <div className="space-y-3">

@@ -3,6 +3,7 @@ import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2 } 
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ExportButton } from '@/features/forge/components/ExportPanel';
 
 // === Sub-viewers ===
 
@@ -247,11 +248,16 @@ export function StudioWorkspace() {
                     <Icon className="w-4 h-4 text-primary" />
                     <h2 className="text-sm font-semibold">{artifact.title}</h2>
                     <span className="text-[10px] text-muted-foreground capitalize ml-1">{artifact.type}</span>
-                    {outlineStatus === 'approved' && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-green-500/10 text-green-400 ml-auto">
-                            Generated
-                        </span>
-                    )}
+                    <div className="flex items-center gap-2 ml-auto">
+                        {outlineStatus === 'approved' && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-green-500/10 text-green-400">
+                                Generated
+                            </span>
+                        )}
+                        {artifact.type === 'slides' && (
+                            <ExportButton artifactId={artifact.id} />
+                        )}
+                    </div>
                 </div>
                 <ScrollArea className="flex-1">
                     {artifact.type === 'slides' && <SlidesViewer tree={artifact.content_tree} />}

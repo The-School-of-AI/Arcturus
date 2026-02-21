@@ -160,4 +160,36 @@ export const api = {
         const res = await axios.get(`${API_BASE}/studio/${artifactId}/revisions/${revisionId}`);
         return res.data;
     },
+
+    // Studio Phase 2 — Export & Themes
+    listThemes: async (): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio/themes`);
+        return res.data;
+    },
+
+    exportArtifact: async (id: string, format: string, themeId?: string): Promise<any> => {
+        const payload: { format: string; theme_id?: string } = { format };
+        if (themeId) payload.theme_id = themeId;
+        const res = await axios.post(`${API_BASE}/studio/${id}/export`, payload);
+        return res.data;
+    },
+
+    listExportJobs: async (id: string): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio/${id}/exports`);
+        return res.data;
+    },
+
+    getExportJob: async (artifactId: string, jobId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/studio/${artifactId}/exports/${jobId}`);
+        return res.data;
+    },
+
+    getExportJobGlobal: async (jobId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/studio/exports/${jobId}`);
+        return res.data;
+    },
+
+    getExportDownloadUrl: (artifactId: string, jobId: string): string => {
+        return `${API_BASE}/studio/${artifactId}/exports/${jobId}/download`;
+    },
 };
