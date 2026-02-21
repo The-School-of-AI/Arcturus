@@ -1,19 +1,28 @@
 # flow.py – 100% NetworkX Graph-First (No agentSession)
 
-import networkx as nx
 import asyncio
 import time
-from memory.context import ExecutionContextManager
-from agents.base_agent import AgentRunner
-from core.utils import log_step, log_error
-from core.event_bus import event_bus
-from core.model_manager import ModelManager
-from ui.visualizer import ExecutionVisualizer
-from rich.live import Live
-from rich.console import Console
 from datetime import datetime
 
+import networkx as nx
+from rich.console import Console
+from rich.live import Live
 
+from agents.base_agent import AgentRunner
+from core.event_bus import event_bus
+from core.model_manager import ModelManager
+from core.utils import log_error, log_step
+from memory.context import ExecutionContextManager
+from safety.audit import log_safety_event
+from safety.canary import attach_canary_to_context, detect_canary_leak, generate_canary
+from safety.input_scanner import scan_input
+from safety.jailbreak import detect_jailbreak
+from safety.policy_engine import PolicyEngine
+from safety.rate_limiter import SimpleRateLimiter
+from safety.tool_hardening import is_tool_allowed, sanitize_tool_args
+from ui.visualizer import ExecutionVisualizer
+
+_RATE_LIMITER = SimpleRateLimiter()
 # ===== EXPONENTIAL BACKOFF FOR TRANSIENT FAILURES =====
 
 async def retry_with_backoff(
@@ -174,10 +183,48 @@ class AgentLoop4:
             self.context.plan_graph.graph['globals_schema'].update(globals_schema)
             self.context._save_session()
             log_step("✅ Session initialized with Query processing", symbol="🌱")
+
+            try:
+                attach_canary_to_context(self.context.plan_graph.graph)
+            except Exception:
+                pass
+            
+            # === Safety: Input scanning (prompt injection / policy pre-checks) ===
+            scan_result = scan_input(query, {"session_id": session_id, "file_manifest": file_manifest})
+            if not scan_result.get("allowed", True):
+                reason = scan_result.get("reason", "blocked by safety")
+                self.context.mark_failed("Query", reason)
+                log_step(f"Blocked input by safety: {scan_result.get('reason')}", symbol="⛔")
+                # Audit the block event
+                log_safety_event(
+                    "input_blocked",
+                    context={"session_id": session_id, "query": query},
+                    metadata={"reason": reason, "hits": scan_result.get("hits")}
+                )
+                return self.context
+
+            # === Safety: Jailbreak Detection ===
+            jailbreak_result = detect_jailbreak(query)
+            if jailbreak_result.get("is_jailbreak", False):
+                reason = "jailbreak_attempt"
+                self.context.mark_failed("Query", reason)
+                log_step(f"Blocked input for potential jailbreak: {jailbreak_result.get('hits')}", symbol="⛔")
+                log_safety_event(
+                    "jailbreak_detected",
+                    context={"session_id": session_id, "query": query},
+                    metadata={"hits": jailbreak_result.get("hits"), "ml_score": jailbreak_result.get("ml_score")}
+                )
+                return self.context
+
+        except Exception as e_scan:
+            log_error(f"Aegis: input scanner error: {e_scan}")
+            raise e_scan
         except Exception as e:
             print(f"❌ ERROR initializing context: {e}")
             raise
 
+        if self.context.plan_graph.nodes["Query"].get("status") == "failed":
+            return self.context
 
         # Phase 1: File Profiling (if files exist)
         file_profiles = {}
@@ -707,13 +754,40 @@ class AgentLoop4:
                 result = await retry_with_backoff(run_agent_step)
             except Exception as e:
                 # All retries exhausted, return failure
-                return {"success": False, "error": f"Agent failed after retries: {str(e)}"}
+                return {
+                    "success": False, 
+                    "error": f"Agent failed after retries: {str(e)}"
+                }
             
             if not result["success"]:
                 return result
             
             output = result["output"]
             
+            # Output policy evaluation (PII, content policy, abstain/block) ===
+            try:
+                pe = PolicyEngine()
+                pol = pe.evaluate_output(output, {"step_id": step_id, "agent": agent_type, "session": context.plan_graph.graph})
+                action = pol.get("action")
+                if action == "block":
+                    log_safety_event(
+                        "policy_violation",
+                        context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "agent": agent_type},
+                        metadata={"reason": pol.get('reason'), "details": pol.get('details')}
+                    )
+                    return {
+                        "success": False, 
+                        "error": f"Policy blocked output: {pol.get('reason','policy_violation')}"
+                    }
+                elif action == "redact":
+                    log_safety_event(
+                        "output_redacted",
+                        context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "agent": agent_type},
+                        metadata={"reason": pol.get('reason'), "details": pol.get('details')}
+                    )
+                    output = pol.get("redacted_output", output)
+            except Exception as e:
+                log_error(f"Aegis: policy engine error: {e}")
             # ✅ CHECK FOR CLARIFICATION REQUEST (HALT)
             if output.get("clarificationMessage"):
                  return {
@@ -739,6 +813,49 @@ class AgentLoop4:
                 tool_name = tool_call.get("name")
                 tool_args = tool_call.get("arguments", {})
                 
+                try:
+                    if not is_tool_allowed(tool_name, {"agent": agent_type}):
+                        log_step(f"Blocked tool call by safety: {tool_name}", symbol="⛔")
+                        log_safety_event(
+                            "tool_call_blocked",
+                            context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "tool_name": tool_name},
+                            metadata={"agent": agent_type}
+                        )
+                        result_str = f"Tool {tool_name} blocked by safety policy"
+                        iterations_data[-1]["tool_result"] = result_str
+                        
+                        current_input = build_agent_input(
+                            instruction="The tool call was blocked by safety policy. Please explain this to the user.",
+                            previous_output=output,
+                            iteration_context={"tool_result": result_str}
+                        )
+                        continue
+
+                    tool_args = sanitize_tool_args(tool_args)
+                    session_key = context.plan_graph.graph.get("session_id")
+                    
+                    if not _RATE_LIMITER.allow(session_key or agent_type):
+                        log_step("Rate limit exceeded for tool calls", symbol="⛔")
+                        log_safety_event(
+                            "rate_limit_exceeded",
+                            context={"session_id": session_key, "step_id": step_id, "tool_name": tool_name},
+                            metadata={"agent": agent_type}
+                        )
+                        result_str = "Rate limit exceeded"
+                        iterations_data[-1]["tool_result"] = result_str
+                        
+                        current_input = build_agent_input(
+                            instruction="Rate limit exceeded. Please wait or try a different approach.",
+                            previous_output=output,
+                            iteration_context={"tool_result": result_str}
+                        )
+                        continue
+                    
+                    log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
+
+                except Exception as e_safety:
+                    log_error(f"Safety check error: {e_safety}")
+                    return {"success": False, "error": f"Internal safety check error: {e_safety}"}                
                 log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
                 
                 # 1a. Try LOCAL SKILL TOOLS first
@@ -840,17 +957,21 @@ class AgentLoop4:
                 )
                 continue
 
-            # 3. Success (No tool call, just output) - Execute code for final iteration
+            # 3. Success (No tool call, just output) - This is the final iteration
             else:
-                # ✅ LAST-SECOND STOP CHECK
-                if context.stop_requested:
-                    return {"success": False, "error": "Stop requested"}
-                    
-                # Execute code if present and save to iterations_data (same as call_self path)
-                if context._has_executable_code(output):
-                    execution_result = await context._auto_execute_code(step_id, output)
-                    iterations_data[-1]["execution_result"] = execution_result
-                return result
+                # Before returning the final output, check for canary leaks
+                final_output_text = str(output.get("output", ""))
+                leaked = detect_canary_leak(final_output_text, context.plan_graph.graph)
+                if leaked:
+                    log_safety_event(
+                        "canary_token_triggered",
+                        context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id},
+                        metadata={"leaked_tokens": leaked, "agent": agent_type}
+                    )
+                    # Depending on policy, you might block or just log. For now, we log.
+                    log_error(f"Canary token leak detected from agent {agent_type}!")
+
+                return {"success": True, "output": output}
         
         # If loop finishes without returning (max turns reached): Return PARTIAL SUCCESS to allow graph continuation
         log_error(f"Max iterations ({max_turns}) reached for {step_id}. Returning last output (incomplete).")

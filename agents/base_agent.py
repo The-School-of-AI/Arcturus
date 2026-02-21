@@ -223,7 +223,18 @@ class AgentRunner:
                 log_error(f"Profile injection failed: {e}")
 
             # 4. Final Prompt Construction
-            full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
+            system_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}"
+            tool_prompt = f"{tools_text}"
+            user_prompt = f"\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
+
+            # HIERARCHY ENFORCEMENT
+            # This is a simplified way to represent the hierarchy for the model.
+            # In a more advanced system, this might involve different API calls or message roles.
+            full_prompt = (
+                f"--- SYSTEM INSTRUCTIONS (HIGHEST PRIORITY) ---\n{system_prompt}\n\n"
+                f"--- AVAILABLE TOOLS ---\n{tool_prompt}\n\n"
+                f"--- USER REQUEST (LOWEST PRIORITY) ---\n{user_prompt}"
+            )
             
             print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
 

@@ -1,10 +1,18 @@
 # P12 Delivery README
 
 ## 1. Scope Delivered
-- TODO
+- Prompt-injection input scanner
+- Minimal policy engine (PII redaction)
+- Canary generator + helpers
+- Test scaffolding (acceptance)
 
 ## 2. Architecture Changes
-- TODO
+- Added `safety/` package
+- Integrated middleware scaffold in `core/loop.py` (developer must paste)
+
+Known Gaps
+- ML-based jailbreak classifier not implemented
+- Tool whitelist to be provided per-org
 
 ## 3. API And UI Changes
 - TODO
