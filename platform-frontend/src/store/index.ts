@@ -2123,6 +2123,7 @@ export const useAppStore = create<AppState>()(
                 selectedLibraryComponent: null,
                 showRagInsights: false,
                 selectedRagFile: null,
+                selectedCanvasWidgetId: null,
             }),
 
             deleteNewsSource: async (id) => {
