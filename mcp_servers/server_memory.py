@@ -17,12 +17,12 @@ def _load_memory() -> List[Dict]:
     if not MEMORY_FILE.exists():
         return []
     try:
-        return json.loads(MEMORY_FILE.read_text())
+        return json.loads(MEMORY_FILE.read_text(encoding='utf-8'))
     except:
         return []
 
 def _save_memory(memories: List[Dict]):
-    MEMORY_FILE.write_text(json.dumps(memories, indent=2))
+    MEMORY_FILE.write_text(json.dumps(memories, indent=2), encoding='utf-8')
 
 @mcp.tool()
 async def store_memory(content: str, tags: List[str] = []) -> str:

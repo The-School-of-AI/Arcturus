@@ -45,7 +45,7 @@ class BeliefUpdateEngine:
         """Load engine config from disk."""
         if self.path.exists():
             try:
-                raw = json.loads(self.path.read_text())
+                raw = json.loads(self.path.read_text(encoding='utf-8'))
                 return BeliefUpdateEngineSchema(**raw)
             except Exception as e:
                 print(f"⚠️ Failed to load BeliefUpdateEngine config: {e}")
@@ -54,7 +54,7 @@ class BeliefUpdateEngine:
     def save(self):
         """Save engine config to disk."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(self.config.model_dump_json(indent=2))
+        self.path.write_text(self.config.model_dump_json(indent=2), encoding='utf-8')
         print(f"💾 Saved BeliefUpdateEngine config")
     
     def get_hub_config(self, hub_name: str) -> HubConfig:
