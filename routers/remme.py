@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 import requests
+import pdb
 
 from shared.state import (
     get_remme_store,
@@ -87,6 +88,7 @@ async def background_smart_scan():
                     remme_store.mark_run_scanned(run_id)
                     continue
 
+                pdb.set_trace
                 hist = [{"role": "user", "content": query}]
                 if output:
                     hist.append({"role": "assistant", "content": output})

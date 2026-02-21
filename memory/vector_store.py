@@ -37,7 +37,7 @@ def get_vector_store(
     Factory for vector store backends. Switch providers without changing caller code.
 
     Args:
-        provider: One of "qdrant", "faiss", "weaviate". Defaults to env VECTOR_STORE_PROVIDER or "qdrant".
+        provider: One of "qdrant", "faiss", "weaviate". Defaults to env VECTOR_STORE_PROVIDER or "faiss".
         **kwargs: Passed to the backend constructor (e.g. url, collection_name for Qdrant).
 
     Returns:
@@ -47,7 +47,7 @@ def get_vector_store(
         store = get_vector_store(provider="qdrant", url="http://localhost:6333")
         store = get_vector_store(provider="faiss", persistence_dir="memory/faiss_index")
     """
-    p = provider or os.environ.get("VECTOR_STORE_PROVIDER", "qdrant")
+    p = provider or os.environ.get("VECTOR_STORE_PROVIDER", "faiss")
     p = p.lower()
 
     if p == "qdrant":

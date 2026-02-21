@@ -32,9 +32,7 @@ def get_remme_store():
     if _remme_store is None:
         import os
         from memory.vector_store import get_vector_store
-        # Default to faiss for backward compat; set VECTOR_STORE_PROVIDER=qdrant to use Qdrant
-        provider = os.environ.get("VECTOR_STORE_PROVIDER", "faiss")
-        _remme_store = get_vector_store(provider=provider)
+        _remme_store = get_vector_store()
     return _remme_store
 
 # RemMe extractor instance
