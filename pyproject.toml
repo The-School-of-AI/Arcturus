@@ -41,7 +41,10 @@ dependencies = [
     "apscheduler>=3.11.2",
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
+    "ray[default]==2.40.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
 ]
 
-[tool.setuptools.packages.find]
-include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "remme*", "routers*", "shared*", "tools*", "ui*"]
+[tool.uv]
+required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
