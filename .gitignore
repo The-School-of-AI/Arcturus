@@ -40,8 +40,6 @@ Notes/
 !Notes/
 
 # Logs & Runtime State
-# Ignore memory data directories but allow Python source files
-memory/episodic/
 memory/session_summaries_index/
 memory/debug_logs/
 !memory/*.py

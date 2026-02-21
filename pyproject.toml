@@ -42,3 +42,6 @@ dependencies = [
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "remme*", "routers*", "shared*", "tools*", "ui*"]

@@ -52,6 +52,24 @@
     "class_name": "IdeAgentPromptSkill",
     "type": "python"
   },
+  "forge_outline": {
+    "path": "core/skills/library/forge_outline",
+    "version": "1.0.0",
+    "description": "Generates structured outlines for slides, documents, and sheets.",
+    "intent_triggers": [
+      "create slides",
+      "make a presentation",
+      "pitch deck",
+      "create document",
+      "write a report",
+      "technical spec",
+      "create spreadsheet",
+      "financial model",
+      "create sheet"
+    ],
+    "class_name": "ForgeOutlineSkill",
+    "type": "python"
+  },
   "apprefinementprompt": {
     "path": "core/skills/library/apprefinementprompt",
     "version": "1.0.0",

@@ -13,6 +13,7 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
 import { InboxPanel } from '../inbox/InboxPanel';
+import CanvasHost from '@/features/canvas/CanvasHost';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -42,6 +43,7 @@ import { IdeLayout } from '@/features/ide/components/IdeLayout';
 import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
 import { MissionControl } from '@/features/console/components/MissionControl';
 import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
+import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
 
 export const AppLayout: React.FC = () => {
     const {
@@ -66,7 +68,7 @@ export const AppLayout: React.FC = () => {
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
-    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || !isSidebarSubPanelOpen;
+    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -223,8 +225,12 @@ export const AppLayout: React.FC = () => {
                                     <SchedulerDashboard />
                                 ) : sidebarTab === 'skills' ? (
                                     <SkillsDashboard />
+                                ) : sidebarTab === 'studio' ? (
+                                    <ForgeDashboard />
                                 ) : sidebarTab === 'console' ? (
                                     <MissionControl />
+                                ) : sidebarTab === 'canvas' ? (
+                                    <CanvasHost surfaceId="main-canvas" />
                                 ) : (
                                     <>
                                         <GraphCanvas />
