@@ -227,7 +227,7 @@ export const AppLayout: React.FC = () => {
                                 ) : sidebarTab === 'console' ? (
                                     <MissionControl />
                                 ) : sidebarTab === 'canvas' ? (
-                                    <CanvasHost surfaceId="main-canvas" />
+                                    <CanvasHost surfaceId="ops-command-v1" />
                                 ) : (
                                     <>
                                         <GraphCanvas />

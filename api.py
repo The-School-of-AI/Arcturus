@@ -19,7 +19,6 @@ from memory.context import ExecutionContextManager
 from remme.utils import get_embedding
 from config.settings_loader import settings, save_settings, reset_settings, reload_settings
 
-
 # Import shared state
 from shared.state import (
     active_loops,
@@ -28,6 +27,7 @@ from shared.state import (
     get_remme_extractor,
     PROJECT_ROOT,
 )
+
 from routers.remme import background_smart_scan  # Needed for lifespan startup
 
 from contextlib import asynccontextmanager
@@ -53,6 +53,11 @@ async def lifespan(app: FastAPI):
         
     scheduler_service.initialize()
     persistence_manager.load_snapshot()
+    
+    # 🎨 Restore Canvas snaps
+    from shared.state import get_canvas_runtime
+    get_canvas_runtime().load_snapshots()
+    
     await multi_mcp.start()
     
     # Check git

@@ -34,12 +34,12 @@
       "id": "map_1",
       "component": "Map",
       "props": {
-        "title": "Global Logistics",
+        "title": "Global Logistics - Active Route",
         "center": [
           40.7128,
           -74.006
         ],
-        "zoom": 10,
+        "zoom": 12,
         "markers": [
           {
             "position": [
@@ -64,12 +64,44 @@
                 -74.006
               ],
               [
-                40.718,
+                40.7135,
+                -74.004
+              ],
+              [
+                40.715,
+                -74.001
+              ],
+              [
+                40.717,
+                -73.998
+              ],
+              [
+                40.719,
+                -73.995
+              ],
+              [
+                40.721,
                 -73.99
               ],
               [
+                40.723,
+                -73.985
+              ],
+              [
                 40.725,
-                -73.96
+                -73.98
+              ],
+              [
+                40.727,
+                -73.975
+              ],
+              [
+                40.7285,
+                -73.965
+              ],
+              [
+                40.7295,
+                -73.955
               ],
               [
                 40.7306,
@@ -78,7 +110,7 @@
             ],
             "color": "#10b981",
             "weight": 6,
-            "popup": "Route: 8.4 mi (Est. 22 mins)"
+            "popup": "Verified Route: 8.4 mi | Traffic: Light (18m remaining)"
           }
         ]
       },
@@ -88,46 +120,57 @@
       "id": "whiteboard_1",
       "component": "Whiteboard",
       "props": {
-        "title": "System Architecture",
+        "title": "Arcturus System Architecture",
         "elements": [
           {
             "type": "rectangle",
-            "x": 50,
-            "y": 50,
-            "width": 120,
-            "height": 60,
+            "id": "rect1",
+            "x": 100,
+            "y": 100,
+            "width": 150,
+            "height": 80,
             "strokeColor": "#3b82f6",
+            "backgroundColor": "#1d4ed8",
+            "fillStyle": "solid",
+            "strokeWidth": 2,
             "text": "UI Platform"
           },
           {
             "type": "arrow",
-            "x": 170,
-            "y": 80,
+            "id": "arrow1",
+            "x": 250,
+            "y": 140,
             "points": [
               [
                 0,
                 0
               ],
               [
-                80,
+                100,
                 0
               ]
             ],
-            "strokeColor": "#94a3b8"
+            "strokeColor": "#94a3b8",
+            "strokeWidth": 2
           },
           {
             "type": "rectangle",
-            "x": 250,
-            "y": 50,
-            "width": 120,
-            "height": 60,
+            "id": "rect2",
+            "x": 350,
+            "y": 100,
+            "width": 150,
+            "height": 80,
             "strokeColor": "#ef4444",
+            "backgroundColor": "#b91c1c",
+            "fillStyle": "solid",
+            "strokeWidth": 2,
             "text": "Agent Core"
           },
           {
             "type": "arrow",
-            "x": 310,
-            "y": 110,
+            "id": "arrow2",
+            "x": 425,
+            "y": 180,
             "points": [
               [
                 0,
@@ -135,18 +178,23 @@
               ],
               [
                 0,
-                60
+                100
               ]
             ],
-            "strokeColor": "#94a3b8"
+            "strokeColor": "#94a3b8",
+            "strokeWidth": 2
           },
           {
             "type": "rectangle",
-            "x": 250,
-            "y": 170,
-            "width": 120,
-            "height": 60,
+            "id": "rect3",
+            "x": 350,
+            "y": 280,
+            "width": 150,
+            "height": 80,
             "strokeColor": "#f59e0b",
+            "backgroundColor": "#b45309",
+            "fillStyle": "solid",
+            "strokeWidth": 2,
             "text": "Episodic Memory"
           }
         ]

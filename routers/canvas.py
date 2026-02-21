@@ -31,7 +31,7 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
         while True:
             # Receive messages from the client (user events)
             data = await websocket.receive_json()
-            await ws_handler.handle_user_event(surface_id, data)
+            await ws_handler.handle_user_event(surface_id, data, sender_socket=websocket)
     except WebSocketDisconnect:
         ws_handler.disconnect(websocket, surface_id)
     except Exception as e:

@@ -1,0 +1,24 @@
+{
+  "tasks": [
+    {
+      "id": "t1",
+      "content": "Implement Whiteboard",
+      "columnId": "done"
+    },
+    {
+      "id": "t4",
+      "content": "Test Bi-directional Sync",
+      "columnId": "in_progress"
+    },
+    {
+      "id": "t3",
+      "content": "Implement Kanban",
+      "columnId": "done"
+    },
+    {
+      "id": "t2",
+      "content": "Implement Map View",
+      "columnId": "done"
+    }
+  ]
+}

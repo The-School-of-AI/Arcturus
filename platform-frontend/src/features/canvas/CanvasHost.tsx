@@ -21,15 +21,31 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         reconnectInterval: 3000,
     });
 
+    // PERSISTENCE: Stop clearing local storage on mount. 
+    // This allows the whiteboard to keep its local state during internal sidebar navigation
+    // while the sync from server handles eventual consistency.
+    /*
+    useEffect(() => {
+        console.log('[Canvas] Cleaning up stale storage for surface:', surfaceId);
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('excalidraw') || key.includes('arcturus')) {
+                localStorage.removeItem(key);
+            }
+        });
+        sessionStorage.clear();
+    }, [surfaceId]);
+    */
+
     // Handle incoming messages
     useEffect(() => {
         if (lastJsonMessage) {
             const msg = lastJsonMessage as any;
-            console.log('[Canvas] Received:', msg);
+            console.log('[Canvas] Received message:', msg.type, msg.surfaceId);
 
             (async () => {
                 switch (msg.type) {
                     case 'updateComponents':
+                        console.log('[Canvas] Components update count:', msg.components?.length);
                         setComponents(msg.components);
                         setIsSandbox(false);
                         break;
@@ -64,6 +80,16 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         }
     };
 
+    // Listen for manual save triggers to capture image snapshots
+    useEffect(() => {
+        const handleTrigger = async (e: any) => {
+            console.log('[Canvas] Snapshot trigger received');
+            await handleCaptureSnapshot();
+        };
+        window.addEventListener('arcturus:capture-snapshot', handleTrigger);
+        return () => window.removeEventListener('arcturus:capture-snapshot', handleTrigger);
+    }, [handleCaptureSnapshot]);
+
     const handleUserEvent = useCallback((componentId: string, eventType: string, data: any = {}) => {
         sendJsonMessage({
             type: 'user_event',
@@ -73,6 +99,14 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
             data
         });
     }, [surfaceId, sendJsonMessage]);
+
+    const handleLocalComponentUpdate = useCallback((componentId: string, updates: Partial<any>) => {
+        setComponents(prev => prev.map(c =>
+            c.id === componentId
+                ? { ...c, props: { ...c.props, ...updates } }
+                : c
+        ));
+    }, []);
 
     const renderComponent = (comp: any) => {
         const Widget = getWidget(comp.component);
@@ -92,8 +126,19 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                 key={comp.id}
                 {...resolvedProps}
                 onClick={() => handleUserEvent(comp.id, 'click')}
-                onCodeChange={(code: string) => handleUserEvent(comp.id, 'change', { code })}
-                onDrawingChange={(elements: any, appState: any) => handleUserEvent(comp.id, 'drawing_change', { elements, appState })}
+                onCodeChange={(code: string) => {
+                    handleLocalComponentUpdate(comp.id, { code });
+                    handleUserEvent(comp.id, 'change', { code });
+                }}
+                onDrawingChange={(elements: any, appState: any) => {
+                    // Update locally immediately to prevent "revert" during re-render
+                    handleLocalComponentUpdate(comp.id, { elements, appState });
+                    handleUserEvent(comp.id, 'drawing_change', { elements, appState });
+                }}
+                onTaskUpdate={(tasks: any[]) => {
+                    handleLocalComponentUpdate(comp.id, { initialTasks: tasks });
+                    handleUserEvent(comp.id, 'kanban_update', { initialTasks: tasks });
+                }}
             >
                 {comp.children?.map((childId: string) => {
                     const child = components.find(c => c.id === childId);
@@ -108,8 +153,8 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
             <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
                 <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-xs font-mono uppercase tracking-wider text-gray-400">
-                        Surface: {surfaceId}
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        Live Surface: {surfaceId === 'ops-command-v1' ? 'Operations Command' : surfaceId}
                     </span>
                 </div>
                 <div className="flex space-x-1">

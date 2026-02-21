@@ -53,7 +53,7 @@ class PersistenceManager:
             if not SNAPSHOT_FILE.parent.exists():
                 SNAPSHOT_FILE.parent.mkdir(parents=True, exist_ok=True)
                 
-            SNAPSHOT_FILE.write_text(json.dumps(snapshot, indent=2))
+            SNAPSHOT_FILE.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
             logger.info(f"✅ System Snapshot saved ({len(snapshot['active_runs'])} runs)")
             
         except Exception as e:
@@ -66,7 +66,7 @@ class PersistenceManager:
             return
             
         try:
-            data = json.loads(SNAPSHOT_FILE.read_text())
+            data = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
             runs = data.get("active_runs", [])
             
             # For now, just log what we found. Re-hydration logic (re-starting loops) 

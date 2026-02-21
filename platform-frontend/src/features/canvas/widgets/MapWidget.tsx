@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -27,10 +27,19 @@ interface MapMarker {
     popup?: string;
 }
 
+interface MapPolyline {
+    positions: [number, number][];
+    color?: string;
+    weight?: number;
+    opacity?: number;
+    popup?: string;
+}
+
 interface MapWidgetProps {
     center?: [number, number];
     zoom?: number;
     markers?: MapMarker[];
+    polylines?: MapPolyline[];
     title?: string;
 }
 
@@ -47,6 +56,7 @@ const MapWidget: React.FC<MapWidgetProps> = ({
     center = [51.505, -0.09],
     zoom = 13,
     markers = [],
+    polylines = [],
     title
 }) => {
     return (
@@ -72,6 +82,19 @@ const MapWidget: React.FC<MapWidgetProps> = ({
                         <Marker key={idx} position={marker.position} title={marker.title}>
                             {marker.popup && <Popup>{marker.popup}</Popup>}
                         </Marker>
+                    ))}
+                    {polylines.map((line, idx) => (
+                        <Polyline
+                            key={`poly-${idx}`}
+                            positions={line.positions}
+                            pathOptions={{
+                                color: line.color || '#3b82f6',
+                                weight: line.weight || 3,
+                                opacity: line.opacity || 0.8
+                            }}
+                        >
+                            {line.popup && <Popup>{line.popup}</Popup>}
+                        </Polyline>
                     ))}
                 </MapContainer>
             </div>
