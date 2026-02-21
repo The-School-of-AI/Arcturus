@@ -64,7 +64,6 @@ packages = [
     "shared",
     "ui",
     "tools",
-    "action",
     "storage",
 ]
 
