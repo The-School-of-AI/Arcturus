@@ -41,6 +41,13 @@ dependencies = [
     "apscheduler>=3.11.2",
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
+    "memo>=0.2.4",
+    "mem0ai>=1.0.4",
+    "sounddevice>=0.5.5",
+    "pvporcupine>=4.0.2",
+    "openwakeword>=0.6.0",
+    "tensorflow>=2.20.0",
+    "pytest>=9.0.2",
 ]
 
 [tool.setuptools.packages.find]

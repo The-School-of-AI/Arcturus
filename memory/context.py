@@ -470,6 +470,12 @@ class ExecutionContextManager:
                         globals_schema[write_key] = output["final_answer"]
                         print(f"✅ Extracted {write_key} = [Final Answer] (mapped from 'final_answer')")
                         extracted = True
+
+                    # 🎉 NEW: Check for 'markdown_report' as fallback (FormatterAgent uses this)
+                    elif "markdown_report" in output:
+                        globals_schema[write_key] = output["markdown_report"]
+                        print(f"✅ Extracted {write_key} = [Markdown Report] (mapped from 'markdown_report')")
+                        extracted = True
                 
                 # Strategy 3: Emergency fallback - try to find any matching data
                 if not extracted:
