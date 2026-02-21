@@ -713,6 +713,12 @@ function setupDialogHandlers() {
             const fetchBuffer = (fetchUrl) => new Promise((resolve, reject) => {
                 const mod = fetchUrl.startsWith('https') ? https : http;
                 mod.get(fetchUrl, (res) => {
+                    if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+                        const status = res.statusCode || 'unknown';
+                        res.resume();
+                        reject(new Error(`Download failed with HTTP ${status}`));
+                        return;
+                    }
                     const chunks = [];
                     res.on('data', (chunk) => chunks.push(chunk));
                     res.on('end', () => resolve(Buffer.concat(chunks)));

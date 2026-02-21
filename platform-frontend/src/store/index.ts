@@ -2181,7 +2181,14 @@ export const useAppStore = create<AppState>()(
             isStudioModalOpen: false,
             setIsStudioModalOpen: (open) => set({ isStudioModalOpen: open }),
             setActiveArtifactId: (id) => {
-                set({ activeArtifactId: id, activeArtifact: null });
+                get().stopExportPolling();
+                set({
+                    activeArtifactId: id,
+                    activeArtifact: null,
+                    exportJobs: [],
+                    activeExportJobId: null,
+                    isExporting: false,
+                });
                 if (id) get().loadArtifact(id);
             },
             fetchArtifacts: async () => {

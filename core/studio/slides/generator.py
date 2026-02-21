@@ -112,23 +112,41 @@ def enforce_slide_count(
         body = body[: MAX_SLIDES - 2]
         slides = [opening] + body + [closing]
 
-    # Under MIN: pad with filler content slides before closing
+    # Under MIN: pad with filler content slides before closing.
+    # For a single-slide deck, preserve that original slide in the first slot.
     if len(slides) < MIN_SLIDES:
         from core.schemas.studio_schema import Slide, SlideElement
-        closing = slides[-1]
-        body = slides[:-1]
-        filler_count = MIN_SLIDES - len(slides)
-        for i in range(filler_count):
-            filler = Slide(
-                id=f"filler-{i+1}",
-                slide_type="content",
-                title=f"Section {len(body) + 1}",
-                elements=[
-                    SlideElement(id=f"filler-e-{i+1}", type="body", content="Content to be developed."),
-                ],
-                speaker_notes="Expand on this section with relevant details.",
-            )
-            body.append(filler)
-        slides = body + [closing]
+        if len(slides) == 1:
+            opening = slides[0]
+            padded = [opening]
+            filler_count = MIN_SLIDES - 1
+            for i in range(filler_count):
+                filler = Slide(
+                    id=f"filler-{i+1}",
+                    slide_type="content",
+                    title=f"Section {len(padded) + 1}",
+                    elements=[
+                        SlideElement(id=f"filler-e-{i+1}", type="body", content="Content to be developed."),
+                    ],
+                    speaker_notes="Expand on this section with relevant details.",
+                )
+                padded.append(filler)
+            slides = padded
+        else:
+            closing = slides[-1]
+            body = slides[:-1]
+            filler_count = MIN_SLIDES - len(slides)
+            for i in range(filler_count):
+                filler = Slide(
+                    id=f"filler-{i+1}",
+                    slide_type="content",
+                    title=f"Section {len(body) + 1}",
+                    elements=[
+                        SlideElement(id=f"filler-e-{i+1}", type="body", content="Content to be developed."),
+                    ],
+                    speaker_notes="Expand on this section with relevant details.",
+                )
+                body.append(filler)
+            slides = body + [closing]
 
     return content_tree.model_copy(update={"slides": slides})

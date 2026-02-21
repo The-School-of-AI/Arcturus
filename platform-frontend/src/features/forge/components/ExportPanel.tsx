@@ -157,6 +157,10 @@ export function ExportPanel({ artifact }: { artifact: any }) {
             }
             // Browser fallback: blob download
             const resp = await fetch(url);
+            if (!resp.ok) {
+                const detail = await resp.text().catch(() => '');
+                throw new Error(detail || `Download failed with HTTP ${resp.status}`);
+            }
             const blob = await resp.blob();
             const blobUrl = URL.createObjectURL(blob);
             const a = document.createElement('a');

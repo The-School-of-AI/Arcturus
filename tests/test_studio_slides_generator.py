@@ -147,6 +147,14 @@ def test_enforce_slide_count_under_min():
     assert len(result.slides) == MIN_SLIDES
 
 
+def test_enforce_slide_count_single_slide_keeps_original_first():
+    ct = _make_content_tree(1)
+    result = enforce_slide_count(ct)
+    assert len(result.slides) == MIN_SLIDES
+    assert result.slides[0].id == "s1"
+    assert result.slides[0].slide_type == "title"
+
+
 def test_enforce_slide_count_preserves_opening_closing():
     ct = _make_content_tree(20)
     result = enforce_slide_count(ct)
