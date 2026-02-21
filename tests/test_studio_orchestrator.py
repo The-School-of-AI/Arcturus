@@ -71,6 +71,83 @@ SLIDES_DRAFT_RESPONSE = json.dumps({
             "elements": [
                 {"id": "e3", "type": "body", "content": "Enterprises waste time."},
             ],
+            "speaker_notes": "Explain the core problem.",
+        },
+        {
+            "id": "s3",
+            "slide_type": "content",
+            "title": "Solution",
+            "elements": [
+                {"id": "e4", "type": "body", "content": "Our AI platform automates workflows."},
+            ],
+            "speaker_notes": "Present the solution.",
+        },
+        {
+            "id": "s4",
+            "slide_type": "two_column",
+            "title": "Before vs After",
+            "elements": [
+                {"id": "e5", "type": "body", "content": "Manual processes."},
+                {"id": "e6", "type": "body", "content": "Automated workflows."},
+            ],
+            "speaker_notes": "Compare old vs new.",
+        },
+        {
+            "id": "s5",
+            "slide_type": "timeline",
+            "title": "Roadmap",
+            "elements": [
+                {"id": "e7", "type": "bullet_list", "content": ["Q1: Launch", "Q2: Scale", "Q3: Expand"]},
+            ],
+            "speaker_notes": "Walk through the timeline.",
+        },
+        {
+            "id": "s6",
+            "slide_type": "chart",
+            "title": "Traction",
+            "elements": [
+                {"id": "e8", "type": "chart", "content": "Revenue growth chart"},
+                {"id": "e9", "type": "body", "content": "3x growth in 12 months."},
+            ],
+            "speaker_notes": "Highlight growth metrics.",
+        },
+        {
+            "id": "s7",
+            "slide_type": "quote",
+            "title": "Testimonial",
+            "elements": [
+                {"id": "e10", "type": "quote", "content": "This product changed everything."},
+                {"id": "e11", "type": "body", "content": "Jane Doe, CTO"},
+            ],
+            "speaker_notes": "Share customer voice.",
+        },
+        {
+            "id": "s8",
+            "slide_type": "content",
+            "title": "Business Model",
+            "elements": [
+                {"id": "e12", "type": "body", "content": "SaaS with enterprise pricing."},
+            ],
+            "speaker_notes": "Explain monetization.",
+        },
+        {
+            "id": "s9",
+            "slide_type": "team",
+            "title": "Team",
+            "elements": [
+                {"id": "e13", "type": "bullet_list", "content": ["CEO: Alice", "CTO: Bob", "VP Eng: Carol"]},
+            ],
+            "speaker_notes": "Introduce the team.",
+        },
+        {
+            "id": "s10",
+            "slide_type": "title",
+            "title": "Thank You",
+            "elements": [
+                {"id": "e14", "type": "title", "content": "Thank You"},
+                {"id": "e15", "type": "subtitle", "content": "Questions?"},
+            ],
+            "speaker_notes": "Close and take questions.",
         },
     ],
     "metadata": {"audience": "investors"},

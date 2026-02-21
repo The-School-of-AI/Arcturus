@@ -4,6 +4,8 @@ import asyncio
 
 from routers import studio as studio_router
 
+_UUID_1 = "00000000-0000-0000-0000-000000000001"
+
 
 def _run(coro):
     loop = asyncio.new_event_loop()
@@ -48,7 +50,7 @@ def test_approve_outline_with_rejected_flag_skips_generation(monkeypatch):
     monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
 
     request = studio_router.ApproveOutlineRequest(approved=False, modifications={"title": "Rework"})
-    result = _run(studio_router.approve_outline("artifact-1", request))
+    result = _run(studio_router.approve_outline(_UUID_1, request))
 
     assert result["status"] == "rejected"
     assert calls["approve"] == 0

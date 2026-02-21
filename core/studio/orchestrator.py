@@ -12,7 +12,7 @@ from core.schemas.studio_schema import (
     OutlineStatus,
     validate_content_tree,
 )
-from core.studio.prompts import get_draft_prompt, get_outline_prompt
+from core.studio.prompts import get_draft_prompt, get_draft_prompt_with_sequence, get_outline_prompt
 from core.studio.revision import RevisionManager, compute_change_summary
 from core.studio.storage import StudioStorage
 
@@ -106,14 +106,34 @@ class ForgeOrchestrator:
         # Mark outline as approved
         artifact.outline.status = OutlineStatus.approved
 
-        # Generate draft via LLM
-        llm_prompt = get_draft_prompt(artifact.type, artifact.outline)
+        # Generate draft via LLM (slides-specific: inject sequence hints)
+        if artifact.type == ArtifactType.slides:
+            from core.studio.slides.generator import (
+                clamp_slide_count,
+                compute_seed,
+                plan_slide_sequence,
+            )
+            seed = compute_seed(artifact.id)
+            target_count = clamp_slide_count(
+                artifact.outline.parameters.get("slide_count") if artifact.outline.parameters else None
+            )
+            sequence = plan_slide_sequence(target_count, seed)
+            llm_prompt = get_draft_prompt_with_sequence(artifact.type, artifact.outline, sequence)
+        else:
+            llm_prompt = get_draft_prompt(artifact.type, artifact.outline)
+
         mm = ModelManager(model_name=artifact.model) if artifact.model else ModelManager()
         raw = await mm.generate_text(llm_prompt)
 
         # Parse and validate content tree
         parsed = parse_llm_json(raw)
         content_tree_model = validate_content_tree(artifact.type, parsed)
+
+        # Slides-specific: enforce slide count range [8, 15]
+        if artifact.type == ArtifactType.slides:
+            from core.studio.slides.generator import enforce_slide_count
+            content_tree_model = enforce_slide_count(content_tree_model)
+
         content_tree = content_tree_model.model_dump(mode="json")
 
         # Create revision
@@ -153,6 +173,92 @@ class ForgeOrchestrator:
         self.storage.save_artifact(artifact)
 
         return artifact.model_dump(mode="json")
+
+    async def export_artifact(
+        self,
+        artifact_id: str,
+        export_format: "ExportFormat",
+        theme_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Export an artifact to the specified format.
+
+        Currently supports PPTX export for slides artifacts.
+        Returns the export job dict.
+        """
+        from core.schemas.studio_schema import (
+            ExportJob,
+            ExportJobSummary,
+            ExportStatus,
+            SlidesContentTree,
+        )
+        from core.studio.slides.exporter import export_to_pptx
+        from core.studio.slides.themes import get_theme
+        from core.studio.slides.validator import validate_pptx
+
+        # Load and verify artifact
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is None:
+            raise ValueError(f"Artifact not found: {artifact_id}")
+        if artifact.content_tree is None:
+            raise ValueError(f"Artifact {artifact_id} has no content tree (approve outline first)")
+        if artifact.type != ArtifactType.slides:
+            raise ValueError(f"Export format {export_format.value} only supports slides artifacts")
+
+        # Resolve theme
+        theme = get_theme(theme_id or artifact.theme_id)
+
+        # Create export job
+        now = datetime.now(timezone.utc)
+        export_job_id = str(uuid4())
+        export_job = ExportJob(
+            id=export_job_id,
+            artifact_id=artifact_id,
+            format=export_format,
+            status=ExportStatus.pending,
+            created_at=now,
+        )
+
+        self.storage.save_export_job(export_job)
+
+        try:
+            content_tree_model = SlidesContentTree(**artifact.content_tree)
+
+            output_path = self.storage.get_export_file_path(
+                artifact_id, export_job_id, export_format.value
+            )
+            export_to_pptx(content_tree_model, theme, output_path)
+
+            validation = validate_pptx(output_path, expected_slide_count=len(content_tree_model.slides))
+
+            if validation["valid"]:
+                export_job.status = ExportStatus.completed
+                export_job.output_uri = str(output_path)
+                export_job.file_size_bytes = output_path.stat().st_size
+                export_job.validator_results = validation
+                export_job.completed_at = datetime.now(timezone.utc)
+            else:
+                export_job.status = ExportStatus.failed
+                export_job.error = "; ".join(validation["errors"])
+                export_job.validator_results = validation
+                export_job.completed_at = datetime.now(timezone.utc)
+
+        except Exception as e:
+            export_job.status = ExportStatus.failed
+            export_job.error = str(e)
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        self.storage.save_export_job(export_job)
+
+        artifact.exports.append(ExportJobSummary(
+            id=export_job.id,
+            format=export_job.format.value,
+            status=export_job.status.value,
+            created_at=export_job.created_at,
+        ))
+        artifact.updated_at = datetime.now(timezone.utc)
+        self.storage.save_artifact(artifact)
+
+        return export_job.model_dump(mode="json")
 
 
 def _parse_outline_item(data: dict) -> OutlineItem:

@@ -19,6 +19,16 @@ class OutlineStatus(str, Enum):
     rejected = "rejected"
 
 
+class ExportFormat(str, Enum):
+    pptx = "pptx"
+
+
+class ExportStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
+    failed = "failed"
+
+
 class AssetKind(str, Enum):
     image = "image"
     chart = "chart"
@@ -109,6 +119,48 @@ class Outline(BaseModel):
     parameters: Dict[str, Any] = Field(default_factory=dict)
 
 
+# === Export Models ===
+
+class ExportJob(BaseModel):
+    id: str
+    artifact_id: str
+    format: ExportFormat
+    status: ExportStatus = ExportStatus.pending
+    output_uri: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    validator_results: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+
+class ExportJobSummary(BaseModel):
+    id: str
+    format: str
+    status: str
+    created_at: datetime
+
+
+# === Theme Models ===
+
+class SlideThemeColors(BaseModel):
+    primary: str
+    secondary: str
+    accent: str
+    background: str
+    text: str
+    text_light: str
+
+
+class SlideTheme(BaseModel):
+    id: str
+    name: str
+    colors: SlideThemeColors
+    font_heading: str
+    font_body: str
+    description: Optional[str] = None
+
+
 # === Core Models ===
 
 class Artifact(BaseModel):
@@ -123,6 +175,7 @@ class Artifact(BaseModel):
     theme_id: Optional[str] = None
     revision_head_id: Optional[str] = None
     outline: Optional[Outline] = None
+    exports: List[ExportJobSummary] = Field(default_factory=list)
 
 
 class Revision(BaseModel):

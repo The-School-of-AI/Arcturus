@@ -73,11 +73,22 @@ def _get_type_specific_outline_guidance(artifact_type: ArtifactType) -> str:
     """Return type-specific guidance for outline generation."""
     if artifact_type == ArtifactType.slides:
         return """Guidance for slides:
-- Plan a narrative arc: opening hook, problem, solution, evidence, call to action
+- Plan a narrative arc: opening hook, problem statement, solution overview, evidence/data, call to action
 - Each outline item represents one slide
 - Suggest 8-12 slides unless the user specifies a count
-- Include speaker notes suggestions in descriptions
-- Consider slide types: title, content, two_column, comparison, timeline, chart, image_text, quote, code, team"""
+- Include speaker notes suggestions in descriptions — these become presenter notes in the exported PPTX
+- Consider slide types and pick the best fit for each slide's content:
+  * title — Opening/closing slides with large centered text
+  * content — Standard slide with title + body paragraphs or bullet points
+  * two_column — Side-by-side comparison or complementary content
+  * comparison — Explicit pros/cons or before/after layout
+  * timeline — Sequential steps, milestones, or roadmap
+  * chart — Data visualization with supporting context
+  * image_text — Split layout with image area and descriptive text
+  * quote — Featured quotation with attribution
+  * code — Technical slide with monospace code block
+  * team — Team members, credits, or acknowledgments
+- Assign a slide_type to each item in the description field (e.g., "slide_type: two_column")"""
 
     elif artifact_type == ArtifactType.document:
         return """Guidance for documents:
@@ -120,9 +131,16 @@ def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
   "metadata": {"audience": "...", "tone": "..."}
 }
 
-- For bullet_list elements, content should be a JSON array of strings
+- For bullet_list elements, content must be a JSON array of strings
 - Each slide must have a unique id (s1, s2, ...) and each element a unique id (e1, e2, ...)
-- Include speaker_notes for every slide"""
+- speaker_notes are REQUIRED for every slide — write 2-3 sentences of presenter guidance
+- Speaker notes should provide talking points, not repeat slide content
+- Match the slide_type to the content purpose:
+  * Use "title" for opening and closing slides
+  * Use "content" for main narrative slides
+  * Use "two_column" when comparing or contrasting
+  * Use "quote" for testimonials or key insights
+  * Use "chart" when referencing data or metrics"""
 
     elif artifact_type == ArtifactType.document:
         return """Generate a DocumentContentTree JSON with this exact schema:
@@ -181,3 +199,20 @@ def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
 - Each tab must have a unique id"""
 
     return ""
+
+
+def get_draft_prompt_with_sequence(
+    artifact_type: ArtifactType,
+    outline: "Outline",
+    slide_sequence: list[dict] | None = None,
+) -> str:
+    """Enhanced draft prompt that includes planned slide sequence."""
+    base_prompt = get_draft_prompt(artifact_type, outline)
+
+    if slide_sequence and artifact_type == ArtifactType.slides:
+        sequence_hint = "\n\nPlanned slide sequence (follow this structure):\n"
+        for i, s in enumerate(slide_sequence, 1):
+            sequence_hint += f"  Slide {i}: type={s['slide_type']}, position={s['position']}\n"
+        base_prompt += sequence_hint
+
+    return base_prompt
