@@ -1,0 +1,570 @@
+{
+  "id": "app-1771690736897",
+  "name": "Counter Pro",
+  "description": "A simple counter app with a reset button.",
+  "cards": [
+    {
+      "id": "dashboard-header",
+      "type": "header",
+      "label": "Event Tracking Dashboard",
+      "context": "Main title for the event tracking dashboard.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Event Tracking Dashboard"
+      },
+      "style": {}
+    },
+    {
+      "id": "total-events-today",
+      "type": "metric",
+      "label": "Total Events Today",
+      "context": "The total number of events recorded in the current day.",
+      "config": {},
+      "data": {
+        "value": "12,876",
+        "change": 15.2,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "unique-users",
+      "type": "trend",
+      "label": "Unique Users Today",
+      "context": "The number of unique users who triggered events today, with a sparkline trend.",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "3,124",
+        "change": 8.1
+      },
+      "style": {}
+    },
+    {
+      "id": "avg-events-hour",
+      "type": "metric",
+      "label": "Avg. Events/Hour",
+      "context": "The average number of events per hour over the last 24 hours.",
+      "config": {},
+      "data": {
+        "value": "536",
+        "change": 2.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "error-rate",
+      "type": "trend",
+      "label": "Error Rate",
+      "context": "The percentage of events that resulted in an error, with a sparkline trend.",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "1.8%",
+        "change": -0.3
+      },
+      "style": {}
+    },
+    {
+      "id": "hourly-event-volume-chart",
+      "type": "line_chart",
+      "label": "Hourly Event Volume Trend",
+      "context": "Trend of total event volume over the last 24 hours, categorized by event type.",
+      "config": {},
+      "data": {
+        "title": "Hourly Event Volume (Last 24h)",
+        "xLabel": "Hour",
+        "yLabel": "Event Count",
+        "series": [
+          {
+            "name": "User Interactions",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "00:00",
+                "y": 300
+              },
+              {
+                "x": "03:00",
+                "y": 250
+              },
+              {
+                "x": "06:00",
+                "y": 400
+              },
+              {
+                "x": "09:00",
+                "y": 700
+              },
+              {
+                "x": "12:00",
+                "y": 900
+              },
+              {
+                "x": "15:00",
+                "y": 850
+              },
+              {
+                "x": "18:00",
+                "y": 780
+              },
+              {
+                "x": "21:00",
+                "y": 600
+              }
+            ]
+          },
+          {
+            "name": "System Events",
+            "color": "#ff6b6b",
+            "data": [
+              {
+                "x": "00:00",
+                "y": 120
+              },
+              {
+                "x": "03:00",
+                "y": 100
+              },
+              {
+                "x": "06:00",
+                "y": 150
+              },
+              {
+                "x": "09:00",
+                "y": 200
+              },
+              {
+                "x": "12:00",
+                "y": 250
+              },
+              {
+                "x": "15:00",
+                "y": 230
+              },
+              {
+                "x": "18:00",
+                "y": 210
+              },
+              {
+                "x": "21:00",
+                "y": 180
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "events-by-type-chart",
+      "type": "bar_chart",
+      "label": "Events by Type (Today)",
+      "context": "Distribution of events grouped by their category or type for the current day.",
+      "config": {},
+      "data": {
+        "title": "Events by Type (Today)",
+        "xLabel": "Event Type",
+        "yLabel": "Count",
+        "points": [
+          {
+            "x": "Click",
+            "y": 4500,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Page View",
+            "y": 3200,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Form Submit",
+            "y": 1800,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Error",
+            "y": 700,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "API Call",
+            "y": 2600,
+            "color": "#00cec9"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "timeframe-selector",
+      "type": "select",
+      "label": "Select Timeframe",
+      "context": "Dropdown to choose the data aggregation period for the dashboard.",
+      "config": {},
+      "data": {
+        "label": "Timeframe",
+        "options": [
+          "Last Hour",
+          "Today",
+          "Last 7 Days",
+          "Last 30 Days"
+        ],
+        "value": "Today"
+      },
+      "style": {}
+    },
+    {
+      "id": "filter-by-tag-input",
+      "type": "tags_input",
+      "label": "Filter by Event Tag",
+      "context": "Input field to filter events by specific tags or keywords.",
+      "config": {},
+      "data": {
+        "tags": [
+          "user-action",
+          "critical"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "threshold-alert-input",
+      "type": "number_input",
+      "label": "Set Alert Threshold",
+      "context": "Input to set a numerical threshold for an alert system.",
+      "config": {},
+      "data": {
+        "label": "Max Errors/Hour",
+        "min": 0,
+        "max": 1000,
+        "value": 50
+      },
+      "style": {}
+    },
+    {
+      "id": "reset-counters-button",
+      "type": "button",
+      "label": "Reset Daily Counters",
+      "context": "Button to reset all daily event counters and start a new tracking period.",
+      "config": {},
+      "data": {
+        "label": "Reset Daily Counters"
+      },
+      "style": {}
+    },
+    {
+      "id": "recent-event-log",
+      "type": "table",
+      "label": "Recent Event Log",
+      "context": "A table displaying the most recent events with their details.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Timestamp",
+          "Event Type",
+          "User ID",
+          "Status"
+        ],
+        "rows": [
+          [
+            "2024-07-20 14:35:01",
+            "Page View",
+            "UID-001",
+            "Success"
+          ],
+          [
+            "2024-07-20 14:34:58",
+            "Button Click",
+            "UID-002",
+            "Success"
+          ],
+          [
+            "2024-07-20 14:34:55",
+            "API Error",
+            "UID-003",
+            "Failed"
+          ],
+          [
+            "2024-07-20 14:34:50",
+            "Form Submit",
+            "UID-001",
+            "Success"
+          ],
+          [
+            "2024-07-20 14:34:42",
+            "Login Attempt",
+            "UID-004",
+            "Success"
+          ],
+          [
+            "2024-07-20 14:34:30",
+            "DB Query",
+            "UID-005",
+            "Success"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "system-notifications-feed",
+      "type": "feed",
+      "label": "System Notifications",
+      "context": "A feed displaying important system notifications or alerts related to event tracking.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "High error rate detected",
+            "time": "5m ago",
+            "description": "Error rate spiked to 3.5%."
+          },
+          {
+            "title": "Daily report generated",
+            "time": "30m ago",
+            "description": "Event summary for July 19th available."
+          },
+          {
+            "title": "New event type added",
+            "time": "2h ago",
+            "description": "Tracking for 'Video Playback' initiated."
+          },
+          {
+            "title": "Database connection stable",
+            "time": "4h ago",
+            "description": "All event logs are being recorded."
+          },
+          {
+            "title": "Low event volume",
+            "time": "8h ago",
+            "description": "Consider checking system health."
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "performance-highlights",
+      "type": "stats_trending",
+      "label": "Performance Highlights",
+      "context": "Key performance indicators with their trending values for events.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "label": "Conversion Rate",
+            "value": "4.5%",
+            "change": "+0.3%"
+          },
+          {
+            "label": "Page Load Time",
+            "value": "1.2s",
+            "change": "-0.1s"
+          },
+          {
+            "label": "Active Sessions",
+            "value": "1,520",
+            "change": "+120"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "device-type-distribution",
+      "type": "pie_chart",
+      "label": "Device Type Distribution",
+      "context": "Distribution of events based on the device type (desktop, mobile, tablet).",
+      "config": {},
+      "data": {
+        "title": "Events by Device Type",
+        "slices": [
+          {
+            "name": "Desktop",
+            "value": 55,
+            "color": "#F5C542"
+          },
+          {
+            "name": "Mobile",
+            "value": 40,
+            "color": "#4ecdc4"
+          },
+          {
+            "name": "Tablet",
+            "value": 5,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "service-health-status",
+      "type": "stats_status",
+      "label": "Service Health Status",
+      "context": "Status of various underlying services contributing to event tracking.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "name": "Event Collector",
+            "status": "online"
+          },
+          {
+            "name": "Database Sync",
+            "status": "online"
+          },
+          {
+            "name": "API Gateway",
+            "status": "online"
+          },
+          {
+            "name": "Analytics Engine",
+            "status": "online"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "dashboard-insights",
+      "type": "markdown",
+      "label": "Dashboard Insights",
+      "context": "A markdown block providing textual insights and analysis of the displayed event data.",
+      "config": {},
+      "data": {
+        "content": "## Event Performance Summary\nThis dashboard provides a real-time view of event activities. Key observations:\n*   **User interaction** is currently peaking during business hours.\n*   A slight **increase in error rate** requires further investigation.\n*   Mobile event volume remains strong, indicating a healthy mobile user base."
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "dashboard-header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "total-events-today",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "unique-users",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "avg-events-hour",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "error-rate",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "hourly-event-volume-chart",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "events-by-type-chart",
+      "x": 12,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "timeframe-selector",
+      "x": 0,
+      "y": 13,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "filter-by-tag-input",
+      "x": 6,
+      "y": 13,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "i": "threshold-alert-input",
+      "x": 14,
+      "y": 13,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "reset-counters-button",
+      "x": 20,
+      "y": 13,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "recent-event-log",
+      "x": 0,
+      "y": 15,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "system-notifications-feed",
+      "x": 12,
+      "y": 15,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "performance-highlights",
+      "x": 0,
+      "y": 23,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "device-type-distribution",
+      "x": 12,
+      "y": 23,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "service-health-status",
+      "x": 0,
+      "y": 29,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "dashboard-insights",
+      "x": 12,
+      "y": 29,
+      "w": 12,
+      "h": 5
+    }
+  ],
+  "lastModified": 1771690759704
+}

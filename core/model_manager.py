@@ -3,10 +3,51 @@ import time
 import asyncio
 import json
 import yaml
+import random
+import functools
 from pathlib import Path
 from google import genai
-from google.genai.errors import ServerError
+from google.genai.errors import ServerError, ClientError
 from dotenv import load_dotenv
+
+def backoff_retry(max_retries=5, base_delay=2.0, max_delay=32.0):
+    """Decorator to retry async functions with exponential backoff and jitter."""
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return await func(*args, **kwargs)
+                except (ServerError, ClientError) as e:
+                    # 503 Service Unavailable or 429 Too Many Requests
+                    error_msg = str(e).lower()
+                    status_code = getattr(e, 'status_code', None)
+                    
+                    is_rate_limit = (
+                        status_code in [429, 503] or 
+                        "503" in error_msg or 
+                        "429" in error_msg or 
+                        "rate limit" in error_msg or
+                        "service unavailable" in error_msg
+                    )
+                    
+                    if not is_rate_limit:
+                        raise e
+                    
+                    retries += 1
+                    if retries >= max_retries:
+                        print(f"❌ Max retries reached for {func.__name__}. Error: {e}")
+                        raise e
+                    
+                    delay = min(base_delay * (2 ** (retries - 1)) + random.uniform(0, 1), max_delay)
+                    print(f"⚠️ Rate limit hit in {func.__name__} (Attempt {retries}/{max_retries}). Retrying in {delay:.2f}s...")
+                    await asyncio.sleep(delay)
+                except Exception as e:
+                    # Non-retriable error
+                    raise e
+        return wrapper
+    return decorator
 
 load_dotenv()
 
@@ -213,6 +254,7 @@ class ModelManager:
             ModelManager._last_call = time.time()
 
 
+    @backoff_retry()
     async def _gemini_generate(self, prompt: str) -> str:
         await self._wait_for_rate_limit()
         try:
@@ -231,6 +273,7 @@ class ModelManager:
             # ✅ Handle other potential errors
             raise RuntimeError(f"Gemini generation failed: {str(e)}")
 
+    @backoff_retry()
     async def _gemini_generate_content(self, contents: list) -> str:
         """Generate content with support for text and images using Gemini SDK"""
         try:

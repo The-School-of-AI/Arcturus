@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import SandboxFrame from './SandboxFrame';
 import { getWidget } from './WidgetRegistry';
+import { useAppStore } from '@/store';
+import { cn } from '@/lib/utils';
 
 interface CanvasHostProps {
     surfaceId: string;
@@ -108,8 +110,12 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         ));
     }, []);
 
+    const selectCanvasWidget = useAppStore((state: any) => state.selectCanvasWidget);
+    const selectedCanvasWidgetId = useAppStore((state: any) => state.selectedCanvasWidgetId);
+
     const renderComponent = (comp: any) => {
         const Widget = getWidget(comp.component);
+        const isSelected = selectedCanvasWidgetId === comp.id;
 
         // Resolve props if they reference the data model (e.g., "$ref:path.to.data")
         const resolvedProps = { ...comp.props };
@@ -122,34 +128,48 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         });
 
         return (
-            <Widget
+            <div
                 key={comp.id}
-                {...resolvedProps}
-                onClick={() => handleUserEvent(comp.id, 'click')}
-                onCodeChange={(code: string) => {
-                    handleLocalComponentUpdate(comp.id, { code });
-                    handleUserEvent(comp.id, 'change', { code });
+                onClick={(e) => {
+                    e.stopPropagation();
+                    selectCanvasWidget(comp.id);
                 }}
-                onDrawingChange={(elements: any, appState: any) => {
-                    // Update locally immediately to prevent "revert" during re-render
-                    handleLocalComponentUpdate(comp.id, { elements, appState });
-                    handleUserEvent(comp.id, 'drawing_change', { elements, appState });
-                }}
-                onTaskUpdate={(tasks: any[]) => {
-                    handleLocalComponentUpdate(comp.id, { initialTasks: tasks });
-                    handleUserEvent(comp.id, 'kanban_update', { initialTasks: tasks });
-                }}
+                className={cn(
+                    "relative rounded-xl transition-all duration-300",
+                    isSelected ? "ring-2 ring-primary ring-offset-4 ring-offset-gray-900 bg-primary/5" : "hover:bg-white/5"
+                )}
             >
-                {comp.children?.map((childId: string) => {
-                    const child = components.find(c => c.id === childId);
-                    return child ? renderComponent(child) : null;
-                })}
-            </Widget>
+                <Widget
+                    {...resolvedProps}
+                    onClick={() => handleUserEvent(comp.id, 'click')}
+                    onCodeChange={(code: string) => {
+                        handleLocalComponentUpdate(comp.id, { code });
+                        handleUserEvent(comp.id, 'change', { code });
+                    }}
+                    onDrawingChange={(elements: any, appState: any) => {
+                        // Update locally immediately to prevent "revert" during re-render
+                        handleLocalComponentUpdate(comp.id, { elements, appState });
+                        handleUserEvent(comp.id, 'drawing_change', { elements, appState });
+                    }}
+                    onTaskUpdate={(tasks: any[]) => {
+                        handleLocalComponentUpdate(comp.id, { initialTasks: tasks });
+                        handleUserEvent(comp.id, 'kanban_update', { initialTasks: tasks });
+                    }}
+                >
+                    {comp.children?.map((childId: string) => {
+                        const child = components.find(c => c.id === childId);
+                        return child ? renderComponent(child) : null;
+                    })}
+                </Widget>
+            </div>
         );
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-2xl border border-gray-700">
+        <div
+            className="flex flex-col h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-2xl border border-gray-700"
+            onClick={() => selectCanvasWidget(null)}
+        >
             <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
                 <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />

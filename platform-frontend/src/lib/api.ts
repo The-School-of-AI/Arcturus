@@ -128,5 +128,11 @@ export const api = {
 
     deleteChatSession: async (sessionId: string, targetType: string, targetId: string): Promise<void> => {
         await axios.delete(`${API_BASE}/chat/session/${sessionId}`, { params: { target_type: targetType, target_id: targetId } });
+    },
+
+    // Canvas Surfaces
+    getCanvasSurfaces: async (): Promise<{ id: string, title: string, componentCount: number }[]> => {
+        const res = await axios.get(`${API_BASE}/canvas/surfaces`);
+        return res.data;
     }
 };

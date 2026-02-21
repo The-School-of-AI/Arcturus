@@ -6,9 +6,9 @@
       "columnId": "done"
     },
     {
-      "id": "t4",
-      "content": "Test Bi-directional Sync",
-      "columnId": "in_progress"
+      "id": "t2",
+      "content": "Implement Map View",
+      "columnId": "done"
     },
     {
       "id": "t3",
@@ -16,9 +16,9 @@
       "columnId": "done"
     },
     {
-      "id": "t2",
-      "content": "Implement Map View",
-      "columnId": "done"
+      "id": "t4",
+      "content": "Test Bi-directional Sync",
+      "columnId": "todo"
     }
   ]
 }

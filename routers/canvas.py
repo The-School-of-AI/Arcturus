@@ -38,6 +38,14 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
         logger.error(f"WebSocket error on surface {surface_id}: {e}")
         ws_handler.disconnect(websocket, surface_id)
 
+@router.get("/surfaces")
+async def list_canvas_surfaces():
+    """
+    List all available canvas surfaces.
+    """
+    runtime = get_canvas_runtime()
+    return runtime.get_surfaces_list()
+
 @router.get("/state/{surface_id}")
 async def get_canvas_state(surface_id: str):
     """

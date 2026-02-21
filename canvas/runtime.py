@@ -171,6 +171,17 @@ class CanvasRuntime:
         except Exception as e:
             logger.error(f"Failed to save snapshots: {e}")
 
+    def get_surfaces_list(self) -> List[Dict[str, Any]]:
+        """Return metadata for all available surfaces."""
+        results = []
+        for sid, state in self.surfaces.items():
+            results.append({
+                "id": sid,
+                "title": sid.replace("-", " ").title(),
+                "componentCount": len(state.get("components", []))
+            })
+        return results
+
     def load_snapshots(self):
         """Restore surface states from disk on startup."""
         import logging

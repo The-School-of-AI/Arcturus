@@ -220,9 +220,20 @@ const WhiteboardWidget: React.FC<WhiteboardWidgetProps> = ({
         onDrawingChangeRef.current = onDrawingChange;
     }, [onDrawingChange]);
 
-    // 5. Flush on unmount to prevent loss during navigation
+    // 5. Global Event Listener for "Commit Changes" pulses from the Inspector
     useEffect(() => {
+        const handleCommitRequest = (e: any) => {
+            const { widgetId } = e.detail;
+            // Only respond if this specific widget is the target (or if it's a global surface commit)
+            if (!widgetId || widgetId === (window as any).CURRENT_WIDGET_ID || title?.toLowerCase().includes(widgetId.split('_')[0])) {
+                console.log(`[Whiteboard] Received commit request for ${widgetId || 'all'}`);
+                handleManualSave();
+            }
+        };
+
+        window.addEventListener('arcturus:commit-request', handleCommitRequest);
         return () => {
+            window.removeEventListener('arcturus:commit-request', handleCommitRequest);
             if (syncTimeout.current) {
                 clearTimeout(syncTimeout.current);
                 // Synchronous-ish flush: if we have an API, get current state and call onDrawingChange
@@ -235,7 +246,7 @@ const WhiteboardWidget: React.FC<WhiteboardWidgetProps> = ({
                 }
             }
         };
-    }, []); // Only run once on mount, flush on unmount
+    }, [title]); // Added title dependency for event filtering
 
     const handleDrawingChange = (els: readonly any[], state: any) => {
         if (readOnly) return;

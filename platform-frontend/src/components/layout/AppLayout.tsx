@@ -43,6 +43,7 @@ import { IdeLayout } from '@/features/ide/components/IdeLayout';
 import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
 import { MissionControl } from '@/features/console/components/MissionControl';
 import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
+import { CanvasInspector } from '../sidebar/CanvasInspector';
 
 export const AppLayout: React.FC = () => {
     const {
@@ -51,7 +52,7 @@ export const AppLayout: React.FC = () => {
         ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode, isInboxOpen, setIsInboxOpen,
-        isSidebarSubPanelOpen
+        isSidebarSubPanelOpen, activeSurfaceId, selectedCanvasWidgetId
     } = useAppStore();
 
     // Moved isInspectorOpen definition down to include new tabs context
@@ -63,8 +64,9 @@ export const AppLayout: React.FC = () => {
         if (sidebarTab === 'rag' && showRagInsights) return true;
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
+        if (sidebarTab === 'canvas' && selectedCanvasWidgetId) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, selectedCanvasWidgetId]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
     const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || !isSidebarSubPanelOpen;
@@ -227,7 +229,7 @@ export const AppLayout: React.FC = () => {
                                 ) : sidebarTab === 'console' ? (
                                     <MissionControl />
                                 ) : sidebarTab === 'canvas' ? (
-                                    <CanvasHost surfaceId="ops-command-v1" />
+                                    <CanvasHost surfaceId={activeSurfaceId} />
                                 ) : (
                                     <>
                                         <GraphCanvas />
@@ -261,8 +263,9 @@ export const AppLayout: React.FC = () => {
                             {sidebarTab === 'apps' ? <AppInspector /> :
                                 sidebarTab === 'mcp' ? <McpInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
-                                        (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
-                                            <WorkspacePanel />}
+                                        sidebarTab === 'canvas' ? <CanvasInspector /> :
+                                            (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
+                                                <WorkspacePanel />}
                         </div>
                     </>
                 )}
