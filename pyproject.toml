@@ -96,6 +96,28 @@ packages = [
     "session",
 ]
 
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Explicitly list Python packages to avoid accidental inclusion of non-package directories
+packages = [
+    "core",
+    "agents",
+    "routers",
+    "mcp_servers",
+    "memory",
+    "remme",
+    "canvas",
+    "gateway_api",
+    "shared",
+    "ui",
+    "tools",
+    "action",
+    "storage",
+]
+
 [tool.uv]
 required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
 
