@@ -157,30 +157,81 @@ async def test_dag_with_3_worker_roles_completes(ray_session):
 # Test 6 — Worker failure: task fails then retries and completes
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# FakeWorker — test double for WorkerAgent (lives only in this test file)
+# ---------------------------------------------------------------------------
+
+class _FakeRemoteMethod:
+    """Mimics ray_actor.some_method.remote(...) returning an awaitable."""
+    def __init__(self, coro_func):
+        self._fn = coro_func
+
+    def remote(self, *args, **kwargs):
+        # Returns a coroutine — SwarmRunner awaits it directly, same as a Ray ObjectRef
+        return self._fn(*args, **kwargs)
+
+
+class FakeWorker:
+    """
+    In-process test double that mimics a Ray WorkerAgent actor handle.
+
+    Why this instead of mock.patch or fail_first_n on production code:
+    - Ray actors run in separate subprocesses; patch.object on the local
+      class never reaches the remote process (call_count stays 0).
+    - Adding test parameters to production WorkerAgent pollutes real code.
+    - FakeWorker lives entirely in this test file, touches nothing in
+      production, and exercises SwarmRunner's retry logic correctly.
+
+    Interface match: SwarmRunner only calls worker.process_task.remote(task)
+    and awaits the result. FakeWorker satisfies exactly that contract.
+    """
+
+    def __init__(self, fail_first_n: int = 0):
+        self.call_count = 0
+        self._fail_first_n = fail_first_n
+        self.process_task = _FakeRemoteMethod(self._process_task)
+
+    async def _process_task(self, task: dict) -> dict:
+        self.call_count += 1
+        if self.call_count <= self._fail_first_n:
+            raise RuntimeError(
+                f"FakeWorker: simulated failure on attempt {self.call_count}."
+            )
+        task["status"] = TaskStatus.COMPLETED
+        task["result"] = f"FakeWorker result (attempt {self.call_count})"
+        return task
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — Worker failure: task fails on attempt 1, retries and completes
+# ---------------------------------------------------------------------------
+
 async def test_worker_failure_triggers_retry_and_completes(ray_session):
     """
     Charter condition 5: swarm must retry when a worker fails.
-    Patches WorkerAgent.process_task to fail on attempt 1, succeed on attempt 2.
+
+    Uses FakeWorker (test double) instead of a real Ray WorkerAgent.
+    FakeWorker exposes the same .process_task.remote(task) interface but
+    runs in-process — allowing us to control failure/success per call count
+    without crossing subprocess boundaries or modifying production code.
     """
     runner = SwarmRunner()
-    call_count = {"n": 0}
-
-    original_process = WorkerAgent.process_task
-
-    async def flaky_process(self, task):
-        call_count["n"] += 1
-        if call_count["n"] == 1:
-            raise RuntimeError("Simulated transient worker failure.")
-        return await original_process(self, task)
-
     research = _make_task("Fetch Articles", "researcher", "high")
 
-    # Patch at the class level so the Ray actor picks it up
-    with patch.object(WorkerAgent, "process_task", flaky_process):
-        results = await runner.run_tasks([research])
+    # Inject a flaky fake worker that fails on call 1, succeeds on call 2
+    fake = FakeWorker(fail_first_n=1)
+    runner.workers["researcher"] = fake
 
-    assert call_count["n"] >= 2, "Expected at least 2 calls (1 failure + 1 retry)"
-    assert results[0]["status"] == TaskStatus.COMPLETED
+    results = await runner.run_tasks([research])
+
+    assert fake.call_count >= 2, (
+        f"Expected ≥2 calls (1 failure + 1 retry), got {fake.call_count}"
+    )
+    assert len(results) == 1
+    assert results[0]["status"] == TaskStatus.COMPLETED, (
+        f"Expected COMPLETED after retry, got: {results[0]['status']}"
+    )
 
 
 # ---------------------------------------------------------------------------

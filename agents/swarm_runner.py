@@ -6,13 +6,12 @@ from typing import List, Dict, Any, Optional
 from agents.manager import ManagerAgent
 from agents.worker import WorkerAgent
 from agents.protocol import Task, TaskStatus
+from core.profile_loader import get_profile
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-MAX_TASK_RETRIES = 2  # Max retries per failed task
 
 
 class SwarmRunner:
@@ -20,6 +19,11 @@ class SwarmRunner:
         self.manager: Optional[ManagerAgent] = None
         self.workers: Dict[str, WorkerAgent] = {}
         self.graph: nx.DiGraph = nx.DiGraph()
+
+        # Load swarm strategy settings from profiles.yaml
+        # (same pattern as AgentLoop4 reading max_steps)
+        profile = get_profile()
+        self.max_task_retries: int = profile.get("strategy.max_task_retries", 2)
 
     async def initialize(self):
         """Initializes Ray and the Manager Agent."""
@@ -126,9 +130,9 @@ class SwarmRunner:
                     completed_tasks[node_id] = t_obj
                     logger.info(f"Task '{t_obj.title}' completed via {t_obj.assigned_to}.")
                 except Exception as e:
-                    if retries < MAX_TASK_RETRIES:
+                    if retries < self.max_task_retries:
                         logger.warning(
-                            f"Task '{task.title}' failed (attempt {retries + 1}). Retrying... Error: {e}"
+                            f"Task '{task.title}' failed (attempt {retries + 1}/{self.max_task_retries}). Retrying... Error: {e}"
                         )
                         self.graph.nodes[node_id]["retries"] += 1
                         # Task stays in graph, will be picked up in next iteration
