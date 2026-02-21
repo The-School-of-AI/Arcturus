@@ -21,7 +21,7 @@ def test_connection():
     """Test basic connection to Qdrant via provider-agnostic factory."""
     print("\n🔍 Testing Qdrant Connection (via get_vector_store)...")
     try:
-        store: VectorStoreProtocol = get_vector_store(provider="qdrant")
+        store: VectorStoreProtocol = get_vector_store(provider="qdrant", collection_name="test_memories")
         print("✅ Successfully connected to Qdrant!")
         return store
     except Exception as e:

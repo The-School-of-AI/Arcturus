@@ -123,27 +123,34 @@ class QdrantVectorStore:
             distance_threshold = 1.0 - score_threshold
 
         try:
-            if hasattr(self.client, "search"):
-                search_results = self.client.search(
+            # if hasattr(self.client, "search"):
+            #     search_results = self.client.search(
+            #         collection_name=self.collection_name,
+            #         query_vector=query_vector,
+            #         limit=k * 2 if query_text else k,
+            #         score_threshold=distance_threshold,
+            #         query_filter=search_filter,
+            #     )
+            # else:
+            #     from qdrant_client.http import models as rest_models
+            #     search_request = rest_models.SearchRequest(
+            #         vector=query_vector,
+            #         limit=k * 2 if query_text else k,
+            #         score_threshold=distance_threshold,
+            #         filter=search_filter,
+            #     )
+            #     response = self.client.http.collections_api.query_points(
+            #         collection_name=self.collection_name,
+            #         search_request=search_request,
+            #     )
+            #     search_results = response.result
+            search_results = self.client.query_points(
                     collection_name=self.collection_name,
-                    query_vector=query_vector,
+                    query=query_vector,
                     limit=k * 2 if query_text else k,
                     score_threshold=distance_threshold,
                     query_filter=search_filter,
                 )
-            else:
-                from qdrant_client.http import models as rest_models
-                search_request = rest_models.SearchRequest(
-                    vector=query_vector,
-                    limit=k * 2 if query_text else k,
-                    score_threshold=distance_threshold,
-                    filter=search_filter,
-                )
-                response = self.client.http.collections_api.search_points(
-                    collection_name=self.collection_name,
-                    search_request=search_request,
-                )
-                search_results = response.result
 
             if hasattr(search_results, "result"):
                 search_results = search_results.result

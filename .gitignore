@@ -23,6 +23,7 @@ action/sandbox_state/
 memory/remme_index/index.bin
 memory/remme_index/memories.json
 memory/remme_index/scanned_runs.json
+memory/user_model/
 **/cpython-*.pyc
 
 

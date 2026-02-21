@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -3751,7 +3751,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.3" },
     { name = "pymupdf4llm", specifier = ">=0.0.21" },
     { name = "pyyaml" },
-    { name = "qdrant-client", specifier = ">=1.7.0" },
+    { name = "qdrant-client", specifier = ">=1.17.0" },
     { name = "rank-bm25", specifier = ">=0.2.2" },
     { name = "rapidfuzz", specifier = ">=3.13.0" },
     { name = "readability-lxml", specifier = ">=0.8.4.1" },
