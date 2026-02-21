@@ -84,7 +84,6 @@ packages = [
     "ui",
     "canvas",
     "gateway_api",
-    "action",
     "storage",
 ]
 
