@@ -46,6 +46,26 @@ def test_clamp_slide_count_above_max():
     assert clamp_slide_count(50) == MAX_SLIDES
 
 
+def test_clamp_slide_count_numeric_string():
+    assert clamp_slide_count("10") == 10
+
+
+def test_clamp_slide_count_numeric_string_with_whitespace():
+    assert clamp_slide_count("  9  ") == 9
+
+
+def test_clamp_slide_count_float_integer_value():
+    assert clamp_slide_count(12.0) == 12
+
+
+def test_clamp_slide_count_invalid_string_uses_default():
+    assert clamp_slide_count("abc") == 10
+
+
+def test_clamp_slide_count_non_integer_float_uses_default():
+    assert clamp_slide_count(10.5) == 10
+
+
 # === plan_slide_sequence ===
 
 def test_plan_slide_sequence_count():

@@ -15,14 +15,35 @@ def compute_seed(artifact_id: str) -> int:
     return int(hashlib.sha256(artifact_id.encode()).hexdigest()[:8], 16)
 
 
-def clamp_slide_count(requested: int | None = None) -> int:
+def clamp_slide_count(requested: int | float | str | None = None) -> int:
     """Clamp requested slide count to [8, 15] range.
 
-    Returns DEFAULT_SLIDES if requested is None.
+    Returns DEFAULT_SLIDES if requested is None or invalid.
     """
     if requested is None:
         return DEFAULT_SLIDES
-    return max(MIN_SLIDES, min(MAX_SLIDES, requested))
+
+    normalized: int
+    if isinstance(requested, bool):
+        return DEFAULT_SLIDES
+    if isinstance(requested, int):
+        normalized = requested
+    elif isinstance(requested, float):
+        if not requested.is_integer():
+            return DEFAULT_SLIDES
+        normalized = int(requested)
+    elif isinstance(requested, str):
+        stripped = requested.strip()
+        if not stripped:
+            return DEFAULT_SLIDES
+        try:
+            normalized = int(stripped)
+        except ValueError:
+            return DEFAULT_SLIDES
+    else:
+        return DEFAULT_SLIDES
+
+    return max(MIN_SLIDES, min(MAX_SLIDES, normalized))
 
 
 def plan_slide_sequence(
