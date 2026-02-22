@@ -72,7 +72,7 @@ export const AppLayout: React.FC = () => {
     const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
-    const [rightWidth, setRightWidth] = useState(450); // original was 450px
+    const [rightWidth, setRightWidth] = useState(250); // total 45% reduction from original 450px
     const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef<'left' | 'right' | null>(null);
