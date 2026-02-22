@@ -1,4 +1,3 @@
-"""
 import pytest
 from safety.input_scanner import scan_input
 from safety.policy_engine import PolicyEngine
