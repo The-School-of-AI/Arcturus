@@ -88,6 +88,20 @@ class CanvasWSHandler:
                 except Exception as e:
                     print(f"[DEBUG] Failed to update persistent state for kanban_update: {e}", flush=True)
 
+        # 1c. Update Persistent State if this is a Monaco code change
+        if data.get("type") == "user_event" and event_type == "change":
+            component_id = data.get("component_id")
+            change_data = data.get("data", {})
+            
+            if component_id and "code" in change_data:
+                try:
+                    runtime = get_canvas_runtime()
+                    await runtime.update_component_props(surface_id, component_id, {
+                        "code": change_data["code"]
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to update persistent state for code change: {e}", exc_info=True)
+
         # 1c. Handle Snapshot Result
         if data.get("type") == "snapshotResult":
             snapshot = data.get("snapshot")

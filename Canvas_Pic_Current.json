@@ -778,9 +778,9 @@
     "isCropping": false,
     "croppingElementId": null,
     "searchMatches": [],
-    "offsetLeft": 458.17132568359375,
-    "offsetTop": 1123.7847900390625,
-    "width": 1399.02783203125,
-    "height": 557.3032836914062
+    "offsetLeft": 458,
+    "offsetTop": 1121.666748046875,
+    "width": 1209.3333740234375,
+    "height": 557.6666870117188
   }
 }

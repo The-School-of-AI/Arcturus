@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Monitor, Activity, Plus, RefreshCw, Layers, Map as MapIcon, Kanban as KanbanIcon, Edit3 } from 'lucide-react';
+import { Layout, Monitor, Activity, Plus, RefreshCw, Layers, Map as MapIcon, Kanban as KanbanIcon, Edit3, LineChart as LineChartIcon, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { Button } from "@/components/ui/button";
@@ -22,14 +22,44 @@ export const CanvasPanel: React.FC = () => {
     const spawnWidget = async (componentType: string, label: string) => {
         const spawnId = `${componentType.toLowerCase()}_${Math.random().toString(36).substr(2, 5)}`;
 
+        let props: any = {
+            title: `New ${label}`,
+            description: `Instantiated from Catalog`
+        };
+
+        // Add dummy data for LineChart
+        if (componentType === 'LineChart') {
+            props = {
+                title: "Analytics Overview",
+                xKey: "time",
+                data: [
+                    { time: '10:00', cpu: 32, mem: 44 },
+                    { time: '11:00', cpu: 45, mem: 52 },
+                    { time: '12:00', cpu: 41, mem: 48 },
+                    { time: '13:00', cpu: 55, mem: 61 },
+                    { time: '14:00', cpu: 48, mem: 58 },
+                ],
+                lines: [
+                    { key: 'cpu', color: '#60a5fa', name: 'CPU (%)' },
+                    { key: 'mem', color: '#fb7185', name: 'Memory (%)' }
+                ]
+            };
+        }
+
+        if (componentType === 'MonacoEditor') {
+            props = {
+                title: "Research Agent Loop",
+                code: "// Arcturus Research Agent Runtime\nasync function conductResearch(topic) {\n    console.log(`🚀 Task: Researching \"${topic}\"...`);\n    \n    // 1. (Optional) Force a background memory sync to find our recent chat!\n    // await Arcturus.ki.sync();\n\n    // 2. Advanced RAG Search (Smart Finder)\n    const docs = await Arcturus.rag.search(topic);\n    \n    if (docs.length > 0) {\n        console.log(`✅ RAG found ${docs.length} snippets.`);\n        // Find a specific stat in the text\n        const stat = docs[0].content.split('.').find(s => s.toLowerCase().includes('world cup') || s.includes('trophy'));\n        if (stat) console.log(`🏆 Key Stat: ${stat.trim()}.`);\n    }\n\n    // 3. Query Memory Store\n    const memories = await Arcturus.ki.search(topic);\n    console.log(`🧠 Memory matches: ${memories.length}`);\n\n    // 4. Update Surface\n    Surface.updateMetadata({\n        status: 'Active Intelligence',\n        topic: topic,\n        lastAnalysis: new Date().toLocaleTimeString()\n    });\n}\n\n// Try 'cricket' or 'Monaco'!\nawait conductResearch('Cricketers and match details');",
+                language: "javascript",
+                theme: "vs-dark"
+            };
+        }
+
         try {
             await axios.post(`${API_BASE}/canvas/test-update/${activeSurfaceId}`, {
                 id: spawnId,
                 component: componentType,
-                props: {
-                    title: `New ${label}`,
-                    description: `Instantiated from Catalog`
-                }
+                props
             });
             selectCanvasWidget(spawnId);
         } catch (err) {
@@ -119,27 +149,41 @@ export const CanvasPanel: React.FC = () => {
                     <Layout className="w-3 h-3" />
                     Widget Catalog
                 </h2>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                     <div
-                        onClick={() => spawnWidget('KanbanWidget', 'Kanban')}
+                        onClick={() => spawnWidget('Kanban', 'Kanban')}
                         className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
                     >
                         <KanbanIcon className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
                         <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Kanban</span>
                     </div>
                     <div
-                        onClick={() => spawnWidget('MapWidget', 'Map')}
+                        onClick={() => spawnWidget('Map', 'Map')}
                         className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
                     >
                         <MapIcon className="w-4 h-4 text-green-400 group-hover:scale-110 transition-transform" />
                         <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Map</span>
                     </div>
                     <div
-                        onClick={() => spawnWidget('WhiteboardWidget', 'Sketch')}
+                        onClick={() => spawnWidget('Whiteboard', 'Sketch')}
                         className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
                     >
                         <Edit3 className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
                         <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Sketch</span>
+                    </div>
+                    <div
+                        onClick={() => spawnWidget('LineChart', 'Analytics')}
+                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
+                    >
+                        <LineChartIcon className="w-4 h-4 text-orange-400 group-hover:scale-110 transition-transform" />
+                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Analytics</span>
+                    </div>
+                    <div
+                        onClick={() => spawnWidget('MonacoEditor', 'Code')}
+                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
+                    >
+                        <Code className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Code</span>
                     </div>
                 </div>
             </div>

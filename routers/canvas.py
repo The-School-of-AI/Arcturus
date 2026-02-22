@@ -57,6 +57,20 @@ async def get_canvas_state(surface_id: str):
         raise HTTPException(status_code=404, detail="Surface not found")
     return state
 
+@router.delete("/state/{surface_id}/component/{component_id}")
+async def delete_canvas_component(surface_id: str, component_id: str):
+    runtime = get_canvas_runtime()
+    await runtime.delete_component(surface_id, component_id)
+    return {"status": "ok"}
+
+@router.patch("/state/{surface_id}/component/{component_id}/rename")
+async def rename_canvas_component(surface_id: str, component_id: str, payload: dict):
+    if "title" not in payload:
+        raise HTTPException(status_code=400, detail="Title is required")
+    runtime = get_canvas_runtime()
+    await runtime.rename_component(surface_id, component_id, payload["title"])
+    return {"status": "ok"}
+
 @router.post("/test-update/{surface_id}")
 async def test_update_canvas(surface_id: str, payload: dict):
     """
@@ -65,6 +79,14 @@ async def test_update_canvas(surface_id: str, payload: dict):
     runtime = get_canvas_runtime()
     if "components" in payload:
         await runtime.push_components(surface_id, payload["components"])
+    elif "id" in payload and "component" in payload:
+        # Single component update/append
+        await runtime.update_component_props(
+            surface_id, 
+            payload["id"], 
+            payload.get("props", {}), 
+            component=payload["component"]
+        )
     if "data" in payload:
         await runtime.update_data(surface_id, payload["data"])
     return {"status": "ok"}

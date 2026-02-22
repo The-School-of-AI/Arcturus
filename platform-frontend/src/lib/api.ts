@@ -134,5 +134,13 @@ export const api = {
     getCanvasSurfaces: async (): Promise<{ id: string, title: string, componentCount: number }[]> => {
         const res = await axios.get(`${API_BASE}/canvas/surfaces`);
         return res.data;
+    },
+
+    deleteCanvasWidget: async (surfaceId: string, componentId: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/canvas/state/${surfaceId}/component/${componentId}`);
+    },
+
+    renameCanvasWidget: async (surfaceId: string, componentId: string, newTitle: string): Promise<void> => {
+        await axios.patch(`${API_BASE}/canvas/state/${surfaceId}/component/${componentId}/rename`, { title: newTitle });
     }
 };

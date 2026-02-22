@@ -7,10 +7,27 @@ import { Button } from "@/components/ui/button";
 export const CanvasInspector: React.FC = () => {
     const {
         selectedCanvasWidgetId,
-        activeSurfaceId
+        activeSurfaceId,
+        deleteCanvasWidget,
+        renameCanvasWidget
     } = useAppStore();
 
     const [committing, setCommitting] = React.useState(false);
+
+    const handleRename = async () => {
+        if (!selectedCanvasWidgetId || !activeSurfaceId) return;
+        const newTitle = window.prompt("Enter new title for widget:", "New Title");
+        if (newTitle) {
+            await renameCanvasWidget(activeSurfaceId, selectedCanvasWidgetId, newTitle);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedCanvasWidgetId || !activeSurfaceId) return;
+        if (window.confirm("Are you sure you want to delete this widget from the surface?")) {
+            await deleteCanvasWidget(activeSurfaceId, selectedCanvasWidgetId);
+        }
+    };
 
     const handleCommit = async () => {
         setCommitting(true);
@@ -103,10 +120,18 @@ export const CanvasInspector: React.FC = () => {
 
                 {/* Simulated Actions */}
                 <div className="pt-4 space-y-2">
-                    <Button variant="outline" className="w-full justify-start gap-2 h-9 text-xs border-border/40 hover:bg-muted">
+                    <Button
+                        variant="outline"
+                        onClick={handleRename}
+                        className="w-full justify-start gap-2 h-9 text-xs border-border/40 hover:bg-muted"
+                    >
                         <Edit3 className="w-3.5 h-3.5" /> Rename Widget
                     </Button>
-                    <Button variant="outline" className="w-full justify-start gap-2 h-9 text-xs border-border/40 hover:bg-muted text-red-400 hover:text-red-300">
+                    <Button
+                        variant="outline"
+                        onClick={handleDelete}
+                        className="w-full justify-start gap-2 h-9 text-xs border-border/40 hover:bg-muted text-red-400 hover:text-red-300"
+                    >
                         <Trash2 className="w-3.5 h-3.5" /> Delete from Surface
                     </Button>
                 </div>

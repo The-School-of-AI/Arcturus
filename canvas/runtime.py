@@ -53,7 +53,7 @@ class CanvasRuntime:
             import logging
             logging.getLogger("canvas.runtime").error(f"Failed to push components to {surface_id}: {e}")
 
-    async def update_component_props(self, surface_id: str, component_id: str, props: Dict[str, Any]):
+    async def update_component_props(self, surface_id: str, component_id: str, props: Dict[str, Any], component: Optional[str] = None):
         """Partial update of a specific component's props. Creates surface if it doesn't exist."""
         
         if surface_id not in self.surfaces:
@@ -81,6 +81,13 @@ class CanvasRuntime:
                         comp["props"] = {}
                     comp["props"].update(props)
                 
+                # Update component type if provided
+                if component:
+                    if hasattr(comp, "component"):
+                        comp.component = component
+                    else:
+                        comp["component"] = component
+                
                 # Special: If this is the main whiteboard/kanban, also save to specific files
                 await self._save_specific_local_files(comp, props)
                 
@@ -90,7 +97,7 @@ class CanvasRuntime:
         if not updated:
             new_comp = {
                 "id": component_id,
-                "component": "Whiteboard", # Default assumption if creating from scratch
+                "component": component or "Whiteboard", # Use provided component or default to Whiteboard
                 "props": props,
                 "children": []
             }
@@ -99,7 +106,52 @@ class CanvasRuntime:
             updated = True
         
         if updated:
+            # Ensure all components in the surface are validated UIComponents
+            from canvas.schema import UIComponent, UpdateComponentsMessage
+            
+            validated = []
+            for c in self.surfaces[surface_id]["components"]:
+                if isinstance(c, UIComponent):
+                    validated.append(c)
+                else:
+                    validated.append(UIComponent(**c))
+            
+            self.surfaces[surface_id]["components"] = validated
             self.save_snapshots()
+            
+    async def delete_component(self, surface_id: str, component_id: str):
+        """Removes a component from a surface and broadcasts the update."""
+        if surface_id not in self.surfaces:
+            return
+            
+        components = self.surfaces[surface_id].get("components", [])
+        initial_count = len(components)
+        
+        target_id = str(component_id).strip().lower()
+        self.surfaces[surface_id]["components"] = [
+            c for c in components 
+            if str(c.id if hasattr(c, "id") else c.get("id", "")).strip().lower() != target_id
+        ]
+        
+        if len(self.surfaces[surface_id]["components"]) < initial_count:
+            # Re-validate and broadcast
+            from canvas.schema import UIComponent, UpdateComponentsMessage
+            validated = []
+            for c in self.surfaces[surface_id]["components"]:
+                if isinstance(c, UIComponent):
+                    validated.append(c)
+                else:
+                    validated.append(UIComponent(**c))
+            
+            self.surfaces[surface_id]["components"] = validated
+            self.save_snapshots()
+            
+            msg = UpdateComponentsMessage(surfaceId=surface_id, components=validated)
+            await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
+
+    async def rename_component(self, surface_id: str, component_id: str, new_title: str):
+        """Renames a component by updating its 'title' prop and broadcasts."""
+        await self.update_component_props(surface_id, component_id, {"title": new_title})
 
     async def _save_specific_local_files(self, comp, props):
         """Helper to save specific state to user-requested local files."""
