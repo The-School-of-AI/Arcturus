@@ -11,11 +11,11 @@ from core.studio.slides.types import (
 
 
 def test_all_slide_types_defined():
-    assert len(SLIDE_TYPES) == 12
+    assert len(SLIDE_TYPES) == 13
 
 
 def test_all_element_types_defined():
-    assert len(ELEMENT_TYPES) == 9
+    assert len(ELEMENT_TYPES) == 11
 
 
 def test_slide_type_elements_complete():

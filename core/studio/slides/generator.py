@@ -105,7 +105,7 @@ def _prevent_consecutive_types(sequence: list[str], rng: random.Random) -> list[
     swap_pool = ["content", "two_column", "stat", "comparison", "image_text"]
     result = list(sequence)
     for i in range(1, len(result) - 1):  # skip opening/closing
-        if result[i] == result[i - 1] and result[i] not in ("title",):
+        if result[i] == result[i - 1] and result[i] not in ("title", "section_divider"):
             alternatives = [t for t in swap_pool if t != result[i]]
             result[i] = rng.choice(alternatives)
     return result

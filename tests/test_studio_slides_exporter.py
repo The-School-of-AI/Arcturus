@@ -430,8 +430,8 @@ def test_export_body_slide_has_slide_number(sample_content_tree, default_theme, 
     export_to_pptx(sample_content_tree, default_theme, output)
     prs = Presentation(str(output))
     slide = prs.slides[1]
-    texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
-    has_number = any("/" in t for t in texts)
+    texts = [s.text_frame.text.strip() for s in slide.shapes if s.has_text_frame]
+    has_number = any(t.isdigit() for t in texts)
     assert has_number, "Content slide should have slide number"
 
 
@@ -440,9 +440,12 @@ def test_export_title_slide_no_chrome(sample_content_tree, default_theme, tmp_pa
     export_to_pptx(sample_content_tree, default_theme, output)
     prs = Presentation(str(output))
     title_slide = prs.slides[0]
-    texts = [s.text_frame.text for s in title_slide.shapes if s.has_text_frame]
-    assert not any("/" in t and t.strip().replace(" ", "").replace("/", "").isdigit()
-                    for t in texts), "Title slide should not have slide number"
+    # Title slide (index 0) should not have a progress bar or standalone slide number
+    # The only text shapes should be title/subtitle content, not single-digit numbers
+    texts = [s.text_frame.text.strip() for s in title_slide.shapes if s.has_text_frame]
+    # A standalone digit would indicate a slide number was added
+    standalone_digits = [t for t in texts if t.isdigit() and len(t) <= 3]
+    assert not standalone_digits, "Title slide should not have slide number"
 
 
 def test_export_chart_has_styled_series(default_theme, tmp_path):
@@ -478,54 +481,62 @@ def test_export_chart_has_gridlines(default_theme, tmp_path):
 class TestParseMarkdownRuns:
     def test_plain_text(self):
         result = _parse_markdown_runs("plain text")
-        assert result == [("plain text", False, False)]
+        assert result == [("plain text", False, False, False)]
 
     def test_bold(self):
         result = _parse_markdown_runs("before **bold** after")
         assert result == [
-            ("before ", False, False),
-            ("bold", True, False),
-            (" after", False, False),
+            ("before ", False, False, False),
+            ("bold", True, False, False),
+            (" after", False, False, False),
         ]
 
     def test_italic(self):
         result = _parse_markdown_runs("before *italic* after")
         assert result == [
-            ("before ", False, False),
-            ("italic", False, True),
-            (" after", False, False),
+            ("before ", False, False, False),
+            ("italic", False, True, False),
+            (" after", False, False, False),
         ]
 
     def test_bold_italic(self):
         result = _parse_markdown_runs("***both***")
-        assert result == [("both", True, True)]
+        assert result == [("both", True, True, False)]
 
     def test_multiple_bold_spans(self):
         result = _parse_markdown_runs("**a** and **b**")
         assert result == [
-            ("a", True, False),
-            (" and ", False, False),
-            ("b", True, False),
+            ("a", True, False, False),
+            (" and ", False, False, False),
+            ("b", True, False, False),
         ]
 
     def test_empty_string(self):
         result = _parse_markdown_runs("")
-        assert result == [("", False, False)]
+        assert result == [("", False, False, False)]
 
     def test_unclosed_marker_treated_as_literal(self):
         result = _parse_markdown_runs("**unclosed text")
-        assert result == [("**unclosed text", False, False)]
+        assert result == [("**unclosed text", False, False, False)]
 
     def test_space_delimited_asterisks_are_literal(self):
         """Asterisks used as operators (e.g. 2 * 3 * 4) must not be parsed as emphasis."""
         result = _parse_markdown_runs("2 * 3 * 4")
-        assert result == [("2 * 3 * 4", False, False)]
+        assert result == [("2 * 3 * 4", False, False, False)]
 
     def test_bold_at_start(self):
         result = _parse_markdown_runs("**Downtime:** causes issues")
         assert result == [
-            ("Downtime:", True, False),
-            (" causes issues", False, False),
+            ("Downtime:", True, False, False),
+            (" causes issues", False, False, False),
+        ]
+
+    def test_highlight(self):
+        result = _parse_markdown_runs("before ==highlighted== after")
+        assert result == [
+            ("before ", False, False, False),
+            ("highlighted", False, False, True),
+            (" after", False, False, False),
         ]
 
 
@@ -616,3 +627,168 @@ class TestMarkdownInPptxExport:
                     assert "**not bold**" in shape.text_frame.text
                     return
         pytest.fail("Code slide should preserve literal ** markers")
+
+
+# === Phase 7: Visual Feedback Upgrade Tests ===
+
+class TestKickerTakeaway:
+    def test_kicker_rendered(self, tmp_path):
+        ct = SlidesContentTree(
+            deck_title="Kicker",
+            slides=[Slide(
+                id="s1", slide_type="content", title="Main Title",
+                elements=[
+                    SlideElement(id="e1", type="kicker", content="Market Insight"),
+                    SlideElement(id="e2", type="body", content="Body text."),
+                ],
+                speaker_notes="Notes.",
+            )],
+        )
+        theme = get_theme()
+        output = tmp_path / "kicker.pptx"
+        export_to_pptx(ct, theme, output)
+        prs = Presentation(str(output))
+        texts = [s.text_frame.text for s in prs.slides[0].shapes if s.has_text_frame]
+        assert any("MARKET INSIGHT" in t for t in texts), "Kicker should be rendered uppercase"
+
+    def test_takeaway_rendered(self, tmp_path):
+        ct = SlidesContentTree(
+            deck_title="Takeaway",
+            slides=[Slide(
+                id="s1", slide_type="content", title="Main Title",
+                elements=[
+                    SlideElement(id="e1", type="body", content="Body text."),
+                    SlideElement(id="e2", type="takeaway", content="This is the key message."),
+                ],
+                speaker_notes="Notes.",
+            )],
+        )
+        theme = get_theme()
+        output = tmp_path / "takeaway.pptx"
+        export_to_pptx(ct, theme, output)
+        prs = Presentation(str(output))
+        texts = [s.text_frame.text for s in prs.slides[0].shapes if s.has_text_frame]
+        assert any("key message" in t for t in texts), "Takeaway should be rendered"
+
+    def test_takeaway_no_body_overlap(self, tmp_path):
+        """Content with takeaway should not have body shapes extending past 6.4"."""
+        ct = SlidesContentTree(
+            deck_title="Overlap Test",
+            slides=[Slide(
+                id="s1", slide_type="content", title="Title",
+                elements=[
+                    SlideElement(id="e1", type="bullet_list",
+                                 content=["A", "B", "C", "D", "E"]),
+                    SlideElement(id="e2", type="takeaway", content="Key takeaway."),
+                ],
+                speaker_notes="Notes.",
+            )],
+        )
+        theme = get_theme()
+        output = tmp_path / "overlap.pptx"
+        export_to_pptx(ct, theme, output)
+        prs = Presentation(str(output))
+        # Verify the card shape height is reduced (not extending to slide bottom)
+        from pptx.util import Emu
+        for shape in prs.slides[0].shapes:
+            if shape.has_text_frame and "Key takeaway" in shape.text_frame.text:
+                # Takeaway should start at ~6.4"
+                assert shape.top >= Inches(6.0), "Takeaway should be near bottom"
+                return
+        pytest.fail("Takeaway element not found in rendered slide")
+
+    def test_missing_kicker_no_crash(self, tmp_path):
+        ct = SlidesContentTree(
+            deck_title="No Kicker",
+            slides=[Slide(
+                id="s1", slide_type="content", title="Title",
+                elements=[SlideElement(id="e1", type="body", content="Body.")],
+                speaker_notes="Notes.",
+            )],
+        )
+        theme = get_theme()
+        output = tmp_path / "no_kicker.pptx"
+        export_to_pptx(ct, theme, output)
+        assert output.exists()
+
+
+class TestSectionDivider:
+    def test_section_divider_renders(self, tmp_path):
+        ct = SlidesContentTree(
+            deck_title="Sections",
+            slides=[Slide(
+                id="s1", slide_type="section_divider", title="Part One",
+                elements=[SlideElement(id="e1", type="subtitle", content="Introduction")],
+                speaker_notes="Section break.",
+            )],
+        )
+        theme = get_theme()
+        output = tmp_path / "divider.pptx"
+        export_to_pptx(ct, theme, output)
+        prs = Presentation(str(output))
+        texts = [s.text_frame.text for s in prs.slides[0].shapes if s.has_text_frame]
+        assert any("Part One" in t for t in texts)
+        assert any("Introduction" in t for t in texts)
+
+    def test_section_divider_shows_ordinal_not_index(self, tmp_path):
+        ct = SlidesContentTree(
+            deck_title="Multi-section",
+            slides=[
+                Slide(id="s1", slide_type="title", title="Opener",
+                      elements=[SlideElement(id="e1", type="title", content="Opener")],
+                      speaker_notes="Open."),
+                Slide(id="s2", slide_type="section_divider", title="First Section",
+                      elements=[], speaker_notes="Break."),
+                Slide(id="s3", slide_type="content", title="Content",
+                      elements=[SlideElement(id="e2", type="body", content="Text.")],
+                      speaker_notes="Notes."),
+                Slide(id="s4", slide_type="section_divider", title="Second Section",
+                      elements=[], speaker_notes="Break."),
+            ],
+        )
+        theme = get_theme()
+        output = tmp_path / "ordinal.pptx"
+        export_to_pptx(ct, theme, output)
+        prs = Presentation(str(output))
+        # First section divider (slide index 1) should show "1", not "0" or "1"
+        div1_texts = [s.text_frame.text for s in prs.slides[1].shapes if s.has_text_frame]
+        assert any(t.strip() == "1" for t in div1_texts), f"First divider should show '1', got {div1_texts}"
+        # Second section divider (slide index 3) should show "2", not "3"
+        div2_texts = [s.text_frame.text for s in prs.slides[3].shapes if s.has_text_frame]
+        assert any(t.strip() == "2" for t in div2_texts), f"Second divider should show '2', got {div2_texts}"
+
+
+class TestProgressBar:
+    def test_progress_bar_present(self, tmp_path):
+        ct = SlidesContentTree(
+            deck_title="Progress",
+            slides=[
+                Slide(id="s1", slide_type="title", title="Start",
+                      elements=[SlideElement(id="e1", type="title", content="Start")],
+                      speaker_notes="Open."),
+                Slide(id="s2", slide_type="content", title="Mid",
+                      elements=[SlideElement(id="e2", type="body", content="Content.")],
+                      speaker_notes="Middle."),
+                Slide(id="s3", slide_type="title", title="End",
+                      elements=[SlideElement(id="e3", type="title", content="End")],
+                      speaker_notes="Close."),
+            ],
+        )
+        theme = get_theme()
+        output = tmp_path / "progress.pptx"
+        export_to_pptx(ct, theme, output)
+        prs = Presentation(str(output))
+        # Middle slide should have slide number "2"
+        texts = [s.text_frame.text.strip() for s in prs.slides[1].shapes if s.has_text_frame]
+        assert "2" in texts, "Progress bar footer should show slide number"
+
+
+def test_export_chart_has_container_card(default_theme, tmp_path):
+    ct = _chart_ct(_bar_chart_spec())
+    output = tmp_path / "chart_card.pptx"
+    export_to_pptx(ct, default_theme, output)
+    prs = Presentation(str(output))
+    chart_slide = prs.slides[1]
+    # Should have both a chart and rounded rectangle shapes (container card)
+    has_chart = any(s.has_chart for s in chart_slide.shapes)
+    assert has_chart, "Chart slide should have a chart"

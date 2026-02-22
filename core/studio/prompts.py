@@ -90,7 +90,9 @@ def _get_type_specific_outline_guidance(artifact_type: ArtifactType) -> str:
   * quote — Featured quotation with attribution
   * code — Technical slide with monospace code block
   * team — Team members, credits, or acknowledgments
+  * section_divider — Section break slide with large section number and title (use between major topic shifts)
 - When the topic involves data, metrics, or KPIs, prefer stat or chart slide types
+- For decks with 10+ slides, insert 1-2 section_divider slides to break the deck into logical sections
 - Bullet points should be SHORT phrases (6-8 words max), not full sentences
 - Assign a slide_type to each item in the description field (e.g., "slide_type: two_column")"""
 
@@ -124,10 +126,10 @@ def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
   "slides": [
     {
       "id": "s1",
-      "slide_type": "title|content|two_column|comparison|timeline|chart|stat|image_text|image_full|quote|code|team",
+      "slide_type": "title|content|two_column|comparison|timeline|chart|stat|image_text|image_full|quote|code|team|section_divider",
       "title": "Slide title",
       "elements": [
-        {"id": "e1", "type": "title|subtitle|body|bullet_list|image|chart|code|quote|stat_callout", "content": "..."}
+        {"id": "e1", "type": "title|subtitle|kicker|takeaway|body|bullet_list|image|chart|code|quote|stat_callout", "content": "..."}
       ],
       "speaker_notes": "Notes for the presenter"
     }
@@ -136,6 +138,8 @@ def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
 }
 
 - For bullet_list elements, content must be a JSON array of strings
+- For "kicker" elements, content is a SHORT phrase (2-5 words) that categorizes the slide (e.g., "MARKET OPPORTUNITY", "KEY INSIGHT", "PHASE 2"). Include a kicker on content, two_column, comparison, timeline, chart, and stat slides.
+- For "takeaway" elements, content is a single concise sentence (max 15 words) summarizing the slide's key message. Include a takeaway on content, two_column, comparison, timeline, chart, and stat slides.
 - Each slide must have a unique id (s1, s2, ...) and each element a unique id (e1, e2, ...)
 - Match the slide_type to the content purpose:
   * Use "title" for opening and closing slides

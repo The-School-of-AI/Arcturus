@@ -1,6 +1,6 @@
 """Slide type and element type constants for the Forge slides pipeline."""
 
-# 12 supported slide types
+# 13 supported slide types
 SLIDE_TYPES = {
     "title",
     "content",
@@ -14,12 +14,15 @@ SLIDE_TYPES = {
     "code",
     "team",
     "stat",
+    "section_divider",
 }
 
-# 9 supported element types
+# 11 supported element types
 ELEMENT_TYPES = {
     "title",
     "subtitle",
+    "kicker",
+    "takeaway",
     "body",
     "bullet_list",
     "image",
@@ -32,17 +35,18 @@ ELEMENT_TYPES = {
 # Slide-type-to-element mapping
 SLIDE_TYPE_ELEMENTS = {
     "title":       ["title", "subtitle"],
-    "content":     ["title", "body", "bullet_list"],
-    "two_column":  ["title", "body", "bullet_list"],
-    "comparison":  ["title", "body", "bullet_list"],
-    "timeline":    ["title", "body", "bullet_list"],
-    "chart":       ["title", "chart", "body"],
+    "content":     ["kicker", "title", "body", "bullet_list", "takeaway"],
+    "two_column":  ["kicker", "title", "body", "bullet_list", "takeaway"],
+    "comparison":  ["kicker", "title", "body", "bullet_list", "takeaway"],
+    "timeline":    ["kicker", "title", "body", "bullet_list", "takeaway"],
+    "chart":       ["kicker", "title", "chart", "body", "takeaway"],
     "image_text":  ["title", "image", "body"],
     "image_full":  ["title", "image", "body"],
     "quote":       ["quote", "body"],
     "code":        ["title", "code", "body"],
     "team":        ["title", "body", "bullet_list"],
-    "stat":        ["title", "stat_callout", "body"],
+    "stat":        ["kicker", "title", "stat_callout", "body", "takeaway"],
+    "section_divider": ["title", "subtitle"],
 }
 
 # Narrative arc pattern — varied with no consecutive repeats
@@ -50,9 +54,11 @@ NARRATIVE_ARC = [
     "title",
     "content",
     "stat",
+    "section_divider",
     "two_column",
     "timeline",
     "image_text",
+    "section_divider",
     "chart",
     "quote",
     "content",

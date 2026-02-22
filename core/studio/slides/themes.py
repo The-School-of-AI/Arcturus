@@ -56,8 +56,8 @@ _register(SlideTheme(
         text_light="#6C757D",
         title_background="#004E64",
     ),
-    font_heading="Montserrat",
-    font_body="Open Sans",
+    font_heading="Century Gothic",
+    font_body="Calibri Light",
     description="Energetic theme for startup pitch decks and product launches",
 ))
 
@@ -73,8 +73,8 @@ _register(SlideTheme(
         text_light="#9E9E9E",
         title_background="#2D2D2D",
     ),
-    font_heading="Helvetica",
-    font_body="Helvetica Light",
+    font_heading="Arial",
+    font_body="Calibri Light",
     description="Minimalist theme with clean typography and subtle accents",
 ))
 
@@ -91,7 +91,7 @@ _register(SlideTheme(
         title_background="#2E7D32",
     ),
     font_heading="Georgia",
-    font_body="Lato",
+    font_body="Verdana",
     description="Organic theme for sustainability, environment, and nature topics",
 ))
 
@@ -107,8 +107,8 @@ _register(SlideTheme(
         text_light="#9E9E9E",
         title_background="#0A0A0A",
     ),
-    font_heading="Roboto",
-    font_body="Roboto Light",
+    font_heading="Calibri",
+    font_body="Calibri Light",
     description="Dark mode theme for technology and developer-focused decks",
 ))
 
@@ -124,8 +124,8 @@ _register(SlideTheme(
         text_light="#8D6E63",
         title_background="#5C2A1A",
     ),
-    font_heading="Playfair Display",
-    font_body="Source Sans Pro",
+    font_heading="Constantia",
+    font_body="Candara",
     description="Warm, earthy theme for creative and lifestyle presentations",
 ))
 
@@ -141,8 +141,8 @@ _register(SlideTheme(
         text_light="#4FC3F7",
         title_background="#006994",
     ),
-    font_heading="Poppins",
-    font_body="Nunito",
+    font_heading="Trebuchet MS",
+    font_body="Verdana",
     description="Calming ocean-inspired theme with gradient accents",
 ))
 

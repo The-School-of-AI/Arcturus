@@ -18,8 +18,9 @@ from core.schemas.studio_schema import SlidesContentTree
 logger = logging.getLogger(__name__)
 
 _IMAGE_PROMPT = (
-    "Generate a professional, clean presentation slide image for: {description}. "
-    "Style: modern, minimal, no text or labels."
+    "Generate a professional, clean 16:9 wide-format presentation image for: {description}. "
+    "Style: modern, minimal, no text or labels or watermarks. "
+    "Composition: wide landscape, subject centered, mood and setting clearly conveyed."
 )
 
 _SEMAPHORE_LIMIT = 3  # ~13 RPM stays under 15 RPM limit
@@ -80,6 +81,27 @@ async def generate_slide_images(
     return images
 
 
+def _crop_to_16_9(img: Image.Image) -> Image.Image:
+    """Center-crop an image to 16:9 aspect ratio."""
+    w, h = img.size
+    target_ratio = 16 / 9
+    current_ratio = w / h
+
+    if abs(current_ratio - target_ratio) < 0.01:
+        return img  # Already 16:9
+
+    if current_ratio > target_ratio:
+        # Too wide — crop sides
+        new_w = int(h * target_ratio)
+        left = (w - new_w) // 2
+        return img.crop((left, 0, left + new_w, h))
+    else:
+        # Too tall — crop top/bottom
+        new_h = int(w / target_ratio)
+        top = (h - new_h) // 2
+        return img.crop((0, top, w, top + new_h))
+
+
 async def _generate_single_image(description: str) -> io.BytesIO | None:
     """Call Gemini to generate a single image, returning JPEG bytes or None."""
     await ModelManager._wait_for_rate_limit_static()
@@ -106,6 +128,9 @@ async def _generate_single_image(description: str) -> io.BytesIO | None:
                 # Convert to RGB JPEG for smaller file size
                 if img.mode in ("RGBA", "P", "LA"):
                     img = img.convert("RGB")
+
+                # Center-crop to 16:9 aspect ratio
+                img = _crop_to_16_9(img)
 
                 buf = io.BytesIO()
                 img.save(buf, format="JPEG", quality=85)

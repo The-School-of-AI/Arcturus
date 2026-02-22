@@ -13,6 +13,7 @@ from pptx.util import Inches, Pt
 import hashlib
 
 from core.schemas.studio_schema import SlideTheme, SlidesContentTree
+from core.studio.slides.themes import _blend_color
 
 # 16:9 widescreen dimensions
 SLIDE_WIDTH = Inches(13.333)
@@ -85,6 +86,10 @@ _DESIGN_TOKENS = {
     "bullet_indent": Inches(0.25),
     "bullet_hanging": Inches(0.20),
 
+    # Kicker / Takeaway
+    "kicker_size": Pt(12),
+    "takeaway_size": Pt(16),
+
     # Caption tokens
     "caption_size": Pt(14),
 
@@ -140,15 +145,20 @@ def export_to_pptx(
 
     blank_layout = prs.slide_layouts[6]  # Blank layout
     total_slides = len(content_tree.slides)
+    section_count = 0
 
     for i, slide_data in enumerate(content_tree.slides):
         pptx_slide = prs.slides.add_slide(blank_layout)
+
+        if slide_data.slide_type == "section_divider":
+            section_count += 1
 
         # Draw motif first (behind other shapes)
         _add_slide_motif(pptx_slide, theme)
 
         renderer = _RENDERERS.get(slide_data.slide_type, _render_content)
-        renderer(pptx_slide, slide_data, theme, images=images, slide_index=i)
+        renderer(pptx_slide, slide_data, theme, images=images, slide_index=i,
+                 section_number=section_count)
 
         # Add slide chrome (skip first and last slides)
         if 0 < i < total_slides - 1:
@@ -208,36 +218,42 @@ _MD_INLINE_RE = re.compile(
     r'\*\*\*(?!\s)(.+?)(?<!\s)\*\*\*'   # ***bold+italic*** (no inner spaces at delimiters)
     r'|\*\*(?!\s)(.+?)(?<!\s)\*\*'       # **bold**
     r'|\*(?!\s)(.+?)(?<!\s)\*'           # *italic*
+    r'|==(?!\s)(.+?)(?<!\s)=='           # ==highlight==
 )
 
 
-def _parse_markdown_runs(text: str) -> list[tuple[str, bool, bool]]:
-    """Parse markdown inline formatting into (text, bold, italic) segments."""
+def _parse_markdown_runs(text: str) -> list[tuple[str, bool, bool, bool]]:
+    """Parse markdown inline formatting into (text, bold, italic, highlight) segments."""
     if not text:
-        return [("", False, False)]
-    segments: list[tuple[str, bool, bool]] = []
+        return [("", False, False, False)]
+    segments: list[tuple[str, bool, bool, bool]] = []
     last_end = 0
     for m in _MD_INLINE_RE.finditer(text):
         # Plain text before this match
         if m.start() > last_end:
-            segments.append((text[last_end:m.start()], False, False))
+            segments.append((text[last_end:m.start()], False, False, False))
         if m.group(1) is not None:       # ***bold+italic***
-            segments.append((m.group(1), True, True))
+            segments.append((m.group(1), True, True, False))
         elif m.group(2) is not None:     # **bold**
-            segments.append((m.group(2), True, False))
+            segments.append((m.group(2), True, False, False))
         elif m.group(3) is not None:     # *italic*
-            segments.append((m.group(3), False, True))
+            segments.append((m.group(3), False, True, False))
+        elif m.group(4) is not None:     # ==highlight==
+            segments.append((m.group(4), False, False, True))
         last_end = m.end()
     # Trailing plain text (or entire string if no matches)
     if last_end < len(text):
-        segments.append((text[last_end:], False, False))
-    return segments or [("", False, False)]
+        segments.append((text[last_end:], False, False, False))
+    return segments or [("", False, False, False)]
 
 
-def _apply_markdown_runs(paragraph, text, *, font_name, font_size, font_color, bold=False):
+def _apply_markdown_runs(paragraph, text, *, font_name, font_size, font_color,
+                         bold=False, accent_color=None):
     """Replace paragraph text with per-run markdown formatting."""
     if isinstance(font_color, str):
         font_color = RGBColor.from_string(font_color.lstrip("#"))
+    if isinstance(accent_color, str):
+        accent_color = RGBColor.from_string(accent_color.lstrip("#"))
 
     segments = _parse_markdown_runs(str(text))
 
@@ -247,20 +263,24 @@ def _apply_markdown_runs(paragraph, text, *, font_name, font_size, font_color, b
     # Set paragraph-level font size for validator compatibility
     paragraph.font.size = font_size
 
-    for seg_text, seg_bold, seg_italic in segments:
+    for seg_text, seg_bold, seg_italic, seg_highlight in segments:
         run = paragraph.add_run()
         run.text = seg_text
         run.font.name = font_name
         run.font.size = font_size
-        run.font.color.rgb = font_color
-        run.font.bold = bold or seg_bold
+        if seg_highlight and accent_color is not None:
+            run.font.color.rgb = accent_color
+            run.font.bold = True
+        else:
+            run.font.color.rgb = font_color
+            run.font.bold = bold or seg_bold
         run.font.italic = seg_italic
 
 
 def _add_text_box(slide, text, left, top, width, height,
                   font_name="Calibri", font_size=None,
                   font_color="#000000", alignment=PP_ALIGN.LEFT,
-                  bold=False, parse_markdown=True):
+                  bold=False, parse_markdown=True, accent_color=None):
     """Add a text box shape with styled text and design token margins."""
     if font_size is None:
         font_size = _DESIGN_TOKENS["body_size"]
@@ -283,7 +303,7 @@ def _add_text_box(slide, text, left, top, width, height,
     if parse_markdown:
         _apply_markdown_runs(
             p, text, font_name=font_name, font_size=scaled_size,
-            font_color=font_color, bold=bold,
+            font_color=font_color, bold=bold, accent_color=accent_color,
         )
     else:
         p.text = str(text)
@@ -297,7 +317,7 @@ def _add_text_box(slide, text, left, top, width, height,
 
 def _add_bullet_list(slide, items, left, top, width, height,
                      font_name="Calibri", font_size=None,
-                     font_color="#000000"):
+                     font_color="#000000", accent_color=None):
     """Add a text box with bullet-point paragraphs."""
     if font_size is None:
         font_size = _DESIGN_TOKENS["body_small_size"]
@@ -328,6 +348,7 @@ def _add_bullet_list(slide, items, left, top, width, height,
         _apply_markdown_runs(
             p, f"\u2022 {item}", font_name=font_name,
             font_size=scaled_size, font_color=resolved_color,
+            accent_color=accent_color,
         )
 
 
@@ -337,6 +358,55 @@ def _find_element(slide_data, element_type):
         if el.type == element_type:
             return el
     return None
+
+
+def _render_kicker(slide, slide_data, theme):
+    """Render a kicker element above the title (small uppercase text in accent color).
+
+    Returns True if a kicker was rendered, False otherwise.
+    """
+    kicker_el = _find_element(slide_data, "kicker")
+    if not kicker_el or not kicker_el.content:
+        return False
+    kicker_text = str(kicker_el.content).upper()
+    _add_text_box(slide, kicker_text,
+                  left=TITLE_LEFT, top=Inches(0.25),
+                  width=TITLE_WIDTH, height=Inches(0.3),
+                  font_name=theme.font_body,
+                  font_size=_DESIGN_TOKENS["kicker_size"],
+                  font_color=theme.colors.accent,
+                  bold=True, parse_markdown=False)
+    return True
+
+
+_TAKEAWAY_HEIGHT = Inches(0.6)
+_TAKEAWAY_GAP = Inches(0.1)  # Gap between body content and takeaway
+_TAKEAWAY_RESERVE = _TAKEAWAY_HEIGHT + _TAKEAWAY_GAP  # Total space to reserve
+
+
+def _has_takeaway(slide_data):
+    """Check if slide data contains a non-empty takeaway element."""
+    el = _find_element(slide_data, "takeaway")
+    return el is not None and bool(el.content)
+
+
+def _render_takeaway(slide, slide_data, theme, top=None):
+    """Render a takeaway element at the bottom of the slide.
+
+    Returns True if a takeaway was rendered, False otherwise.
+    """
+    takeaway_el = _find_element(slide_data, "takeaway")
+    if not takeaway_el or not takeaway_el.content:
+        return False
+    takeaway_top = top or Inches(6.4)
+    _add_text_box(slide, str(takeaway_el.content),
+                  left=TITLE_LEFT, top=takeaway_top,
+                  width=TITLE_WIDTH, height=_TAKEAWAY_HEIGHT,
+                  font_name=theme.font_body,
+                  font_size=_DESIGN_TOKENS["takeaway_size"],
+                  font_color=theme.colors.secondary,
+                  bold=True)
+    return True
 
 
 def _set_slide_background(slide, theme):
@@ -358,44 +428,44 @@ def _set_slide_background(slide, theme):
     fill.fore_color.rgb = RGBColor.from_string(bg_hex)
 
 
-def _blend_color(color_hex: str, bg_hex: str, ratio: float) -> str:
-    """Blend color_hex toward bg_hex by ratio (0.0 = all bg, 1.0 = all color)."""
-    c = color_hex.lstrip("#")
-    b = bg_hex.lstrip("#")
-    cr, cg, cb = int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
-    br, bg_r, bb = int(b[0:2], 16), int(b[2:4], 16), int(b[4:6], 16)
-    r = int(cr * ratio + br * (1 - ratio) + 0.5)
-    g = int(cg * ratio + bg_r * (1 - ratio) + 0.5)
-    bl = int(cb * ratio + bb * (1 - ratio) + 0.5)
-    return "#{:02X}{:02X}{:02X}".format(
-        max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, bl))
-    )
-
-
 # === Slide Chrome ===
 
 def _add_slide_chrome(slide, theme, slide_number, total_slides):
-    """Add accent bar and slide number to a slide."""
-    # Accent bar — full slide width
-    bar = slide.shapes.add_shape(
+    """Add progress bar and slide number to a slide."""
+    bar_height = Inches(0.04)
+    bar_top = _DESIGN_TOKENS["accent_bar_top"]
+
+    # Background bar — full width, light tint
+    bg_tint = _blend_color(theme.colors.text_light, theme.colors.background, 0.20)
+    bg_bar = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), _DESIGN_TOKENS["accent_bar_top"],
-        SLIDE_WIDTH, _DESIGN_TOKENS["accent_bar_height"],
+        Inches(0), bar_top, SLIDE_WIDTH, bar_height,
     )
-    bar.fill.solid()
-    bar.fill.fore_color.rgb = RGBColor.from_string(
+    bg_bar.fill.solid()
+    bg_bar.fill.fore_color.rgb = RGBColor.from_string(bg_tint.lstrip("#"))
+    bg_bar.line.fill.background()
+
+    # Fill bar — proportional width, accent color
+    progress = slide_number / total_slides
+    fill_width = int(SLIDE_WIDTH * progress)
+    fill_bar = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), bar_top, fill_width, bar_height,
+    )
+    fill_bar.fill.solid()
+    fill_bar.fill.fore_color.rgb = RGBColor.from_string(
         theme.colors.accent.lstrip("#")
     )
-    bar.line.fill.background()  # No border
+    fill_bar.line.fill.background()
 
-    # Slide number — right-aligned
+    # Slide number — right-aligned (just the number)
     num_box = slide.shapes.add_textbox(
         SLIDE_WIDTH - MARGIN_RIGHT - Inches(1.2), _DESIGN_TOKENS["footer_top"],
         Inches(1.2), _DESIGN_TOKENS["footer_height"],
     )
     tf = num_box.text_frame
     p = tf.paragraphs[0]
-    p.text = f"{slide_number} / {total_slides}"
+    p.text = str(slide_number)
     p.alignment = PP_ALIGN.RIGHT
     p.font.size = _DESIGN_TOKENS["footer_size"]
     p.font.color.rgb = RGBColor.from_string(
@@ -506,7 +576,8 @@ def _pick_icon_shape(text, index=0):
 
 def _add_icon_bullet_list(slide, items, left, top, width, height,
                           font_name="Calibri", font_size=None,
-                          font_color="#000000", icon_color="#4472C4"):
+                          font_color="#000000", icon_color="#4472C4",
+                          accent_color=None):
     """Add a bullet list with small shape icons next to each item."""
     if font_size is None:
         font_size = _DESIGN_TOKENS["body_size"]
@@ -525,9 +596,9 @@ def _add_icon_bullet_list(slide, items, left, top, width, height,
     text_left_offset = left + Inches(0.35)
     text_width = width - Inches(0.35)
 
-    # Estimate line height for vertical positioning
-    line_height_emu = int(font_size.pt * 1.6 * 12700)  # pt → EMU with spacing
-    item_spacing = max(line_height_emu, Inches(0.42))
+    # Dynamic spacing: scale with font size (pt * 0.023 inches gives ~0.41" at 18pt)
+    item_spacing_in = font_size.pt * 0.023
+    item_spacing_in = max(item_spacing_in, 0.32)  # Floor to prevent cramming
 
     txBox = slide.shapes.add_textbox(text_left_offset, top, text_width, height)
     tf = txBox.text_frame
@@ -539,7 +610,7 @@ def _add_icon_bullet_list(slide, items, left, top, width, height,
 
     for i, item in enumerate(items):
         # Add icon shape only if it fits within the body area
-        icon_top = top + Inches(i * 0.42 + 0.05)
+        icon_top = top + Inches(i * item_spacing_in + 0.05)
         if icon_top + icon_size <= top + height:
             shape = _pick_icon_shape(str(item), i)
             icon = slide.shapes.add_shape(
@@ -560,6 +631,7 @@ def _add_icon_bullet_list(slide, items, left, top, width, height,
         _apply_markdown_runs(
             p, str(item), font_name=font_name,
             font_size=scaled_size, font_color=resolved_color,
+            accent_color=accent_color,
         )
 
 
@@ -621,15 +693,29 @@ def _add_card(slide, *, left, top, width, height, theme, color_key="primary"):
     base_color = getattr(theme.colors, color_key)
     card_fill = _blend_color(base_color, theme.colors.background, 0.10)
     card = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, left, top, width, height,
+        MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height,
     )
+    card.adjustments[0] = 0.05  # Corner radius
     card.fill.solid()
     card.fill.fore_color.rgb = RGBColor.from_string(card_fill.lstrip("#"))
-    # Subtle border
-    card.line.width = Pt(1)
-    card.line.color.rgb = RGBColor.from_string(
-        _blend_color(theme.colors.text_light, theme.colors.background, 0.30).lstrip("#")
-    )
+    card.line.fill.background()  # No visible border
+
+    # Soft drop shadow via XML
+    from pptx.oxml.ns import qn
+    sp_pr = card._element.spPr
+    effect_lst = sp_pr.makeelement(qn("a:effectLst"), {})
+    outer_shdw = effect_lst.makeelement(qn("a:outerShdw"), {
+        "blurRad": "190500",   # ~15pt blur
+        "dist": "63500",       # ~5pt distance
+        "dir": "5400000",      # 90 degrees (straight down)
+        "algn": "bl",
+    })
+    srgb = outer_shdw.makeelement(qn("a:srgbClr"), {"val": "000000"})
+    alpha = srgb.makeelement(qn("a:alpha"), {"val": "15000"})  # 15% opacity
+    srgb.append(alpha)
+    outer_shdw.append(srgb)
+    effect_lst.append(outer_shdw)
+    sp_pr.append(effect_lst)
 
     # Left accent strip
     strip = slide.shapes.add_shape(
@@ -667,13 +753,30 @@ def _style_chart(chart, spec, theme):
 
     # Series colors
     palette = _build_chart_palette(theme)
+    is_line_chart = spec.chart_type.value in ("line",)
     try:
         for idx, series in enumerate(chart.series):
             color_hex = palette[idx % len(palette)].lstrip("#")
             series.format.fill.solid()
             series.format.fill.fore_color.rgb = RGBColor.from_string(color_hex)
+            # Thicker lines for line charts
+            if is_line_chart:
+                series.format.line.width = Pt(3)
+                series.format.line.color.rgb = RGBColor.from_string(color_hex)
     except Exception:
         pass
+
+    # Data labels on first series for line charts
+    if is_line_chart:
+        try:
+            chart.series[0].has_data_labels = True
+            dl = chart.series[0].data_labels
+            dl.font.size = _DESIGN_TOKENS["code_size"]
+            dl.font.color.rgb = RGBColor.from_string(
+                theme.colors.text_light.lstrip("#")
+            )
+        except Exception:
+            pass
 
     # Axis labels
     try:
@@ -683,6 +786,7 @@ def _style_chart(chart, spec, theme):
             va.major_gridlines.format.line.color.rgb = RGBColor.from_string(
                 theme.colors.text_light.lstrip("#")
             )
+            va.format.line.fill.background()  # Hide redundant axis line
             if va.has_tick_labels:
                 va.tick_labels.font.size = _DESIGN_TOKENS["body_small_size"]
                 va.tick_labels.font.color.rgb = RGBColor.from_string(
@@ -717,6 +821,16 @@ def _add_chart(slide, spec, theme):
         return False
     try:
         from core.schemas.studio_schema import ChartType
+
+        # Chart container card — rounded rect behind chart area
+        card_margin = Inches(0.15)
+        _add_card(slide,
+                  left=CHART_LEFT - card_margin,
+                  top=CHART_TOP - card_margin,
+                  width=CHART_WIDTH + card_margin * 2,
+                  height=CHART_HEIGHT + card_margin * 2,
+                  theme=theme, color_key="primary")
+
         if spec.chart_type.value == "scatter":
             chart_data = XyChartData()
             series = chart_data.add_series(spec.title or "Data")
@@ -740,6 +854,21 @@ def _add_chart(slide, spec, theme):
         chart.has_legend = len(spec.series) > 1 or spec.chart_type.value == "pie"
 
         _style_chart(chart, spec, theme)
+
+        # Enable data labels on bar/pie charts with <=6 categories
+        cat_count = len(spec.categories) if spec.categories else 0
+        if spec.chart_type.value in ("bar", "pie") and cat_count <= 6:
+            try:
+                for series_obj in chart.series:
+                    series_obj.has_data_labels = True
+                    dl = series_obj.data_labels
+                    dl.font.size = _DESIGN_TOKENS["code_size"]
+                    dl.font.color.rgb = RGBColor.from_string(
+                        theme.colors.text.lstrip("#")
+                    )
+            except Exception:
+                pass
+
         return True
     except Exception:
         return False
@@ -792,8 +921,12 @@ def _render_content(slide, slide_data, theme, **kwargs):
     slide_index = kwargs.get("slide_index", 0)
     card_style = slide_index % 3
 
+    _render_kicker(slide, slide_data, theme)
+
     body_top, title_font = _compute_body_top(slide_data.title)
     body_height = SLIDE_HEIGHT - body_top - MARGIN_BOTTOM
+    if _has_takeaway(slide_data):
+        body_height -= _TAKEAWAY_RESERVE
 
     _add_text_box(slide, slide_data.title or "",
                   left=TITLE_LEFT, top=TITLE_TOP,
@@ -844,21 +977,28 @@ def _render_content(slide, slide_data, theme, **kwargs):
                               width=content_width, height=body_height,
                               font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_size"],
                               font_color=theme.colors.text,
-                              icon_color=theme.colors.accent)
+                              icon_color=theme.colors.accent,
+                              accent_color=theme.colors.accent)
     elif body_el and body_el.content:
         _add_text_box(slide, body_el.content,
                       left=content_left, top=body_top,
                       width=content_width, height=body_height,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_size"],
-                      font_color=theme.colors.text)
+                      font_color=theme.colors.text,
+                      accent_color=theme.colors.accent)
 
+    _render_takeaway(slide, slide_data, theme)
     _set_slide_background(slide, theme)
 
 
 def _render_two_column(slide, slide_data, theme, **kwargs):
     """Two-column layout: title + left/right body areas."""
+    _render_kicker(slide, slide_data, theme)
+
     body_top, title_font = _compute_body_top(slide_data.title)
     body_height = SLIDE_HEIGHT - body_top - MARGIN_BOTTOM
+    if _has_takeaway(slide_data):
+        body_height -= _TAKEAWAY_RESERVE
 
     _add_text_box(slide, slide_data.title or "",
                   left=TITLE_LEFT, top=TITLE_TOP,
@@ -877,13 +1017,15 @@ def _render_two_column(slide, slide_data, theme, **kwargs):
                               width=COLUMN_WIDTH, height=body_height,
                               font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
                               font_color=theme.colors.text,
-                              icon_color=theme.colors.accent)
+                              icon_color=theme.colors.accent,
+                              accent_color=theme.colors.accent)
     else:
         _add_text_box(slide, left_content,
                       left=MARGIN_LEFT, top=body_top,
                       width=COLUMN_WIDTH, height=body_height,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
-                      font_color=theme.colors.text)
+                      font_color=theme.colors.text,
+                      accent_color=theme.colors.accent)
 
     # Right column
     right_content = body_elements[1].content if len(body_elements) > 1 else ""
@@ -893,22 +1035,29 @@ def _render_two_column(slide, slide_data, theme, **kwargs):
                               width=COLUMN_WIDTH, height=body_height,
                               font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
                               font_color=theme.colors.text,
-                              icon_color=theme.colors.accent)
+                              icon_color=theme.colors.accent,
+                              accent_color=theme.colors.accent)
     else:
         _add_text_box(slide, right_content,
                       left=MARGIN_LEFT + COLUMN_WIDTH + COLUMN_GAP, top=body_top,
                       width=COLUMN_WIDTH, height=body_height,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
-                      font_color=theme.colors.text)
+                      font_color=theme.colors.text,
+                      accent_color=theme.colors.accent)
 
+    _render_takeaway(slide, slide_data, theme)
     _add_decorative_accent(slide, theme, kwargs.get("slide_index", 0))
     _set_slide_background(slide, theme)
 
 
 def _render_comparison(slide, slide_data, theme, **kwargs):
     """Comparison slide: title + two labeled columns in cards."""
+    _render_kicker(slide, slide_data, theme)
+
     body_top, title_font = _compute_body_top(slide_data.title)
     body_height = SLIDE_HEIGHT - body_top - MARGIN_BOTTOM
+    if _has_takeaway(slide_data):
+        body_height -= _TAKEAWAY_RESERVE
 
     _add_text_box(slide, slide_data.title or "",
                   left=TITLE_LEFT, top=TITLE_TOP,
@@ -928,7 +1077,8 @@ def _render_comparison(slide, slide_data, theme, **kwargs):
                   left=MARGIN_LEFT + Inches(0.12), top=body_top,
                   width=COLUMN_WIDTH - Inches(0.12), height=body_height,
                   font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
-                  font_color=theme.colors.text)
+                  font_color=theme.colors.text,
+                  accent_color=theme.colors.accent)
 
     # Right card (secondary)
     right_left = MARGIN_LEFT + COLUMN_WIDTH + COLUMN_GAP
@@ -939,16 +1089,22 @@ def _render_comparison(slide, slide_data, theme, **kwargs):
                   left=right_left + Inches(0.12), top=body_top,
                   width=COLUMN_WIDTH - Inches(0.12), height=body_height,
                   font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
-                  font_color=theme.colors.text)
+                  font_color=theme.colors.text,
+                  accent_color=theme.colors.accent)
 
+    _render_takeaway(slide, slide_data, theme)
     _add_decorative_accent(slide, theme, kwargs.get("slide_index", 0))
     _set_slide_background(slide, theme)
 
 
 def _render_timeline(slide, slide_data, theme, **kwargs):
     """Timeline/roadmap slide: title + sequential items with visual circles."""
+    _render_kicker(slide, slide_data, theme)
+
     body_top, title_font = _compute_body_top(slide_data.title)
     body_height = SLIDE_HEIGHT - body_top - MARGIN_BOTTOM
+    if _has_takeaway(slide_data):
+        body_height -= _TAKEAWAY_RESERVE
 
     _add_text_box(slide, slide_data.title or "",
                   left=TITLE_LEFT, top=TITLE_TOP,
@@ -979,20 +1135,25 @@ def _render_timeline(slide, slide_data, theme, **kwargs):
                          left=BODY_LEFT + Inches(0.4), top=body_top,
                          width=BODY_WIDTH - Inches(0.4), height=body_height,
                          font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_size"],
-                         font_color=theme.colors.text)
+                         font_color=theme.colors.text,
+                         accent_color=theme.colors.accent)
     elif body_el and body_el.content:
         _add_text_box(slide, body_el.content,
                       left=BODY_LEFT, top=body_top,
                       width=BODY_WIDTH, height=body_height,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_size"],
-                      font_color=theme.colors.text)
+                      font_color=theme.colors.text,
+                      accent_color=theme.colors.accent)
 
+    _render_takeaway(slide, slide_data, theme)
     _set_slide_background(slide, theme)
 
 
 def _render_chart(slide, slide_data, theme, **kwargs):
     """Chart slide: title + native chart or text fallback."""
     from core.studio.slides.charts import parse_chart_spec, normalize_chart_spec
+
+    _render_kicker(slide, slide_data, theme)
 
     _, title_font = _compute_body_top(slide_data.title)
 
@@ -1025,12 +1186,16 @@ def _render_chart(slide, slide_data, theme, **kwargs):
     # Body/caption below chart
     if body_el and body_el.content:
         caption_top = CAPTION_TOP if chart_rendered else Inches(5.0)
+        caption_h = CAPTION_HEIGHT
+        if _has_takeaway(slide_data):
+            caption_h = Inches(0.3)  # Shrink to leave room for takeaway
         _add_text_box(slide, body_el.content,
                       left=BODY_LEFT, top=caption_top,
-                      width=BODY_WIDTH, height=CAPTION_HEIGHT,
+                      width=BODY_WIDTH, height=caption_h,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
                       font_color=theme.colors.text)
 
+    _render_takeaway(slide, slide_data, theme)
     _set_slide_background(slide, theme)
 
 
@@ -1080,7 +1245,8 @@ def _render_image_text(slide, slide_data, theme, **kwargs):
                       left=MARGIN_LEFT + COLUMN_WIDTH + COLUMN_GAP, top=body_top,
                       width=COLUMN_WIDTH, height=body_height,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
-                      font_color=theme.colors.text)
+                      font_color=theme.colors.text,
+                      accent_color=theme.colors.accent)
 
     _set_slide_background(slide, theme)
 
@@ -1164,13 +1330,15 @@ def _render_team(slide, slide_data, theme, **kwargs):
                          left=BODY_LEFT, top=body_top,
                          width=BODY_WIDTH, height=body_height,
                          font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_size"],
-                         font_color=theme.colors.text)
+                         font_color=theme.colors.text,
+                         accent_color=theme.colors.accent)
     elif body_el and body_el.content:
         _add_text_box(slide, body_el.content,
                       left=BODY_LEFT, top=body_top,
                       width=BODY_WIDTH, height=body_height,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_size"],
-                      font_color=theme.colors.text)
+                      font_color=theme.colors.text,
+                      accent_color=theme.colors.accent)
 
     _add_decorative_accent(slide, theme, kwargs.get("slide_index", 0))
     _set_slide_background(slide, theme)
@@ -1178,6 +1346,8 @@ def _render_team(slide, slide_data, theme, **kwargs):
 
 def _render_stat(slide, slide_data, theme, **kwargs):
     """Stat slide: 1-3 large stat callouts with labels."""
+    _render_kicker(slide, slide_data, theme)
+
     _, title_font = _compute_body_top(slide_data.title)
 
     _add_text_box(slide, slide_data.title or "",
@@ -1237,13 +1407,17 @@ def _render_stat(slide, slide_data, theme, **kwargs):
 
     # Optional body/context below stats
     if stats and body_el and body_el.content:
+        stat_body_h = Inches(1.2)
+        if _has_takeaway(slide_data):
+            stat_body_h = Inches(0.5)  # Shrink to leave room for takeaway
         _add_text_box(slide, body_el.content,
                       left=BODY_LEFT, top=Inches(5.5),
-                      width=BODY_WIDTH, height=Inches(1.2),
+                      width=BODY_WIDTH, height=stat_body_h,
                       font_name=theme.font_body, font_size=_DESIGN_TOKENS["body_small_size"],
                       font_color=theme.colors.text_light,
                       alignment=PP_ALIGN.CENTER)
 
+    _render_takeaway(slide, slide_data, theme)
     _set_slide_background(slide, theme)
 
 
@@ -1264,24 +1438,48 @@ def _render_image_full(slide, slide_data, theme, **kwargs):
         fill.solid()
         fill.fore_color.rgb = RGBColor.from_string("1A1A2E")
 
-    # Semi-transparent dark overlay for text readability
+    # Gradient dark overlay: transparent at top, dark at bottom (where text sits)
     overlay = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
         Inches(0), Inches(0), SLIDE_WIDTH, SLIDE_HEIGHT,
     )
-    overlay.fill.solid()
-    overlay.fill.fore_color.rgb = RGBColor.from_string("000000")
-    # Set transparency to ~55% via alpha on the XML element
+    overlay.fill.gradient()
+    overlay.line.fill.background()
+
+    # Configure gradient stops via XML for precise alpha control
     from pptx.oxml.ns import qn
     sp_pr = overlay._element.spPr
-    solid_fill_elem = sp_pr.find(qn("a:solidFill"))
-    if solid_fill_elem is not None:
-        srgb = solid_fill_elem.find(qn("a:srgbClr"))
-        if srgb is not None:
-            alpha = srgb.makeelement(qn("a:alpha"), {})
-            alpha.set("val", "45000")  # 45% opacity (55% transparent)
-            srgb.append(alpha)
-    overlay.line.fill.background()
+    grad_fill = sp_pr.find(qn("a:gradFill"))
+    if grad_fill is not None:
+        # Set linear angle: 16200000 = 270 degrees (bottom-to-top in EMU)
+        lin = grad_fill.find(qn("a:lin"))
+        if lin is None:
+            lin = grad_fill.makeelement(qn("a:lin"), {})
+            grad_fill.append(lin)
+        lin.set("ang", "16200000")
+        lin.set("scaled", "1")
+
+        # Replace auto-generated stops with our custom ones
+        gs_lst = grad_fill.find(qn("a:gsLst"))
+        if gs_lst is not None:
+            for gs in list(gs_lst):
+                gs_lst.remove(gs)
+
+            # Stop 0 (top of slide): black at 0% opacity (fully transparent)
+            gs0 = gs_lst.makeelement(qn("a:gs"), {"pos": "0"})
+            srgb0 = gs0.makeelement(qn("a:srgbClr"), {"val": "000000"})
+            alpha0 = srgb0.makeelement(qn("a:alpha"), {"val": "0"})
+            srgb0.append(alpha0)
+            gs0.append(srgb0)
+            gs_lst.append(gs0)
+
+            # Stop 1 (bottom of slide): black at 80% opacity
+            gs1 = gs_lst.makeelement(qn("a:gs"), {"pos": "100000"})
+            srgb1 = gs1.makeelement(qn("a:srgbClr"), {"val": "000000"})
+            alpha1 = srgb1.makeelement(qn("a:alpha"), {"val": "80000"})
+            srgb1.append(alpha1)
+            gs1.append(srgb1)
+            gs_lst.append(gs1)
 
     # Title — centered, white, large
     _add_text_box(slide, slide_data.title or "",
@@ -1301,6 +1499,56 @@ def _render_image_full(slide, slide_data, theme, **kwargs):
                       font_color="#DDDDDD", alignment=PP_ALIGN.CENTER)
 
 
+def _render_section_divider(slide, slide_data, theme, **kwargs):
+    """Section divider slide: large section number + title, whitespace-heavy."""
+    section_number = kwargs.get("section_number", 1)
+
+    # Use dark background like title slide
+    title_bg = getattr(theme.colors, "title_background", None)
+    if title_bg:
+        fill = slide.background.fill
+        fill.solid()
+        fill.fore_color.rgb = RGBColor.from_string(title_bg.lstrip("#"))
+        title_color = "#FFFFFF"
+        subtitle_color = "#CCCCCC"
+    else:
+        _set_slide_background(slide, theme)
+        title_color = theme.colors.primary
+        subtitle_color = theme.colors.text_light
+
+    # Large section number in accent color
+    section_num = str(section_number)
+    _add_text_box(slide, section_num,
+                  left=MARGIN_LEFT, top=Inches(1.5),
+                  width=CONTENT_WIDTH, height=Inches(2.0),
+                  font_name=theme.font_heading,
+                  font_size=Pt(120),
+                  font_color=theme.colors.accent,
+                  alignment=PP_ALIGN.CENTER,
+                  bold=True, parse_markdown=False)
+
+    # Section title
+    _add_text_box(slide, slide_data.title or "",
+                  left=MARGIN_LEFT, top=Inches(3.8),
+                  width=CONTENT_WIDTH, height=Inches(1.5),
+                  font_name=theme.font_heading,
+                  font_size=_DESIGN_TOKENS["heading_size"],
+                  font_color=title_color,
+                  alignment=PP_ALIGN.CENTER,
+                  bold=True)
+
+    # Optional subtitle
+    subtitle_el = _find_element(slide_data, "subtitle")
+    if subtitle_el and subtitle_el.content:
+        _add_text_box(slide, subtitle_el.content,
+                      left=MARGIN_LEFT, top=Inches(5.3),
+                      width=CONTENT_WIDTH, height=Inches(0.8),
+                      font_name=theme.font_body,
+                      font_size=_DESIGN_TOKENS["body_size"],
+                      font_color=subtitle_color,
+                      alignment=PP_ALIGN.CENTER)
+
+
 # Renderer dispatch table
 _RENDERERS = {
     "title": _render_title,
@@ -1315,4 +1563,5 @@ _RENDERERS = {
     "code": _render_code,
     "team": _render_team,
     "stat": _render_stat,
+    "section_divider": _render_section_divider,
 }
