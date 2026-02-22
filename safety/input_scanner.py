@@ -9,7 +9,6 @@ import base64
 import binascii
 import unicodedata
 import requests
-import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Tuple, Optional
 
@@ -246,41 +245,33 @@ def scan_input(text: str, session_context: Dict[str, Any] = None, mode: str = "h
             if use_nemo:
                 futures["nemo"] = executor.submit(_scan_nemo, text, provider_config)
             
-            # Collect results as they complete
-            for future in as_completed(futures.values()):
+            # Collect all results (wait for all to complete)
+            completed_futures = list(as_completed(futures.values()))
+            for future in completed_futures:
                 try:
                     result = future.result(timeout=6)  # Slightly longer than individual timeout
                     results.append(result)
-                    
-                    # Early exit if any provider flags (defense-in-depth)
-                    if not result.get("allowed", True):
-                        # Wait for other provider to complete, then aggregate
-                        for other_future in as_completed(futures.values()):
-                            if other_future != future:
-                                try:
-                                    other_result = other_future.result(timeout=1)
-                                    results.append(other_result)
-                                except Exception:
-                                    pass
-                        
-                        # Aggregate all results
-                        all_hits = []
-                        flagged_providers = []
-                        for r in results:
-                            all_hits.extend(r.get("hits", []))
-                            if not r.get("allowed", True):
-                                flagged_providers.append(r.get("provider", "unknown"))
-                        
-                        return {
-                            "allowed": False,
-                            "reason": f"flagged_by:{','.join(flagged_providers)}",
-                            "hits": list(set(all_hits)),
-                            "providers": [r.get("provider") for r in results],
-                            "mode": "hybrid"
-                        }
                 except Exception as e:
-                    # Provider failed, continue
-                    pass
+                    # Provider failed, add error result
+                    results.append({"allowed": True, "reason": f"provider_error:{str(e)}", "hits": [], "provider": "unknown"})
+            
+            # Check if any provider flagged
+            flagged_providers = []
+            all_hits = []
+            for r in results:
+                all_hits.extend(r.get("hits", []))
+                if not r.get("allowed", True):
+                    flagged_providers.append(r.get("provider", "unknown"))
+            
+            # If any provider flags, block immediately
+            if flagged_providers:
+                return {
+                    "allowed": False,
+                    "reason": f"flagged_by:{','.join(flagged_providers)}",
+                    "hits": list(set(all_hits)),
+                    "providers": [r.get("provider") for r in results],
+                    "mode": "hybrid"
+                }
         
         # Both providers passed, add local scanner result
         local_result = scan_input_local(text)
