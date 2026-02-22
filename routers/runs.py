@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
 
-from ops.tracing import get_tracer
+from ops.tracing import run_span
 from opentelemetry.trace import Status, StatusCode
 
 from shared.state import (
@@ -94,10 +94,7 @@ async def process_run(run_id: str, query: str):
     - Wraps: remme retrieval, agent loop, memory extraction
     - Child spans (agent_loop.run, llm.generate) inherit trace_id automatically
     """
-    tracer = get_tracer("runs")
-    with tracer.start_as_current_span("run.execute") as span:
-        span.set_attribute("run_id", run_id)
-        span.set_attribute("query", query[:200] if query else "")
+    with run_span(run_id, query or "") as span:
         try:
             # 1. RETRIEVE MEMORIES (Remme)
             # Search for past relevant facts to inject into this run

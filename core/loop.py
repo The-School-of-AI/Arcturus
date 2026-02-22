@@ -4,7 +4,13 @@ import networkx as nx
 import asyncio
 import time
 from memory.context import ExecutionContextManager
-from ops.tracing import get_tracer
+from ops.tracing import (
+    agent_loop_run_span,
+    agent_plan_span,
+    agent_execute_dag_span,
+    agent_execute_node_span,
+    attach_plan_graph_to_span,
+)
 from opentelemetry.trace import Status, StatusCode
 from agents.base_agent import AgentRunner
 from core.utils import log_step, log_error
@@ -153,9 +159,9 @@ class AgentLoop4:
         - Span name: agent_loop.run
         - Child spans: agent_loop.plan (planner), agent_loop.execute_dag (DAG execution)
         """
-        tracer = get_tracer("agent_loop")
-        with tracer.start_as_current_span("agent_loop.run") as span:
+        with agent_loop_run_span(session_id or "", query or "") as span:
             span.set_attribute("session_id", session_id or "")
+            span.set_attribute("title", "Start the Agent Loop")
             span.set_attribute("query", (query or "")[:100])
             # 🟢 PHASE 0: BOOTSTRAP CONTEXT (Immediate VS Code feedback)
             # We create a temporary graph with just a "Query" node (running Planner) so the UI sees meaningful start
@@ -241,8 +247,9 @@ class AgentLoop4:
                         )
 
                     # WATCHTOWER: Planner phase span
-                    with tracer.start_as_current_span("agent_loop.plan"):
+                    with agent_plan_span() as plan_span:
                         plan_result = await self._track_task(retry_with_backoff(run_planner))
+                        attach_plan_graph_to_span(plan_span, plan_result)
 
                     if self.context.stop_requested:
                         break
@@ -315,7 +322,7 @@ class AgentLoop4:
 
                     try:
                         # WATCHTOWER: DAG execution span (contains execute_node spans)
-                        with tracer.start_as_current_span("agent_loop.execute_dag"):
+                        with agent_execute_dag_span():
                             await self._track_task(self._execute_dag(self.context))
 
                         if self.context.stop_requested:
@@ -678,13 +685,10 @@ class AgentLoop4:
         - Attributes: node_id, agent type, session_id
         - LLM calls inside the agent become children of this span
         """
-        tracer = get_tracer("agent_loop")
         step_data = context.get_step_data(step_id)
         agent_type = step_data["agent"]
-        with tracer.start_as_current_span("agent_loop.execute_node") as span:
-            span.set_attribute("node_id", step_id)
-            span.set_attribute("agent", agent_type)
-            span.set_attribute("session_id", context.plan_graph.graph.get("session_id", ""))
+        session_id_val = context.plan_graph.graph.get("session_id", "")
+        with agent_execute_node_span(step_id, agent_type, session_id_val) as span:
             # 📡 EMIT EVENT
             await event_bus.publish("step_start", "AgentLoop4", {"step_id": step_id})
 

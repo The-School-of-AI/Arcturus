@@ -63,7 +63,8 @@ async def lifespan(app: FastAPI):
         from ops.tracing import init_tracing
         init_tracing(
             mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
-            jaeger_endpoint=watchtower.get("jaeger_endpoint")
+            jaeger_endpoint=watchtower.get("jaeger_endpoint"),
+            service_name=watchtower.get("service_name", "arcturus")
         )
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         FastAPIInstrumentor.instrument_app(app)

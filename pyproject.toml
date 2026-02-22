@@ -46,6 +46,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.28.0",
     "opentelemetry-instrumentation-fastapi>=0.49b0",
     "pymongo>=4.10.0",
+    "mem0ai>=1.0.4",
 ]
 
 [tool.setuptools.packages.find]

@@ -5,7 +5,7 @@ import json
 import yaml
 from pathlib import Path
 from google import genai
-from ops.tracing import get_tracer
+from ops.tracing import llm_span
 from opentelemetry.trace import Status, StatusCode
 from google.genai.errors import ServerError
 from dotenv import load_dotenv
@@ -120,11 +120,7 @@ class ModelManager:
         - Attributes: model, provider, prompt_length, output_length
         - Used for latency breakdown and cost tracking (Days 6-10)
         """
-        tracer = get_tracer("model_manager")
-        with tracer.start_as_current_span("llm.generate") as span:
-            span.set_attribute("model", self.text_model_key)
-            span.set_attribute("provider", self.model_type)
-            span.set_attribute("prompt_length", len(prompt))
+        with llm_span(self.text_model_key, self.model_type, len(prompt)) as span:
             try:
                 # Route to provider-specific implementation
                 if self.model_type == "gemini":
@@ -133,7 +129,10 @@ class ModelManager:
                     result = await self._ollama_generate(prompt)
                 else:
                     raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+                
+                span.set_attribute("prompt", prompt)
                 span.set_attribute("output_length", len(result))
+                span.set_attribute("output_preview", (result[:1000] if result else ""))
                 return result
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -147,12 +146,8 @@ class ModelManager:
         - Span name: llm.generate
         - Attributes: model, provider, prompt_length, output_length
         """
-        tracer = get_tracer("model_manager")
         prompt_len = sum(len(c) if isinstance(c, str) else 0 for c in contents)
-        with tracer.start_as_current_span("llm.generate") as span:
-            span.set_attribute("model", self.text_model_key)
-            span.set_attribute("provider", self.model_type)
-            span.set_attribute("prompt_length", prompt_len)
+        with llm_span(self.text_model_key, self.model_type, prompt_len) as span:
             try:
                 # Route to provider-specific implementation (multimodal)
                 if self.model_type == "gemini":
@@ -163,6 +158,7 @@ class ModelManager:
                 else:
                     raise NotImplementedError(f"Unsupported model type: {self.model_type}")
                 span.set_attribute("output_length", len(result))
+                span.set_attribute("output_preview", (result[:500] if result else ""))
                 return result
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))

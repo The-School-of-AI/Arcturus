@@ -1,11 +1,14 @@
 """
-Watchtower OpenTelemetry integration.
-Exports trace spans to MongoDB for persistence and querying.
+WATCHTOWER: OpenTelemetry core setup.
+MongoDB exporter, tracer provider, and get_tracer.
 """
-from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
-from opentelemetry.sdk.trace import ReadableSpan
-from pymongo import MongoClient
 from datetime import datetime
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
+from pymongo import MongoClient
 
 
 class MongoDBSpanExporter(SpanExporter):
@@ -21,22 +24,18 @@ class MongoDBSpanExporter(SpanExporter):
 
     def _ensure_indexes(self):
         """Create indexes for trace_id, run_id, and time-range queries."""
-        # Trace lookup: fetch all spans for a trace
         self.collection.create_index("trace_id")
-        # Run-based queries: find traces by run_id
         self.collection.create_index("attributes.run_id")
-        # Time-range queries: recent traces
         self.collection.create_index([("start_time", -1)])
 
     def export(self, spans: list[ReadableSpan]) -> SpanExportResult:
         """Convert OTel spans to MongoDB documents and insert."""
-        # Flatten span attributes to strings for MongoDB storage
         docs = []
         for span in spans:
             docs.append({
                 "trace_id": format(span.context.trace_id, "032x"),
                 "span_id": format(span.context.span_id, "016x"),
-                "parent_span_id": format(span.parent_id, "016x") if span.parent_id else None,
+                "parent_span_id": format(span.parent.span_id, "016x") if span.parent else None,
                 "name": span.name,
                 "start_time": datetime.fromtimestamp(span.start_time / 1e9),
                 "end_time": datetime.fromtimestamp(span.end_time / 1e9),
@@ -55,17 +54,14 @@ class MongoDBSpanExporter(SpanExporter):
         return True
 
 
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-
-def init_tracing(mongodb_uri: str, jaeger_endpoint: str | None = None):
+def init_tracing(mongodb_uri: str, jaeger_endpoint: str | None = None, service_name: str = "arcturus"):
     """
     Initialize OpenTelemetry: set up TracerProvider and exporters.
     Call once at app startup (e.g. in api.py lifespan).
+    service_name: Shown in Jaeger as the service/project name (default: arcturus).
     """
-    provider = TracerProvider()
+    resource = Resource.create({"service.name": service_name})
+    provider = TracerProvider(resource=resource)
     provider.add_span_processor(BatchSpanProcessor(MongoDBSpanExporter(mongodb_uri)))
     if jaeger_endpoint:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
