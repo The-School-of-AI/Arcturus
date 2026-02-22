@@ -1,14 +1,40 @@
-# Project 11 Setup Guide: Qdrant Local Development
+# Project 11 Setup Guide: Qdrant (Cloud or Local)
 
-This guide will help you set up Qdrant locally using Docker for Phase 1 of Project 11.
+This guide will help you set up Qdrant (cloud or local via Docker) for Phase 1 of Project 11.
 
 ## Prerequisites
 
-- Docker and Docker Compose installed
 - Python 3.11+
 - Project dependencies installed (`uv sync` or `pip install -e .`)
+- For Option 2 (Docker): Docker and Docker Compose installed
 
-## Step 1: Start Qdrant with Docker
+## Step 1: Set Up Qdrant
+
+Choose one of the following options:
+
+### Option 1: Qdrant Cloud
+
+1. **Create a Qdrant Cloud cluster**
+   - Go to [Qdrant Cloud](https://cloud.qdrant.io/)
+   - Sign up or log in
+   - Create a new cluster and choose your region
+
+2. **Get your cluster URL and API key**
+   - In the Qdrant Cloud Console, find your cluster URL (e.g. `https://xyz-example.region.cloud-provider.cloud.qdrant.io`)
+   - Go to **API Keys**, create a new key, and copy it
+
+3. **Configure `.env`**
+   - Copy `.env.example` to `.env` if you haven't already
+   - Add the following (or update existing values):
+
+   ```
+   QDRANT_URL=https://your-cluster-id.region.cloud-provider.cloud.qdrant.io
+   QDRANT_API_KEY=your-api-key-here
+   ```
+
+   The application reads these from the environment (see `memory/qdrant_config.py`). No code changes are required.
+
+### Option 2: Docker (local)
 
 From the project root directory, run:
 
@@ -31,8 +57,9 @@ You should see `arcturus-qdrant` container running.
 ## Step 2: Check Qdrant Health
 
 Open your browser and visit:
-- **REST API**: http://localhost:6333/dashboard
-- **Health Check**: http://localhost:6333/health
+- **REST API (Docker)**: http://localhost:6333/dashboard
+- **Health Check (Docker)**: http://localhost:6333/health
+- **Cloud**: Use `https://<your-cluster-url>/health` (replace with your `QDRANT_URL`)
 
 You should see a JSON response with `"status": "ok"`.
 
@@ -71,7 +98,8 @@ Expected output:
 
 ## Step 5: Verify in Qdrant Dashboard
 
-1. Open http://localhost:6333/dashboard
+1. **Docker**: Open http://localhost:6333/dashboard  
+   **Cloud**: Open your cluster dashboard in Qdrant Cloud Console
 2. You should see the `arcturus_memories` collection
 3. Check the points count (should match test memories added)
 
