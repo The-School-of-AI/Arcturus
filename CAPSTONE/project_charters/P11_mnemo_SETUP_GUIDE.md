@@ -1,6 +1,7 @@
 # Project 11 Setup Guide: Qdrant (Cloud or Local)
 
-This guide will help you set up Qdrant (cloud or local via Docker) for Phase 1 of Project 11.
+This guide will help you set up Qdrant (cloud or local via Docker) for Phase 1 of Project 11. 
+**Note**: You don't need to do these steps if you don't want to move to qdrant for now. The default config will use faiss (the legacy one).
 
 ## Prerequisites
 
