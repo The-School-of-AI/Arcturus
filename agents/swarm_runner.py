@@ -9,9 +9,7 @@ import ray
 from agents.manager import ManagerAgent
 from agents.protocol import Task, TaskPriority, TaskStatus
 from agents.worker import WorkerAgent
-from agents.protocol import Task, TaskStatus
 from core.profile_loader import get_profile
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
