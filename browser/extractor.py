@@ -68,14 +68,30 @@ class PageExtractor:
             return f"Error extracting DOM: {str(e)}"
 
     async def get_accessibility_tree(self) -> Dict[str, Any]:
-        """Parse the browser's accessibility tree using aria_snapshot (Playwright >=1.48)."""
+        """Parse the browser's accessibility tree.
+
+        Uses locator-based aria_snapshot() (Playwright >=1.48). Falls back to
+        the legacy accessibility.snapshot() for older Playwright builds.
+        """
+        # Modern API: Playwright >= 1.48 (locator-based aria_snapshot)
         try:
-            # aria_snapshot() is the modern replacement for the removed page.accessibility API
-            snapshot = await self.page.aria_snapshot()
+            snapshot = await self.page.locator(":root").aria_snapshot()
             return {"role": "document", "snapshot": snapshot}
+        except AttributeError:
+            pass  # Method not available on this Playwright version
         except Exception as e:
-            logger.error(f"Failed to get accessibility snapshot: {e}")
-            return {"error": str(e)}
+            logger.warning(f"aria_snapshot() failed: {e}")
+
+        # Legacy API: Playwright < 1.48
+        if hasattr(self.page, "accessibility"):
+            try:
+                tree = await self.page.accessibility.snapshot()
+                return tree or {"role": "document", "snapshot": ""}
+            except Exception as e:
+                logger.error(f"Legacy accessibility.snapshot() also failed: {e}")
+                return {"error": str(e)}
+
+        return {"error": "No accessibility API found on this Playwright version"}
 
     async def get_labeled_screenshot(self) -> str:
         """
