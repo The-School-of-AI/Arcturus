@@ -1,6 +1,10 @@
 # Qdrant collection configurations
 # Add new collections here as we migrate more data to Qdrant.
 # Each collection can have dimension, indexed fields, and other settings.
+# Connection: override via QDRANT_URL, QDRANT_API_KEY env vars if needed.
+
+url: http://localhost:6333
+api_key: null   # optional; for Qdrant Cloud set via QDRANT_API_KEY
 
 default_collection: arcturus_memories
 

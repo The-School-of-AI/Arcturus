@@ -44,7 +44,7 @@ def get_vector_store(
         VectorStoreProtocol implementation.
 
     Example:
-        store = get_vector_store(provider="qdrant", url="http://localhost:6333")
+        store = get_vector_store(provider="qdrant")  # url/api_key from config
         store = get_vector_store(provider="faiss", persistence_dir="memory/faiss_index")
     """
     p = provider or os.environ.get("VECTOR_STORE_PROVIDER", "faiss")

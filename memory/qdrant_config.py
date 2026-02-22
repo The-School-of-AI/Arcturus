@@ -1,7 +1,9 @@
 """
 Load and resolve Qdrant collection configs from config/qdrant_config.yaml.
+Connection settings (url, api_key) are read from config or env (QDRANT_URL, QDRANT_API_KEY).
 """
 
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -48,3 +50,15 @@ def list_collections() -> list[str]:
     """Return names of all configured collections."""
     cfg = _load_config()
     return list(cfg.get("collections", {}).keys())
+
+
+def get_qdrant_url() -> str:
+    """Return Qdrant connection URL from config or env. Default: http://localhost:6333"""
+    cfg = _load_config()
+    return os.getenv("QDRANT_URL") or cfg.get("url") or "http://localhost:6333"
+
+
+def get_qdrant_api_key() -> Optional[str]:
+    """Return Qdrant API key from config or env. Default: None (local mode)."""
+    cfg = _load_config()
+    return os.getenv("QDRANT_API_KEY") or cfg.get("api_key") or None

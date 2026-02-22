@@ -29,7 +29,7 @@ except ImportError:
 from core.utils import log_step, log_error
 
 from memory.backends.base import VectorStoreProtocol
-from memory.qdrant_config import get_collection_config, get_default_collection
+from memory.qdrant_config import get_collection_config, get_default_collection, get_qdrant_url, get_qdrant_api_key
 from memory.user_id import get_user_id
 
 
@@ -47,9 +47,7 @@ class QdrantVectorStore:
     def __init__(
         self,
         collection_name: Optional[str] = None,
-        url: str = "http://localhost:6333",
         dimension: Optional[int] = None,
-        api_key: Optional[str] = None,
         scanned_runs_path: Optional[Path] = None,
     ):
         self.collection_name = collection_name or get_default_collection()
@@ -59,11 +57,12 @@ class QdrantVectorStore:
         self._is_tenant = cfg.get("is_tenant", False)
         self._tenant_keyword_field = cfg.get("tenant_keyword_field", "user_id")
         self._user_id = get_user_id() if self._is_tenant else None
-        self.url = url
-        self.client = QdrantClient(url=url, api_key=api_key, timeout=10.0)
+        self.url = get_qdrant_url()
+        api_key = get_qdrant_api_key()
+        self.client = QdrantClient(url=self.url, api_key=api_key, timeout=10.0)
         self._scanned_runs_path = Path(scanned_runs_path) if scanned_runs_path else Path(__file__).parent.parent.parent / "memory" / "remme_index" / "scanned_runs.json"
         self._ensure_collection()
-        log_step(f"✅ QdrantVectorStore initialized: {url}/{self.collection_name}", symbol="🔧")
+        log_step(f"✅ QdrantVectorStore initialized: {self.url}/{self.collection_name}", symbol="🔧")
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()

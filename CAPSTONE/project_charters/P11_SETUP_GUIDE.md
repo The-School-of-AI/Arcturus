@@ -147,17 +147,12 @@ For production deployment:
 
 Example:
 ```python
-# Via factory (recommended) - uses config/qdrant_config.yaml
+# Via factory (recommended) - url/api_key from config/qdrant_config.yaml or QDRANT_URL, QDRANT_API_KEY
 from memory.vector_store import get_vector_store
-store = get_vector_store(provider="qdrant", url=os.getenv("QDRANT_URL"))
+store = get_vector_store(provider="qdrant")
 
 # Or with explicit collection
-store = get_vector_store(
-    provider="qdrant",
-    collection_name="arcturus_memories",
-    url=os.getenv("QDRANT_URL"),
-    api_key=os.getenv("QDRANT_API_KEY"),
-)
+store = get_vector_store(provider="qdrant", collection_name="arcturus_memories")
 ```
 
 ---
