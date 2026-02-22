@@ -26,6 +26,9 @@ jobs:
           uv sync --python 3.11
           uv pip install pytest pytest-asyncio
 
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
       - name: Run backend gate
         run: uv run scripts/test_all.sh backend
 

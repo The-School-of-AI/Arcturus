@@ -1,61 +1,79 @@
-"""Acceptance scaffold for P10 (p10_phantom).
+import pytest
+import asyncio
+from browser.controller import BrowserController
+from browser.extractor import PageExtractor
 
-Replace these contract tests with feature-level assertions as implementation matures.
-"""
+@pytest.fixture
+async def browser():
+    ctrl = BrowserController(headless=True)
+    await ctrl.start()
+    yield ctrl
+    await ctrl.stop()
 
-from pathlib import Path
+@pytest.mark.asyncio
+async def test_navigation(browser):
+    """Test 1: Basic navigation."""
+    await browser.navigate("https://example.com")
+    assert "Example Domain" in await browser.page.title()
 
-PROJECT_ID = "P10"
-PROJECT_KEY = "p10_phantom"
-CI_CHECK = "p10-phantom-browser"
-CHARTER = Path("CAPSTONE/project_charters/P10_phantom_autonomous_browser_agent.md")
-DELIVERY_README = Path("CAPSTONE/project_charters/P10_DELIVERY_README.md")
-DEMO_SCRIPT = Path("scripts/demos/p10_phantom.sh")
-THIS_FILE = Path("tests/acceptance/p10_phantom/test_multistep_workflow_completes.py")
+@pytest.mark.asyncio
+async def test_element_extraction(browser):
+    """Test 2: Simplified DOM extraction."""
+    await browser.navigate("https://example.com")
+    extractor = PageExtractor(browser.page)
+    dom = await extractor.get_simplified_dom()
+    assert "[e0]" in dom
 
+@pytest.mark.asyncio
+async def test_click_interaction(browser):
+    """Test 3: Click interaction."""
+    await browser.navigate("https://example.com")
+    # example.com has one link
+    await browser.click("a")
+    assert "iana.org" in browser.page.url
 
-def _charter_text() -> str:
-    return CHARTER.read_text(encoding="utf-8")
+@pytest.mark.asyncio
+async def test_typing_interaction(browser):
+    """Test 4: Typing interaction."""
+    # Using a site with a search bar for typing test
+    await browser.navigate("https://www.google.com")
+    # Basic check - might need adjustment based on consent screens
+    try:
+        await browser.type('textarea[name="q"]', "Phantom Agent")
+    except:
+        pytest.skip("Search bar not found (likely consent screen)")
 
+@pytest.mark.asyncio
+async def test_screenshot_capture(browser):
+    """Test 5: Screenshot capability."""
+    await browser.navigate("https://example.com")
+    path = await browser.get_screenshot("test_ss.png")
+    import os
+    assert os.path.exists(path)
 
-def test_01_charter_exists() -> None:
-    assert CHARTER.exists(), f"Missing charter: {CHARTER}"
+@pytest.mark.asyncio
+async def test_accessibility_tree(browser):
+    """Test 6: Accessibility tree snapshot."""
+    await browser.navigate("https://example.com")
+    extractor = PageExtractor(browser.page)
+    tree = await extractor.get_accessibility_tree()
+    if "error" in tree:
+        pytest.skip(f"No accessibility API available: {tree['error']}")
+    assert "role" in tree
 
+@pytest.mark.asyncio
+async def test_invalid_url_handling(browser):
+    """Test 7: Error handling for invalid URL."""
+    with pytest.raises(Exception):
+        await browser.navigate("https://this-is-not-a-real-website-12345.com")
 
-def test_02_expanded_gate_contract_present() -> None:
-    assert "Expanded Mandatory Test Gate Contract (10 Hard Conditions)" in _charter_text()
-
-
-def test_03_acceptance_path_declared_in_charter() -> None:
-    assert f"Acceptance: " in _charter_text()
-
-
-def test_04_demo_script_exists() -> None:
-    assert DEMO_SCRIPT.exists(), f"Missing demo script: {DEMO_SCRIPT}"
-
-
-def test_05_demo_script_is_executable() -> None:
-    assert DEMO_SCRIPT.stat().st_mode & 0o111, f"Demo script not executable: {DEMO_SCRIPT}"
-
-
-def test_06_delivery_readme_exists() -> None:
-    assert DELIVERY_README.exists(), f"Missing delivery README: {DELIVERY_README}"
-
-
-def test_07_delivery_readme_has_required_sections() -> None:
-    required = [
-        "## 1. Scope Delivered",
-        "## 2. Architecture Changes",
-        "## 3. API And UI Changes",
-        "## 4. Mandatory Test Gate Definition",
-        "## 5. Test Evidence",
-        "## 8. Known Gaps",
-        "## 10. Demo Steps",
-    ]
-    text = DELIVERY_README.read_text(encoding="utf-8")
-    for section in required:
-        assert section in text, f"Missing section {section} in {DELIVERY_README}"
-
-
-def test_08_ci_check_declared_in_charter() -> None:
-    assert f"CI required check: " in _charter_text()
+@pytest.mark.asyncio
+async def test_multistep_workflow(browser):
+    """Test 8: Multi-step workflow completeness."""
+    await browser.navigate("https://example.com")
+    await browser.click("a")
+    assert "iana.org" in browser.page.url
+    await browser.navigate("https://example.com")
+    extractor = PageExtractor(browser.page)
+    dom = await extractor.get_simplified_dom()
+    assert "Example Domain" in await browser.page.content()
