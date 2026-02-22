@@ -1,0 +1,12 @@
+name: Research Department
+description: Handles web research, academic literature, and data analysis tasks.
+agents:
+  - role: web_researcher
+    description: Searches the web and retrieves relevant articles and sources.
+    skills: [researcher]
+  - role: academic_researcher
+    description: Searches academic papers, journals, and databases.
+    skills: [researcher]
+  - role: data_analyst
+    description: Analyses structured data, statistics, and produces summaries.
+    skills: [analyst]

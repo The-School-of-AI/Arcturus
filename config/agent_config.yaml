@@ -1,4 +1,10 @@
 agents:
+  ManagerAgent:
+    model: gemini
+    mcp_servers: []
+    skills:
+      - manager
+    description: Receives a user request and decomposes it into a DAG of sub-tasks for Worker Agents.
   PlannerAgent:
     model: gemini
     mcp_servers: []
