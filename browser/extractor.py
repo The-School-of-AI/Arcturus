@@ -68,13 +68,11 @@ class PageExtractor:
             return f"Error extracting DOM: {str(e)}"
 
     async def get_accessibility_tree(self) -> Dict[str, Any]:
-        """Parse the browser's accessibility tree."""
+        """Parse the browser's accessibility tree using aria_snapshot (Playwright >=1.48)."""
         try:
-            if hasattr(self.page, "accessibility"):
-                return await self.page.accessibility.snapshot()
-            else:
-                logger.warning("Accessibility API not available on Page object")
-                return {"error": "Accessibility API not available"}
+            # aria_snapshot() is the modern replacement for the removed page.accessibility API
+            snapshot = await self.page.aria_snapshot()
+            return {"role": "document", "snapshot": snapshot}
         except Exception as e:
             logger.error(f"Failed to get accessibility snapshot: {e}")
             return {"error": str(e)}
