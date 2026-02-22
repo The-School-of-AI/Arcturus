@@ -123,7 +123,6 @@ Defense layer changes are additive and do not touch existing logic. All safety m
 | Gap | Severity | Mitigation | Plan |
 |-----|----------|-----------|------|
 | Tool whitelist is permissive when no config set | Low | Argument sanitization still runs | Week 2 |
-| ML jailbreak classifier is a placeholder in `jailbreak.py` | Low | Lakera Guard already provides ML-based detection; local patterns cover the rest | Replace placeholder if Lakera is unavailable |
 
 ## 9. Rollback Plan
 
@@ -161,7 +160,7 @@ export LAKERA_PROJECT_ID=your_project_id_here   # optional
 # Nemo Guardrails runs in-process via the Python package (no separate server needed
 # for local dev). It uses GEMINI_API_KEY above via a custom GeminiCustomLLM provider.
 # Only set NEMO_API_URL if you want to point at a self-hosted Nemo REST server instead.
-# export NEMO_API_URL=http://localhost:8001
+export NEMO_API_URL=http://localhost:8001
 ```
 
 ### 3. Start infrastructure
@@ -189,7 +188,7 @@ npm run dev          # frontend only
 npm run dev:all      # frontend + backend together
 ```
 
-Open `http://localhost:3000` in your browser.
+Open `http://localhost:5173` in your browser.
 
 ### 6. Exercise the safety layer via the UI
 
