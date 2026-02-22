@@ -1,0 +1,12 @@
+name: Engineering Department
+description: Handles software architecture, implementation, and code review tasks.
+agents:
+  - role: architect
+    description: Designs system architecture, APIs, and data models.
+    skills: [coder]
+  - role: coder
+    description: Implements features, writes code, and produces working software.
+    skills: [coder]
+  - role: reviewer
+    description: Reviews code for correctness, quality, and security.
+    skills: [analyst]

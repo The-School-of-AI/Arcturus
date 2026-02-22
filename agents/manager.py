@@ -5,14 +5,15 @@ A Ray Actor that loads its system prompt via the skill system
 ModelManager to decompose a user request into a DAG of Tasks.
 """
 
-import ray
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any
+
+import ray
 
 from agents.protocol import Task, TaskPriority, TaskStatus
-from core.model_manager import ModelManager
-from core.json_parser import parse_llm_json
 from core.bootstrap import bootstrap_agents
+from core.json_parser import parse_llm_json
+from core.model_manager import ModelManager
 from core.registry import AgentRegistry
 
 logger = logging.getLogger(__name__)
@@ -61,17 +62,17 @@ class ManagerAgent:
     and returns a list of serialized Task dicts.
     """
 
-    def __init__(self, agent_id: str = "manager_001", model_name: Optional[str] = None):
+    def __init__(self, agent_id: str = "manager_001", model_name: str | None = None):
         self.agent_id = agent_id
         self.model_name = model_name  # None → uses default from profiles.yaml
-        self._prompt: Optional[str] = None  # Lazy-loaded on first call
+        self._prompt: str | None = None  # Lazy-loaded on first call
 
     def _get_prompt(self) -> str:
         if self._prompt is None:
             self._prompt = _load_prompt()
         return self._prompt
 
-    async def decompose_task(self, user_request: str) -> List[Dict[str, Any]]:
+    async def decompose_task(self, user_request: str) -> list[dict[str, Any]]:
         """
         Decomposes a high-level user request into a DAG of Task dicts.
 
@@ -87,7 +88,7 @@ class ManagerAgent:
 
         # Call LLM via ModelManager
         try:
-            mm = ModelManager(model_name=self.model_name)
+            mm = ModelManager(model_name=self.model_name or "")
             raw_response = await mm.generate_text(full_prompt)
         except Exception as e:
             logger.error(f"[Manager:{self.agent_id}] LLM call failed: {e}")
@@ -106,8 +107,8 @@ class ManagerAgent:
             raise RuntimeError(f"ManagerAgent failed to parse LLM response: {e}")
 
         # Build Task objects — resolve title-based depends_on → UUIDs
-        title_to_task: Dict[str, Task] = {}
-        ordered_tasks: List[Task] = []
+        title_to_task: dict[str, Task] = {}
+        ordered_tasks: list[Task] = []
 
         for raw in raw_tasks:
             task = Task(
@@ -142,9 +143,9 @@ class ManagerAgent:
     async def reevaluate_plan(
         self,
         original_request: str,
-        completed_tasks: List[Dict[str, Any]],
-        failed_tasks: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        completed_tasks: list[dict[str, Any]],
+        failed_tasks: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """
         Re-plans when tasks fail — retries failed tasks with PENDING status.
         (Phase 2: will call LLM for smarter re-planning.)

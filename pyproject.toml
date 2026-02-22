@@ -69,3 +69,63 @@ packages = [
 
 [tool.uv]
 required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "types-PyYAML>=6.0",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — fast Python linter (replaces flake8/isort/pyupgrade)
+# Scoped to P08 touched code paths: agents/, core/, config/, tests/
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+include = [
+    "agents/**/*.py",
+    "core/**/*.py",
+    "config/**/*.py",
+    "tests/**/*.py",
+]
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "platform-frontend",
+    "data",
+]
+
+[tool.ruff.lint]
+# E/W = pycodestyle, F = pyflakes, I = isort, UP = pyupgrade
+select = ["E", "W", "F", "I", "UP"]
+ignore = [
+    "E501",   # line too long — handled by line-length above
+    "F401",   # imported but unused — Ray remote classes import side-effects
+    "E402",   # module level import not at top — Ray actors use deferred imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+# base_agent.py is legacy code — suppress cosmetic whitespace and style errors
+"agents/base_agent.py" = ["W291", "W293", "I001", "UP007", "UP042", "UP045"]
+
+# ---------------------------------------------------------------------------
+# Mypy — static type checker
+# Only checks agents/ (P08 scope) to avoid false-positives in legacy code
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+files = ["agents"]
+explicit_package_bases = true   # fixes "found twice" when run from project root
+follow_imports = "silent"        # silence errors in imported legacy files (remme/, core/, etc.)
+ignore_missing_imports = true    # Ray stubs and internal packages are untyped
+warn_unused_ignores = false
+check_untyped_defs = true        # Check bodies even without full annotations
+# Relax strictness for pragmatic compatibility with existing codebase
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+[[tool.mypy.overrides]]
+module = ["ray.*", "google.*", "mcp.*", "PIL.*", "psutil", "yaml"]
+ignore_missing_imports = true

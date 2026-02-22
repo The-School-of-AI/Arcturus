@@ -12,6 +12,8 @@ strategy:
   max_steps: 3                  # max sequential agent steps
   max_lifelines_per_step: 3     # retries for each step inside AgentRunner (after primary failure)
   max_task_retries: 2           # retries for each swarm task if the worker actor fails (SwarmRunner)
+  swarm_token_budget: 50000     # total token budget across all tasks in one swarm run
+  swarm_cost_budget_usd: 0.50   # hard cost stop for one swarm run (mirrors max_cost_per_run)
 
 memory:
   memory_service: true

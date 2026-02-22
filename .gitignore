@@ -46,6 +46,7 @@ memory/debug_logs/
 *.log
 server.log
 benchmark_results.txt
+S15A.egg-info/
 
 # Environment Secrets
 .env

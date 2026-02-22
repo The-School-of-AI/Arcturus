@@ -46,6 +46,7 @@ jobs:
           - check_name: p08-legion-swarm
             acceptance: tests/acceptance/p08_legion/test_swarm_completes_with_worker_failure.py
             integration: tests/integration/test_legion_chronicle_capture.py
+            lint_paths: "agents"
           - check_name: p09-bazaar-marketplace
             acceptance: tests/acceptance/p09_bazaar/test_tampered_skill_is_blocked.py
             integration: tests/integration/test_bazaar_skill_install_execution.py
@@ -81,9 +82,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest
+          pip install pytest ruff mypy types-PyYAML
       - name: Install frontend dependencies
         run: npm ci
         working-directory: platform-frontend
       - name: Run gate
-        run: ./ci/run_project_gate.sh "${{ matrix.check_name }}" "${{ matrix.acceptance }}" "${{ matrix.integration }}"
+        run: ./ci/run_project_gate.sh "${{ matrix.check_name }}" "${{ matrix.acceptance }}" "${{ matrix.integration }}" "${{ matrix.lint_paths || '' }}"
