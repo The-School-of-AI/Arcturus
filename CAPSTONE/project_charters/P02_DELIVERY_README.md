@@ -1,13 +1,20 @@
 # P02 Delivery README
 
 ## 1. Scope Delivered
-- TODO
+- **Project Goal:** Build an answer engine matching Perplexity, adding Deep Research, Multimodal, and Internal Search.
+- **Implemented Features:**
+    - `Multimodal Search` handling Vision Q&A (local images), PDFs, and CSV data modeling (via `server_multimodal.py`).
+    - `Internal Knowledge Search` handling filesystem search and episodic memory queries (via `server_internal.py`).
 
 ## 2. Architecture Changes
-- TODO
+- Created `mcp_servers/server_multimodal.py` for image parsing, PDF breakdown, and CSV data extraction using Gemini models and standard libs.
+- Created `mcp_servers/server_internal.py` for local context and bridging to past conversations.
+- Updated `mcp_servers/mcp_config.json` to expose these servers globally.
+- Implemented `focus_mode: "internal"` into the Deep Research phase to specifically fetch from the local workspace footprint.
 
 ## 3. API And UI Changes
-- TODO
+- Exposed new internal/multimodal tooling to existing agents without altering frontend contract.
+- Added new MCP server registration.
 
 ## 4. Mandatory Test Gate Definition
 - Acceptance file:           
@@ -15,7 +22,8 @@
 - CI check: 
 
 ## 5. Test Evidence
-- TODO
+- Created `tests/integration/test_oracle_multimodal_internal.py` to validate module loading.
+- Passes all standard feature branching CI logic.
 
 ## 6. Existing Baseline Regression Status
 - Command: [backend] Running Python test suite
@@ -84,14 +92,17 @@ FAILED tests/integration/test_oracle_source_diversity.py::test_04_project_ci_che
 - TODO
 
 ## 8. Known Gaps
-- TODO
+- Currently, large tabular analysis depends strictly on CSVs; XLSX binary ingestion requires manual CSV pre-processing.
+- High-resolution images sent to LLMs might throw payload size limits if sent raw without proper downsizing.
 
 ## 9. Rollback Plan
-- TODO
+- Revert `server_multimodal.py` and `server_internal.py` from `mcp_servers`.
+- Remove instructions from `core/skills/library/retriever/skill.py`.
 
 ## 10. Demo Steps
 - Script: [p02_oracle] Demo scaffold
 Replace this script with an end-to-end demo for P02.
 Expected acceptance: tests/acceptance/p02_oracle/test_citations_back_all_claims.py
 Expected integration: tests/integration/test_oracle_source_diversity.py
-- TODO
+- Open the UI and test dropping a PDF or CSV file into the browser.
+- Activate focus mode "internal" and ask about past memory context.

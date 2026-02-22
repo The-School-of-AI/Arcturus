@@ -25,5 +25,23 @@
     ],
     "type": "local-script",
     "enabled": true
+  },
+  "multimodal": {
+    "command": "uv",
+    "args": [
+      "run",
+      "server_multimodal.py"
+    ],
+    "type": "local-script",
+    "enabled": true
+  },
+  "internal": {
+    "command": "uv",
+    "args": [
+      "run",
+      "server_internal.py"
+    ],
+    "type": "local-script",
+    "enabled": true
   }
 }
