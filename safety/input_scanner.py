@@ -11,7 +11,8 @@ import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Tuple, Optional
 
-from safety.lakera_guard import LAKERA_GUARD_API_KEY, scan_lakera as _scan_lakera
+import os
+from safety.lakera_guard import scan_lakera as _scan_lakera
 
 INJECTION_PATTERNS = [
     r"ignore\s+(?:all\s+)?(?:previous|prior|all)\s+instructions",
@@ -193,32 +194,37 @@ def scan_input(text: str, session_context: Dict[str, Any] = None, mode: str = "h
     scan_mode = provider_config.get("scan_mode", mode)  # Allow override from config
     
     results = []
-    
+
     if scan_mode == "hybrid":
-        # HYBRID MODE: Run Lakera and Nemo in parallel
-        # This provides true defense-in-depth and faster response
-        
+        # HYBRID MODE: Run Lakera and Nemo in parallel.
+
         with ThreadPoolExecutor(max_workers=2) as executor:
             futures = {}
-            
-            # Submit Lakera scan
-            if LAKERA_GUARD_API_KEY:
+
+            # Submit Lakera scan (read env lazily — key may be loaded after module import)
+            if os.getenv("LAKERA_GUARD_API_KEY"):
+                print(f"[Aegis] submitting lakera scan (parallel)", flush=True)
                 futures["lakera"] = executor.submit(_scan_lakera, text)
-            
+            else:
+                print("[Aegis] lakera skipped — LAKERA_GUARD_API_KEY not set", flush=True)
+
             # Submit Nemo scan
             if use_nemo:
+                print("[Aegis] submitting nemo scan (parallel)", flush=True)
                 futures["nemo"] = executor.submit(_scan_nemo, text, provider_config)
-            
-            # Collect all results (wait for all to complete)
+
+            # Collect ALL results before processing any — both providers must
+            # finish before we decide what to block.
             completed_futures = list(as_completed(futures.values()))
             for future in completed_futures:
                 try:
                     result = future.result(timeout=6)  # Slightly longer than individual timeout
                     results.append(result)
+                    print(f"[Aegis] provider={result.get('provider')} allowed={result.get('allowed')} reason={result.get('reason')}", flush=True)
                 except Exception as e:
                     # Provider failed, add error result
                     results.append({"allowed": True, "reason": f"provider_error:{str(e)}", "hits": [], "provider": "unknown"})
-            
+
             # Check if any provider flagged
             flagged_providers = []
             all_hits = []
@@ -245,7 +251,7 @@ def scan_input(text: str, session_context: Dict[str, Any] = None, mode: str = "h
     else:
         # FALLBACK MODE: Sequential execution (original behavior)
         # 1. Try Lakera Guard (primary, cloud-based, ML-powered)
-        if LAKERA_GUARD_API_KEY:
+        if os.getenv("LAKERA_GUARD_API_KEY"):
             lakera_result = _scan_lakera(text)
             results.append(lakera_result)
             

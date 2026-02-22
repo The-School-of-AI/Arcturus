@@ -42,6 +42,7 @@ dependencies = [
     "psutil>=7.2.2",
     "qdrant-client>=1.7.0",
     "pytest>=8.0.0",
+    "nemoguardrails>=0.20.0",
 ]
 
 [tool.setuptools.packages.find]
