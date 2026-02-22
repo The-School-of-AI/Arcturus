@@ -1,13 +1,15 @@
 
-import ray
 import asyncio
-import networkx as nx
-from typing import List, Dict, Any, Optional
-from agents.manager import ManagerAgent
-from agents.worker import WorkerAgent
-from agents.protocol import Task, TaskStatus
-from core.profile_loader import get_profile
 import logging
+from typing import Any
+
+import networkx as nx
+import ray
+
+from agents.manager import ManagerAgent
+from agents.protocol import Task, TaskPriority, TaskStatus
+from agents.worker import WorkerAgent
+from core.profile_loader import get_profile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -16,14 +18,20 @@ logger = logging.getLogger(__name__)
 
 class SwarmRunner:
     def __init__(self):
-        self.manager: Optional[ManagerAgent] = None
-        self.workers: Dict[str, WorkerAgent] = {}
+        self.manager: ManagerAgent | None = None
+        self.workers: dict[str, WorkerAgent] = {}
         self.graph: nx.DiGraph = nx.DiGraph()
 
         # Load swarm strategy settings from profiles.yaml
         # (same pattern as AgentLoop4 reading max_steps)
         profile = get_profile()
         self.max_task_retries: int = profile.get("strategy.max_task_retries", 2)
+        self.swarm_token_budget: int = profile.get("strategy.swarm_token_budget", 50000)
+        self.swarm_cost_budget_usd: float = profile.get("strategy.swarm_cost_budget_usd", 0.50)
+
+        # Runtime accumulators (reset each run_tasks call)
+        self._tokens_used: int = 0
+        self._cost_usd: float = 0.0
 
     async def initialize(self):
         """Initializes Ray and the Manager Agent."""
@@ -31,10 +39,10 @@ class SwarmRunner:
             ray.init(ignore_reinit_error=True)
             logger.info("Ray initialized.")
 
-        self.manager = ManagerAgent.remote()
+        self.manager = ManagerAgent.remote()  # type: ignore[attr-defined]
         logger.info("Manager Agent initialized.")
 
-    async def run_request(self, user_request: str) -> List[Dict[str, Any]]:
+    async def run_request(self, user_request: str) -> list[dict[str, Any]]:
         """
         Main entry point:
         1. Decompose request into tasks (via LLM ManagerAgent).
@@ -44,27 +52,43 @@ class SwarmRunner:
         logger.info(f"SwarmRunner receiving request: {user_request}")
 
         # 1. Decompose
-        task_dicts = await self.manager.decompose_task.remote(user_request)
+        task_dicts = await self.manager.decompose_task.remote(user_request)  # type: ignore[union-attr]
         logger.info(f"Decomposed into {len(task_dicts)} tasks.")
 
         return await self.run_tasks(task_dicts)
 
-    async def run_tasks(self, task_dicts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def run_tasks(self, task_dicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Builds the DAG from a list of task dicts and executes it.
         Can be called directly in tests to bypass the LLM decomposition step.
         """
-        # Reset graph for fresh run
+        # Reset graph and budget accumulators for fresh run
         self.graph = nx.DiGraph()
+        self._tokens_used = 0
+        self._cost_usd = 0.0
+
+        # Priority weights for budget allocation
+        _priority_weight = {
+            TaskPriority.CRITICAL: 4,
+            TaskPriority.HIGH: 3,
+            TaskPriority.MEDIUM: 2,
+            TaskPriority.LOW: 1,
+        }
 
         # Build Graph & Instantiate Workers
-        for t_data in task_dicts:
-            task = Task(**t_data)
+        task_objs = [Task(**t_data) for t_data in task_dicts]
+        total_weight = sum(_priority_weight.get(t.priority, 2) for t in task_objs)
+
+        for task in task_objs:
+            # Allocate proportional token budget
+            weight = _priority_weight.get(task.priority, 2)
+            task.token_budget = int(self.swarm_token_budget * weight / total_weight)
+
             self.graph.add_node(task.id, task=task, retries=0)
 
             role = task.assigned_to
-            if role not in self.workers:
-                self.workers[role] = WorkerAgent.remote(
+            if role and role not in self.workers:
+                self.workers[role] = WorkerAgent.remote(  # type: ignore[attr-defined]
                     agent_id=f"worker_{role}", role=role
                 )
 
@@ -75,14 +99,23 @@ class SwarmRunner:
         results = await self._execute_dag()
         return results
 
-    async def _execute_dag(self) -> List[Dict[str, Any]]:
+    async def _execute_dag(self) -> list[dict[str, Any]]:
         """
         Executes the task DAG respecting dependencies.
         Implements per-task retry on failure (up to MAX_TASK_RETRIES).
         Returns all completed task dicts (failed tasks are included with FAILED status).
         """
-        completed_tasks: Dict[str, Task] = {}
-        failed_tasks: Dict[str, Task] = {}
+        completed_tasks: dict[str, Task] = {}
+        failed_tasks: dict[str, Task] = {}
+
+        # Pre-populate from nodes that already carry a terminal status.
+        # This supports resumed/injected graphs (e.g. test_10 injects a pre-failed node).
+        for node_id in self.graph.nodes:
+            node_task = self.graph.nodes[node_id]["task"]
+            if node_task.status == TaskStatus.COMPLETED:
+                completed_tasks[node_id] = node_task
+            elif node_task.status in (TaskStatus.FAILED, TaskStatus.BLOCKED):
+                failed_tasks[node_id] = node_task
 
         while len(completed_tasks) + len(failed_tasks) < len(self.graph.nodes):
             # Find ready nodes: not processed AND all predecessors completed
@@ -116,7 +149,7 @@ class SwarmRunner:
             for node_id in ready_nodes:
                 task = self.graph.nodes[node_id]["task"]
                 worker = self.workers[task.assigned_to]
-                future = worker.process_task.remote(task.model_dump())
+                future = worker.process_task.remote(task.model_dump())  # type: ignore[attr-defined]
                 futures_map[future] = node_id
 
             # Await and handle results individually
@@ -128,7 +161,38 @@ class SwarmRunner:
                     t_obj = Task(**res)
                     self.graph.nodes[node_id]["task"] = t_obj
                     completed_tasks[node_id] = t_obj
-                    logger.info(f"Task '{t_obj.title}' completed via {t_obj.assigned_to}.")
+
+                    # Accumulate budget usage
+                    self._tokens_used += t_obj.token_used
+                    self._cost_usd += t_obj.cost_usd
+                    logger.info(
+                        f"Task '{t_obj.title}' completed. "
+                        f"Cost so far: ${self._cost_usd:.4f} / ${self.swarm_cost_budget_usd:.2f}"
+                    )
+
+                    # Hard budget stop
+                    if self._cost_usd >= self.swarm_cost_budget_usd:
+                        logger.warning(
+                            f"Budget exceeded: ${self._cost_usd:.4f} >= ${self.swarm_cost_budget_usd:.2f}. "
+                            "Blocking remaining tasks."
+                        )
+                        remaining = [
+                            nid for nid in self.graph.nodes
+                            if nid not in completed_tasks and nid not in failed_tasks
+                        ]
+                        for nid in remaining:
+                            t = self.graph.nodes[nid]["task"]
+                            t.status = TaskStatus.BLOCKED
+                            t.result = "Blocked: swarm cost budget exceeded."
+                            failed_tasks[nid] = t
+                        # Close any unawaited coroutine futures from this batch
+                        # (no-op for real Ray ObjectRefs; prevents warning with in-process test doubles)
+                        import asyncio as _asyncio
+                        for f in futures_map:
+                            if _asyncio.iscoroutine(f):
+                                f.close()
+                        break
+
                 except Exception as e:
                     if retries < self.max_task_retries:
                         logger.warning(
