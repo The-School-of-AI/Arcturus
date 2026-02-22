@@ -94,6 +94,14 @@
     "class_name": "TestAgentSkill",
     "type": "python"
   },
+  "deep_research": {
+    "path": "core/skills/library/deep-research",
+    "version": "1.0.0",
+    "description": "Teaches PlannerAgent to generate iterative deep research plans with focus modes",
+    "intent_triggers": [],
+    "class_name": "DeepResearchSkill",
+    "type": "python"
+  },
   "scheduler": {
     "path": "core/skills/library/scheduler",
     "version": "1.0.0",

@@ -274,13 +274,21 @@ Use `SchedulerAgent` to define:
 {
   "plan_graph": {
     "nodes": [...],
-    "edges": [...]
+    "edges": [
+      {"source": "ROOT", "target": "T001"},
+      {"source": "T001", "target": "T002"},
+      {"source": "T001", "target": "T003"},
+      {"source": "T002", "target": "T004"},
+      {"source": "T003", "target": "T004"}
+    ]
   },
   "next_step_id": "T001",
   "interpretation_confidence": 0.85,
   "ambiguity_notes": []
 }
 ```
+
+**CRITICAL: Each edge MUST be an object with "source" and "target" keys. Do NOT use arrays like ["T001", "T002"].**
 
 ### Confidence Scoring Guide
 

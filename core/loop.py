@@ -141,7 +141,7 @@ class AgentLoop4:
             log_error(f"Failed to resume session: {e}")
             raise
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, research_mode="standard", focus_mode=None):
         # 🟢 PHASE 0: BOOTSTRAP CONTEXT (Immediate VS Code feedback)
         # We create a temporary graph with just a "Query" node (running Planner) so the UI sees meaningful start
         bootstrap_graph = {
@@ -172,6 +172,8 @@ class AgentLoop4:
             # Inject multi_mcp immediately
             self.context.multi_mcp = self.multi_mcp
             self.context.plan_graph.graph['globals_schema'].update(globals_schema)
+            self.context.plan_graph.graph['research_mode'] = research_mode
+            self.context.plan_graph.graph['focus_mode'] = focus_mode
             self.context._save_session()
             log_step("✅ Session initialized with Query processing", symbol="🌱")
         except Exception as e:
@@ -214,6 +216,8 @@ class AgentLoop4:
                         {
                             "original_query": query,
                             "planning_strategy": self.strategy_name,
+                            "research_mode": research_mode,
+                            "focus_mode": focus_mode,
                             "globals_schema": self.context.plan_graph.graph.get("globals_schema", {}),
                             "file_manifest": file_manifest,
                             "file_profiles": file_profiles,
@@ -230,6 +234,14 @@ class AgentLoop4:
                 if not plan_result["success"]:
                     self.context.mark_failed("Query", plan_result['error'])
                     raise RuntimeError(f"Planning failed: {plan_result['error']}")
+
+                # Normalize: if model returned {nodes, edges} at top level instead of {plan_graph: {nodes, edges}}
+                if 'plan_graph' not in plan_result['output'] and 'nodes' in plan_result['output'] and 'edges' in plan_result['output']:
+                    log_step("Normalizing plan output: wrapping top-level nodes/edges into plan_graph", symbol="🔧")
+                    plan_result['output']['plan_graph'] = {
+                        'nodes': plan_result['output'].pop('nodes'),
+                        'edges': plan_result['output'].pop('edges')
+                    }
 
                 if 'plan_graph' not in plan_result['output']:
                     self.context.mark_failed("Query", "Output missing plan_graph")
@@ -402,10 +414,16 @@ class AgentLoop4:
             
         # Add new edges, redirecting ROOT -> First Step to Query -> First Step
         for edge in new_edges:
-            # Robustly handle different edge formats or missing keys
-            source = edge.get("source") or edge.get("from")
-            target = edge.get("target") or edge.get("to")
-            
+            # Robustly handle different edge formats: list [src, tgt] or dict {source, target}
+            if isinstance(edge, (list, tuple)) and len(edge) >= 2:
+                source, target = str(edge[0]), str(edge[1])
+            elif isinstance(edge, dict):
+                source = edge.get("source") or edge.get("from")
+                target = edge.get("target") or edge.get("to")
+            else:
+                log_step(f"⚠️ Skipping malformed edge: {edge}", symbol="⚠️")
+                continue
+
             if not source or not target:
                 log_step(f"⚠️ Skipping malformed edge: {edge}", symbol="⚠️")
                 continue
@@ -483,7 +501,9 @@ class AgentLoop4:
         console = Console()
         
         # 🔧 DEBUGGING MODE: No Live display, just regular prints
-        max_iterations = self.max_steps
+        # Deep research needs more iterations (6+ phases with retries)
+        is_deep_research = context.plan_graph.graph.get('research_mode') == 'deep_research'
+        max_iterations = max(self.max_steps * 3, 15) if is_deep_research else self.max_steps
         iteration = 0
         
         # ===== COST THRESHOLD ENFORCEMENT =====
@@ -627,7 +647,14 @@ class AgentLoop4:
 
         # Final state
         console.print(visualizer.get_layout())
-        
+
+        # 🔧 CLEANUP: Mark any steps stuck in non-terminal states as failed
+        for n_id in context.plan_graph.nodes:
+            node_status = context.plan_graph.nodes[n_id].get("status")
+            if node_status in ('pending', 'running'):
+                context.mark_failed(n_id, f"Marked failed: loop ended with step in '{node_status}' state")
+                log_step(f"🧹 Cleaned up {n_id}: {node_status} → failed", symbol="🧹")
+
         # Determine and save final status
         if context.stop_requested:
              context.plan_graph.graph['status'] = 'stopped'
@@ -713,7 +740,17 @@ class AgentLoop4:
                 return result
             
             output = result["output"]
-            
+
+            # 🔧 ROBUSTNESS: Ensure output is a dict (Gemma may return a list)
+            if isinstance(output, list):
+                if len(output) > 0 and isinstance(output[0], dict):
+                    output = output[0]
+                else:
+                    log_step(f"⚠️ {agent_type} returned a list instead of dict, wrapping", symbol="⚠️")
+                    output = {"raw_output": output}
+            elif not isinstance(output, dict):
+                output = {"raw_output": str(output)}
+
             # ✅ CHECK FOR CLARIFICATION REQUEST (HALT)
             if output.get("clarificationMessage"):
                  return {
@@ -736,8 +773,19 @@ class AgentLoop4:
                 # 1. Check for 'call_tool' (ReAct)
             if output.get("call_tool"):
                 tool_call = output["call_tool"]
+                # 🔧 ROBUSTNESS: tool_call might be a list (Gemma quirk)
+                if isinstance(tool_call, list) and len(tool_call) > 0:
+                    tool_call = tool_call[0] if isinstance(tool_call[0], dict) else {"name": str(tool_call[0])}
+                elif not isinstance(tool_call, dict):
+                    tool_call = {"name": str(tool_call)}
                 tool_name = tool_call.get("name")
                 tool_args = tool_call.get("arguments", {})
+                # 🔧 ROBUSTNESS: Ensure tool_args is a dict (Gemma may output a list)
+                if isinstance(tool_args, list):
+                    log_step(f"⚠️ Tool args is a list, converting to dict", symbol="⚠️")
+                    tool_args = {f"arg_{i}": v for i, v in enumerate(tool_args)}
+                elif not isinstance(tool_args, dict):
+                    tool_args = {"value": tool_args}
                 
                 log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
                 
@@ -830,7 +878,10 @@ class AgentLoop4:
 
                     if execution_result.get("status") == "success":
                         execution_data = execution_result.get("result", {})
-                        inputs = {**inputs, **execution_data}  # Update inputs for iteration 2
+                        if isinstance(execution_data, dict):
+                            inputs = {**inputs, **execution_data}  # Update inputs for iteration 2
+                        else:
+                            inputs["execution_result"] = execution_data
                 
                 # Prepare input for next iteration
                 current_input = build_agent_input(

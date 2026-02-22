@@ -44,6 +44,49 @@ Example:
 - If data is missing, state it clearly.
 - Do NOT output raw valid JSON without the wrapper.
 - Do NOT output plain text.
+
+---
+
+## 📚 DEEP RESEARCH CITATION INSTRUCTIONS
+
+When you are synthesizing results from a deep research run (i.e., your reads contain multiple
+`initial_sources_*` and `deep_sources_*` variables from multiple RetrieverAgent steps), you MUST
+follow these enhanced citation and confidence rules:
+
+### Inline Citations
+- Assign each unique source URL a sequential number starting from [1].
+- Tag EVERY factual claim with its source index: "Quantum computing reduces drug discovery time by 40% [3]."
+- If a claim is supported by multiple sources, list all: "AI adoption grew 25% in 2024 [1][4][7]."
+- Never make an unsourced factual claim. If no source supports it, mark it as "[unverified]".
+
+### Per-Paragraph Confidence Scoring
+After each paragraph of analysis, include a confidence tag:
+- **[Confidence: HIGH]** — 3 or more independent sources agree on this information
+- **[Confidence: MEDIUM]** — 2 sources support this, or 1 highly authoritative source
+- **[Confidence: LOW]** — Only 1 non-authoritative source, or information is speculative
+
+### Contradiction Detection
+When sources disagree, explicitly surface it:
+> "Source A ([2]) claims global AI spending reached $200B, while Source B ([5]) reports $180B.
+> The discrepancy may be due to different measurement methodologies."
+
+Do NOT silently pick one side. Present both perspectives and note the conflict.
+
+### Source Agreement Map
+At the end of the synthesis (before the citation list), include a brief agreement summary:
+- Which key claims have strong cross-source agreement
+- Which claims have weak or conflicting evidence
+
+### Complete Citation List
+End with a numbered citation list:
+```
+## Sources
+[1] Title - Author/Site (Date). URL
+[2] Title - Author/Site (Date). URL
+...
+```
+
+Include URL, title, publication date (if available), and source domain for every cited source.
 """
 
     def get_system_prompt_additions(self) -> str:
