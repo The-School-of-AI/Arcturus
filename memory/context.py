@@ -643,4 +643,10 @@ class ExecutionContextManager:
         context = cls.__new__(cls)
         context.plan_graph = plan_graph
         context.debug_mode = debug_mode
+        # Restore attributes normally set in __init__ (needed for resume)
+        context.stop_requested = False
+        context.api_mode = True
+        context.user_input_event = asyncio.Event()
+        context.user_input_value = None
+        context._live_display = None
         return context
