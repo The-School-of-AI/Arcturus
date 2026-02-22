@@ -325,9 +325,6 @@ async def bootstrap_from_remme():
     print("🚀 Starting UserModel bootstrap from REMME memories...")
     
     store = get_remme_store()
-    if not store.index:
-        store.load_index()
-    
     memories = store.get_all()
     
     if not memories:

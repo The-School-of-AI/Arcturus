@@ -23,15 +23,16 @@ def get_multi_mcp():
         _multi_mcp = MultiMCP()
     return _multi_mcp
 
-# RemMe store instance
+# RemMe / Vector store instance (provider-agnostic via get_vector_store)
 _remme_store = None
 
 def get_remme_store():
-    """Get the RemmeStore instance, creating it if needed."""
+    """Get the vector store instance via abstraction layer. Uses get_vector_store()."""
     global _remme_store
     if _remme_store is None:
-        from remme.store import RemmeStore
-        _remme_store = RemmeStore()
+        import os
+        from memory.vector_store import get_vector_store
+        _remme_store = get_vector_store()
     return _remme_store
 
 # RemMe extractor instance
