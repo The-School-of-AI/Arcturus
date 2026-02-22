@@ -92,6 +92,27 @@ class QdrantVectorStore:
                 else:
                     log_error(f"Failed to create tenant payload index: {e}")
 
+        # Create keyword indexes for filter fields (required for Qdrant Cloud filtered search)
+        cfg = get_collection_config(self.collection_name)
+        indexed_fields = cfg.get("indexed_payload_fields", [])
+        for field in indexed_fields:
+            if field == self._tenant_keyword_field:
+                continue
+            try:
+                self.client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name=field,
+                    field_schema=http_models.KeywordIndexParams(
+                        type=http_models.KeywordIndexType.KEYWORD,
+                    ),
+                )
+                log_step(f"🔑 Created payload index on {field}", symbol="✨")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
+                    pass
+                else:
+                    log_error(f"Failed to create payload index for {field}: {e}")
+
     def _tenant_filter(self, filter_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Merge tenant user_id into filter metadata."""
         base: Dict[str, Any] = {self._tenant_keyword_field: self._user_id} if self._is_tenant and self._user_id else {}

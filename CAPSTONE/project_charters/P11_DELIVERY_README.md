@@ -67,11 +67,17 @@ RemMe / Oracle / Planner
 ```bash
 uv run python -m pytest tests/acceptance/p11_mnemo/test_memory_influences_planner_output.py -v
 ```
+```
+=========== 8 passed in 0.01s =========
+```
 - Charter exists, gate contract present, demo script exists, delivery README has required sections, CI check declared
 
 ### Integration Tests
 ```bash
 uv run python -m pytest tests/integration/test_mnemo_oracle_cross_project_retrieval.py -v
+```
+```
+======== 5 passed in 0.01s ============
 ```
 - Integration file declared in charter, files exist, baseline script exists, CI check wired in workflow
 
@@ -79,6 +85,9 @@ uv run python -m pytest tests/integration/test_mnemo_oracle_cross_project_retrie
 ```bash
 # Start Qdrant first: docker-compose up -d (or use Qdrant Cloud)
 uv run python scripts/test_qdrant_setup.py
+```
+```
+✅ All tests completed!
 ```
 
 ## 6. Existing Baseline Regression Status

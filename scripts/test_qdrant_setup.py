@@ -2,6 +2,10 @@
 """
 Test script to verify Qdrant setup and basic operations.
 
+Uses collection "test_memories" from config/qdrant_config.yaml, which includes
+indexed_payload_fields [category, source]. Indexes are created automatically on
+connection and are required for filtered search in Qdrant Cloud.
+
 Run this after starting Qdrant with: docker-compose up -d
 """
 
@@ -115,10 +119,10 @@ def test_get_and_update(store: VectorStoreProtocol, memory_id: str):
 
 
 def test_filtering(store: VectorStoreProtocol):
-    """Test metadata filtering."""
-    print("\n🔍 Testing Metadata Filtering...")
+    """Test metadata filtering (relies on category/source payload indexes)."""
+    print("\n🔍 Testing Metadata Filtering (category & source indexes)...")
     
-    # Search with category filter
+    # Search with category filter (requires category index in Qdrant Cloud)
     query_embedding = np.random.rand(768).astype(np.float32)
     results = store.search(
         query_vector=query_embedding,
@@ -126,11 +130,21 @@ def test_filtering(store: VectorStoreProtocol):
         k=10,
     )
     
-    print(f"  ✅ Found {len(results)} tech memories")
+    print(f"  ✅ Found {len(results)} tech memories (category filter)")
     for result in results:
-        assert result["category"] == "tech", "Filter failed!"
+        assert result["category"] == "tech", "Category filter failed!"
+
+    # Search with source filter (requires source index in Qdrant Cloud)
+    results_src = store.search(
+        query_vector=query_embedding,
+        filter_metadata={"source": "test"},
+        k=10,
+    )
+    print(f"  ✅ Found {len(results_src)} memories with source=test")
+    for result in results_src:
+        assert result["source"] == "test", "Source filter failed!"
     
-    print("  ✅ Filtering works correctly!")
+    print("  ✅ Filtering works correctly (indexes OK)!")
 
 
 def test_count_and_get_all(store: VectorStoreProtocol):
