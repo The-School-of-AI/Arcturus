@@ -14,11 +14,16 @@
 - **RemMe integration**: `shared/state.py` uses `get_vector_store()`; RemMe router reads from provider-agnostic store
 
 ### Deferred (Phase 2+)
+- Moving RAG chunks to qdrant?
+- Moving Episodic to qdrant?
+- Moving session memories to qdrant?
+- Need to think more whether to keep Preferences/hubs in json or move - will be done as part of Phase 3 (spaces)
 - Knowledge graph (`memory/knowledge_graph.py`), entity extraction, Neo4j/NetworkX
 - Spaces and collections (`memory/spaces.py`)
 - Cross-device sync (`memory/sync.py`), CRDT
 - Lifecycle manager (`memory/lifecycle.py`), importance scoring, archival
 - Frontend: knowledge graph explorer, spaces manager
+- performance and optimization (qdrant index optimization)
 
 ## 2. Architecture Changes
 
@@ -129,4 +134,4 @@ uv run python scripts/test_qdrant_setup.py
    export VECTOR_STORE_PROVIDER=qdrant
    uv run python scripts/migrate_faiss_to_qdrant.py
    ```
-5. Use Qdrant in RemMe: `export VECTOR_STORE_PROVIDER=qdrant` before starting API
+5. Use Qdrant in RemMe: `export VECTOR_STORE_PROVIDER=qdrant` or add `VECTOR_STORE_PROVIDER=qdrant` in your `.env` file before starting API
