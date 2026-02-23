@@ -16,6 +16,7 @@ DEFAULT_KEY_SCOPES = [
     "cron:read",
     "cron:write",
     "webhooks:write",
+    "webhooks:read",
     "pages:write",
     "studio:write",
 ]
@@ -225,24 +226,89 @@ class GatewayWebhookTriggerRequest(BaseModel):
     payload: Dict[str, Any] = Field(default_factory=dict)
 
 
+class GatewayWebhookTriggerResponse(BaseModel):
+    status: Literal["queued"] = "queued"
+    queued_deliveries: int
+
+
+class GatewayWebhookInboundRequest(BaseModel):
+    event_type: str = Field(min_length=1)
+    payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GatewayWebhookInboundResponse(BaseModel):
+    status: Literal["accepted"] = "accepted"
+    source: str
+    trace_id: str
+    queued_deliveries: int
+
+
+class GatewayWebhookDispatchRequest(BaseModel):
+    limit: int = Field(default=100, ge=1, le=1000)
+    max_attempts: int = Field(default=3, ge=1, le=20)
+    base_backoff_seconds: int = Field(default=5, ge=1, le=3600)
+
+
+class GatewayWebhookDispatchResponse(BaseModel):
+    status: Literal["completed"] = "completed"
+    trace_id: str
+    scanned: int
+    delivered: int
+    retried: int
+    dead_lettered: int
+
+
+class GatewayWebhookDeliveryOut(BaseModel):
+    delivery_id: str
+    subscription_id: str
+    target_url: str
+    event_type: str
+    status: Literal["queued", "retry_pending", "delivered", "dead_letter"]
+    attempt: int
+    timestamp: str
+    updated_at: str
+    last_error: Optional[str] = None
+    next_attempt_at: Optional[str] = None
+
+
+class GatewayWebhookReplayResponse(BaseModel):
+    status: Literal["requeued"] = "requeued"
+    trace_id: str
+    delivery_id: str
+
+
 class GatewayPageGenerateRequest(BaseModel):
     query: str = Field(min_length=1)
     template: Optional[str] = None
+    oracle_limit: int = Field(default=5, ge=1, le=20)
 
 
 class GatewayPageGenerateResponse(BaseModel):
-    status: str
-    message: str
+    status: Literal["success"] = "success"
+    trace_id: str
+    page_id: str
+    query: str
+    template: Optional[str]
+    title: str
+    summary: str
+    citations: List[str]
+    artifact: Dict[str, Any]
 
 
 class GatewayStudioGenerateRequest(BaseModel):
     prompt: str = Field(min_length=1)
     template: Optional[str] = None
+    oracle_limit: int = Field(default=5, ge=1, le=20)
 
 
 class GatewayStudioGenerateResponse(BaseModel):
-    status: str
-    message: str
+    status: Literal["success"] = "success"
+    trace_id: str
+    artifact_id: str
+    artifact_type: Literal["slides", "document", "sheet"]
+    title: str
+    outline: Dict[str, Any]
+    citations: List[str]
 
 
 class GatewayUsageResponse(BaseModel):

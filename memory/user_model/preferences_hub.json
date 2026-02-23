@@ -1,0 +1,130 @@
+{
+  "hub_type": "PreferencesHub",
+  "schema_version": "1.0",
+  "stable_defaults": {
+    "default_language": "python",
+    "default_output_format": "markdown",
+    "default_verbosity": "concise",
+    "default_decision_style": "single_best",
+    "default_iteration_style": "fast_iterations",
+    "default_feedback_style": "implicit_ok"
+  },
+  "output_contract": {
+    "verbosity": {
+      "default": "concise",
+      "by_scope": {},
+      "confidence": 0.0,
+      "last_seen_at": null
+    },
+    "format_defaults": {
+      "default": "markdown",
+      "by_scope": {},
+      "confidence": 0.0,
+      "last_seen_at": null
+    },
+    "structure_rules": [],
+    "tone_constraints": [],
+    "emoji_policy": {
+      "mode": "minimal",
+      "allowed_when": [
+        "casual_chat"
+      ],
+      "disallowed_when": [
+        "work_artifacts"
+      ]
+    },
+    "chunking": {
+      "max_lines": 400,
+      "prefer_full_files": true,
+      "chunk_strategy": "logical_sections"
+    },
+    "citations_posture": {
+      "default": "minimal",
+      "by_scope": {},
+      "style": "minimal_inline"
+    },
+    "questions_policy": {
+      "clarifications": "minimize",
+      "ask_only_if_blocked": true,
+      "if_ambiguous": "best_effort_assumptions",
+      "when_high_risk": "ask_before_irreversible",
+      "batch_questions": true
+    },
+    "options_presentation": {
+      "default": "single_best",
+      "max_options": 3,
+      "offer_options_when": [
+        "high_uncertainty"
+      ]
+    }
+  },
+  "anti_preferences": {
+    "avoid_patterns": {
+      "phrases": [],
+      "moves": []
+    },
+    "never_use": {
+      "words": [],
+      "openings": [],
+      "closings": []
+    }
+  },
+  "tooling_defaults": {
+    "frameworks": {
+      "frontend": [],
+      "backend": [],
+      "testing": [],
+      "confidence": 0.0
+    },
+    "package_manager": {
+      "python": "uv",
+      "javascript": "pnpm",
+      "confidence": 0.0
+    },
+    "validation": [
+      "pydantic"
+    ],
+    "testing": [
+      "pytest"
+    ],
+    "preferred_libraries": {},
+    "style_preferences": {
+      "type_annotations": true,
+      "comment_density": "low",
+      "docstring_style": "google",
+      "line_length": 88,
+      "import_style": "absolute"
+    }
+  },
+  "autonomy_and_risk": {
+    "autonomy": {
+      "create_files": "allowed",
+      "modify_files": "allowed",
+      "delete_files": "confirm_first",
+      "run_shell": "allowed",
+      "destructive_actions": "confirm_first",
+      "web_browse": "allowed",
+      "install_packages": "allowed",
+      "git_operations": "safe_only"
+    },
+    "risk_tolerance": {
+      "default": "moderate",
+      "by_scope": {
+        "security": "conservative"
+      }
+    },
+    "confirmation_gates": []
+  },
+  "coding_contracts": {
+    "deliverable_preference": "full_file",
+    "error_handling_style": "explicit",
+    "async_preference": "async_first",
+    "testing_expectations": "unit_tests_required"
+  },
+  "meta": {
+    "confidence": 0.0,
+    "evidence_count": 0,
+    "last_updated": "2026-02-22T18:08:04.610980",
+    "created_at": "2026-02-22T17:17:46.357682"
+  }
+}
