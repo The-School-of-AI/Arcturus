@@ -2922,15 +2922,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pluggy"
-version = "1.6.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
-]
-
-[[package]]
 name = "portalocker"
 version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4075,7 +4066,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.3" },
     { name = "pymongo", specifier = ">=4.10.0" },
     { name = "pymupdf4llm", specifier = ">=0.0.21" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest" },
     { name = "pyyaml" },
     { name = "qdrant-client", specifier = ">=1.7.0" },
     { name = "rank-bm25", specifier = ">=0.2.2" },
