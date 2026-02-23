@@ -274,11 +274,8 @@ class AgentLoop4:
                 )
                 return self.context
 
-        except Exception as e_scan:
-            log_error(f"Aegis: input scanner error: {e_scan}")
-            raise e_scan
         except Exception as e:
-            print(f"❌ ERROR initializing context: {e}")
+            log_error(f"Aegis error or context init failure: {e}")
             raise
 
         if self.context.plan_graph.nodes["Query"].get("status") == "failed":
@@ -298,37 +295,10 @@ class AgentLoop4:
                         "writes": ["file_profiles"]
                     }
                 )
-                self.context.memory_context = memory_context  # Store for retrieval
-                # Inject multi_mcp immediately
-                self.context.multi_mcp = self.multi_mcp
-                self.context.plan_graph.graph['globals_schema'].update(globals_schema)
-                self.context._save_session()
-                log_step("✅ Session initialized with Query processing", symbol="🌱")
-            except Exception as e:
-                span.set_status(Status(StatusCode.ERROR, str(e)))
-                span.record_exception(e)
-                print(f"❌ ERROR initializing context: {e}")
-                raise
-
-            # Phase 1: File Profiling (if files exist)
-            # Run DistillerAgent to profile uploaded files before planning
-            file_profiles = {}
-            if uploaded_files:
-                # Wrap with retry for transient failures
-                async def run_distiller():
-                    return await self.agent_runner.run_agent(
-                        "DistillerAgent",
-                        {
-                            "task": "profile_files",
-                            "files": uploaded_files,
-                            "instruction": "Profile and summarize each file's structure, columns, content type",
-                            "writes": ["file_profiles"]
-                        }
-                    )
-                file_result = await self._track_task(retry_with_backoff(run_distiller))
-                if file_result["success"]:
-                    file_profiles = file_result["output"]
-                    self.context.set_file_profiles(file_profiles)
+            file_result = await self._track_task(retry_with_backoff(run_distiller))
+            if file_result["success"]:
+                file_profiles = file_result["output"]
+                self.context.set_file_profiles(file_profiles)
 
             # Phase 2: Planning and Execution Loop
             try:
@@ -948,86 +918,6 @@ class AgentLoop4:
             # Update step data with iterations so far
             step_data = context.get_step_data(step_id)
             step_data['iterations'] = iterations_data
-            
-                # 1. Check for 'call_tool' (ReAct)
-            if output.get("call_tool"):
-                tool_call = output["call_tool"]
-                tool_name = tool_call.get("name")
-                tool_args = tool_call.get("arguments", {})
-                
-                try:
-                    if not is_tool_allowed(tool_name, {"agent": agent_type}):
-                        log_step(f"Blocked tool call by safety: {tool_name}", symbol="⛔")
-                        log_safety_event(
-                            "tool_call_blocked",
-                            context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "tool_name": tool_name},
-                            metadata={"agent": agent_type}
-                        )
-                        result_str = f"Tool {tool_name} blocked by safety policy"
-                        iterations_data[-1]["tool_result"] = result_str
-                        
-                        current_input = build_agent_input(
-                            instruction="The tool call was blocked by safety policy. Please explain this to the user.",
-                            previous_output=output,
-                            iteration_context={"tool_result": result_str}
-                        )
-                        continue
-
-                    tool_args = sanitize_tool_args(tool_args)
-                    session_key = context.plan_graph.graph.get("session_id")
-                    user_key = session_key or agent_type
-                    
-                    # Use operation-specific rate limiting for tool calls
-                    if not _RATE_LIMITER.allow(user_key, operation_type="tool_call"):
-                        log_step("Rate limit exceeded for tool calls", symbol="⛔")
-                        log_safety_event(
-                            "rate_limit_exceeded",
-                            context={"session_id": session_key, "step_id": step_id, "tool_name": tool_name},
-                            metadata={"agent": agent_type, "operation_type": "tool_call"}
-                        )
-                        result_str = "Rate limit exceeded"
-                        iterations_data[-1]["tool_result"] = result_str
-                        
-                        current_input = build_agent_input(
-                            instruction="Rate limit exceeded. Please wait or try a different approach.",
-                            previous_output=output,
-                            iteration_context={"tool_result": result_str}
-                        )
-                        continue
-                    
-                    log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
-
-                except Exception as e_safety:
-                    log_error(f"Safety check error: {e_safety}")
-                    return {"success": False, "error": f"Internal safety check error: {e_safety}"}                
-                log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
-                
-                # 1a. Try LOCAL SKILL TOOLS first
-                tool_executed = False
-                skill_tool_result = None
-                
-                try:
-                    from core.registry import AgentRegistry
-                    from shared.state import get_skill_manager
-                    
-                    agent_config = AgentRegistry.get(agent_type)
-                    skill_mgr = get_skill_manager()
-                    
-                    if agent_config and "skills" in agent_config:
-                        possible_skills = agent_config["skills"]
-                        for skill_name in possible_skills:
-                            skill = skill_mgr.get_skill(skill_name)
-                            if skill:
-                                for tool in skill.get_tools():
-                                    if getattr(tool, 'name', None) == tool_name:
-                                        log_step(f"🧩 Executing Local Skill Tool: {tool_name}", symbol="🧩")
-                                        if asyncio.iscoroutinefunction(tool.func):
-                                            skill_tool_result = await tool.func(**tool_args)
-                                        else:
-                                            skill_tool_result = tool.func(**tool_args)
-                                        tool_executed = True
-                                        break
-                            if tool_executed: break
 
             # ReAct loop: agent can call tools, call_self, or produce final output
             for turn in range(1, max_turns + 1):
@@ -1080,6 +970,48 @@ class AgentLoop4:
                         tool_call = output["call_tool"]
                         tool_name = tool_call.get("name")
                         tool_args = tool_call.get("arguments", {})
+
+                        # === Safety: Tool hardening ===
+                        try:
+                            if not is_tool_allowed(tool_name, {"agent": agent_type}):
+                                log_step(f"Blocked tool call by safety: {tool_name}", symbol="⛔")
+                                log_safety_event(
+                                    "tool_call_blocked",
+                                    context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "tool_name": tool_name},
+                                    metadata={"agent": agent_type}
+                                )
+                                result_str = f"Tool {tool_name} blocked by safety policy"
+                                iterations_data[-1]["tool_result"] = result_str
+                                current_input = build_agent_input(
+                                    instruction="The tool call was blocked by safety policy. Please explain this to the user.",
+                                    previous_output=output,
+                                    iteration_context={"tool_result": result_str}
+                                )
+                                continue
+
+                            tool_args = sanitize_tool_args(tool_args)
+                            session_key = context.plan_graph.graph.get("session_id")
+                            user_key = session_key or agent_type
+
+                            if not _RATE_LIMITER.allow(user_key, operation_type="tool_call"):
+                                log_step("Rate limit exceeded for tool calls", symbol="⛔")
+                                log_safety_event(
+                                    "rate_limit_exceeded",
+                                    context={"session_id": session_key, "step_id": step_id, "tool_name": tool_name},
+                                    metadata={"agent": agent_type, "operation_type": "tool_call"}
+                                )
+                                result_str = "Rate limit exceeded"
+                                iterations_data[-1]["tool_result"] = result_str
+                                current_input = build_agent_input(
+                                    instruction="Rate limit exceeded. Please wait or try a different approach.",
+                                    previous_output=output,
+                                    iteration_context={"tool_result": result_str}
+                                )
+                                continue
+
+                        except Exception as e_safety:
+                            log_error(f"Safety check error: {e_safety}")
+                            return {"success": False, "error": f"Internal safety check error: {e_safety}"}
 
                         log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
 
@@ -1176,52 +1108,18 @@ class AgentLoop4:
                             iterations_data[-1]["execution_result"] = execution_result
                             # Merge so mark_done skips re-execution (avoids duplicate code.execution span)
                             output = context._merge_execution_results(output, execution_result)
+                        # Check for canary leaks before returning final output
+                        final_output_text = str(output.get("output", ""))
+                        leaked = detect_canary_leak(final_output_text, context.plan_graph.graph)
+                        if leaked:
+                            log_safety_event(
+                                "canary_token_triggered",
+                                context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id},
+                                metadata={"leaked_tokens": leaked, "agent": agent_type}
+                            )
+                            log_error(f"Canary token leak detected from agent {agent_type}!")
                         return {"success": True, "output": output}
 
-                current_input = build_agent_input(
-                    instruction=instruction,
-                    previous_output=output,
-                    iteration_context={"tool_result": result_str}
-                )
-                continue # Loop to next turn
-
-            # 2. Check for call_self (Legacy/Advanced recursion)
-            elif output.get("call_self"):
-                # Handle code execution if needed
-                if context._has_executable_code(output):
-                    execution_result = await context._auto_execute_code(step_id, output)
-                    
-                    # ✅ SAVE RESULT TO HISTORY
-                    iterations_data[-1]["execution_result"] = execution_result
-
-                    if execution_result.get("status") == "success":
-                        execution_data = execution_result.get("result", {})
-                        inputs = {**inputs, **execution_data}  # Update inputs for iteration 2
-                
-                # Prepare input for next iteration
-                current_input = build_agent_input(
-                    instruction=output.get("next_instruction", "Continue the task"),
-                    previous_output=output,
-                    iteration_context=output.get("iteration_context", {})
-                )
-                continue
-
-            # 3. Success (No tool call, just output) - This is the final iteration
-            else:
-                # Before returning the final output, check for canary leaks
-                final_output_text = str(output.get("output", ""))
-                leaked = detect_canary_leak(final_output_text, context.plan_graph.graph)
-                if leaked:
-                    log_safety_event(
-                        "canary_token_triggered",
-                        context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id},
-                        metadata={"leaked_tokens": leaked, "agent": agent_type}
-                    )
-                    # Depending on policy, you might block or just log. For now, we log.
-                    log_error(f"Canary token leak detected from agent {agent_type}!")
-
-                return {"success": True, "output": output}
-        
         # If loop finishes without returning (max turns reached): Return PARTIAL SUCCESS to allow graph continuation
         log_error(f"Max iterations ({max_turns}) reached for {step_id}. Returning last output (incomplete).")
         last_output = iterations_data[-1]["output"] if iterations_data else {"error": "No output produced"}
