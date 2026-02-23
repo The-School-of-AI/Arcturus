@@ -7,6 +7,9 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
 
+from ops.tracing import run_span, agent_execute_node_span
+from opentelemetry.trace import Status, StatusCode
+
 from shared.state import (
     active_loops,
     get_multi_mcp,
@@ -64,295 +67,306 @@ class ExecuteNodeRequest(BaseModel):
 # === Background Tasks ===
 
 async def process_resume(run_id: str, session_path: Path):
-    """Background task to resume agent loop from a file"""
-    try:
-        loop = AgentLoop4(multi_mcp=multi_mcp)
-        # Register the LOOP instance immediately so we can stop it
-        active_loops[run_id] = loop
-        
-        print(f"[{run_id}] Resuming run from {session_path}")
-        await loop.resume(str(session_path))
-        
-    except Exception as e:
-        print(f"Run {run_id} resume failed: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        # Clean up
-        if run_id in active_loops:
-            del active_loops[run_id]
+    """Background task to resume agent loop from a file.
+    WATCHTOWER: Wraps with run_span so resume runs appear in Jaeger with run_id.
+    """
+    from ops.tracing import run_span
+    with run_span(run_id, "resume"):
+        try:
+            loop = AgentLoop4(multi_mcp=multi_mcp)
+            # Register the LOOP instance immediately so we can stop it
+            active_loops[run_id] = loop
+
+            print(f"[{run_id}] Resuming run from {session_path}")
+            await loop.resume(str(session_path))
+        except Exception as e:
+            print(f"Run {run_id} resume failed: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Clean up
+            if run_id in active_loops:
+                del active_loops[run_id]
 
 
 async def process_run(run_id: str, query: str):
-    """Background task to execute the agent loop"""
-    try:
-        # 1. RETRIEVE MEMORIES (Remme)
-        # Search for past relevant facts to injecting into this run
-        memory_context = ""
-        context = None # Initialize for safe access in finally block
-        results = []
+    """
+    Background task: retrieve Remme memories, run agent loop, extract new memories.
+    WATCHTOWER: Root span for the entire agent run.
+    - Span name: run.execute
+    - Wraps: remme retrieval, agent loop, memory extraction
+    - Child spans (agent_loop.run, llm.generate) inherit trace_id automatically
+    """
+    with run_span(run_id, query or "") as span:
         try:
-            emb = get_embedding(query, task_type="search_query")
-            results = remme_store.search(emb, query_text=query, k=3)
-            if results:
-                memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
-                memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
-                print(f" Remme: Injected {len(results)} memories into run {run_id}")
-        except Exception as e:
-            print(f"⚠️ Remme Retrieval Failed: {e}")
+            # 1. RETRIEVE MEMORIES (Remme)
+            # Search for past relevant facts to inject into this run
+            memory_context = ""
+            context = None  # Initialize for safe access in finally block
+            results = []
+            try:
+                emb = get_embedding(query, task_type="search_query")
+                results = remme_store.search(emb, query_text=query, k=3)
+                if results:
+                    memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
+                    memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
+                    print(f" Remme: Injected {len(results)} memories into run {run_id}")
+            except Exception as e:
+                print(f"⚠️ Remme Retrieval Failed: {e}")
 
-        loop = AgentLoop4(multi_mcp=multi_mcp)
-        # Register the LOOP instance immediately so we can stop it
-        active_loops[run_id] = loop
-        
-        # Execute the loop
-        # The loop will maintain its own internal context
-        print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
-        try:
-             context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context)
-        except asyncio.CancelledError:
-             print(f"[{run_id}] Run cancelled.")
-             context = loop.context # Recovery context from loop if possible
-        
-        # 2. EXTRACT NEW MEMORIES (Remme)
-        # We put this in a finally block? No, because we want it only on success/completion of meaningful work.
-        # But if user stops it, we might want to extract partials.
-        # For now, let's leave it after run() but handle the stop case explicitly if context is returned.
-        
-    except Exception as e:
-        print(f"Run {run_id} failed: {e}")
-    finally:
-        # Clean up
-        if run_id in active_loops:
-            del active_loops[run_id]
-            
-        # Attempt extraction if we have context (even if stopped)
-        # Note: 'context' variable needs to be accessible here.
-        pass 
-        # After run completes, extract new facts
-        try:
-            # Get the history from context (Plan Graph or Session Summary)
-            # For now, we don't return the full conversation history from loop.run directly
-            # But context has plan_graph... 
-            # Ideally we extract from the "Summary" generated by the ReportingAgent if available
-            # OR we can pass the query and the FINAL output.
-            
-            # Simple V1: Extract from Query + Final Answer (if available)
-            final_output = ""
-            # Try to find final output from graph
-            if context and context.plan_graph:
-                # Find nodes with output
-                for node_id in context.plan_graph.nodes:
-                    node = context.plan_graph.nodes[node_id]
-                    if node.get("status") == "completed" and node.get("output"):
-                        final_output += f"{node_id} Output: {str(node['output'])}\n"
+            loop = AgentLoop4(multi_mcp=multi_mcp)
+            # Register the LOOP instance immediately so we can stop it
+            active_loops[run_id] = loop
 
-            history = [{"role": "assistant", "content": final_output}]
-            
-            print(f" Remme: Extracting facts from run {run_id}...")
-            # Pass existing memories from earlier search to context-aware extractor
-            # ⚡ RUN IN THREAD TO AVOID BLOCKING EVENT LOOP
-            commands, preferences = await asyncio.to_thread(
-                remme_extractor.extract, 
-                query, 
-                history, 
-                existing_memories=results
-            )
-            
-            if commands:
-                for cmd in commands:
-                    if not isinstance(cmd, dict):
-                        print(f"⚠️ Remme: Skipping invalid command format: {cmd}")
-                        continue
-                        
-                    action = cmd.get("action")
-                    text = cmd.get("text")
-                    target_id = cmd.get("id")
-                    
-                    try:
-                        if action == "add" and text:
-                            emb = get_embedding(text, task_type="search_document")
-                            remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
-                            print(f"✅ Remme: Added new fact: {text}")
-                        elif action == "update" and target_id and text:
-                            emb = get_embedding(text, task_type="search_document")
-                            remme_store.update_text(target_id, text, emb)
-                            print(f"🔄 Remme: Updated fact {target_id}: {text}")
-                        elif action == "delete" and target_id:
-                            remme_store.delete(target_id)
-                            print(f"🗑️ Remme: Deleted fact {target_id}")
-                    except Exception as e:
-                        print(f"❌ Remme Action Failed: {e}")
-            
-            # Apply preferences to hubs
-            if preferences:
-                from remme.extractor import apply_preferences_to_hubs
-                apply_preferences_to_hubs(preferences)
-                print(f"✅ Remme: Processed {len(preferences)} preference updates.")
-                
-                print(f"✅ Remme: Processed {len(commands)} memory updates.")
-            else:
-                 print(f"ℹ️ Remme: No new facts extracted from run {run_id}.")
+            # Execute the agent loop (planning -> DAG execution)
+            # The loop maintains its own internal context and session
+            print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
+            try:
+                context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context)
+            except asyncio.CancelledError:
+                span.set_status(Status(StatusCode.ERROR, "cancelled"))
+                print(f"[{run_id}] Run cancelled.")
+                context = loop.context  # Recovery context from loop if possible
+
+            # Mark span as error if run completed with failure status (max iterations, cost exceeded, etc.)
+            if context and getattr(context, "plan_graph", None):
+                status = context.plan_graph.graph.get("status")
+                if status in ("failed", "cost_exceeded"):
+                    span.set_status(Status(StatusCode.ERROR, context.plan_graph.graph.get("error", status)))
+
+            # 2. EXTRACT NEW MEMORIES (Remme)
+            # We put this in a finally block? No, because we want it only on success/completion of meaningful work.
+            # But if user stops it, we might want to extract partials.
+            # For now, let's leave it after run() but handle the stop case explicitly if context is returned.
 
         except Exception as e:
-            print(f"⚠️ Remme Extraction Failed: {e}")
-            import traceback
-            traceback.print_exc()
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            span.record_exception(e)
+            print(f"Run {run_id} failed: {e}")
+        finally:
+            # Clean up
+            if run_id in active_loops:
+                del active_loops[run_id]
 
-        # 3. AUTO-SAVE REPORTS TO NOTES
+            # Attempt extraction if we have context (even if stopped)
+            # Note: 'context' variable needs to be accessible here.
+            # After run completes, extract new facts from the session
+            try:
+                # Get the history from context (Plan Graph or Session Summary)
+                # For now, we don't return the full conversation history from loop.run directly
+                # But context has plan_graph...
+                # Ideally we extract from the "Summary" generated by the ReportingAgent if available
+                # OR we can pass the query and the FINAL output.
+
+                # Simple V1: Extract from Query + Final Answer (if available)
+                final_output = ""
+                # Collect outputs from completed nodes in the plan graph
+                if context and context.plan_graph:
+                    # Find nodes with output
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        if node.get("status") == "completed" and node.get("output"):
+                            final_output += f"{node_id} Output: {str(node['output'])}\n"
+
+                history = [{"role": "assistant", "content": final_output}]
+
+                print(f" Remme: Extracting facts from run {run_id}...")
+                # Pass existing memories from earlier search to context-aware extractor
+                # ⚡ RUN IN THREAD TO AVOID BLOCKING EVENT LOOP
+                commands, preferences = await asyncio.to_thread(
+                    remme_extractor.extract,
+                    query,
+                    history,
+                    existing_memories=results
+                )
+
+                if commands:
+                    for cmd in commands:
+                        if not isinstance(cmd, dict):
+                            print(f"⚠️ Remme: Skipping invalid command format: {cmd}")
+                            continue
+
+                        action = cmd.get("action")
+                        text = cmd.get("text")
+                        target_id = cmd.get("id")
+
+                        try:
+                            if action == "add" and text:
+                                emb = get_embedding(text, task_type="search_document")
+                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                print(f"✅ Remme: Added new fact: {text}")
+                            elif action == "update" and target_id and text:
+                                emb = get_embedding(text, task_type="search_document")
+                                remme_store.update_text(target_id, text, emb)
+                                print(f"🔄 Remme: Updated fact {target_id}: {text}")
+                            elif action == "delete" and target_id:
+                                remme_store.delete(target_id)
+                                print(f"🗑️ Remme: Deleted fact {target_id}")
+                        except Exception as e:
+                            print(f"❌ Remme Action Failed: {e}")
+
+                # Apply preferences to hubs
+                if preferences:
+                    from remme.extractor import apply_preferences_to_hubs
+                    apply_preferences_to_hubs(preferences)
+                    print(f"✅ Remme: Processed {len(preferences)} preference updates.")
+
+                    print(f"✅ Remme: Processed {len(commands)} memory updates.")
+                else:
+                    print(f"ℹ️ Remme: No new facts extracted from run {run_id}.")
+
+            except Exception as e:
+                print(f"⚠️ Remme Extraction Failed: {e}")
+                import traceback
+                traceback.print_exc()
+
             # 3. AUTO-SAVE REPORTS TO NOTES
-        try:
-             if context and context.plan_graph:
-                import re
-                
-                notes_dir = PROJECT_ROOT / "data" / "Notes" / "Arcturus"
-                notes_dir.mkdir(parents=True, exist_ok=True)
-                
-                def sanitize_filename(title):
-                    title = re.sub(r'[\\/*?:"<>|#]', "", title)
-                    title = title.replace("\n", " ").strip()
-                    return title[:60].strip()
+            try:
+                if context and context.plan_graph:
+                    import re
 
-                def extract_title(content):
-                    match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
-                    if match:
-                        return match.group(1).strip()
-                    # Fallback to first non-empty line
-                    lines = [l.strip() for l in content.split('\n') if l.strip()]
-                    if lines:
-                        return lines[0]
-                    return "Untitled Report"
+                    notes_dir = PROJECT_ROOT / "data" / "Notes" / "Arcturus"
+                    notes_dir.mkdir(parents=True, exist_ok=True)
 
+                    def sanitize_filename(title):
+                        title = re.sub(r'[\\/*?:"<>|#]', "", title)
+                        title = title.replace("\n", " ").strip()
+                        return title[:60].strip()
+
+                    def extract_title(content):
+                        match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
+                        if match:
+                            return match.group(1).strip()
+                        # Fallback to first non-empty line
+                        lines = [l.strip() for l in content.split('\n') if l.strip()]
+                        if lines:
+                            return lines[0]
+                        return "Untitled Report"
+
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        agent_type = node.get("agent", "")
+                        output = node.get("output", {})
+                        if not output:
+                            continue
+
+                        # Check for Formatter output keys
+                        markdown = output.get("markdown_report")
+                        if not markdown:
+                            for k, v in output.items():
+                                if k.startswith("formatted_report") and isinstance(v, str):
+                                    markdown = v
+                                    break
+
+                        if markdown and len(markdown) > 100:
+                            title = extract_title(markdown)
+                            filename = sanitize_filename(title) + ".md"
+                            target_path = notes_dir / filename
+
+                            if target_path.exists() and len(target_path.read_text(encoding='utf-8')) >= len(markdown):
+                                continue
+
+                            with open(target_path, 'w', encoding='utf-8') as f:
+                                f.write(markdown)
+                            print(f"✅ Auto-Saved Report to Notes: {filename}")
+
+            except Exception as e:
+                print(f"⚠️ Failed to auto-save report: {e}")
+
+            # Return result for Scheduler/Skills
+            final_result = {"status": "completed", "run_id": run_id}
+            if context and context.plan_graph:
+                # Check for any failed nodes
                 for node_id in context.plan_graph.nodes:
                     node = context.plan_graph.nodes[node_id]
-                    agent_type = node.get("agent", "")
-                    output = node.get("output", {})
-                    if not output: continue
+                    if node.get("status") == "failed":
+                        final_result["status"] = "failed"
+                        final_result["error"] = node.get("error")
+                        break
 
-                    # Check for Formatter output keys
-                    markdown = output.get("markdown_report")
-                    if not markdown:
-                         for k, v in output.items():
-                             if k.startswith("formatted_report") and isinstance(v, str):
-                                 markdown = v
-                                 break
-                    
-                    if markdown and len(markdown) > 100:
-                         title = extract_title(markdown)
-                         filename = sanitize_filename(title) + ".md"
-                         target_path = notes_dir / filename
-                         
-                         if target_path.exists() and len(target_path.read_text(encoding='utf-8')) >= len(markdown):
-                             continue
+            if context:
+                try:
+                    output_str = ""
+                    if context.plan_graph:
+                        # 1. Look for FormatterAgent output first (The Final Report)
+                        for node_id in context.plan_graph.nodes:
+                            node = context.plan_graph.nodes[node_id]
+                            node_agent = node.get("agent", "")
+                            out = node.get("output", {})
 
-                         with open(target_path, 'w', encoding='utf-8') as f:
-                             f.write(markdown)
-                         print(f"✅ Auto-Saved Report to Notes: {filename}")
+                            if node_agent == "FormatterAgent" or "Format" in node_agent:
+                                if isinstance(out, dict):
+                                    md = out.get("markdown_report")
+                                    if not md:
+                                        for k, v in out.items():
+                                            if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
+                                                md = v
+                                                break
 
-        except Exception as e:
-            print(f"⚠️ Failed to auto-save report: {e}")
-            
-        # Return result for Scheduler/Skills
-        final_result = {"status": "completed", "run_id": run_id}
-        if context and context.plan_graph:
-            # Check for any failed nodes
-            for node_id in context.plan_graph.nodes:
-                node = context.plan_graph.nodes[node_id]
-                if node.get("status") == "failed":
-                    final_result["status"] = "failed"
-                    final_result["error"] = node.get("error")
-                    break
-        
-        if context:
-             try:
-                 output_str = ""
-                 if context.plan_graph:
-                     # 1. Look for FormatterAgent output first (The Final Report)
-                     for node_id in context.plan_graph.nodes:
-                         node = context.plan_graph.nodes[node_id]
-                         node_agent = node.get("agent", "")
-                         out = node.get("output", {})
-                         
-                         if node_agent == "FormatterAgent" or "Format" in node_agent:
-                             if isinstance(out, dict):
-                                 md = out.get("markdown_report")
-                                 if not md:
-                                     # Try all keys for something that looks like a report
-                                     for k, v in out.items():
-                                         if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
-                                             md = v
-                                             break
-                                 
-                                 if md:
-                                     output_str = md
-                                     break
-                                 
-                                 # Fallback: if 'output' is a long string
-                                 if isinstance(out.get("output"), str) and len(out["output"]) > 100:
-                                     output_str = out["output"]
-                                     break
-                     
-                     # 2. Fallback: Find any node with a substantial string output
-                     if not output_str:
-                         for node_id in reversed(list(context.plan_graph.nodes)):
-                             if node_id == "ROOT": continue
-                             node = context.plan_graph.nodes[node_id]
-                             out = node.get("output", {})
-                             
-                             if isinstance(out, dict):
-                                 # Try to find the largest string value in the dict (recursive search)
-                                 def find_largest_string(d):
-                                     largest = ""
-                                     for v in d.values():
-                                         if isinstance(v, str):
-                                             if len(v) > len(largest):
-                                                 largest = v
-                                         elif isinstance(v, dict):
-                                             sub = find_largest_string(v)
-                                             if len(sub) > len(largest):
-                                                 largest = sub
-                                     return largest
-                                 
-                                 largest_str = find_largest_string(out)
-                                 if len(largest_str) > 50:
-                                     output_str = largest_str
-                                     break
-                                     
-                             elif isinstance(out, str) and len(out) > 50:
-                                 output_str = out
-                                 break
+                                    if md:
+                                        output_str = md
+                                        break
 
-                 # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
-                 if output_str:
-                     import re
-                     # If the output starts and ends with {} or [], it might be a JSON dump 
-                     # that contains a markdown_report field.
-                     if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
-                         try:
-                             # Try to parse it and extract the report field
-                             data = json.loads(output_str)
-                             if isinstance(data, dict):
-                                 # Look for report-like keys
-                                 for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
-                                     if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
-                                         output_str = data[k]
-                                         break
-                         except:
-                             pass
-                     
-                     # Final check: remove block delimiters if LLM wrapped them in ```markdown
-                     output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
-                     output_str = re.sub(r'\n```$', '', output_str)
+                                    if isinstance(out.get("output"), str) and len(out["output"]) > 100:
+                                        output_str = out["output"]
+                                        break
 
-                 final_result["output"] = output_str.strip() if output_str else "No substantial output found."
-                 if final_result.get("status") == "failed":
-                     final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
-                 else:
-                     final_result["summary"] = output_str.strip() if output_str else "Completed."
-             except Exception as e:
-                 print(f"⚠️ Extraction Error: {e}")
-        
-        return final_result
+                        # 2. Fallback: Find any node with a substantial string output
+                        if not output_str:
+                            for node_id in reversed(list(context.plan_graph.nodes)):
+                                if node_id == "ROOT":
+                                    continue
+                                node = context.plan_graph.nodes[node_id]
+                                out = node.get("output", {})
+
+                                if isinstance(out, dict):
+                                    def find_largest_string(d):
+                                        largest = ""
+                                        for v in d.values():
+                                            if isinstance(v, str):
+                                                if len(v) > len(largest):
+                                                    largest = v
+                                            elif isinstance(v, dict):
+                                                sub = find_largest_string(v)
+                                                if len(sub) > len(largest):
+                                                    largest = sub
+                                        return largest
+
+                                    largest_str = find_largest_string(out)
+                                    if len(largest_str) > 50:
+                                        output_str = largest_str
+                                        break
+
+                                elif isinstance(out, str) and len(out) > 50:
+                                    output_str = out
+                                    break
+
+                        # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
+                        if output_str:
+                            import re
+                            if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
+                                try:
+                                    data = json.loads(output_str)
+                                    if isinstance(data, dict):
+                                        for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
+                                            if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
+                                                output_str = data[k]
+                                                break
+                                except Exception:
+                                    pass
+
+                            output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
+                            output_str = re.sub(r'\n```$', '', output_str)
+
+                        final_result["output"] = output_str.strip() if output_str else "No substantial output found."
+                        if final_result.get("status") == "failed":
+                            final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
+                        else:
+                            final_result["summary"] = output_str.strip() if output_str else "Completed."
+                except Exception as e:
+                    print(f"⚠️ Extraction Error: {e}")
+
+            return final_result
 
 
 # === Endpoints ===
@@ -572,210 +586,212 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
     - Returns the NEW output WITHOUT saving to session
     """
     try:
-        # 1. Find the session file
-        summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
-        found_file = None
-        for path in summaries_dir.rglob(f"session_{run_id}.json"):
-            found_file = path
-            break
-        
-        if not found_file:
-            raise HTTPException(status_code=404, detail="Session not found")
-        
-        # 2. Load session data
-        import networkx as nx
-        session_data = json.loads(found_file.read_text())
-        if "edges" in session_data:
-            G = nx.node_link_graph(session_data, edges="edges")
-        elif "links" in session_data:
-            G = nx.node_link_graph(session_data, edges="links")
-        elif "link" in session_data:
-            G = nx.node_link_graph(session_data, edges="link")
-        else:
-            session_data["edges"] = []
-            G = nx.node_link_graph(session_data, edges="edges")
-        
-        # 3. Find the node
-        if node_id not in G.nodes:
-            raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
-        
-        node_data = G.nodes[node_id]
-        agent_type = node_data.get("agent")
-        
-        if not agent_type:
-            raise HTTPException(status_code=400, detail="Node has no agent type")
-        
-        # 4. Collect inputs from globals_schema based on 'reads'
-        globals_schema = G.graph.get("globals_schema", {})
-        reads = node_data.get("reads", [])
-        inputs = {key: globals_schema.get(key) for key in reads if key in globals_schema}
-        
-        # 5. Build the input payload helper
-        def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
-            # Determine base values
-            prompt_to_use = instruction or node_data.get("agent_prompt", node_data.get("description", ""))
-            query_to_use = G.graph.get("original_query", "")
+        with run_span(run_id, f"agent_test:{node_id}"):
+            # 1. Find the session file
+            summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+            found_file = None
+            for path in summaries_dir.rglob(f"session_{run_id}.json"):
+                found_file = path
+                break
 
-            # Apply overrides from request if present
-            if request and request.input:
-                if agent_type == "PlannerAgent":
-                    query_to_use = request.input
-                else:
-                    # For downstream agents, the input overrides the instruction/goal
-                    prompt_to_use = request.input
+            if not found_file:
+                raise HTTPException(status_code=404, detail="Session not found")
 
-            payload = {
-                "step_id": node_id,
-                "agent_prompt": prompt_to_use,
-                "reads": reads,
-                "writes": node_data.get("writes", []),
-                "inputs": inputs,
-                "original_query": query_to_use,
-                "session_context": {
-                    "session_id": run_id,
-                    "created_at": G.graph.get("created_at", ""),
-                    "file_manifest": G.graph.get("file_manifest", []),
-                },
-                **({"previous_output": previous_output} if previous_output else {}),
-                **({"iteration_context": iteration_context} if iteration_context else {})
-            }
-             # Formatter-specific additions
-            if agent_type == "FormatterAgent":
-                global_data = G.graph.get('globals_schema', {}).copy()
-                print(f"🕵️‍♂️ DEBUG FORMATTER: run_id={run_id}")
-                print(f"🕵️‍♂️ DEBUG FORMATTER: file={found_file}")
-                print(f"🕵️‍♂️ DEBUG FORMATTER: globals_keys={list(global_data.keys())}")
-                if 'formatted_report_T010' in global_data:
-                    print(f"🕵️‍♂️ DEBUG FORMATTER: FOUND STALE KEY 'formatted_report_T010'!")
-                payload["all_globals_schema"] = global_data
-            return payload
-
-        # 6. Execute with ReAct Loop (Max 15 turns)
-        from agents.base_agent import AgentRunner
-        from memory.context import ExecutionContextManager
-        
-        agent_runner = AgentRunner(multi_mcp)
-        temp_context = ExecutionContextManager.__new__(ExecutionContextManager)
-        temp_context.plan_graph = G
-        temp_context.multi_mcp = multi_mcp
-
-        max_turns = 15
-        current_input = build_agent_input()
-        iterations_data = []
-        final_output = {}
-        final_execution_result = None
-
-        for turn in range(1, max_turns + 1):
-            print(f"🔄 Test Mode: {agent_type} Iteration {turn}/{max_turns}")
-            
-            # Run Agent
-            result = await agent_runner.run_agent(agent_type, current_input)
-            
-            if not result["success"]:
-                return {
-                    "status": "error",
-                    "error": result.get("error", "Agent execution failed"),
-                    "node_id": node_id,
-                    "agent_type": agent_type
-                }
-            
-            output = result["output"]
-            final_output = output # Update final output
-            iterations_data.append({"iteration": turn, "output": output})
-            
-            # 1. Check for 'call_tool' (ReAct)
-            if output.get("call_tool"):
-                tool_call = output["call_tool"]
-                tool_name = tool_call.get("name")
-                tool_args = tool_call.get("arguments", {})
-                
-                print(f"🛠️ Test Mode: Executing Tool: {tool_name}")
-                
-                try:
-                    # Execute tool via MultiMCP
-                    tool_result = await multi_mcp.route_tool_call(tool_name, tool_args)
-                    
-                    # Serialize result content
-                    if isinstance(tool_result.content, list):
-                        result_str = "\n".join([str(item.text) for item in tool_result.content if hasattr(item, "text")])
-                    else:
-                        result_str = str(tool_result.content)
-
-                    # Save result to history
-                    iterations_data[-1]["tool_result"] = result_str
-                    
-                    # Prepare input for next iteration
-                    instruction = output.get("thought", "Use the tool result to generate the final output.")
-                    if turn == max_turns - 1:
-                         instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
-
-                    current_input = build_agent_input(
-                        instruction=instruction,
-                        previous_output=output,
-                        iteration_context={"tool_result": result_str}
-                    )
-                    continue # Loop to next turn
-
-                except Exception as e:
-                    print(f"Test Mode: Tool Execution Failed: {e}")
-                    current_input = build_agent_input(
-                        instruction="The tool execution failed. Try a different approach or tool.",
-                        previous_output=output,
-                        iteration_context={"tool_result": f"Error: {str(e)}"}
-                    )
-                    continue
-
-            # 2. Check for call_self (Legacy/Advanced recursion)
-            elif output.get("call_self"):
-                # Handle code execution if needed
-                if temp_context._has_executable_code(output):
-                     # Pass 'inputs' as overrides so variables from prev iterations (like ipl_urls_1A) are available
-                    execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
-                    final_execution_result = execution_result
-                    
-                    # Save result to history
-                    iterations_data[-1]["execution_result"] = execution_result
-
-                    if execution_result.get("status") == "success":
-                        execution_data = execution_result.get("result", {})
-                        inputs = {**inputs, **execution_data}  # Update inputs for next iteration
-                
-                # Prepare input for next iteration
-                current_input = build_agent_input(
-                    instruction=output.get("next_instruction", "Continue the task"),
-                    previous_output=output,
-                    iteration_context=output.get("iteration_context", {})
-                )
-                continue
-
-            # 3. Success (No tool call, just output)
+            # 2. Load session data
+            import networkx as nx
+            session_data = json.loads(found_file.read_text())
+            if "edges" in session_data:
+                G = nx.node_link_graph(session_data, edges="edges")
+            elif "links" in session_data:
+                G = nx.node_link_graph(session_data, edges="links")
+            elif "link" in session_data:
+                G = nx.node_link_graph(session_data, edges="link")
             else:
-                 # Execute code if present (Final Iteration)
-                if temp_context._has_executable_code(output):
-                     # Pass 'inputs' as overrides here too
-                    final_execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
-                    iterations_data[-1]["execution_result"] = final_execution_result
-                    if final_execution_result:
-                         final_output = temp_context._merge_execution_results(output, final_execution_result)
-                break # Exit loop
-        
-        # 8. Get the original output for comparison
-        original_output = node_data.get("output", {})
-        
-        # Ensure final_execution_result is passed even if loop broke early
-        if not final_execution_result and iterations_data:
-             final_execution_result = iterations_data[-1].get("execution_result")
+                session_data["edges"] = []
+                G = nx.node_link_graph(session_data, edges="edges")
 
-        return {
-            "status": "success",
-            "node_id": node_id,
-            "agent_type": agent_type,
-            "original_output": original_output,
-            "test_output": final_output,
-            "execution_result": final_execution_result,
-            "inputs_used": inputs,
-            "iterations": iterations_data # Optional: Pass full iterations if needed by UI
-        }
+            # 3. Find the node
+            if node_id not in G.nodes:
+                raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
+
+            node_data = G.nodes[node_id]
+            agent_type = node_data.get("agent")
+
+            if not agent_type:
+                raise HTTPException(status_code=400, detail="Node has no agent type")
+
+            # 4. Collect inputs from globals_schema based on 'reads'
+            globals_schema = G.graph.get("globals_schema", {})
+            reads = node_data.get("reads", [])
+            inputs = {key: globals_schema.get(key) for key in reads if key in globals_schema}
+
+            # 5. Build the input payload helper
+            def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
+                # Determine base values
+                prompt_to_use = instruction or node_data.get("agent_prompt", node_data.get("description", ""))
+                query_to_use = G.graph.get("original_query", "")
+
+                # Apply overrides from request if present
+                if request and request.input:
+                    if agent_type == "PlannerAgent":
+                        query_to_use = request.input
+                    else:
+                        # For downstream agents, the input overrides the instruction/goal
+                        prompt_to_use = request.input
+
+                payload = {
+                    "step_id": node_id,
+                    "agent_prompt": prompt_to_use,
+                    "reads": reads,
+                    "writes": node_data.get("writes", []),
+                    "inputs": inputs,
+                    "original_query": query_to_use,
+                    "session_context": {
+                        "session_id": run_id,
+                        "created_at": G.graph.get("created_at", ""),
+                        "file_manifest": G.graph.get("file_manifest", []),
+                    },
+                    **({"previous_output": previous_output} if previous_output else {}),
+                    **({"iteration_context": iteration_context} if iteration_context else {})
+                }
+                # Formatter-specific additions
+                if agent_type == "FormatterAgent":
+                    global_data = G.graph.get('globals_schema', {}).copy()
+                    print(f"🕵️‍♂️ DEBUG FORMATTER: run_id={run_id}")
+                    print(f"🕵️‍♂️ DEBUG FORMATTER: file={found_file}")
+                    print(f"🕵️‍♂️ DEBUG FORMATTER: globals_keys={list(global_data.keys())}")
+                    if 'formatted_report_T010' in global_data:
+                        print(f"🕵️‍♂️ DEBUG FORMATTER: FOUND STALE KEY 'formatted_report_T010'!")
+                    payload["all_globals_schema"] = global_data
+                return payload
+
+            # 6. Execute with ReAct Loop (Max 15 turns)
+            from agents.base_agent import AgentRunner
+            from memory.context import ExecutionContextManager
+
+            agent_runner = AgentRunner(multi_mcp)
+            temp_context = ExecutionContextManager.__new__(ExecutionContextManager)
+            temp_context.plan_graph = G
+            temp_context.multi_mcp = multi_mcp
+
+            max_turns = 15
+            current_input = build_agent_input()
+            iterations_data = []
+            final_output = {}
+            final_execution_result = None
+
+            with agent_execute_node_span(node_id, agent_type, run_id):
+                for turn in range(1, max_turns + 1):
+                    print(f"🔄 Test Mode: {agent_type} Iteration {turn}/{max_turns}")
+
+                    # Run Agent
+                    result = await agent_runner.run_agent(agent_type, current_input)
+
+                    if not result["success"]:
+                        return {
+                            "status": "error",
+                            "error": result.get("error", "Agent execution failed"),
+                            "node_id": node_id,
+                            "agent_type": agent_type
+                        }
+
+                    output = result["output"]
+                    final_output = output  # Update final output
+                    iterations_data.append({"iteration": turn, "output": output})
+
+                    # 1. Check for 'call_tool' (ReAct)
+                    if output.get("call_tool"):
+                        tool_call = output["call_tool"]
+                        tool_name = tool_call.get("name")
+                        tool_args = tool_call.get("arguments", {})
+
+                        print(f"🛠️ Test Mode: Executing Tool: {tool_name}")
+
+                        try:
+                            # Execute tool via MultiMCP
+                            tool_result = await multi_mcp.route_tool_call(tool_name, tool_args)
+
+                            # Serialize result content
+                            if isinstance(tool_result.content, list):
+                                result_str = "\n".join([str(item.text) for item in tool_result.content if hasattr(item, "text")])
+                            else:
+                                result_str = str(tool_result.content)
+
+                            # Save result to history
+                            iterations_data[-1]["tool_result"] = result_str
+
+                            # Prepare input for next iteration
+                            instruction = output.get("thought", "Use the tool result to generate the final output.")
+                            if turn == max_turns - 1:
+                                instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
+
+                            current_input = build_agent_input(
+                                instruction=instruction,
+                                previous_output=output,
+                                iteration_context={"tool_result": result_str}
+                            )
+                            continue  # Loop to next turn
+
+                        except Exception as e:
+                            print(f"Test Mode: Tool Execution Failed: {e}")
+                            current_input = build_agent_input(
+                                instruction="The tool execution failed. Try a different approach or tool.",
+                                previous_output=output,
+                                iteration_context={"tool_result": f"Error: {str(e)}"}
+                            )
+                            continue
+
+                    # 2. Check for call_self (Legacy/Advanced recursion)
+                    elif output.get("call_self"):
+                        # Handle code execution if needed
+                        if temp_context._has_executable_code(output):
+                            # Pass 'inputs' as overrides so variables from prev iterations (like ipl_urls_1A) are available
+                            execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
+                            final_execution_result = execution_result
+
+                            # Save result to history
+                            iterations_data[-1]["execution_result"] = execution_result
+
+                            if execution_result.get("status") == "success":
+                                execution_data = execution_result.get("result", {})
+                                inputs = {**inputs, **execution_data}  # Update inputs for next iteration
+
+                        # Prepare input for next iteration
+                        current_input = build_agent_input(
+                            instruction=output.get("next_instruction", "Continue the task"),
+                            previous_output=output,
+                            iteration_context=output.get("iteration_context", {})
+                        )
+                        continue
+
+                    # 3. Success (No tool call, just output)
+                    else:
+                        # Execute code if present (Final Iteration)
+                        if temp_context._has_executable_code(output):
+                            # Pass 'inputs' as overrides here too
+                            final_execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
+                            iterations_data[-1]["execution_result"] = final_execution_result
+                            if final_execution_result:
+                                final_output = temp_context._merge_execution_results(output, final_execution_result)
+                        break  # Exit loop
+
+            # 8. Get the original output for comparison
+            original_output = node_data.get("output", {})
+
+            # Ensure final_execution_result is passed even if loop broke early
+            if not final_execution_result and iterations_data:
+                final_execution_result = iterations_data[-1].get("execution_result")
+
+            return {
+                "status": "success",
+                "node_id": node_id,
+                "agent_type": agent_type,
+                "original_output": original_output,
+                "test_output": final_output,
+                "execution_result": final_execution_result,
+                "inputs_used": inputs,
+                "iterations": iterations_data  # Optional: Pass full iterations if needed by UI
+            }
         
     except HTTPException:
         raise

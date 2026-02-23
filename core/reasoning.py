@@ -3,6 +3,7 @@ import re
 from typing import Callable, Any, Dict, List, Optional
 from core.model_manager import ModelManager
 from core.utils import log_step, log_error
+from ops.tracing import set_span_context
 
 class Verifier:
     """
@@ -50,8 +51,9 @@ class Verifier:
         """
         
         try:
-            response = await self.model_manager.generate_text(prompt)
-            
+            with set_span_context({"agent": "Verifier", "node_id": "verification"}):
+                response = await self.model_manager.generate_text(prompt)
+
             # Parse output
             score_match = re.search(r"SCORE:\s*(\d+)", response, re.IGNORECASE)
             critique_match = re.search(r"CRITIQUE:\s*(.*)", response, re.IGNORECASE | re.DOTALL)

@@ -82,6 +82,34 @@ def get_studio_storage():
 # Global settings state
 settings = {}
 
+# Nexus MessageBus instance — shared across all routers
+_message_bus = None
+
+def get_message_bus():
+    """Get the Nexus MessageBus instance, creating it if needed.
+
+    Wires together: MessageFormatter + MessageRouter (mock agent) +
+    TelegramAdapter + WebChatAdapter.
+    """
+    global _message_bus
+    if _message_bus is None:
+        from gateway.bus import MessageBus
+        from gateway.formatter import MessageFormatter
+        from gateway.router import MessageRouter, create_mock_agent
+        from channels.telegram import TelegramAdapter
+        from channels.webchat import WebChatAdapter
+        formatter = MessageFormatter()
+        router = MessageRouter(agent_factory=create_mock_agent, formatter=formatter)
+        _message_bus = MessageBus(
+            router=router,
+            formatter=formatter,
+            adapters={
+                "telegram": TelegramAdapter(),
+                "webchat": WebChatAdapter(),
+            },
+        )
+    return _message_bus
+
 # Canvas components
 _canvas_ws = None
 _canvas_runtime = None
