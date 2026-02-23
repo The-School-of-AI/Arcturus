@@ -81,7 +81,7 @@ function ThemePickerDialog({
     const fetchThemes = useAppStore(s => s.fetchThemes);
     const [selected, setSelected] = useState<string | null>(null);
     const [strictLayout, setStrictLayout] = useState(false);
-    const [generateImages, setGenerateImages] = useState(false);
+    const [generateImages, setGenerateImages] = useState(true);
     const [expandedBase, setExpandedBase] = useState<string | null>(null);
     const [variants, setVariants] = useState<Record<string, any[]>>({});
     const [loadingVariants, setLoadingVariants] = useState<string | null>(null);
@@ -115,7 +115,7 @@ function ThemePickerDialog({
             onOpenChange(false);
             setSelected(null);
             setStrictLayout(false);
-            setGenerateImages(false);
+            setGenerateImages(true);
             setExpandedBase(null);
         }
     };
@@ -124,7 +124,7 @@ function ThemePickerDialog({
         if (!v) {
             setSelected(null);
             setStrictLayout(false);
-            setGenerateImages(false);
+            setGenerateImages(true);
             setExpandedBase(null);
         }
         onOpenChange(v);
