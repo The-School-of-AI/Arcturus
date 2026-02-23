@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 import asyncio
 from core.sandbox.executor import UniversalSandbox
+from ops.tracing import code_execution_span
+from opentelemetry.trace import Status, StatusCode
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
@@ -183,87 +185,100 @@ class ExecutionContextManager:
         if not code_to_execute:
             return {"status": "error", "error": "No executable code found"}
         
-        # Get node data for context
-        node_data = self.plan_graph.nodes[step_id]
-        reads = node_data.get("reads", [])
-        
-        # Get globals_schema for injection
-        globals_schema = self.plan_graph.graph['globals_schema'].copy()
-        
-        # Merge input_overrides if provided (for API test loops)
-        if input_overrides:
-            globals_schema.update(input_overrides)
-        
-        last_failure = None
-        for code_key, code in code_to_execute.items():
+        session_id = self.plan_graph.graph.get("session_id", "")
+        with code_execution_span(step_id, session_id, list(code_to_execute.keys())) as span:
             try:
-                # INJECT ALL AVAILABLE VARIABLES
-                globals_injection = ""
+                # Get node data for context
+                node_data = self.plan_graph.nodes[step_id]
+                reads = node_data.get("reads", [])
                 
-                # 1. Inject ALL globals_schema variables (with safe parsing)
-                for var_name, var_value in globals_schema.items():
-                    # 🔧 CRITICAL FIX: Parse string representations of lists/dicts
-                    # This prevents the bug where "['url1', 'url2']" becomes a string
-                    # instead of an actual list, causing iteration over characters
-                    parsed_value = self._ensure_parsed_value(var_value)
-                    
-                    globals_injection += f'{var_name} = {repr(parsed_value)}\n'
+                # Get globals_schema for injection
+                globals_schema = self.plan_graph.graph['globals_schema'].copy()
                 
-                # 2. Inject agent's own output variables (with safe parsing)
-                for var_name, var_value in output.items():
-                    if var_name not in ['code_variants', 'call_self', 'cost', 'input_tokens', 'output_tokens', 'execution_result', 'execution_status', 'execution_error', 'execution_time', 'executed_variant']:
-                        parsed_value = self._ensure_parsed_value(var_value)
-                        globals_injection += f'{var_name} = {repr(parsed_value)}\n'
+                # Merge input_overrides if provided (for API test loops)
+                if input_overrides:
+                    globals_schema.update(input_overrides)
                 
-                # 3. Create convenience variables for reads (with safe parsing)
-                reads_data = {}
-                for read_key in reads:
-                    if read_key in globals_schema:
-                        reads_data[read_key] = self._ensure_parsed_value(globals_schema[read_key])
+                last_failure = None
+                for code_key, code in code_to_execute.items():
+                    try:
+                        # INJECT ALL AVAILABLE VARIABLES
+                        globals_injection = ""
+                        
+                        # 1. Inject ALL globals_schema variables (with safe parsing)
+                        for var_name, var_value in globals_schema.items():
+                            # 🔧 CRITICAL FIX: Parse string representations of lists/dicts
+                            # This prevents the bug where "['url1', 'url2']" becomes a string
+                            # instead of an actual list, causing iteration over characters
+                            parsed_value = self._ensure_parsed_value(var_value)
+                            globals_injection += f'{var_name} = {repr(parsed_value)}\n'
+                        
+                        # 2. Inject agent's own output variables (with safe parsing)
+                        for var_name, var_value in output.items():
+                            if var_name not in ['code_variants', 'call_self', 'cost', 'input_tokens', 'output_tokens', 'execution_result', 'execution_status', 'execution_error', 'execution_time', 'executed_variant']:
+                                parsed_value = self._ensure_parsed_value(var_value)
+                                globals_injection += f'{var_name} = {repr(parsed_value)}\n'
+                        
+                        # 3. Create convenience variables for reads (with safe parsing)
+                        reads_data = {}
+                        for read_key in reads:
+                            if read_key in globals_schema:
+                                reads_data[read_key] = self._ensure_parsed_value(globals_schema[read_key])
+                        globals_injection += f'reads_data = {repr(reads_data)}\n'
+                        
+                        enhanced_code = globals_injection + code
+                        
+                        # Use UniversalSandbox
+                        sandbox = UniversalSandbox(
+                            multi_mcp=self.multi_mcp if hasattr(self, 'multi_mcp') else None,
+                            session_id=self.plan_graph.graph['session_id']
+                        )
+                        result_obj = await sandbox.run(enhanced_code)
+                        
+                        # Convert SandboxResult to expected dict format
+                        if result_obj.get("status") == "success":
+                            span.set_attribute("status", "success")
+                            span.set_attribute("execution_time", str(result_obj.get("execution_time", "")))
+                            result_preview = str(result_obj.get("result", ""))[:500]
+                            span.set_attribute("result_preview", result_preview)
+                            return {
+                                "status": "success",
+                                "result": result_obj.get("result"),
+                                "logs": result_obj.get("logs"),
+                                "execution_time": result_obj.get("execution_time"),
+                                "executed_variant": code_key
+                            }
+                        else:
+                            last_failure = {
+                                "status": "error",
+                                "error": result_obj.get("error"),
+                                "logs": result_obj.get("logs"),
+                                "executed_variant": code_key
+                            }
+                    except Exception as e:
+                        last_failure = {
+                            "status": "error",
+                            "error": str(e),
+                            "executed_variant": code_key,
+                            "logs": f"System Error: {str(e)}"
+                        }
+                        span.set_status(Status(StatusCode.ERROR, str(e)))
+                        span.record_exception(e)
+                        continue
                 
-                globals_injection += f'reads_data = {repr(reads_data)}\n'
+                if last_failure:
+                    span.set_attribute("status", "error")
+                    span.set_attribute("error", str(last_failure.get("error", ""))[:500])
+                    return last_failure
                 
-                enhanced_code = globals_injection + code
-                
-                # Use UniversalSandbox
-                sandbox = UniversalSandbox(
-                    multi_mcp=self.multi_mcp if hasattr(self, 'multi_mcp') else None,
-                    session_id=self.plan_graph.graph['session_id']
-                )
-                result_obj = await sandbox.run(enhanced_code)
-                
-                # Convert SandboxResult to expected dict format
-                if result_obj.get("status") == "success":
-                    return {
-                        "status": "success",
-                        "result": result_obj.get("result"),
-                        "logs": result_obj.get("logs"),
-                        "execution_time": result_obj.get("execution_time"),
-                        "executed_variant": code_key
-                    }
-                else:
-                    # Keep track of the failure to return if nothing succeeds
-                    last_failure = {
-                        "status": "error",
-                        "error": result_obj.get("error"),
-                        "logs": result_obj.get("logs"),
-                        "executed_variant": code_key
-                    }
-                
+                span.set_attribute("status", "error")
+                span.set_attribute("error", "All code variants failed")
+                return {"status": "error", "error": "All code variants failed (no result generated)"}
             except Exception as e:
-                # Capture exception as a structured failure result
-                last_failure = {
-                    "status": "error", 
-                    "error": str(e),
-                    "executed_variant": code_key,
-                    "logs": f"System Error: {str(e)}"
-                }
-                continue
-        
-        if last_failure:
-            return last_failure
-            
-        return {"status": "error", "error": "All code variants failed (no result generated)"}
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                span.set_attribute("error", str(e)[:500])
+                raise
     
     def _merge_execution_results(self, original_output, execution_result):
         """Merge execution results into agent output"""
@@ -421,14 +436,22 @@ class ExecutionContextManager:
                 print(f"❌ User interaction failed: {e}")
                 node_data['error'] = str(e)
         
-        # CODE EXECUTION CHECK
+        # CODE EXECUTION CHECK (skip if already executed in loop - avoids duplicate code.execution span)
         execution_result = None
-        if self._has_executable_code(output):
+        if self._has_executable_code(output) and "execution_result" not in output and "execution_status" not in output:
             try:
                 execution_result = await self._auto_execute_code(step_id, output)
                 output = self._merge_execution_results(output, execution_result)
             except Exception as e:
                 print(f"❌ Code execution failed: {e}")
+        elif output and isinstance(output, dict) and output.get("execution_status") is not None:
+            # Already executed in loop - reconstruct for extraction logic
+            execution_result = {
+                "status": output.get("execution_status"),
+                "result": output.get("execution_result"),
+                "error": output.get("execution_error"),
+                "logs": output.get("execution_logs"),
+            }
         
         # EXTRACTION LOGIC - Handle both code execution results AND direct agent outputs
         globals_schema = self.plan_graph.graph['globals_schema']
@@ -643,4 +666,10 @@ class ExecutionContextManager:
         context = cls.__new__(cls)
         context.plan_graph = plan_graph
         context.debug_mode = debug_mode
+        # Restore attributes normally set in __init__ (needed for resume)
+        context.stop_requested = False
+        context.api_mode = True
+        context.user_input_event = asyncio.Event()
+        context.user_input_value = None
+        context._live_display = None
         return context

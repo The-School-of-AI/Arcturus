@@ -70,3 +70,4 @@ scripts/test_all.sh quick
 - Use `.env.example` as template for local secrets.
 - Never commit real API keys.
 - Gateway admin endpoints (`/api/v1/keys*`) require `ARCTURUS_GATEWAY_ADMIN_KEY` to be explicitly configured; when unset, admin auth fails closed (`503` `admin_key_not_configured`).
+- Gateway inbound signed webhook endpoint (`/api/v1/webhooks/inbound/*`) requires `ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET`; when unset, signature validation fails closed (`503` `webhook_signing_not_configured`).
