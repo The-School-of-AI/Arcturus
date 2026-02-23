@@ -10,7 +10,7 @@ Provides common functionality for:
 
 import json
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional, Type, TypeVar
 
@@ -58,9 +58,17 @@ class BaseHub(ABC):
         """Save hub data to JSON file."""
         # Update meta timestamp
         if hasattr(self.data, 'meta') and hasattr(self.data.meta, 'last_updated'):
-            self.data.meta.last_updated = datetime.now()
+            now = datetime.now()
+            previous = self.data.meta.last_updated
+
+            # Keep last_updated strictly monotonic to avoid clock-skew regressions
+            # where a persisted timestamp can be in the future relative to now.
+            if isinstance(previous, datetime) and previous >= now:
+                self.data.meta.last_updated = previous + timedelta(microseconds=1)
+            else:
+                self.data.meta.last_updated = now
             if not self.data.meta.created_at:
-                self.data.meta.created_at = datetime.now()
+                self.data.meta.created_at = now
         
         # Ensure directory exists
         self.path.parent.mkdir(parents=True, exist_ok=True)
