@@ -4,7 +4,7 @@ import logging
 
 from marketplace.skill_base import SkillManifest, load_manifest
 
-logger = logging.getLogger("marketplace")
+logger = logging.getLogger("bazaar")
 
 class SkillRegistry:
     """

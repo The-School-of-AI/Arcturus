@@ -9,9 +9,26 @@ skill_dependencies: []
 intent_triggers:
   - hello
   - example
+  - greet
 tools:
   - name: say_hello
     description: Returns a greeting message
     module: tools.greeter
     function: say_hello
+    parameters:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name to greet
+  - name: say_goodbye
+    description: Returns a farewell message
+    module: tools.greeter
+    function: say_goodbye
+    parameters:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name to bid farewell
 checksum: ""

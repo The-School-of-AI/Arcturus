@@ -8,7 +8,7 @@ import logging
 from marketplace.skill_base import load_manifest, SkillManifest
 from marketplace.registry import SkillRegistry
 
-logger = logging.getLogger("marketplace")
+logger = logging.getLogger("bazaar")
 
 @dataclass
 class InstallResult:
