@@ -110,4 +110,5 @@ agents:
     - coder
     - python_coding
     - debugging
+    - visual_explainer
     description: Specialized workspace assistant for deep code analysis and interactive debugging.
