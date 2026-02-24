@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2
+    CalendarClock, Terminal, Zap, Wand2, Network
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -22,11 +22,12 @@ import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 import { NewsPanel } from '@/components/sidebar/NewsPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
+import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
 
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio',
+    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'swarm',
     active: boolean,
     onClick: () => void
 }) => {
@@ -139,6 +140,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
                     <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
                     <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} />
+                    <NavIcon icon={Network} label="Swarm" tab="swarm" active={sidebarTab === 'swarm'} onClick={() => setSidebarTab('swarm')} />
 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
@@ -343,7 +345,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'remme' && <RemmePanel />}
                     {sidebarTab === 'explorer' && <ExplorerPanel />}
                     {sidebarTab === 'studio' && <StudioSidebar />}
-
+                    {sidebarTab === 'swarm' && <SwarmSidebar />}
                     {/* Persist AppsSidebar to prevent reloading app components */}
                     <div style={{ display: sidebarTab === 'apps' ? 'block' : 'none', height: '100%' }}>
                         <AppsSidebar />

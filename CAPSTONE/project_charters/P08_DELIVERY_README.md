@@ -29,12 +29,37 @@
 | Integration tests (10/10 executable) | `tests/integration/test_legion_chronicle_capture.py` | ✅ |
 | Lint (`ruff`) and typecheck (`mypy`) wired into `p08-legion-swarm` CI | `ci/run_project_gate.sh`, `pyproject.toml` | ✅ |
 
-**Not in scope (Days 11–20):**
-- Swarm UI graph (`features/swarm/`) — Days 11–15
-- P2P and Pipeline agent topologies — v2 / Days 16–20
+
+### Days 11–15: Swarm UI Graph and Manual Intervention ✅
+
+| Deliverable | File | Status |
+|---|---|---|
+| Backend REST/SSE router for Swarm UI | `routers/swarm.py` | ✅ |
+| Router mounted in `api.py` at `/api/swarm` | `api.py` | ✅ |
+| SwarmRunner: `get_dag_snapshot()` | `agents/swarm_runner.py` | ✅ |
+| SwarmRunner: `pause() / resume()` (asyncio.Event) | `agents/swarm_runner.py` | ✅ |
+| SwarmRunner: `inject_message()` | `agents/swarm_runner.py` | ✅ |
+| SwarmRunner: `reassign_task() / abort_task()` | `agents/swarm_runner.py` | ✅ |
+| SwarmRunner: `get_agent_log()` | `agents/swarm_runner.py` | ✅ |
+| TypeScript types for Swarm UI | `features/swarm/types.ts` | ✅ |
+| Typed API client (`swarmApi`) | `features/swarm/swarmApi.ts` | ✅ |
+| Zustand store slice for swarm state | `features/swarm/useSwarmStore.ts` | ✅ |
+| SSE hook (`useSwarmSSE`) | `features/swarm/useSwarmSSE.ts` | ✅ |
+| Live DAG visualisation with React Flow | `features/swarm/SwarmGraphView.tsx` | ✅ |
+| Agent conversation peek panel | `features/swarm/AgentPeekPanel.tsx` | ✅ |
+| Manual intervention modal (pause/resume/message/reassign/abort) | `features/swarm/InterventionModal.tsx` | ✅ |
+| Template save/load drawer | `features/swarm/TemplateDrawer.tsx` | ✅ |
+| Swarm panel integrating all sub-components | `features/swarm/SwarmPanel.tsx` | ✅ |
+| "Swarm" nav tab wired into Sidebar | `components/layout/Sidebar.tsx` | ✅ |
+| `sidebarTab` type extended to include `swarm` | `store/index.ts` | ✅ |
+| 4 acceptance tests (HC11-1 through HC11-4) | `tests/acceptance/p08_legion/test_swarm_ui_api.py` | ✅ |
+
+**Not in scope (Days 16–20):**
+- P2P and Pipeline agent topologies — Days 16–20
 - Failure-injection stress testing — Days 16–20
 
 ---
+
 
 ## Architecture Changes
 

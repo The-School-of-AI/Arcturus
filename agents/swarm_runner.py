@@ -17,7 +17,11 @@ logger = logging.getLogger(__name__)
 
 
 class SwarmRunner:
-    def __init__(self):
+    def __init__(
+        self,
+        swarm_token_budget: int | None = None,
+        swarm_cost_budget_usd: float | None = None,
+    ):
         self.manager: ManagerAgent | None = None
         self.workers: dict[str, WorkerAgent] = {}
         self.graph: nx.DiGraph = nx.DiGraph()
@@ -26,12 +30,17 @@ class SwarmRunner:
         # (same pattern as AgentLoop4 reading max_steps)
         profile = get_profile()
         self.max_task_retries: int = profile.get("strategy.max_task_retries", 2)
-        self.swarm_token_budget: int = profile.get("strategy.swarm_token_budget", 50000)
-        self.swarm_cost_budget_usd: float = profile.get("strategy.swarm_cost_budget_usd", 0.50)
+        self.swarm_token_budget: int = swarm_token_budget if swarm_token_budget is not None else profile.get("strategy.swarm_token_budget", 50000)
+        self.swarm_cost_budget_usd: float = swarm_cost_budget_usd if swarm_cost_budget_usd is not None else profile.get("strategy.swarm_cost_budget_usd", 0.50)
 
         # Runtime accumulators (reset each run_tasks call)
         self._tokens_used: int = 0
         self._cost_usd: float = 0.0
+
+        # Pause support for UI manual intervention
+        self._paused: asyncio.Event = asyncio.Event()  # set = paused, clear = running
+        self._agent_logs: dict[str, list[dict]] = {}   # agent_id → conversation log
+
 
     async def initialize(self):
         """Initializes Ray and the Manager Agent."""
@@ -211,7 +220,87 @@ class SwarmRunner:
         all_tasks = list(completed_tasks.values()) + list(failed_tasks.values())
         return [t.model_dump() for t in all_tasks]
 
+    # ------------------------------------------------------------------
+    # Swarm UI control methods
+    # ------------------------------------------------------------------
+
+    def get_dag_snapshot(self) -> list[dict]:
+        """Return a JSON-serialisable snapshot of all tasks and their statuses."""
+        snapshot = []
+        for node_id, data in self.graph.nodes(data=True):
+            task: Task | None = data.get("task")
+            if task is None:
+                continue
+            snapshot.append({
+                "task_id": task.id,
+                "title": task.title,
+                "status": task.status.value,
+                "assigned_to": task.assigned_to,
+                "priority": task.priority.value,
+                "dependencies": list(self.graph.predecessors(node_id)),
+                "token_used": task.token_used,
+                "cost_usd": task.cost_usd,
+                "result": task.result,
+            })
+        return snapshot
+
+    async def pause(self) -> None:
+        """Pause DAG execution between task dispatches."""
+        self._paused.set()
+        logger.info("[SwarmRunner] Paused by user intervention.")
+
+    async def resume(self) -> None:
+        """Resume a paused swarm."""
+        self._paused.clear()
+        logger.info("[SwarmRunner] Resumed by user intervention.")
+
+    async def inject_message(self, agent_id: str, content: str) -> None:
+        """Route an AgentMessage to a specific worker actor."""
+        from agents.protocol import AgentMessage
+        worker = self.workers.get(agent_id)
+        if worker is None:
+            raise ValueError(f"Worker {agent_id!r} not found")
+        msg = AgentMessage(
+            from_agent="user",
+            to_agent=agent_id,
+            task_id="intervention",
+            content=content,
+        )
+        await worker.process_message.remote(msg.model_dump())  # type: ignore[attr-defined]
+        logger.info(f"[SwarmRunner] Injected message to {agent_id!r}.")
+
+    async def reassign_task(self, task_id: str, new_role: str) -> None:
+        """Reassign a task to a different worker role (spawning one if needed)."""
+        for node_id, data in self.graph.nodes(data=True):
+            task: Task | None = data.get("task")
+            if task and task.id == task_id:
+                task.assigned_to = new_role
+                task.status = TaskStatus.PENDING
+                if new_role not in self.workers:
+                    self.workers[new_role] = WorkerAgent.remote(  # type: ignore[attr-defined]
+                        agent_id=f"worker_{new_role}", role=new_role
+                    )
+                logger.info(f"[SwarmRunner] Task {task_id!r} reassigned to {new_role!r}.")
+                return
+        raise ValueError(f"Task {task_id!r} not found in DAG")
+
+    async def abort_task(self, task_id: str) -> None:
+        """Immediately mark a task as FAILED."""
+        for node_id, data in self.graph.nodes(data=True):
+            task: Task | None = data.get("task")
+            if task and task.id == task_id:
+                task.status = TaskStatus.FAILED
+                task.result = "Aborted by user intervention."
+                logger.info(f"[SwarmRunner] Task {task_id!r} aborted.")
+                return
+        raise ValueError(f"Task {task_id!r} not found in DAG")
+
+    def get_agent_log(self, agent_id: str) -> list[dict]:
+        """Return the conversation log recorded for agent_id (or empty list)."""
+        return self._agent_logs.get(agent_id, [])
+
     async def shutdown(self):
+
         ray.shutdown()
 
 
