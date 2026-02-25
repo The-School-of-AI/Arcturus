@@ -298,8 +298,8 @@ export function StudioWorkspace() {
                                 Generated
                             </span>
                         )}
-                        {artifact.type === 'slides' && (
-                            <ExportButton artifactId={artifact.id} />
+                        {['slides', 'document'].includes(artifact.type) && (
+                            <ExportButton artifactId={artifact.id} artifactType={artifact.type} />
                         )}
                     </div>
                 </div>

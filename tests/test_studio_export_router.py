@@ -40,7 +40,7 @@ def test_export_artifact_invalid_format(monkeypatch):
 
     monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
 
-    request = studio_router.ExportArtifactRequest(format="pdf")
+    request = studio_router.ExportArtifactRequest(format="xlsx")
     with pytest.raises(HTTPException) as exc_info:
         _run(studio_router.export_artifact(_UUID_1, request))
     assert exc_info.value.status_code == 400
@@ -201,3 +201,146 @@ def test_list_themes_with_variants():
 def test_list_themes_filter_base_id():
     result = _run(studio_router.list_themes_endpoint(base_id="corporate-blue"))
     assert len(result) == 7  # 1 base + 6 variants
+
+
+# === Phase 4: DOCX/PDF format + media type tests ===
+
+def test_export_artifact_docx_format(monkeypatch):
+    class FakeOrchestrator:
+        async def export_artifact(self, artifact_id, export_format, theme_id=None, strict_layout=False, generate_images=False):
+            return {"id": _UUID_JOB, "status": "completed", "format": "docx"}
+
+    monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
+
+    request = studio_router.ExportArtifactRequest(format="docx")
+    result = _run(studio_router.export_artifact(_UUID_1, request))
+    assert result["format"] == "docx"
+    assert result["status"] == "completed"
+
+
+def test_export_artifact_pdf_format(monkeypatch):
+    class FakeOrchestrator:
+        async def export_artifact(self, artifact_id, export_format, theme_id=None, strict_layout=False, generate_images=False):
+            return {"id": _UUID_JOB, "status": "completed", "format": "pdf"}
+
+    monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
+
+    request = studio_router.ExportArtifactRequest(format="pdf")
+    result = _run(studio_router.export_artifact(_UUID_1, request))
+    assert result["format"] == "pdf"
+    assert result["status"] == "completed"
+
+
+def test_download_docx_media_type(monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    output_path = storage.get_export_file_path(_UUID_1, _UUID_JOB, "docx")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(b"fake docx content")
+
+    job = ExportJob(
+        id=_UUID_JOB,
+        artifact_id=_UUID_1,
+        format=ExportFormat.docx,
+        status=ExportStatus.completed,
+        output_uri=str(output_path),
+        created_at=datetime.now(timezone.utc),
+    )
+    storage.save_export_job(job)
+    monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
+
+    result = _run(studio_router.download_export(_UUID_1, _UUID_JOB))
+    from fastapi.responses import FileResponse
+    assert isinstance(result, FileResponse)
+    assert result.media_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+def test_download_pdf_media_type(monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    output_path = storage.get_export_file_path(_UUID_1, _UUID_JOB, "pdf")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(b"fake pdf content")
+
+    job = ExportJob(
+        id=_UUID_JOB,
+        artifact_id=_UUID_1,
+        format=ExportFormat.pdf,
+        status=ExportStatus.completed,
+        output_uri=str(output_path),
+        created_at=datetime.now(timezone.utc),
+    )
+    storage.save_export_job(job)
+    monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
+
+    result = _run(studio_router.download_export(_UUID_1, _UUID_JOB))
+    from fastapi.responses import FileResponse
+    assert isinstance(result, FileResponse)
+    assert result.media_type == "application/pdf"
+
+
+def test_export_format_enum_accepts_docx():
+    from core.schemas.studio_schema import ExportFormat
+    assert ExportFormat("docx") == ExportFormat.docx
+
+
+def test_export_format_enum_accepts_pdf():
+    from core.schemas.studio_schema import ExportFormat
+    assert ExportFormat("pdf") == ExportFormat.pdf
+
+
+def test_download_pptx_still_uses_presentation_media_type(monkeypatch, tmp_path):
+    """Existing PPTX downloads should continue to work with the correct media type."""
+    from datetime import datetime, timezone
+    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    output_path = storage.get_export_file_path(_UUID_1, _UUID_JOB, "pptx")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(b"fake pptx content")
+
+    job = ExportJob(
+        id=_UUID_JOB,
+        artifact_id=_UUID_1,
+        format=ExportFormat.pptx,
+        status=ExportStatus.completed,
+        output_uri=str(output_path),
+        created_at=datetime.now(timezone.utc),
+    )
+    storage.save_export_job(job)
+    monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
+
+    result = _run(studio_router.download_export(_UUID_1, _UUID_JOB))
+    from fastapi.responses import FileResponse
+    assert isinstance(result, FileResponse)
+    assert result.media_type == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+
+
+def test_export_invalid_combo_document_pptx(monkeypatch):
+    """Requesting PPTX for a document artifact should fail at the orchestrator level."""
+    class FakeOrchestrator:
+        async def export_artifact(self, artifact_id, export_format, theme_id=None, strict_layout=False, generate_images=False):
+            raise ValueError("Format pptx not supported for document artifacts")
+
+    monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
+
+    request = studio_router.ExportArtifactRequest(format="pptx")
+    with pytest.raises(HTTPException) as exc_info:
+        _run(studio_router.export_artifact(_UUID_1, request))
+    assert exc_info.value.status_code == 400
+
+
+def test_export_unsupported_format_rejected():
+    """Formats not in the ExportFormat enum should be rejected."""
+    request = studio_router.ExportArtifactRequest(format="xlsx")
+    with pytest.raises(HTTPException) as exc_info:
+        _run(studio_router.export_artifact(_UUID_1, request))
+    assert exc_info.value.status_code == 400
+    assert "Unsupported export format" in exc_info.value.detail

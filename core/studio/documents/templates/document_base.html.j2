@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ doc_title }}</title>
+    <link rel="stylesheet" href="file://{{ css_path }}">
+</head>
+<body>
+    <header>
+        <h1 class="doc-title">{{ doc_title }}</h1>
+        {% if doc_type %}
+        <p class="doc-type">{{ doc_type }}</p>
+        {% endif %}
+    </header>
+
+    {% if abstract %}
+    <section class="abstract">
+        <h2>Abstract</h2>
+        <p>{{ abstract }}</p>
+    </section>
+    {% endif %}
+
+    {% macro render_sections(sections) %}
+    {% for section in sections %}
+    <section class="doc-section level-{{ section.level }}">
+        <h{{ section.level + 1 }}>{{ section.heading }}</h{{ section.level + 1 }}>
+        {% if section.content %}
+        {% for paragraph in section.content.split('\n\n') %}
+        {% if paragraph.strip() %}
+        <p>{{ paragraph.strip() }}</p>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        {% if section.subsections %}
+        {{ render_sections(section.subsections) }}
+        {% endif %}
+    </section>
+    {% endfor %}
+    {% endmacro %}
+
+    {{ render_sections(sections) }}
+
+    {% if bibliography %}
+    <section class="bibliography">
+        <h2>Bibliography</h2>
+        <ol class="bib-list">
+            {% for entry in bibliography %}
+            <li id="bib-{{ entry.key }}">
+                <span class="bib-key">[{{ entry.key }}]</span>
+                <span class="bib-author">{{ entry.get('author', 'Unknown') }}.</span>
+                <span class="bib-title">{{ entry.get('title', '') }}.</span>
+                {% if entry.get('year') %}
+                <span class="bib-year">({{ entry.year }})</span>
+                {% endif %}
+                {% if entry.get('url') %}
+                <a class="bib-url" href="{{ entry.url }}">{{ entry.url }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+    {% endif %}
+</body>
+</html>

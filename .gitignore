@@ -31,7 +31,7 @@ memory/user_model/
 
 # Data & Documents (Large files/datasets)
 data/
-documents/
+/documents/
 mcp_servers/documents/
 mcp_servers/faiss_index/
 classNotes/

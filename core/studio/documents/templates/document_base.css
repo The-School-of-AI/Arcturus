@@ -1,0 +1,132 @@
+/* Document PDF base styles — Letter page, serif body, sans headings */
+@page {
+    size: letter;
+    margin: 1in 1in 1in 1in;
+}
+
+body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #222;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2em;
+    padding-bottom: 1em;
+    border-bottom: 2px solid #333;
+}
+
+.doc-title {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 24pt;
+    font-weight: 700;
+    margin: 0 0 0.3em 0;
+    color: #111;
+}
+
+.doc-type {
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #666;
+    margin: 0;
+}
+
+/* Abstract */
+.abstract {
+    margin: 1.5em 2em;
+    padding: 1em;
+    background: #f8f8f8;
+    border-left: 3px solid #999;
+}
+
+.abstract h2 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 12pt;
+    margin: 0 0 0.5em 0;
+    color: #444;
+}
+
+.abstract p {
+    font-style: italic;
+    margin: 0;
+}
+
+/* Headings */
+h2, h3, h4 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #222;
+    page-break-after: avoid;
+}
+
+h2 {
+    font-size: 16pt;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.2em;
+}
+
+h3 {
+    font-size: 13pt;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+}
+
+h4 {
+    font-size: 11pt;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+}
+
+/* Body paragraphs */
+p {
+    margin: 0 0 0.8em 0;
+    text-align: justify;
+}
+
+/* Bibliography */
+.bibliography {
+    margin-top: 2em;
+    page-break-before: always;
+}
+
+.bibliography h2 {
+    margin-bottom: 0.8em;
+}
+
+.bib-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.bib-list li {
+    margin-bottom: 0.6em;
+    padding-left: 2em;
+    text-indent: -2em;
+}
+
+.bib-key {
+    font-weight: bold;
+    color: #444;
+}
+
+.bib-author {
+    margin-left: 0.3em;
+}
+
+.bib-title {
+    font-style: italic;
+}
+
+.bib-year {
+    color: #555;
+}
+
+.bib-url {
+    color: #0066cc;
+    word-break: break-all;
+    font-size: 9pt;
+}

@@ -298,8 +298,18 @@ async def download_export(artifact_id: str, export_job_id: str):
     if not file_path.resolve().is_relative_to(expected_base.resolve()):
         raise HTTPException(status_code=400, detail="Export file path outside expected directory")
 
+    _EXPORT_MEDIA_TYPES = {
+        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "pdf": "application/pdf",
+    }
+    media_type = _EXPORT_MEDIA_TYPES.get(
+        job.format.value,
+        "application/octet-stream",
+    )
+
     return FileResponse(
         path=str(file_path),
         filename=f"{artifact_id}.{job.format.value}",
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        media_type=media_type,
     )

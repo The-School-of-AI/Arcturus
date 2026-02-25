@@ -697,10 +697,18 @@ function setupDialogHandlers() {
     // Save file via native dialog and auto-open in default app
     ipcMain.handle('dialog:saveAndOpen', async (event, { url, defaultName }) => {
         try {
+            // Dynamic file filters based on file extension
+            const ext = (defaultName || '').split('.').pop()?.toLowerCase();
+            const filterMap = {
+                pptx: { name: 'PowerPoint', extensions: ['pptx'] },
+                docx: { name: 'Word Document', extensions: ['docx'] },
+                pdf: { name: 'PDF Document', extensions: ['pdf'] },
+            };
+            const primaryFilter = filterMap[ext] || { name: 'All Files', extensions: ['*'] };
             const result = await dialog.showSaveDialog(mainWindow, {
                 defaultPath: defaultName || 'download',
                 filters: [
-                    { name: 'PowerPoint', extensions: ['pptx'] },
+                    primaryFilter,
                     { name: 'All Files', extensions: ['*'] }
                 ]
             });

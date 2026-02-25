@@ -7,6 +7,14 @@ from pathlib import Path
 
 import pytest
 
+def _weasyprint_available():
+    try:
+        from weasyprint import HTML
+        return True
+    except (ImportError, OSError):
+        return False
+
+
 PROJECT_ID = "P04"
 PROJECT_KEY = "p04_forge"
 CI_CHECK = "p04-forge-studio"
@@ -253,7 +261,7 @@ def test_15_invalid_format_returns_error() -> None:
     """Requesting unsupported format returns controlled error."""
     from core.schemas.studio_schema import ExportFormat
     with pytest.raises(ValueError):
-        ExportFormat("pdf")
+        ExportFormat("xlsx")
 
 
 def test_16_export_job_has_validator_results(tmp_path) -> None:
@@ -407,3 +415,160 @@ def test_21_layout_quality_blocks_bad_export(tmp_path) -> None:
 
     assert result["status"] == "failed"
     assert result["validator_results"]["layout_valid"] is False
+
+
+# --- Phase 4: Document DOCX/PDF export tests ---
+
+def _sample_document_content_tree_dict() -> dict:
+    """Return a sample document content tree dict for testing."""
+    return {
+        "doc_title": "Technical Specification: AI Agent Framework",
+        "doc_type": "technical_spec",
+        "abstract": "This document specifies the architecture and design of the AI Agent Framework.",
+        "sections": [
+            {
+                "id": "sec1", "heading": "Introduction", "level": 1,
+                "content": "The AI Agent Framework provides a modular architecture for building autonomous AI agents.",
+                "subsections": [
+                    {
+                        "id": "sec1a", "heading": "Purpose", "level": 2,
+                        "content": "This specification defines the core components and their interactions.",
+                        "subsections": [], "citations": [],
+                    }
+                ],
+                "citations": ["agent_paper"],
+            },
+            {
+                "id": "sec2", "heading": "Architecture", "level": 1,
+                "content": "The framework follows a layered architecture with clear separation of concerns.",
+                "subsections": [], "citations": [],
+            },
+            {
+                "id": "sec3", "heading": "Implementation", "level": 1,
+                "content": "Implementation follows a phased approach with iterative delivery.",
+                "subsections": [], "citations": [],
+            },
+        ],
+        "bibliography": [
+            {"key": "agent_paper", "title": "Autonomous AI Agents", "author": "Smith et al.", "year": "2024"},
+        ],
+        "metadata": {"audience": "engineers", "tone": "technical"},
+    }
+
+
+def test_22_docx_export_creates_valid_file(tmp_path):
+    """Phase 4: DOCX export produces a valid, openable Word document."""
+    from core.schemas.studio_schema import DocumentContentTree
+    from core.studio.documents.exporter_docx import export_to_docx
+    from core.studio.documents.validator import validate_docx
+
+    ct_dict = _sample_document_content_tree_dict()
+    ct = DocumentContentTree(**ct_dict)
+    output_path = tmp_path / "test.docx"
+    export_to_docx(ct, output_path)
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+    validation = validate_docx(output_path, ct)
+    assert validation["valid"] is True
+    assert validation["heading_count"] >= 3
+    assert validation["text_present"] is True
+    assert validation["bibliography_present"] is True
+
+
+@pytest.mark.skipif(
+    not _weasyprint_available(),
+    reason="WeasyPrint native libraries not available",
+)
+def test_23_pdf_export_creates_valid_file(tmp_path):
+    """Phase 4: PDF export produces a valid, openable PDF document."""
+    from core.schemas.studio_schema import DocumentContentTree
+    from core.studio.documents.exporter_pdf import export_to_pdf
+    from core.studio.documents.validator import validate_pdf
+
+    ct_dict = _sample_document_content_tree_dict()
+    ct = DocumentContentTree(**ct_dict)
+    output_path = tmp_path / "test.pdf"
+    export_to_pdf(ct, output_path)
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+    validation = validate_pdf(output_path, ct)
+    assert validation["valid"] is True
+    assert validation["page_count"] >= 1
+    assert validation["text_present"] is True
+
+
+def test_24_document_export_job_lifecycle(tmp_path):
+    """Phase 4: Full document export lifecycle — outline → draft → export DOCX."""
+    import asyncio
+    from datetime import datetime, timezone
+    from uuid import uuid4
+    from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
+    from core.studio.orchestrator import ForgeOrchestrator
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    orch = ForgeOrchestrator(storage)
+
+    art_id = str(uuid4())
+    ct_dict = _sample_document_content_tree_dict()
+    artifact = Artifact(
+        id=art_id, type=ArtifactType.document, title="Tech Spec",
+        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        content_tree=ct_dict,
+    )
+    storage.save_artifact(artifact)
+
+    loop = asyncio.new_event_loop()
+    try:
+        result = loop.run_until_complete(
+            orch.export_artifact(art_id, ExportFormat.docx)
+        )
+    finally:
+        loop.close()
+
+    assert result["status"] == "completed"
+    assert result["format"] == "docx"
+    assert result["output_uri"] is not None
+    assert result["validator_results"]["valid"] is True
+
+
+@pytest.mark.skipif(
+    not _weasyprint_available(),
+    reason="WeasyPrint native libraries not available",
+)
+def test_25_document_pdf_export_job_lifecycle(tmp_path):
+    """Phase 4: Full document export lifecycle — export PDF."""
+    import asyncio
+    from datetime import datetime, timezone
+    from uuid import uuid4
+    from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
+    from core.studio.orchestrator import ForgeOrchestrator
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    orch = ForgeOrchestrator(storage)
+
+    art_id = str(uuid4())
+    ct_dict = _sample_document_content_tree_dict()
+    artifact = Artifact(
+        id=art_id, type=ArtifactType.document, title="Tech Spec",
+        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        content_tree=ct_dict,
+    )
+    storage.save_artifact(artifact)
+
+    loop = asyncio.new_event_loop()
+    try:
+        result = loop.run_until_complete(
+            orch.export_artifact(art_id, ExportFormat.pdf)
+        )
+    finally:
+        loop.close()
+
+    assert result["status"] == "completed"
+    assert result["format"] == "pdf"
+    assert result["validator_results"]["valid"] is True

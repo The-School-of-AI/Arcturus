@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Download, Loader2, CheckCircle, AlertCircle, Palette, FileDown, ChevronDown
+    Download, Loader2, CheckCircle, AlertCircle, Palette, FileDown, ChevronDown, FileText, File
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
@@ -33,7 +33,12 @@ function ValidationSummary({ results }: { results: any }) {
     const [expanded, setExpanded] = useState(false);
     if (!results) return null;
 
-    const warnings = results.layout_warnings || [];
+    const layoutWarnings = Array.isArray(results.layout_warnings) ? results.layout_warnings : [];
+    const genericWarnings = Array.isArray(results.warnings) ? results.warnings : [];
+    const warnings = [...layoutWarnings];
+    for (const warning of genericWarnings) {
+        if (!warnings.includes(warning)) warnings.push(warning);
+    }
     const notesValid = results.notes_quality_valid;
     const chartValid = results.chart_quality_valid;
     const hasIssues = warnings.length > 0 || notesValid === false || chartValid === false;
@@ -295,6 +300,49 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
+// --- Document Format Picker Dialog ---
+
+function DocFormatPickerDialog({
+    open,
+    onOpenChange,
+    onSelect,
+}: {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    onSelect: (format: string) => void;
+}) {
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="bg-card border-border sm:max-w-sm text-foreground">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <FileDown className="w-4 h-4 text-primary" />
+                        Choose Export Format
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-3 p-1">
+                    <button
+                        onClick={() => { onSelect('docx'); onOpenChange(false); }}
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/50 hover:border-primary/40 hover:bg-muted/30 transition-all"
+                    >
+                        <FileText className="w-8 h-8 text-blue-400" />
+                        <span className="text-sm font-medium">DOCX</span>
+                        <span className="text-[10px] text-muted-foreground">Word Document</span>
+                    </button>
+                    <button
+                        onClick={() => { onSelect('pdf'); onOpenChange(false); }}
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/50 hover:border-primary/40 hover:bg-muted/30 transition-all"
+                    >
+                        <File className="w-8 h-8 text-red-400" />
+                        <span className="text-sm font-medium">PDF</span>
+                        <span className="text-[10px] text-muted-foreground">PDF Document</span>
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 // --- Export Panel (for ForgeDashboard ArtifactDetail) ---
 
 export function ExportPanel({ artifact }: { artifact: any }) {
@@ -304,10 +352,15 @@ export function ExportPanel({ artifact }: { artifact: any }) {
     const autoDownloadJobId = useAppStore(s => s.autoDownloadJobId);
     const clearAutoDownload = useAppStore(s => s.clearAutoDownload);
     const [themePickerOpen, setThemePickerOpen] = useState(false);
+    const [docFormatPickerOpen, setDocFormatPickerOpen] = useState(false);
+
+    const isDocument = artifact.type === 'document';
+    const isSlides = artifact.type === 'slides';
 
     const handleDownload = async (job: any) => {
         const url = api.getExportDownloadUrl(artifact.id, job.id);
-        const defaultName = `${artifact.title || 'slides'}.pptx`;
+        const jobFormat = job.format || (isDocument ? 'docx' : 'pptx');
+        const defaultName = `${artifact.title || artifact.type}.${jobFormat}`;
         try {
             // Electron: native Save dialog + auto-open
             if ((window as any).electronAPI) {
@@ -350,11 +403,15 @@ export function ExportPanel({ artifact }: { artifact: any }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [autoDownloadJobId, exportJobs, artifact.id]);
 
-    // Only show for slides with content_tree
-    if (artifact.type !== 'slides' || !artifact.content_tree) return null;
+    // Show for slides or documents with content_tree
+    if (!['slides', 'document'].includes(artifact.type) || !artifact.content_tree) return null;
 
     const handleThemeSelected = (themeId: string, strictLayout?: boolean, generateImages?: boolean) => {
-        startExport(artifact.id, themeId, strictLayout, generateImages);
+        startExport(artifact.id, 'pptx', themeId, strictLayout, generateImages);
+    };
+
+    const handleDocFormatSelected = (format: string) => {
+        startExport(artifact.id, format);
     };
 
     const formatSize = (bytes: number | null | undefined) => {
@@ -372,7 +429,7 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                     Export
                 </h3>
                 <button
-                    onClick={() => setThemePickerOpen(true)}
+                    onClick={() => isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
                     disabled={isExporting}
                     className="h-7 px-3 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
@@ -380,6 +437,11 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                         <>
                             <Loader2 className="w-3 h-3 animate-spin" />
                             Exporting...
+                        </>
+                    ) : isDocument ? (
+                        <>
+                            <FileDown className="w-3 h-3" />
+                            Export Doc
                         </>
                     ) : (
                         <>
@@ -447,30 +509,46 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                 </div>
             )}
 
-            <ThemePickerDialog
-                open={themePickerOpen}
-                onOpenChange={setThemePickerOpen}
-                onSelect={handleThemeSelected}
-            />
+            {isSlides && (
+                <ThemePickerDialog
+                    open={themePickerOpen}
+                    onOpenChange={setThemePickerOpen}
+                    onSelect={handleThemeSelected}
+                />
+            )}
+            {isDocument && (
+                <DocFormatPickerDialog
+                    open={docFormatPickerOpen}
+                    onOpenChange={setDocFormatPickerOpen}
+                    onSelect={handleDocFormatSelected}
+                />
+            )}
         </div>
     );
 }
 
 // --- Export Button (lightweight, for StudioWorkspace header) ---
 
-export function ExportButton({ artifactId }: { artifactId: string }) {
+export function ExportButton({ artifactId, artifactType }: { artifactId: string; artifactType?: string }) {
     const isExporting = useAppStore(s => s.isExporting);
     const startExport = useAppStore(s => s.startExport);
     const [themePickerOpen, setThemePickerOpen] = useState(false);
+    const [docFormatPickerOpen, setDocFormatPickerOpen] = useState(false);
+
+    const isDocument = artifactType === 'document';
 
     const handleThemeSelected = (themeId: string, strictLayout?: boolean, generateImages?: boolean) => {
-        startExport(artifactId, themeId, strictLayout, generateImages);
+        startExport(artifactId, 'pptx', themeId, strictLayout, generateImages);
+    };
+
+    const handleDocFormatSelected = (format: string) => {
+        startExport(artifactId, format);
     };
 
     return (
         <>
             <button
-                onClick={() => setThemePickerOpen(true)}
+                onClick={() => isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
                 disabled={isExporting}
                 className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-1"
             >
@@ -481,11 +559,20 @@ export function ExportButton({ artifactId }: { artifactId: string }) {
                 )}
                 Export
             </button>
-            <ThemePickerDialog
-                open={themePickerOpen}
-                onOpenChange={setThemePickerOpen}
-                onSelect={handleThemeSelected}
-            />
+            {!isDocument && (
+                <ThemePickerDialog
+                    open={themePickerOpen}
+                    onOpenChange={setThemePickerOpen}
+                    onSelect={handleThemeSelected}
+                />
+            )}
+            {isDocument && (
+                <DocFormatPickerDialog
+                    open={docFormatPickerOpen}
+                    onOpenChange={setDocFormatPickerOpen}
+                    onSelect={handleDocFormatSelected}
+                />
+            )}
         </>
     );
 }

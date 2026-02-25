@@ -12,6 +12,15 @@ from uuid import uuid4
 
 import pytest
 
+
+def _weasyprint_available():
+    try:
+        from weasyprint import HTML
+        return True
+    except (ImportError, OSError):
+        return False
+
+
 from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
 from core.studio.orchestrator import ForgeOrchestrator
 from core.studio.storage import StudioStorage
@@ -413,3 +422,111 @@ def test_17_quality_rejection_preserves_artifact_state(orchestrator, storage, mo
     # Artifact state unchanged by failed export
     reloaded = storage.load_artifact(art_id)
     assert reloaded.revision_head_id == rev_before
+
+
+# --- Phase 4: Document pipeline integration tests ---
+
+DOCUMENT_DRAFT_RESPONSE = json.dumps({
+    "doc_title": "Technical Specification: Agent Framework",
+    "doc_type": "technical_spec",
+    "abstract": "This document specifies the architecture.",
+    "sections": [
+        {"id": "sec1", "heading": "Introduction", "level": 1,
+         "content": "The framework provides a modular architecture.",
+         "subsections": [
+             {"id": "sec1a", "heading": "Purpose", "level": 2,
+              "content": "Defines core components.", "subsections": [], "citations": []}
+         ],
+         "citations": ["ref1"]},
+        {"id": "sec2", "heading": "Architecture", "level": 1,
+         "content": "Layered architecture with separation of concerns.",
+         "subsections": [], "citations": []},
+        {"id": "sec3", "heading": "Implementation", "level": 1,
+         "content": "Phased approach with iterative delivery.",
+         "subsections": [], "citations": []},
+    ],
+    "bibliography": [
+        {"key": "ref1", "title": "AI Agents", "author": "Smith et al.", "year": "2024"},
+    ],
+    "metadata": {"audience": "engineers"},
+})
+
+
+@pytest.fixture
+def mock_llm_document(monkeypatch):
+    """Mock LLM for document drafts."""
+    async def fake_generate(self, prompt):
+        if "content architect" in prompt.lower():
+            return OUTLINE_RESPONSE
+        return DOCUMENT_DRAFT_RESPONSE
+    monkeypatch.setattr("core.model_manager.ModelManager.generate_text", fake_generate)
+
+
+def test_18_document_outline_to_draft_to_docx_export(orchestrator, storage, mock_llm_document) -> None:
+    """Full document pipeline: outline → draft → export DOCX."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Write a technical specification",
+        artifact_type=ArtifactType.document,
+    ))
+    art_id = result["artifact_id"]
+    art_data = _run(orchestrator.approve_and_generate_draft(art_id))
+    assert art_data["content_tree"]["doc_title"] == "Technical Specification: Agent Framework"
+
+    export_result = _run(orchestrator.export_artifact(art_id, ExportFormat.docx))
+    assert export_result["status"] == "completed"
+    assert export_result["format"] == "docx"
+    assert export_result["validator_results"]["valid"] is True
+
+
+@pytest.mark.skipif(
+    not _weasyprint_available(),
+    reason="WeasyPrint native libraries not available",
+)
+def test_19_document_pdf_export(orchestrator, storage, mock_llm_document) -> None:
+    """Document pipeline: outline → draft → export PDF."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Write a technical specification",
+        artifact_type=ArtifactType.document,
+    ))
+    art_id = result["artifact_id"]
+    _run(orchestrator.approve_and_generate_draft(art_id))
+
+    export_result = _run(orchestrator.export_artifact(art_id, ExportFormat.pdf))
+    assert export_result["status"] == "completed"
+    assert export_result["format"] == "pdf"
+    assert export_result["validator_results"]["valid"] is True
+
+
+@pytest.mark.skipif(
+    not _weasyprint_available(),
+    reason="WeasyPrint native libraries not available",
+)
+def test_20_document_multiple_exports_tracked(orchestrator, storage, mock_llm_document) -> None:
+    """Multiple document exports are tracked on the artifact."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Write a report",
+        artifact_type=ArtifactType.document,
+    ))
+    art_id = result["artifact_id"]
+    _run(orchestrator.approve_and_generate_draft(art_id))
+
+    _run(orchestrator.export_artifact(art_id, ExportFormat.docx))
+    _run(orchestrator.export_artifact(art_id, ExportFormat.pdf))
+
+    loaded = storage.load_artifact(art_id)
+    assert len(loaded.exports) == 2
+    formats = {e.format for e in loaded.exports}
+    assert formats == {"docx", "pdf"}
+
+
+def test_21_document_export_pptx_blocked(orchestrator, storage, mock_llm_document) -> None:
+    """PPTX export should fail for document artifacts."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Write a report",
+        artifact_type=ArtifactType.document,
+    ))
+    art_id = result["artifact_id"]
+    _run(orchestrator.approve_and_generate_draft(art_id))
+
+    with pytest.raises(ValueError, match="not supported"):
+        _run(orchestrator.export_artifact(art_id, ExportFormat.pptx))

@@ -11,6 +11,9 @@ from core.schemas.studio_schema import (
     AssetKind,
     DocumentContentTree,
     DocumentSection,
+    ExportFormat,
+    ExportJob,
+    ExportStatus,
     Outline,
     OutlineItem,
     OutlineStatus,
@@ -370,3 +373,53 @@ class TestRoundTrips:
         assert reconstructed.id == sample_artifact.id
         assert reconstructed.type == sample_artifact.type
         assert reconstructed.title == sample_artifact.title
+
+
+# === Phase 4: ExportFormat docx/pdf + provenance metadata ===
+
+class TestExportFormatEnum:
+    def test_pptx_value(self):
+        assert ExportFormat.pptx.value == "pptx"
+
+    def test_docx_value(self):
+        assert ExportFormat.docx.value == "docx"
+
+    def test_pdf_value(self):
+        assert ExportFormat.pdf.value == "pdf"
+
+    def test_all_formats(self):
+        values = {f.value for f in ExportFormat}
+        assert values == {"pptx", "docx", "pdf"}
+
+    def test_export_job_with_docx_format(self):
+        job = ExportJob(
+            id="j1",
+            artifact_id="a1",
+            format=ExportFormat.docx,
+            status=ExportStatus.pending,
+            created_at=datetime.now(timezone.utc),
+        )
+        assert job.format == ExportFormat.docx
+
+    def test_export_job_with_pdf_format(self):
+        job = ExportJob(
+            id="j2",
+            artifact_id="a1",
+            format=ExportFormat.pdf,
+            status=ExportStatus.pending,
+            created_at=datetime.now(timezone.utc),
+        )
+        assert job.format == ExportFormat.pdf
+
+
+class TestDocumentProvenanceMetadata:
+    def test_document_with_provenance_metadata(self, sample_document_tree):
+        sample_document_tree.metadata = {
+            "tone": "formal",
+            "provenance_slots": [
+                {"citation_key": "ref1", "source_type": "reference", "verified": False}
+            ],
+        }
+        dumped = sample_document_tree.model_dump()
+        assert "provenance_slots" in dumped["metadata"]
+        assert len(dumped["metadata"]["provenance_slots"]) == 1

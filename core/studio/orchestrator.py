@@ -65,6 +65,11 @@ class ForgeOrchestrator:
             parameters=parameters,
         )
 
+        # Document-specific outline normalization
+        if artifact_type == ArtifactType.document:
+            from core.studio.documents.generator import normalize_document_outline
+            outline = normalize_document_outline(outline, parameters, prompt)
+
         # Create artifact
         now = datetime.now(timezone.utc)
         artifact_id = str(uuid4())
@@ -142,6 +147,13 @@ class ForgeOrchestrator:
             from core.studio.slides.notes import repair_speaker_notes
             content_tree_model = repair_speaker_notes(content_tree_model)
 
+        # Document-specific: normalize content tree
+        elif artifact.type == ArtifactType.document:
+            from core.studio.documents.generator import normalize_document_content_tree
+            content_tree_model = normalize_document_content_tree(
+                content_tree_model, outline=artifact.outline, artifact_id=artifact_id
+            )
+
         content_tree = content_tree_model.model_dump(mode="json")
 
         # Create revision
@@ -192,18 +204,21 @@ class ForgeOrchestrator:
     ) -> Dict[str, Any]:
         """Export an artifact to the specified format.
 
-        Currently supports PPTX export for slides artifacts.
+        Supported combinations:
+        - slides → pptx
+        - document → docx, pdf
+        - sheet → (Phase 5)
+
         When generate_images=True, the heavy work runs in the background
         and the pending job is returned immediately for polling.
         Returns the export job dict.
         """
         from core.schemas.studio_schema import (
+            ExportFormat,
             ExportJob,
             ExportJobSummary,
             ExportStatus,
-            SlidesContentTree,
         )
-        from core.studio.slides.themes import get_theme
 
         # Load and verify artifact
         artifact = self.storage.load_artifact(artifact_id)
@@ -211,11 +226,35 @@ class ForgeOrchestrator:
             raise ValueError(f"Artifact not found: {artifact_id}")
         if artifact.content_tree is None:
             raise ValueError(f"Artifact {artifact_id} has no content tree (approve outline first)")
-        if artifact.type != ArtifactType.slides:
-            raise ValueError(f"Export format {export_format.value} only supports slides artifacts")
 
-        # Resolve theme
-        theme = get_theme(theme_id or artifact.theme_id)
+        # Validate artifact type / format combinations
+        _VALID_COMBOS = {
+            ArtifactType.slides: {ExportFormat.pptx},
+            ArtifactType.document: {ExportFormat.docx, ExportFormat.pdf},
+        }
+        valid_formats = _VALID_COMBOS.get(artifact.type)
+        if valid_formats is None:
+            raise ValueError(f"Export not yet supported for {artifact.type.value} artifacts")
+        if export_format not in valid_formats:
+            raise ValueError(
+                f"Format {export_format.value} not supported for {artifact.type.value} artifacts "
+                f"(supported: {', '.join(f.value for f in valid_formats)})"
+            )
+
+        # Reject slides-only params for document exports
+        if artifact.type == ArtifactType.document:
+            if theme_id:
+                raise ValueError("theme_id is not supported for document exports")
+            if strict_layout:
+                raise ValueError("strict_layout is not supported for document exports")
+            if generate_images:
+                raise ValueError("generate_images is not supported for document exports")
+
+        # Resolve theme for slides
+        theme = None
+        if artifact.type == ArtifactType.slides:
+            from core.studio.slides.themes import get_theme
+            theme = get_theme(theme_id or artifact.theme_id)
 
         # Create export job
         now = datetime.now(timezone.utc)
@@ -240,7 +279,7 @@ class ForgeOrchestrator:
         artifact.updated_at = datetime.now(timezone.utc)
         self.storage.save_artifact(artifact)
 
-        if generate_images:
+        if artifact.type == ArtifactType.slides and generate_images:
             # Run heavy work in background — return pending job immediately
             asyncio.create_task(self._run_export(
                 artifact_id, export_job, artifact.content_tree,
@@ -248,11 +287,16 @@ class ForgeOrchestrator:
             ))
             return export_job.model_dump(mode="json")
 
-        # Synchronous path (no image gen) — fast, complete inline
-        await self._run_export(
-            artifact_id, export_job, artifact.content_tree,
-            theme, strict_layout, generate_images,
-        )
+        # Synchronous path — fast, complete inline
+        if artifact.type == ArtifactType.document:
+            await self._run_document_export(
+                artifact_id, export_job, artifact.content_tree,
+            )
+        else:
+            await self._run_export(
+                artifact_id, export_job, artifact.content_tree,
+                theme, strict_layout, generate_images,
+            )
         return export_job.model_dump(mode="json")
 
     async def _run_export(
@@ -314,6 +358,69 @@ class ForgeOrchestrator:
                 all_errors = validation.get("errors", []) + validation.get("layout_errors", [])
                 export_job.error = "; ".join(all_errors) if all_errors else "Quality validation failed"
                 validation["strict_layout"] = strict_layout
+                export_job.validator_results = validation
+                export_job.completed_at = datetime.now(timezone.utc)
+
+        except Exception as e:
+            export_job.status = ExportStatus.failed
+            export_job.error = str(e)
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        self.storage.save_export_job(export_job)
+
+        # Update the artifact's exports summary with the final status
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is not None:
+            for summary in artifact.exports:
+                if summary.id == export_job.id:
+                    summary.status = export_job.status.value
+                    break
+            artifact.updated_at = datetime.now(timezone.utc)
+            self.storage.save_artifact(artifact)
+
+
+    async def _run_document_export(
+        self,
+        artifact_id: str,
+        export_job: Any,
+        content_tree_dict: dict,
+    ) -> None:
+        """Execute document export (DOCX or PDF)."""
+        from core.schemas.studio_schema import (
+            DocumentContentTree,
+            ExportFormat,
+            ExportStatus,
+        )
+
+        try:
+            content_tree_model = DocumentContentTree(**content_tree_dict)
+
+            output_path = self.storage.get_export_file_path(
+                artifact_id, export_job.id, export_job.format.value
+            )
+
+            if export_job.format == ExportFormat.docx:
+                from core.studio.documents.exporter_docx import export_to_docx
+                from core.studio.documents.validator import validate_docx
+                export_to_docx(content_tree_model, output_path)
+                validation = validate_docx(output_path, content_tree_model)
+            elif export_job.format == ExportFormat.pdf:
+                from core.studio.documents.exporter_pdf import export_to_pdf
+                from core.studio.documents.validator import validate_pdf
+                export_to_pdf(content_tree_model, output_path)
+                validation = validate_pdf(output_path, content_tree_model)
+            else:
+                raise ValueError(f"Unsupported document format: {export_job.format.value}")
+
+            if validation["valid"]:
+                export_job.status = ExportStatus.completed
+                export_job.output_uri = str(output_path)
+                export_job.file_size_bytes = output_path.stat().st_size
+                export_job.validator_results = validation
+                export_job.completed_at = datetime.now(timezone.utc)
+            else:
+                export_job.status = ExportStatus.failed
+                export_job.error = "; ".join(validation.get("errors", [])) or "Validation failed"
                 export_job.validator_results = validation
                 export_job.completed_at = datetime.now(timezone.utc)
 

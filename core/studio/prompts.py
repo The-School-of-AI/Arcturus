@@ -106,9 +106,17 @@ def _get_type_specific_outline_guidance(artifact_type: ArtifactType) -> str:
 - Plan hierarchical sections with clear heading levels
 - Each outline item represents a major section
 - Use children for subsections (heading level 2, 3, etc.)
-- Consider document types: technical_spec, business_plan, research_paper, blog_post, report, proposal, white_paper
-- Include an abstract/executive summary section
-- Plan for citations and bibliography where appropriate"""
+- Maximum nesting depth: 3 levels (section → subsection → sub-subsection)
+- Core document types for Phase 4:
+  * technical_spec — Required sections: Introduction, Requirements, Architecture, Implementation
+  * report — Required sections: Executive Summary, Introduction, Findings, Conclusion
+  * proposal — Required sections: Executive Summary, Problem Statement, Proposed Solution, Timeline
+- Always include an abstract/executive summary section
+- Plan for citations and bibliography where appropriate
+- Suggest 4-15 sections depending on document complexity
+- For technical_spec: include diagrams, code examples, API references in descriptions
+- For report: include data analysis, methodology, findings in descriptions
+- For proposal: include budget, timeline, risk assessment in descriptions"""
 
     elif artifact_type == ArtifactType.sheet:
         return """Guidance for spreadsheets:
@@ -227,8 +235,15 @@ SPEAKER NOTES REQUIREMENTS (mandatory for every slide):
 }
 
 - Each section must have a unique id
-- Use level 1 for top sections, 2 for subsections, 3 for sub-subsections
-- Write substantive multi-paragraph content for each section"""
+- Use level 1 for top sections, 2 for subsections, 3 for sub-subsections (max depth 3)
+- Write substantive multi-paragraph content for each section
+- NEVER use placeholder text like "TBD", "Lorem ipsum", "Content to be developed", or "To be added"
+- Every section must contain real, substantive content — no filler
+- Citations in section content should use bracket notation: [citation_key]
+- Every citation key used in sections MUST have a matching entry in bibliography
+- Bibliography entries must have: key, title, author (year and url optional)
+- Include metadata.provenance_slots as an array of {"citation_key": "...", "source_type": "reference", "verified": false}
+- doc_type must be one of: technical_spec, report, proposal"""
 
     elif artifact_type == ArtifactType.sheet:
         return """Generate a SheetContentTree JSON with this exact schema:

@@ -21,6 +21,8 @@ class OutlineStatus(str, Enum):
 
 class ExportFormat(str, Enum):
     pptx = "pptx"
+    docx = "docx"
+    pdf = "pdf"
 
 
 class ExportStatus(str, Enum):

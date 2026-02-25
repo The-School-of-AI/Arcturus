@@ -439,7 +439,7 @@ interface StudioSlice {
     exportPollingInterval: ReturnType<typeof setInterval> | null;
     autoDownloadJobId: { jobId: string; artifactId: string } | null;
     fetchThemes: (params?: { include_variants?: boolean; base_id?: string; limit?: number }) => Promise<void>;
-    startExport: (artifactId: string, themeId?: string, strictLayout?: boolean, generateImages?: boolean) => Promise<void>;
+    startExport: (artifactId: string, format?: string, themeId?: string, strictLayout?: boolean, generateImages?: boolean) => Promise<void>;
     fetchExportJobs: (artifactId: string) => Promise<void>;
     pollExportJob: (artifactId: string, jobId: string) => void;
     stopExportPolling: () => void;
@@ -2269,10 +2269,10 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            startExport: async (artifactId, themeId, strictLayout, generateImages) => {
+            startExport: async (artifactId, format, themeId, strictLayout, generateImages) => {
                 set({ isExporting: true });
                 try {
-                    const job = await api.exportArtifact(artifactId, 'pptx', themeId, strictLayout, generateImages);
+                    const job = await api.exportArtifact(artifactId, format || 'pptx', themeId, strictLayout, generateImages);
                     const jobId = job.job_id || job.id;
                     set({
                         activeExportJobId: jobId,

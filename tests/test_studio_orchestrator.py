@@ -9,12 +9,21 @@ from core.json_parser import JsonParsingError
 from core.schemas.studio_schema import (
     Artifact,
     ArtifactType,
+    ExportFormat,
     Outline,
     OutlineItem,
     OutlineStatus,
 )
 from core.studio.orchestrator import ForgeOrchestrator
 from core.studio.storage import StudioStorage
+
+
+def _weasyprint_available():
+    try:
+        from weasyprint import HTML
+        return True
+    except (ImportError, OSError):
+        return False
 
 
 def _run(coro):
@@ -501,3 +510,152 @@ class TestRejectOutline:
         )
         assert artifact_data["title"] == "Needs Rework"
         assert artifact_data["outline"]["title"] == "Needs Rework"
+
+
+# === Phase 4: Document Normalization and Export Tests ===
+
+class TestDocumentOutlineNormalization:
+    def test_document_outline_resolves_doc_type(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a technical specification",
+            artifact_type=ArtifactType.document,
+        ))
+        loaded = storage.load_artifact(result["artifact_id"])
+        assert loaded.outline.parameters.get("doc_type") == "technical_spec"
+
+    def test_document_outline_inserts_required_sections(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        loaded = storage.load_artifact(result["artifact_id"])
+        titles = {item.title for item in loaded.outline.items}
+        # Report requires: Executive Summary, Introduction, Findings, Conclusion
+        assert "Executive Summary" in titles or "Findings" in titles or "Conclusion" in titles
+
+
+class TestDocumentDraftNormalization:
+    def test_document_draft_normalized(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        artifact_data = _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+        ct = artifact_data["content_tree"]
+        assert ct["doc_type"] in ("report", "technical_spec", "proposal")
+        # Provenance slots should be present in metadata
+        assert "provenance_slots" in ct.get("metadata", {})
+
+    def test_document_draft_has_normalized_section_ids(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        artifact_data = _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+        ct = artifact_data["content_tree"]
+        assert ct["sections"][0]["id"] == "sec1"
+
+
+class TestDocumentExportLifecycle:
+    def test_export_docx_creates_job(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        job_data = _run(orchestrator.export_artifact(
+            result["artifact_id"],
+            export_format=ExportFormat.docx,
+        ))
+        assert job_data["format"] == "docx"
+        assert job_data["status"] == "completed"
+        assert job_data["output_uri"] is not None
+
+    @pytest.mark.skipif(
+        not _weasyprint_available(),
+        reason="WeasyPrint native libraries not available",
+    )
+    def test_export_pdf_creates_job(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        job_data = _run(orchestrator.export_artifact(
+            result["artifact_id"],
+            export_format=ExportFormat.pdf,
+        ))
+        assert job_data["format"] == "pdf"
+        assert job_data["status"] == "completed"
+
+    def test_export_pptx_for_document_raises(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="not supported"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.pptx,
+            ))
+
+
+class TestDocumentExportParamGating:
+    def test_theme_id_rejected_for_document(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="theme_id"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.docx,
+                theme_id="some-theme",
+            ))
+
+    def test_strict_layout_rejected_for_document(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="strict_layout"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.docx,
+                strict_layout=True,
+            ))
+
+    def test_generate_images_rejected_for_document(self, orchestrator, storage, mock_llm_document):
+        result = _run(orchestrator.generate_outline(
+            prompt="Write a report",
+            artifact_type=ArtifactType.document,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="generate_images"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.docx,
+                generate_images=True,
+            ))
+
+    def test_sheet_export_not_yet_supported(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="not yet supported"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.pptx,
+            ))
