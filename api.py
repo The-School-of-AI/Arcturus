@@ -126,15 +126,18 @@ async def lifespan(app: FastAPI):
     # =========================================================
     watchtower = settings.get("watchtower", {})
     if watchtower.get("enabled", True):
-        # Bootstrap TracerProvider with MongoDB + optional Jaeger OTLP exporters
-        from ops.tracing import init_tracing
-        init_tracing(
-            mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
-            jaeger_endpoint=watchtower.get("jaeger_endpoint"),
-            service_name=watchtower.get("service_name", "arcturus")
-        )
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        FastAPIInstrumentor.instrument_app(app)
+        try:
+            from ops.tracing import init_tracing
+            init_tracing(
+                mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
+                jaeger_endpoint=watchtower.get("jaeger_endpoint"),
+                service_name=watchtower.get("service_name", "arcturus"),
+            )
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+            FastAPIInstrumentor.instrument_app(app)
+            print("✅ [Watchtower] Tracing initialized")
+        except Exception as e:
+            print(f"⚠️ [Watchtower] Tracing unavailable (MongoDB not running?): {e}")
     await multi_mcp.start()
     
     # 3. External Dependency Checks (Non-blocking or deferred)
