@@ -1,4 +1,3 @@
-
 import ast
 import asyncio
 import time
@@ -13,6 +12,9 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
+
+from ops.tracing import sandbox_run_span
+from opentelemetry.trace import Status, StatusCode
 
 # Core Logging Utility
 from core.utils import log_step, log_error, log_json_block
@@ -68,6 +70,9 @@ class UniversalSandbox:
         # 2. Safety Check
         is_safe, violations = self._check_safety(code)
         if not is_safe:
+            with sandbox_run_span(self.session_id, code) as blocked_span:
+                blocked_span.set_attribute("status", "blocked")
+                blocked_span.set_attribute("error", f"Security violation: {violations[0]['description']}"[:500])
             return SandboxResult(
                 "blocked", 
                 error=f"Security violation: {violations[0]['description']}",
@@ -75,79 +80,92 @@ class UniversalSandbox:
                 total_time=round(time.perf_counter() - start_time, 3)
             )
 
-        try:
-            tree = ast.parse(code)
-            
-            # 3. Analyze complexity
-            func_count = sum(isinstance(node, ast.Call) for node in ast.walk(tree))
-            if func_count > self.max_functions:
-                return SandboxResult("error", error="Complexity limit exceeded", execution_time=start_ts)
+        with sandbox_run_span(self.session_id, code) as span:
+            try:
+                tree = ast.parse(code)
+                
+                # 3. Analyze complexity
+                func_count = sum(isinstance(node, ast.Call) for node in ast.walk(tree))
+                if func_count > self.max_functions:
+                    span.set_attribute("status", "error")
+                    span.set_attribute("error", "Complexity limit exceeded")
+                    return SandboxResult("error", error="Complexity limit exceeded", execution_time=start_ts)
 
-            # 4. Prepare Environment
-            tool_funcs = self._get_tool_proxies()
-            safe_globals = self._build_globals(tool_funcs)
-            local_vars = {}
+                # 4. Prepare Environment
+                tool_funcs = self._get_tool_proxies()
+                safe_globals = self._build_globals(tool_funcs)
+                local_vars = {}
 
-            # 5. Transform AST
-            tree = self._transform_ast(tree, set(tool_funcs))
-            
-            # Auto-return last expression if it's meaningful
-            if tree.body and isinstance(tree.body[-1], ast.Expr):
-                tree.body[-1] = ast.Return(value=tree.body[-1].value)
-            
-            # 6. Compile & Wrap
-            func_def = ast.AsyncFunctionDef(
-                name="__main",
-                args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
-                body=tree.body,
-                decorator_list=[]
-            )
-            module = ast.Module(body=[func_def], type_ignores=[])
-            ast.fix_missing_locations(module)
-            
-            compiled = compile(module, filename="<sandbox>", mode="exec")
-            exec(compiled, safe_globals, local_vars)
+                # 5. Transform AST
+                tree = self._transform_ast(tree, set(tool_funcs))
+                
+                # Auto-return last expression if it's meaningful
+                if tree.body and isinstance(tree.body[-1], ast.Expr):
+                    tree.body[-1] = ast.Return(value=tree.body[-1].value)
+                
+                # 6. Compile & Wrap
+                func_def = ast.AsyncFunctionDef(
+                    name="__main",
+                    args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
+                    body=tree.body,
+                    decorator_list=[]
+                )
+                module = ast.Module(body=[func_def], type_ignores=[])
+                ast.fix_missing_locations(module)
+                
+                compiled = compile(module, filename="<sandbox>", mode="exec")
+                exec(compiled, safe_globals, local_vars)
 
-            # 7. Execute with Monitoring
-            log_capture = io.StringIO()
-            timeout = max(5, func_count * 2) 
-            
-            # Custom logging hook to safely capture without recursion
-            class RealTimeLogger(io.StringIO):
-                def write(self, s):
-                    super().write(s)
-                    # We avoid calling log_step here because log_step writes to stderr,
-                    # which is currently redirected to this very logger, causing recursion.
-                    # We'll log the full capture AFTER the execution block.
-                def flush(self):
-                    super().flush()
+                # 7. Execute with Monitoring
+                log_capture = io.StringIO()
+                # Use timeout_per_func (MCP tool calls can take 30+ seconds)
+                timeout = max(30, func_count * self.timeout_per_func) 
+                
+                # Custom logging hook to safely capture without recursion
+                class RealTimeLogger(io.StringIO):
+                    def write(self, s):
+                        super().write(s)
+                        # We avoid calling log_step here because log_step writes to stderr,
+                        # which is currently redirected to this very logger, causing recursion.
+                        # We'll log the full capture AFTER the execution block.
+                    def flush(self):
+                        super().flush()
 
-            rt_logger = RealTimeLogger()
-            
-            with contextlib.redirect_stdout(rt_logger), contextlib.redirect_stderr(rt_logger):
-                returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
+                rt_logger = RealTimeLogger()
+                
+                with contextlib.redirect_stdout(rt_logger), contextlib.redirect_stderr(rt_logger):
+                    returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
 
-            # 8. Extract & Serialize Results
-            result_data = self._serialize(returned)
-            self._save_state(result_data)
-            
-            final_logs = rt_logger.getvalue()
-            return SandboxResult(
-                "success",
-                result=result_data,
-                logs=final_logs,
-                execution_time=start_ts,
-                total_time=round(time.perf_counter() - start_time, 3)
-            )
+                # 8. Extract & Serialize Results
+                result_data = self._serialize(returned)
+                self._save_state(result_data)
+                
+                final_logs = rt_logger.getvalue()
+                total_time = round(time.perf_counter() - start_time, 3)
+                span.set_attribute("status", "success")
+                span.set_attribute("execution_time", str(total_time))
+                result_preview = str(result_data)[:500]
+                span.set_attribute("result_preview", result_preview)
+                return SandboxResult(
+                    "success",
+                    result=result_data,
+                    logs=final_logs,
+                    execution_time=start_ts,
+                    total_time=total_time
+                )
 
-        except Exception as e:
-            return SandboxResult(
-                "error",
-                error=f"{type(e).__name__}: {str(e)}",
-                traceback=traceback.format_exc(),
-                execution_time=start_ts,
-                total_time=round(time.perf_counter() - start_time, 3)
-            )
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                span.set_attribute("status", "error")
+                span.set_attribute("error", f"{type(e).__name__}: {str(e)}"[:500])
+                return SandboxResult(
+                    "error",
+                    error=f"{type(e).__name__}: {str(e)}",
+                    traceback=traceback.format_exc(),
+                    execution_time=start_ts,
+                    total_time=round(time.perf_counter() - start_time, 3)
+                )
 
     def _check_safety(self, code: str):
         # Basic check for now

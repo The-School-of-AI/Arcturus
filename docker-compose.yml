@@ -18,3 +18,20 @@ services:
       retries: 3
       start_period: 40s
 
+  mongodb:
+    image: mongo:7
+    container_name: arcturus-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongodb:/data/db
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: arcturus-jaeger
+    ports:
+      - "16686:16686"   # UI
+      - "4318:4318"     # OTLP HTTP
+    restart: unless-stopped
+
