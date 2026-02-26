@@ -464,7 +464,12 @@ async def rag_search(query: str):
     """Semantic search against indexed RAG documents with page numbers"""
     try:
         args = {"query": query}
-        result = await multi_mcp.call_tool("rag", "search_stored_documents_rag", args)
+        # Add timeout to prevent hanging if MCP server or Ollama is unresponsive
+        import asyncio
+        result = await asyncio.wait_for(
+            multi_mcp.call_tool("rag", "search_stored_documents_rag", args),
+            timeout=30.0
+        )
         
         # DEBUG: Log raw MCP result
         print(f"DEBUG MCP Result type: {type(result)}")
@@ -514,6 +519,9 @@ async def rag_search(query: str):
                 })
         
         return {"status": "success", "results": structured_results}
+    except asyncio.TimeoutError:
+        print(f"RAG SEARCH TIMEOUT: Query '{query}' timed out after 30s")
+        raise HTTPException(status_code=504, detail="RAG Search timed out. Please check if Ollama is responsive.")
     except Exception as e:
         import traceback
         print(f"RAG SEARCH ERROR: {e}")

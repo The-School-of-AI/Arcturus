@@ -119,6 +119,10 @@ class CanvasRuntime:
             self.surfaces[surface_id]["components"] = validated
             self.save_snapshots()
             
+            # BROADCAST: Send update to all clients for reactivity
+            msg = UpdateComponentsMessage(surfaceId=surface_id, components=validated)
+            await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
+            
     async def delete_component(self, surface_id: str, component_id: str):
         """Removes a component from a surface and broadcasts the update."""
         if surface_id not in self.surfaces:

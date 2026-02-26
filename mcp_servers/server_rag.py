@@ -420,7 +420,7 @@ def preview_document(path: str) -> MarkdownOutput:
     """Preview a document using the AI-enhanced extraction logic used for indexing."""
     file = Path(path)
     if not file.exists():
-        return MarkdownOutput(markdown=f"### ❌ Error\nFile not found: `{path}`")
+        return MarkdownOutput(markdown=f"### [ERROR] Error\nFile not found: `{path}`")
     
     ext = file.suffix.lower()
     mcp_log("INFO", f"Previewing {file.name} (ext: {ext})")
@@ -443,10 +443,10 @@ def preview_document(path: str) -> MarkdownOutput:
         else:
             # Fallback to raw text for everything else
             text = file.read_text(errors='replace')
-            return MarkdownOutput(markdown=f"### 📖 Raw View (Fallback)\n\n{text}")
+            return MarkdownOutput(markdown=f"### [INFO] Raw View (Fallback)\n\n{text}")
     except Exception as e:
         mcp_log("ERROR", f"Preview failed: {str(e)}")
-        return MarkdownOutput(markdown=f"### ❌ Critical Error\nExtraction failed: {str(e)}")
+        return MarkdownOutput(markdown=f"### [CRITICAL ERROR]\nExtraction failed: {str(e)}")
 @mcp.tool()
 async def ask_document(query: str, doc_id: str, history: list[dict] = [], image: str = None) -> str:
     """Ask a question about a specific document.

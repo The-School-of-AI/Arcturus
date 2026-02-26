@@ -30,9 +30,9 @@ async def test_memory():
     expected_file = memory_dir / f"skeleton_{session_id}.json"
     
     if expected_file.exists():
-        print(f"✅ SUCCESS: Episodic skeleton saved at {expected_file}")
+        print(f"SUCCESS: Episodic skeleton saved at {expected_file}")
     else:
-        print(f"❌ FAILURE: Skeleton not found at {expected_file}")
+        print(f"FAILURE: Skeleton not found at {expected_file}")
 
 async def test_skill():
     print("\n[TEST] Verifying FileReaderSkill...")
@@ -55,12 +55,12 @@ async def test_skill():
     
     if result["success"]:
         response = result["output"].get('response', 'No response field')
-        print(f"✅ SUCCESS: Agent Execution Success!")
+        print(f"SUCCESS: Agent Execution Success!")
         print(f"Agent Output: {response[:100]}...")
         if "Arcturus" in str(result["output"]):
-             print("✅ SUCCESS: Content verification passed.")
+             print("SUCCESS: Content verification passed.")
     else:
-        print(f"❌ FAILURE: Agent Execution Failed: {result.get('error')}")
+        print(f"FAILURE: Agent Execution Failed: {result.get('error')}")
 
 async def main():
     parser = argparse.ArgumentParser()

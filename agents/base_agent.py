@@ -90,7 +90,7 @@ class AgentRunner:
                     # Get tools from skill
                     skill_tools_list.extend(skill.get_tools())
                     
-                    log_step(f"🧩 Applied Skill: {meta.name}", symbol="🧩")
+                    log_step(f"[SKILL] Applied Skill: {meta.name}", symbol="[SKILL]")
                 
                 if skill_prompts:
                     # Append skill prompts to the main prompt template
@@ -180,7 +180,7 @@ class AgentRunner:
                     # Handle different input key possibilities
                     query = input_data.get("task") or input_data.get("original_query") or ""
                     if query:
-                        log_step(f"🧠 Searching episodic memory for: '{query[:50]}...'", symbol="🔍")
+                        log_step(f"[MEMORY] Searching episodic memory for: '{query[:50]}...'", symbol="[SEARCH]")
                         past_episodes = search_episodes(query, limit=2)
                         if past_episodes:
                             episodic_context = "\n\n## Relevant Past Experiences (Recipes)\n"
@@ -188,7 +188,7 @@ class AgentRunner:
                             for ep in past_episodes:
                                 steps = " -> ".join([n.get("agent", "??") for n in ep.get("nodes", []) if n.get("agent") != "System"])
                                 episodic_context += f"- **Task**: \"{ep['original_query']}\"\n  **Workflow**: {steps}\n"
-                            log_step(f"📈 Found {len(past_episodes)} relevant past episodes.", symbol="💡")
+                            log_step(f"[INFO] Found {len(past_episodes)} relevant past episodes.", symbol="[INFO]")
                 except Exception as e:
                     log_error(f"Episodic retrieval hook failed: {e}")
 
@@ -225,12 +225,12 @@ class AgentRunner:
             # 4. Final Prompt Construction
             full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
             
-            print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
+            print(f"[DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
 
             debug_log_dir = Path(__file__).parent.parent / "memory" / "debug_logs"
             debug_log_dir.mkdir(parents=True, exist_ok=True)
             (debug_log_dir / "latest_prompt.txt").write_text(f"AGENT: {agent_type}\nCONFIG: {config.get('prompt_file', 'Dynamic Injection')}\n\n{full_prompt}", encoding="utf-8")
-            log_step(f"🤖 {agent_type} invoked", payload={"prompt_file": config.get('prompt_file', 'Dynamic'), "input_keys": list(input_data.keys())}, symbol="🟦")
+            log_step(f"[RUN] {agent_type} invoked", payload={"prompt_file": config.get('prompt_file', 'Dynamic'), "input_keys": list(input_data.keys())}, symbol="[RUN]")
 
             # 4. Create model manager with user's selected model from settings
             # IMPORTANT: Use reload_settings() to get fresh settings from disk
@@ -244,12 +244,12 @@ class AgentRunner:
                 override = overrides[agent_type]
                 model_provider = override.get("model_provider", "gemini")
                 model_name = override.get("model", "gemini-2.5-flash")
-                log_step(f"🎯 Override for {agent_type}: {model_provider}:{model_name}", symbol="✨")
+                log_step(f"[OVERRIDE] Override for {agent_type}: {model_provider}:{model_name}", symbol="[TARGET]")
             else:
                 model_provider = agent_settings.get("model_provider", "gemini")
                 model_name = agent_settings.get("default_model", "gemini-2.5-flash")
             
-            log_step(f"📡 Using {model_provider}:{model_name}", symbol="🔌")
+            log_step(f"[INFO] Using {model_provider}:{model_name}", symbol="[INFO]")
             model_manager = ModelManager(model_name, provider=model_provider)
             
             # 5. Generate response (System 1 vs System 2)
@@ -261,7 +261,7 @@ class AgentRunner:
 
             if use_system2:
                 from core.reasoning import ReasoningEngine
-                log_step("🧠 System 2 Reasoning Activated", symbol="🧠")
+                log_step("[REASONING] System 2 Reasoning Activated", symbol="[REASONING]")
                 engine = ReasoningEngine(model_manager)
                 # We use the original query from input_data, or fallback to 'Task'
                 query_context = input_data.get("original_query") or input_data.get("task") or "Complex Task"
@@ -286,7 +286,7 @@ class AgentRunner:
             if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict):
                 output = output[0]
                 
-            log_step(f"🟩 {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="🟩")
+            log_step(f"[DONE] {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="[DONE]")
 
             # import pdb; pdb.set_trace()
             
@@ -314,7 +314,7 @@ class AgentRunner:
             }
             
         except Exception as e:
-            log_error(f"❌ {agent_type}: {str(e)}")
+            log_error(f"[ERROR] {agent_type}: {str(e)}")
             return {
                 "success": False,
                 "agent_type": agent_type,

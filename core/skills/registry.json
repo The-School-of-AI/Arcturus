@@ -79,6 +79,14 @@
     "class_name": "DistillerSkill",
     "type": "python"
   },
+  "file_reader": {
+    "path": "core\\skills\\library\\file_reader",
+    "version": "1.0.0",
+    "description": "Allows reading and searching files within the project workspace.",
+    "intent_triggers": [],
+    "class_name": "FileReadSkill",
+    "type": "python"
+  },
   "formatter": {
     "path": "core\\skills\\library\\formatter",
     "version": "1.0.0",

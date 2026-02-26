@@ -37,11 +37,11 @@ def backoff_retry(max_retries=5, base_delay=2.0, max_delay=32.0):
                     
                     retries += 1
                     if retries >= max_retries:
-                        print(f"❌ Max retries reached for {func.__name__}. Error: {e}")
+                        print(f"[ERROR] Max retries reached for {func.__name__}. Error: {e}")
                         raise e
                     
                     delay = min(base_delay * (2 ** (retries - 1)) + random.uniform(0, 1), max_delay)
-                    print(f"⚠️ Rate limit hit in {func.__name__} (Attempt {retries}/{max_retries}). Retrying in {delay:.2f}s...")
+                    print(f"[WARN] Rate limit hit in {func.__name__} (Attempt {retries}/{max_retries}). Retrying in {delay:.2f}s...")
                     await asyncio.sleep(delay)
                 except Exception as e:
                     # Non-retriable error
@@ -207,7 +207,7 @@ class ModelManager:
                     encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
                     images_base64.append(encoded)
                 except Exception as e:
-                    print(f"⚠️ Failed to encode image for Ollama: {e}")
+                    print(f"[WARN] Failed to encode image for Ollama: {e}")
         
         prompt = "\n".join(text_parts)
         

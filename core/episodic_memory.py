@@ -142,7 +142,7 @@ class EpisodicMemory:
             file_path = self.directory / f"skeleton_{session_id}.json"
             file_path.write_text(json.dumps(skeleton, indent=2))
             
-            log_step(f"🧠 Saved Episode Skeleton: {file_path.name} ({len(json.dumps(skeleton))} bytes)", symbol="💾")
+            log_step(f"[MEMORY] Saved Episode Skeleton: {file_path.name} ({len(json.dumps(skeleton))} bytes)", symbol="[MEMORY]")
             
         except Exception as e:
             log_error(f"Failed to save episodic memory: {e}")

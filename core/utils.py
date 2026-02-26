@@ -11,14 +11,14 @@ def print(*args, **kwargs):
     console.print(*args, **kwargs)
 
 
-def log_step(title: str, payload=None, symbol: str = "🟢"):
+def log_step(title: str, payload=None, symbol: str = "[STEP]"):
     print(f"\n[b]{symbol} {title}[/b]")
     if payload:
         from pprint import pprint
         pprint(payload)
 
 def log_error(message: str, err: Exception = None):
-    print(f"\n[red]❌ {message}[/red]")
+    print(f"\n[red][ERROR] {message}[/red]")
     if err:
         print(f"[dim]{str(err)}[/dim]")
 
@@ -57,7 +57,7 @@ def log_json_block(title: str, block):
         return "\n".join(lines)
 
     content = format_block(block)
-    panel = Panel(content, title=f"📌 {title}", title_align="left", border_style="cyan", expand=False)
+    panel = Panel(content, title=f"[INFO] {title}", title_align="left", border_style="cyan", expand=False)
     console.print(panel)
 
 

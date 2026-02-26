@@ -5,7 +5,7 @@ import time
 API_BASE = "http://localhost:8000/api"
 
 def test_multi_canvas_sync():
-    print("🚀 Starting Multi-Canvas Synchronization Test\n")
+    print("[START] Starting Multi-Canvas Synchronization Test\n")
 
     # 1. Fetch Surfaces
     print("1. Fetching available surfaces...")
@@ -15,7 +15,7 @@ def test_multi_canvas_sync():
         surfaces = r.json()
         print(f"   Found {len(surfaces)} surfaces: {[s['id'] for s in surfaces]}\n")
     except Exception as e:
-        print(f"❌ Failed to fetch surfaces: {e}")
+        print(f"[FAIL] Failed to fetch surfaces: {e}")
         return
 
     test_component = {
@@ -41,7 +41,7 @@ def test_multi_canvas_sync():
             )
             r.raise_for_status()
         except Exception as e:
-            print(f"   ❌ Failed to push to {surface_id}: {e}")
+            print(f"   [FAIL] Failed to push to {surface_id}: {e}")
 
     # 3. Verify state for each surface
     print("\n3. Verifying state consistency...")
@@ -59,12 +59,12 @@ def test_multi_canvas_sync():
             # Check if marker exists
             marker = next((c for c in components if c['id'] == "diagnostic_sync_marker"), None)
             if marker:
-                print(f"   ✅ Surface {surface_id}: Marker found")
+                print(f"   [PASS] Surface {surface_id}: Marker found")
             else:
-                print(f"   ❌ Surface {surface_id}: Marker MISSING")
+                print(f"   [FAIL] Surface {surface_id}: Marker MISSING")
                 all_ok = False
         except Exception as e:
-            print(f"   ❌ Failed to verify {surface_id}: {e}")
+            print(f"   [FAIL] Failed to verify {surface_id}: {e}")
             all_ok = False
 
     # 4. Cleanup (Remove marker)
@@ -82,14 +82,14 @@ def test_multi_canvas_sync():
                 f"{API_BASE}/canvas/test-update/{surface_id}",
                 json={"components": new_components}
             )
-            print(f"   ✅ Cleaned {surface_id}")
+            print(f"   [PASS] Cleaned {surface_id}")
         except:
             pass
 
     if all_ok:
-        print("\n✨ ALL TESTS PASSED: Multi-canvas synchronization is healthy.")
+        print("\n[OK] ALL TESTS PASSED: Multi-canvas synchronization is healthy.")
     else:
-        print("\n⚠️ SOME TESTS FAILED: Please check individual surface logs.")
+        print("\n[WARN] SOME TESTS FAILED: Please check individual surface logs.")
 
 if __name__ == "__main__":
     test_multi_canvas_sync()

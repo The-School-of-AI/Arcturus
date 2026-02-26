@@ -91,7 +91,7 @@ class ReasoningEngine:
         """
         
         # 1. GENERATE DRAFT
-        log_step("🤔 System 2: Generating Initial Draft...", symbol="💭")
+        log_step("[REASONING] System 2: Generating Initial Draft...", symbol="[THINK]")
         current_draft = await generate_func()
         
         # Fast Path Check? (Optional, maybe for simple queries we skip reasoning entirely, 
@@ -104,15 +104,15 @@ class ReasoningEngine:
             score, critique = await self.verifier.verify(query, current_draft, context)
             history.append({"draft": current_draft, "score": score, "critique": critique})
             
-            log_step(f"🧐 Verification Round {i+1}: Score {score}/100", symbol="🛡️")
+            log_step(f"[VERIFY] Verification Round {i+1}: Score {score}/100", symbol="[VERIFY]")
             
             # 3. DECIDE
             if score >= 85:
-                log_step("✅ Draft Accepted via Fast Path", symbol="🚀")
+                log_step("[SUCCESS] Draft Accepted via Fast Path", symbol="[RUN]")
                 return current_draft, history
             
             if i == max_refinements:
-                log_step("⚠️ Max refinements reached. Returning best available draft.", symbol="🛑")
+                log_step("[WARN] Max refinements reached. Returning best available draft.", symbol="[STOP]")
                 # Return best draft seen so far
                 best_attempt = max(history, key=lambda x: x['score'])
                 return best_attempt['draft'], history

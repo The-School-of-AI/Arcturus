@@ -35,9 +35,7 @@ mcp_servers/faiss_index/
 classNotes/
 Notes/
 
-# Allow only specific code-related data if needed (example: whitelisting notes)
-!data/Notes/
-!Notes/
+# !Notes/
 
 # Logs & Runtime State
 memory/
@@ -87,3 +85,4 @@ benchmark_results.txt
 # Added by Arcturus
 .arcturus/
 .arcturus
+scripts/github/Pr_Body_03.md

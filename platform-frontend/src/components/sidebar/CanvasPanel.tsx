@@ -27,21 +27,28 @@ export const CanvasPanel: React.FC = () => {
             description: `Instantiated from Catalog`
         };
 
-        // Add dummy data for LineChart
+        // Add randomized dynamic data for LineChart
         if (componentType === 'LineChart') {
+            const now = new Date();
+            const data = [];
+            for (let i = 0; i < 7; i++) {
+                const hour = new Date(now.getTime() - (6 - i) * 3600000);
+                data.push({
+                    time: `${hour.getHours()}:00`,
+                    cpu: Math.floor(Math.random() * 40) + 20,
+                    mem: Math.floor(Math.random() * 30) + 40,
+                    latency: Math.floor(Math.random() * 100) + 20
+                });
+            }
+
             props = {
-                title: "Analytics Overview",
+                title: "Live Resource Analytics",
                 xKey: "time",
-                data: [
-                    { time: '10:00', cpu: 32, mem: 44 },
-                    { time: '11:00', cpu: 45, mem: 52 },
-                    { time: '12:00', cpu: 41, mem: 48 },
-                    { time: '13:00', cpu: 55, mem: 61 },
-                    { time: '14:00', cpu: 48, mem: 58 },
-                ],
+                data,
                 lines: [
                     { key: 'cpu', color: '#60a5fa', name: 'CPU (%)' },
-                    { key: 'mem', color: '#fb7185', name: 'Memory (%)' }
+                    { key: 'mem', color: '#fb7185', name: 'Memory (%)' },
+                    { key: 'latency', color: '#34d399', name: 'Latency (ms)' }
                 ]
             };
         }

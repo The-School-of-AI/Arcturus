@@ -53,7 +53,7 @@ async def retry_with_backoff(
             last_exception = e
             if attempt < max_retries - 1:
                 delay = base_delay * (2 ** attempt)  # 1s, 2s, 4s
-                log_step(f"Transient error: {type(e).__name__}. Retrying in {delay}s (attempt {attempt + 1}/{max_retries})", symbol="🔄")
+                log_step(f"Transient error: {type(e).__name__}. Retrying in {delay}s (attempt {attempt + 1}/{max_retries})", symbol="[RETRY]")
                 await asyncio.sleep(delay)
             else:
                 log_error(f"All {max_retries} retry attempts failed: {e}")
@@ -126,13 +126,13 @@ class AgentLoop4:
                 
                 if status in ["running", "stopped", "waiting_input"]:
                     node_data["status"] = "pending"
-                    log_step(f"🔄 Resetting {node_id} from {status} to pending", symbol="Tg")
+                    log_step(f"[RESET] Resetting {node_id} from {status} to pending", symbol="[RESET]")
                     reset_count += 1
             
             if reset_count > 0:
                 self.context._save_session()
                 
-            log_step(f"✅ Resuming session {self.context.plan_graph.graph['session_id']} ({reset_count} steps reset)", symbol="▶️")
+            log_step(f"[RESUME] Resuming session {self.context.plan_graph.graph['session_id']} ({reset_count} steps reset)", symbol="[RESUME]")
             
             # 3. Execute DAG
             return await self._execute_dag(self.context)
@@ -173,9 +173,9 @@ class AgentLoop4:
             self.context.multi_mcp = self.multi_mcp
             self.context.plan_graph.graph['globals_schema'].update(globals_schema)
             self.context._save_session()
-            log_step("✅ Session initialized with Query processing", symbol="🌱")
+            log_step("[INFO] Session initialized with Query processing", symbol="[INIT]")
         except Exception as e:
-            print(f"❌ ERROR initializing context: {e}")
+            print(f"[ERROR] initializing context: {e}")
             raise
 
 
@@ -247,7 +247,7 @@ class AgentLoop4:
                 )
                 
                 if confidence < AUTO_CLARYFY_THRESHOLD and ambiguity_notes and not has_clarification_agent:
-                    log_step(f"Low confidence ({confidence:.2f}), auto-triggering clarification", symbol="❓")
+                    log_step(f"Low confidence ({confidence:.2f}), auto-triggering clarification", symbol="[CLARIFY]")
                     
                     # Get the first step ID from the plan
                     first_step = plan_result["output"].get("next_step_id", "T001")
@@ -281,15 +281,15 @@ class AgentLoop4:
                                 node["reads"] = []
                             if clarification_write_key not in node["reads"]:
                                 node["reads"].append(clarification_write_key)
-                                log_step(f"Wired {clarification_write_key} into {first_step}'s reads", symbol="🔗")
+                                log_step(f"Wired {clarification_write_key} into {first_step}'s reads", symbol="[WIRE]")
                             break
                     
                     # Update next_step_id to start with clarification
                     plan_result["output"]["next_step_id"] = "T000_AutoClarify"
                     
-                    log_step(f"Injected ClarificationAgent before {first_step}", symbol="➕")
+                    log_step(f"Injected ClarificationAgent before {first_step}", symbol="[INJECT]")
                 elif has_clarification_agent:
-                    log_step(f"Planner already added ClarificationAgent, skipping auto-injection", symbol="ℹ️")
+                    log_step(f"Planner already added ClarificationAgent, skipping auto-injection", symbol="[INFO]")
                 
                 # ✅ Mark Query/Planner as Done
                 self.context.plan_graph.nodes["Query"]["output"] = plan_result["output"]
@@ -310,7 +310,7 @@ class AgentLoop4:
 
                     # Phase 5: Check for Adaptive Re-Planning (Dead End Discovery)
                     if self._should_replan():
-                        log_step("♻️ Adaptive Re-planning: Clarification resolved, formulating next steps...", symbol="🔄")
+                        log_step("[REPLAN] Adaptive Re-planning: Clarification resolved, formulating next steps...", symbol="[REPLAN]")
                         # Reactivate Query node for UI
                         self.context.plan_graph.nodes["Query"]["status"] = "running"
                         self.context._save_session()
@@ -321,9 +321,9 @@ class AgentLoop4:
 
                 except (Exception, asyncio.CancelledError) as e:
                     if isinstance(e, asyncio.CancelledError) or self.context.stop_requested:
-                        log_step("🛑 Execution interrupted/stopped.", symbol="🛑")
+                        log_step("[STOP] Execution interrupted/stopped.", symbol="[STOP]")
                         break
-                    print(f"❌ ERROR during execution: {e}")
+                    print(f"[ERROR] during execution: {e}")
                     import traceback
                     traceback.print_exc()
                     raise
@@ -421,7 +421,7 @@ class AgentLoop4:
         # This fixes cases where PlannerAgent returns nodes but forgets the edges
         for node in new_nodes:
             if node["id"] not in nodes_with_incoming_edges:
-                log_step(f"🔗 Auto-connected orphan node {node['id']} to Query", symbol="🔗")
+                log_step(f"[LINK] Auto-connected orphan node {node['id']} to Query", symbol="[LINK]")
                 self.context.plan_graph.add_edge("Query", node["id"])
         
         # 🔧 SAFETY NET: Ensure ClarificationAgent outputs are wired to successor nodes
@@ -450,7 +450,7 @@ class AgentLoop4:
                                 for write_key in clarification_writes:
                                     if write_key not in succ_node["reads"]:
                                         succ_node["reads"].append(write_key)
-                                        log_step(f"🔗 Auto-wired {write_key} into {successor_id}'s reads", symbol="🔗")
+                                        log_step(f"[WIRE] Auto-wired {write_key} into {successor_id}'s reads", symbol="[WIRE]")
                                         
                                         # Also update the node in the graph if already added
                                         if successor_id in self.context.plan_graph:
@@ -461,7 +461,7 @@ class AgentLoop4:
                                 break
         
         self.context._save_session()
-        log_step("✅ Plan merged into execution context", symbol="🌳")
+        log_step("[SUCCESS] Plan merged into execution context", symbol="[GRAPH]")
 
     async def _execute_dag(self, context):
         """Execute DAG with visualization - DEBUGGING MODE"""
@@ -495,7 +495,7 @@ class AgentLoop4:
 
         while not context.all_done():
             if context.stop_requested:
-                console.print("[yellow]🛑 Aborting execution: Cleaning up nodes...[/yellow]")
+                console.print("[STOP] Aborting execution: Cleaning up nodes...")
                 # Cleanup: Mark any 'running' nodes as 'stopped' to prevent zombie spinners in UI
                 for n_id in context.plan_graph.nodes:
                     if context.plan_graph.nodes[n_id].get("status") == "running":
@@ -548,7 +548,7 @@ class AgentLoop4:
                 # Log step start with description
                 step_data = context.get_step_data(step_id)
                 desc = step_data.get("agent_prompt", step_data.get("description", "No description"))[:60]
-                log_step(f"🔄 Starting {step_id} ({step_data['agent']}): {desc}...", symbol="🚀")
+                log_step(f"[RUN] Starting {step_id} ({step_data['agent']}): {desc}...", symbol="[RUN]")
                 
                 visualizer.mark_running(step_id)
                 context.mark_running(step_id)
@@ -572,7 +572,7 @@ class AgentLoop4:
                      if "output" in result:
                          context.plan_graph.nodes[step_id]["output"] = result["output"]
                      context._save_session()
-                     log_step(f"⏳ {step_id}: Waiting for user input...", symbol="⏳")
+                     log_step(f"[WAIT] {step_id}: Waiting for user input...", symbol="[WAIT]")
                      continue
                 
                 if isinstance(result, Exception):
@@ -580,25 +580,25 @@ class AgentLoop4:
                     if retry_count < MAX_STEP_RETRIES:
                         step_data['_retry_count'] = retry_count + 1
                         context.plan_graph.nodes[step_id]['status'] = 'pending'  # Reset to pending for retry
-                        log_step(f"🔄 Retrying {step_id} (attempt {retry_count + 1}/{MAX_STEP_RETRIES}): {str(result)}", symbol="🔄")
+                        log_step(f"[RETRY] Retrying {step_id} (attempt {retry_count + 1}/{MAX_STEP_RETRIES}): {str(result)}", symbol="[RETRY]")
                     else:
                         visualizer.mark_failed(step_id, result)
                         context.mark_failed(step_id, str(result))
-                        log_error(f"❌ Failed {step_id} after {MAX_STEP_RETRIES} retries: {str(result)}")
+                        log_error(f"[ERROR] Failed {step_id} after {MAX_STEP_RETRIES} retries: {str(result)}")
                 elif result["success"]:
                     visualizer.mark_completed(step_id)
                     await context.mark_done(step_id, result["output"])
-                    log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+                    log_step(f"[DONE] Completed {step_id} ({step_data['agent']})", symbol="[DONE]")
                 else:
                     # Agent returned failure - also retry
                     if retry_count < MAX_STEP_RETRIES:
                         step_data['_retry_count'] = retry_count + 1
                         context.plan_graph.nodes[step_id]['status'] = 'pending'
-                        log_step(f"🔄 Retrying {step_id} (attempt {retry_count + 1}/{MAX_STEP_RETRIES}): {result['error']}", symbol="🔄")
+                        log_step(f"[RETRY] Retrying {step_id} (attempt {retry_count + 1}/{MAX_STEP_RETRIES}): {result['error']}", symbol="[RETRY]")
                     else:
                         visualizer.mark_failed(step_id, result["error"])
                         context.mark_failed(step_id, result["error"])
-                        log_error(f"❌ Failed {step_id} after {MAX_STEP_RETRIES} retries: {result['error']}")
+                        log_error(f"[ERROR] Failed {step_id} after {MAX_STEP_RETRIES} retries: {result['error']}")
 
             # ===== COST THRESHOLD CHECK =====
             accumulated_cost = sum(
@@ -609,19 +609,19 @@ class AgentLoop4:
             
             # Warning threshold
             if not cost_warning_shown and accumulated_cost >= warn_cost:
-                log_step(f"⚠️ Cost Warning: ${accumulated_cost:.4f} (threshold: ${warn_cost:.2f})", symbol="💰")
+                log_step(f"[WARN] Cost Warning: ${accumulated_cost:.4f} (threshold: ${warn_cost:.2f})", symbol="[COST]")
                 cost_warning_shown = True
             
             # Hard stop threshold
             if accumulated_cost >= max_cost:
-                log_error(f"🛑 Cost Exceeded: ${accumulated_cost:.4f} > ${max_cost:.2f}")
+                log_error(f"[CRITICAL] Cost Exceeded: ${accumulated_cost:.4f} > ${max_cost:.2f}")
                 context.plan_graph.graph['status'] = 'cost_exceeded'
                 context.plan_graph.graph['final_cost'] = accumulated_cost
                 break
                 
             iteration += 1
             if iteration >= max_iterations:
-                log_error(f"🛑 Max Iterations Reached: {iteration}/{max_iterations}")
+                log_error(f"[ERROR] Max Iterations Reached: {iteration}/{max_iterations}")
                 context.plan_graph.graph['status'] = 'failed'
                 break
 
@@ -651,9 +651,9 @@ class AgentLoop4:
                 session_data = {"graph": graph_data}
                 await mem.save_episode(session_data)
             except Exception as e:
-                print(f"⚠️ Failed to save episodic memory: {e}")
+                print(f"[WARN] Failed to save episodic memory: {e}")
 
-            console.print("🎉 All tasks completed!")
+            console.print("[DONE] All tasks completed!")
 
     async def _execute_step(self, step_id, context):
         """Execute a single step with call_self support"""
@@ -697,7 +697,7 @@ class AgentLoop4:
         iterations_data = []
         
         for turn in range(1, max_turns + 1):
-            log_step(f"🔄 {agent_type} Iteration {turn}/{max_turns}", symbol="🔄")
+            log_step(f"[RUN] {agent_type} Iteration {turn}/{max_turns}", symbol="[RUN]")
             
             # Run Agent (with retry for transient failures like rate limits)
             async def run_agent_step():
@@ -739,7 +739,7 @@ class AgentLoop4:
                 tool_name = tool_call.get("name")
                 tool_args = tool_call.get("arguments", {})
                 
-                log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
+                log_step(f"[TOOL] Executing Tool: {tool_name}", payload=tool_args, symbol="[TOOL]")
                 
                 # 1a. Try LOCAL SKILL TOOLS first
                 tool_executed = False
@@ -759,7 +759,7 @@ class AgentLoop4:
                             if skill:
                                 for tool in skill.get_tools():
                                     if getattr(tool, 'name', None) == tool_name:
-                                        log_step(f"🧩 Executing Local Skill Tool: {tool_name}", symbol="🧩")
+                                        log_step(f"[SKILL] Executing Local Skill Tool: {tool_name}", symbol="[SKILL]")
                                         if asyncio.iscoroutinefunction(tool.func):
                                             skill_tool_result = await tool.func(**tool_args)
                                         else:

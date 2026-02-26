@@ -76,8 +76,12 @@ const MonacoWidget: React.FC<MonacoWidgetProps> = ({
                                 const resp = await axios.get(`${API_BASE}/rag/search?query=${q}`);
                                 addLog(`✅ RAG returned ${resp.data.results?.length || 0} snippets`, 'success');
                                 return resp.data.results;
-                            } catch (e) {
-                                addLog(`❌ RAG search failed: ${e}`, 'error');
+                            } catch (e: any) {
+                                const errorMsg = e.response?.data?.detail || e.message || String(e);
+                                addLog(`❌ RAG search failed: ${errorMsg}`, 'error');
+                                if (errorMsg.includes("not connected") || errorMsg.includes("500")) {
+                                    addLog('💡 Tip: Ensure the backend is running and Ollama is active with "nomic-embed-text" model.', 'info');
+                                }
                                 return [];
                             }
                         }

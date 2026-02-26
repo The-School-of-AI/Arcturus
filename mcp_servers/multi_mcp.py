@@ -215,7 +215,7 @@ class MultiMCP:
                                  args[script_arg_idx] = new_script
                                  print(f"  ✅ Auto-detected entry point: {new_script}")
                              else:
-                                 print(f"  ❌ Could not auto-detect entry point for {name}")
+                                 print(f"  [ERROR] Could not auto-detect entry point for {name}")
 
                      except ValueError:
                          pass
@@ -286,20 +286,20 @@ class MultiMCP:
                     result = await session.list_tools()
                     self.tools[name] = result.tools
                     self._save_to_cache(name, result.tools)
-                    print(f"  ✅ [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
+                    print(f"  [DONE] [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
                 
                 self.sessions[name] = session
 
-        except TimeoutError:
-             print(f"  ⏳ [yellow]{name}[/yellow] timed out during startup.")
+        except asyncio.TimeoutError:
+             print(f"  [TIMEOUT] [yellow]{name}[/yellow] timed out during startup.")
         except Exception as e:
-            print(f"  ❌ [red]{name}[/red] failed to start: {e}")
+            print(f"  [ERROR] [red]{name}[/red] failed to start: {e}")
         except BaseException as e:
-            print(f"  ❌ [red]{name}[/red] CRITICAL FAILURE: {e}")
+            print(f"  [CRITICAL] [red]{name}[/red]: {e}")
 
     async def start(self):
         """Start all configured servers"""
-        print("[bold green]🚀 Starting MCP Servers...[/bold green]")
+        print("[bold green][START] Starting MCP Servers...[/bold green]")
         for name, config in self.server_configs.items():
             if config.get("enabled", True):
                 await self._start_server(name, config)
@@ -392,7 +392,7 @@ class MultiMCP:
                 return False
             await asyncio.sleep(0.5)
             
-        print(f"  ✅ Drained '{name}'")
+        print(f"  [DONE] Drained '{name}'")
         return True
 
     # Helper to route tool call by finding which server has it
@@ -544,7 +544,7 @@ class MultiMCP:
             if name in self.server_pids: del self.server_pids[name]
             return True
         except Exception as e:
-            print(f"  ❌ Failed to kill '{name}': {e}")
+            print(f"  [ERROR] Failed to kill '{name}': {e}")
             return False
 
 
