@@ -15,6 +15,7 @@ from shared.state import (
     get_multi_mcp,
     get_remme_store,
     get_remme_extractor,
+    signal_run_complete,
     PROJECT_ROOT,
 )
 from core.loop import AgentLoop4
@@ -87,6 +88,55 @@ async def process_resume(run_id: str, session_path: Path):
             # Clean up
             if run_id in active_loops:
                 del active_loops[run_id]
+
+
+def _extract_voice_output(context) -> str:
+    """
+    Quickly extract TTS-friendly output from the agent context.
+    Called immediately after loop.run() — must be fast.
+    """
+    if not context or not context.plan_graph:
+        return "I've completed your request."
+
+    # 1. Look for FormatterAgent output (the final polished report)
+    for node_id in context.plan_graph.nodes:
+        node = context.plan_graph.nodes[node_id]
+        agent_type = node.get("agent", "")
+        output = node.get("output", {})
+
+        if not output or not isinstance(output, dict):
+            continue
+
+        if "Format" in agent_type or agent_type == "FormatterAgent":
+            md = output.get("markdown_report") or output.get("formatted_report")
+            if not md:
+                for k, v in output.items():
+                    if ("report" in k.lower() or "formatted" in k.lower()) and isinstance(v, str):
+                        md = v
+                        break
+            if md and len(md) > 50:
+                return md
+
+    # 2. Fallback: find the last completed node with substantial output
+    for node_id in reversed(list(context.plan_graph.nodes)):
+        if node_id == "ROOT":
+            continue
+        node = context.plan_graph.nodes[node_id]
+        if node.get("status") != "completed":
+            continue
+        output = node.get("output", {})
+
+        if isinstance(output, dict):
+            best = ""
+            for v in output.values():
+                if isinstance(v, str) and len(v) > len(best):
+                    best = v
+            if len(best) > 50:
+                return best
+        elif isinstance(output, str) and len(output) > 50:
+            return output
+
+    return "I've completed your request."
 
 
 async def process_run(run_id: str, query: str):
@@ -197,7 +247,7 @@ async def process_run(run_id: str, query: str):
                                 print(f"✅ Remme: Added new fact: {text}")
                             elif action == "update" and target_id and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                remme_store.update_text(target_id, text, emb)
+                                remme_store.update(target_id, text=text, embedding=emb)
                                 print(f"🔄 Remme: Updated fact {target_id}: {text}")
                             elif action == "delete" and target_id:
                                 remme_store.delete(target_id)

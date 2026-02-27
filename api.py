@@ -7,6 +7,11 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+from dotenv import load_dotenv
+
+# Load environment variables early for all services
+load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Load .env before anything else so env vars are available to all modules.
 from dotenv import load_dotenv
@@ -45,7 +50,70 @@ remme_extractor = get_remme_extractor()
 async def lifespan(app: FastAPI):
     print("🚀 API Starting up...")
     
-    # Bootstrap & Validate Registry
+    # 1. Initialize Voice Pipeline FIRST (Zero Cold-Start)
+    from voice.orchestrator import Orchestrator
+    from voice.voice_wake_service import VoiceWakeService
+    from voice.stt_service import STTService
+    from voice.deepgram_stt_service import DeepgramSTTService
+    from voice.agent import Agent
+    from voice.tts_service import TTSService
+    from voice.config import VOICE_CONFIG
+
+    try:
+        # Create essential services 
+        voice_agent = Agent()
+        tts_cfg = VOICE_CONFIG.get("tts", {})
+        voice_tts = TTSService(
+            voice_name=tts_cfg.get("voice_name"),
+            personas=tts_cfg.get("personas"),
+            active_persona=tts_cfg.get("active_persona"),
+        )
+        
+        orchestrator = Orchestrator(
+            wake_service=None,
+            stt_service=None,
+            agent=voice_agent,
+            tts=voice_tts
+        )
+
+        stt_cfg = VOICE_CONFIG.get("stt", {})
+        stt_provider = VOICE_CONFIG.get("stt_provider", "whisper")
+        sample_rate = stt_cfg.get("sample_rate", 16000)
+        noise_reduce = stt_cfg.get("noise_reduce", True)
+
+        if stt_provider == "deepgram":
+            dg_cfg = stt_cfg.get("deepgram", {})
+            voice_stt = DeepgramSTTService(
+                sample_rate=sample_rate,
+                on_text_callback=orchestrator.on_text,
+                language=dg_cfg.get("language", "en"),
+                noise_reduce=noise_reduce,
+            )
+        else:
+            w_cfg = stt_cfg.get("whisper", {})
+            voice_stt = STTService(
+                sample_rate=sample_rate,
+                on_text_callback=orchestrator.on_text,
+                model_size=w_cfg.get("model_size", "small"),
+                device=w_cfg.get("device", "cpu"),
+                noise_reduce=noise_reduce,
+            )
+        
+        voice_wake = VoiceWakeService(on_wake_callback=orchestrator.on_wake)
+        orchestrator.wake = voice_wake
+        orchestrator.stt = voice_stt
+        voice_wake.orchestrator = orchestrator
+        
+        voice_wake.start()
+        voice_stt.start()
+        
+        app.state.orchestrator = orchestrator
+        print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
+        
+    except Exception as e:
+        print(f"⚠️ [Voice] Startup failed: {e}")
+
+    # 2. Bootstrap & Validate Registry (Slower metadata checks)
     from core.bootstrap import bootstrap_agents
     from core.registry import registry
     try:
@@ -53,7 +121,6 @@ async def lifespan(app: FastAPI):
         registry.validate()
     except Exception as e:
         print(f"❌ Registry Validation Failed: {e}")
-        # We don't necessarily exit, but log big error
         
     scheduler_service.initialize()
     persistence_manager.load_snapshot()
@@ -74,22 +141,20 @@ async def lifespan(app: FastAPI):
         FastAPIInstrumentor.instrument_app(app)
     await multi_mcp.start()
     
-    # Check git
+    # 3. External Dependency Checks (Non-blocking or deferred)
     try:
         subprocess.run(["git", "--version"], capture_output=True, check=True)
         print("✅ Git found.")
     except Exception:
-        print("⚠️ Git NOT found. GitHub explorer features will fail.")
+        print("⚠️ Git NOT found.")
 
-    # Check Ollama
     try:
         import requests
         from config.settings_loader import get_ollama_url
-        requests.get(get_ollama_url("base"), timeout=1)  # Usually http://localhost:11434/
+        requests.get(get_ollama_url("base"), timeout=1)
         print("✅ Ollama found.")
     except Exception:
-        print("⚠️ Ollama NOT found. AI features may fail.")
-    
+        print("⚠️ Ollama NOT found.")
     # 🧠 Start Smart Sync in background
     asyncio.create_task(background_smart_scan())
     
@@ -102,6 +167,18 @@ async def lifespan(app: FastAPI):
     get_canvas_runtime().save_snapshots()
     persistence_manager.save_snapshot()
     await multi_mcp.stop()
+    # Stop the voice pipeline explicitly so native audio threads don't
+    # block process exit (Porcupine's C thread holds the event loop otherwise)
+    try:
+        if hasattr(app.state, 'orchestrator'):
+            orch = app.state.orchestrator
+            orch._cancel_all()
+            if orch.wake:
+                orch.wake.stop()    # kills Porcupine native thread + PortAudio stream
+            if orch.stt:
+                orch.stt.stop()    # closes Deepgram/Whisper connection
+    except Exception as e:
+        print(f"⚠️ [Voice] Shutdown error: {e}")
 
 app = FastAPI(lifespan=lifespan)
 
@@ -171,6 +248,9 @@ from routers import studio as studio_router
 from routers import admin as admin_router
 app.include_router(studio_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
+from routers import voice as voice_router
+app.include_router(voice_router.router, prefix="/api")
+
 
 # Gateway API v1 (P15)
 from gateway_api.v1 import router as gateway_v1_router

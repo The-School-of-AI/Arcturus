@@ -1,0 +1,23 @@
+# Qdrant collection configurations
+# Add new collections here as we migrate more data to Qdrant.
+# Each collection can have dimension, indexed fields, and other settings.
+# Connection: override via QDRANT_URL, QDRANT_API_KEY env vars if needed.
+
+url: http://localhost:6333
+api_key: null   # optional; for Qdrant Cloud set via QDRANT_API_KEY
+
+default_collection: arcturus_memories
+
+collections:
+  arcturus_memories:
+    dimension: 768          # matches nomic-embed-text
+    distance: cosine        # cosine | euclidean | dot
+    is_tenant: true              # multi-tenant; scope by tenant field
+    tenant_keyword_field: user_id # payload field for tenant isolation (keyword index)
+    indexed_payload_fields: [category, source]  # required for filtered search in Qdrant Cloud
+
+  test_memories:            # Test collection; mirrors arcturus_memories index setup
+    dimension: 768
+    distance: cosine
+    is_tenant: false
+    indexed_payload_fields: [category, source]
