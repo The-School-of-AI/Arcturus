@@ -100,11 +100,21 @@ class UniversalSandbox:
 
                 # 5. Transform AST
                 tree = self._transform_ast(tree, set(tool_funcs))
-                
-                # Auto-return last expression if it's meaningful
-                if tree.body and isinstance(tree.body[-1], ast.Expr):
-                    tree.body[-1] = ast.Return(value=tree.body[-1].value)
-                
+
+                # Auto-return last expression/assignment if code doesn't explicitly return
+                if tree.body:
+                    last_stmt = tree.body[-1]
+                    has_return = any(isinstance(n, ast.Return) for n in ast.walk(tree))
+                    if not has_return:
+                        if isinstance(last_stmt, ast.Expr):
+                            # Bare expression: `json.loads(...)` → `return json.loads(...)`
+                            tree.body[-1] = ast.Return(value=last_stmt.value)
+                        elif isinstance(last_stmt, ast.Assign) and len(last_stmt.targets) == 1:
+                            # Assignment: `results = json.loads(...)` → keep assignment + `return results`
+                            target = last_stmt.targets[0]
+                            if isinstance(target, ast.Name):
+                                tree.body.append(ast.Return(value=ast.Name(id=target.id, ctx=ast.Load())))
+
                 # 6. Compile & Wrap
                 func_def = ast.AsyncFunctionDef(
                     name="__main",
@@ -114,66 +124,21 @@ class UniversalSandbox:
                 )
                 module = ast.Module(body=[func_def], type_ignores=[])
                 ast.fix_missing_locations(module)
-                
+
                 compiled = compile(module, filename="<sandbox>", mode="exec")
                 exec(compiled, safe_globals, local_vars)
-            # 5. Transform AST
-            tree = self._transform_ast(tree, set(tool_funcs))
-            
-            # Auto-return last expression/assignment if code doesn't explicitly return
-            if tree.body:
-                last_stmt = tree.body[-1]
-                has_return = any(isinstance(n, ast.Return) for n in ast.walk(tree))
-                if not has_return:
-                    if isinstance(last_stmt, ast.Expr):
-                        # Bare expression: `json.loads(...)` → `return json.loads(...)`
-                        tree.body[-1] = ast.Return(value=last_stmt.value)
-                    elif isinstance(last_stmt, ast.Assign) and len(last_stmt.targets) == 1:
-                        # Assignment: `results = json.loads(...)` → keep assignment + `return results`
-                        target = last_stmt.targets[0]
-                        if isinstance(target, ast.Name):
-                            tree.body.append(ast.Return(value=ast.Name(id=target.id, ctx=ast.Load())))
-            
-            # 6. Compile & Wrap
-            func_def = ast.AsyncFunctionDef(
-                name="__main",
-                args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
-                body=tree.body,
-                decorator_list=[]
-            )
-            module = ast.Module(body=[func_def], type_ignores=[])
-            ast.fix_missing_locations(module)
-            
-            compiled = compile(module, filename="<sandbox>", mode="exec")
-            exec(compiled, safe_globals, local_vars)
 
                 # 7. Execute with Monitoring
                 log_capture = io.StringIO()
                 # Use timeout_per_func (MCP tool calls can take 30+ seconds)
-                timeout = max(30, func_count * self.timeout_per_func) 
-                
+                timeout = max(30, func_count * self.timeout_per_func)
+
                 # Custom logging hook to safely capture without recursion
                 class RealTimeLogger(io.StringIO):
                     def write(self, s):
                         super().write(s)
-                        # We avoid calling log_step here because log_step writes to stderr,
-                        # which is currently redirected to this very logger, causing recursion.
-                        # We'll log the full capture AFTER the execution block.
                     def flush(self):
                         super().flush()
-            # 7. Execute with Monitoring
-            log_capture = io.StringIO()
-            timeout = max(30, func_count * 5)  # Allow enough time for web requests
-            
-            # Custom logging hook to safely capture without recursion
-            class RealTimeLogger(io.StringIO):
-                def write(self, s):
-                    super().write(s)
-                    # We avoid calling log_step here because log_step writes to stderr,
-                    # which is currently redirected to this very logger, causing recursion.
-                    # We'll log the full capture AFTER the execution block.
-                def flush(self):
-                    super().flush()
 
                 rt_logger = RealTimeLogger()
                 

@@ -79,11 +79,11 @@ class AgentRunner:
                     # 1. Load Configured Skills (respecting exclude_skills filter)
                     active_skills = []
                     excluded = set(exclude_skills or [])
-                for skill_name in config.get("skills", []):
+                    for skill_name in config.get("skills", []):
                         if skill_name in excluded:
-                        log_step(f"⏩ Skipping skill '{skill_name}' (excluded for this mode)", symbol="⏩")
-                        continue
-                    skill = skill_manager.get_skill(skill_name)
+                            log_step(f"⏩ Skipping skill '{skill_name}' (excluded for this mode)", symbol="⏩")
+                            continue
+                        skill = skill_manager.get_skill(skill_name)
                         if skill:
                             active_skills.append(skill)
 
@@ -290,7 +290,22 @@ class AgentRunner:
                 (debug_log_dir / f"{timestamp}_{agent_type}_prompt.txt").write_text(full_prompt, encoding="utf-8")
 
                 # 6. Parse JSON response dynamically
-                output = parse_llm_json(response)
+                try:
+                    output = parse_llm_json(response)
+                except Exception as json_err:
+                    # Fallback: lightweight models may return plain text instead of JSON.
+                    # Wrap the raw response in the expected format so the pipeline continues.
+                    log_error(f"⚠️ {agent_type}: JSON parse failed, wrapping raw text. ({json_err})")
+                    raw = response.strip()
+                    output = {"final_answer": raw}
+                    # FormatterAgent/SummarizerAgent: raw text IS the report — map to expected keys
+                    if agent_type == "FormatterAgent":
+                        output["markdown_report"] = raw
+                        for wk in input_data.get("writes", []):
+                            output[wk] = raw
+                    elif agent_type == "SummarizerAgent":
+                        for wk in input_data.get("writes", []):
+                            output[wk] = raw
 
                 # Robustness: Some models (like gemma3) wrap JSON in a list
                 if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict):
@@ -332,67 +347,6 @@ class AgentRunner:
                     "output_tokens": 0,
                     "total_tokens": 0
                 }
-            # 6. Parse JSON response dynamically
-            try:
-                output = parse_llm_json(response)
-            except Exception as json_err:
-                # Fallback: lightweight models may return plain text instead of JSON.
-                # Wrap the raw response in the expected format so the pipeline continues.
-                log_error(f"⚠️ {agent_type}: JSON parse failed, wrapping raw text. ({json_err})")
-                raw = response.strip()
-                output = {"final_answer": raw}
-                # FormatterAgent/SummarizerAgent: raw text IS the report — map to expected keys
-                if agent_type == "FormatterAgent":
-                    output["markdown_report"] = raw
-                    for wk in input_data.get("writes", []):
-                        output[wk] = raw
-                elif agent_type == "SummarizerAgent":
-                    for wk in input_data.get("writes", []):
-                        output[wk] = raw
-
-            # Robustness: Some models (like gemma3) wrap JSON in a list
-            if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict):
-                output = output[0]
-                
-            log_step(f"🟩 {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="🟩")
-
-            # import pdb; pdb.set_trace()
-            
-            # Calculate input text for costing
-            input_text = str(input_data)
-            
-            # Calculate output text for costing
-            output_text = str(output)
-            
-            # Calculate cost and tokens
-            cost_data = self.calculate_cost(input_text, output_text)
-            
-            # Add cost data and model info to result
-            if isinstance(output, dict):
-                output.update(cost_data)
-                output["executed_model"] = f"{model_provider}:{model_name}"
-                if reasoning_history:
-                     output["_reasoning_trace"] = reasoning_history
-            
-            return {
-                "success": True,
-                "agent_type": agent_type,
-                "output": output,
-                "agent_prompt": full_prompt # For Episodic Memory
-            }
-            
-        except Exception as e:
-            log_error(f"❌ {agent_type}: {str(e)}")
-            return {
-                "success": False,
-                "agent_type": agent_type,
-                "error": str(e),
-                "cost": 0.0,
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "total_tokens": 0
-            }
-
     def get_available_agents(self) -> list:
         """Return list of available agent types"""
         from core.registry import AgentRegistry

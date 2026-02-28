@@ -154,8 +154,9 @@ class ModelManager:
                 # Route to provider-specific implementation
                 if self.model_type == "gemini":
                     result = await self._gemini_generate(prompt)
-        elif self.model_type == "openrouter":
-            return await self._openrouter_generate(prompt)                elif self.model_type == "ollama":
+                elif self.model_type == "openrouter":
+                    result = await self._openrouter_generate(prompt)
+                elif self.model_type == "ollama":
                     result = await self._ollama_generate(prompt)
                 else:
                     raise NotImplementedError(f"Unsupported model type: {self.model_type}")

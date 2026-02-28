@@ -307,18 +307,18 @@ async def process_run(run_id: str, query: str, research_mode: str = "standard", 
                             continue
 
                         # Check for Formatter output keys (robust extraction)
-                    markdown = None
-                    if isinstance(output, dict):
+                        markdown = None
+                        if isinstance(output, dict):
                             markdown = output.get("markdown_report")
                             if not markdown:
-                               for k, v in output.items():
-                                   if k.startswith("formatted_report") and isinstance(v, str):
-                                       markdown = v
-                                       break
-                        if not markdown:
-                            fa = output.get("final_answer", "")
-                            if isinstance(fa, str) and len(fa) > 100:
-                                markdown = fa
+                                for k, v in output.items():
+                                    if k.startswith("formatted_report") and isinstance(v, str):
+                                        markdown = v
+                                        break
+                            if not markdown:
+                                fa = output.get("final_answer", "")
+                                if isinstance(fa, str) and len(fa) > 100:
+                                    markdown = fa
 
                         if markdown and len(markdown) > 100:
                             title = extract_title(markdown)
@@ -334,76 +334,6 @@ async def process_run(run_id: str, query: str, research_mode: str = "standard", 
 
             except Exception as e:
                 print(f"⚠️ Failed to auto-save report: {e}")
-
-            # Return result for Scheduler/Skills
-            final_result = {"status": "completed", "run_id": run_id}
-            if context and context.plan_graph:
-                # Check for any failed nodes
-                for node_id in context.plan_graph.nodes:
-                    node = context.plan_graph.nodes[node_id]
-                    if node.get("status") == "failed":
-                        final_result["status"] = "failed"
-                        final_result["error"] = node.get("error")
-                        break
-
-            if context:
-                try:
-                    output_str = ""
-                    if context.plan_graph:
-                        # 1. Look for FormatterAgent output first (The Final Report)
-                        for node_id in context.plan_graph.nodes:
-                            node = context.plan_graph.nodes[node_id]
-                            node_agent = node.get("agent", "")
-                            out = node.get("output", {})
-
-                            if node_agent == "FormatterAgent" or "Format" in node_agent:
-                                if isinstance(out, dict):
-                                    md = out.get("markdown_report")
-                                    if not md:
-                                        for k, v in out.items():
-                                            if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
-                                                md = v
-                                                break
-
-                                    if md:
-                                        output_str = md
-                                        break
-
-                                    if isinstance(out.get("output"), str) and len(out["output"]) > 100:
-                                        output_str = out["output"]
-                                        break
-
-                        # 2. Fallback: Find any node with a substantial string output
-                        if not output_str:
-                            for node_id in reversed(list(context.plan_graph.nodes)):
-                                if node_id == "ROOT":
-                                    continue
-                                node = context.plan_graph.nodes[node_id]
-                                out = node.get("output", {})
-
-                                if isinstance(out, dict):
-                                    def find_largest_string(d):
-                                        largest = ""
-                                        for v in d.values():
-                                            if isinstance(v, str):
-                                                if len(v) > len(largest):
-                                                    largest = v
-                                            elif isinstance(v, dict):
-                                                sub = find_largest_string(v)
-                                                if len(sub) > len(largest):
-                                                    largest = sub
-                                        return largest
-
-                                    largest_str = find_largest_string(out)
-                                    if len(largest_str) > 50:
-                                        output_str = largest_str
-                                        break
-
-                                elif isinstance(out, str) and len(out) > 50:
-                                    output_str = out
-                                    break
-        except Exception as e:
-            print(f"⚠️ Failed to auto-save report: {e}")
             
         # Return result for Scheduler/Skills
         final_result = {"status": "completed", "run_id": run_id}
@@ -511,22 +441,6 @@ async def process_run(run_id: str, query: str, research_mode: str = "standard", 
                                  output_str = out
                                  break
 
-                        # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
-                        if output_str:
-                            import re
-                            if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
-                                try:
-                                    data = json.loads(output_str)
-                                    if isinstance(data, dict):
-                                        for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
-                                            if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
-                                                output_str = data[k]
-                                                break
-                                except Exception:
-                                    pass
-
-                            output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
-                            output_str = re.sub(r'\n```$', '', output_str)
                  # 5. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
                  if output_str:
                      import re
@@ -547,17 +461,17 @@ async def process_run(run_id: str, query: str, research_mode: str = "standard", 
                      output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
                      output_str = re.sub(r'\n```$', '', output_str)
 
-                        final_result["output"] = output_str.strip() if output_str else "No substantial output found."
-                        if final_result.get("status") == "failed":
-                            final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
-                        else:
-                            final_result["summary"] = output_str.strip() if output_str else "Completed."
-                except Exception as e:
-                    print(f"⚠️ Extraction Error: {e}")
+                 final_result["output"] = output_str.strip() if output_str else "No substantial output found."
+                 if final_result.get("status") == "failed":
+                     final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
+                 else:
+                     final_result["summary"] = output_str.strip() if output_str else "Completed."
+             except Exception as e:
+                 print(f"⚠️ Extraction Error: {e}")
                  import traceback
                  traceback.print_exc()
 
-            return final_result
+        return final_result
 
 
 # === Endpoints ===
