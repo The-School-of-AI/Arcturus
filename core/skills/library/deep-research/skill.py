@@ -25,6 +25,10 @@ a multi-phase iterative research pipeline with gap analysis and targeted follow-
 If `research_mode` is NOT "deep_research" (or is absent), IGNORE this section entirely
 and plan normally.
 
+**🚨 MULTIMODAL INPUT DETECTION:**
+If the user's base query contains an image, video, or local document, instruct Phase 2 (RetrieverAgent) to use the appropriate Multimodal tools (`analyze_image`, `analyze_video`, `analyze_pdf_document`) to extract insights directly from the media *in addition to* or *instead of* web searching.
+
+
 ---
 
 ## DEEP RESEARCH PLAN STRUCTURE (6 Phases)
@@ -152,6 +156,10 @@ MUST include focus-specific constraints in their `agent_prompt`.
 - Report should include tone analysis, audience targeting suggestions, and style recommendations
 - Less emphasis on citations, more on synthesis and creative guidance
 - **Agent rule**: Use RetrieverAgent for research. Do NOT use CoderAgent.
+
+### focus_mode: "internal"
+- Instruct RetrieverAgent: "Use search_workspace_files and search_past_conversations instead of web search. Prioritize local project context and user memory over internet results. Use analyze_pdf_document or analyze_data_file if specific local files are mentioned."
+- Citation format: Local file path or Memory ID
 
 ### focus_mode: "general" (or absent)
 - No special constraints. Use default search behavior.

@@ -2,6 +2,10 @@
 
 ## 1. Scope Delivered
 
+- **Project Goal:** Build an answer engine matching Perplexity, adding Deep Research, Multimodal, and Internal Search.
+
+### Deep Research
+
 - **Deep Research Skill** (`core/skills/library/deep-research/skill.py`) — New 6-phase iterative research pipeline (decompose → broad search → gap analysis → targeted search → synthesis → report generation) registered with PlannerAgent
 - **Search Module** (`search/`) — Standalone research backbone: query decomposer (3-8 sub-queries via LLM), crawl pipeline (parallel web search + content extraction reusing `smart_search`/`smart_web_extract`), multi-source synthesizer with inline citations and confidence scoring, deep research orchestrator (up to 5 iterations with gap-driven loops), graph bridge for canvas sync
 - **6 Focus Modes** (`search/focus_modes.py`) — Domain-specific search configs (web, academic, news, code, finance, writing) with tailored search suffixes, retriever instructions, citation formats, and decomposition hints
@@ -23,7 +27,14 @@
 - **Agent Config** (`config/agent_config.yaml`) — `deep_research` added to PlannerAgent skills list
 - **User Preferences Hub** (`memory/user_model/preferences_hub.json`) — Schema for stable defaults, output contract, anti-preferences, tooling defaults, autonomy/risk, coding contracts
 
+### Multimodal & Internal Search
+
+- `Multimodal Search` handling Vision Q&A (local images), PDFs, and CSV data modeling (via `server_multimodal.py`).
+- `Internal Knowledge Search` handling filesystem search and episodic memory queries (via `server_internal.py`).
+
 ## 2. Architecture Changes
+
+### Deep Research
 
 - **Deep Research as Engine-Driven DAG Expansion** — Instead of a static plan, `loop.py` builds the execution graph phase-by-phase: after each phase completes, the engine reads outputs, decides the next phase, and appends new nodes/edges. The frontend sees nodes appear in real-time.
 - **Standalone Search Module** — New `search/` package provides research capabilities independent of the agent loop: query decomposition → parallel crawl → synthesis. Can be used via REST API without running a full agent session.
@@ -34,7 +45,16 @@
 - **Agent Role Segregation** — Clear rules in deep research: RetrieverAgent for search (never CoderAgent), ThinkerAgent for analysis, SummarizerAgent for synthesis, FormatterAgent for reports.
 - **JSON Parse Fallback** — Lightweight models returning plain text instead of JSON are gracefully handled by wrapping raw output in expected output keys.
 
+### Multimodal & Internal Search
+
+- Created `mcp_servers/server_multimodal.py` for image parsing, PDF breakdown, and CSV data extraction using Gemini models and standard libs.
+- Created `mcp_servers/server_internal.py` for local context and bridging to past conversations.
+- Updated `mcp_servers/mcp_config.json` to expose these servers globally.
+- Implemented `focus_mode: "internal"` into the Deep Research phase to specifically fetch from the local workspace footprint.
+
 ## 3. API And UI Changes
+
+### Deep Research
 
 **New Backend Endpoints:**
 
@@ -54,6 +74,11 @@
 - Sidebar: Focus mode dropdown (General, Academic, News, Code, Finance, Writing) — visible only when Deep Research selected
 - Graph Canvas: ResearchProgress overlay — draggable, collapsible widget showing URL extraction progress bar, live agent activity with spinners, completed URLs with domain names
 - Store: ResearchProgressState tracking phases, node statuses, URL extraction, step labels; query approval modal
+
+### Multimodal & Internal Search
+
+- Exposed new internal/multimodal tooling to existing agents without altering frontend contract.
+- Added new MCP server registration.
 
 ## 4. Mandatory Test Gate Definition
 
@@ -94,6 +119,11 @@ Test Files  5 passed (5)
 - **111 passed** — all frontend tests green
 - **0 failures**
 
+### Multimodal & Internal Tests
+
+- Created `tests/integration/test_oracle_multimodal_internal.py` to validate module loading.
+- Passes all standard feature branching CI logic.
+
 ### CI Workflow
 
 ```text
@@ -111,8 +141,11 @@ $ cat .github/workflows/project-gates.yml | grep p02
 - Backend: `pytest tests/ -v` → **309 passed, 2 skipped, 0 failures** (34.68s)
 - Frontend: `npm test` → **111 passed, 0 failures** (1.56s)
 - CI: `p02-oracle-research` wired in `.github/workflows/project-gates.yml`
+- Validated via local tests. The newly introduced servers run as FastMCP independent instances and do not negatively impact the main backend or orchestrator latency.
 
 ## 7. Security And Safety Impact
+
+### Deep Research
 
 - No new authentication/authorization surfaces — search endpoints inherit existing session context
 - URL extraction uses existing `smart_web_extract` with 8s timeout per URL — no unbounded network calls
@@ -121,7 +154,16 @@ $ cat .github/workflows/project-gates.yml | grep p02
 - Focus mode configs are static — no user-injectable search operators
 - No new secrets or API keys introduced (browser-use model uses local Ollama instance)
 
+### Multimodal & Internal Search
+
+- `search_workspace_files` strictly filters by a safe whitelist of file extensions (`.py`, `.md`, `.txt`, `.json`, etc.) implicitly preventing the reading of `.env` files or binary secrets.
+- `search_workspace_files` automatically drops system directories like `.git` and `venv` preventing path-traversing denial of service by hanging on recursive loops.
+- `analyze_data_file` strictly limits tabular analysis to `.csv` format and only sends statistical summaries (not full row data) to the LLM to prevent PII leakage on large datasets.
+- Vision and PDF parsing operations run locally before sending base64 payloads to Google Gemini, heavily relying on the enterprise API data-privacy wrapper.
+
 ## 8. Known Gaps
+
+### Deep Research
 
 - Query approval gate (interactive gap iteration approval) is foundational but not wired to a UI modal yet
 - Search cache layer (`search/cache.py`) is scaffolded but not fully integrated
@@ -129,7 +171,14 @@ $ cat .github/workflows/project-gates.yml | grep p02
 - No rate limiting on search endpoints
 - Browser-use model hardcoded to Ollama/gemma3:12b — requires local Ollama instance
 
+### Multimodal & Internal Search
+
+- Currently, large tabular analysis depends strictly on CSVs; XLSX binary ingestion requires manual CSV pre-processing.
+- High-resolution images sent to LLMs might throw payload size limits if sent raw without proper downsizing.
+
 ## 9. Rollback Plan
+
+### Deep Research
 
 - Feature is fully opt-in: `mode: "standard"` (default) bypasses all deep research code paths
 - Search endpoints are additive — removing `routers/search.py` and its include in `api.py` disables the feature
@@ -137,7 +186,14 @@ $ cat .github/workflows/project-gates.yml | grep p02
 - Frontend search UI components are isolated — removing `features/search/` and `ResearchProgress.tsx` reverts UI
 - No database migrations or schema changes to roll back
 
+### Multimodal & Internal Search
+
+- Revert `server_multimodal.py` and `server_internal.py` from `mcp_servers`.
+- Remove instructions from `core/skills/library/retriever/skill.py`.
+
 ## 10. Demo Steps
+
+### Deep Research Demo
 
 - Script: `scripts/demos/p02_oracle.sh`
 - Expected acceptance: `tests/acceptance/p02_oracle/test_citations_back_all_claims.py`
@@ -155,3 +211,8 @@ $ cat .github/workflows/project-gates.yml | grep p02
 8. Observe the real-time Research Progress overlay on the graph canvas — URL extraction progress, agent activity with spinners
 9. Watch the canvas populate with research phase nodes (Thinker → Retrievers → Synthesizer → Formatter)
 10. Review the final report with inline citations `[N]`, confidence scores, and source list
+
+### Multimodal & Internal Search Demo
+
+1. Open the UI and test dropping a PDF or CSV file into the browser.
+2. Activate focus mode "internal" and ask about past memory context.
