@@ -7,8 +7,16 @@ and adds each to the Qdrant arcturus_rag_chunks collection.
 Keeps metadata.json for BM25 (unchanged).
 
 Usage:
+    # For Qdrant Cloud, ensure .env has:
+    #   QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
+    #   QDRANT_API_KEY=your-api-key
+    #   RAG_VECTOR_STORE_PROVIDER=qdrant
+    uv run python scripts/migrate_rag_faiss_to_qdrant.py
+
+    # Or export before running:
+    export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
+    export QDRANT_API_KEY=your-api-key
     export RAG_VECTOR_STORE_PROVIDER=qdrant
-    docker-compose up -d   # ensure Qdrant is running
     uv run python scripts/migrate_rag_faiss_to_qdrant.py
 """
 
@@ -19,6 +27,13 @@ from pathlib import Path
 # Add project root
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
+
+# Load .env so QDRANT_URL and QDRANT_API_KEY are available
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
 
 RAG_INDEX_DIR = ROOT / "mcp_servers" / "faiss_index"
 
@@ -70,6 +85,8 @@ def migrate():
     # Initialize Qdrant RAG store
     from memory.rag_store import get_rag_vector_store
     store = get_rag_vector_store(provider="qdrant")
+    print(f"✓ Qdrant RAG store initialized {store}")
+    print("=" * 60)
 
     migrated = 0
     skipped = 0

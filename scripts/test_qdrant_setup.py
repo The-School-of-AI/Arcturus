@@ -16,6 +16,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Load .env so QDRANT_URL and QDRANT_API_KEY are available (for Cloud)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(project_root / ".env")
+except ImportError:
+    pass
+
 import numpy as np
 from memory.vector_store import get_vector_store, VectorStoreProtocol
 from memory.rag_store import get_rag_vector_store

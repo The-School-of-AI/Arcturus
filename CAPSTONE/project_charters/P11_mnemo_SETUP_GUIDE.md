@@ -94,6 +94,7 @@ pip install qdrant-client>=1.7.0
 Test the connection and basic operations:
 
 ```bash
+# For Qdrant Cloud: ensure .env has QDRANT_URL and QDRANT_API_KEY (script loads .env)
 uv run python scripts/test_qdrant_setup.py
 ```
 
@@ -152,9 +153,25 @@ pip install -e .
 
 ## Migration: FAISS → Qdrant
 
+**Important for Qdrant Cloud:** The migration scripts load `.env` automatically. Ensure your `.env` has:
+
+```
+QDRANT_URL=https://your-cluster-id.region.cloud-provider.cloud.qdrant.io
+QDRANT_API_KEY=your-api-key-here
+```
+
+Without these, migrations will use the default `http://localhost:6333` (local Docker).
+
 ### Remme memories
 
 ```bash
+# Option 1: Use .env (recommended for Cloud)
+# Add to .env: QDRANT_URL, QDRANT_API_KEY, VECTOR_STORE_PROVIDER=qdrant
+uv run python scripts/migrate_faiss_to_qdrant.py
+
+# Option 2: Export explicitly
+export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
+export QDRANT_API_KEY=your-api-key
 export VECTOR_STORE_PROVIDER=qdrant
 uv run python scripts/migrate_faiss_to_qdrant.py
 ```
@@ -164,6 +181,13 @@ Reads from `memory/remme_index/`, writes to `arcturus_memories` collection.
 ### RAG document chunks
 
 ```bash
+# Option 1: Use .env (recommended for Cloud)
+# Add to .env: QDRANT_URL, QDRANT_API_KEY, RAG_VECTOR_STORE_PROVIDER=qdrant
+uv run python scripts/migrate_rag_faiss_to_qdrant.py
+
+# Option 2: Export explicitly
+export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
+export QDRANT_API_KEY=your-api-key
 export RAG_VECTOR_STORE_PROVIDER=qdrant
 uv run python scripts/migrate_rag_faiss_to_qdrant.py
 ```
