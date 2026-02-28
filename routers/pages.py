@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import asyncio
+import time
 import uuid
 
 from content import page_generator
@@ -14,6 +15,17 @@ router = APIRouter(prefix="/pages", tags=["Pages"])
 class GenerateRequest(BaseModel):
     query: str
     template: Optional[str] = "topic_overview"
+
+
+class SectionRefreshRequest(BaseModel):
+    action: str  # "expand", "simplify", "add_examples", "cite_more", "regenerate"
+    instruction: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+
+
+class WidgetRequest(BaseModel):
+    widget_type: str  # "stock_ticker", "weather", "live_chart", "poll", "calculator"
+    config: Dict[str, Any]
 
 
 # Simple in-process job tracker (Phase-1). Replace with persistent job queue in Phase-2.
@@ -94,6 +106,8 @@ PAGES_META: Dict[str, Dict[str, Any]] = {}
 FOLDERS: Dict[str, Dict[str, Any]] = {}
 SHARES: Dict[str, Any] = {}
 VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
+PUBLIC_PAGES: Dict[str, Dict[str, Any]] = {}  # Store public page shares with passwords
+PUBLIC_PAGES: Dict[str, Dict[str, Any]] = {}  # Store public page shares with passwords
 
 
 @router.get("", response_model=ListResponse)
@@ -427,6 +441,17 @@ async def execute_page_action(page_id: str, req: PageActionRequest):
         if req.share_type == "link":
             token = uuid.uuid4().hex
             url = f"/shared/{token}"
+            
+            # Store public share with metadata
+            PUBLIC_PAGES[token] = {
+                "page_id": page_id,
+                "created_at": datetime.utcnow().isoformat(),
+                "password": req.password,  # None if no password
+                "access_count": 0,
+                "expires_at": req.expires_at,
+                "permissions": req.permissions or "read"
+            }
+            
             SHARES.setdefault(page_id, []).append({
                 "type": "link",
                 "token": token,
@@ -437,7 +462,8 @@ async def execute_page_action(page_id: str, req: PageActionRequest):
                 "status": "completed",
                 "share_url": url,
                 "token": token,
-                "expires_at": req.expires_at
+                "expires_at": req.expires_at,
+                "password_protected": bool(req.password)
             })
             
         elif req.share_type == "users":
@@ -482,3 +508,388 @@ async def get_action_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="action job not found")
     return job
+
+
+# Week 3: Interactive blocks and section-level refresh endpoints
+
+@router.post("/{page_id}/sections/{section_id}/refresh", status_code=202)
+async def refresh_section(page_id: str, section_id: str, req: SectionRefreshRequest):
+    """Refresh a specific section with enhanced content using AI.
+    
+    Supports actions: expand, simplify, add_examples, cite_more, regenerate
+    """
+    # Verify page exists
+    try:
+        page = page_generator.load_page(page_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    
+    # Find the section
+    target_section = None
+    for section in page.get("sections", []):
+        if section.get("id") == section_id:
+            target_section = section
+            break
+    
+    if not target_section:
+        raise HTTPException(status_code=404, detail="section not found")
+    
+    # Create refresh job
+    job_id = uuid.uuid4().hex
+    JOBS[job_id] = {
+        "status": "pending",
+        "page_id": page_id,
+        "section_id": section_id,
+        "action": req.action,
+        "instruction": req.instruction
+    }
+    
+    # Start async refresh task
+    asyncio.create_task(_refresh_section_job(job_id, page_id, section_id, req, page, target_section))
+    
+    return {"job_id": job_id, "status_url": f"/api/pages/refresh/{job_id}"}
+
+
+@router.get("/refresh/{job_id}")
+async def get_refresh_status(job_id: str):
+    """Get status of section refresh job"""
+    job = JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="refresh job not found")
+    return job
+
+
+@router.post("/{page_id}/widgets", status_code=201)
+async def add_widget(page_id: str, req: WidgetRequest):
+    """Add an interactive widget to a page"""
+    try:
+        page = page_generator.load_page(page_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    
+    # Create widget
+    widget_id = f"widget_{uuid.uuid4().hex[:8]}"
+    widget = {
+        "id": widget_id,
+        "type": req.widget_type,
+        "config": req.config,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "active": True
+    }
+    
+    # Add to first section that supports widgets
+    for section in page.get("sections", []):
+        if "widgets" in section:
+            section["widgets"].append(widget)
+            break
+    else:
+        # If no section has widgets, add to overview section
+        if page.get("sections"):
+            page["sections"][0].setdefault("widgets", []).append(widget)
+    
+    # Save page
+    import json
+    from pathlib import Path
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    path.write_text(json.dumps(page, indent=2), encoding="utf-8")
+    
+    return {"widget_id": widget_id, "message": "Widget added successfully"}
+
+
+@router.delete("/{page_id}/widgets/{widget_id}")
+async def remove_widget(page_id: str, widget_id: str):
+    """Remove a widget from a page"""
+    try:
+        page = page_generator.load_page(page_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    
+    # Find and remove widget
+    removed = False
+    for section in page.get("sections", []):
+        if "widgets" in section:
+            section["widgets"] = [w for w in section["widgets"] if w.get("id") != widget_id]
+            if any(w.get("id") == widget_id for w in section.get("widgets", [])):
+                removed = True
+    
+    if not removed:
+        raise HTTPException(status_code=404, detail="widget not found")
+    
+    # Save page
+    import json
+    from pathlib import Path
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    path.write_text(json.dumps(page, indent=2), encoding="utf-8")
+    
+    return {"message": "Widget removed successfully"}
+
+
+@router.post("/{page_id}/copilot/chat", status_code=200)
+async def copilot_chat(page_id: str, message: str = Query(..., description="Chat message for the copilot")):
+    """Chat with the embedded copilot for a specific page"""
+    try:
+        page = page_generator.load_page(page_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+    
+    # Simple copilot response based on page content
+    page_context = {
+        "title": page.get("title", ""),
+        "query": page.get("query", ""),
+        "sections_count": len(page.get("sections", [])),
+        "citations_count": len(page.get("citations", {}))
+    }
+    
+    # Generate contextual response
+    if "expand" in message.lower():
+        response = f"I can help you expand any section of '{page_context['title']}'. Which specific topic would you like me to elaborate on?"
+    elif "chart" in message.lower() or "data" in message.lower():
+        response = f"This page contains data visualizations. I can help you understand the {page_context['citations_count']} sources or explain specific metrics in detail."
+    elif "source" in message.lower() or "citation" in message.lower():
+        response = f"This analysis is based on {page_context['citations_count']} credible sources. Would you like me to highlight specific research findings?"
+    else:
+        response = f"Hello! I'm here to help you with '{page_context['title']}'. I can expand sections, explain data, find additional sources, or answer specific questions about {page_context['query']}."
+    
+    return {
+        "response": response,
+        "context": page_context,
+        "suggestions": [
+            "Expand the overview section",
+            "Show me more data visualizations", 
+            "Find additional sources",
+            "Explain the key findings"
+        ]
+    }
+
+
+async def _refresh_section_job(job_id: str, page_id: str, section_id: str, req: SectionRefreshRequest, page: Dict[str, Any], section: Dict[str, Any]):
+    """Background task to refresh a section with enhanced content"""
+    try:
+        JOBS[job_id]["status"] = "running"
+        
+        # Import section agents
+        from content.section_agents import (
+            overview_generate_section, detail_generate_section, 
+            data_generate_section, source_generate_section, 
+            comparison_generate_section
+        )
+        
+        # Get original query and create enhanced query based on action
+        original_query = page.get("query", "")
+        enhanced_query = original_query
+        
+        if req.action == "expand":
+            enhanced_query = f"{original_query} detailed analysis expanded"
+        elif req.action == "simplify":
+            enhanced_query = f"{original_query} simplified explanation"
+        elif req.action == "add_examples":
+            enhanced_query = f"{original_query} examples and case studies"
+        elif req.action == "cite_more":
+            enhanced_query = f"{original_query} additional sources research"
+        
+        # Add custom instruction if provided
+        if req.instruction:
+            enhanced_query += f" {req.instruction}"
+        
+        # Get fresh Oracle data
+        from content import oracle_client
+        oracle_resp = oracle_client.search_oracle(enhanced_query, k=5)
+        resources = {"oracle_results": oracle_resp.get("results", [])}
+        
+        # Regenerate section based on type
+        section_type = section.get("type")
+        if section_type == "overview":
+            new_section = await overview_generate_section(enhanced_query, page, resources)
+        elif section_type == "detail":
+            new_section = await detail_generate_section(enhanced_query, page, resources)
+        elif section_type == "data":
+            new_section = await data_generate_section(enhanced_query, page, resources)
+        elif section_type == "source":
+            new_section = await source_generate_section(enhanced_query, page, resources)
+        elif section_type == "comparison":
+            new_section = await comparison_generate_section(enhanced_query, page, resources)
+        else:
+            raise ValueError(f"Unknown section type: {section_type}")
+        
+        # Update section in page
+        for i, sect in enumerate(page["sections"]):
+            if sect.get("id") == section_id:
+                # Preserve original ID and add refresh metadata
+                new_section["id"] = section_id
+                new_section.setdefault("metadata", {})["refreshed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                new_section.setdefault("metadata", {})["refresh_action"] = req.action
+                page["sections"][i] = new_section
+                break
+        
+        # Save updated page
+        import json
+        from pathlib import Path
+        DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+        path = DATA_DIR / f"{page_id}.json"
+        path.write_text(json.dumps(page, indent=2), encoding="utf-8")
+        
+        # Update job status
+        JOBS[job_id]["status"] = "completed" 
+        JOBS[job_id]["section"] = new_section
+        
+    except Exception as e:
+        JOBS[job_id]["status"] = "failed"
+        JOBS[job_id]["error"] = str(e)
+
+
+# Public Access Endpoints for Shared Pages
+
+@router.get("/shared/{token}")
+async def get_shared_page(token: str, password: Optional[str] = None):
+    """Access a publicly shared page via token"""
+    
+    if token not in PUBLIC_PAGES:
+        raise HTTPException(status_code=404, detail="Shared page not found")
+    
+    share_info = PUBLIC_PAGES[token]
+    
+    # Check if password is required
+    if share_info.get("password") and password != share_info["password"]:
+        raise HTTPException(status_code=401, detail="Password required or incorrect")
+    
+    # Check expiration
+    if share_info.get("expires_at"):
+        from datetime import datetime
+        expires = datetime.fromisoformat(share_info["expires_at"])
+        if datetime.utcnow() > expires:
+            raise HTTPException(status_code=410, detail="Shared link has expired")
+    
+    # Increment access count
+    PUBLIC_PAGES[token]["access_count"] += 1
+    
+    # Get the actual page
+    page_id = share_info["page_id"]
+    from pathlib import Path
+    import json
+    
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Page not found")
+    
+    page = json.loads(path.read_text(encoding="utf-8"))
+    
+    # Add sharing metadata to response
+    page["shared_via"] = {
+        "token": token,
+        "access_count": share_info["access_count"],
+        "shared_at": share_info["created_at"],
+        "permissions": share_info.get("permissions", "read")
+    }
+    
+    return page
+
+
+@router.get("/shared/{token}/info")
+async def get_shared_page_info(token: str):
+    """Get metadata about a shared page without accessing the content"""
+    
+    if token not in PUBLIC_PAGES:
+        raise HTTPException(status_code=404, detail="Shared page not found")
+    
+    share_info = PUBLIC_PAGES[token]
+    
+    # Get basic page info
+    page_id = share_info["page_id"]
+    from pathlib import Path
+    import json
+    
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Page not found")
+    
+    page = json.loads(path.read_text(encoding="utf-8"))
+    
+    return {
+        "title": page.get("title", "Untitled"),
+        "query": page.get("query", ""),
+        "template": page.get("template", "unknown"),
+        "sections_count": len(page.get("sections", [])),
+        "shared_at": share_info["created_at"],
+        "access_count": share_info["access_count"],
+        "password_protected": bool(share_info.get("password")),
+        "permissions": share_info.get("permissions", "read"),
+        "expires_at": share_info.get("expires_at")
+    }
+
+
+@router.get("/{page_id}/versions")
+async def get_page_versions(page_id: str):
+    """Get version history for a page"""
+    
+    # Check if page exists
+    from pathlib import Path
+    import json
+    
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Page not found")
+    
+    versions = VERSIONS.get(page_id, [])
+    
+    # Add current version
+    current_page = json.loads(path.read_text(encoding="utf-8"))
+    current_version = {
+        "version": len(versions) + 1,
+        "created_at": current_page.get("created_at", "unknown"),
+        "created_by": current_page.get("created_by", "system"),
+        "query": current_page.get("query", ""),
+        "sections_count": len(current_page.get("sections", [])),
+        "is_current": True
+    }
+    
+    return {
+        "page_id": page_id,
+        "current_version": current_version,
+        "version_history": versions,
+        "total_versions": len(versions) + 1
+    }
+
+
+@router.post("/{page_id}/versions")
+async def create_page_version(page_id: str, description: Optional[str] = None):
+    """Create a new version snapshot of a page"""
+    
+    from pathlib import Path
+    import json
+    from datetime import datetime
+    
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Page not found")
+    
+    # Load current page
+    current_page = json.loads(path.read_text(encoding="utf-8"))
+    
+    # Create version snapshot
+    version_entry = {
+        "version": len(VERSIONS.get(page_id, [])) + 1,
+        "created_at": datetime.utcnow().isoformat(),
+        "description": description or f"Version snapshot {len(VERSIONS.get(page_id, [])) + 1}",
+        "query": current_page.get("query", ""),
+        "sections_count": len(current_page.get("sections", [])),
+        "snapshot": current_page.copy()  # Full page snapshot
+    }
+    
+    # Store version
+    VERSIONS.setdefault(page_id, []).append(version_entry)
+    
+    return {
+        "version_created": version_entry["version"],
+        "description": version_entry["description"],
+        "created_at": version_entry["created_at"]
+    }
