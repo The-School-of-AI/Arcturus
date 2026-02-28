@@ -16,6 +16,10 @@ from shared.state import (
     get_remme_store,
     get_remme_extractor,
     signal_run_complete,
+    push_stream_chunk,
+    finish_stream,
+    has_stream_queue,
+    get_stream_chunk_count,
     PROJECT_ROOT,
 )
 from core.loop import AgentLoop4
@@ -36,6 +40,8 @@ remme_extractor = get_remme_extractor()
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
+    source: str = "web" # "web" or "voice"
+    stream: bool = False # Whether the caller expects a streaming response
     
     def __init__(self, **data):
         super().__init__(**data)
@@ -139,7 +145,7 @@ def _extract_voice_output(context) -> str:
     return "I've completed your request."
 
 
-async def process_run(run_id: str, query: str):
+async def process_run(run_id: str, query: str, source: str = "web", stream: bool = False):
     """
     Background task: retrieve Remme memories, run agent loop, extract new memories.
     WATCHTOWER: Root span for the entire agent run.
@@ -415,6 +421,42 @@ async def process_run(run_id: str, query: str):
                             final_result["summary"] = output_str.strip() if output_str else "Completed."
                 except Exception as e:
                     print(f"⚠️ Extraction Error: {e}")
+                    # Ensure output is always set, even if extraction failed
+                    if "output" not in final_result:
+                        final_result["output"] = "I've processed your request."
+
+            # ── Voice pipeline: signal completion ──────────────────────────────
+            # NOTE: Text chunks are pushed incrementally per-node by _execute_dag
+            # (via push_stream_chunk). Here we only need to:
+            #   1. Close the stream queue with finish_stream (TTS consumer: no more chunks)
+            #   2. Signal the completion Event (for the Event-based / non-streamed path)
+            voice_output = final_result.get("output", "I've completed your request.")
+            output_len = len(voice_output) if voice_output else 0
+            try:
+                if has_stream_queue(run_id):
+                    # Chunks were already pushed incrementally — just close the stream.
+                    if get_stream_chunk_count(run_id) == 0:
+                        if not voice_output or not voice_output.strip():
+                            voice_output = "I've completed your request."
+                        push_stream_chunk(run_id, voice_output)
+                        print(f"📡 [Voice] Fallback: pushed full output for run {run_id} ({output_len} chars)")
+                    else:
+                        print(f"📡 [Voice] Closing stream for run {run_id} "
+                              f"(chunks were pushed incrementally)")
+
+                    finish_stream(run_id)
+                elif source == "voice" and stream:
+                    # Only warn if it's a voice run and we EXPECTED streaming but the queue is missing
+                    print(f"⚠️ [Voice] No stream queue registered for run {run_id}! "
+                          f"Response not queued for TTS: "
+                          f"{voice_output[:100] if output_len > 100 else voice_output}")
+
+                # Signal run complete (for the Event-based / non-streaming path)
+                signal_run_complete(run_id, voice_output)
+            except Exception as e:
+                print(f"❌ [Voice] Failed to signal voice pipeline: {e}")
+                import traceback
+                traceback.print_exc()
 
             return final_result
 
@@ -426,7 +468,7 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     run_id = str(int(datetime.now().timestamp()))
     
     # Start background execution
-    background_tasks.add_task(process_run, run_id, request.query)
+    background_tasks.add_task(process_run, run_id, request.query, request.source, request.stream)
     
     return {
         "id": run_id,

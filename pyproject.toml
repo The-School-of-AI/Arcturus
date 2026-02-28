@@ -62,6 +62,7 @@ dependencies = [
     "websocket-client>=1.9.0",
     "pocketsphinx>=5.0.4",
     "azure-cognitiveservices-speech>=1.48.2",
+    "piper-tts>=1.2.0",
 ]
 
 [tool.setuptools.packages.find]

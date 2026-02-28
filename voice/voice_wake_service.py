@@ -8,14 +8,8 @@ from datetime import datetime
 from voice.audio_input import AudioInput
 from voice.wake_engine import create_wake_engine
 from voice.config import VOICE_CONFIG
-
-# ── VAD (Voice Activity Detection) parameters ───────────────────
-# RMS energy threshold for detecting user speech during TTS playback.
-# If the mic RMS exceeds this for BARGE_IN_FRAMES consecutive frames,
-# we treat it as the user interrupting.
-BARGE_IN_RMS_THRESHOLD = 1500     # int16 scale (0–32768)
-BARGE_IN_FRAMES        = 3        # consecutive loud frames needed
-# ────────────────────────────────────────────────────────────────
+from voice.barge_in import BargeInDetector, BargeInConfig
+from shared.state import tts_is_speaking, tts_in_barge_in_grace_window
 
 
 class VoiceWakeService:
@@ -31,7 +25,22 @@ class VoiceWakeService:
         self.orchestrator = None  # Will be set after initialization
         self._running = False
         self._thread = None
-        self._loud_frame_streak = 0  # consecutive frames above VAD threshold
+
+        # Robust barge-in detector (separate from wake/VAD/STT path).
+        bi = VOICE_CONFIG.get("barge_in", {}) or {}
+        self._barge = BargeInDetector(
+            sample_rate=self.engine.sample_rate,
+            frame_length=self.engine.frame_length,
+            config=BargeInConfig(
+                # Requirements: 120–200ms continuous speech; choose mid.
+                min_continuous_speech_ms=float(bi.get("min_speech_ms", 160.0)),
+                # Requirements: ~2.0–2.5× noise floor; choose mid.
+                energy_ratio_threshold=float(bi.get("energy_ratio", 2.5)),
+                # Near-field gates (reduce distant-speaker false barge-in).
+                min_absolute_rms=float(bi.get("min_absolute_rms", 900.0)),
+                min_rms_above_noise=float(bi.get("min_rms_above_noise", 250.0)),
+            ),
+        )
 
     def _on_internal_wake(self):
         """Called directly by the engine thread when detection occurs"""
@@ -64,6 +73,8 @@ class VoiceWakeService:
             pcm = self.audio.read()  # Drain priming frames
             if pcm is None:
                 continue  # read timed out — skip this iteration
+            # Establish an initial ambient noise floor during warmup.
+            self._barge.observe_ambient(pcm)
             # Accumulate RMS over last half of warmup to check mic is live
             if i > warmup_frames // 2:
                 samples = np.array(pcm, dtype=np.float64)
@@ -86,39 +97,56 @@ class VoiceWakeService:
                 if pcm is None:
                     continue
 
-                # 1. Always process wake word (calls _on_internal_wake on match)
-                self.engine.process(pcm)
+                state = self.orchestrator.state if self.orchestrator else "IDLE"
+
+                # ── HARD GATE mic → VAD/STT during TTS SPEAKING ─────────────
+                # Non-negotiable: while TTS is speaking, mic frames must NOT reach
+                # wake/VAD/STT. We still allow *barge-in detection* after grace,
+                # via a separate detector that does not feed STT.
+                if state != "SPEAKING":
+                    # Wake engine is allowed in IDLE/LISTENING/THINKING.
+                    self.engine.process(pcm)
 
                 if not self.orchestrator:
+                    # No downstream pipeline yet; keep learning ambient floor.
+                    self._barge.observe_ambient(pcm)
                     continue
 
-                state = self.orchestrator.state
-
-                # 2. Push audio to STT while LISTENING
                 if state == "LISTENING":
+                    # Feed STT only while listening (never during TTS).
                     if self.orchestrator.stt:
                         self.orchestrator.stt.push_audio(pcm)
-                    self._loud_frame_streak = 0  # reset VAD counter
+                    # Update ambient noise floor continuously when not speaking.
+                    self._barge.observe_ambient(pcm)
+                    self._barge.reset_speech_streak()
 
-                # 3. VAD barge-in: detect user speech during SPEAKING
+                elif state in ("IDLE", "THINKING"):
+                    # Keep learning ambient noise while idle/thinking.
+                    self._barge.observe_ambient(pcm)
+                    self._barge.reset_speech_streak()
+
                 elif state == "SPEAKING":
-                    # Suppress barge-in while TTS is actively outputting audio —
-                    # the mic picks up our own speaker output and the VAD
-                    # mistakes it for user speech (echo/feedback loop).
-                    tts = getattr(self.orchestrator, 'tts', None)
-                    if tts and tts.is_speaking:
-                        # TTS is still playing — any loud audio is just echo
-                        self._loud_frame_streak = 0
-                    elif self._is_speech(pcm):
-                        self._loud_frame_streak += 1
-                        if self._loud_frame_streak >= BARGE_IN_FRAMES:
-                            print("⚡ [VAD] User speech detected — barge-in!")
-                            self._loud_frame_streak = 0
-                            self.orchestrator.interrupt()
-                    else:
-                        self._loud_frame_streak = 0
+                    # Hard gate: do not process wake engine, do not feed STT, do not
+                    # call any existing VAD modules here.
+                    if not tts_is_speaking():
+                        # If orchestrator says SPEAKING but TTS isn't active, treat as ambient.
+                        self._barge.observe_ambient(pcm)
+                        self._barge.reset_speech_streak()
+                        continue
+
+                    # Grace window: suppress barge-in completely for ~300ms on TTS start.
+                    if tts_in_barge_in_grace_window():
+                        self._barge.reset_speech_streak()
+                        continue
+
+                    interrupt, rms, ratio = self._barge.should_interrupt(pcm)
+                    if interrupt:
+                        # Minimal logging: orchestrator will log state transition.
+                        self._barge.reset_speech_streak()
+                        self.orchestrator.interrupt()
+                    # else: keep accumulating until continuous speech threshold is hit.
                 else:
-                    self._loud_frame_streak = 0
+                    self._barge.reset_speech_streak()
 
             except KeyboardInterrupt:
                 # Ctrl+C pressed while inside the audio loop — stop cleanly
@@ -128,14 +156,6 @@ class VoiceWakeService:
             except Exception as e:
                 if self._running:
                     print(f"⚠️ [Voice] Audio loop error: {e}")
-
-
-    @staticmethod
-    def _is_speech(pcm) -> bool:
-        """Simple energy-based VAD: True if frame RMS exceeds threshold."""
-        samples = np.array(pcm, dtype=np.int16)
-        rms = np.sqrt(np.mean(samples.astype(np.float64) ** 2))
-        return rms > BARGE_IN_RMS_THRESHOLD
 
     def _flush_audio(self):
         q = self.audio.q

@@ -77,6 +77,27 @@ VOICE_CONFIG = {
     },
 
     # -----------------------------
+    # Barge-in configuration (mic→TTS interruption)
+    # -----------------------------
+    # These thresholds intentionally bias toward *near-field* speech to avoid
+    # distant talkers or background TV triggering interruption.
+    "barge_in": {
+        # Suppress barge-in detection for this long after TTS starts
+        # (attack phase / echo leakage).
+        "grace_ms": 300,
+
+        # Continuous speech required (120–200ms recommended).
+        "min_speech_ms": 160,
+
+        # Energy must be at least this multiple of ambient noise floor.
+        "energy_ratio": 2.5,
+
+        # Near-field gates (int16 RMS units).
+        "min_absolute_rms": 900,
+        "min_rms_above_noise": 250,
+    },
+
+    # -----------------------------
     # STT configuration
     # -----------------------------
     # Provider: "whisper" (local, private) or "deepgram" (cloud, faster)
@@ -102,12 +123,16 @@ VOICE_CONFIG = {
     },
 
     # -----------------------------
-    # TTS configuration (Azure Speech)
+    # TTS configuration
     # -----------------------------
-    # Credentials loaded from env: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
-    "tts": {
-        "voice_name": "en-US-JennyNeural",   # default (overridden by active persona)
+    # Provider selection: "azure" (cloud, premium) or "piper" (local, offline, streaming)
+    "tts_provider": "piper",
 
+    # Azure Speech credentials loaded from env: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
+    "tts": {
+        "voice_name": "en-US-JennyNeural",  
+         # default (overridden by active persona)
+        "streaming_enabled": True,
         # Active persona — must match a key in "personas" below
         "active_persona": "professional",
 
@@ -139,4 +164,28 @@ VOICE_CONFIG = {
             },
         },
     },
+
+    # -----------------------------
+    # Piper TTS configuration (local, offline)
+    # -----------------------------
+    # Download models from: https://huggingface.co/rhasspy/piper-voices
+    # Place .onnx + .onnx.json under voice/piper_models/
+    "piper_tts": {
+        # Path to the .onnx model file (relative paths resolved from voice/ dir)
+        "model_path": os.path.join(_VOICE_DIR, "piper_models", "en_US-lessac-medium.onnx"),
+
+        # Speech speed: 1.0 = normal, < 1.0 = faster, > 1.0 = slower
+        "length_scale": 1.0,
+
+        # Pause between sentences in seconds
+        "sentence_silence": 0.15,
+
+        # Speaker ID (for multi-speaker models, None for single-speaker)
+        "speaker_id": None,
+
+        # Enable streaming mode: start speaking as Nexus chunks arrive
+        # instead of waiting for the full response
+        "streaming_enabled": True,
+    },
 }
+
