@@ -38,6 +38,7 @@ class MessageFormatter:
         "googlechat": "_format_googlechat",
         "imessage": "_format_plain",  # iMessage renders plain text natively
         "teams": "_format_teams",
+        "signal": "_format_plain",  # Signal renders plain text natively
     }
 
     def format(self, text: str, channel: str, **kwargs) -> str:

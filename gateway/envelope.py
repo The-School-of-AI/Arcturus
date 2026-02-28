@@ -439,6 +439,51 @@ class MessageEnvelope:
             },
         )
 
+    @classmethod
+    def from_signal(
+        cls,
+        phone_number: str,
+        sender_name: str,
+        text: str,
+        message_id: str,
+        is_group: bool = False,
+        group_id: Optional[str] = None,
+        is_bot: bool = False,
+        **kwargs,
+    ) -> "MessageEnvelope":
+        """Create a MessageEnvelope from a Signal inbound message.
+
+        Args:
+            phone_number: Sender's E.164 phone number (``+15551234567``).
+            sender_name: Sender's Signal display name or phone number.
+            text: Message text.
+            message_id: signal-cli message timestamp (used as unique ID).
+            is_group: Whether the message was sent to a group.
+            group_id: Signal group ID when ``is_group`` is True.
+            is_bot: Whether the sender is a bot (always False for Signal).
+            **kwargs: Additional metadata to store.
+
+        Returns:
+            MessageEnvelope instance.
+        """
+        conversation_id = group_id if is_group and group_id else phone_number
+        return cls(
+            channel="signal",
+            channel_message_id=message_id,
+            sender_id=phone_number,
+            sender_name=sender_name,
+            content=cls.normalize_text(text),
+            thread_id=conversation_id,
+            conversation_id=conversation_id,
+            sender_is_bot=is_bot,
+            metadata={
+                "phone_number": phone_number,
+                "is_group": is_group,
+                "group_id": group_id,
+                **kwargs,
+            },
+        )
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert envelope to dictionary for serialization."""
         return {

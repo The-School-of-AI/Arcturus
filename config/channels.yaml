@@ -128,6 +128,23 @@ channels:
       max_retries: 3
       retry_backoff_seconds: 1.0
 
+  # Signal — requires signal-cli (https://github.com/AsamK/signal-cli) and
+  # the signal_bridge/app.py Python sidecar running alongside it.
+  # signal-cli daemon: signal-cli -a +E164 daemon --http
+  signal:
+    enabled: true
+    # URL of the signal_bridge Python HTTP sidecar
+    bridge_url_env: SIGNAL_BRIDGE_URL
+    # Shared HMAC-SHA256 secret for bridge ↔ FastAPI auth (leave empty for dev mode)
+    bridge_secret_env: SIGNAL_BRIDGE_SECRET
+    # Signal renders plain text; no Markdown conversion needed
+    parse_mode: plain
+    policies:
+      group_activation: mention-only
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
 # Global routing defaults (overridden per channel above)
 routing:
   default_queue_mode: serial   # "serial" | "parallel"

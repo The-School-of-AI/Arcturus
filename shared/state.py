@@ -182,6 +182,7 @@ def get_message_bus():
         from channels.googlechat import GoogleChatAdapter
         from channels.imessage import iMessageAdapter
         from channels.teams import TeamsAdapter
+        from channels.signal import SignalAdapter
         formatter = MessageFormatter()
         group_activation = _load_group_activation()
         router = MessageRouter(
@@ -201,6 +202,7 @@ def get_message_bus():
                 "googlechat": GoogleChatAdapter(),
                 "imessage": iMessageAdapter(),
                 "teams": TeamsAdapter(),
+                "signal": SignalAdapter(),
             },
         )
     return _message_bus

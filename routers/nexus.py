@@ -665,3 +665,72 @@ async def imessage_inbound(request: Request) -> Dict[str, Any]:
     await bus.roundtrip(envelope)
 
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Signal inbound
+# ---------------------------------------------------------------------------
+
+
+@router.post("/signal/inbound")
+async def signal_inbound(request: Request) -> Dict[str, Any]:
+    """Receive an inbound Signal message forwarded by the signal-cli bridge.
+
+    The signal_bridge/app.py sidecar polls signal-cli every 2 seconds and
+    POSTs new messages with the following JSON body:
+
+        {
+          "message_id":  "1740650000000",
+          "phone_number": "+15551234567",
+          "sender_name":  "Alice",
+          "text":         "hello",
+          "is_group":     false,
+          "group_id":     null,
+          "timestamp":    "2026-02-28T10:00:00Z"
+        }
+
+    The ``X-Signal-Secret`` header carries an optional HMAC-SHA256 signature
+    over the raw body.  Verification is skipped when ``SIGNAL_BRIDGE_SECRET``
+    is empty (dev mode).
+    """
+    body = await request.body()
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    # 1. Optional HMAC-SHA256 signature verification.
+    bus = _get_bus()
+    adapter = bus.adapters.get("signal")
+    bridge_secret: str = getattr(adapter, "bridge_secret", "") if adapter else ""
+    if bridge_secret:
+        sig = request.headers.get("X-Signal-Secret", "")
+        from channels.signal import SignalAdapter as _SignalAdapter
+        if not _SignalAdapter.verify_signature(body, sig, bridge_secret):
+            raise HTTPException(status_code=403, detail="Invalid Signal bridge signature")
+
+    # 2. Extract fields.
+    message_id = payload.get("message_id") or str(uuid.uuid4())
+    text = (payload.get("text") or "").strip()
+
+    # Guard: skip empty text (reactions, receipts, etc.)
+    if not text:
+        return {"ok": True, "skipped": True, "reason": "empty_text"}
+
+    phone_number = payload.get("phone_number", "unknown")
+    sender_name = payload.get("sender_name") or phone_number
+    is_group = bool(payload.get("is_group", False))
+    group_id = payload.get("group_id")
+
+    # 3. Build envelope and roundtrip through the bus.
+    envelope = MessageEnvelope.from_signal(
+        phone_number=phone_number,
+        sender_name=sender_name,
+        text=text,
+        message_id=message_id,
+        is_group=is_group,
+        group_id=group_id,
+    )
+    await bus.roundtrip(envelope)
+
+    return {"ok": True}
