@@ -1,5 +1,4 @@
 
-import os
 import json
 import re
 import time
@@ -23,54 +22,43 @@ class AppGenerator:
         # Ensure directories exist
         self.apps_dir.mkdir(exist_ok=True)
 
-    def _get_model_config(self, key: str = "text_generation") -> str:
+    def _get_model_config(self, key: str = "text_generation") -> tuple:
+        """Returns (model_name, provider_type) tuple."""
         try:
             profile = yaml.safe_load((self.config_dir / "profiles.yaml").read_text())
             models_config = json.loads((self.config_dir / "models.json").read_text())
-            
+
             model_key = profile.get("llm", {}).get(key, "gemini")
             model_info = models_config.get("models", {}).get(model_key, {})
-            return model_info.get("model", "gemini-2.5-flash")
+            provider = model_info.get("type", "gemini")
+            model_name = model_info.get("model", "gemini-2.5-flash")
+            return model_name, provider
         except:
-            return "gemini-2.5-flash"
+            return "gemini-2.5-flash", "gemini"
 
     async def generate_frontend(self, prompt: str, model_override: Optional[str] = None) -> Dict[str, Any]:
         """Generate UI JSON configuration."""
         print(f"[Generator] Generating Frontend for: {prompt[:50]}...")
-        
+
         # Load prompt from Skill
         try:
             from core.skills.library.appgenerationprompt.skill import AppgenerationpromptSkill
             skill = AppgenerationpromptSkill()
-            # The prompt expects {{USER_REQUEST}}, but the code was using {{USER_PROMPT}}
-            # Let's align with the skill's template
             generation_prompt = skill.prompt_text.replace("{{USER_REQUEST}}", prompt)
-            generation_prompt = generation_prompt.replace("{{USER_PROMPT}}", prompt) # Handle both just in case
+            generation_prompt = generation_prompt.replace("{{USER_PROMPT}}", prompt)
         except ImportError:
              raise ImportError("AppgenerationpromptSkill not found. Ensure core.skills.library.appgenerationprompt is available.")
 
-        
-        # Start AI
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
-        model = model_override or self._get_model_config()
-        
-        # Call Gemini
-        google_search_tool = types.Tool(google_search=types.GoogleSearch())
-        
-        response = client.models.generate_content(
-            model=model,
-            contents=generation_prompt,
-            config=types.GenerateContentConfig(
-                tools=[google_search_tool],
-                temperature=0.3
-            )
-        )
-        
+        model_name, provider = self._get_model_config()
+        if model_override:
+            model_name = model_override
+
+        from core.model_manager import ModelManager
+        mm = ModelManager(model_name, provider=provider)
+        response_text = await mm.generate_text(generation_prompt)
+
         try:
-            return self._extract_json(response.text)
+            return self._extract_json(response_text)
         except Exception as e:
             print(f"[Generator] JSON Extract failed: {e}")
             raise
@@ -78,31 +66,25 @@ class AppGenerator:
     async def generate_backend(self, prompt: str, frontend_spec: Dict[str, Any], model_override: Optional[str] = None) -> str:
         """Generate Python backend code."""
         print(f"[Generator] Generating Backend...")
-        
+
         # Load prompt
         prompt_file = self.prompts_dir / "BackendGenerationPrompt.md"
         if not prompt_file.exists():
-            # Fallback simple prompt
             generation_prompt = f"Create a FastAPI router for this app:\nUser Prompt: {prompt}\nSpec: {json.dumps(frontend_spec)}"
         else:
             generation_prompt = prompt_file.read_text()
             generation_prompt = generation_prompt.replace("{{USER_PROMPT}}", prompt)
             generation_prompt = generation_prompt.replace("{{FRONTEND_SPEC}}", json.dumps(frontend_spec, indent=2))
-            
-        # Start AI
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
-        model = model_override or self._get_model_config()
-        
-        response = client.models.generate_content(
-            model=model,
-            contents=generation_prompt,
-            config=types.GenerateContentConfig(temperature=0.2)
-        )
-        
-        return self._extract_code(response.text)
+
+        model_name, provider = self._get_model_config()
+        if model_override:
+            model_name = model_override
+
+        from core.model_manager import ModelManager
+        mm = ModelManager(model_name, provider=provider)
+        response_text = await mm.generate_text(generation_prompt)
+
+        return self._extract_code(response_text)
 
     async def generate_app(self, name: str, prompt: str, model_override: Optional[str] = None) -> Dict[str, Any]:
         """Orchestrate full app generation."""

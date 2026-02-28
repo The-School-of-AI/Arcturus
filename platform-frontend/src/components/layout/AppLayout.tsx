@@ -5,7 +5,7 @@ import { WorkspacePanel } from '../workspace/WorkspacePanel';
 import { GraphCanvas } from '../graph/GraphCanvas';
 import { FlowWorkspace } from '../workspace/FlowWorkspace';
 import { RunTimeline } from '@/features/replay/RunTimeline';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Search, X, Plus } from 'lucide-react';
 import { DocumentViewer } from '../rag/DocumentViewer';
 import { DocumentAssistant } from '../rag/DocumentAssistant';
 import { NotesEditor } from '../notes/NotesEditor';
@@ -14,6 +14,104 @@ import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
 import { InboxPanel } from '../inbox/InboxPanel';
 import CanvasHost from '@/features/canvas/CanvasHost';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Button } from '../ui/button';
+
+// ── Query Approval Dialog (editable) ──
+const QueryApprovalDialog: React.FC<{
+    approval: { queries: any[]; runId: string; originalQuery: string };
+    onApprove: (runId: string, queries: any[]) => Promise<void>;
+}> = ({ approval, onApprove }) => {
+    const [editableQueries, setEditableQueries] = useState<{ query: string; dimension: string }[]>(() =>
+        approval.queries.map((q: any) => ({
+            query: typeof q === 'string' ? q : (q.query || ''),
+            dimension: typeof q === 'string' ? 'general' : (q.dimension || 'general'),
+        }))
+    );
+
+    const updateQuery = (index: number, value: string) => {
+        setEditableQueries(prev => prev.map((q, i) => i === index ? { ...q, query: value } : q));
+    };
+
+    const removeQuery = (index: number) => {
+        setEditableQueries(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const addQuery = () => {
+        setEditableQueries(prev => [...prev, { query: '', dimension: `custom_${prev.length + 1}` }]);
+    };
+
+    const handleApprove = async () => {
+        const cleaned = editableQueries
+            .map(q => ({ ...q, query: q.query.trim() }))
+            .filter(q => q.query.length > 0);
+        if (cleaned.length > 0) {
+            await onApprove(approval.runId, cleaned);
+        }
+    };
+
+    const hasEmptyQuery = editableQueries.some(q => q.query.trim().length === 0);
+    const canApprove = editableQueries.length > 0 && !hasEmptyQuery;
+
+    return (
+        <Dialog open={true} onOpenChange={() => {}}>
+            <DialogContent className="sm:max-w-2xl bg-card border-border" onPointerDownOutside={e => e.preventDefault()}>
+                <DialogHeader>
+                    <DialogTitle className="text-foreground flex items-center gap-2">
+                        <Search className="w-5 h-5 text-neon-yellow" />
+                        Review Research Queries
+                    </DialogTitle>
+                    <DialogDescription>
+                        Edit, remove, or add queries below. Each query will be searched by an independent retriever agent.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 max-h-80 overflow-y-auto py-2 pr-1">
+                    {editableQueries.map((q, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 border border-border/50">
+                            <span className="text-neon-yellow font-bold text-sm mt-2.5 w-5 text-center shrink-0">{i + 1}</span>
+                            <div className="flex-1 min-w-0">
+                                <textarea
+                                    value={q.query}
+                                    onChange={e => updateQuery(i, e.target.value)}
+                                    rows={2}
+                                    className="w-full bg-background border border-border rounded px-2 py-1.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-neon-yellow/50"
+                                />
+                                <p className="text-xs text-muted-foreground mt-0.5 px-1">{q.dimension}</p>
+                            </div>
+                            <button
+                                onClick={() => removeQuery(i)}
+                                disabled={editableQueries.length <= 1}
+                                className="mt-2 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+                                title="Remove query"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+                <DialogFooter className="flex justify-between sm:justify-between">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addQuery}
+                        disabled={editableQueries.length >= 8}
+                        className="gap-1"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Query
+                    </Button>
+                    <Button
+                        onClick={handleApprove}
+                        disabled={!canApprove}
+                        className="bg-neon-yellow text-charcoal-950 hover:bg-neon-yellow/90 font-bold disabled:opacity-50"
+                    >
+                        Approve & Continue ({editableQueries.filter(q => q.query.trim()).length})
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -75,6 +173,10 @@ export const AppLayout: React.FC = () => {
     const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef<'left' | 'right' | null>(null);
+
+    // Query Approval Gate
+    const pendingQueryApproval = useAppStore(s => s.pendingQueryApproval);
+    const approveQueries = useAppStore(s => s.approveQueries);
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
 
@@ -270,6 +372,14 @@ export const AppLayout: React.FC = () => {
                     </>
                 )}
             </div>
+
+            {/* Query Approval Dialog — always mounted */}
+            {pendingQueryApproval && (
+                <QueryApprovalDialog
+                    approval={pendingQueryApproval}
+                    onApprove={approveQueries}
+                />
+            )}
         </div>
     );
 };

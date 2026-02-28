@@ -113,6 +113,15 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const [researchMode, setResearchMode] = React.useState<"standard" | "deep_research">("standard");
     const [focusMode, setFocusMode] = React.useState("general");
 
+    // Reset dialog state when closed
+    React.useEffect(() => {
+        if (!isNewRunOpen) {
+            setNewQuery("");
+            setResearchMode("standard");
+            setFocusMode("general");
+        }
+    }, [isNewRunOpen]);
+
     // Filter runs
     const filteredRuns = React.useMemo(() => {
         if (!searchQuery.trim()) return runs;
@@ -233,25 +242,23 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                     </Button>
                                                 </div>
                                             </div>
-                                            {/* Research Mode Selector */}
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-muted-foreground">Research Mode</label>
-                                                <Select value={researchMode} onValueChange={(v: "standard" | "deep_research") => setResearchMode(v)}>
-                                                    <SelectTrigger className="bg-muted border-input text-foreground">
-                                                        <SelectValue placeholder="Standard" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="standard">Standard Research</SelectItem>
-                                                        <SelectItem value="deep_research">Deep Research</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            {/* Focus Mode — only visible for Deep Research */}
-                                            {researchMode === 'deep_research' && (
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-muted-foreground">Focus Mode</label>
+                                            {/* Research Mode — Toggle + Inline Focus */}
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setResearchMode(researchMode === "standard" ? "deep_research" : "standard")}
+                                                    className={cn(
+                                                        "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 border",
+                                                        researchMode === "deep_research"
+                                                            ? "bg-primary/15 text-primary border-primary/30 shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
+                                                            : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:border-border"
+                                                    )}
+                                                >
+                                                    <Search className="w-3 h-3" />
+                                                    Deep Research
+                                                </button>
+                                                {researchMode === 'deep_research' && (
                                                     <Select value={focusMode} onValueChange={setFocusMode}>
-                                                        <SelectTrigger className="bg-muted border-input text-foreground">
+                                                        <SelectTrigger className="h-[30px] w-auto min-w-[110px] bg-muted/50 border-border/50 text-foreground text-xs rounded-full px-3 animate-in fade-in slide-in-from-left-2 duration-200">
                                                             <SelectValue placeholder="General" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -263,11 +270,8 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                             <SelectItem value="writing">Writing</SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                    <p className="text-xs text-muted-foreground/70">
-                                                        Deep Research performs iterative multi-step research with gap analysis, confidence scoring, and comprehensive citations.
-                                                    </p>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                         <DialogFooter>
                                             <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>

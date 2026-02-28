@@ -146,6 +146,8 @@ from routers import optimizer
 app.include_router(optimizer.router, prefix="/api")
 from routers import studio as studio_router
 app.include_router(studio_router.router, prefix="/api")
+from routers import search as search_router
+app.include_router(search_router.router, prefix="/api")
 
 
 

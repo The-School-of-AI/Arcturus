@@ -110,39 +110,52 @@ Example node:
 ## FOCUS MODE CONSTRAINTS
 
 The input may contain a `focus_mode` field. When set, ALL RetrieverAgent tasks (Phase 2 and Phase 4)
-MUST include focus-specific constraints in their `agent_prompt`:
+MUST include focus-specific constraints in their `agent_prompt`.
+
+### 🚨 CRITICAL AGENT CONSTRAINT FOR ALL FOCUS MODES
+- **Phase 2 and Phase 4 (search phases): ONLY use RetrieverAgent.** NEVER use CoderAgent for web search or data retrieval.
+- **Phase 1 and Phase 3 (analysis phases): ONLY use ThinkerAgent.** NEVER use CoderAgent for decomposition or gap analysis.
+- **Phase 5 (synthesis): ONLY use SummarizerAgent.**
+- **Phase 6 (formatting): ONLY use FormatterAgent.**
+- **CoderAgent should ONLY appear in a deep research plan if there is an explicit computational task** (e.g., calculate CAGR, generate a chart, run a statistical model on retrieved data). It is NOT for data gathering.
 
 ### focus_mode: "academic"
 - Append to search queries: `site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov OR site:semanticscholar.org`
 - Instruct RetrieverAgent: "Prioritize peer-reviewed papers, academic journals, and research institutions. Ignore blog posts and opinion pieces."
 - Citations must use APA format: Author (Year). Title. Journal, Volume(Issue), Pages. DOI/URL
 - Include: publication year, journal name, citation count if available
+- **Agent rule**: Use RetrieverAgent for all paper searches. Do NOT use CoderAgent or BrowserAgent.
 
 ### focus_mode: "news"
 - Append to search queries: `news OR latest OR breaking OR report`
 - Instruct RetrieverAgent: "Prioritize recent news articles from the last 7 days. Include publication date prominently. Prefer established news outlets."
 - Include publication date, outlet name, and reporter name in citations
 - Sort findings by recency
+- **Agent rule**: Use RetrieverAgent for all news searches. Do NOT use CoderAgent.
 
 ### focus_mode: "code"
 - Append to search queries: `site:github.com OR site:stackoverflow.com OR site:docs.python.org OR documentation`
 - Instruct RetrieverAgent: "Prioritize code repositories, technical documentation, and developer forums. Extract code snippets and API examples."
 - Include executable code blocks in report
 - Citation format: Repository/Documentation name, URL, last updated date
+- **Agent rule**: Use RetrieverAgent for doc/code searches. Use CoderAgent ONLY if the task requires running or testing code.
 
 ### focus_mode: "finance"
 - Append to search queries: `site:sec.gov OR financial report OR earnings OR market data OR investor`
 - Instruct RetrieverAgent: "Prioritize SEC filings, financial reports, earnings calls, and market data sources. Extract numerical data, percentages, and financial metrics."
 - Include data tables and numerical summaries in report
 - Citation format: Company/Source, Filing type, Date, URL
+- **Agent rule**: Use RetrieverAgent for ALL financial data retrieval (stock prices, SEC filings, earnings reports, market data). RetrieverAgent has access to yahoo_finance tools for stock data. Do NOT use CoderAgent for data retrieval. Use CoderAgent ONLY for financial calculations (CAGR, DCF models, ratio analysis) AFTER data has been retrieved by RetrieverAgent.
 
 ### focus_mode: "writing"
 - Instruct RetrieverAgent: "Focus on editorial content, style guides, writing techniques, and audience analysis. Look for examples of effective writing in the target genre/style."
 - Report should include tone analysis, audience targeting suggestions, and style recommendations
 - Less emphasis on citations, more on synthesis and creative guidance
+- **Agent rule**: Use RetrieverAgent for research. Do NOT use CoderAgent.
 
 ### focus_mode: "general" (or absent)
 - No special constraints. Use default search behavior.
+- **Agent rule**: Use RetrieverAgent for all web searches. CoderAgent only for computation tasks.
 
 ---
 

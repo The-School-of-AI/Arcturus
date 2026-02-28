@@ -71,6 +71,9 @@ class AgentLoop4:
         self.agent_runner = AgentRunner(multi_mcp)
         self.context = None  # Reference for external stopping
         self._tasks = set()  # Track active async tasks for immediate cancellation
+        self._query_approval_event = None  # asyncio.Event for query approval gate
+        self._pending_queries = None
+        self._approved_queries = None
         
         # Load profile for strategy settings
         from core.profile_loader import get_profile
@@ -211,6 +214,9 @@ class AgentLoop4:
                 async def run_planner():
                     # 🧠 Enable System 2 Reasoning for the Planner
                     # This ensures the plan is Verified and Refined before execution
+                    # In standard mode, exclude the deep_research skill so the planner
+                    # generates a simple plan instead of a 6-phase deep research pipeline
+                    planner_exclude = ["deep_research"] if research_mode != "deep_research" else []
                     return await self.agent_runner.run_agent(
                         "PlannerAgent",
                         {
@@ -223,7 +229,8 @@ class AgentLoop4:
                             "file_profiles": file_profiles,
                             "memory_context": memory_context
                         },
-                        use_system2=True
+                        use_system2=True,
+                        exclude_skills=planner_exclude
                     )
                 
                 plan_result = await self._track_task(retry_with_backoff(run_planner))
@@ -314,8 +321,11 @@ class AgentLoop4:
                 self._merge_plan_into_context(new_plan_graph)
 
                 try:
-                    # Phase 4: Execute DAG
-                    await self._track_task(self._execute_dag(self.context))
+                    # Phase 4: Execute DAG (with deep research expansion)
+                    if research_mode == "deep_research":
+                        await self._track_task(self._expand_deep_research_dag(self.context))
+                    else:
+                        await self._track_task(self._execute_dag(self.context))
 
                     if self.context.stop_requested:
                         break
@@ -379,16 +389,842 @@ class AgentLoop4:
         
         return has_new_leaf_clarification
 
+    # ===== DEEP RESEARCH: ENGINE-DRIVEN DAG EXPANSION =====
+
+    async def _expand_deep_research_dag(self, context):
+        """
+        Engine-driven DAG expansion for deep research mode.
+
+        Replaces PlannerAgent full plan generation with deterministic,
+        phase-by-phase graph expansion. Each phase:
+        1. Executes current pending nodes
+        2. Reads completed outputs
+        3. Creates next phase nodes/edges
+        4. Merges into graph (UI sees new nodes on next poll)
+        5. Executes new nodes
+
+        Phases:
+          1: T001 ThinkerAgent (query decomposition) — already in graph
+          2: N × RetrieverAgent (parallel search, one per sub-query)
+          3: ThinkerAgent (gap analysis)
+          4: SummarizerAgent (synthesis with citations)
+          5: FormatterAgent (final report)
+        """
+        focus_mode = context.plan_graph.graph.get('focus_mode')
+        original_query = context.plan_graph.graph.get('original_query', '')
+
+        # ── Strip planner's nodes beyond T001 ──
+        # The PlannerAgent creates a full plan (T001-T00N), but deep research mode
+        # replaces T002+ with engine-controlled nodes. If we don't remove them,
+        # _execute_dag will run the planner's T002-T00N with wrong prompts
+        # before the engine gets a chance to create its own.
+        keep_nodes = {"ROOT", "Query", "T001"}
+        remove_ids = [n for n in context.plan_graph.nodes if n not in keep_nodes]
+        for node_id in remove_ids:
+            context.plan_graph.remove_node(node_id)
+        if remove_ids:
+            log_step(f"Stripped {len(remove_ids)} planner nodes — engine will rebuild phases 2-6", symbol="🔧")
+
+        # ── Override T001 prompt with improved research decomposition ──
+        if "T001" in context.plan_graph.nodes:
+            focus_instruction = ""
+            if focus_mode:
+                focus_labels = {
+                    "academic": "Focus on academic and scholarly angles — peer-reviewed research, theoretical frameworks, key researchers, institutions, and landmark papers.",
+                    "news": "Focus on recent events, breaking developments, policy changes, and current affairs angles.",
+                    "code": "Focus on technical implementation, APIs, libraries, frameworks, code architecture, and developer ecosystem.",
+                    "finance": "Focus on financial aspects — market data, companies, valuations, economic impact, investment angles, and regulatory landscape.",
+                    "writing": "Focus on narrative craft, communication styles, audience analysis, and editorial perspectives.",
+                }
+                focus_instruction = (
+                    f"\nFOCUS MODE: {focus_mode.upper()}\n"
+                    f"{focus_labels.get(focus_mode, 'Apply general research best practices.')}\n"
+                    f"Weight your queries toward this focus while still maintaining breadth.\n"
+                )
+
+            context.plan_graph.nodes["T001"]["agent_prompt"] = (
+                f"You are a research strategist. Decompose the following query into 5-8 comprehensive "
+                f"sub-queries that independent search agents will execute in parallel.\n\n"
+                f"QUERY: '{original_query}'\n"
+                f"{focus_instruction}\n"
+                f"STRATEGY:\n"
+                f"- Consider every plausible interpretation and domain the query could refer to\n"
+                f"- For each domain, cover: definitions & fundamentals, technical depth, types & classifications, "
+                f"key players & real-world applications, recent trends\n"
+                f"- If the query implies geographic, temporal, or industry context, add queries scoped to that context\n"
+                f"- Include one synthesis query that compares/contrasts across identified domains\n"
+                f"- Each sub-query must be a complete, self-contained search string\n\n"
+                f"OUTPUT: JSON with key 'decomposed_queries' — a list of "
+                f"{{\"query\": \"<full search string>\", \"dimension\": \"<short label>\"}}"
+            )
+
+        # ── Phase 1: Execute T001 (ThinkerAgent — Query Decomposition) ──
+        log_step("Deep Research Phase 1: Query decomposition", symbol="🔬")
+        await self._track_task(self._execute_dag(context))
+
+        if context.stop_requested:
+            return
+
+        # Check T001 completed
+        t001_data = context.plan_graph.nodes.get("T001", {})
+        if t001_data.get("status") != "completed":
+            log_error(f"T001 did not complete (status: {t001_data.get('status')}). Cannot expand.")
+            return
+
+        # Extract sub-queries
+        gs = context.plan_graph.graph['globals_schema']
+        decomposed_raw = gs.get("decomposed_queries_T001")
+        sub_queries = self._extract_sub_queries(decomposed_raw)
+
+        if not sub_queries:
+            log_step("No sub-queries extracted, falling back to original query", symbol="⚠️")
+            sub_queries = [{"query": original_query, "dimension": "general"}]
+
+        sub_queries = sub_queries[:8]  # Cap at 8
+        num_queries = len(sub_queries)
+        log_step(f"Decomposed into {num_queries} sub-queries", symbol="📋")
+
+        # ── Query Approval Gate ──
+        # Pause and wait for user to approve decomposed queries before spawning retrievers
+        self._query_approval_event = asyncio.Event()
+        self._pending_queries = sub_queries
+        self._approved_queries = None
+
+        await event_bus.publish("query_approval_required", "AgentLoop4", {
+            "run_id": context.plan_graph.graph.get("session_id", ""),
+            "queries": sub_queries,
+            "original_query": original_query,
+        })
+        log_step("Waiting for user to approve research queries...", symbol="⏳")
+
+        await self._query_approval_event.wait()
+
+        # Use approved queries (may have been modified by user) or fallback to original
+        if self._approved_queries is not None:
+            sub_queries = self._approved_queries
+            num_queries = len(sub_queries)
+            log_step(f"User approved {num_queries} queries", symbol="✅")
+
+        self._query_approval_event = None
+        self._pending_queries = None
+        self._approved_queries = None
+
+        # ── Phase 2: Create N RetrieverAgent Nodes (Parallel) ──
+        retriever_nodes = []
+        retriever_edges = []
+        retriever_ids = []
+        retriever_write_keys = []
+
+        for i, sq in enumerate(sub_queries):
+            node_id = f"T{str(i + 2).zfill(3)}"  # T002, T003, ...
+            q_text = sq.get("query", original_query) if isinstance(sq, dict) else str(sq)
+            dimension = sq.get("dimension", f"dim_{i+1}") if isinstance(sq, dict) else f"dim_{i+1}"
+            write_key = f"initial_sources_{node_id}"
+
+            retriever_nodes.append({
+                "id": node_id,
+                "description": f"Search: {dimension}"[:120],
+                "agent": "RetrieverAgent",
+                "agent_prompt": self._build_retriever_prompt(q_text, focus_mode),
+                "reads": ["decomposed_queries_T001"],
+                "writes": [write_key],
+                "status": "pending"
+            })
+            retriever_edges.append({"source": "T001", "target": node_id})
+            retriever_ids.append(node_id)
+            retriever_write_keys.append(write_key)
+
+        self._merge_plan_into_context({"nodes": retriever_nodes, "edges": retriever_edges})
+        await event_bus.publish("dag_expanded", "AgentLoop4", {
+            "phase": 2, "new_nodes": retriever_ids,
+            "message": f"Searching {num_queries} dimensions with 15 URLs each"
+        })
+
+        log_step(f"Deep Research Phase 2: {num_queries} parallel searches", symbol="🔍")
+        await self._execute_steps_parallel(context, retriever_ids)
+
+        if context.stop_requested:
+            return
+
+        # Filter to only successfully completed retrievers
+        successful_ids = [rid for rid in retriever_ids
+                          if context.plan_graph.nodes.get(rid, {}).get("status") == "completed"]
+        successful_write_keys = [f"initial_sources_{rid}" for rid in successful_ids]
+
+        if not successful_ids:
+            log_error("All RetrieverAgents failed. Cannot continue deep research.")
+            return
+
+        # ── Phase 3: Gap Analysis ThinkerAgent ──
+        gap_id = f"T{str(num_queries + 2).zfill(3)}"
+        gap_analysis_key = f"gap_analysis_{gap_id}"
+
+        gap_node = {
+            "id": gap_id,
+            "description": "Analyze gaps and contradictions across sources",
+            "agent": "ThinkerAgent",
+            "agent_prompt": (
+                f"Analyze all collected research sources for coverage gaps, contradictions, "
+                f"and weak evidence. Read: {', '.join(successful_write_keys)}. "
+                f"Original query: '{original_query}'. "
+                f"Output JSON with: 'gap_analysis' (string summary of gaps found), "
+                f"'followup_queries' (list of 1-3 targeted search queries to fill the most critical gaps), "
+                f"'contradictions' (list of conflicting claims between sources)."
+            ),
+            "reads": successful_write_keys,
+            "writes": [gap_analysis_key],
+            "status": "pending"
+        }
+        gap_edges = [{"source": rid, "target": gap_id} for rid in successful_ids]
+
+        self._merge_plan_into_context({"nodes": [gap_node], "edges": gap_edges})
+        await event_bus.publish("dag_expanded", "AgentLoop4", {
+            "phase": 3, "new_nodes": [gap_id],
+            "message": "Analyzing gaps and contradictions"
+        })
+
+        log_step(f"Deep Research Phase 3: Gap analysis ({gap_id})", symbol="🔎")
+        await self._track_task(self._execute_dag(context))
+
+        if context.stop_requested:
+            return
+
+        # ── Phase 4: Targeted Deep Search (follow-up queries from gap analysis) ──
+        deep_write_keys = []
+        followup_ids = []
+        followup_queries = self._extract_followup_queries(context, gap_analysis_key)
+        node_offset = num_queries + 3  # next available node number
+
+        if followup_queries:
+            followup_nodes = []
+            followup_edges = []
+
+            for i, fq in enumerate(followup_queries):
+                fq_id = f"T{str(node_offset + i).zfill(3)}"
+                fq_write_key = f"deep_sources_{fq_id}"
+                followup_nodes.append({
+                    "id": fq_id,
+                    "description": f"Deep search: {fq[:80]}",
+                    "agent": "RetrieverAgent",
+                    "agent_prompt": self._build_retriever_prompt(fq, focus_mode),
+                    "reads": [gap_analysis_key],
+                    "writes": [fq_write_key],
+                    "status": "pending"
+                })
+                followup_edges.append({"source": gap_id, "target": fq_id})
+                followup_ids.append(fq_id)
+                deep_write_keys.append(fq_write_key)
+
+            self._merge_plan_into_context({"nodes": followup_nodes, "edges": followup_edges})
+            await event_bus.publish("dag_expanded", "AgentLoop4", {
+                "phase": 4, "new_nodes": followup_ids,
+                "message": f"Deep searching {len(followup_queries)} follow-up queries"
+            })
+
+            log_step(f"Deep Research Phase 4: {len(followup_queries)} targeted follow-up searches", symbol="🔬")
+            await self._execute_steps_parallel(context, followup_ids)
+            node_offset += len(followup_queries)
+
+            if context.stop_requested:
+                return
+
+            # Filter to successfully completed follow-up retrievers
+            deep_write_keys = [f"deep_sources_{fid}" for fid in followup_ids
+                               if context.plan_graph.nodes.get(fid, {}).get("status") == "completed"]
+        else:
+            log_step("Deep Research Phase 4: No follow-up queries needed — skipping", symbol="⏩")
+
+        # ── Build source index and pre-process sources before synthesis ──
+        all_retriever_keys = successful_write_keys + deep_write_keys
+        self._build_source_index(context, all_retriever_keys)
+        self._preprocess_sources(context, all_retriever_keys, sub_queries)
+
+        # ── Phase 5: SummarizerAgent ──
+        synth_id = f"T{str(node_offset).zfill(3)}"
+        synth_key = f"research_synthesis_{synth_id}"
+        synth_reads = ["processed_sources", "source_index", gap_analysis_key]
+
+        # Build focus-mode-specific synthesis instructions
+        focus_synth_extra = ""
+        if focus_mode == "code":
+            focus_synth_extra = (
+                "FOCUS MODE: CODE. You MUST preserve ALL code blocks from sources. "
+                "Wrap every code snippet in fenced markdown code blocks with the correct language tag "
+                "(```python, ```javascript, etc.). Include complete function signatures, class definitions, "
+                "and usage examples. Do NOT paraphrase or summarize code — include it verbatim. "
+                "Organize code examples by dimension/topic. For each code block, explain what it does "
+                "and cite its source using [[N]](url). "
+            )
+
+        synth_node = {
+            "id": synth_id,
+            "description": "Synthesize all sources into cited narrative",
+            "agent": "SummarizerAgent",
+            "agent_prompt": (
+                f"Synthesize ALL research sources into a comprehensive, exhaustive narrative. "
+                f"Read 'processed_sources' (organized by research dimension with excerpts) "
+                f"and 'source_index' (mapping source numbers to REAL URLs and titles). "
+                f"Original query: '{original_query}'. "
+                f"{focus_synth_extra}"
+                f"Cover EVERY research dimension. Cite EVERY source using [[N]](url) format "
+                f"where url is the ACTUAL URL from source_index or processed_sources — "
+                f"NEVER use example.com or any placeholder/made-up URL. "
+                f"Each source in processed_sources has 'url' and 'index' fields — use those exact URLs. "
+                f"Include per-paragraph confidence scoring (HIGH/MEDIUM/LOW). "
+                f"Surface contradictions explicitly. Minimum 1500 words."
+            ),
+            "reads": synth_reads,
+            "writes": [synth_key],
+            "status": "pending"
+        }
+
+        # Wire synthesis to gap analysis + all follow-up retrievers
+        synth_edges = [{"source": gap_id, "target": synth_id}]
+        for fid in followup_ids:
+            synth_edges.append({"source": fid, "target": synth_id})
+
+        self._merge_plan_into_context({
+            "nodes": [synth_node],
+            "edges": synth_edges
+        })
+        await event_bus.publish("dag_expanded", "AgentLoop4", {
+            "phase": 5, "new_nodes": [synth_id],
+            "message": "Synthesizing sources with citations"
+        })
+
+        log_step(f"Deep Research Phase 5: Synthesis ({synth_id})", symbol="📝")
+        await self._track_task(self._execute_dag(context))
+
+        if context.stop_requested:
+            return
+
+        # ── Phase 6: FormatterAgent ──
+        fmt_id = f"T{str(node_offset + 1).zfill(3)}"
+        fmt_key = f"formatted_report_{fmt_id}"
+
+        # Build focus-mode-specific formatter instructions
+        focus_fmt_extra = ""
+        if focus_mode == "code":
+            focus_fmt_extra = (
+                "FOCUS MODE: CODE. The report MUST include ALL code blocks from the synthesis. "
+                "Preserve every fenced code block verbatim — do NOT remove, truncate, or summarize code. "
+                "Use proper syntax highlighting (```python, ```javascript, etc.). "
+                "Add a dedicated '## Code Examples' or '## Implementation' section grouping all code snippets. "
+                "For each code block include: source citation, language, and brief explanation. "
+            )
+
+        fmt_node = {
+            "id": fmt_id,
+            "description": "Format final research report",
+            "agent": "FormatterAgent",
+            "agent_prompt": (
+                f"Generate the final research report from available data. "
+                f"Original query: '{original_query}'. "
+                f"Use all_globals_schema to find ALL available data even if some phases were incomplete. "
+                f"{focus_fmt_extra}"
+                f"Include: executive summary, key findings with confidence levels, "
+                f"detailed analysis, methodology, and clickable citation list. "
+                f"CRITICAL: Use source_index to get REAL URLs for citations — NEVER use example.com or placeholder URLs. "
+                f"Preserve all [[N]](url) citations from the synthesis exactly as-is. "
+                f"If some data is missing, note it but still produce the best report possible. "
+                f"Output the report under BOTH 'markdown_report' AND '{fmt_key}' keys in your JSON response."
+            ),
+            "reads": [synth_key, "source_index"],
+            "writes": [fmt_key],
+            "status": "pending"
+        }
+
+        self._merge_plan_into_context({
+            "nodes": [fmt_node],
+            "edges": [{"source": synth_id, "target": fmt_id}]
+        })
+        await event_bus.publish("dag_expanded", "AgentLoop4", {
+            "phase": 6, "new_nodes": [fmt_id],
+            "message": "Generating final report"
+        })
+
+        log_step(f"Deep Research Phase 6: Report formatting ({fmt_id})", symbol="📄")
+        await self._track_task(self._execute_dag(context))
+
+        # ── Fallback: Ensure FormatterAgent always produces output ──
+        fmt_status = context.plan_graph.nodes.get(fmt_id, {}).get("status")
+        if fmt_status != "completed":
+            log_step("FormatterAgent didn't complete — running fallback with available data", symbol="⚠️")
+            # Reset formatter to pending and clear dependency edges so it can run
+            if fmt_id in context.plan_graph.nodes:
+                context.plan_graph.nodes[fmt_id]["status"] = "pending"
+                context.plan_graph.nodes[fmt_id]["error"] = None
+            # Remove incoming edges so get_ready_steps() won't block on failed predecessors
+            predecessors = list(context.plan_graph.predecessors(fmt_id))
+            for pred in predecessors:
+                context.plan_graph.remove_edge(pred, fmt_id)
+            await self._track_task(self._execute_dag(context))
+
+        # ── Post-process: Fix citations with real URLs from source_index ──
+        self._fix_citations(context, synth_key)
+        self._fix_citations(context, fmt_key)
+
+        log_step("Deep research complete", symbol="✅")
+
+    def _fix_citations(self, context, output_key: str):
+        """Post-process markdown to replace placeholder/fake URLs with real source_index URLs.
+
+        Handles these patterns:
+          [[N]](any-url)  → [[N]](real-url)
+          [[N]]           → [[N]](real-url)
+          [N]             → [[N]](real-url) (only bare numeric refs)
+        """
+        import re as _re
+
+        gs = context.plan_graph.graph.get('globals_schema', {})
+        source_index = gs.get("source_index", {})
+        if not source_index:
+            return
+
+        text = gs.get(output_key)
+        if not text or not isinstance(text, str):
+            # Also check node output for markdown_report
+            for node_id in context.plan_graph.nodes:
+                node = context.plan_graph.nodes[node_id]
+                out = node.get("output", {})
+                if isinstance(out, dict):
+                    text = out.get("markdown_report") or out.get(output_key)
+                    if text and isinstance(text, str):
+                        break
+            if not text or not isinstance(text, str):
+                return
+
+        original_text = text
+
+        # Pattern 1: [[N]](url) → replace url with real one
+        def replace_bracketed_with_url(match):
+            n = match.group(1)
+            src = source_index.get(n) or source_index.get(str(n))
+            if src and src.get("url"):
+                title = src.get("title", f"Source {n}")
+                return f"[[{n}] {title}]({src['url']})"
+            return match.group(0)
+
+        text = _re.sub(r'\[\[(\d+)\]\]\([^)]*\)', replace_bracketed_with_url, text)
+
+        # Pattern 2: [[N]] without URL → add real URL
+        def replace_bracketed_no_url(match):
+            n = match.group(1)
+            src = source_index.get(n) or source_index.get(str(n))
+            if src and src.get("url"):
+                title = src.get("title", f"Source {n}")
+                return f"[[{n}] {title}]({src['url']})"
+            return match.group(0)
+
+        text = _re.sub(r'\[\[(\d+)\]\](?!\()', replace_bracketed_no_url, text)
+
+        # Pattern 3: bare [N] (single bracket, not already [[N]]) → [[N] Title](real-url)
+        # Negative lookbehind for [ to avoid re-matching [[N]] patterns already handled above
+        # Negative lookahead for ] and ( to avoid matching [N](url) or [N][ref]
+        def replace_bare_ref(match):
+            n = match.group(1)
+            src = source_index.get(n) or source_index.get(str(n))
+            if src and src.get("url"):
+                title = src.get("title", f"Source {n}")
+                return f"[[{n}] {title}]({src['url']})"
+            return match.group(0)
+
+        text = _re.sub(r'(?<!\[)\[(\d{1,2})\](?!\(|\[|\])', replace_bare_ref, text)
+
+        if text != original_text:
+            # Update in globals_schema
+            gs[output_key] = text
+            # Update in node output
+            for node_id in context.plan_graph.nodes:
+                node = context.plan_graph.nodes[node_id]
+                out = node.get("output", {})
+                if isinstance(out, dict):
+                    if "markdown_report" in out and isinstance(out["markdown_report"], str):
+                        out["markdown_report"] = self._apply_citation_fix(out["markdown_report"], source_index)
+                    if output_key in out and isinstance(out[output_key], str):
+                        out[output_key] = self._apply_citation_fix(out[output_key], source_index)
+            log_step(f"Fixed citations in {output_key} with real URLs from source_index", symbol="🔗")
+
+    def _apply_citation_fix(self, text: str, source_index: dict) -> str:
+        """Apply citation URL replacement to a text string."""
+        import re as _re
+
+        def replace_with_url(match):
+            n = match.group(1)
+            src = source_index.get(n) or source_index.get(str(n))
+            if src and src.get("url"):
+                title = src.get("title", f"Source {n}")
+                return f"[[{n}] {title}]({src['url']})"
+            return match.group(0)
+
+        # Replace [[N]](any-url) with real URL
+        text = _re.sub(r'\[\[(\d+)\]\]\([^)]*\)', replace_with_url, text)
+        # Replace [[N]] without URL
+        text = _re.sub(r'\[\[(\d+)\]\](?!\()', replace_with_url, text)
+        # Replace [[N] any-title](any-url) with real URL
+        text = _re.sub(r'\[\[(\d+)\][^\]]*\]\([^)]*\)', replace_with_url, text)
+        # Replace bare [N] (single bracket) with real URL
+        text = _re.sub(r'(?<!\[)\[(\d{1,2})\](?!\(|\[|\])', replace_with_url, text)
+        return text
+
+    def _extract_sub_queries(self, decomposed_raw) -> list:
+        """Robustly extract sub-queries from ThinkerAgent T001 output."""
+        import json as _json
+
+        if decomposed_raw is None:
+            return []
+
+        # String → parse
+        if isinstance(decomposed_raw, str):
+            try:
+                decomposed_raw = _json.loads(decomposed_raw)
+            except (_json.JSONDecodeError, TypeError):
+                return []
+
+        # List → validate items
+        if isinstance(decomposed_raw, list):
+            result = []
+            for item in decomposed_raw:
+                if isinstance(item, dict) and "query" in item:
+                    result.append(item)
+                elif isinstance(item, str):
+                    result.append({"query": item, "dimension": "general"})
+            return result
+
+        # Dict → look for 'decomposed_queries' key
+        if isinstance(decomposed_raw, dict):
+            queries = decomposed_raw.get("decomposed_queries")
+            if queries:
+                return self._extract_sub_queries(queries)
+            # Nested output
+            nested = decomposed_raw.get("output")
+            if isinstance(nested, dict):
+                queries = nested.get("decomposed_queries")
+                if queries:
+                    return self._extract_sub_queries(queries)
+
+        return []
+
+    def _extract_followup_queries(self, context, gap_analysis_key: str) -> list:
+        """Extract follow-up queries from gap analysis output. Returns list of query strings, capped at 3."""
+        import json as _json
+
+        gs = context.plan_graph.graph.get('globals_schema', {})
+        raw = gs.get(gap_analysis_key)
+        if raw is None:
+            return []
+
+        # String → parse
+        if isinstance(raw, str):
+            try:
+                raw = _json.loads(raw)
+            except (_json.JSONDecodeError, TypeError):
+                return []
+
+        # Dict → look for followup_queries key (or variants)
+        if isinstance(raw, dict):
+            for key in ("followup_queries", "follow_up_queries", "deep_queries", "targeted_queries"):
+                queries = raw.get(key)
+                if queries and isinstance(queries, list):
+                    result = [q if isinstance(q, str) else q.get("query", str(q)) for q in queries]
+                    return [q for q in result if q.strip()][:3]
+            # Check nested output
+            nested = raw.get("output")
+            if isinstance(nested, dict):
+                return self._extract_followup_queries(context, gap_analysis_key)
+
+        return []
+
+    def _auto_build_source_index(self, context):
+        """Auto-build source_index from ALL completed RetrieverAgent outputs.
+        Called after each RetrieverAgent completes in _execute_dag.
+        Works for both standard and deep research modes.
+        """
+        # Collect write keys from all completed RetrieverAgent nodes
+        retriever_write_keys = []
+        for node_id, node_data in context.plan_graph.nodes(data=True):
+            if node_id == "ROOT":
+                continue
+            if node_data.get("agent") == "RetrieverAgent" and node_data.get("status") == "completed":
+                retriever_write_keys.extend(node_data.get("writes", []))
+
+        if retriever_write_keys:
+            self._build_source_index(context, retriever_write_keys)
+
+    def _build_source_index(self, context, write_keys: list) -> dict:
+        """Build a deduplicated source index from retriever outputs.
+        Returns: {"1": {"url": "...", "title": "...", "snippet": "..."}, ...}
+        Also stores it in globals_schema["source_index"].
+        """
+        import json as _json
+
+        gs = context.plan_graph.graph.get('globals_schema', {})
+        seen_urls = set()
+        source_index = {}
+        counter = 1
+
+        for key in write_keys:
+            raw = gs.get(key)
+            if raw is None:
+                continue
+
+            # Parse if string
+            if isinstance(raw, str):
+                try:
+                    raw = _json.loads(raw)
+                except (_json.JSONDecodeError, TypeError):
+                    continue
+
+            # Handle dict wrapper: some retrievers return {"key": [sources]}
+            # or MCP TextContent format: {"content": [{"type": "text", "text": "[{sources}]"}]}
+            if isinstance(raw, dict):
+                # Unwrap MCP TextContent format first
+                content_list = raw.get("content")
+                if isinstance(content_list, list) and content_list:
+                    first = content_list[0]
+                    if isinstance(first, dict) and first.get("type") == "text" and "text" in first:
+                        # This is MCP TextContent — parse the inner JSON text
+                        try:
+                            raw = _json.loads(first["text"])
+                        except (_json.JSONDecodeError, TypeError):
+                            continue
+                    else:
+                        # Regular dict wrapper — look for the first list value
+                        raw = content_list
+                else:
+                    # Look for the first list value inside the dict
+                    for v in raw.values():
+                        if isinstance(v, list) and v:
+                            raw = v
+                            break
+                    else:
+                        continue
+
+            # Handle list of source dicts or URL strings
+            sources = raw if isinstance(raw, list) else []
+            for src in sources:
+                if isinstance(src, str):
+                    # Plain URL string — add with no content
+                    url = src.strip()
+                    if url and url.startswith("http") and url not in seen_urls:
+                        seen_urls.add(url)
+                        source_index[str(counter)] = {
+                            "url": url,
+                            "title": "",
+                            "snippet": ""
+                        }
+                        counter += 1
+                elif isinstance(src, dict):
+                    url = src.get("url", "")
+                    if not url or url in seen_urls:
+                        continue
+                    content = src.get("content", "")
+                    if isinstance(content, str) and content.startswith("[error]"):
+                        continue
+                    seen_urls.add(url)
+                    source_index[str(counter)] = {
+                        "url": url,
+                        "title": src.get("title", ""),
+                        "snippet": content[:200] if isinstance(content, str) else ""
+                    }
+                    counter += 1
+
+        gs["source_index"] = source_index
+        log_step(f"Built source index: {len(source_index)} unique sources", symbol="📋")
+        return source_index
+
+    def _preprocess_sources(self, context, write_keys: list, sub_queries: list) -> list:
+        """Pre-process retriever outputs into organized, deduplicated structure by dimension.
+        Returns list of dimension dicts and stores as globals_schema["processed_sources"].
+        """
+        import json as _json
+
+        gs = context.plan_graph.graph.get('globals_schema', {})
+        source_index = gs.get("source_index", {})
+
+        # Build reverse lookup: url -> source index number
+        url_to_index = {}
+        for idx, info in source_index.items():
+            url_to_index[info.get("url", "")] = idx
+
+        # Map write_keys to dimensions from sub_queries
+        dimensions = []
+        for i, key in enumerate(write_keys):
+            dim_label = "general"
+            if i < len(sub_queries):
+                sq = sub_queries[i]
+                dim_label = sq.get("dimension", f"dimension_{i+1}") if isinstance(sq, dict) else f"dimension_{i+1}"
+
+            raw = gs.get(key)
+            if raw is None:
+                continue
+            if isinstance(raw, str):
+                try:
+                    raw = _json.loads(raw)
+                except (_json.JSONDecodeError, TypeError):
+                    continue
+
+            # Unwrap MCP TextContent format: {"content": [{"type": "text", "text": "[{sources}]"}]}
+            if isinstance(raw, dict):
+                content_list = raw.get("content")
+                if isinstance(content_list, list) and content_list:
+                    first = content_list[0]
+                    if isinstance(first, dict) and first.get("type") == "text" and "text" in first:
+                        try:
+                            raw = _json.loads(first["text"])
+                        except (_json.JSONDecodeError, TypeError):
+                            continue
+
+            sources = raw if isinstance(raw, list) else []
+            dim_sources = []
+            for src in sources:
+                if not isinstance(src, dict):
+                    continue
+                url = src.get("url", "")
+                content = src.get("content", "")
+                if content.startswith("[error]") or not url:
+                    continue
+                idx = url_to_index.get(url, "?")
+                # Code focus mode: larger excerpts to preserve code blocks
+                focus = context.plan_graph.graph.get('focus_mode', '')
+                max_chars = 12000 if focus == "code" else 4000
+                dim_sources.append({
+                    "index": idx,
+                    "url": url,
+                    "title": src.get("title", ""),
+                    "excerpt": content[:max_chars]
+                })
+
+            if dim_sources:
+                dimensions.append({
+                    "dimension": dim_label,
+                    "sources": dim_sources
+                })
+
+        gs["processed_sources"] = dimensions
+        total = sum(len(d["sources"]) for d in dimensions)
+        log_step(f"Pre-processed sources: {total} sources across {len(dimensions)} dimensions", symbol="📊")
+        return dimensions
+
+    def _build_retriever_prompt(self, query_text: str, focus_mode: str = None) -> str:
+        """Build RetrieverAgent prompt with optional focus_mode constraints."""
+        prompt = (
+            f"Search for: '{query_text}'. "
+            f"Use search_web_with_text_content with string='{query_text}'"
+        )
+
+        focus_constraints = {
+            "academic": (
+                " site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov",
+                "Prioritize peer-reviewed papers and academic sources. Format citations in APA."
+            ),
+            "news": (
+                " news OR latest OR breaking",
+                "Prioritize recent news from the last 7 days. Include publication dates."
+            ),
+            "code": (
+                " site:github.com OR site:stackoverflow.com OR documentation",
+                "Prioritize code repositories and technical docs. Extract code snippets."
+            ),
+            "finance": (
+                " site:sec.gov OR financial report OR earnings",
+                "Prioritize financial data, SEC filings, market data. Extract numbers."
+            ),
+            "writing": (
+                "",
+                "Focus on editorial content, style guides, writing techniques."
+            ),
+        }
+
+        if focus_mode and focus_mode in focus_constraints:
+            search_suffix, instruction = focus_constraints[focus_mode]
+            if search_suffix:
+                prompt += f". Append to search: '{search_suffix}'"
+            prompt += f" {instruction}"
+
+        prompt += (
+            " and integer=15. "
+            "Return all results with URLs, titles, and extracted text."
+        )
+        return prompt
+
+    async def _direct_web_search(self, query: str, limit: int = 5) -> str:
+        """Direct web search bypassing MCP server for parallel deep research.
+        Replicates search_web_with_text_content logic from server_browser.py.
+        Returns JSON string of results (same format as MCP tool output).
+        """
+        import json as _json
+        from mcp_servers.tools.switch_search_method import smart_search
+        from mcp_servers.tools.web_tools_async import smart_web_extract
+
+        EXTRACT_TIMEOUT = 8
+
+        async def _extract_single(url: str, rank: int) -> dict:
+            try:
+                web_result = await asyncio.wait_for(smart_web_extract(url), timeout=EXTRACT_TIMEOUT)
+                text = web_result.get("best_text", "")[:8000]
+                text = text.replace('\n', ' ').replace('  ', ' ').strip()
+                return {
+                    "url": url,
+                    "title": web_result.get("title", ""),
+                    "content": text if text else "[error] No readable content found",
+                    "images": web_result.get("images", []),
+                    "rank": rank
+                }
+            except asyncio.TimeoutError:
+                return {"url": url, "title": "", "content": f"[error] Timeout after {EXTRACT_TIMEOUT}s", "rank": rank}
+            except Exception as e:
+                return {"url": url, "title": "", "content": f"[error] {str(e)}", "rank": rank}
+
+        try:
+            limit = min(max(limit, 1), 20)
+            urls = await smart_search(query, limit)
+
+            if not urls:
+                return _json.dumps([{"url": "", "title": "", "content": "[error] No search results found", "rank": 1}])
+
+            target_urls = urls[:limit]
+            tasks = [_extract_single(url, i + 1) for i, url in enumerate(target_urls)]
+            results = await asyncio.gather(*tasks)
+            results = sorted(results, key=lambda r: r["rank"])
+            return _json.dumps(results)
+        except Exception as e:
+            return _json.dumps([{"url": "", "title": "", "content": f"[error] {str(e)}", "rank": 1}])
+
+    async def _emit_source_progress_helper(self, step_id, total_sources):
+        """Emit source reading progress events for the UI."""
+        interval = max(0.6, 8.0 / total_sources)
+        for i in range(1, total_sources + 1):
+            await asyncio.sleep(interval)
+            await event_bus.publish("source_progress", "AgentLoop4", {
+                "step_id": step_id,
+                "current": i,
+                "total": total_sources,
+                "message": f"Reading source {i}/{total_sources}..."
+            })
+
     def _merge_plan_into_context(self, new_plan_graph):
         """Merge the planned nodes into the existing bootstrap context"""
         new_nodes = new_plan_graph.get("nodes", [])
         new_edges = new_plan_graph.get("edges", [])
-        
+
         # Track which new nodes have incoming edges to detect orphans
         nodes_with_incoming_edges = set()
+        # Track successfully added node IDs (to skip edges referencing rejected nodes)
+        added_node_ids = set(self.context.plan_graph.nodes)  # includes existing nodes (ROOT, Query)
+
+        # Build set of valid agent types from registry
+        from core.registry import AgentRegistry
+        valid_agents = set(AgentRegistry.list_agents().keys())
 
         # Add new nodes
         for node in new_nodes:
+            # Validate agent type — reject hallucinated agents before they enter the graph
+            agent_type = node.get("agent", "")
+            if agent_type and agent_type not in valid_agents:
+                log_step(f"Invalid agent '{agent_type}' in plan node {node.get('id', '?')} — skipping (valid: {', '.join(sorted(valid_agents))})", symbol="⚠️")
+                continue
+
             # Prepare node data with defaults
             node_data = node.copy()
             # Set defaults if not present in the plan
@@ -403,7 +1239,7 @@ class AgentLoop4:
             }
             for k, v in defaults.items():
                 node_data.setdefault(k, v)
-                
+
             # Avoid overwriting already completed nodes if they somehow appear in the new plan
             if node["id"] in self.context.plan_graph:
                  existing_status = self.context.plan_graph.nodes[node["id"]].get("status")
@@ -411,7 +1247,8 @@ class AgentLoop4:
                       continue
 
             self.context.plan_graph.add_node(node["id"], **node_data)
-            
+            added_node_ids.add(node["id"])
+
         # Add new edges, redirecting ROOT -> First Step to Query -> First Step
         for edge in new_edges:
             # Robustly handle different edge formats: list [src, tgt] or dict {source, target}
@@ -427,10 +1264,15 @@ class AgentLoop4:
             if not source or not target:
                 log_step(f"⚠️ Skipping malformed edge: {edge}", symbol="⚠️")
                 continue
-            
+
             # Redirect dependencies: If a node depends on ROOT, make it depend on Query
             if source == "ROOT":
                 source = "Query"
+
+            # Skip edges referencing rejected/non-existent nodes to prevent phantom nodes
+            if source not in added_node_ids or target not in added_node_ids:
+                log_step(f"⚠️ Skipping edge {source}→{target}: references node not in graph", symbol="⚠️")
+                continue
 
             self.context.plan_graph.add_edge(source, target)
             nodes_with_incoming_edges.add(target)
@@ -438,7 +1280,7 @@ class AgentLoop4:
         # 🛡️ AUTO-CONNECT: If a new node has NO incoming edges, connect it to "Query"
         # This fixes cases where PlannerAgent returns nodes but forgets the edges
         for node in new_nodes:
-            if node["id"] not in nodes_with_incoming_edges:
+            if node["id"] in added_node_ids and node["id"] not in nodes_with_incoming_edges:
                 log_step(f"🔗 Auto-connected orphan node {node['id']} to Query", symbol="🔗")
                 self.context.plan_graph.add_edge("Query", node["id"])
         
@@ -501,9 +1343,11 @@ class AgentLoop4:
         console = Console()
         
         # 🔧 DEBUGGING MODE: No Live display, just regular prints
-        # Deep research needs more iterations (6+ phases with retries)
+        # Each DAG step needs one iteration, plus headroom for retries (MAX_STEP_RETRIES=2 per step).
+        # Deep research needs more iterations (6+ phases with retries).
         is_deep_research = context.plan_graph.graph.get('research_mode') == 'deep_research'
-        max_iterations = max(self.max_steps * 3, 15) if is_deep_research else self.max_steps
+        num_steps = sum(1 for n in context.plan_graph.nodes if n != "ROOT")
+        max_iterations = max(self.max_steps * 3, 15) if is_deep_research else max(num_steps * 3, self.max_steps)
         iteration = 0
         
         # ===== COST THRESHOLD ENFORCEMENT =====
@@ -512,6 +1356,9 @@ class AgentLoop4:
         max_cost = settings.get("agent", {}).get("max_cost_per_run", 0.50)
         warn_cost = settings.get("agent", {}).get("warn_at_cost", 0.25)
         cost_warning_shown = False
+
+        stall_counter = 0  # Counts consecutive iterations with no progress
+        MAX_STALL = 20     # Break out after this many stalled iterations
 
         while not context.all_done():
             if context.stop_requested:
@@ -522,13 +1369,10 @@ class AgentLoop4:
                         context.plan_graph.nodes[n_id]["status"] = "stopped"
                 context._save_session()
                 break
-            
-            # Get ready nodes
+
+            # Get ready nodes (only returns pending nodes with all deps completed)
             ready_steps = context.get_ready_steps()
-            
-            # 🛡️ DEFENSIVE: Filter out steps that are not pending (prevents loops)
-            ready_steps = [s for s in ready_steps if context.plan_graph.nodes[s]["status"] == "pending"]
-            
+
             if not ready_steps:
                 # Check for running steps or waiting steps
                 running_or_waiting = any(
@@ -537,19 +1381,50 @@ class AgentLoop4:
                 )
                 
                 if not running_or_waiting:
-                    # If no ready steps, and nothing is running/waiting, and we aren't "all_done" (maybe orphans?)
-                    # Check if everything is completed or skipped
-                    is_complete = all(
-                        context.plan_graph.nodes[n]['status'] in ['completed', 'skipped', 'cost_exceeded']
-                        for n in context.plan_graph.nodes
-                        if n != "ROOT"
-                    )
-                    if is_complete:
-                        break
-                
-                # Wait for progress
+                    # Cascade failures: mark pending steps blocked by non-completed predecessors
+                    blocked_steps = []
+                    non_complete_terminal = {'failed', 'skipped', 'cost_exceeded', 'stopped'}
+                    for n in context.plan_graph.nodes:
+                        if n == "ROOT":
+                            continue
+                        if context.plan_graph.nodes[n].get('status') == 'pending':
+                            preds = list(context.plan_graph.predecessors(n))
+                            if any(context.plan_graph.nodes[p].get('status') in non_complete_terminal for p in preds):
+                                blocked_steps.append(n)
+
+                    if blocked_steps:
+                        for step_id in blocked_steps:
+                            visualizer.mark_failed(step_id, "upstream dependency failed")
+                            context.mark_failed(step_id, "Skipped: upstream dependency failed")
+                            log_step(f"⏭️ Skipping {step_id}: upstream dependency failed", symbol="⏭️")
+                        continue  # Re-check — cascaded failures may unblock or complete the graph
+
+                    # Deadlock detection: pending nodes exist but none are blocked by
+                    # failed predecessors — likely phantom nodes, cycles, or missing edges
+                    remaining_pending = [
+                        n for n in context.plan_graph.nodes
+                        if n != "ROOT" and context.plan_graph.nodes[n].get('status') == 'pending'
+                    ]
+                    if remaining_pending:
+                        log_step(f"Deadlock: {len(remaining_pending)} unreachable pending nodes — marking failed", symbol="⚠️")
+                        for n_id in remaining_pending:
+                            visualizer.mark_failed(n_id, "unreachable: no viable execution path")
+                            context.mark_failed(n_id, "Unreachable: no viable execution path (possible cycle or missing dependency)")
+                        continue  # Re-check all_done()
+
+                    # Nothing pending, nothing running — we're done
+                    break
+
+                # Wait for progress (with stall detection)
+                stall_counter += 1
+                if stall_counter >= MAX_STALL:
+                    log_error(f"🛑 DAG stalled: {MAX_STALL} iterations with no progress. Breaking out.")
+                    break
                 await asyncio.sleep(0.5)
                 continue
+
+            # Reset stall counter — we have work to do
+            stall_counter = 0
 
             # Show current state (only when we found work to do)
             try:
@@ -569,9 +1444,7 @@ class AgentLoop4:
                 step_data = context.get_step_data(step_id)
                 desc = step_data.get("agent_prompt", step_data.get("description", "No description"))[:60]
                 log_step(f"🔄 Starting {step_id} ({step_data['agent']}): {desc}...", symbol="🚀")
-                
-                visualizer.mark_running(step_id)
-                context.mark_running(step_id)
+
                 tasks.append(self._track_task(self._execute_step(step_id, context)))
 
             results = await self._track_task(asyncio.gather(*tasks, return_exceptions=True))
@@ -583,10 +1456,18 @@ class AgentLoop4:
             for step_id, result in zip(ready_steps, results):
                 step_data = context.get_step_data(step_id)
                 retry_count = step_data.get('_retry_count', 0)
-                
+
+                # Guard against None or unexpected result types
+                if result is None or (not isinstance(result, (dict, Exception))):
+                    # _execute_step returned something unexpected — treat as failure
+                    visualizer.mark_failed(step_id, "No result returned")
+                    context.mark_failed(step_id, "Step returned no result")
+                    log_error(f"❌ {step_id}: _execute_step returned {type(result).__name__}")
+                    continue
+
                 # ✅ HANDLE AWAITING INPUT
                 if isinstance(result, dict) and result.get("status") == "waiting_input":
-                     visualizer.mark_waiting(step_id) 
+                     visualizer.mark_waiting(step_id)
                      context.plan_graph.nodes[step_id]["status"] = "waiting_input"
                      # Preserve partial output
                      if "output" in result:
@@ -594,7 +1475,7 @@ class AgentLoop4:
                      context._save_session()
                      log_step(f"⏳ {step_id}: Waiting for user input...", symbol="⏳")
                      continue
-                
+
                 if isinstance(result, Exception):
                     # Check if we should retry this step
                     if retry_count < MAX_STEP_RETRIES:
@@ -609,6 +1490,19 @@ class AgentLoop4:
                     visualizer.mark_completed(step_id)
                     await context.mark_done(step_id, result["output"])
                     log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+                    completed_now = sum(1 for n in context.plan_graph.nodes
+                                        if n != "ROOT" and context.plan_graph.nodes[n].get("status") == "completed")
+                    total_now = sum(1 for n in context.plan_graph.nodes if n != "ROOT")
+                    await event_bus.publish("step_complete", "AgentLoop4", {
+                        "step_id": step_id,
+                        "agent": step_data["agent"],
+                        "progress": f"{completed_now}/{total_now}",
+                        "message": f"Completed {step_data['agent']} ({completed_now}/{total_now})"
+                    })
+
+                    # Auto-build source_index after RetrieverAgent completes
+                    if step_data["agent"] == "RetrieverAgent":
+                        self._auto_build_source_index(context)
                 else:
                     # Agent returned failure - also retry
                     if retry_count < MAX_STEP_RETRIES:
@@ -682,16 +1576,120 @@ class AgentLoop4:
 
             console.print("🎉 All tasks completed!")
 
-    async def _execute_step(self, step_id, context):
+    async def _execute_steps_parallel(self, context, step_ids: list):
+        """Execute steps in true parallel (deep research only).
+        Each task processes its own result and publishes completion immediately."""
+        if not step_ids:
+            return
+
+        log_step(f"⚡ Executing {len(step_ids)} agents in parallel: {step_ids}", symbol="⚡")
+
+        for step_id in step_ids:
+            context.mark_running(step_id)
+            step_data = context.get_step_data(step_id)
+            desc = step_data.get("description", "")[:60]
+            log_step(f"🔄 Starting {step_id} ({step_data['agent']}): {desc}", symbol="🚀")
+
+        MAX_STEP_RETRIES = 2
+
+        async def _run_and_process(step_id):
+            """Run step + process result + publish completion — all inside the parallel task."""
+            step_data = context.get_step_data(step_id)
+            retry_count = 0
+
+            while retry_count <= MAX_STEP_RETRIES:
+                try:
+                    result = await self._execute_step(step_id, context, direct_search=True)
+                except Exception as e:
+                    result = e
+
+                if isinstance(result, Exception):
+                    retry_count += 1
+                    if retry_count <= MAX_STEP_RETRIES:
+                        context.plan_graph.nodes[step_id]['status'] = 'pending'
+                        context.mark_running(step_id)
+                        log_step(f"🔄 Retry {step_id} ({retry_count}/{MAX_STEP_RETRIES}): {result}", symbol="🔄")
+                        continue
+                    else:
+                        context.mark_failed(step_id, str(result))
+                        log_error(f"❌ Failed {step_id}: {result}")
+                        return
+
+                if result is None or not isinstance(result, dict):
+                    context.mark_failed(step_id, "Step returned no result")
+                    log_error(f"❌ {step_id}: returned {type(result).__name__}")
+                    return
+
+                if result.get("success"):
+                    await context.mark_done(step_id, result["output"])
+                    log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+                    await event_bus.publish("step_complete", "AgentLoop4", {
+                        "step_id": step_id,
+                        "agent": step_data["agent"],
+                        "message": f"Completed {step_data['agent']}"
+                    })
+                    return
+                else:
+                    retry_count += 1
+                    if retry_count <= MAX_STEP_RETRIES:
+                        context.plan_graph.nodes[step_id]['status'] = 'pending'
+                        context.mark_running(step_id)
+                        log_step(f"🔄 Retry {step_id} ({retry_count}/{MAX_STEP_RETRIES}): {result.get('error', 'Unknown')}", symbol="🔄")
+                        continue
+                    else:
+                        context.mark_failed(step_id, result.get("error", "Unknown error"))
+                        log_error(f"❌ Failed {step_id}: {result.get('error')}")
+                        return
+
+        tasks = {
+            step_id: asyncio.create_task(_run_and_process(step_id))
+            for step_id in step_ids
+        }
+        for t in tasks.values():
+            self._tasks.add(t)
+
+        await asyncio.gather(*tasks.values(), return_exceptions=True)
+
+        for t in tasks.values():
+            self._tasks.discard(t)
+
+        # Build source_index once after ALL retrievers complete
+        self._auto_build_source_index(context)
+
+    async def _execute_step(self, step_id, context, direct_search=False):
         """Execute a single step with call_self support"""
-        # 📡 EMIT EVENT
-        await event_bus.publish("step_start", "AgentLoop4", {"step_id": step_id})
+        # 📡 EMIT PROGRESS EVENT — count total and completed steps for progress
+        total_steps = sum(1 for n in context.plan_graph.nodes if n != "ROOT")
+        completed_steps = sum(1 for n in context.plan_graph.nodes
+                              if n != "ROOT" and context.plan_graph.nodes[n].get("status") == "completed")
         step_data = context.get_step_data(step_id)
         agent_type = step_data["agent"]
+        desc = step_data.get("description", "")[:80]
+
+        # Validate agent type exists in registry
+        from core.registry import AgentRegistry
+        if not AgentRegistry.get(agent_type):
+            error_msg = f"Unknown agent type: {agent_type} (Not found in Registry). Available: {', '.join(AgentRegistry.list_agents().keys())}"
+            log_error(error_msg)
+            return {"success": False, "error": error_msg}
+
+        await event_bus.publish("step_start", "AgentLoop4", {
+            "step_id": step_id,
+            "agent": agent_type,
+            "description": desc,
+            "progress": f"{completed_steps + 1}/{total_steps}",
+            "message": f"Running {agent_type} ({completed_steps + 1}/{total_steps}): {desc}"
+        })
         
         # Get inputs from NetworkX graph
         inputs = context.get_inputs(step_data.get("reads", []))
-        
+
+        # Auto-inject source_index for SummarizerAgent and FormatterAgent
+        if agent_type in ("SummarizerAgent", "FormatterAgent"):
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            if "source_index" in gs and "source_index" not in inputs:
+                inputs["source_index"] = gs["source_index"]
+
         # 🔧 HELPER FUNCTION: Build agent input (consistent for both iterations)
         def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
             # Base payload for all agents
@@ -788,6 +1786,12 @@ class AgentLoop4:
                     tool_args = {"value": tool_args}
                 
                 log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
+                await event_bus.publish("tool_call", "AgentLoop4", {
+                    "step_id": step_id,
+                    "agent": agent_type,
+                    "tool_name": tool_name,
+                    "message": f"{agent_type} calling {tool_name}..."
+                })
                 
                 # 1a. Try LOCAL SKILL TOOLS first
                 tool_executed = False
@@ -821,12 +1825,53 @@ class AgentLoop4:
                     tool_executed = True # Failed but found
                     skill_tool_result = f"Error executing local skill tool: {str(e)}"
 
-                # 1b. Fallback to MultiMCP
+                # 1b. Direct search bypass (parallel deep research)
+                if not tool_executed and direct_search and tool_name == "search_web_with_text_content":
+                    try:
+                        query = tool_args.get("string", "")
+                        num_results = tool_args.get("integer", 5)
+                        log_step(f"⚡ Direct search (parallel): {query[:60]}...", symbol="⚡")
+
+                        total_sources = min(max(num_results, 1), 20)
+                        progress_task = asyncio.create_task(self._emit_source_progress_helper(step_id, total_sources))
+
+                        skill_tool_result = await self._direct_web_search(query, num_results)
+
+                        if progress_task and not progress_task.done():
+                            progress_task.cancel()
+                        tool_executed = True
+                    except Exception as e:
+                        log_error(f"Direct search failed, falling back to MCP: {e}")
+                        # tool_executed stays False → falls through to MCP
+
+                # 1c. Fallback to MultiMCP
                 if not tool_executed:
                     try:
+                        # Stream per-source progress for search tools
+                        progress_task = None
+                        if tool_name == "search_web_with_text_content":
+                            total_sources = min(max(tool_args.get("integer", 5), 1), 20)
+                            async def _emit_source_progress():
+                                # Sources extract concurrently (~1-8s each).
+                                # Emit progress ticks so the UI shows "Reading source N/M..."
+                                interval = max(0.6, 8.0 / total_sources)
+                                for i in range(1, total_sources + 1):
+                                    await asyncio.sleep(interval)
+                                    await event_bus.publish("source_progress", "AgentLoop4", {
+                                        "step_id": step_id,
+                                        "current": i,
+                                        "total": total_sources,
+                                        "message": f"Reading source {i}/{total_sources}..."
+                                    })
+                            progress_task = asyncio.create_task(_emit_source_progress())
+
                         # Execute tool via MultiMCP
                         mcp_result = await self.multi_mcp.route_tool_call(tool_name, tool_args)
-                        
+
+                        # Cancel progress emitter once tool completes
+                        if progress_task and not progress_task.done():
+                            progress_task.cancel()
+
                         # Serialize result content
                         if hasattr(mcp_result, 'content'):
                             if isinstance(mcp_result.content, list):
@@ -835,8 +1880,10 @@ class AgentLoop4:
                                 skill_tool_result = str(mcp_result.content)
                         else:
                             skill_tool_result = str(mcp_result)
-                            
+
                     except Exception as e:
+                        if progress_task and not progress_task.done():
+                            progress_task.cancel()
                         log_error(f"Tool Execution Failed: {e}")
                         # Feed error back to agent
                         current_input = build_agent_input(
@@ -851,6 +1898,22 @@ class AgentLoop4:
 
                 # ✅ SAVE RESULT TO HISTORY
                 iterations_data[-1]["tool_result"] = result_str
+
+                # 📡 EMIT TOOL RESULT EVENT with source count
+                source_count = 0
+                try:
+                    import json as _json
+                    parsed = _json.loads(result_str) if result_str.startswith("[") else None
+                    if isinstance(parsed, list):
+                        source_count = len(parsed)
+                except Exception:
+                    pass
+                await event_bus.publish("tool_result", "AgentLoop4", {
+                    "step_id": step_id,
+                    "tool_name": tool_name,
+                    "source_count": source_count,
+                    "message": f"Processed {source_count} sources from {tool_name}" if source_count else f"Tool {tool_name} completed"
+                })
 
                 # Log result (truncated)
                 log_step(f"✅ Tool Result", payload={"result_preview": result_str[:200] + "..."}, symbol="🔌")
@@ -896,11 +1959,16 @@ class AgentLoop4:
                 # ✅ LAST-SECOND STOP CHECK
                 if context.stop_requested:
                     return {"success": False, "error": "Stop requested"}
-                    
-                # Execute code if present and save to iterations_data (same as call_self path)
+
+                # Execute code if present and merge into output
                 if context._has_executable_code(output):
                     execution_result = await context._auto_execute_code(step_id, output)
                     iterations_data[-1]["execution_result"] = execution_result
+                    # Merge execution results into the output and flag as already executed
+                    # so mark_done doesn't re-execute
+                    output = context._merge_execution_results(output, execution_result)
+                    output["_code_already_executed"] = True
+                    result = {**result, "output": output}
                 return result
         
         # If loop finishes without returning (max turns reached): Return PARTIAL SUCCESS to allow graph continuation

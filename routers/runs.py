@@ -32,7 +32,9 @@ remme_extractor = get_remme_extractor()
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
-    
+    mode: str = "standard"  # "standard" or "deep_research"
+    focus_mode: str = None  # "general", "academic", "news", "code", "finance", "writing"
+
     def __init__(self, **data):
         super().__init__(**data)
         if self.model is None:
@@ -54,6 +56,10 @@ class UserInputRequest(BaseModel):
 class AgentTestRequest(BaseModel):
     """Optional request body for agent testing"""
     pass
+
+
+class QueryApprovalRequest(BaseModel):
+    queries: list  # list of {query, dimension} dicts
 
 
 class ExecuteNodeRequest(BaseModel):
@@ -83,7 +89,7 @@ async def process_resume(run_id: str, session_path: Path):
             del active_loops[run_id]
 
 
-async def process_run(run_id: str, query: str):
+async def process_run(run_id: str, query: str, research_mode: str = "standard", focus_mode: str = None):
     """Background task to execute the agent loop"""
     try:
         # 1. RETRIEVE MEMORIES (Remme)
@@ -109,7 +115,7 @@ async def process_run(run_id: str, query: str):
         # The loop will maintain its own internal context
         print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
         try:
-             context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context)
+             context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context, research_mode=research_mode, focus_mode=focus_mode)
         except asyncio.CancelledError:
              print(f"[{run_id}] Run cancelled.")
              context = loop.context # Recovery context from loop if possible
@@ -229,13 +235,19 @@ async def process_run(run_id: str, query: str):
                     output = node.get("output", {})
                     if not output: continue
 
-                    # Check for Formatter output keys
-                    markdown = output.get("markdown_report")
-                    if not markdown:
-                         for k, v in output.items():
-                             if k.startswith("formatted_report") and isinstance(v, str):
-                                 markdown = v
-                                 break
+                    # Check for Formatter output keys (robust extraction)
+                    markdown = None
+                    if isinstance(output, dict):
+                        markdown = output.get("markdown_report")
+                        if not markdown:
+                            for k, v in output.items():
+                                if k.startswith("formatted_report") and isinstance(v, str):
+                                    markdown = v
+                                    break
+                        if not markdown:
+                            fa = output.get("final_answer", "")
+                            if isinstance(fa, str) and len(fa) > 100:
+                                markdown = fa
                     
                     if markdown and len(markdown) > 100:
                          title = extract_title(markdown)
@@ -272,75 +284,109 @@ async def process_run(run_id: str, query: str):
                          node = context.plan_graph.nodes[node_id]
                          node_agent = node.get("agent", "")
                          out = node.get("output", {})
-                         
+
                          if node_agent == "FormatterAgent" or "Format" in node_agent:
                              if isinstance(out, dict):
+                                 # Try standard key first
                                  md = out.get("markdown_report")
                                  if not md:
-                                     # Try all keys for something that looks like a report
+                                     # Try dynamic formatted_report_* keys
                                      for k, v in out.items():
                                          if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
                                              md = v
                                              break
-                                 
-                                 if md:
+                                 if not md:
+                                     # Try final_answer (common fallback from JSON parse wrapping)
+                                     fa = out.get("final_answer", "")
+                                     if isinstance(fa, str) and len(fa) > 100:
+                                         md = fa
+                                 if not md:
+                                     # Try 'output' key
+                                     o = out.get("output")
+                                     if isinstance(o, str) and len(o) > 100:
+                                         md = o
+                                     elif isinstance(o, dict):
+                                         md = o.get("markdown_report") or o.get("final_answer", "")
+
+                                 if md and isinstance(md, str) and len(md) > 50:
                                      output_str = md
                                      break
-                                 
-                                 # Fallback: if 'output' is a long string
-                                 if isinstance(out.get("output"), str) and len(out["output"]) > 100:
-                                     output_str = out["output"]
+
+                             # Handle case where output is a raw string (not dict)
+                             elif isinstance(out, str) and len(out) > 100:
+                                 output_str = out
+                                 break
+
+                     # 2. Fallback: Check globals_schema for formatted report keys
+                     if not output_str:
+                         gs = context.plan_graph.graph.get('globals_schema', {})
+                         for k, v in gs.items():
+                             if k.startswith("formatted_report") and isinstance(v, str) and len(v) > 100:
+                                 output_str = v
+                                 print(f"📋 Extracted report from globals_schema['{k}']")
+                                 break
+
+                     # 3. Fallback: Check SummarizerAgent output (if formatter failed)
+                     if not output_str:
+                         for node_id in reversed(list(context.plan_graph.nodes)):
+                             node = context.plan_graph.nodes[node_id]
+                             node_agent = node.get("agent", "")
+                             out = node.get("output", {})
+                             if node_agent == "SummarizerAgent" and isinstance(out, dict):
+                                 md = out.get("final_answer") or out.get("markdown_report", "")
+                                 if isinstance(md, str) and len(md) > 100:
+                                     output_str = md
+                                     print(f"📋 Fell back to SummarizerAgent output")
                                      break
-                     
-                     # 2. Fallback: Find any node with a substantial string output
+
+                     # 4. Fallback: Find any node with a substantial string output
                      if not output_str:
                          for node_id in reversed(list(context.plan_graph.nodes)):
                              if node_id == "ROOT": continue
                              node = context.plan_graph.nodes[node_id]
                              out = node.get("output", {})
-                             
+
                              if isinstance(out, dict):
                                  # Try to find the largest string value in the dict (recursive search)
-                                 def find_largest_string(d):
+                                 def find_largest_string(d, depth=0):
+                                     if depth > 3: return ""
                                      largest = ""
                                      for v in d.values():
                                          if isinstance(v, str):
                                              if len(v) > len(largest):
                                                  largest = v
                                          elif isinstance(v, dict):
-                                             sub = find_largest_string(v)
+                                             sub = find_largest_string(v, depth + 1)
                                              if len(sub) > len(largest):
                                                  largest = sub
                                      return largest
-                                 
+
                                  largest_str = find_largest_string(out)
                                  if len(largest_str) > 50:
                                      output_str = largest_str
                                      break
-                                     
+
                              elif isinstance(out, str) and len(out) > 50:
                                  output_str = out
                                  break
 
-                 # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
+                 # 5. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
                  if output_str:
                      import re
-                     # If the output starts and ends with {} or [], it might be a JSON dump 
+                     # If the output starts and ends with {} or [], it might be a JSON dump
                      # that contains a markdown_report field.
                      if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
                          try:
-                             # Try to parse it and extract the report field
                              data = json.loads(output_str)
                              if isinstance(data, dict):
-                                 # Look for report-like keys
-                                 for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
+                                 for k in ["markdown_report", "formatted_report", "final_answer", "output", "summary", "report"]:
                                      if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
                                          output_str = data[k]
                                          break
                          except:
                              pass
-                     
-                     # Final check: remove block delimiters if LLM wrapped them in ```markdown
+
+                     # Remove block delimiters if LLM wrapped them in ```markdown
                      output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
                      output_str = re.sub(r'\n```$', '', output_str)
 
@@ -351,6 +397,8 @@ async def process_run(run_id: str, query: str):
                      final_result["summary"] = output_str.strip() if output_str else "Completed."
              except Exception as e:
                  print(f"⚠️ Extraction Error: {e}")
+                 import traceback
+                 traceback.print_exc()
         
         return final_result
 
@@ -360,10 +408,14 @@ async def process_run(run_id: str, query: str):
 @router.post("/runs")
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     run_id = str(int(datetime.now().timestamp()))
-    
+
     # Start background execution
-    background_tasks.add_task(process_run, run_id, request.query)
-    
+    background_tasks.add_task(
+        process_run, run_id, request.query,
+        research_mode=request.mode,
+        focus_mode=request.focus_mode
+    )
+
     return {
         "id": run_id,
         "status": "starting",
@@ -418,10 +470,15 @@ async def list_runs():
                         (n.get("total_tokens", 0) or 0) for n in nodes
                     )
                     
+                    run_id_parsed = session_file.stem.replace("session_", "")
+                    # Override status to "running" if this run is still active in memory
+                    if run_id_parsed in active_loops:
+                        computed_status = "running"
+
                     runs.append({
-                        "id": session_file.stem.replace("session_", ""),
-                        "query": query, 
-                        "created_at": created_at, 
+                        "id": run_id_parsed,
+                        "query": query,
+                        "created_at": created_at,
                         "status": computed_status,
                         "total_tokens": total_tokens
                     })
@@ -513,6 +570,19 @@ async def provide_input(run_id: str, request: UserInputRequest):
         else:
             raise HTTPException(status_code=400, detail="Context not initialized")
     
+    raise HTTPException(status_code=404, detail="Active run not found")
+
+
+@router.post("/runs/{run_id}/approve_queries")
+async def approve_queries(run_id: str, request: QueryApprovalRequest):
+    """Approve decomposed queries to proceed with retriever agents"""
+    if run_id in active_loops:
+        loop = active_loops[run_id]
+        if loop._query_approval_event and not loop._query_approval_event.is_set():
+            loop._approved_queries = request.queries
+            loop._query_approval_event.set()
+            return {"id": run_id, "status": "approved", "query_count": len(request.queries)}
+        raise HTTPException(status_code=400, detail="No pending query approval for this run")
     raise HTTPException(status_code=404, detail="Active run not found")
 
 

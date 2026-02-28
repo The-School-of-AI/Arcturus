@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Bot, FileText, Brain, Code, Play, CheckCircle2, Loader2 } from 'lucide-react';
+import { Bot, FileText, Brain, Code, Play, CheckCircle2, Loader2, XCircle, Circle } from 'lucide-react';
 import type { AgentNodeData } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -100,6 +100,9 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                             {data.type}
                         </span>
                         {isRunning && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                        {data.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-green-500" />}
+                        {data.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                        {data.status === 'pending' && <Circle className="w-3 h-3 text-muted-foreground/40" />}
                     </div>
 
                     <h3 className={cn("text-sm font-semibold truncate mt-0.5", statusColor)}>

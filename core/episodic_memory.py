@@ -12,11 +12,10 @@ class MemorySkeletonizer:
     Removes heavy payloads (HTML, huge text) but preserves Logic (Prompts, Tool Calls).
     """
     @staticmethod
-    @staticmethod
     def skeletonize(session_data: Dict) -> Dict:
         # Robust extraction: 'nodes' might be at root or inside 'graph' wrapper
         graph_data = session_data.get("graph", session_data)
-        
+
         # If 'graph' points to attributes (like in the file 1770375024), we might need to look at root
         if "nodes" in session_data:
             nodes = session_data["nodes"]
@@ -27,7 +26,8 @@ class MemorySkeletonizer:
             # Standard Wrapper Case
             nodes = graph_data.get("nodes", [])
             edges = graph_data.get("edges", graph_data.get("links", []))
-            metadata = graph_data
+            # Graph-level attributes (session_id, original_query, etc.) are under the "graph" key
+            metadata = graph_data.get("graph", {}) if isinstance(graph_data, dict) else {}
             
         skeleton = {
             "id": metadata.get("session_id"),
@@ -101,12 +101,21 @@ class MemorySkeletonizer:
                         })
                     
                     # Capture Code Execution
-                    if output.get("call_self"):
+                    call_self_val = output.get("call_self")
+                    if call_self_val:
+                        # call_self can be a bool (RetrieverAgent) or a dict with code
+                        snippet = ""
+                        if isinstance(call_self_val, dict):
+                            snippet = call_self_val.get("code", "")[:500]
+                        elif "code_variants" in output:
+                            # Extract first code variant as the snippet
+                            variants = output["code_variants"]
+                            if isinstance(variants, dict) and variants:
+                                snippet = str(next(iter(variants.values())))[:500]
                         actions.append({
                             "type": "code",
                             "lang": "python",
-                            # Code is the recipe! Keep it.
-                            "snippet": output.get("call_self", {}).get("code", "")[:500] 
+                            "snippet": snippet
                         })
                         
             s_node["actions"] = actions

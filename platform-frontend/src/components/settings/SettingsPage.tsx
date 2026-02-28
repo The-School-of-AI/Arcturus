@@ -22,6 +22,11 @@ const GEMINI_MODELS = [
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
 ];
 
+// OpenRouter models
+const OPENROUTER_MODELS = [
+    { value: 'google/gemini-2.5-flash-lite-preview-09-2025', label: 'Gemini 2.5 Flash Preview', description: 'Via OpenRouter' },
+];
+
 interface OllamaModel {
     name: string;
     size_gb: number;
@@ -54,9 +59,9 @@ interface SettingsData {
         top_k: number;
     };
     agent: {
-        model_provider: 'gemini' | 'ollama';
+        model_provider: 'gemini' | 'ollama' | 'openrouter';
         default_model: string;
-        overrides?: Record<string, { model_provider: 'gemini' | 'ollama'; model: string }>;
+        overrides?: Record<string, { model_provider: 'gemini' | 'ollama' | 'openrouter'; model: string }>;
         max_steps: number;
         max_lifelines_per_step: number;
         planning_mode: string;
@@ -85,7 +90,13 @@ export const SettingsPage: React.FC = () => {
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [promptContent, setPromptContent] = useState('');
-    const [geminiStatus, setGeminiStatus] = useState<{ configured: boolean; key_preview: string | null } | null>(null);
+    const [geminiStatus, setGeminiStatus] = useState<{
+        configured: boolean;
+        gemini_configured: boolean;
+        openrouter_configured: boolean;
+        gemini_key_preview: string | null;
+        openrouter_key_preview: string | null;
+    } | null>(null);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -261,7 +272,7 @@ export const SettingsPage: React.FC = () => {
         setHasChanges(true);
     };
 
-    const updateOverride = (agentType: string, provider: 'gemini' | 'ollama', model: string) => {
+    const updateOverride = (agentType: string, provider: 'gemini' | 'ollama' | 'openrouter', model: string) => {
         if (!settings) return;
         const overrides = { ...(settings.agent.overrides || {}) };
         overrides[agentType] = { model_provider: provider, model };
@@ -386,24 +397,37 @@ export const SettingsPage: React.FC = () => {
                 onChange={(v) => updateSetting('models', 'memory_extraction', v)}
             />
 
-            {/* Gemini Status */}
-            <div className="p-4 rounded-lg border border-border bg-muted/20 mt-6">
+            {/* API Key Status */}
+            <div className="p-4 rounded-lg border border-border bg-muted/20 mt-6 space-y-3">
                 <div className="flex items-center gap-2">
-                    {geminiStatus?.configured ? (
+                    {geminiStatus?.gemini_configured ? (
                         <Check className="w-4 h-4 text-green-500" />
                     ) : (
                         <X className="w-4 h-4 text-red-500" />
                     )}
                     <span className="text-sm font-medium">
-                        Gemini API Key: {geminiStatus?.configured ? 'Configured' : 'Not configured'}
+                        Gemini API Key: {geminiStatus?.gemini_configured ? 'Configured' : 'Not configured'}
                     </span>
-                    {geminiStatus?.key_preview && (
-                        <span className="text-xs text-muted-foreground font-mono">({geminiStatus.key_preview})</span>
+                    {geminiStatus?.gemini_key_preview && (
+                        <span className="text-xs text-muted-foreground font-mono">({geminiStatus.gemini_key_preview})</span>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {geminiStatus?.openrouter_configured ? (
+                        <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                        <X className="w-4 h-4 text-red-500" />
+                    )}
+                    <span className="text-sm font-medium">
+                        OpenRouter API Key: {geminiStatus?.openrouter_configured ? 'Configured' : 'Not configured'}
+                    </span>
+                    {geminiStatus?.openrouter_key_preview && (
+                        <span className="text-xs text-muted-foreground font-mono">({geminiStatus.openrouter_key_preview})</span>
                     )}
                 </div>
                 {!geminiStatus?.configured && (
                     <p className="text-xs text-muted-foreground mt-2">
-                        Set GEMINI_API_KEY environment variable and restart the server.
+                        Set GEMINI_API_KEY or OPENROUTER_API_KEY in your .env file and restart the server.
                     </p>
                 )}
             </div>
@@ -466,13 +490,13 @@ export const SettingsPage: React.FC = () => {
             const provider = value.substring(0, colonIndex);
             const modelName = value.substring(colonIndex + 1);
 
-            if (provider === 'gemini' || provider === 'ollama') {
+            if (provider === 'gemini' || provider === 'ollama' || provider === 'openrouter') {
                 // Update both fields in a single state update to prevent stale state issues
                 setSettings({
                     ...settings,
                     agent: {
                         ...settings.agent,
-                        model_provider: provider as 'gemini' | 'ollama',
+                        model_provider: provider as 'gemini' | 'ollama' | 'openrouter',
                         default_model: modelName
                     }
                 });
@@ -501,6 +525,16 @@ export const SettingsPage: React.FC = () => {
                             </option>
                         ))}
 
+                        {/* OpenRouter Cloud Models */}
+                        <option disabled value="" className="text-muted-foreground font-semibold">
+                            OpenRouter (Cloud)
+                        </option>
+                        {OPENROUTER_MODELS.map((m) => (
+                            <option key={`openrouter:${m.value}`} value={`openrouter:${m.value}`}>
+                                &nbsp;&nbsp;{m.label} — {m.description}
+                            </option>
+                        ))}
+
                         {/* Ollama Local Models */}
                         {ollamaTextModels.length > 0 && (
                             <>
@@ -522,15 +556,21 @@ export const SettingsPage: React.FC = () => {
                             <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
                                 Local Execution
                             </span>
+                        ) : settings?.agent.model_provider === 'openrouter' ? (
+                            <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                OpenRouter Cloud
+                            </span>
                         ) : (
                             <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Cloud Execution
+                                Gemini API (Direct)
                             </span>
                         )}
                         <span className="text-muted-foreground">
                             {settings?.agent.model_provider === 'ollama'
                                 ? 'Running on your machine via Ollama'
-                                : 'Using Google Gemini API'}
+                                : settings?.agent.model_provider === 'openrouter'
+                                ? 'Using Gemini models via OpenRouter proxy (OPENROUTER_API_KEY)'
+                                : 'Using native Google Gemini API (GEMINI_API_KEY)'}
                         </span>
                     </div>
                 </SettingGroup>
@@ -622,7 +662,7 @@ export const SettingsPage: React.FC = () => {
                                     const model = value.substring(colonIndex + 1);
 
                                     newOverrides[agentType] = {
-                                        model_provider: provider as 'gemini' | 'ollama',
+                                        model_provider: provider as 'gemini' | 'ollama' | 'openrouter',
                                         model
                                     };
                                 }
@@ -673,6 +713,13 @@ export const SettingsPage: React.FC = () => {
                                             {GEMINI_MODELS.map(m => (
                                                 <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
                                                     Gemini: {m.label}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label="OpenRouter (Cloud)">
+                                            {OPENROUTER_MODELS.map(m => (
+                                                <option key={`openrouter:${m.value}`} value={`openrouter:${m.value}`}>
+                                                    OpenRouter: {m.label}
                                                 </option>
                                             ))}
                                         </optgroup>
@@ -752,7 +799,7 @@ export const SettingsPage: React.FC = () => {
             const colonIndex = value.indexOf(':');
             if (colonIndex === -1) return;
 
-            const provider = value.substring(0, colonIndex) as 'gemini' | 'ollama';
+            const provider = value.substring(0, colonIndex) as 'gemini' | 'ollama' | 'openrouter';
             const modelName = value.substring(colonIndex + 1);
 
             updateOverride(agentType, provider, modelName);
@@ -796,6 +843,12 @@ export const SettingsPage: React.FC = () => {
                         <option disabled value="" className="text-muted-foreground font-semibold">Gemini (Cloud)</option>
                         {GEMINI_MODELS.map((m) => (
                             <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                {m.label} — {m.description}
+                            </option>
+                        ))}
+                        <option disabled value="" className="mt-2 text-muted-foreground font-semibold">OpenRouter (Cloud)</option>
+                        {OPENROUTER_MODELS.map((m) => (
+                            <option key={`openrouter:${m.value}`} value={`openrouter:${m.value}`}>
                                 {m.label} — {m.description}
                             </option>
                         ))}

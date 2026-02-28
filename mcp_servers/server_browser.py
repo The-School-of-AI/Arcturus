@@ -22,7 +22,6 @@ load_dotenv()
 # Browser Use Imports
 try:
     from browser_use import Agent, Browser, BrowserConfig
-    from langchain_google_genai import ChatGoogleGenerativeAI
     BROWSER_USE_AVAILABLE = True
 except ImportError:
     BROWSER_USE_AVAILABLE = False
@@ -96,6 +95,31 @@ from mcp.types import TextContent
 async def search_web_with_text_content(string: str, integer: int = 5) -> dict:
     """Search web and return URLs with extracted text content. Gets both URLs and readable text from top search results. Ideal for exhaustive research. Use integer parameter to control how many results to fetch (default 5, max 20)."""
 
+    EXTRACT_TIMEOUT = 8  # 8 second timeout per URL (httpx fast path + margin)
+
+    async def _extract_single(url: str, rank: int) -> dict:
+        """Extract text from a single URL with timeout"""
+        try:
+            print(f"Reading source {rank}... | {url}")
+            web_result = await asyncio.wait_for(smart_web_extract(url), timeout=EXTRACT_TIMEOUT)
+            text_content = web_result.get("best_text", "")[:8000]
+            text_content = text_content.replace('\n', ' ').replace('  ', ' ').strip()
+            token_count = len(text_content) // 4
+            print(f"Source {rank} extracted | Tokens: {token_count} | {url}")
+            return {
+                "url": url,
+                "title": web_result.get("title", ""),
+                "content": text_content if text_content.strip() else "[error] No readable content found",
+                "images": web_result.get("images", []),
+                "rank": rank
+            }
+        except asyncio.TimeoutError:
+            print(f"Source {rank} timed out (>{EXTRACT_TIMEOUT}s) | {url}")
+            return {"url": url, "title": "", "content": f"[error] Timeout after {EXTRACT_TIMEOUT}s", "rank": rank}
+        except Exception as e:
+            print(f"Source {rank} failed | {url} | {str(e)}")
+            return {"url": url, "title": "", "content": f"[error] {str(e)}", "rank": rank}
+
     try:
         limit = min(max(integer, 1), 20)  # Clamp between 1 and 20
         # Step 1: Get URLs
@@ -111,34 +135,19 @@ async def search_web_with_text_content(string: str, integer: int = 5) -> dict:
                 ]
             }
 
-        # Step 2: Extract text content from each URL
-        results = []
+        # Step 2: Extract text content from ALL URLs concurrently
         max_extracts = min(len(urls), limit)
-        
-        for i, url in enumerate(urls[:max_extracts]):
-            try:
-                print(f"Link: {url} | Status: Visiting...") 
-                web_result = await asyncio.wait_for(smart_web_extract(url), timeout=20)
-                text_content = web_result.get("best_text", "")[:4000]
-                text_content = text_content.replace('\n', ' ').replace('  ', ' ').strip()
-                token_count = len(text_content) // 4
-                
-                print(f"Link: {url} | Status: Extracted | Tokens: {token_count}")
+        target_urls = urls[:max_extracts]
 
-                results.append({
-                    "url": url,
-                    "content": text_content if text_content.strip() else "[error] No readable content found",
-                    "images": web_result.get("images", []),
-                    "rank": i + 1
-                })
-            except Exception as e:
-                print(f"Link: {url} | Status: Failed | Error: {str(e)}")
-                results.append({
-                    "url": url,
-                    "content": f"[error] {str(e)}",
-                    "rank": i + 1
-                })
-        
+        print(f"Fetching {len(target_urls)} URLs concurrently (timeout: {EXTRACT_TIMEOUT}s each)...")
+        tasks = [_extract_single(url, i + 1) for i, url in enumerate(target_urls)]
+        results = await asyncio.gather(*tasks)
+
+        # Sort by rank to maintain original order
+        results = sorted(results, key=lambda r: r["rank"])
+        successful = sum(1 for r in results if not r["content"].startswith("[error]"))
+        print(f"Completed: {successful}/{len(results)} sources extracted successfully")
+
         return {
             "content": [
                 TextContent(
@@ -223,9 +232,33 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
             except ImportError:
                 print("⚠️ langchain_ollama not installed")
                 return "Error: langchain_ollama not installed for Ollama provider"
+        elif model_provider == "gemini":
+            # Use native Google Gemini API via LangChain
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                llm = ChatGoogleGenerativeAI(
+                    model=model_name,
+                    google_api_key=os.getenv("GEMINI_API_KEY")
+                )
+                print(f"🌐 Browser Use: Using Gemini model {model_name}")
+            except ImportError:
+                print("⚠️ langchain_google_genai not installed")
+                return "Error: langchain_google_genai not installed for Gemini provider"
         else:
-            llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=os.getenv("GEMINI_API_KEY"))
-            print(f"☁️ Browser Use: Using Gemini model {model_name}")
+            # OpenRouter (or any other cloud provider)
+            try:
+                from langchain_openai import ChatOpenAI
+                from core.model_manager import _resolve_openrouter_model
+                resolved = _resolve_openrouter_model(model_name)
+                llm = ChatOpenAI(
+                    model=resolved,
+                    api_key=os.getenv("OPENROUTER_API_KEY"),
+                    base_url="https://openrouter.ai/api/v1"
+                )
+                print(f"🌐 Browser Use: Using OpenRouter model {resolved}")
+            except ImportError:
+                print("⚠️ langchain_openai not installed")
+                return "Error: langchain_openai not installed for OpenRouter provider"
         
         # Get shared browser
         browser = await get_shared_browser()

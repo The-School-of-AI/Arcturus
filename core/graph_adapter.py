@@ -103,4 +103,9 @@ def nx_to_reactflow(graph: nx.DiGraph):
             "style": { "stroke": "#888888", "strokeDasharray": "none" }  # Gray solid line
         })
 
-    return {"nodes": nodes, "edges": edges}
+    # Include graph-level metadata for frontend
+    metadata = {}
+    if hasattr(graph, 'graph'):
+        metadata['research_mode'] = graph.graph.get('research_mode', 'standard')
+
+    return {"nodes": nodes, "edges": edges, "metadata": metadata}

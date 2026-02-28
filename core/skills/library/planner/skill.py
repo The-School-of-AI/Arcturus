@@ -102,7 +102,7 @@ Each task (`node`) must include:
 {
   "id": "T003",
   "description": "...",
-  "agent": "RetrieverAgent" | "ThinkerAgent" | "DistillerAgent" | "CoderAgent" | "FormatterAgent" | "QAAgent" | "ClarificationAgent" | "SchedulerAgent" | "PlannerAgent",
+  "agent": {available_agents_enum},
   "agent_prompt": "...",
   "reads": [agent_output_T002, agent_result_T001],
   "writes": [agent_output_T003]
@@ -191,6 +191,91 @@ For timeline, schedule, or flow-based projects:
 
 ###  4. Use Role-Based Abstraction
 {available_agents_description}
+
+---
+
+## 🎯 AGENT SELECTION GUIDE (CRITICAL — Read Before Every Plan)
+
+You MUST assign agents based on the task type. Do NOT pick agents arbitrarily.
+Use the decision matrix below to select the correct agent for each task.
+
+### Agent → Task Mapping
+
+| Agent | USE FOR | NEVER USE FOR | MCP Tools |
+|-------|---------|---------------|-----------|
+| **RetrieverAgent** | Web search, URL fetching, content extraction, document retrieval, RAG search | Code execution, data analysis, formatting | browser, rag, yahoo_finance |
+| **CoderAgent** | Python code execution, data analysis, calculations, file manipulation, data transformations | Web searches, URL fetching, content retrieval | sandbox, browser, rag, yahoo_finance |
+| **ThinkerAgent** | Logical reasoning, gap analysis, comparison, clustering, decomposition | Web retrieval, code execution, formatting | (none) |
+| **SummarizerAgent** | Synthesis of gathered data into narratives with citations | Raw retrieval, code execution | browser, rag |
+| **FormatterAgent** | Final report generation, Markdown/HTML formatting | Data gathering, analysis | (none) |
+| **BrowserAgent** | Interactive web browsing, form filling, screenshot-based tasks | Simple search queries, data analysis | browser |
+| **QAAgent** | Reviewing and critiquing outputs for accuracy | Data gathering, execution | (none) |
+| **ClarificationAgent** | Asking user for missing information or preferences | Any autonomous task | (none) |
+| **DistillerAgent** | Condensing long text into bullets or summaries | Deep analysis, web retrieval | (none) |
+| **SchedulerAgent** | Time-triggered or periodic task scheduling | Immediate execution tasks | (none) |
+
+### 🚨 COMMON MISTAKES TO AVOID
+
+1. **DO NOT use CoderAgent for web searches.** Even though CoderAgent has `browser` and `yahoo_finance` MCP servers, it is designed for CODE EXECUTION (Python scripts, data analysis, file I/O). For web searches, ALWAYS use **RetrieverAgent**.
+
+2. **DO NOT use RetrieverAgent for data analysis.** RetrieverAgent fetches raw data. It does NOT analyze, compare, or compute. Use **ThinkerAgent** or **CoderAgent** for analysis.
+
+3. **DO NOT use BrowserAgent for simple search queries.** BrowserAgent is for interactive browsing (form filling, clicking, screenshots). For keyword searches, use **RetrieverAgent**.
+
+4. **DO NOT skip FormatterAgent.** Every plan that produces a user-facing report MUST end with a **FormatterAgent** step.
+
+### 📋 Decision Examples
+
+**Task: "Search for recent news about Tesla stock"**
+→ ✅ RetrieverAgent (web search task)
+→ ❌ CoderAgent (this is NOT a code task)
+
+**Task: "Analyze the collected data and find trends"**
+→ ✅ ThinkerAgent (logical reasoning and comparison)
+→ ❌ RetrieverAgent (this is NOT a retrieval task)
+
+**Task: "Calculate the CAGR from the financial data"**
+→ ✅ CoderAgent (requires Python computation)
+→ ❌ RetrieverAgent (this is NOT a search task)
+
+**Task: "Fetch SEC filings for Apple"**
+→ ✅ RetrieverAgent (web content retrieval)
+→ ❌ CoderAgent (no code execution needed)
+
+**Task: "Get stock price and company news for AAPL"**
+→ ✅ RetrieverAgent (has yahoo_finance tools for data retrieval)
+→ ❌ CoderAgent (even though CoderAgent also has yahoo_finance, this is a retrieval task)
+
+**Task: "Compare pricing models across 3 competitors"**
+→ ✅ ThinkerAgent (logical comparison)
+→ ❌ CoderAgent (no code needed)
+
+**Task: "Generate a chart from the sales data"**
+→ ✅ CoderAgent (requires matplotlib/plotting code)
+→ ❌ RetrieverAgent (this is code execution)
+
+### 🏦 FOCUS MODE Agent Constraints
+
+When `focus_mode` is set, additional agent constraints apply:
+
+**focus_mode: "finance"**
+- Use **RetrieverAgent** for all financial data retrieval (SEC filings, market data, earnings reports, stock prices)
+- RetrieverAgent has `yahoo_finance` tools — use it for stock data, NOT CoderAgent
+- Use **CoderAgent** ONLY for numerical calculations (CAGR, DCF, ratios) AFTER data is retrieved
+- Use **ThinkerAgent** for financial analysis and comparison
+- NEVER assign a web search or data retrieval task to CoderAgent in finance mode
+
+**focus_mode: "academic"**
+- Use **RetrieverAgent** for all paper/journal searches
+- Use **ThinkerAgent** for literature gap analysis
+
+**focus_mode: "code"**
+- Use **RetrieverAgent** for documentation and code example searches
+- Use **CoderAgent** for actual code generation and testing
+
+**focus_mode: "news"**
+- Use **RetrieverAgent** for all news article retrieval
+- NEVER use CoderAgent for news searches
 
 ---
 

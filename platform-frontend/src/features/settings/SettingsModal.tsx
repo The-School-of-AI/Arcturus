@@ -134,7 +134,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                                                 onChange={(e) => updateAgentOverride('TestAgent', 'model_provider', e.target.value)}
                                             >
                                                 <option value="ollama">Ollama</option>
-                                                <option value="gemini">Gemini</option>
+                                                <option value="gemini">Gemini (Direct)</option>
+                                                <option value="openrouter">OpenRouter</option>
                                             </select>
 
                                             {settings.agent?.overrides?.TestAgent?.model_provider === 'gemini' ? (
@@ -142,7 +143,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                                                     className="w-full bg-input border border-border rounded px-2 py-1 text-xs"
                                                     value={settings.agent?.overrides?.TestAgent?.model || "gemini-2.5-flash"}
                                                     onChange={(e) => updateAgentOverride('TestAgent', 'model', e.target.value)}
-                                                    placeholder="Model name"
+                                                    placeholder="e.g. gemini-2.5-flash"
+                                                />
+                                            ) : settings.agent?.overrides?.TestAgent?.model_provider === 'openrouter' ? (
+                                                <input
+                                                    className="w-full bg-input border border-border rounded px-2 py-1 text-xs"
+                                                    value={settings.agent?.overrides?.TestAgent?.model || "google/gemini-2.5-flash"}
+                                                    onChange={(e) => updateAgentOverride('TestAgent', 'model', e.target.value)}
+                                                    placeholder="e.g. google/gemini-2.5-flash"
                                                 />
                                             ) : (
                                                 <select
@@ -167,7 +175,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                                                 onChange={(e) => setSettings({ ...settings, agent: { ...settings.agent, model_provider: e.target.value } })}
                                             >
                                                 <option value="ollama">Ollama</option>
-                                                <option value="gemini">Gemini</option>
+                                                <option value="gemini">Gemini (Direct)</option>
+                                                <option value="openrouter">OpenRouter</option>
                                             </select>
 
                                             {settings.agent?.model_provider === 'gemini' ? (
@@ -175,7 +184,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                                                     className="w-full bg-input border border-border rounded px-2 py-1 text-xs"
                                                     value={settings.agent?.default_model || "gemini-2.5-flash"}
                                                     onChange={(e) => setSettings({ ...settings, agent: { ...settings.agent, default_model: e.target.value } })}
-                                                    placeholder="Model name"
+                                                    placeholder="e.g. gemini-2.5-flash"
+                                                />
+                                            ) : settings.agent?.model_provider === 'openrouter' ? (
+                                                <input
+                                                    className="w-full bg-input border border-border rounded px-2 py-1 text-xs"
+                                                    value={settings.agent?.default_model || "google/gemini-2.5-flash"}
+                                                    onChange={(e) => setSettings({ ...settings, agent: { ...settings.agent, default_model: e.target.value } })}
+                                                    placeholder="e.g. google/gemini-2.5-flash"
                                                 />
                                             ) : (
                                                 <select
