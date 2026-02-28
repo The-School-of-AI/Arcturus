@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.settings_loader import get_ollama_url, get_model, get_timeout
 
-EMBED_URL = get_ollama_url("embeddings")
+EMBED_URL = get_ollama_url("embed")
 EMBED_MODEL = get_model("embedding")
 OLLAMA_TIMEOUT = get_timeout()
 

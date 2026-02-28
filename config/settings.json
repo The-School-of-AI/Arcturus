@@ -1,4 +1,9 @@
 {
+  "watchtower": {
+    "enabled": true,
+    "mongodb_uri": "mongodb://localhost:27017",
+    "jaeger_endpoint": "http://localhost:4318/v1/traces"
+  },
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
     "timeout": 300
