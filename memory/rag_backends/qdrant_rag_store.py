@@ -2,6 +2,7 @@
 Qdrant-backed RAG vector store. Uses arcturus_rag_chunks collection.
 """
 
+import hashlib
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -28,6 +29,12 @@ from memory.qdrant_config import get_collection_config, get_qdrant_api_key, get_
 def _distance_from_str(s: str):
     m = {"cosine": Distance.COSINE, "euclidean": Distance.EUCLID, "dot": Distance.DOT}
     return m.get((s or "cosine").lower(), Distance.COSINE)
+
+
+def _chunk_id_to_point_id(chunk_id: str) -> int:
+    """Convert chunk_id to Qdrant point ID (64-bit unsigned int)."""
+    h = hashlib.md5(chunk_id.encode()).hexdigest()[:16]
+    return int(h, 16)
 
 
 class QdrantRAGStore:
@@ -88,7 +95,8 @@ class QdrantRAGStore:
                 "page": ent.get("page", 1),
             }
             vec = emb.tolist() if isinstance(emb, np.ndarray) else list(emb)
-            points.append(PointStruct(id=chunk_id, vector=vec, payload=payload))
+            point_id = _chunk_id_to_point_id(chunk_id)
+            points.append(PointStruct(id=point_id, vector=vec, payload=payload))
         if points:
             self.client.upsert(collection_name=self.collection_name, points=points)
 
