@@ -2,6 +2,10 @@
 """
 Test script to verify Qdrant setup and basic operations.
 
+Uses collection "test_memories" from config/qdrant_config.yaml, which includes
+indexed_payload_fields [category, source]. Indexes are created automatically on
+connection and are required for filtered search in Qdrant Cloud.
+
 Run this after starting Qdrant with: docker-compose up -d
 """
 
@@ -13,15 +17,15 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import numpy as np
-from memory.vector_store import QdrantVectorStore
+from memory.vector_store import get_vector_store, VectorStoreProtocol
 from core.utils import log_step, log_error
 
 
 def test_connection():
-    """Test basic connection to Qdrant."""
-    print("\n🔍 Testing Qdrant Connection...")
+    """Test basic connection to Qdrant via provider-agnostic factory."""
+    print("\n🔍 Testing Qdrant Connection (via get_vector_store)...")
     try:
-        store = QdrantVectorStore()
+        store: VectorStoreProtocol = get_vector_store(provider="qdrant", collection_name="test_memories")
         print("✅ Successfully connected to Qdrant!")
         return store
     except Exception as e:
@@ -31,7 +35,7 @@ def test_connection():
         return None
 
 
-def test_add_and_search(store: QdrantVectorStore):
+def test_add_and_search(store: VectorStoreProtocol):
     """Test adding memories and searching."""
     print("\n📝 Testing Add and Search Operations...")
     
@@ -88,7 +92,7 @@ def test_add_and_search(store: QdrantVectorStore):
     return added_ids
 
 
-def test_get_and_update(store: QdrantVectorStore, memory_id: str):
+def test_get_and_update(store: VectorStoreProtocol, memory_id: str):
     """Test getting and updating a memory."""
     print("\n✏️ Testing Get and Update Operations...")
     
@@ -114,11 +118,11 @@ def test_get_and_update(store: QdrantVectorStore, memory_id: str):
         print(f"  ❌ Failed to update memory")
 
 
-def test_filtering(store: QdrantVectorStore):
-    """Test metadata filtering."""
-    print("\n🔍 Testing Metadata Filtering...")
+def test_filtering(store: VectorStoreProtocol):
+    """Test metadata filtering (relies on category/source payload indexes)."""
+    print("\n🔍 Testing Metadata Filtering (category & source indexes)...")
     
-    # Search with category filter
+    # Search with category filter (requires category index in Qdrant Cloud)
     query_embedding = np.random.rand(768).astype(np.float32)
     results = store.search(
         query_vector=query_embedding,
@@ -126,14 +130,24 @@ def test_filtering(store: QdrantVectorStore):
         k=10,
     )
     
-    print(f"  ✅ Found {len(results)} tech memories")
+    print(f"  ✅ Found {len(results)} tech memories (category filter)")
     for result in results:
-        assert result["category"] == "tech", "Filter failed!"
+        assert result["category"] == "tech", "Category filter failed!"
+
+    # Search with source filter (requires source index in Qdrant Cloud)
+    results_src = store.search(
+        query_vector=query_embedding,
+        filter_metadata={"source": "test"},
+        k=10,
+    )
+    print(f"  ✅ Found {len(results_src)} memories with source=test")
+    for result in results_src:
+        assert result["source"] == "test", "Source filter failed!"
     
-    print("  ✅ Filtering works correctly!")
+    print("  ✅ Filtering works correctly (indexes OK)!")
 
 
-def test_count_and_get_all(store: QdrantVectorStore):
+def test_count_and_get_all(store: VectorStoreProtocol):
     """Test counting and getting all memories."""
     print("\n📊 Testing Count and Get All Operations...")
     
@@ -144,7 +158,7 @@ def test_count_and_get_all(store: QdrantVectorStore):
     print(f"  ✅ Retrieved {len(all_memories)} memories (limited to 10)")
 
 
-def test_delete(store: QdrantVectorStore, memory_id: str):
+def test_delete(store: VectorStoreProtocol, memory_id: str):
     """Test deleting a memory."""
     print("\n🗑️ Testing Delete Operation...")
     
