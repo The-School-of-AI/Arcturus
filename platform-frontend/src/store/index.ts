@@ -427,6 +427,7 @@ interface StudioSlice {
     fetchArtifacts: () => Promise<void>;
     loadArtifact: (id: string) => Promise<void>;
     createArtifact: (type: 'slides' | 'documents' | 'sheets', prompt: string, title?: string) => Promise<void>;
+    approveError: string | null;
     approveOutline: (id: string) => Promise<void>;
     rejectOutline: (id: string) => Promise<void>;
     setActiveArtifactId: (id: string | null) => void;
@@ -2180,6 +2181,7 @@ export const useAppStore = create<AppState>()(
             activeArtifact: null,
             isGenerating: false,
             isApproving: false,
+            approveError: null,
             isStudioModalOpen: false,
             setIsStudioModalOpen: (open) => set({ isStudioModalOpen: open }),
             setActiveArtifactId: (id) => {
@@ -2187,6 +2189,7 @@ export const useAppStore = create<AppState>()(
                 set({
                     activeArtifactId: id,
                     activeArtifact: null,
+                    approveError: null,
                     exportJobs: [],
                     activeExportJobId: null,
                     isExporting: false,
@@ -2230,13 +2233,16 @@ export const useAppStore = create<AppState>()(
                 }
             },
             approveOutline: async (id) => {
-                set({ isApproving: true });
+                set({ isApproving: true, approveError: null });
                 try {
                     const data = await api.approveOutline(id, true);
                     set({ activeArtifact: data, activeArtifactId: data.id });
                     await get().fetchArtifacts();
-                } catch (e) {
+                } catch (e: any) {
+                    const detail = e?.response?.data?.detail;
+                    const msg = typeof detail === 'string' ? detail : (e?.message || 'Failed to generate document');
                     console.error("Failed to approve outline", e);
+                    set({ approveError: msg });
                 } finally {
                     set({ isApproving: false });
                 }

@@ -29,6 +29,105 @@ _PLACEHOLDER_PATTERNS = [
 ]
 
 
+def normalize_document_content_tree_raw(data: dict) -> dict:
+    """Normalize raw LLM JSON dict before Pydantic validation.
+
+    Maps common LLM field-name variants to the canonical
+    DocumentContentTree / DocumentSection field names so that
+    ``validate_content_tree`` doesn't blow up with a 422.
+    """
+    # --- Top-level field aliases ---
+    # doc_title
+    if "doc_title" not in data:
+        for alias in ("title", "name", "document_title"):
+            if alias in data:
+                data["doc_title"] = data.pop(alias)
+                break
+        else:
+            data["doc_title"] = "Untitled Document"
+
+    # doc_type
+    if "doc_type" not in data:
+        for alias in ("type", "document_type"):
+            if alias in data:
+                data["doc_type"] = data.pop(alias)
+                break
+        else:
+            data["doc_type"] = DEFAULT_DOC_TYPE
+
+    # Normalize unknown doc_type values to default
+    if data["doc_type"] not in DOC_TYPE_TEMPLATES:
+        logger.info(
+            "Normalizing unknown doc_type '%s' to '%s' in raw data",
+            data["doc_type"],
+            DEFAULT_DOC_TYPE,
+        )
+        data["doc_type"] = DEFAULT_DOC_TYPE
+
+    # sections — ensure it exists
+    if "sections" not in data:
+        data["sections"] = []
+
+    # Normalize each section recursively
+    data["sections"] = [_normalize_section_raw(s) for s in data["sections"] if isinstance(s, dict)]
+
+    # bibliography — ensure it's a list
+    if "bibliography" not in data:
+        data["bibliography"] = []
+
+    return data
+
+
+def _normalize_section_raw(section: dict) -> dict:
+    """Normalize a single section dict (and its children) recursively."""
+    # heading: LLMs often use 'title' or 'name' instead of 'heading'
+    if "heading" not in section:
+        for alias in ("title", "name", "section_title"):
+            if alias in section:
+                section["heading"] = section.pop(alias)
+                break
+        else:
+            section["heading"] = "Untitled Section"
+
+    # id: coerce to str
+    if "id" in section:
+        section["id"] = str(section["id"])
+    else:
+        section["id"] = "sec0"
+
+    # level: ensure int, default 1
+    if "level" not in section:
+        section["level"] = 1
+    else:
+        try:
+            section["level"] = int(section["level"])
+        except (TypeError, ValueError):
+            section["level"] = 1
+
+    # subsections: LLMs sometimes use 'children' (from the outline schema)
+    if "subsections" not in section:
+        for alias in ("children", "sub_sections"):
+            if alias in section:
+                section["subsections"] = section.pop(alias)
+                break
+        else:
+            section["subsections"] = []
+
+    # Recurse into subsections
+    if isinstance(section["subsections"], list):
+        section["subsections"] = [
+            _normalize_section_raw(s) for s in section["subsections"] if isinstance(s, dict)
+        ]
+    else:
+        section["subsections"] = []
+
+    # citations: ensure list
+    if "citations" not in section:
+        section["citations"] = []
+
+    return section
+
+
 def normalize_document_outline(
     outline: Any,
     parameters: Optional[Dict[str, Any]] = None,

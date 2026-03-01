@@ -209,7 +209,7 @@ SPEAKER NOTES REQUIREMENTS (mandatory for every slide):
         return """Generate a DocumentContentTree JSON with this exact schema:
 {
   "doc_title": "Document title",
-  "doc_type": "technical_spec|business_plan|research_paper|blog_post|report|proposal|white_paper",
+  "doc_type": "technical_spec|report|proposal",
   "abstract": "Executive summary or abstract",
   "sections": [
     {

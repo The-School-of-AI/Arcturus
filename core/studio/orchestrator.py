@@ -136,7 +136,22 @@ class ForgeOrchestrator:
 
         # Parse and validate content tree
         parsed = parse_llm_json(raw)
-        content_tree_model = validate_content_tree(artifact.type, parsed)
+
+        # Document-specific: normalize raw LLM field names before validation
+        if artifact.type == ArtifactType.document:
+            logger.debug(
+                "Raw LLM document output (truncated): %.500s", str(parsed)
+            )
+            from core.studio.documents.generator import normalize_document_content_tree_raw
+            parsed = normalize_document_content_tree_raw(parsed)
+
+        try:
+            content_tree_model = validate_content_tree(artifact.type, parsed)
+        except Exception:
+            logger.warning(
+                "Content tree validation failed. Raw parsed data: %s", parsed
+            )
+            raise
 
         # Slides-specific: enforce slide count range [8, 15]
         if artifact.type == ArtifactType.slides:

@@ -13,6 +13,7 @@ from core.schemas.studio_schema import (
 from core.studio.documents.generator import (
     MAX_DEPTH,
     normalize_document_content_tree,
+    normalize_document_content_tree_raw,
     normalize_document_outline,
 )
 from core.studio.documents.types import DOC_TYPE_TEMPLATES
@@ -215,3 +216,124 @@ class TestNormalizeDocumentContentTree:
         result2 = normalize_document_content_tree(result1)
         assert len(result1.sections) == len(result2.sections)
         assert len(result1.bibliography) == len(result2.bibliography)
+
+
+class TestNormalizeDocumentContentTreeRaw:
+    """Tests for the pre-validation raw dict normalizer."""
+
+    def test_maps_title_to_doc_title(self):
+        data = {"title": "My Doc", "type": "report", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_title"] == "My Doc"
+        assert "title" not in result
+
+    def test_maps_document_title_to_doc_title(self):
+        data = {"document_title": "My Doc", "doc_type": "report", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_title"] == "My Doc"
+
+    def test_maps_type_to_doc_type(self):
+        data = {"doc_title": "Doc", "type": "proposal", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_type"] == "proposal"
+        assert "type" not in result
+
+    def test_normalizes_unknown_doc_type(self):
+        data = {"doc_title": "Doc", "doc_type": "blog_post", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_type"] == "report"
+
+    def test_defaults_missing_doc_title(self):
+        data = {"doc_type": "report", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_title"] == "Untitled Document"
+
+    def test_defaults_missing_doc_type(self):
+        data = {"doc_title": "Doc", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_type"] == "report"
+
+    def test_section_title_mapped_to_heading(self):
+        data = {
+            "doc_title": "Doc",
+            "doc_type": "report",
+            "sections": [{"id": 1, "title": "Intro", "content": "Hello"}],
+        }
+        result = normalize_document_content_tree_raw(data)
+        sec = result["sections"][0]
+        assert sec["heading"] == "Intro"
+        assert "title" not in sec
+
+    def test_section_id_coerced_to_str(self):
+        data = {
+            "doc_title": "Doc",
+            "doc_type": "report",
+            "sections": [{"id": 1, "heading": "Intro"}],
+        }
+        result = normalize_document_content_tree_raw(data)
+        assert result["sections"][0]["id"] == "1"
+
+    def test_children_mapped_to_subsections(self):
+        data = {
+            "doc_title": "Doc",
+            "doc_type": "report",
+            "sections": [
+                {"id": "1", "heading": "Intro", "children": [{"id": "1a", "title": "Sub"}]}
+            ],
+        }
+        result = normalize_document_content_tree_raw(data)
+        sec = result["sections"][0]
+        assert "subsections" in sec
+        assert len(sec["subsections"]) == 1
+        assert sec["subsections"][0]["heading"] == "Sub"
+
+    def test_full_llm_mismatch_produces_valid_model(self):
+        """End-to-end: typical LLM-mismatched JSON → valid DocumentContentTree."""
+        raw_llm = {
+            "title": "Market Analysis Report",
+            "type": "report",
+            "abstract": "A comprehensive analysis.",
+            "sections": [
+                {
+                    "id": 1,
+                    "title": "Executive Summary",
+                    "level": 1,
+                    "content": "Summary of findings.",
+                    "children": [
+                        {"id": "1a", "name": "Key Metrics", "content": "Metrics detail."}
+                    ],
+                },
+                {"id": 2, "title": "Conclusion", "level": 1, "content": "Final thoughts."},
+            ],
+        }
+        normalized = normalize_document_content_tree_raw(raw_llm)
+        # Should not raise
+        tree = DocumentContentTree(**normalized)
+        assert tree.doc_title == "Market Analysis Report"
+        assert tree.doc_type == "report"
+        assert len(tree.sections) == 2
+        assert tree.sections[0].heading == "Executive Summary"
+        assert tree.sections[0].subsections[0].heading == "Key Metrics"
+        assert tree.sections[0].id == "1"
+
+    def test_ensures_bibliography_default(self):
+        data = {"doc_title": "Doc", "doc_type": "report", "sections": []}
+        result = normalize_document_content_tree_raw(data)
+        assert result["bibliography"] == []
+
+    def test_preserves_existing_canonical_fields(self):
+        """When the LLM already uses correct field names, normalizer is a no-op."""
+        data = {
+            "doc_title": "Correct Doc",
+            "doc_type": "proposal",
+            "abstract": "Summary.",
+            "sections": [
+                {"id": "sec1", "heading": "Intro", "level": 1, "content": "Hello.", "subsections": [], "citations": []}
+            ],
+            "bibliography": [],
+        }
+        result = normalize_document_content_tree_raw(data)
+        assert result["doc_title"] == "Correct Doc"
+        assert result["doc_type"] == "proposal"
+        tree = DocumentContentTree(**result)
+        assert tree.sections[0].heading == "Intro"

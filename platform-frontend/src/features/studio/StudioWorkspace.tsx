@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2 } from 'lucide-react';
+import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,6 +11,7 @@ function OutlineViewer({ artifact }: { artifact: any }) {
     const approveOutline = useAppStore(s => s.approveOutline);
     const rejectOutline = useAppStore(s => s.rejectOutline);
     const isApproving = useAppStore(s => s.isApproving);
+    const approveError = useAppStore(s => s.approveError);
     const outline = artifact.outline;
 
     if (!outline) return null;
@@ -40,6 +41,13 @@ function OutlineViewer({ artifact }: { artifact: any }) {
                     </button>
                 </div>
             </div>
+
+            {approveError && (
+                <div className="mx-4 mt-2 p-3 rounded-lg border border-destructive/50 bg-destructive/10 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                    <p className="text-sm text-destructive">{approveError}</p>
+                </div>
+            )}
 
             <ScrollArea className="flex-1 p-4">
                 <div className="space-y-2 max-w-3xl mx-auto">

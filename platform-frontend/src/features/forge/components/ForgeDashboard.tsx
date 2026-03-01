@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Hammer, Plus, RefreshCw, CheckCircle, XCircle, ChevronRight, ChevronDown,
-    History, FileText, Presentation, Table2, Loader2
+    History, FileText, Presentation, Table2, Loader2, AlertCircle
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
@@ -204,6 +204,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
     const approveOutline = useAppStore(s => s.approveOutline);
     const rejectOutline = useAppStore(s => s.rejectOutline);
     const isApproving = useAppStore(s => s.isApproving);
+    const approveError = useAppStore(s => s.approveError);
     const [revisions, setRevisions] = useState<any[]>([]);
     const [revisionsLoading, setRevisionsLoading] = useState(false);
     const [showContentTree, setShowContentTree] = useState(false);
@@ -289,6 +290,13 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                     <XCircle className="w-4 h-4 mr-2" />
                                     Reject
                                 </Button>
+                            </div>
+                        )}
+
+                        {approveError && (
+                            <div className="p-3 rounded-lg border border-destructive/50 bg-destructive/10 flex items-start gap-2">
+                                <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                                <p className="text-sm text-destructive">{approveError}</p>
                             </div>
                         )}
                     </div>
