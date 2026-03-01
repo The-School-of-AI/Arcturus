@@ -182,4 +182,3 @@ This rewrites the 20-day plan into **distinct phases** where each phase can be *
 
 ### Exit criteria
 - All hard conditions satisfied and demo artifacts reproducible.
-

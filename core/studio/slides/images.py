@@ -2,8 +2,10 @@
 
 import asyncio
 import io
+import json
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
@@ -18,14 +20,24 @@ from core.schemas.studio_schema import SlidesContentTree
 logger = logging.getLogger(__name__)
 
 _IMAGE_PROMPT = (
-    "Generate a professional, clean 16:9 wide-format presentation image for: {description}. "
+    "Generate a professional, clean presentation image for: {description}. "
     "Style: modern, minimal, no text or labels or watermarks. "
     "Composition: wide landscape, subject centered, mood and setting clearly conveyed."
 )
 
 _SEMAPHORE_LIMIT = 3  # ~13 RPM stays under 15 RPM limit
 
+_MODELS_JSON = Path(__file__).parent.parent.parent.parent / "config" / "models.json"
+
 _client = None
+
+
+def _get_image_model() -> str:
+    """Resolve the image generation model from config/models.json."""
+    config = json.loads(_MODELS_JSON.read_text())
+    key = config.get("defaults", {}).get("image_generation", "gemini-image")
+    model_info = config.get("models", {}).get(key, {})
+    return model_info.get("model", "gemini-3.1-flash-image-preview")
 
 
 def _get_client() -> genai.Client:
@@ -81,27 +93,6 @@ async def generate_slide_images(
     return images
 
 
-def _crop_to_16_9(img: Image.Image) -> Image.Image:
-    """Center-crop an image to 16:9 aspect ratio."""
-    w, h = img.size
-    target_ratio = 16 / 9
-    current_ratio = w / h
-
-    if abs(current_ratio - target_ratio) < 0.01:
-        return img  # Already 16:9
-
-    if current_ratio > target_ratio:
-        # Too wide — crop sides
-        new_w = int(h * target_ratio)
-        left = (w - new_w) // 2
-        return img.crop((left, 0, left + new_w, h))
-    else:
-        # Too tall — crop top/bottom
-        new_h = int(w / target_ratio)
-        top = (h - new_h) // 2
-        return img.crop((0, top, w, top + new_h))
-
-
 async def _generate_single_image(description: str) -> io.BytesIO | None:
     """Call Gemini to generate a single image, returning JPEG bytes or None."""
     await ModelManager._wait_for_rate_limit_static()
@@ -112,25 +103,25 @@ async def _generate_single_image(description: str) -> io.BytesIO | None:
 
         response = await asyncio.to_thread(
             client.models.generate_content,
-            model="gemini-2.5-flash-image",
+            model=_get_image_model(),
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_modalities=["IMAGE"],
+                image_config=genai_types.ImageConfig(
+                    aspect_ratio="16:9",
+                    image_size="512",
+                ),
             ),
         )
 
         # Extract image from response parts
-        for part in response.candidates[0].content.parts:
+        for part in response.parts:
             if part.inline_data is not None:
-                raw_bytes = part.inline_data.data
-                img = Image.open(io.BytesIO(raw_bytes))
+                img = Image.open(io.BytesIO(part.inline_data.data))
 
                 # Convert to RGB JPEG for smaller file size
                 if img.mode in ("RGBA", "P", "LA"):
                     img = img.convert("RGB")
-
-                # Center-crop to 16:9 aspect ratio
-                img = _crop_to_16_9(img)
 
                 buf = io.BytesIO()
                 img.save(buf, format="JPEG", quality=85)
