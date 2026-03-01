@@ -5,6 +5,8 @@ import { create } from 'zustand';
 import type { SwarmTask, SwarmEvent, SwarmTemplate } from './types';
 import { swarmApi } from './swarmApi';
 
+export type RunEntry = { id: string; label: string; status: 'running' | 'done' | 'failed' };
+
 interface SwarmStore {
     // Active run
     activeRunId: string | null;
@@ -18,6 +20,7 @@ interface SwarmStore {
     isInterventionOpen: boolean;
     isTemplateDrawerOpen: boolean;
     templates: SwarmTemplate[];
+    runHistory: RunEntry[];
 
     // Actions
     setActiveRunId: (id: string | null) => void;
@@ -27,6 +30,7 @@ interface SwarmStore {
     setInterventionOpen: (open: boolean) => void;
     setTemplateDrawerOpen: (open: boolean) => void;
     loadTemplates: () => Promise<void>;
+    setRunHistory: (updater: RunEntry[] | ((prev: RunEntry[]) => RunEntry[])) => void;
 }
 
 export const useSwarmStore = create<SwarmStore>((set, get) => ({
@@ -39,6 +43,7 @@ export const useSwarmStore = create<SwarmStore>((set, get) => ({
     isInterventionOpen: false,
     isTemplateDrawerOpen: false,
     templates: [],
+    runHistory: [],
 
     setActiveRunId: (id) => set({ activeRunId: id, tasks: [], tokensUsed: 0, costUsd: 0, selectedAgentId: null }),
 
@@ -97,4 +102,8 @@ export const useSwarmStore = create<SwarmStore>((set, get) => ({
             set({ templates: [] });
         }
     },
+
+    setRunHistory: (updater) => set(state => ({
+        runHistory: typeof updater === 'function' ? updater(state.runHistory) : updater
+    })),
 }));
