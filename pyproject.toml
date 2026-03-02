@@ -47,6 +47,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.49b0",
     "pymongo>=4.10.0",
     "pytest>=9.0.2",
+    "cryptography>=46.0.5",
 ]
 
 [tool.setuptools.packages.find]
