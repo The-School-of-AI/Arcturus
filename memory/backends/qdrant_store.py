@@ -379,6 +379,14 @@ class QdrantVectorStore:
                 points_selector=[memory_id],
             )
             log_step(f"🗑️ Deleted memory: {memory_id[:8]}...", symbol="❌")
+            # Keep knowledge graph in sync: remove Memory node and its relationships
+            try:
+                from memory.knowledge_graph import get_knowledge_graph
+                kg = get_knowledge_graph()
+                if kg and kg.enabled:
+                    kg.delete_memory(memory_id)
+            except Exception as e:
+                log_error(f"Knowledge graph delete_memory failed: {e}")
             return True
         except Exception as e:
             log_error(f"Failed to delete memory {memory_id}: {e}")

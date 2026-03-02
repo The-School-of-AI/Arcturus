@@ -370,6 +370,22 @@ class KnowledgeGraph:
         )
         return records
 
+    def delete_memory(self, memory_id: str) -> None:
+        """
+        Remove the Memory node and all its relationships from the graph.
+        Called when a memory is deleted from Qdrant so the knowledge graph stays in sync.
+        Entity nodes are left in place (they may be referenced by other memories).
+        """
+        if not self._enabled or not memory_id:
+            return
+        self._run_write(
+            """
+            MATCH (m:Memory {id: $memory_id})
+            DETACH DELETE m
+            """,
+            {"memory_id": memory_id},
+        )
+
     def expand_from_entities(
         self,
         entity_ids: List[str],

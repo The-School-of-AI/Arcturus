@@ -10,6 +10,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from core.utils import log_error
+import pdb
 
 
 # Default stop words for fallback entity token extraction
@@ -48,6 +49,7 @@ def retrieve(
     user_id = user_id or _get_user_id() or ""
     result_ids: set = set()
     memory_context = ""
+    pdb.set_trace()
 
     # 1. Semantic recall (may return 0 — graph recall will still run)
     semantic_results = _semantic_recall(query, store, k=semantic_k)
