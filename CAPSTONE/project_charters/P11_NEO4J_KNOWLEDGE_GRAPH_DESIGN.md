@@ -1,6 +1,6 @@
 # P11 Mnemo: Neo4j Knowledge Graph Design
 
-> **Status:** Implemented. See memory/knowledge_graph.py, memory/entity_extractor.py, scripts/migrate_memories_to_neo4j.py.
+> **Status:** Implemented. Core: memory/knowledge_graph.py, memory/entity_extractor.py, scripts/migrate_memories_to_neo4j.py. Retrieval (9.1): memory/memory_retriever.py, dual-path recall. See §9.1 for tweaks pending.
 > **Context:** Phase 3 of Mnemo — Neo4j layer for Remme memories (entities, relationships, User/Session nodes).
 
 ---
@@ -81,22 +81,29 @@ Neo4j stores extracted entities and relationships from Remme memories. It ties t
 
 ---
 
-## 5. Retrieval Flow
+## 5. Retrieval Flow (Current Implementation)
 
 ```
-Query: "What do I know about John and his work?"
+Query: "Planning to meet John again at his office? Check weather next week?"
          │
-         ├─► Qdrant: semantic search → top-k memories (memory_ids)
+         ├─► Path 1: Semantic recall (Qdrant vector search, k=10)
+         │   - Top 3 used for direct memory context
+         │   - All 10 used for entity_ids → graph expansion
          │
-         └─► Neo4j: 
-             - Find Entity(name="John")
-             - Traverse RELATED_TO, LIVES_IN, WORKS_AT, etc.
-             - Get Memory nodes via CONTAINS_ENTITY or HAS_MEMORY
-             - Optionally: (User)-[:LIVES_IN]->(City) for user context
+         ├─► Path 2: Entity recall (runs INDEPENDENTLY when kg enabled)
+         │   - Extract entities from query (EntityExtractor.extract_from_query)
+         │   - Resolve against Neo4j (KnowledgeGraph.resolve_entity_candidates, fuzzy)
+         │   - Fallback: stop-word tokens → get_memory_ids_for_entity_names
+         │   - Expand → memory_ids → fetch from Qdrant
+         │   - Rescues when semantic returns 0 (e.g. "John" in query, "Jon" in memory)
+         │
+         └─► Merge: PREVIOUS MEMORIES + RELATED ENTITIES + ADDITIONAL MEMORIES + USER FACTS
          │
          ▼
     Fused context for agent
 ```
+
+Orchestrated by `memory/memory_retriever.py`; `routers/runs.py` calls `retrieve(query)`.
 
 ---
 
@@ -111,16 +118,17 @@ Query: "What do I know about John and his work?"
 
 ---
 
-## 7. Files to Create/Modify
+## 7. Files Created/Modified
 
-| File | Action |
+| File | Status |
 |------|--------|
-| `memory/knowledge_graph.py` | New: Neo4j client, schema, CRUD |
-| `memory/entity_extractor.py` | New: LLM/NER extraction |
-| `config/qdrant_config.yaml` | Add `session_id`, `entity_ids` to indexed fields |
-| `memory/backends/qdrant_store.py` | Ensure add() accepts `session_id`, `entity_ids` |
-| `remme/extractor.py` or ingestion path | Call knowledge graph on memory add |
-| `scripts/migrate_memories_to_neo4j.py` | New: backfill script |
+| `memory/knowledge_graph.py` | Neo4j client, schema, CRUD; `resolve_entity_candidates`, `get_memory_ids_for_entity_names`, `expand_from_entities` |
+| `memory/entity_extractor.py` | LLM extraction from memory text; `extract_from_query` for lightweight NER on query |
+| `memory/memory_retriever.py` | **New:** Orchestrates semantic recall (k=10), entity recall (dual path), graph expansion, merge |
+| `config/qdrant_config.yaml` | `session_id` in indexed fields |
+| `memory/backends/qdrant_store.py` | add() accepts `session_id`; `_ingest_to_knowledge_graph` on add |
+| `routers/runs.py` | Uses `memory_retriever.retrieve(query)` instead of direct search |
+| `scripts/migrate_memories_to_neo4j.py` | Backfill script |
 
 ---
 
@@ -140,19 +148,22 @@ Or attach the file and ask to implement the design.
 
 ### 9.1 Retrieval Gap: When Semantic Search Returns Nothing
 
-**Problem:** At agent run time we do a single vector search (top-k, e.g. 3) on Qdrant. If the user query does not semantically match any memory (e.g. "Planning to meet John again at his office? Can you check the weather next week?"), Qdrant returns no results. We then never call Neo4j, so we never surface the memory that contains entities like "Jon", "Google", "NC" even though "John" / "office" are clearly related. The knowledge graph is only used *after* we have at least one memory from Qdrant.
+**Status:** Implemented. A few more tweaks will be discussed in a separate context.
 
-**Two directions to address this:**
+**Problem (was):** At agent run time we did a single vector search (top-k=3) on Qdrant. If the query did not semantically match any memory, we never called Neo4j and lost entity-matched memories (e.g. "John" in query vs "Jon" in memory).
 
-1. **Entity-friendly payload in Qdrant**
+**Implemented:**
+- **Entity-first path:** `memory_retriever.py` runs entity recall **independently** of semantic search. Extract entities from query → resolve against Neo4j (fuzzy match, e.g. John↔Jon) → get memory_ids → fetch memories from Qdrant. Runs even when semantic returns 0.
+- **Larger k:** Semantic recall uses k=10; top 3 for direct context; all 10 for graph expansion.
+- **KnowledgeGraph:** `resolve_entity_candidates`, `get_memory_ids_for_entity_names`; `EntityExtractor.extract_from_query`.
+
+**Tweaks pending (to be discussed in separate context):**
+
+1. **Entity-friendly payload in Qdrant (optional)**
    - **Idea:** Store something more readable than raw `entity_ids` in Qdrant (e.g. composite keys like `Person::Jon`, `Company::Google`, or a small list of `{type, name}` objects) so we can do entity-based matching or display without always querying Neo4j.
    - **Industry practice:** Keeping only foreign IDs in the vector store is common (single source of truth in the graph). Denormalizing entity names/types into the payload is also common when you need filter-by-entity or hybrid search (e.g. keyword/entity filters in Qdrant) or to avoid a Neo4j round-trip for every read. Tradeoff: payload size and consistency (if an entity is renamed in Neo4j, you’d need to update Qdrant). A practical approach is to store both: `entity_ids` (for Neo4j link) and something like `entity_labels` or `entity_composite_keys` (for display and optional filter/expansion) so reads and entity-first retrieval can work without always hitting Neo4j.
 
-2. **Smarter search at agent run**
-   - **Idea:** Don’t rely only on “Qdrant top-k then expand.” Options:
-     - **Larger k then trim:** e.g. fetch top 10 from Qdrant, use top 3 for direct memory context and use the rest (or all 10) for entity_ids → Neo4j expansion, then fuse. So we still have one vector call but more candidates for graph expansion.
-     - **Dual path:** In parallel (or as fallback), do an **entity-first** path: from the query, extract or guess entity names (e.g. “John”, “office”) → query Neo4j for entities matching those names (or similar) → get `memory_ids` from the graph → fetch those memories from Qdrant by id and inject into context. That way even with zero semantic match we can still pull in memories that mention “John” / “Jon” / “Google office”.
-   - Combining both (slightly larger k + entity-first fallback) gives better recall when the query is entity-centric but not semantically close to the memory text.
+2. **Further search refinements (if needed)** — Larger k and dual path are already in place. Possible future tweaks: tune k, top_for_context, fuzzy_threshold; or add entity labels to Qdrant for filter/display without Neo4j round-trip. *(Original ideas: larger k + entity-first fallback; both are now implemented.)*
 
 ### 9.2 Session-Level Extraction: One Pass for Memories, Preferences, and Entities
 
