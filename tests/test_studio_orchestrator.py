@@ -18,9 +18,9 @@ from core.studio.orchestrator import ForgeOrchestrator
 from core.studio.storage import StudioStorage
 
 
-def _weasyprint_available():
+def _xhtml2pdf_available():
     try:
-        from weasyprint import HTML
+        from xhtml2pdf import pisa
         return True
     except (ImportError, OSError):
         return False
@@ -573,8 +573,8 @@ class TestDocumentExportLifecycle:
         assert job_data["output_uri"] is not None
 
     @pytest.mark.skipif(
-        not _weasyprint_available(),
-        reason="WeasyPrint native libraries not available",
+        not _xhtml2pdf_available(),
+        reason="xhtml2pdf not available",
     )
     def test_export_pdf_creates_job(self, orchestrator, storage, mock_llm_document):
         result = _run(orchestrator.generate_outline(

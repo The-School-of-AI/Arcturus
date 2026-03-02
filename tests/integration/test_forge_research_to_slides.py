@@ -13,9 +13,9 @@ from uuid import uuid4
 import pytest
 
 
-def _weasyprint_available():
+def _xhtml2pdf_available():
     try:
-        from weasyprint import HTML
+        from xhtml2pdf import pisa
         return True
     except (ImportError, OSError):
         return False
@@ -479,8 +479,8 @@ def test_18_document_outline_to_draft_to_docx_export(orchestrator, storage, mock
 
 
 @pytest.mark.skipif(
-    not _weasyprint_available(),
-    reason="WeasyPrint native libraries not available",
+    not _xhtml2pdf_available(),
+    reason="xhtml2pdf not available",
 )
 def test_19_document_pdf_export(orchestrator, storage, mock_llm_document) -> None:
     """Document pipeline: outline → draft → export PDF."""
@@ -498,8 +498,8 @@ def test_19_document_pdf_export(orchestrator, storage, mock_llm_document) -> Non
 
 
 @pytest.mark.skipif(
-    not _weasyprint_available(),
-    reason="WeasyPrint native libraries not available",
+    not _xhtml2pdf_available(),
+    reason="xhtml2pdf not available",
 )
 def test_20_document_multiple_exports_tracked(orchestrator, storage, mock_llm_document) -> None:
     """Multiple document exports are tracked on the artifact."""

@@ -6,16 +6,16 @@ from unittest.mock import patch
 
 from core.schemas.studio_schema import DocumentContentTree, DocumentSection
 
-# Check if WeasyPrint native dependencies are available
-_weasyprint_available = True
+# Check if xhtml2pdf is available
+_xhtml2pdf_available = True
 try:
-    from weasyprint import HTML
+    from xhtml2pdf import pisa
 except (ImportError, OSError):
-    _weasyprint_available = False
+    _xhtml2pdf_available = False
 
-_skip_no_weasyprint = pytest.mark.skipif(
-    not _weasyprint_available,
-    reason="WeasyPrint native libraries not available (gobject/pango/etc.)",
+_skip_no_xhtml2pdf = pytest.mark.skipif(
+    not _xhtml2pdf_available,
+    reason="xhtml2pdf not available",
 )
 
 from core.studio.documents.exporter_pdf import export_to_pdf
@@ -60,7 +60,7 @@ def output_path(tmp_path):
     return tmp_path / "test_output.pdf"
 
 
-@_skip_no_weasyprint
+@_skip_no_xhtml2pdf
 class TestExportToPdf:
     def test_creates_file(self, sample_content_tree, output_path):
         result = export_to_pdf(sample_content_tree, output_path)
@@ -138,10 +138,10 @@ class TestExportToPdf:
         export_to_pdf(tree, path)
         assert path.exists()
 
-    def test_weasyprint_import_failure(self, sample_content_tree, output_path):
-        """Test graceful error when WeasyPrint is not available."""
-        with patch.dict("sys.modules", {"weasyprint": None}):
-            with pytest.raises(RuntimeError, match="WeasyPrint is required"):
+    def test_xhtml2pdf_import_failure(self, sample_content_tree, output_path):
+        """Test graceful error when xhtml2pdf is not available."""
+        with patch.dict("sys.modules", {"xhtml2pdf": None}):
+            with pytest.raises(RuntimeError, match="xhtml2pdf is required"):
                 # Need to reimport to trigger the import failure
                 import importlib
                 import core.studio.documents.exporter_pdf as mod
@@ -159,3 +159,96 @@ class TestExportToPdf:
         path = tmp_path / "empty.pdf"
         export_to_pdf(tree, path)
         assert path.exists()
+
+    def test_pdf_renders_bold_text(self, tmp_path):
+        """Bold markdown should render without raw ** markers."""
+        tree = DocumentContentTree(
+            doc_title="Bold Test",
+            doc_type="report",
+            sections=[
+                DocumentSection(
+                    id="s1", heading="Section", level=1,
+                    content="This has **bold text** in it.",
+                ),
+            ],
+        )
+        path = tmp_path / "bold.pdf"
+        export_to_pdf(tree, path)
+        import fitz
+        pdf = fitz.open(str(path))
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        assert "bold text" in text
+        assert "**bold text**" not in text
+
+    def test_pdf_renders_code_block(self, tmp_path):
+        """Fenced code blocks should render without ``` markers."""
+        tree = DocumentContentTree(
+            doc_title="Code Test",
+            doc_type="report",
+            sections=[
+                DocumentSection(
+                    id="s1", heading="Section", level=1,
+                    content="Example:\n\n```python\nprint('hello')\n```",
+                ),
+            ],
+        )
+        path = tmp_path / "code.pdf"
+        export_to_pdf(tree, path)
+        import fitz
+        pdf = fitz.open(str(path))
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        assert "print" in text
+        assert "```" not in text
+
+    def test_pdf_renders_inline_glossary_list(self, tmp_path):
+        """LLM-generated inline definition lists should not show raw * or ** markers."""
+        tree = DocumentContentTree(
+            doc_title="Glossary Test",
+            doc_type="report",
+            sections=[
+                DocumentSection(
+                    id="s1", heading="Definitions and Acronyms", level=1,
+                    content=(
+                        "The following key terms are defined: "
+                        "* **Monolith:** The existing application. "
+                        "* **Microservice (MS):** A small service. "
+                        "* **API Gateway:** A single entry point."
+                    ),
+                ),
+            ],
+        )
+        path = tmp_path / "glossary.pdf"
+        export_to_pdf(tree, path)
+        import fitz
+        pdf = fitz.open(str(path))
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        assert "Monolith:" in text
+        assert "**Monolith:**" not in text
+        assert "Microservice (MS):" in text
+        assert "* **" not in text
+
+    def test_pdf_mermaid_shows_diagram_label(self, tmp_path):
+        """Mermaid blocks should show 'Diagram (source)' label, not raw fences."""
+        tree = DocumentContentTree(
+            doc_title="Mermaid Test",
+            doc_type="report",
+            sections=[
+                DocumentSection(
+                    id="s1", heading="Architecture", level=1,
+                    content="Overview:\n\n```mermaid\ngraph TD\n  A-->B\n```",
+                ),
+            ],
+        )
+        path = tmp_path / "mermaid.pdf"
+        export_to_pdf(tree, path)
+        import fitz
+        pdf = fitz.open(str(path))
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        assert "Diagram (source)" in text
+        assert "mermaid.live" in text
+        assert "graph TD" in text
+        assert "```" not in text

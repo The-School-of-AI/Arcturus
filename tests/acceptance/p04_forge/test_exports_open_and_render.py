@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-def _weasyprint_available():
+def _xhtml2pdf_available():
     try:
-        from weasyprint import HTML
+        from xhtml2pdf import pisa
         return True
     except (ImportError, OSError):
         return False
@@ -478,8 +478,8 @@ def test_22_docx_export_creates_valid_file(tmp_path):
 
 
 @pytest.mark.skipif(
-    not _weasyprint_available(),
-    reason="WeasyPrint native libraries not available",
+    not _xhtml2pdf_available(),
+    reason="xhtml2pdf not available",
 )
 def test_23_pdf_export_creates_valid_file(tmp_path):
     """Phase 4: PDF export produces a valid, openable PDF document."""
@@ -537,8 +537,8 @@ def test_24_document_export_job_lifecycle(tmp_path):
 
 
 @pytest.mark.skipif(
-    not _weasyprint_available(),
-    reason="WeasyPrint native libraries not available",
+    not _xhtml2pdf_available(),
+    reason="xhtml2pdf not available",
 )
 def test_25_document_pdf_export_job_lifecycle(tmp_path):
     """Phase 4: Full document export lifecycle — export PDF."""

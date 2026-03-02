@@ -8,16 +8,16 @@ from core.studio.documents.exporter_docx import export_to_docx
 from core.studio.documents.exporter_pdf import export_to_pdf
 from core.studio.documents.validator import validate_docx, validate_pdf
 
-# Check if WeasyPrint native dependencies are available
-_weasyprint_available = True
+# Check if xhtml2pdf is available
+_xhtml2pdf_available = True
 try:
-    from weasyprint import HTML
+    from xhtml2pdf import pisa
 except (ImportError, OSError):
-    _weasyprint_available = False
+    _xhtml2pdf_available = False
 
-_skip_no_weasyprint = pytest.mark.skipif(
-    not _weasyprint_available,
-    reason="WeasyPrint native libraries not available (gobject/pango/etc.)",
+_skip_no_xhtml2pdf = pytest.mark.skipif(
+    not _xhtml2pdf_available,
+    reason="xhtml2pdf not available",
 )
 
 
@@ -114,7 +114,7 @@ class TestValidateDocx:
         assert len(result["warnings"]) > 0
 
 
-@_skip_no_weasyprint
+@_skip_no_xhtml2pdf
 class TestValidatePdf:
     def test_valid_pdf(self, sample_content_tree, tmp_path):
         path = tmp_path / "valid.pdf"

@@ -1,4 +1,4 @@
-"""PDF exporter — render DocumentContentTree via HTML→WeasyPrint."""
+"""PDF exporter — render DocumentContentTree via HTML→xhtml2pdf."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from core.schemas.studio_schema import DocumentContentTree
+from core.studio.documents.markdown_render import markdown_to_html
 
 logger = logging.getLogger(__name__)
 
@@ -20,22 +21,26 @@ def export_to_pdf(
 ) -> Path:
     """Render a DocumentContentTree to a PDF file.
 
-    Uses Jinja2 for HTML templating and WeasyPrint for PDF rendering.
+    Uses Jinja2 for HTML templating and xhtml2pdf for PDF rendering.
     Returns the output path.
 
-    Raises RuntimeError if WeasyPrint is not available.
+    Raises RuntimeError if xhtml2pdf is not available.
     """
-    # Lazy import — WeasyPrint has heavy native deps
+    # Lazy import — keep startup fast
     try:
-        from weasyprint import HTML
+        from xhtml2pdf import pisa
     except ImportError as e:
         raise RuntimeError(
-            "WeasyPrint is required for PDF export. "
-            "Install it with: pip install weasyprint"
+            "xhtml2pdf is required for PDF export. "
+            "Install it with: pip install xhtml2pdf"
         ) from e
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Read CSS content for inline embedding
+    css_file = _TEMPLATE_DIR / "document_base.css"
+    css_inline = css_file.read_text(encoding="utf-8")
 
     # Build HTML from template
     env = Environment(
@@ -50,15 +55,20 @@ def export_to_pdf(
     html_content = template.render(
         doc_title=content_tree.doc_title,
         doc_type=content_tree.doc_type,
-        abstract=content_tree.abstract,
+        abstract=markdown_to_html(content_tree.abstract),
         sections=sections_data,
         bibliography=content_tree.bibliography,
-        css_path=str(_TEMPLATE_DIR / "document_base.css"),
+        css_inline=css_inline,
     )
 
     # Render PDF
-    html_obj = HTML(string=html_content, base_url=str(_TEMPLATE_DIR))
-    html_obj.write_pdf(str(output_path))
+    with open(str(output_path), "wb") as f:
+        pisa_status = pisa.CreatePDF(html_content, dest=f)
+
+    if not output_path.exists() or output_path.stat().st_size == 0:
+        raise RuntimeError(
+            f"PDF generation failed (pisa errors: {pisa_status.err})"
+        )
 
     return output_path
 
@@ -69,7 +79,7 @@ def _section_to_dict(section) -> dict:
         "id": section.id,
         "heading": section.heading,
         "level": section.level,
-        "content": section.content or "",
+        "content": markdown_to_html(section.content),
         "subsections": [_section_to_dict(s) for s in (section.subsections or [])],
         "citations": section.citations or [],
     }

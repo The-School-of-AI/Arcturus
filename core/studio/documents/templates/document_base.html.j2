@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <title>{{ doc_title }}</title>
-    <link rel="stylesheet" href="file://{{ css_path }}">
+    {% if css_inline %}<style>{{ css_inline | safe }}</style>
+    {% else %}<link rel="stylesheet" href="file://{{ css_path }}">{% endif %}
 </head>
 <body>
     <header>
@@ -16,7 +17,7 @@
     {% if abstract %}
     <section class="abstract">
         <h2>Abstract</h2>
-        <p>{{ abstract }}</p>
+        <div class="abstract-content">{{ abstract | safe }}</div>
     </section>
     {% endif %}
 
@@ -25,11 +26,7 @@
     <section class="doc-section level-{{ section.level }}">
         <h{{ section.level + 1 }}>{{ section.heading }}</h{{ section.level + 1 }}>
         {% if section.content %}
-        {% for paragraph in section.content.split('\n\n') %}
-        {% if paragraph.strip() %}
-        <p>{{ paragraph.strip() }}</p>
-        {% endif %}
-        {% endfor %}
+        <div class="section-content">{{ section.content | safe }}</div>
         {% endif %}
         {% if section.subsections %}
         {{ render_sections(section.subsections) }}
