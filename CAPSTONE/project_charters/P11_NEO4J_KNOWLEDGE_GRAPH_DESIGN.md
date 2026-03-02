@@ -1,6 +1,6 @@
 # P11 Mnemo: Neo4j Knowledge Graph Design
 
-> **Status:** Implemented. Core: memory/knowledge_graph.py, memory/entity_extractor.py, scripts/migrate_memories_to_neo4j.py. Retrieval (9.1): memory/memory_retriever.py, dual-path recall. See §9.1 for tweaks pending.
+> **Status:** Implemented. Core: `memory/knowledge_graph.py`, `memory/entity_extractor.py`, `scripts/migrate_memories_to_neo4j.py`. Retrieval (9.1): `memory/memory_retriever.py`, dual-path recall, multi-tenant-safe expansion. See §9 for remaining work.
 > **Context:** Phase 3 of Mnemo — Neo4j layer for Remme memories (entities, relationships, User/Session nodes).
 
 ---
@@ -8,6 +8,23 @@
 ## 1. Overview
 
 Neo4j stores extracted entities and relationships from Remme memories. It ties to Qdrant via `memory_id` (Qdrant point id) and `entity_ids` (Neo4j entity ids in Qdrant payload).
+
+### 1.1 Implementation status (Mar 2026)
+
+- **Implemented (code landed):**
+  - **Canonical entity dedupe:** Entity nodes now store `canonical_name` and `composite_key = type::canonical_name` so `"Google"` and `"google"` (same type) merge; display `name` is preserved.
+  - **Relationship modeling:** Entity–entity relationships use a promoted set of first-class Neo4j relationship types (`ENTITY_REL_TYPES` in `knowledge_graph.py`, e.g. `WORKS_AT`, `LOCATED_IN`, `OWNS`) with `RELATED_TO` as a fallback when the extractor emits an unknown type.
+  - **Entity resolution:** `resolve_entity_candidates` does exact match, then fuzzy match **within-type first**, then **global fallback** so wrong NER types (e.g. `"John"` as Concept) can still match existing `Person` entities.
+  - **Graph expansion:** `expand_from_entities` traverses all entity relationship types (first-class + `RELATED_TO`), scopes memories to the requesting user via `(u:User {user_id})-[:HAS_MEMORY]->(m)` to avoid multi-tenant leakage, and returns deterministically ordered `memory_ids` (by `m.created_at DESC`, then de-duped in Python while preserving order).
+  - **Retrieval orchestrator:** `memory_retriever.retrieve` runs semantic (k=10) and entity recall independently, uses a **global `result_ids` dedupe set** across all paths (semantic, entity-first, graph-expanded), and batch-fetches memories where the store supports it (`get_many`/`get_batch`) to reduce N+1 calls.
+  - **Backfill:** `scripts/migrate_memories_to_neo4j.py` backfills existing Qdrant memories via `KnowledgeGraph.ingest_memory`, which now applies canonicalization and relationship modeling automatically.
+
+- **Remaining / future work:**
+  - **Entity-friendly payload in Qdrant (optional)** — §9.1. Still using `entity_ids` plus optional `entity_labels`; composite keys and richer payloads are a design option, not yet implemented.
+  - **Session-level extraction** — §9.2. Single extractor pass for memories + preferences + entities from session summary.
+  - **Preferences unification** — §9.3. Move evidence/preferences into Qdrant + Neo4j as the single source of truth.
+  - **Spaces / `space_id` dimension** — §9.4. Reserved; not yet wired into ingestion or retrieval.
+  - **Expansion depth:** `expand_from_entities` currently performs one-hop expansion only; `depth` is reserved for future multi-hop traversal.
 
 ---
 
@@ -76,7 +93,7 @@ Neo4j stores extracted entities and relationships from Remme memories. It ties t
 3. Create **Memory** node; link `(User)-[:HAS_MEMORY]->(Memory)` and `(Memory)-[:FROM_SESSION]->(Session)`.
 4. Extract entities and relationships from memory text (LLM or NER).
 5. Create **Entity** nodes; link `(Memory)-[:CONTAINS_ENTITY]->(Entity)`.
-6. Create `(Entity)-[:RELATED_TO]->(Entity)` with `source_memory_ids`.
+6. Create entity–entity relationships using first-class types (e.g. `WORKS_AT`, `LOCATED_IN`, `OWNS`, `KNOWS`) when recognized; otherwise create `(Entity)-[:RELATED_TO {type: "...", source_memory_ids: [...] }]->(Entity)` as a generic fallback.
 7. Infer user-centric facts → create `(User)-[:LIVES_IN|WORKS_AT|KNOWS|PREFERS]->(Entity)` with `source_memory_ids`.
 8. Update Qdrant memory payload with `entity_ids`.
 
@@ -105,6 +122,11 @@ Query: "Planning to meet John again at his office? Check weather next week?"
 ```
 
 Orchestrated by `memory/memory_retriever.py`; `routers/runs.py` calls `retrieve(query)`.
+
+Key retrieval behaviors in the current implementation:
+- **Dual-path recall:** Semantic (k=10) and entity-first recall run independently; entity recall still runs when semantic returns 0.
+- **Global dedupe & ordering:** A single `result_ids` set is maintained across semantic, entity-first, and graph-expanded memories; graph and entity paths batch-fetch memories when possible and append up to a small fixed number for readability. Graph-expanded `memory_ids` are ordered by `Memory.created_at DESC` (then de-duped) for deterministic results.
+- **Multi-tenant safety:** Graph expansion (`expand_from_entities`) scopes memories by `(u:User {user_id})-[:HAS_MEMORY]->(m)` when `user_id` is provided, preventing cross-tenant leakage even when entities are globally deduped by `composite_key`.
 
 ---
 

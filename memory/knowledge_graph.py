@@ -472,19 +472,41 @@ class KnowledgeGraph:
         placeholders = ", ".join([f"$id{i}" for i in range(len(entity_ids))])
         params = {f"id{i}": eid for i, eid in enumerate(entity_ids)}
         params["user_id"] = user_id or ""
+
+        # IMPORTANT (multi-tenant safety):
+        # If user_id is provided, constrain returned memories to (u)-[:HAS_MEMORY]->(m).
+        # Entities are globally deduped by composite_key, so unconstrained memory expansion
+        # could leak memories across users if we don't scope by user here.
+        if user_id:
+            memory_match = "OPTIONAL MATCH (u:User {user_id: $user_id})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e)"
+        else:
+            memory_match = "OPTIONAL MATCH (m:Memory)-[:CONTAINS_ENTITY]->(e)"
+
+        # Deterministic ordering: sort memory ids by Memory.created_at (desc) at query time,
+        # then de-dupe in Python while preserving order.
         query = f"""
             MATCH (e:Entity)
             WHERE e.id IN [{placeholders}]
             OPTIONAL MATCH (e)-[:{rel_types}]-(other:Entity)
-            OPTIONAL MATCH (m:Memory)-[:CONTAINS_ENTITY]->(e)
-            WITH e, collect(DISTINCT other) AS related, collect(DISTINCT m) AS mems
+            WITH e, collect(DISTINCT other) AS related
+            {memory_match}
+            WITH e, related, m
+            ORDER BY m.created_at DESC
+            WITH e, related, collect(m.id) AS memory_ids_raw
             RETURN e.id AS id, e.type AS type, e.name AS name,
                    [x IN related WHERE x IS NOT NULL | {{id: x.id, type: x.type, name: x.name}}] AS related_entities,
-                   [m IN mems WHERE m IS NOT NULL | m.id] AS memory_ids
+                   [mid IN memory_ids_raw WHERE mid IS NOT NULL] AS memory_ids
             """
         records = self._run_query(query, params)
-        entities = []
-        memory_ids = set()
+
+        # Preserve entity order to keep results stable across runs.
+        input_order = {eid: idx for idx, eid in enumerate(entity_ids)}
+        records.sort(key=lambda r: input_order.get(r.get("id"), 10**9))
+
+        entities: List[Dict[str, Any]] = []
+        ordered_memory_ids: List[str] = []
+        seen_mem: Set[str] = set()
+
         for r in records:
             entities.append({
                 "id": r.get("id"),
@@ -492,8 +514,12 @@ class KnowledgeGraph:
                 "name": r.get("name"),
                 "related": r.get("related_entities", []),
             })
-            memory_ids.update(r.get("memory_ids") or [])
-        user_facts = []
+            for mid in (r.get("memory_ids") or []):
+                if mid and mid not in seen_mem:
+                    seen_mem.add(mid)
+                    ordered_memory_ids.append(mid)
+
+        user_facts: List[Dict[str, Any]] = []
         if user_id:
             uf = self._run_query(
                 """
@@ -503,9 +529,10 @@ class KnowledgeGraph:
                 {"user_id": user_id},
             )
             user_facts = uf
+
         return {
             "entities": entities,
-            "memory_ids": list(memory_ids),
+            "memory_ids": ordered_memory_ids,
             "user_facts": user_facts,
         }
 

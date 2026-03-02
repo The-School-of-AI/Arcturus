@@ -13,6 +13,52 @@ from core.utils import log_error
 import pdb
 
 
+def _store_get_many(store: Any, ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    """
+    Best-effort batch fetch for Qdrant-backed store wrappers.
+    Falls back to N+1 get() if no batch API is available.
+    Returns {id: memory_dict}.
+    """
+    ids = [i for i in ids if i]
+    if not store or not ids:
+        return {}
+    try:
+        if hasattr(store, "get_many"):
+            # Preferred: custom wrapper method
+            items = store.get_many(ids)
+            if isinstance(items, dict):
+                return items
+            if isinstance(items, list):
+                out: Dict[str, Dict[str, Any]] = {}
+                for it in items:
+                    if isinstance(it, dict) and it.get("id"):
+                        out[it["id"]] = it
+                return out
+        if hasattr(store, "get_batch"):
+            items = store.get_batch(ids)
+            if isinstance(items, dict):
+                return items
+            if isinstance(items, list):
+                out: Dict[str, Dict[str, Any]] = {}
+                for it in items:
+                    if isinstance(it, dict) and it.get("id"):
+                        out[it["id"]] = it
+                return out
+    except Exception:
+        # Fall back below
+        pass
+
+    out: Dict[str, Dict[str, Any]] = {}
+    for mid in ids:
+        try:
+            m = store.get(mid)
+            if m:
+                out[mid] = m
+        except Exception:
+            continue
+    return out
+
+
 # Default stop words for fallback entity token extraction
 _STOP_WORDS = {
     "the", "a", "an", "is", "are", "was", "were", "do", "does", "did",
@@ -64,7 +110,8 @@ def retrieve(
     semantic_results = _semantic_recall(query, store, k=semantic_k, filter_metadata=filter_metadata)
     if semantic_results:
         top = semantic_results[:top_for_context]
-        result_ids = {r["id"] for r in top}
+        # Dedupe set across ALL recall paths (semantic k + entity + graph)
+        result_ids = {r["id"] for r in semantic_results if r.get("id")}
         memory_str = "\n".join(
             [f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in top]
         )
@@ -185,11 +232,15 @@ def _append_graph_expansion(
     # Extra memories from graph
     extra_ids = [mid for mid in expanded.get("memory_ids", []) if mid not in result_ids]
     if extra_ids:
+        # Show up to 3 additional memories; batch-fetch for performance
+        to_show = extra_ids[:3]
+        batch = _store_get_many(store, to_show)
         extra_texts = []
-        for mid in extra_ids[:3]:
-            m = store.get(mid)
+        for mid in to_show:
+            m = batch.get(mid)
             if m and m.get("text"):
                 extra_texts.append(f"- {m['text']} (graph-expanded)")
+                result_ids.add(mid)
         if extra_texts:
             memory_context += "\nADDITIONAL RELEVANT MEMORIES (from graph):\n" + "\n".join(extra_texts) + "\n"
     # User facts
@@ -211,11 +262,16 @@ def _append_entity_memories(
     if not store or not entity_first_ids:
         return memory_context
     texts = []
-    for mid in entity_first_ids[:5]:
-        if mid not in result_ids:
-            m = store.get(mid)
-            if m and m.get("text"):
-                texts.append(f"- {m['text']} (entity-matched)")
+    # Show up to 3 entity-matched memories; batch-fetch for performance
+    to_consider = [mid for mid in entity_first_ids[:5] if mid and mid not in result_ids]
+    batch = _store_get_many(store, to_consider)
+    for mid in to_consider:
+        m = batch.get(mid)
+        if m and m.get("text"):
+            texts.append(f"- {m['text']} (entity-matched)")
+            result_ids.add(mid)
+        if len(texts) >= 3:
+            break
     if texts:
-        memory_context += "\nMEMORIES BY ENTITY (from knowledge graph):\n" + "\n".join(texts[:3]) + "\n"
+        memory_context += "\nMEMORIES BY ENTITY (from knowledge graph):\n" + "\n".join(texts) + "\n"
     return memory_context
