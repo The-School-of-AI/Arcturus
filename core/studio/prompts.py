@@ -124,7 +124,10 @@ def _get_type_specific_outline_guidance(artifact_type: ArtifactType) -> str:
 - Describe what columns and data each tab will contain
 - Plan for formulas and calculated fields
 - Consider tab types: data entry, summary, charts, assumptions
-- Include column planning in the description"""
+- Include column planning in the description
+- When formulas are appropriate, describe them in the tab description
+- Plan tabs with consistent column naming across related tabs
+- Consider including a summary/totals tab for multi-tab workbooks"""
 
     return ""
 
@@ -266,7 +269,26 @@ SPEAKER NOTES REQUIREMENTS (mandatory for every slide):
 - column_widths must match the number of headers
 - Use realistic sample data in rows
 - Include formulas for calculated fields using Excel-style notation
-- Each tab must have a unique id"""
+- Each tab must have a unique id
+
+FORMULA REQUIREMENTS:
+- Include formulas for totals, growth percentages, and derived metrics where appropriate
+- Formulas must start with '=' and use valid A1-notation cell references
+- Cell references must point to cells within the same tab's data range
+- Do not reference cells beyond the last data row or column
+- NEVER create circular references: a formula must NOT reference its own cell
+- NEVER create indirect circular references: if A2 references B2, then B2 must NOT reference A2 (or any chain back to A2)
+
+FORMATTING CONVENTIONS:
+- Use meaningful, descriptive headers (not generic "Column1", "Column2")
+- Provide appropriate column_widths for each column (wider for text, narrower for numbers)
+- Include an assumptions section when the data involves projections or estimates
+
+DATA INTEGRITY:
+- All rows must have the same number of columns as headers
+- Each tab must have a unique id and name
+- Do not use placeholder content (TBD, Lorem ipsum, N/A for all values)
+- Include at least one raw-data tab and one computed summary tab when applicable"""
 
     return ""
 

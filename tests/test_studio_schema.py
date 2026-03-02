@@ -208,14 +208,15 @@ class TestSheetContentTree:
         assert len(sample_sheet_tree.tabs) == 1
         assert sample_sheet_tree.tabs[0].formulas["C3"] == "=C2*1.1"
 
-    def test_column_widths_mismatch(self):
-        with pytest.raises(ValidationError, match="column_widths length"):
-            SheetTab(
-                id="t1",
-                name="Bad",
-                headers=["A", "B", "C"],
-                column_widths=[100, 200],  # 2 widths for 3 headers
-            )
+    def test_column_widths_mismatch_accepted(self):
+        """Mismatched column_widths are accepted; normalization aligns them later."""
+        tab = SheetTab(
+            id="t1",
+            name="OK",
+            headers=["A", "B", "C"],
+            column_widths=[100, 200],  # 2 widths for 3 headers — no longer rejected
+        )
+        assert len(tab.column_widths) == 2
 
     def test_column_widths_empty_ok(self):
         tab = SheetTab(id="t1", name="OK", headers=["A", "B"])
@@ -389,7 +390,13 @@ class TestExportFormatEnum:
 
     def test_all_formats(self):
         values = {f.value for f in ExportFormat}
-        assert values == {"pptx", "docx", "pdf", "html"}
+        assert values == {"pptx", "docx", "pdf", "html", "xlsx", "csv"}
+
+    def test_xlsx_value(self):
+        assert ExportFormat("xlsx") == ExportFormat.xlsx
+
+    def test_csv_value(self):
+        assert ExportFormat("csv") == ExportFormat.csv
 
     def test_export_job_with_docx_format(self):
         job = ExportJob(
@@ -516,3 +523,50 @@ class TestDocumentProvenanceMetadata:
         dumped = sample_document_tree.model_dump()
         assert "provenance_slots" in dumped["metadata"]
         assert len(dumped["metadata"]["provenance_slots"]) == 1
+
+
+# === Phase 5: Sheet Analysis Report Tests ===
+
+
+class TestSheetAnalysisReport:
+    def test_sheet_analysis_report_serialization(self):
+        from core.schemas.studio_schema import (
+            SheetAnalysisReport,
+            SheetNumericSummary,
+            SheetCorrelation,
+        )
+
+        report = SheetAnalysisReport(
+            summary_stats=[
+                SheetNumericSummary(column="Revenue", count=5, null_count=0, mean=100.0, median=95.0)
+            ],
+            correlations=[
+                SheetCorrelation(column_a="X", column_b="Y", pearson_r=0.95)
+            ],
+        )
+        data = report.model_dump()
+        restored = SheetAnalysisReport(**data)
+        assert restored.summary_stats[0].column == "Revenue"
+        assert restored.correlations[0].pearson_r == 0.95
+
+    def test_sheet_content_tree_with_analysis_report(self):
+        from core.schemas.studio_schema import (
+            SheetAnalysisReport,
+            SheetContentTree,
+            SheetNumericSummary,
+            SheetTab,
+        )
+
+        tree = SheetContentTree(
+            workbook_title="Test",
+            tabs=[SheetTab(id="t1", name="Data", headers=["A"], rows=[[1]])],
+            analysis_report=SheetAnalysisReport(
+                summary_stats=[
+                    SheetNumericSummary(column="A", count=1, null_count=0)
+                ]
+            ),
+        )
+        data = tree.model_dump()
+        restored = SheetContentTree(**data)
+        assert restored.analysis_report is not None
+        assert restored.analysis_report.summary_stats[0].column == "A"

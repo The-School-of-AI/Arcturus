@@ -530,3 +530,132 @@ def test_21_document_export_pptx_blocked(orchestrator, storage, mock_llm_documen
 
     with pytest.raises(ValueError, match="not supported"):
         _run(orchestrator.export_artifact(art_id, ExportFormat.pptx))
+
+
+# --- Phase 5: Sheet pipeline integration tests ---
+
+SHEET_DRAFT_RESPONSE = json.dumps({
+    "workbook_title": "Sales Report",
+    "tabs": [
+        {
+            "id": "t1", "name": "Revenue",
+            "headers": ["Month", "Amount", "Growth"],
+            "rows": [
+                ["Jan", 1000, 0.0],
+                ["Feb", 1200, 0.2],
+                ["Mar", 1500, 0.25],
+                ["Apr", 1350, -0.1],
+            ],
+            "formulas": {"D2": "=C2/B2"},
+            "column_widths": [100, 80, 80],
+        },
+        {
+            "id": "t2", "name": "Summary",
+            "headers": ["Metric", "Value"],
+            "rows": [["Total", 5050], ["Average", 1262.5]],
+            "formulas": {},
+            "column_widths": [120, 80],
+        },
+    ],
+})
+
+
+@pytest.fixture
+def mock_llm_sheet(monkeypatch):
+    """Mock LLM for sheet drafts."""
+    async def fake_generate(self, prompt):
+        if "content architect" in prompt.lower():
+            return OUTLINE_RESPONSE
+        return SHEET_DRAFT_RESPONSE
+    monkeypatch.setattr("core.model_manager.ModelManager.generate_text", fake_generate)
+
+
+def test_22_sheet_outline_to_draft_to_xlsx_export(orchestrator, storage, mock_llm_sheet) -> None:
+    """Full sheet pipeline: outline → draft → XLSX export."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Create a sales report spreadsheet",
+        artifact_type=ArtifactType.sheet,
+    ))
+    art_id = result["artifact_id"]
+    art_data = _run(orchestrator.approve_and_generate_draft(art_id))
+    assert art_data["content_tree"]["workbook_title"] == "Sales Report"
+
+    export_result = _run(orchestrator.export_artifact(art_id, ExportFormat.xlsx))
+    assert export_result["status"] == "completed"
+    assert export_result["format"] == "xlsx"
+    assert export_result["file_size_bytes"] > 0
+    assert export_result["validator_results"]["valid"] is True
+
+
+def test_23_sheet_upload_analysis_to_export_pipeline(orchestrator, storage, mock_llm_sheet) -> None:
+    """Upload CSV → analysis → XLSX export."""
+    import csv as csv_mod
+    import tempfile
+
+    # 1. Create the initial sheet artifact via outline+draft
+    result = _run(orchestrator.generate_outline(
+        prompt="Create a report",
+        artifact_type=ArtifactType.sheet,
+    ))
+    art_id = result["artifact_id"]
+    _run(orchestrator.approve_and_generate_draft(art_id))
+
+    # 2. Create a CSV file for upload
+    csv_content = "Product,Revenue,Units\n"
+    for i in range(10):
+        csv_content += f"P{i},{100 + i * 10},{50 + i}\n"
+
+    # 3. Upload and analyze (returns full artifact dict)
+    upload_result = _run(orchestrator.analyze_sheet_upload(
+        art_id, "data.csv", csv_content.encode("utf-8"), "text/csv"
+    ))
+    ct = upload_result["content_tree"]
+    assert ct["analysis_report"] is not None
+    assert len(ct["analysis_report"]["summary_stats"]) >= 2
+
+    # 4. Export the updated artifact to XLSX
+    export_result = _run(orchestrator.export_artifact(art_id, ExportFormat.xlsx))
+    assert export_result["status"] == "completed"
+
+
+def test_24_sheet_invalid_upload_graceful_failure(orchestrator, storage, mock_llm_sheet) -> None:
+    """Invalid upload returns controlled error, artifact unchanged."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Create a report",
+        artifact_type=ArtifactType.sheet,
+    ))
+    art_id = result["artifact_id"]
+    _run(orchestrator.approve_and_generate_draft(art_id))
+
+    # Get revision before upload attempt
+    loaded_before = storage.load_artifact(art_id)
+    rev_before = loaded_before.revision_head_id
+
+    # Upload a binary file with unsupported type
+    with pytest.raises(ValueError, match="Unsupported"):
+        _run(orchestrator.analyze_sheet_upload(
+            art_id, "data.pptx", b"fake content", "application/vnd.ms-powerpoint"
+        ))
+
+    # Artifact unchanged
+    loaded_after = storage.load_artifact(art_id)
+    assert loaded_after.revision_head_id == rev_before
+
+
+def test_25_sheet_export_param_gating_enforced(orchestrator, storage, mock_llm_sheet) -> None:
+    """Slides-only params (theme_id, strict_layout, generate_images) rejected for sheet exports."""
+    result = _run(orchestrator.generate_outline(
+        prompt="Create a report",
+        artifact_type=ArtifactType.sheet,
+    ))
+    art_id = result["artifact_id"]
+    _run(orchestrator.approve_and_generate_draft(art_id))
+
+    with pytest.raises(ValueError, match="theme_id"):
+        _run(orchestrator.export_artifact(art_id, ExportFormat.xlsx, theme_id="corporate-blue"))
+
+    with pytest.raises(ValueError, match="strict_layout"):
+        _run(orchestrator.export_artifact(art_id, ExportFormat.xlsx, strict_layout=True))
+
+    with pytest.raises(ValueError, match="generate_images"):
+        _run(orchestrator.export_artifact(art_id, ExportFormat.xlsx, generate_images=True))

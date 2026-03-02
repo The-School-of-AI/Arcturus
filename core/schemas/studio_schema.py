@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 # === Enums ===
@@ -24,6 +24,8 @@ class ExportFormat(str, Enum):
     docx = "docx"
     pdf = "pdf"
     html = "html"
+    xlsx = "xlsx"
+    csv = "csv"
 
 
 class ExportStatus(str, Enum):
@@ -119,14 +121,47 @@ class SheetTab(BaseModel):
     formulas: Dict[str, str] = Field(default_factory=dict)
     column_widths: List[int] = Field(default_factory=list)
 
-    @model_validator(mode="after")
-    def check_column_widths(self):
-        if self.column_widths and self.headers and len(self.column_widths) != len(self.headers):
-            raise ValueError(
-                f"column_widths length ({len(self.column_widths)}) "
-                f"must match headers length ({len(self.headers)})"
-            )
-        return self
+
+# === Sheet Analysis Models ===
+
+
+class SheetNumericSummary(BaseModel):
+    column: str
+    count: int
+    null_count: int
+    mean: Optional[float] = None
+    median: Optional[float] = None
+    std: Optional[float] = None
+    min_val: Optional[float] = None
+    max_val: Optional[float] = None
+
+
+class SheetCorrelation(BaseModel):
+    column_a: str
+    column_b: str
+    pearson_r: float
+
+
+class SheetTrend(BaseModel):
+    column: str
+    direction: str  # "up", "down", "flat"
+    slope: float
+
+
+class SheetAnomaly(BaseModel):
+    column: str
+    row_index: int
+    value: float
+    z_score: float
+
+
+class SheetAnalysisReport(BaseModel):
+    summary_stats: List[SheetNumericSummary] = Field(default_factory=list)
+    correlations: List[SheetCorrelation] = Field(default_factory=list)
+    trends: List[SheetTrend] = Field(default_factory=list)
+    anomalies: List[SheetAnomaly] = Field(default_factory=list)
+    pivot_preview: Optional[Dict[str, Any]] = None
+    warnings: List[str] = Field(default_factory=list)
 
 
 class SheetContentTree(BaseModel):
@@ -134,6 +169,7 @@ class SheetContentTree(BaseModel):
     tabs: List[SheetTab]
     assumptions: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    analysis_report: Optional[SheetAnalysisReport] = None
 
 
 # === Outline Models ===

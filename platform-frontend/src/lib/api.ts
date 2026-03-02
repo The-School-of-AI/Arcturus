@@ -198,4 +198,15 @@ export const api = {
     getExportDownloadUrl: (artifactId: string, jobId: string): string => {
         return `${API_BASE}/studio/${artifactId}/exports/${jobId}/download`;
     },
+
+    analyzeSheetUpload: async (artifactId: string, file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await axios.post(
+            `${API_BASE}/studio/${artifactId}/sheets/analyze-upload`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        return data;
+    },
 };

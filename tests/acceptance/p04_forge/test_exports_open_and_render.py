@@ -261,7 +261,7 @@ def test_15_invalid_format_returns_error() -> None:
     """Requesting unsupported format returns controlled error."""
     from core.schemas.studio_schema import ExportFormat
     with pytest.raises(ValueError):
-        ExportFormat("xlsx")
+        ExportFormat("odt")
 
 
 def test_16_export_job_has_validator_results(tmp_path) -> None:
@@ -572,3 +572,147 @@ def test_25_document_pdf_export_job_lifecycle(tmp_path):
     assert result["status"] == "completed"
     assert result["format"] == "pdf"
     assert result["validator_results"]["valid"] is True
+
+
+# --- Phase 5: Sheet XLSX/CSV export tests ---
+
+def _sample_sheet_content_tree_dict() -> dict:
+    """Return a sample sheet content tree dict for testing."""
+    return {
+        "workbook_title": "Sales Report",
+        "tabs": [
+            {
+                "id": "t1",
+                "name": "Revenue",
+                "headers": ["Month", "Amount", "Growth"],
+                "rows": [
+                    ["Jan", 1000, 0.0],
+                    ["Feb", 1200, 0.2],
+                    ["Mar", 1500, 0.25],
+                    ["Apr", 1350, -0.1],
+                ],
+                "formulas": {"D2": "=C2/B2", "D3": "=C3/B3"},
+                "column_widths": [100, 80, 80],
+            },
+            {
+                "id": "t2",
+                "name": "Summary",
+                "headers": ["Metric", "Value"],
+                "rows": [["Total", 5050], ["Average", 1262.5]],
+                "formulas": {},
+                "column_widths": [120, 80],
+            },
+        ],
+    }
+
+
+def test_26_xlsx_export_creates_valid_file(tmp_path) -> None:
+    """Phase 5: XLSX export produces a valid, openable workbook."""
+    from core.schemas.studio_schema import SheetContentTree
+    from core.studio.sheets.exporter_xlsx import export_to_xlsx
+    from core.studio.sheets.validator import validate_xlsx
+
+    ct = SheetContentTree(**_sample_sheet_content_tree_dict())
+    output_path = tmp_path / "test.xlsx"
+    export_to_xlsx(ct, output_path)
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+    result = validate_xlsx(output_path, expected_sheet_names=["Revenue", "Summary"])
+    assert result["valid"] is True
+    assert result["sheet_count"] == 2
+
+
+def test_27_csv_export_creates_valid_file(tmp_path) -> None:
+    """Phase 5: CSV export produces a valid, openable CSV file."""
+    from core.schemas.studio_schema import SheetContentTree
+    from core.studio.sheets.exporter_csv import export_to_csv
+    from core.studio.sheets.validator import validate_csv
+
+    ct = SheetContentTree(**_sample_sheet_content_tree_dict())
+    output_path = tmp_path / "test.csv"
+    tab_name = export_to_csv(ct, output_path)
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+    assert tab_name == "Revenue"
+
+    result = validate_csv(output_path, min_rows=4)
+    assert result["valid"] is True
+    assert result["column_count"] == 3
+
+
+def test_28_upload_analysis_generates_summary_tabs(tmp_path) -> None:
+    """Phase 5: CSV upload analysis generates analysis tabs and report."""
+    import csv
+    from core.studio.sheets.ingest import ingest_upload
+    from core.studio.sheets.analysis import analyze_dataset, build_analysis_tabs
+
+    csv_path = tmp_path / "data.csv"
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Product", "Revenue", "Units"])
+        for i in range(20):
+            writer.writerow([f"Product_{i}", 100 + i * 10, 50 + i])
+
+    dataset = ingest_upload("data.csv", csv_path.read_bytes(), "text/csv")
+    assert dataset.columns == ["Product", "Revenue", "Units"]
+    assert len(dataset.rows) == 20
+
+    report = analyze_dataset(dataset)
+    assert len(report.summary_stats) >= 2  # Revenue and Units
+
+    tabs = build_analysis_tabs(dataset, report)
+    tab_names = [t.name for t in tabs]
+    assert "Uploaded_Data" in tab_names
+    assert "Summary_Stats" in tab_names
+
+
+def test_29_sheet_formula_refs_are_valid() -> None:
+    """Phase 5: Formulas in generated sheet reference valid cells."""
+    from core.schemas.studio_schema import SheetContentTree
+    from core.studio.sheets.formulas import validate_tab_formulas
+
+    ct = SheetContentTree(**_sample_sheet_content_tree_dict())
+    for tab in ct.tabs:
+        warnings = validate_tab_formulas(tab)
+        # No formulas should be removed (all refs should be valid)
+        for w in warnings:
+            assert "removed" not in w.lower(), f"Valid formula was removed: {w}"
+
+
+def test_30_sheet_export_job_lifecycle_completed(tmp_path) -> None:
+    """Phase 5: Sheet export job transitions to completed with validator results."""
+    import asyncio
+    from datetime import datetime, timezone
+    from uuid import uuid4
+    from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
+    from core.studio.orchestrator import ForgeOrchestrator
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    orch = ForgeOrchestrator(storage)
+
+    art_id = str(uuid4())
+    ct_dict = _sample_sheet_content_tree_dict()
+    artifact = Artifact(
+        id=art_id, type=ArtifactType.sheet, title="Sales Report",
+        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        content_tree=ct_dict,
+    )
+    storage.save_artifact(artifact)
+
+    loop = asyncio.new_event_loop()
+    try:
+        result = loop.run_until_complete(
+            orch.export_artifact(art_id, ExportFormat.xlsx)
+        )
+    finally:
+        loop.close()
+
+    assert result["status"] == "completed"
+    assert result["format"] == "xlsx"
+    assert result["output_uri"] is not None
+    assert result["validator_results"]["valid"] is True
+    assert result["validator_results"]["sheet_count"] >= 2

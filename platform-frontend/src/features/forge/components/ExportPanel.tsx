@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Download, Loader2, CheckCircle, AlertCircle, Palette, FileDown, ChevronDown, FileText, File, Globe
+    Download, Loader2, CheckCircle, AlertCircle, Palette, FileDown, ChevronDown, FileText, File, Globe, Table2, FileSpreadsheet
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
@@ -393,6 +393,54 @@ function DocFormatPickerDialog({
     );
 }
 
+// --- Sheet Format Picker Dialog ---
+
+function SheetFormatPickerDialog({
+    open,
+    onOpenChange,
+    onSelect,
+}: {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    onSelect: (format: string) => void;
+}) {
+    const handleSelect = (format: string) => {
+        onSelect(format);
+        onOpenChange(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="bg-card border-border sm:max-w-sm text-foreground">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <FileDown className="w-4 h-4 text-primary" />
+                        Choose Export Format
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-3 p-1">
+                    <button
+                        onClick={() => handleSelect('xlsx')}
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/50 hover:border-primary/40 hover:bg-muted/30 transition-all"
+                    >
+                        <FileSpreadsheet className="w-8 h-8 text-green-400" />
+                        <span className="text-sm font-medium">XLSX</span>
+                        <span className="text-[10px] text-muted-foreground">Excel Workbook</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelect('csv')}
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/50 hover:border-primary/40 hover:bg-muted/30 transition-all"
+                    >
+                        <Table2 className="w-8 h-8 text-blue-400" />
+                        <span className="text-sm font-medium">CSV</span>
+                        <span className="text-[10px] text-muted-foreground">All Tabs (ZIP)</span>
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 // --- Export Panel (for ForgeDashboard ArtifactDetail) ---
 
 export function ExportPanel({ artifact }: { artifact: any }) {
@@ -403,14 +451,17 @@ export function ExportPanel({ artifact }: { artifact: any }) {
     const clearAutoDownload = useAppStore(s => s.clearAutoDownload);
     const [themePickerOpen, setThemePickerOpen] = useState(false);
     const [docFormatPickerOpen, setDocFormatPickerOpen] = useState(false);
+    const [sheetFormatPickerOpen, setSheetFormatPickerOpen] = useState(false);
 
     const isDocument = artifact.type === 'document';
     const isSlides = artifact.type === 'slides';
+    const isSheet = artifact.type === 'sheet';
 
     const handleDownload = async (job: any) => {
         const url = api.getExportDownloadUrl(artifact.id, job.id);
         const jobFormat = job.format || (isDocument ? 'docx' : 'pptx');
-        const defaultName = `${artifact.title || artifact.type}.${jobFormat}`;
+        const fileExt = jobFormat === 'csv' ? 'zip' : jobFormat;
+        const defaultName = `${artifact.title || artifact.type}.${fileExt}`;
         try {
             // Electron: native Save dialog + auto-open
             if ((window as any).electronAPI) {
@@ -453,8 +504,8 @@ export function ExportPanel({ artifact }: { artifact: any }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [autoDownloadJobId, exportJobs, artifact.id]);
 
-    // Show for slides or documents with content_tree
-    if (!['slides', 'document'].includes(artifact.type) || !artifact.content_tree) return null;
+    // Show for slides, documents, or sheets with content_tree
+    if (!['slides', 'document', 'sheet'].includes(artifact.type) || !artifact.content_tree) return null;
 
     const handleThemeSelected = (themeId: string, strictLayout?: boolean, generateImages?: boolean) => {
         startExport(artifact.id, 'pptx', themeId, strictLayout, generateImages);
@@ -462,6 +513,10 @@ export function ExportPanel({ artifact }: { artifact: any }) {
 
     const handleDocFormatSelected = (format: string, generateImages?: boolean) => {
         startExport(artifact.id, format, undefined, undefined, generateImages);
+    };
+
+    const handleSheetFormatSelected = (format: string) => {
+        startExport(artifact.id, format);
     };
 
     const formatSize = (bytes: number | null | undefined) => {
@@ -479,7 +534,7 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                     Export
                 </h3>
                 <button
-                    onClick={() => isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
+                    onClick={() => isSheet ? setSheetFormatPickerOpen(true) : isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
                     disabled={isExporting}
                     className="h-7 px-3 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
@@ -487,6 +542,11 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                         <>
                             <Loader2 className="w-3 h-3 animate-spin" />
                             Exporting...
+                        </>
+                    ) : isSheet ? (
+                        <>
+                            <FileDown className="w-3 h-3" />
+                            Export Sheet
                         </>
                     ) : isDocument ? (
                         <>
@@ -573,6 +633,13 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                     onSelect={handleDocFormatSelected}
                 />
             )}
+            {isSheet && (
+                <SheetFormatPickerDialog
+                    open={sheetFormatPickerOpen}
+                    onOpenChange={setSheetFormatPickerOpen}
+                    onSelect={handleSheetFormatSelected}
+                />
+            )}
         </div>
     );
 }
@@ -584,8 +651,10 @@ export function ExportButton({ artifactId, artifactType }: { artifactId: string;
     const startExport = useAppStore(s => s.startExport);
     const [themePickerOpen, setThemePickerOpen] = useState(false);
     const [docFormatPickerOpen, setDocFormatPickerOpen] = useState(false);
+    const [sheetFormatPickerOpen, setSheetFormatPickerOpen] = useState(false);
 
     const isDocument = artifactType === 'document';
+    const isSheet = artifactType === 'sheet';
 
     const handleThemeSelected = (themeId: string, strictLayout?: boolean, generateImages?: boolean) => {
         startExport(artifactId, 'pptx', themeId, strictLayout, generateImages);
@@ -595,10 +664,14 @@ export function ExportButton({ artifactId, artifactType }: { artifactId: string;
         startExport(artifactId, format, undefined, undefined, generateImages);
     };
 
+    const handleSheetFormatSelected = (format: string) => {
+        startExport(artifactId, format);
+    };
+
     return (
         <>
             <button
-                onClick={() => isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
+                onClick={() => isSheet ? setSheetFormatPickerOpen(true) : isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
                 disabled={isExporting}
                 className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-1"
             >
@@ -609,7 +682,7 @@ export function ExportButton({ artifactId, artifactType }: { artifactId: string;
                 )}
                 Export
             </button>
-            {!isDocument && (
+            {!isDocument && !isSheet && (
                 <ThemePickerDialog
                     open={themePickerOpen}
                     onOpenChange={setThemePickerOpen}
@@ -621,6 +694,13 @@ export function ExportButton({ artifactId, artifactType }: { artifactId: string;
                     open={docFormatPickerOpen}
                     onOpenChange={setDocFormatPickerOpen}
                     onSelect={handleDocFormatSelected}
+                />
+            )}
+            {isSheet && (
+                <SheetFormatPickerDialog
+                    open={sheetFormatPickerOpen}
+                    onOpenChange={setSheetFormatPickerOpen}
+                    onSelect={handleSheetFormatSelected}
                 />
             )}
         </>

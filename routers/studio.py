@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationError
 from typing import Dict, Optional
@@ -249,6 +249,29 @@ async def export_artifact(artifact_id: str, request: ExportArtifactRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{artifact_id}/sheets/analyze-upload")
+async def analyze_sheet_upload(artifact_id: str, file: UploadFile = File(...)):
+    """Upload a file for analysis against an existing sheet artifact."""
+    _validate_artifact_id(artifact_id)
+    try:
+        content_bytes = await file.read()
+        orchestrator = _get_orchestrator()
+        result = await orchestrator.analyze_sheet_upload(
+            artifact_id=artifact_id,
+            filename=file.filename or "upload",
+            content_bytes=content_bytes,
+            content_type=file.content_type or "",
+        )
+        return result
+    except ValueError as e:
+        detail = str(e)
+        if "not found" in detail.lower():
+            raise HTTPException(status_code=404, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{artifact_id}/exports")
 async def list_exports(artifact_id: str):
     """List all export jobs for an artifact."""
@@ -303,14 +326,18 @@ async def download_export(artifact_id: str, export_job_id: str):
         "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "pdf": "application/pdf",
         "html": "text/html",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "csv": "text/csv",
+        "zip": "application/zip",
     }
+    actual_ext = file_path.suffix.lstrip(".")
     media_type = _EXPORT_MEDIA_TYPES.get(
-        job.format.value,
+        actual_ext,
         "application/octet-stream",
     )
 
     return FileResponse(
         path=str(file_path),
-        filename=f"{artifact_id}.{job.format.value}",
+        filename=f"{artifact_id}.{actual_ext}",
         media_type=media_type,
     )

@@ -647,15 +647,148 @@ class TestDocumentExportParamGating:
                 generate_images=True,
             ))
 
-    def test_sheet_export_not_yet_supported(self, orchestrator, storage, mock_llm_sheet):
+    def test_sheet_export_rejects_pptx_format(self, orchestrator, storage, mock_llm_sheet):
         result = _run(orchestrator.generate_outline(
             prompt="Create a financial model",
             artifact_type=ArtifactType.sheet,
         ))
         _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
 
-        with pytest.raises(ValueError, match="not yet supported"):
+        with pytest.raises(ValueError, match="not supported"):
             _run(orchestrator.export_artifact(
                 result["artifact_id"],
                 export_format=ExportFormat.pptx,
             ))
+
+
+# === Phase 5: Sheet Export Tests ===
+
+
+class TestSheetExportLifecycle:
+    def test_sheet_export_xlsx_lifecycle(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        job = _run(orchestrator.export_artifact(
+            result["artifact_id"],
+            export_format=ExportFormat.xlsx,
+        ))
+        assert job["status"] == "completed"
+        assert job["format"] == "xlsx"
+        assert job["validator_results"]["valid"] is True
+
+    def test_sheet_export_csv_lifecycle(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        job = _run(orchestrator.export_artifact(
+            result["artifact_id"],
+            export_format=ExportFormat.csv,
+        ))
+        assert job["status"] == "completed"
+        assert job["format"] == "csv"
+        assert job["output_uri"].endswith(".zip")
+        assert job["validator_results"]["valid"] is True
+        assert job["validator_results"]["format"] == "csv_zip"
+        assert "exported_tabs" in job["validator_results"]
+
+    def test_sheet_export_rejects_theme_id(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="theme_id"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.xlsx,
+                theme_id="some-theme",
+            ))
+
+    def test_sheet_export_rejects_strict_layout(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="strict_layout"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.xlsx,
+                strict_layout=True,
+            ))
+
+    def test_sheet_export_rejects_generate_images(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        with pytest.raises(ValueError, match="generate_images"):
+            _run(orchestrator.export_artifact(
+                result["artifact_id"],
+                export_format=ExportFormat.xlsx,
+                generate_images=True,
+            ))
+
+    def test_sheet_export_stores_validator_results(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        job = _run(orchestrator.export_artifact(
+            result["artifact_id"],
+            export_format=ExportFormat.xlsx,
+        ))
+        assert job["validator_results"] is not None
+        assert "sheet_count" in job["validator_results"]
+
+
+class TestSheetUploadAnalysis:
+    def test_analyze_sheet_upload_creates_revision(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        csv_content = b"Name,Score\nAlice,95\nBob,88\n"
+        updated = _run(orchestrator.analyze_sheet_upload(
+            result["artifact_id"],
+            "data.csv",
+            csv_content,
+            "text/csv",
+        ))
+        assert updated["content_tree"]["analysis_report"] is not None
+        # Should have new revision
+        revisions = storage.list_revisions(result["artifact_id"])
+        assert len(revisions) >= 2  # initial draft + upload analysis
+
+    def test_analyze_sheet_upload_updates_content_tree(self, orchestrator, storage, mock_llm_sheet):
+        result = _run(orchestrator.generate_outline(
+            prompt="Create a financial model",
+            artifact_type=ArtifactType.sheet,
+        ))
+        _run(orchestrator.approve_and_generate_draft(result["artifact_id"]))
+
+        csv_content = b"Category,Revenue\nA,100\nB,200\nA,150\n"
+        updated = _run(orchestrator.analyze_sheet_upload(
+            result["artifact_id"],
+            "data.csv",
+            csv_content,
+            "text/csv",
+        ))
+        tab_names = [t["name"] for t in updated["content_tree"]["tabs"]]
+        assert "Uploaded_Data" in tab_names
+        assert "Summary_Stats" in tab_names

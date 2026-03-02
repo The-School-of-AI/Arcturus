@@ -445,6 +445,8 @@ interface StudioSlice {
     pollExportJob: (artifactId: string, jobId: string) => void;
     stopExportPolling: () => void;
     clearAutoDownload: () => void;
+    // Phase 5: Sheet Upload Analysis
+    analyzeSheetUpload: (artifactId: string, file: File) => Promise<void>;
 }
 
 interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
@@ -2334,6 +2336,13 @@ export const useAppStore = create<AppState>()(
                     clearInterval(interval);
                     set({ exportPollingInterval: null });
                 }
+            },
+
+            // Phase 5: Sheet Upload Analysis
+            analyzeSheetUpload: async (artifactId: string, file: File) => {
+                const result = await api.analyzeSheetUpload(artifactId, file);
+                set({ activeArtifact: result });
+                get().fetchArtifacts?.();
             },
         }),
         {

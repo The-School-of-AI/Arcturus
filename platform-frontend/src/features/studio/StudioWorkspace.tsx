@@ -1,5 +1,5 @@
-import React from 'react';
-import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2, AlertCircle } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2, AlertCircle, Upload } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -232,6 +232,57 @@ function SheetViewer({ tree }: { tree: any }) {
     );
 }
 
+// === Upload Data Button (for sheet artifacts) ===
+
+function UploadDataButton({ artifactId }: { artifactId: string }) {
+    const analyzeSheetUpload = useAppStore(s => s.analyzeSheetUpload);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsUploading(true);
+        setError(null);
+        try {
+            await analyzeSheetUpload(artifactId, file);
+        } catch (err: any) {
+            setError(err?.response?.data?.detail || err?.message || 'Upload failed');
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    return (
+        <>
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.json"
+                className="hidden"
+                onChange={handleUpload}
+            />
+            <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+                {isUploading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                    <Upload className="w-3 h-3" />
+                )}
+                Upload Data
+            </button>
+            {error && (
+                <span className="text-[9px] text-red-400">{error}</span>
+            )}
+        </>
+    );
+}
+
 // === Main Workspace ===
 
 export function StudioWorkspace() {
@@ -306,7 +357,10 @@ export function StudioWorkspace() {
                                 Generated
                             </span>
                         )}
-                        {['slides', 'document'].includes(artifact.type) && (
+                        {artifact.type === 'sheet' && (
+                            <UploadDataButton artifactId={artifact.id} />
+                        )}
+                        {['slides', 'document', 'sheet'].includes(artifact.type) && (
                             <ExportButton artifactId={artifact.id} artifactType={artifact.type} />
                         )}
                     </div>

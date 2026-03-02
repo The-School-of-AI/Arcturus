@@ -40,7 +40,7 @@ def test_export_artifact_invalid_format(monkeypatch):
 
     monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
 
-    request = studio_router.ExportArtifactRequest(format="xlsx")
+    request = studio_router.ExportArtifactRequest(format="odt")
     with pytest.raises(HTTPException) as exc_info:
         _run(studio_router.export_artifact(_UUID_1, request))
     assert exc_info.value.status_code == 400
@@ -339,8 +339,75 @@ def test_export_invalid_combo_document_pptx(monkeypatch):
 
 def test_export_unsupported_format_rejected():
     """Formats not in the ExportFormat enum should be rejected."""
-    request = studio_router.ExportArtifactRequest(format="xlsx")
+    request = studio_router.ExportArtifactRequest(format="odt")
     with pytest.raises(HTTPException) as exc_info:
         _run(studio_router.export_artifact(_UUID_1, request))
     assert exc_info.value.status_code == 400
     assert "Unsupported export format" in exc_info.value.detail
+
+
+# === Phase 5: Sheet Export Router Tests ===
+
+
+def test_xlsx_format_accepted(monkeypatch):
+    """XLSX format should be accepted as a valid ExportFormat."""
+    class FakeOrchestrator:
+        async def export_artifact(self, artifact_id, export_format, theme_id=None, strict_layout=False, generate_images=False):
+            return {"id": "job1", "status": "completed", "format": "xlsx"}
+
+    monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
+    request = studio_router.ExportArtifactRequest(format="xlsx")
+    result = _run(studio_router.export_artifact(_UUID_1, request))
+    assert result["format"] == "xlsx"
+
+
+def test_csv_format_accepted(monkeypatch):
+    """CSV format should be accepted as a valid ExportFormat."""
+    class FakeOrchestrator:
+        async def export_artifact(self, artifact_id, export_format, theme_id=None, strict_layout=False, generate_images=False):
+            return {"id": "job1", "status": "completed", "format": "csv"}
+
+    monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
+    request = studio_router.ExportArtifactRequest(format="csv")
+    result = _run(studio_router.export_artifact(_UUID_1, request))
+    assert result["format"] == "csv"
+
+
+def test_export_format_enum_accepts_xlsx():
+    from core.schemas.studio_schema import ExportFormat
+    assert ExportFormat("xlsx") == ExportFormat.xlsx
+
+
+def test_export_format_enum_accepts_csv():
+    from core.schemas.studio_schema import ExportFormat
+    assert ExportFormat("csv") == ExportFormat.csv
+
+
+def test_download_csv_zip_media_type(monkeypatch, tmp_path):
+    """CSV format job with .zip file on disk returns application/zip media type."""
+    from datetime import datetime, timezone
+    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+    from core.studio.storage import StudioStorage
+
+    storage = StudioStorage(base_dir=tmp_path / "studio")
+    # The CSV export now writes a .zip file on disk
+    output_path = storage.get_export_file_path(_UUID_1, _UUID_JOB, "zip")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(b"fake zip content")
+
+    job = ExportJob(
+        id=_UUID_JOB,
+        artifact_id=_UUID_1,
+        format=ExportFormat.csv,
+        status=ExportStatus.completed,
+        output_uri=str(output_path),
+        created_at=datetime.now(timezone.utc),
+    )
+    storage.save_export_job(job)
+    monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
+
+    result = _run(studio_router.download_export(_UUID_1, _UUID_JOB))
+    from fastapi.responses import FileResponse
+    assert isinstance(result, FileResponse)
+    assert result.media_type == "application/zip"
+    assert result.filename.endswith(".zip")

@@ -169,6 +169,11 @@ class ForgeOrchestrator:
                 content_tree_model, outline=artifact.outline, artifact_id=artifact_id
             )
 
+        # Sheet-specific: normalize content tree
+        elif artifact.type == ArtifactType.sheet:
+            from core.studio.sheets.generator import normalize_sheet_content_tree
+            content_tree_model = normalize_sheet_content_tree(content_tree_model)
+
         content_tree = content_tree_model.model_dump(mode="json")
 
         # Create revision
@@ -246,6 +251,7 @@ class ForgeOrchestrator:
         _VALID_COMBOS = {
             ArtifactType.slides: {ExportFormat.pptx},
             ArtifactType.document: {ExportFormat.docx, ExportFormat.pdf, ExportFormat.html},
+            ArtifactType.sheet: {ExportFormat.xlsx, ExportFormat.csv},
         }
         valid_formats = _VALID_COMBOS.get(artifact.type)
         if valid_formats is None:
@@ -264,6 +270,15 @@ class ForgeOrchestrator:
                 raise ValueError("strict_layout is not supported for document exports")
             if generate_images and export_format != ExportFormat.html:
                 raise ValueError("generate_images is only supported for HTML document exports")
+
+        # Reject slides/document-only params for sheet exports
+        if artifact.type == ArtifactType.sheet:
+            if theme_id:
+                raise ValueError("theme_id is not supported for sheet exports")
+            if strict_layout:
+                raise ValueError("strict_layout is not supported for sheet exports")
+            if generate_images:
+                raise ValueError("generate_images is not supported for sheet exports")
 
         # Resolve theme for slides
         theme = None
@@ -311,7 +326,11 @@ class ForgeOrchestrator:
             return export_job.model_dump(mode="json")
 
         # Synchronous path — fast, complete inline
-        if artifact.type == ArtifactType.document:
+        if artifact.type == ArtifactType.sheet:
+            await self._run_sheet_export(
+                artifact_id, export_job, artifact.content_tree,
+            )
+        elif artifact.type == ArtifactType.document:
             await self._run_document_export(
                 artifact_id, export_job, artifact.content_tree,
             )
@@ -484,6 +503,135 @@ class ForgeOrchestrator:
                     break
             artifact.updated_at = datetime.now(timezone.utc)
             self.storage.save_artifact(artifact)
+
+    async def _run_sheet_export(
+        self,
+        artifact_id: str,
+        export_job: Any,
+        content_tree_dict: dict,
+    ) -> None:
+        """Execute sheet export (XLSX or CSV)."""
+        from core.schemas.studio_schema import ExportFormat, ExportStatus, SheetContentTree
+        from core.studio.sheets.exporter_xlsx import export_to_xlsx, sanitize_sheet_name
+        from core.studio.sheets.exporter_csv import export_to_csv_zip
+        from core.studio.sheets.validator import validate_xlsx, validate_csv_zip
+
+        try:
+            content_tree_model = SheetContentTree(**content_tree_dict)
+            output_path = self.storage.get_export_file_path(
+                artifact_id, export_job.id, export_job.format.value
+            )
+
+            if export_job.format == ExportFormat.xlsx:
+                export_to_xlsx(content_tree_model, output_path)
+                validation = validate_xlsx(
+                    output_path,
+                    expected_sheet_names=[sanitize_sheet_name(t.name) for t in content_tree_model.tabs],
+                    expected_formula_cells=sum(
+                        len(t.formulas) for t in content_tree_model.tabs
+                    ),
+                )
+            elif export_job.format == ExportFormat.csv:
+                output_path = self.storage.get_export_file_path(
+                    artifact_id, export_job.id, "zip"
+                )
+                exported_tabs = export_to_csv_zip(content_tree_model, output_path)
+                validation = validate_csv_zip(
+                    output_path, expected_tab_names=exported_tabs
+                )
+                validation["exported_tabs"] = exported_tabs
+            else:
+                raise ValueError(
+                    f"Unsupported sheet format: {export_job.format.value}"
+                )
+
+            if validation["valid"]:
+                export_job.status = ExportStatus.completed
+                export_job.output_uri = str(output_path)
+                export_job.file_size_bytes = output_path.stat().st_size
+                export_job.validator_results = validation
+                export_job.completed_at = datetime.now(timezone.utc)
+            else:
+                export_job.status = ExportStatus.failed
+                export_job.error = (
+                    "; ".join(validation.get("errors", [])) or "Validation failed"
+                )
+                export_job.validator_results = validation
+                export_job.completed_at = datetime.now(timezone.utc)
+
+        except Exception as e:
+            export_job.status = ExportStatus.failed
+            export_job.error = str(e)
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        self.storage.save_export_job(export_job)
+
+        # Update the artifact's exports summary with the final status
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is not None:
+            for summary in artifact.exports:
+                if summary.id == export_job.id:
+                    summary.status = export_job.status.value
+                    break
+            artifact.updated_at = datetime.now(timezone.utc)
+            self.storage.save_artifact(artifact)
+
+    async def analyze_sheet_upload(
+        self,
+        artifact_id: str,
+        filename: str,
+        content_bytes: bytes,
+        content_type: str,
+    ) -> dict:
+        """Ingest an uploaded file, analyze it, and update the sheet artifact."""
+        from core.schemas.studio_schema import SheetContentTree
+        from core.studio.sheets.ingest import ingest_upload
+        from core.studio.sheets.analysis import analyze_dataset, build_analysis_tabs
+
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is None:
+            raise ValueError(f"Artifact not found: {artifact_id}")
+        if artifact.type != ArtifactType.sheet:
+            raise ValueError(f"Artifact {artifact_id} is not a sheet artifact")
+        if artifact.content_tree is None:
+            raise ValueError(
+                f"Artifact {artifact_id} has no content tree (approve outline first)"
+            )
+
+        # Ingest and analyze
+        dataset = ingest_upload(filename, content_bytes, content_type)
+        report = analyze_dataset(dataset)
+        analysis_tabs = build_analysis_tabs(dataset, report)
+
+        # Update content tree
+        content_tree_model = SheetContentTree(**artifact.content_tree)
+
+        # Remove existing analysis tabs (replace on re-upload)
+        analysis_tab_ids = {"uploaded_data", "summary_stats", "correlations", "anomalies", "pivot"}
+        content_tree_model.tabs = [
+            t for t in content_tree_model.tabs if t.id not in analysis_tab_ids
+        ]
+        content_tree_model.tabs.extend(analysis_tabs)
+        content_tree_model.analysis_report = report
+
+        content_tree = content_tree_model.model_dump(mode="json")
+
+        # Create revision
+        change_summary = f"Added upload analysis from {filename}"
+        revision = self.revision_manager.create_revision(
+            artifact_id=artifact_id,
+            content_tree=content_tree,
+            change_summary=change_summary,
+            parent_revision_id=artifact.revision_head_id,
+        )
+
+        # Update artifact
+        artifact.content_tree = content_tree
+        artifact.revision_head_id = revision.id
+        artifact.updated_at = datetime.now(timezone.utc)
+        self.storage.save_artifact(artifact)
+
+        return artifact.model_dump(mode="json")
 
 
 def _parse_outline_item(data: dict) -> OutlineItem:
