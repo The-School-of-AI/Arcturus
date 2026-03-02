@@ -54,7 +54,7 @@ def _canonical_name(name: str) -> str:
 # Entity-to-entity relationship types promoted as first-class Neo4j relationship types.
 # Extractor may send lowercase (e.g. works_at); we normalize to this set. Unknown types → RELATED_TO.
 ENTITY_REL_TYPES = frozenset({
-    "WORKS_AT", "LOCATED_IN", "MET", "OWNS", "PART_OF", "MEMBER_OF", "KNOWS",
+    "WORKS_AT", "LOCATED_IN", "MET", "MET_AT", "OWNS", "PART_OF", "MEMBER_OF", "KNOWS",
     "EMPLOYED_BY", "LIVES_IN", "BASED_IN",
 })
 
@@ -439,16 +439,45 @@ class KnowledgeGraph:
         """
         Remove the Memory node and all its relationships from the graph.
         Called when a memory is deleted from Qdrant so the knowledge graph stays in sync.
-        Entity nodes are left in place (they may be referenced by other memories).
+        Entity nodes that were only referenced by this memory (orphans) are also removed,
+        along with their entity-entity and user-entity relationships, to avoid dead data.
         """
         if not self._enabled or not memory_id:
             return
+        # Collect entity ids linked to this memory before we delete it
+        records = self._run_query(
+            """
+            MATCH (m:Memory {id: $memory_id})-[:CONTAINS_ENTITY]->(e:Entity)
+            RETURN collect(e.id) AS entity_ids
+            """,
+            {"memory_id": memory_id},
+        )
+        entity_ids: List[str] = []
+        if records and records[0].get("entity_ids"):
+            entity_ids = [eid for eid in records[0]["entity_ids"] if eid]
+
+        # Remove the memory and its relationships
         self._run_write(
             """
             MATCH (m:Memory {id: $memory_id})
             DETACH DELETE m
             """,
             {"memory_id": memory_id},
+        )
+
+        # Delete orphan entities: no other Memory has CONTAINS_ENTITY to them
+        if not entity_ids:
+            return
+        placeholders = ", ".join([f"$id{i}" for i in range(len(entity_ids))])
+        params = {f"id{i}": eid for i, eid in enumerate(entity_ids)}
+        self._run_write(
+            f"""
+            MATCH (e:Entity)
+            WHERE e.id IN [{placeholders}]
+              AND NOT (e)<-[:CONTAINS_ENTITY]-(:Memory)
+            DETACH DELETE e
+            """,
+            params,
         )
 
     def expand_from_entities(

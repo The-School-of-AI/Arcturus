@@ -101,6 +101,7 @@ def retrieve(
     result_ids: set = set()
     memory_context = ""
 
+    pdb.set_trace()
     # Build filter for session-scoped retrieval (memory-backed session routing)
     filter_metadata: Optional[Dict[str, Any]] = None
     if session_id:
@@ -191,6 +192,7 @@ def _entity_recall(query: str, user_id: str, kg: Any) -> List[str]:
     try:
         from memory.entity_extractor import EntityExtractor
         entities = EntityExtractor().extract_from_query(query)
+        pdb.set_trace()
         if entities:
             resolved = kg.resolve_entity_candidates(user_id, entities, fuzzy_threshold=0.85)
             if resolved:

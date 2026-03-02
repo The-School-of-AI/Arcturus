@@ -45,6 +45,6 @@ Only include user facts when the text clearly indicates they apply to the user (
 1. Extract only concrete entities mentioned in the text.
 2. Keep names normalized (trim, no extra punctuation).
 3. If nothing relevant, return empty arrays.
-4. entity_relationships link entities to each other. Prefer types: works_at, located_in, met, owns, part_of, member_of, knows, employed_by, lives_in, based_in (stored as first-class Neo4j relationship types); others are stored as RELATED_TO with type in a property).
+4. entity_relationships link entities to each other. Prefer types: works_at, located_in, met, met_at, owns, part_of, member_of, knows, employed_by, lives_in, based_in (stored as first-class Neo4j relationship types); others are stored as RELATED_TO with type in a property).
 5. user_facts are first-person facts about the user.
 6. Prefer extracting at least one entity when the text mentions any named thing, preference, or concept (e.g. "Python", "vegetarian", "John").

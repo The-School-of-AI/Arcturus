@@ -18,6 +18,7 @@ Neo4j stores extracted entities and relationships from Remme memories. It ties t
   - **Graph expansion:** `expand_from_entities` traverses all entity relationship types (first-class + `RELATED_TO`), scopes memories to the requesting user via `(u:User {user_id})-[:HAS_MEMORY]->(m)` to avoid multi-tenant leakage, and returns deterministically ordered `memory_ids` (by `m.created_at DESC`, then de-duped in Python while preserving order).
   - **Retrieval orchestrator:** `memory_retriever.retrieve` runs semantic (k=10) and entity recall independently, uses a **global `result_ids` dedupe set** across all paths (semantic, entity-first, graph-expanded), and batch-fetches memories where the store supports it (`get_many`/`get_batch`) to reduce N+1 calls.
   - **Backfill:** `scripts/migrate_memories_to_neo4j.py` backfills existing Qdrant memories via `KnowledgeGraph.ingest_memory`, which now applies canonicalization and relationship modeling automatically.
+  - **Memory delete & orphan cleanup:** When a memory is deleted (`delete_memory`), the Memory node and its relationships are removed; entities that are no longer referenced by any Memory (orphans) are then removed via `DETACH DELETE`, along with their entity-entity and user-entity relationships, so the graph does not retain dead data (e.g. "Jon" and "Google" that existed only in that memory).
 
 - **Remaining / future work:**
   - **Entity-friendly payload in Qdrant (optional)** — §9.1. Still using `entity_ids` plus optional `entity_labels`; composite keys and richer payloads are a design option, not yet implemented.
@@ -46,7 +47,7 @@ Neo4j stores extracted entities and relationships from Remme memories. It ties t
 | **HAS_MEMORY** | User → Memory | — | Ownership; multi-tenant |
 | **FROM_SESSION** | Memory → Session | — | Provenance; "which session produced this memory" |
 | **CONTAINS_ENTITY** | Memory → Entity | — | Memory mentions this entity |
-| **Entity–Entity** | Entity → Entity | — | First-class: WORKS_AT, LOCATED_IN, MET, OWNS, PART_OF, MEMBER_OF, KNOWS, EMPLOYED_BY, LIVES_IN, BASED_IN (see `ENTITY_REL_TYPES` in knowledge_graph.py). Fallback: RELATED_TO with `type`, `value`, `confidence`, `source_memory_ids`. |
+| **Entity–Entity** | Entity → Entity | — | First-class: WORKS_AT, LOCATED_IN, MET, MET_AT, OWNS, PART_OF, MEMBER_OF, KNOWS, EMPLOYED_BY, LIVES_IN, BASED_IN (see `ENTITY_REL_TYPES` in knowledge_graph.py). Fallback: RELATED_TO with `type`, `value`, `confidence`, `source_memory_ids`. |
 | **RELATED_TO** | Entity → Entity | `type`, `value`, `confidence`, `source_memory_ids` | Used when extractor type is not in ENTITY_REL_TYPES |
 | **LIVES_IN** | User → Entity | `source_memory_ids` | Derived: user lives in City |
 | **WORKS_AT** | User → Entity | `source_memory_ids` | Derived: user works at Company |
