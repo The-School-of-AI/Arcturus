@@ -169,25 +169,71 @@ pip install -e .
 - Check `entity_extraction` model in `config/settings.json` or skill config
 - Run `ollama list` to see available models
 
-## Migration: FAISS → Qdrant
+## Migration Orchestration: FAISS → Qdrant → Neo4j
 
-**Important for Qdrant Cloud:** The migration scripts load `.env` automatically. Ensure your `.env` has:
+**Recommended path:** Use the unified migration orchestrator `scripts/migrate_all_memories.py`. It will:
 
-```
-QDRANT_URL=https://your-cluster-id.region.cloud-provider.cloud.qdrant.io
-QDRANT_API_KEY=your-api-key-here
-```
+- Migrate FAISS **Remme memories** → Qdrant (`arcturus_memories`) via `migrate_faiss_to_qdrant.py`
+- Migrate **RAG FAISS index** → Qdrant (`arcturus_rag_chunks`) via `migrate_rag_faiss_to_qdrant.py`
+- Backfill Qdrant **memories → Neo4j** via `migrate_memories_to_neo4j.py`
 
-Without these, migrations will use the default `http://localhost:6333` (local Docker).
+### Docker mode (default)
 
-### Remme memories
+For local Docker (Qdrant + Neo4j via `docker-compose`):
 
 ```bash
-# Option 1: Use .env (recommended for Cloud)
-# Add to .env: QDRANT_URL, QDRANT_API_KEY, VECTOR_STORE_PROVIDER=qdrant
+# From project root
+uv run python scripts/migrate_all_memories.py
+# or explicitly
+uv run python scripts/migrate_all_memories.py docker
+```
+
+This will:
+
+- Run `docker-compose up -d` to ensure Qdrant and Neo4j are up
+- Offer to append sensible Qdrant/Neo4j defaults to `.env` (it will **ask before writing** and never overwrite existing values)
+- Run the three migrations in order
+
+### Cloud mode
+
+If you're using **Qdrant Cloud** and **Neo4j Aura (or other managed Neo4j)**:
+
+1. Configure your `.env`:
+
+   ```bash
+   # Qdrant Cloud
+   QDRANT_URL=https://your-cluster-id.region.cloud-provider.cloud.qdrant.io
+   QDRANT_API_KEY=your-api-key-here
+   VECTOR_STORE_PROVIDER=qdrant
+   RAG_VECTOR_STORE_PROVIDER=qdrant
+
+   # Neo4j (Aura or self-hosted)
+   NEO4J_ENABLED=true
+   NEO4J_URI=neo4j+s://your-neo4j-instance.databases.neo4j.io  # or bolt://... for self-hosted
+   NEO4J_USER=your-neo4j-username
+   NEO4J_PASSWORD=your-neo4j-password
+   ```
+
+2. Run:
+
+   ```bash
+   uv run python scripts/migrate_all_memories.py cloud
+   ```
+
+The script will remind you about these env vars, wait for you to confirm that `.env` is configured, and then run the same migration sequence as in Docker mode.
+
+### Using individual migration scripts (advanced)
+
+You can still run the underlying scripts directly for fine‑grained control:
+
+#### Remme memories (FAISS → Qdrant)
+
+```bash
+# Using .env (recommended for Cloud)
+# Ensure .env has: QDRANT_URL, QDRANT_API_KEY, VECTOR_STORE_PROVIDER=qdrant
 uv run python scripts/migrate_faiss_to_qdrant.py
 
-# Option 2: Export explicitly
+# Or export explicitly
 export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
 export QDRANT_API_KEY=your-api-key
 export VECTOR_STORE_PROVIDER=qdrant
@@ -196,14 +242,14 @@ uv run python scripts/migrate_faiss_to_qdrant.py
 
 Reads from `memory/remme_index/`, writes to `arcturus_memories` collection.
 
-### RAG document chunks
+#### RAG document chunks (FAISS → Qdrant)
 
 ```bash
-# Option 1: Use .env (recommended for Cloud)
-# Add to .env: QDRANT_URL, QDRANT_API_KEY, RAG_VECTOR_STORE_PROVIDER=qdrant
+# Using .env (recommended for Cloud)
+# Ensure .env has: QDRANT_URL, QDRANT_API_KEY, RAG_VECTOR_STORE_PROVIDER=qdrant
 uv run python scripts/migrate_rag_faiss_to_qdrant.py
 
-# Option 2: Export explicitly
+# Or export explicitly
 export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
 export QDRANT_API_KEY=your-api-key
 export RAG_VECTOR_STORE_PROVIDER=qdrant

@@ -13,7 +13,7 @@
 - **Qdrant backend** (`memory/backends/qdrant_store.py`): Full CRUD, search, multi-tenant support via `user_id` payload
 - **Config layer** (`memory/qdrant_config.py`, `config/qdrant_config.yaml`): Collection config (dimension, distance), URL/API key from env (`QDRANT_URL`, `QDRANT_API_KEY`)
 - **FAISS fallback**: Default provider remains `faiss`; switch via `VECTOR_STORE_PROVIDER=qdrant`
-- **Migration script** (`scripts/migrate_faiss_to_qdrant.py`): Migrate existing FAISS memories to Qdrant
+- **Migration script** (`scripts/migrate_all_memories.py`): Orchestrates FAISS→Qdrant (memories + RAG) and Qdrant→Neo4j backfill in one command; wraps `migrate_faiss_to_qdrant.py`, `migrate_rag_faiss_to_qdrant.py`, and `migrate_memories_to_neo4j.py`
 - **Setup guide** (`CAPSTONE/project_charters/P11_mnemo_SETUP_GUIDE.md`): Qdrant (Cloud/Docker) and Neo4j setup
 - **RemMe integration**: `shared/state.py` uses `get_vector_store()`; RemMe router reads from provider-agnostic store
 
@@ -25,7 +25,7 @@
 - **Qdrant payload changes**: `session_id`, `entity_ids`, and optional `entity_labels` for Neo4j link and display/filter. Indexing of these fields is configured via `config/qdrant_config.yaml`.
 - **Ingestion on add**: `qdrant_store.add()` calls `_ingest_to_knowledge_graph` → extract entities → write Neo4j → update Qdrant with `entity_ids`
 - **routers/runs.py**: Uses `memory_retriever.retrieve(query)` instead of direct search
-- **Migration script** (`scripts/migrate_memories_to_neo4j.py`): Backfill existing Qdrant memories to Neo4j
+- **Backfill script** (`scripts/migrate_memories_to_neo4j.py`): Still available for targeted Qdrant→Neo4j backfill, but the recommended path is via `scripts/migrate_all_memories.py`
 - **Enable via env**: `NEO4J_ENABLED=true`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`
 - **Moved RAG chunks to qdrant** Backfill existing chunks to Qdrant
 
@@ -48,7 +48,7 @@ memory/backends/qdrant_store.py  — QdrantVectorStore; add() triggers _ingest_t
 memory/backends/faiss_store.py   — FaissVectorStore (wraps RemmeStore)
 memory/qdrant_config.py          — get_collection_config(), get_qdrant_url(), get_qdrant_api_key()
 config/qdrant_config.yaml        — Collection specs; session_id, entity_labels indexed
-scripts/migrate_faiss_to_qdrant.py
+scripts/migrate_faiss_to_qdrant.py   — FAISS → Qdrant memories (used by migrate_all_memories.py)
 scripts/test_qdrant_setup.py
 
 # Phase 2/3 (Neo4j Knowledge Graph)
@@ -56,7 +56,8 @@ memory/knowledge_graph.py        — Neo4j client, schema, resolve_entity_candid
 memory/entity_extractor.py       — LLM extraction; extract_from_query for query NER
 memory/memory_retriever.py       — Dual-path retrieval (semantic + entity recall), graph expansion
 core/skills/library/entity_extraction/ — Entity extraction skill (SKILL.md, registry)
-scripts/migrate_memories_to_neo4j.py  — Backfill Qdrant → Neo4j
+scripts/migrate_memories_to_neo4j.py  — Backfill Qdrant → Neo4j (used by migrate_all_memories.py)
+scripts/migrate_all_memories.py       — Run all migrations in order (FAISS→Qdrant memories, RAG→Qdrant, Qdrant→Neo4j)
 ```
 
 ### Data Flow
@@ -163,12 +164,33 @@ uv run python scripts/test_qdrant_setup.py
    ```bash
    uv run python scripts/test_qdrant_setup.py
    ```
-4. Migrate FAISS → Qdrant (optional):
+4. Run end-to-end migrations (FAISS → Qdrant memories, RAG FAISS → Qdrant, Qdrant → Neo4j) with a single command:
+
+   - **Docker (default)** — uses local Docker services, runs `docker-compose up -d`, optionally appends Qdrant/Neo4j env vars to `.env`, then runs all migrations in order:
+     ```bash
+     uv run python scripts/migrate_all_memories.py
+     # or explicitly
+     uv run python scripts/migrate_all_memories.py docker
+     ```
+
+   - **Cloud** — assumes Qdrant Cloud + Neo4j Aura (or similar). The script will prompt you to create the accounts and configure `.env` (`QDRANT_URL`, `QDRANT_API_KEY`, `VECTOR_STORE_PROVIDER=qdrant`, `RAG_VECTOR_STORE_PROVIDER=qdrant`, `NEO4J_ENABLED=true`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`) before running the same migration sequence:
+     ```bash
+     uv run python scripts/migrate_all_memories.py cloud
+     ```
+
+5. (Optional) Use individual scripts directly if you need fine-grained control:
    ```bash
-   export VECTOR_STORE_PROVIDER=qdrant
+   # FAISS → Qdrant (Remme memories)
    uv run python scripts/migrate_faiss_to_qdrant.py
+
+   # RAG FAISS → Qdrant (RAG chunks)
+   uv run python scripts/migrate_rag_faiss_to_qdrant.py
+
+   # Qdrant → Neo4j backfill
+   uv run python scripts/migrate_memories_to_neo4j.py
    ```
-5. Use Qdrant in RemMe: `export VECTOR_STORE_PROVIDER=qdrant` or add `VECTOR_STORE_PROVIDER=qdrant` in your `.env` file before starting API
+
+6. Use Qdrant in RemMe: `export VECTOR_STORE_PROVIDER=qdrant` (and `RAG_VECTOR_STORE_PROVIDER=qdrant`) or add them in your `.env` file before starting the API
 
 ### Neo4j Knowledge Graph (Phase 2/3)
 6. Start Neo4j: `docker-compose up -d neo4j` (or use Neo4j Aura)
