@@ -7,6 +7,7 @@ import logging
 
 from marketplace.skill_base import load_manifest, SkillManifest
 from marketplace.registry import SkillRegistry
+from marketplace.integrity import verify_checksum
 
 logger = logging.getLogger("bazaar")
 
@@ -75,6 +76,15 @@ class SkillInstaller:
                 message=f"Missing skill dependencies: {missing}",
                 missing_deps=missing
             )
+        
+        # Check integrity (checksum verification)
+        if manifest.checksum:
+            if not verify_checksum(source_dir):
+                return InstallResult(
+                    success=False,
+                    skill_name=manifest.name,
+                    message="SECURITY: Checksum verification failed — skill may have been tampered with"
+                )
         
         return InstallResult(
             success=True,
