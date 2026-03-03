@@ -259,6 +259,8 @@ from routers import studio as studio_router
 from routers import admin as admin_router
 app.include_router(studio_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
+from routers.marketplace import router as marketplace_router
+app.include_router(marketplace_router, prefix="/api/v3")
 from routers import voice as voice_router
 app.include_router(voice_router.router, prefix="/api")
 

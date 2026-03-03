@@ -46,14 +46,12 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.28.0",
     "opentelemetry-instrumentation-fastapi>=0.49b0",
     "pymongo>=4.10.0",
-
-
+    "cryptography>=46.0.5",
     "memo>=0.2.4",
     "mem0ai>=1.0.4",
     "sounddevice>=0.5.5",
     "pvporcupine>=4.0.2",
     "openwakeword>=0.6.0",
-    
     "tensorflow>=2.20.0",
     "pytest>=9.0.2",
     "faster-whisper>=1.2.1",

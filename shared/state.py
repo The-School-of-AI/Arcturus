@@ -238,6 +238,18 @@ def get_skill_manager():
         _skill_manager.initialize()
     return _skill_manager
 
+# Marketplace Bridge instance
+_marketplace_bridge = None
+
+def get_marketplace_bridge():
+    """Get the MarketplaceBridge instance, creating/initializing it if needed."""
+    global _marketplace_bridge
+    if _marketplace_bridge is None:
+        from marketplace.bridge import MarketplaceBridge
+        _marketplace_bridge = MarketplaceBridge()
+        _marketplace_bridge.initialize()
+    return _marketplace_bridge
+
 # Agent Runner instance
 _agent_runner = None
 
