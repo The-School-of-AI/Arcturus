@@ -28,28 +28,55 @@ from gateway_api.webhooks import WebhookService
 class _FakeScheduler:
     def __init__(self):
         self.jobs = {}
+        self.history = {}
 
     def list_jobs(self):
         return list(self.jobs.values())
 
-    def add_job(self, name: str, cron_expression: str, agent_type: str, query: str):
+    def add_job(
+        self,
+        name: str,
+        cron_expression: str,
+        agent_type: str,
+        query: str,
+        timezone: str = "UTC",
+    ):
         job = JobDefinition(
             id=f"job_{len(self.jobs) + 1}",
             name=name,
             cron_expression=cron_expression,
             agent_type=agent_type,
             query=query,
+            timezone=timezone,
         )
         self.jobs[job.id] = job
+        self.history.setdefault(job.id, [])
         return job
 
     def trigger_job(self, job_id: str):
         if job_id not in self.jobs:
             raise KeyError(job_id)
-        self.jobs[job.id].last_run = datetime.now(timezone.utc).isoformat()
+        self.jobs[job_id].last_run = datetime.now(timezone.utc).isoformat()
+        self.history.setdefault(job_id, []).append(
+            {
+                "job_id": job_id,
+                "run_id": f"manual_{job_id}",
+                "status": "success",
+                "started_at": self.jobs[job_id].last_run,
+                "finished_at": self.jobs[job_id].last_run,
+                "error": None,
+                "output_summary": "manual trigger",
+            }
+        )
 
     def delete_job(self, job_id: str):
         self.jobs.pop(job_id, None)
+
+    def get_job_history(self, job_id: str, limit: int = 50):
+        rows = list(self.history.get(job_id, []))
+        rows = rows[-max(1, limit) :]
+        rows.reverse()
+        return rows
 
 
 class _FakeOracleAdapter:
@@ -229,13 +256,21 @@ def gateway_test_client(tmp_path, monkeypatch):
     app.include_router(gateway_router)
     client = TestClient(app)
 
-    def create_api_key(scopes):
+    def create_api_key(
+        scopes,
+        rpm_limit=120,
+        burst_limit=60,
+        monthly_request_quota=100_000,
+        monthly_unit_quota=500_000,
+    ):
         _, plaintext = asyncio.run(
             key_store.create_key(
                 name="test",
                 scopes=scopes,
-                rpm_limit=120,
-                burst_limit=60,
+                rpm_limit=rpm_limit,
+                burst_limit=burst_limit,
+                monthly_request_quota=monthly_request_quota,
+                monthly_unit_quota=monthly_unit_quota,
             )
         )
         return plaintext

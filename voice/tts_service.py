@@ -21,8 +21,18 @@ Requires:
 """
 
 import os
+import re
 import html
+import queue
 import threading
+
+from shared.state import (
+    cancel_tts_event,
+    tts_mark_start,
+    tts_mark_stop,
+    tts_request_cancel,
+)
+from voice.config import VOICE_CONFIG
 
 try:
     import azure.cognitiveservices.speech as speechsdk
@@ -31,6 +41,11 @@ except ImportError:
     _HAS_AZURE_SPEECH = False
     print("⚠️ [TTS] azure-cognitiveservices-speech not installed. "
           "Install with: pip install azure-cognitiveservices-speech")
+
+
+# ── Sentence-boundary regex (same as Piper) ───────────────────
+# Splits on . ! ? followed by whitespace or end — keeps the punctuation.
+_SENTENCE_RE = re.compile(r'(?<=[.!?])\s+')
 
 
 # ── Default persona definitions (used when config is not provided) ──
@@ -215,6 +230,9 @@ class TTSService:
         with self._lock:
             self._is_speaking = True
             self._cancelled = False
+        # Global speaking state + grace window for barge-in gating.
+        grace_ms = VOICE_CONFIG.get("barge_in", {}).get("grace_ms", 700)
+        tts_mark_start(grace_ms=grace_ms)
 
         preview = text[:120].replace('\n', ' ')
         persona_tag = f" [{self._active_persona_name}]" if self._active_persona_name else ""
@@ -226,13 +244,14 @@ class TTSService:
             print(f"   📢 [TTS-Fallback] {text}")
             with self._lock:
                 self._is_speaking = False
+            tts_mark_stop()
             return
 
         try:
-            result = self._synthesizer.speak_ssml_async(text).get()
+            result = self._synthesizer_speak_ssml_blocking(text)
 
             with self._lock:
-                if self._cancelled:
+                if self._cancelled or cancel_tts_event.is_set():
                     return
 
             if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
@@ -249,6 +268,7 @@ class TTSService:
         finally:
             with self._lock:
                 self._is_speaking = False
+            tts_mark_stop()
 
     @property
     def is_speaking(self) -> bool:
@@ -260,8 +280,11 @@ class TTSService:
         Immediately stop any ongoing speech playback (barge-in).
         Uses Azure SDK's stop_speaking_async() to cut audio mid-sentence.
         """
+        # Global cancel event (checked by streaming loops).
+        tts_request_cancel()
         with self._lock:
             if not self._is_speaking:
+                # Nothing to cancel — avoid logging a barge-in when we weren't speaking.
                 return
             self._cancelled = True
             self._is_speaking = False
@@ -273,6 +296,173 @@ class TTSService:
                 self._synthesizer.stop_speaking_async().get()
             except Exception as e:
                 print(f"⚠️ [TTS] Error during stop: {e}")
+        tts_mark_stop()
+
+    # ── Streaming TTS (queue-based, same pattern as Piper) ─────
+
+    def speak_streamed(self, text_queue: queue.Queue, sentinel=None):
+        """
+        Consume text chunks from *text_queue* and start speaking as
+        soon as a complete sentence is available.
+
+        The producer (Orchestrator) pushes partial text strings into
+        the queue.  When we accumulate enough to form a sentence
+        (ending in .!?) we immediately synthesise and play it via
+        Azure Neural TTS.
+
+        Args:
+            text_queue:  queue.Queue that yields str chunks.
+                         The producer pushes *sentinel* (default None)
+                         when done.
+            sentinel:    Value that signals "no more chunks".
+
+        This method **blocks** until all chunks are spoken or
+        cancel() is called.
+        """
+        with self._lock:
+            self._is_speaking = True
+            self._cancelled = False
+        grace_ms = VOICE_CONFIG.get("barge_in", {}).get("grace_ms", 700)
+        tts_mark_start(grace_ms=grace_ms)
+
+        persona_tag = f" [{self._active_persona_name}]" if self._active_persona_name else ""
+        print(f"🔊 [TTS]{persona_tag} Streaming mode — waiting for first chunk...")
+
+        if not self._synthesizer:
+            # Drain the queue (fallback / console-only mode)
+            full_text = []
+            while True:
+                chunk = text_queue.get()
+                if chunk is sentinel:
+                    break
+                full_text.append(chunk)
+            joined = " ".join(full_text)
+            print(f"   📢 [TTS-Fallback] {joined}")
+            with self._lock:
+                self._is_speaking = False
+            return
+
+        try:
+            buffer = ""
+            spoken_count = 0
+
+            while True:
+                with self._lock:
+                    if self._cancelled or cancel_tts_event.is_set():
+                        break
+
+                # Non-blocking get with short timeout so we can check cancel
+                try:
+                    chunk = text_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+
+                if chunk is sentinel:
+                    # Flush remaining buffer
+                    if buffer.strip():
+                        self._speak_sentence(buffer.strip())
+                        spoken_count += 1
+                    break
+
+                buffer += chunk
+
+                # Try to extract complete sentences from buffer
+                while True:
+                    match = _SENTENCE_RE.search(buffer)
+                    if not match:
+                        break
+
+                    # Everything up to and including the sentence-end
+                    sentence = buffer[:match.start()].strip()
+                    buffer = buffer[match.end():]
+
+                    if sentence:
+                        with self._lock:
+                            if self._cancelled or cancel_tts_event.is_set():
+                                break
+                        self._speak_sentence(sentence)
+                        spoken_count += 1
+
+            if spoken_count == 0:
+                print(f"⚠️ [TTS]{persona_tag} No sentences spoken (empty stream).")
+            else:
+                print(f"✅ [TTS]{persona_tag} Streamed {spoken_count} sentence(s).")
+
+        except Exception as e:
+            print(f"❌ [TTS] Streaming playback failed: {e}")
+        finally:
+            with self._lock:
+                self._is_speaking = False
+            tts_mark_stop()
+
+    def _speak_sentence(self, sentence: str):
+        """
+        Synthesise one sentence via Azure Neural TTS and play it.
+        Used by speak_streamed() for streaming sentence-by-sentence.
+        """
+        sentence = self._clean_for_speech(sentence)
+        if not sentence:
+            return
+        preview = sentence[:80]
+        persona_tag = f" [{self._active_persona_name}]" if self._active_persona_name else ""
+        print(f"   🗣️ [TTS]{persona_tag} \"{preview}{'...' if len(sentence) > 80 else ''}\"")
+        # Streaming path must not call speak() (it would toggle is_speaking and reset grace).
+        ssml = self._wrap_with_prosody(sentence)
+        self._synthesizer_speak_ssml_blocking(ssml)
+
+    def _synthesizer_speak_ssml_blocking(self, ssml: str):
+        """
+        Low-level Azure speak call that does NOT manage global/local state.
+        Used by both speak() and streaming sentence playback.
+        """
+        if not self._synthesizer:
+            return None
+        if cancel_tts_event.is_set():
+            return None
+        with self._lock:
+            if self._cancelled:
+                return None
+        return self._synthesizer.speak_ssml_async(ssml).get()
+
+    @staticmethod
+    def _clean_for_speech(text: str) -> str:
+        """Strip markdown / code artifacts for cleaner speech."""
+        # Remove code blocks
+        text = re.sub(r'```[\s\S]*?```', '', text)
+        text = re.sub(r'`[^`]+`', '', text)
+        # Remove markdown images
+        text = re.sub(r'!\[[^\]]*\]\([^\)]+\)', '', text)
+        # Convert links to just the label
+        text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+        # Remove header markers
+        text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+        # Remove bold/italic
+        text = re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', text)
+        text = re.sub(r'_{1,3}([^_]+)_{1,3}', r'\1', text)
+        # Remove horizontal rules
+        text = re.sub(r'^[-*_]{3,}\s*$', '', text, flags=re.MULTILINE)
+        # Remove bullet markers
+        text = re.sub(r'^[\s]*[-*+]\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^[\s]*\d+\.\s+', '', text, flags=re.MULTILINE)
+        # Remove table formatting
+        text = re.sub(r'\|', ' ', text)
+        text = re.sub(r'^[-:]+\s*$', '', text, flags=re.MULTILINE)
+        # Remove LLM-generated placeholder phrases (bracket and bare-prose variants)
+        # e.g. "[Placeholder for second point]", "Placeholder for X.", "[Add content here]"
+        text = re.sub(
+            r'\[?[Pp]laceholder\b[^\]\n]*\]?\.?', '', text
+        )
+        text = re.sub(
+            r'\[(?:Add|Insert|Include|Enter|TODO|TBD|Content goes here)[^\]]*\]',
+            '', text, flags=re.IGNORECASE
+        )
+        # Remove lines that became empty after stripping
+        text = re.sub(r'^\s*$', '', text, flags=re.MULTILINE)
+        # Collapse whitespace
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        text = re.sub(r'  +', ' ', text)
+        text = text.strip()
+        return text
 
     def speak_ssml(self, ssml: str):
         """Convenience: send raw SSML directly to speak()."""

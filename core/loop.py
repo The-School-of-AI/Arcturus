@@ -77,6 +77,66 @@ async def retry_with_backoff(
     raise last_exception
 
 
+# ── Voice streaming helper ─────────────────────────────────────────────────
+# Nodes to skip for voice streaming (they produce metadata, not user-facing text)
+_VOICE_SKIP_AGENTS = {
+    "PlannerAgent", "ClarificationAgent", "DistillerAgent", "QueryAgent",
+}
+_VOICE_MIN_CHARS = 40  # Don't speak very short outputs
+
+
+def _extract_node_chunk(step_id: str, agent_type: str, output) -> str | None:
+    """
+    Extract a speakable text chunk from a completed node's output.
+
+    Returns a clean string suitable for TTS, or None if the node
+    shouldn't be spoken (e.g., planner, clarification, trivial output).
+    """
+    if agent_type in _VOICE_SKIP_AGENTS:
+        return None
+
+    if not output:
+        return None
+
+    text = None
+
+    # FormatterAgent: prefer the markdown report
+    if isinstance(output, dict):
+        # SKIP IF ERROR PRESENT
+        if output.get("error") or output.get("status") == "failed":
+             return None
+
+        if "Format" in agent_type or agent_type == "FormatterAgent":
+            text = output.get("markdown_report") or output.get("formatted_report")
+            if not text:
+                for k, v in output.items():
+                    if ("report" in k.lower() or "formatted" in k.lower()) and isinstance(v, str):
+                        text = v
+                        break
+
+        # Generic fallback: find the largest string value
+        if not text:
+            best = ""
+            for k, v in output.items():
+                if k == "error" or k == "traceback":
+                    continue
+                if isinstance(v, str) and len(v) > len(best):
+                    best = v
+            text = best or None
+
+    elif isinstance(output, str):
+        # Basic heuristic for avoiding speaking technical errors directly
+        if output.lower().startswith("error:") or "traceback (most recent call last):" in output.lower():
+            return None
+        text = output
+
+    if not text or len(text.strip()) < _VOICE_MIN_CHARS:
+        return None
+
+    return text.strip()
+# ──────────────────────────────────────────────────────────────────────────
+
+
 class AgentLoop4:
     def __init__(self, multi_mcp, strategy="conservative"):
         self.multi_mcp = multi_mcp
@@ -628,6 +688,20 @@ class AgentLoop4:
                     visualizer.mark_completed(step_id)
                     await context.mark_done(step_id, result["output"])
                     log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+
+                    # ── Voice streaming: push this node's output immediately ──
+                    # If a stream queue is registered (voice pipeline is listening),
+                    # push speakable text so TTS can start speaking before the full
+                    # run completes — true incremental streaming.
+                    try:
+                        from shared.state import has_stream_queue, push_stream_chunk
+                        session_id_for_stream = context.plan_graph.graph.get("session_id", "")
+                        if session_id_for_stream and has_stream_queue(session_id_for_stream):
+                            _chunk = _extract_node_chunk(step_id, step_data["agent"], result["output"])
+                            if _chunk:
+                                push_stream_chunk(session_id_for_stream, _chunk)
+                    except Exception as _ve:
+                        print(f"⚠️ [Voice] Failed to push stream chunk for {step_id}: {_ve}")
                 else:
                     # Agent returned failure - also retry
                     if retry_count < MAX_STEP_RETRIES:
@@ -659,6 +733,19 @@ class AgentLoop4:
                 break
                 
             iteration += 1
+            # Only trigger max-iteration guard when there's no forward progress
+            # (prevents false alarm when tasks are completing normally)
+            completed_now = sum(
+                1 for n in context.plan_graph.nodes
+                if context.plan_graph.nodes[n].get('status') in ('completed', 'skipped', 'cost_exceeded')
+                and n != "ROOT"
+            )
+            if not hasattr(context, '_last_completed_count'):
+                context._last_completed_count = 0
+            if completed_now > context._last_completed_count:
+                # Forward progress — reset the stall counter
+                context._last_completed_count = completed_now
+                iteration = 0
             if iteration >= max_iterations:
                 log_error(f"🛑 Max Iterations Reached: {iteration}/{max_iterations}")
                 context.plan_graph.graph['status'] = 'failed'

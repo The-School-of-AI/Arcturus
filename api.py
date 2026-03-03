@@ -58,12 +58,27 @@ async def lifespan(app: FastAPI):
     try:
         # Create essential services 
         voice_agent = Agent()
-        tts_cfg = VOICE_CONFIG.get("tts", {})
-        voice_tts = TTSService(
-            voice_name=tts_cfg.get("voice_name"),
-            personas=tts_cfg.get("personas"),
-            active_persona=tts_cfg.get("active_persona"),
-        )
+
+        # Choose TTS backend based on config
+        tts_provider = VOICE_CONFIG.get("tts_provider", "azure")
+        if tts_provider == "piper":
+            from voice.piper_tts_service import PiperTTSService
+            piper_cfg = VOICE_CONFIG.get("piper_tts", {})
+            voice_tts = PiperTTSService(
+                model_path=piper_cfg.get("model_path"),
+                length_scale=piper_cfg.get("length_scale", 1.0),
+                sentence_silence=piper_cfg.get("sentence_silence", 0.15),
+                speaker_id=piper_cfg.get("speaker_id"),
+            )
+            print(f"🔊 [Voice] TTS provider: Piper (local, streaming={piper_cfg.get('streaming_enabled', False)})")
+        else:
+            tts_cfg = VOICE_CONFIG.get("tts", {})
+            voice_tts = TTSService(
+                voice_name=tts_cfg.get("voice_name"),
+                personas=tts_cfg.get("personas"),
+                active_persona=tts_cfg.get("active_persona"),
+            )
+            print(f"🔊 [Voice] TTS provider: Azure Speech")
         
         orchestrator = Orchestrator(
             wake_service=None,
