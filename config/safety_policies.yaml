@@ -1,0 +1,104 @@
+# Safety Policies Configuration
+# This file defines configurable safety policies for prompt injection defense
+
+# Default policies (applied to all users unless overridden)
+default:
+  # Input scanning configuration
+  input_scanning:
+    # Provider priority: lakera, nemo, local
+    providers:
+      - lakera
+      - nemo
+      - local
+    # Use Nemo Guardrails
+    use_nemo: true
+    # Scan mode: "hybrid" (parallel) or "fallback" (sequential)
+    # Hybrid mode runs Lakera and Nemo in parallel for true defense-in-depth
+    # Fallback mode runs sequentially (faster if Lakera flags early)
+    scan_mode: hybrid  # Options: "hybrid" or "fallback"
+    # Strict mode: block on any detection
+    strict_mode: true
+  
+  # Injection patterns (additional to built-in patterns)
+  injection_patterns:
+    - "ignore all previous instructions"
+    - "disregard prior instructions"
+    - "you are now"
+    - "new instructions:"
+  
+  # Rate limiting configuration
+  rate_limits:
+    default:
+      limit: 60
+      window_seconds: 60
+    sensitive:
+      limit: 10
+      window_seconds: 60
+    tool_call:
+      limit: 30
+      window_seconds: 60
+    input_scan:
+      limit: 100
+      window_seconds: 60
+  
+  # Threat tracking configuration
+  threat_tracking:
+    warn_threshold: 1
+    rate_limit_threshold: 3
+    block_threshold: 5
+    window_seconds: 300  # 5 minutes
+    block_duration_seconds: 3600  # 1 hour
+  
+  # PII detection patterns
+  pii_detection:
+    enabled: true
+    patterns:
+      email: true
+      ssn: true
+      credit_card: true
+      phone: false  # Disabled by default
+      ip_address: false
+  
+  # Output scanning configuration
+  output_scanning:
+    check_canary_leaks: true
+    check_prompt_leakage: true
+    check_instruction_overrides: true
+    strict_mode: true  # Block on critical issues
+  
+  # Instruction hierarchy enforcement
+  instruction_hierarchy:
+    enabled: true
+    strict_mode: false  # Sanitize instead of block
+    allow_user_tool_requests: true
+
+# Organization-specific overrides
+organizations:
+  # Example: Enterprise org with stricter policies
+  enterprise:
+    rate_limits:
+      sensitive:
+        limit: 5
+        window_seconds: 60
+    threat_tracking:
+      block_threshold: 3  # Stricter blocking
+    output_scanning:
+      strict_mode: true
+
+# User-specific overrides (for trusted users)
+users:
+  # Example: Trusted admin user
+  admin:
+    rate_limits:
+      sensitive:
+        limit: 100
+        window_seconds: 60
+    threat_tracking:
+      warn_threshold: 5  # More lenient
+
+# Custom injection patterns (domain-specific)
+custom_patterns:
+  # Add domain-specific patterns here
+  - "execute system command"
+  - "bypass security"
+  - "access admin panel"
