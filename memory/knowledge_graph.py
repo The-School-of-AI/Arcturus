@@ -99,9 +99,13 @@ class KnowledgeGraph:
             self._driver.close()
             self._driver = None
 
+    def _session(self):
+        """Create a session with notification warnings suppressed (e.g. 'relationship type does not exist')."""
+        return self._driver.session(warn_notification_severity="OFF")
+
     def _ensure_schema(self) -> None:
         """Create constraints and indexes if they don't exist."""
-        with self._driver.session() as session:
+        with self._session() as session:
             # Unique constraints for idempotent upserts
             for q in [
                 "CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.user_id IS UNIQUE",
@@ -122,7 +126,7 @@ class KnowledgeGraph:
         if not self._enabled or not self._driver:
             return []
         try:
-            with self._driver.session() as session:
+            with self._session() as session:
                 result = session.run(query, parameters or {})
                 return [dict(record) for record in result]
         except Exception as e:
@@ -134,7 +138,7 @@ class KnowledgeGraph:
         if not self._enabled or not self._driver:
             return
         try:
-            with self._driver.session() as session:
+            with self._session() as session:
                 session.run(query, parameters or {})
         except Exception as e:
             log_error(f"Neo4j write failed: {e}")
