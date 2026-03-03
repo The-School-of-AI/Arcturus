@@ -13,7 +13,6 @@ import json
 import sys
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
-
 # Add project root to path and import settings
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.settings_loader import settings, get_ollama_url, get_model, get_timeout
@@ -54,26 +53,36 @@ class RemmeExtractor:
         # Add current query
         transcript += f"USER: {query}\n"
         
-        # Format existing memories for the prompt
+        # Format existing memories for the prompt (use short aliases T001, T002 so LLM returns them; backend resolves to real Qdrant IDs)
         memories_str = "NONE"
         if existing_memories:
-            memories_str = "\n".join([f"ID: {m['id']} | Fact: {m['text']}" for m in existing_memories])
+            memories_str = "\n".join(
+                [f"ID: T{i+1:03d} | Fact: {m.get('text', '')}" for i, m in enumerate(existing_memories)]
+            )
 
-        # 2. Load extraction prompt
+        # 2. Load extraction prompt (priority: Skill > file > settings)
+        base_prompt = None
         try:
-            prompt_path = Path(__file__).parent.parent / "prompts" / "remme_extraction.md"
-            base_prompt = prompt_path.read_text().strip()
-        except:
-            base_prompt = settings.get("remme", {}).get("extraction_prompt", "Extract facts from conversation.")
+            from shared.state import get_skill_manager
+            skill = get_skill_manager().get_skill("remme_extraction")
+            if skill and skill.prompt_text:
+                base_prompt = skill.prompt_text.strip()
+        except Exception:
+            pass
+        if not base_prompt:
+            try:
+                prompt_path = Path(__file__).parent.parent / "prompts" / "remme_extraction.md"
+                base_prompt = prompt_path.read_text().strip()
+            except Exception:
+                base_prompt = settings.get("remme", {}).get("extraction_prompt", "Extract facts from conversation.")
 
         system_prompt = f"""{base_prompt}
+        
 
 EXISTING RELEVANT MEMORIES:
 {memories_str}
 """
 
-        print(f"[DEBUG] RemMe Target Model: {self.model}")
-        
         try:
             response = requests.post(
                 self.api_url,
@@ -168,16 +177,23 @@ EXISTING RELEVANT MEMORIES:
         return memories
 
 
-def apply_preferences_to_hubs(preferences: Dict) -> List[str]:
+def apply_preferences_to_hubs(preferences) -> List[str]:
     """
     Apply extracted preferences to REMME hubs.
     
     Args:
-        preferences: Dict of preference key-value pairs from extraction
+        preferences: Dict of preference key-value pairs from extraction.
+                    If a list is passed (e.g. LLM returned {"preferences": [...]}),
+                    treat as empty or use first dict element so .get() does not fail.
         
     Returns:
         List of changes made (for logging)
     """
+    if not isinstance(preferences, dict):
+        if isinstance(preferences, list) and preferences and isinstance(preferences[0], dict):
+            preferences = preferences[0]
+        else:
+            preferences = {}
     from remme.hubs import get_preferences_hub, get_operating_context_hub, get_soft_identity_hub
     from remme.engines import get_evidence_log
     

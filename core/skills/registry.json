@@ -209,6 +209,14 @@
     "class_name": "AppgenerationpromptSkill",
     "type": "python"
   },
+  "entity_extraction": {
+    "path": "core/skills/library/entity_extraction",
+    "version": "1.0.0",
+    "description": "Extracts entities and relationships from memory text for the knowledge graph",
+    "intent_triggers": [],
+    "class_name": "EntityExtractionSkill",
+    "type": "python"
+  },
   "decision": {
     "path": "core/skills/library/decision",
     "version": "1.0.0",

@@ -6,10 +6,8 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
-
 from ops.tracing import run_span, agent_execute_node_span
 from opentelemetry.trace import Status, StatusCode
-
 from shared.state import (
     active_loops,
     get_multi_mcp,
@@ -175,20 +173,20 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
                     print(f"[{run_id}] 🧠 Skill '{skill_id}' modified prompt.")
 
             # 1. RETRIEVE MEMORIES (Remme)
-            # Search for past relevant facts to inject into this run
+            # Orchestration: memory_retriever handles semantic recall, entity recall, graph expansion, merge
             memory_context = ""
-            context = None  # Initialize for safe access in finally block
             results = []
+            context = None  # Initialize for safe access in finally block
             try:
-                emb = get_embedding(query, task_type="search_query")
-                results = remme_store.search(emb, query_text=query, k=3)
-                if results:
-                    memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
-                    memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
-                    print(f" Remme: Injected {len(results)} memories into run {run_id}")
+                from memory.memory_retriever import retrieve
+                memory_context, results = retrieve(
+                    query,
+                    session_id=run_id,
+                )
+                if memory_context:
+                    print(f" Remme: Injected memory context into run {run_id}")
             except Exception as e:
                 print(f"⚠️ Remme Retrieval Failed: {e}")
-
             loop = AgentLoop4(multi_mcp=multi_mcp)
             # Register the LOOP instance immediately so we can stop it
             active_loops[run_id] = loop
@@ -260,6 +258,23 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
                     existing_memories=results
                 )
 
+                def _resolve_memory_id(alias_or_id: str, existing: list) -> Optional[str]:
+                    """Resolve T001-style alias (or slug_T002) to real Qdrant point ID; pass-through UUIDs/integers."""
+                    if not alias_or_id or not existing:
+                        return alias_or_id
+                    import re
+                    s = str(alias_or_id).strip()
+                    # Exact T001, T002, ...
+                    m = re.match(r"^T(\d+)$", s, re.IGNORECASE)
+                    if not m:
+                        # LLM sometimes returns slug-style id, e.g. jons_office_location_T002
+                        m = re.search(r"T(\d+)$", s, re.IGNORECASE)
+                    if m:
+                        idx = int(m.group(1)) - 1
+                        if 0 <= idx < len(existing) and existing[idx].get("id"):
+                            return existing[idx]["id"]
+                    return alias_or_id
+
                 if commands:
                     for cmd in commands:
                         if not isinstance(cmd, dict):
@@ -268,20 +283,24 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
 
                         action = cmd.get("action")
                         text = cmd.get("text")
-                        target_id = cmd.get("id")
+                        target_id_raw = cmd.get("id")
+                        target_id = _resolve_memory_id(target_id_raw, results) if target_id_raw else None
 
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                remme_store.add(
+                                    text, emb, category="derived", source=f"run_{run_id}",
+                                    metadata={"session_id": run_id},
+                                )
                                 print(f"✅ Remme: Added new fact: {text}")
                             elif action == "update" and target_id and text:
                                 emb = get_embedding(text, task_type="search_document")
                                 remme_store.update(target_id, text=text, embedding=emb)
-                                print(f"🔄 Remme: Updated fact {target_id}: {text}")
+                                print(f"🔄 Remme: Updated fact {target_id_raw or target_id}: {text}")
                             elif action == "delete" and target_id:
                                 remme_store.delete(target_id)
-                                print(f"🗑️ Remme: Deleted fact {target_id}")
+                                print(f"🗑️ Remme: Deleted fact {target_id_raw or target_id}")
                         except Exception as e:
                             print(f"❌ Remme Action Failed: {e}")
 
