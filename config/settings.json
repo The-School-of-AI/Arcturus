@@ -13,7 +13,8 @@
     "semantic_chunking": "gemma3:4b",
     "image_captioning": "gemma3:4b",
     "memory_extraction": "gemma3:4b",
-    "insights_provider": "ollama"
+    "insights_provider": "ollama",
+    "entity_extraction": "gemma3:4b"
   },
   "rag": {
     "chunk_size": 256,

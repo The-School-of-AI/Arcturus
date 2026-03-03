@@ -1,7 +1,6 @@
-
 from typing import List, Dict, Any, Optional
 from core.skills.base import BaseSkill
-from mcp_servers.multi_mcp import ToolDefinition
+
 
 class FileReadSkill(BaseSkill):
     """Provides advanced file reading capabilities, including partial reads and searching."""
