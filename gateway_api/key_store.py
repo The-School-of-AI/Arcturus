@@ -14,6 +14,8 @@ from shared.state import PROJECT_ROOT
 DATA_DIR = PROJECT_ROOT / "data" / "gateway"
 API_KEYS_FILE = DATA_DIR / "api_keys.json"
 KEY_AUDIT_FILE = DATA_DIR / "key_audit.jsonl"
+DEFAULT_MONTHLY_REQUEST_QUOTA = 100_000
+DEFAULT_MONTHLY_UNIT_QUOTA = 500_000
 
 _file_locks: Dict[Path, asyncio.Lock] = {}
 
@@ -83,6 +85,8 @@ class GatewayKeyStore:
         scopes: List[str],
         rpm_limit: int,
         burst_limit: int,
+        monthly_request_quota: int = DEFAULT_MONTHLY_REQUEST_QUOTA,
+        monthly_unit_quota: int = DEFAULT_MONTHLY_UNIT_QUOTA,
     ) -> Tuple[Dict[str, Any], str]:
         plaintext = f"arc_{secrets.token_urlsafe(32)}"
         key_hash = _hash_key(plaintext)
@@ -97,6 +101,8 @@ class GatewayKeyStore:
             "scopes": scopes,
             "rpm_limit": rpm_limit,
             "burst_limit": burst_limit,
+            "monthly_request_quota": monthly_request_quota,
+            "monthly_unit_quota": monthly_unit_quota,
             "status": "active",
             "created_at": now,
             "updated_at": now,
@@ -107,7 +113,16 @@ class GatewayKeyStore:
             payload.setdefault("keys", []).append(record)
             _write_json(self.keys_file, payload)
 
-        await self._audit("create", key_id, {"name": name, "scopes": scopes})
+        await self._audit(
+            "create",
+            key_id,
+            {
+                "name": name,
+                "scopes": scopes,
+                "monthly_request_quota": monthly_request_quota,
+                "monthly_unit_quota": monthly_unit_quota,
+            },
+        )
         return record, plaintext
 
     async def update_key(
@@ -118,6 +133,8 @@ class GatewayKeyStore:
         scopes: Optional[List[str]] = None,
         rpm_limit: Optional[int] = None,
         burst_limit: Optional[int] = None,
+        monthly_request_quota: Optional[int] = None,
+        monthly_unit_quota: Optional[int] = None,
         status: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         async with _get_lock(self.keys_file):
@@ -134,11 +151,27 @@ class GatewayKeyStore:
                     record["rpm_limit"] = rpm_limit
                 if burst_limit is not None:
                     record["burst_limit"] = burst_limit
+                if monthly_request_quota is not None:
+                    record["monthly_request_quota"] = monthly_request_quota
+                if monthly_unit_quota is not None:
+                    record["monthly_unit_quota"] = monthly_unit_quota
                 if status is not None:
                     record["status"] = status
                 record["updated_at"] = _utc_now_iso()
                 _write_json(self.keys_file, payload)
-                await self._audit("update", key_id, {"status": record.get("status")})
+                await self._audit(
+                    "update",
+                    key_id,
+                    {
+                        "status": record.get("status"),
+                        "monthly_request_quota": record.get(
+                            "monthly_request_quota", DEFAULT_MONTHLY_REQUEST_QUOTA
+                        ),
+                        "monthly_unit_quota": record.get(
+                            "monthly_unit_quota", DEFAULT_MONTHLY_UNIT_QUOTA
+                        ),
+                    },
+                )
                 return record
 
         return None
