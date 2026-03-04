@@ -29,9 +29,9 @@ class AudioInput:
         )
         self.stream.start()
 
-    def read(self, timeout: float = 0.5):
+    def read(self, timeout: float = 0.1):
         """
-        Returns one frame of PCM audio as a tuple of int16 samples.
+        Returns one frame of PCM audio as a numpy int16 array.
 
         Uses a timeout so the calling thread remains responsive to
         signals (Ctrl+C / KeyboardInterrupt).  Returns None if no
@@ -39,8 +39,7 @@ class AudioInput:
         treat None as a no-op and loop again.
         """
         try:
-            pcm = self.q.get(timeout=timeout)
-            return tuple(pcm.tolist())
+            return self.q.get(timeout=timeout)
         except queue.Empty:
             return None
 

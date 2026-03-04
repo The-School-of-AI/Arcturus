@@ -5,9 +5,14 @@ import math
 import time
 from dataclasses import dataclass
 
-from fastapi import HTTPException, Response, status
+from fastapi import HTTPException, Request, Response, status
 
 from gateway_api.auth import AuthContext
+from gateway_api.usage_governance import (
+    UsageGovernanceDecision,
+    apply_usage_governance_headers,
+    enforce_usage_governance,
+)
 
 
 @dataclass
@@ -111,3 +116,23 @@ async def enforce_rate_limit(auth_context: AuthContext, cost: int = 1) -> RateLi
         )
 
     return decision
+
+
+async def enforce_rate_limit_and_usage_governance(
+    request: Request,
+    response: Response,
+    auth_context: AuthContext,
+    *,
+    cost: int = 1,
+    estimated_units: int | None = None,
+) -> tuple[RateLimitDecision, UsageGovernanceDecision]:
+    rate_limit_decision = await enforce_rate_limit(auth_context, cost=cost)
+    apply_rate_limit_headers(response, rate_limit_decision)
+
+    usage_decision = await enforce_usage_governance(
+        request=request,
+        auth_context=auth_context,
+        estimated_units=estimated_units,
+    )
+    apply_usage_governance_headers(response, usage_decision)
+    return rate_limit_decision, usage_decision

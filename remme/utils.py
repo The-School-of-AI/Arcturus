@@ -19,14 +19,19 @@ def get_embedding(text: str, task_type: str = "search_document") -> np.ndarray:
         # search_document: for the facts/documents
         prefix = f"{task_type}: "
         full_text = prefix + text if not text.startswith(prefix) else text
-        
+
         response = requests.post(
-            EMBED_URL, 
-            json={"model": EMBED_MODEL, "prompt": full_text}, 
+            EMBED_URL,
+            json={"model": EMBED_MODEL, "input": full_text},
             timeout=OLLAMA_TIMEOUT
         )
         response.raise_for_status()
-        embedding = response.json()["embedding"]
+        data = response.json()
+        # Ollama /api/embed returns "embeddings" (plural, array); legacy used "embedding" (singular)
+        if "embeddings" in data and data["embeddings"]:
+            embedding = data["embeddings"][0]
+        else:
+            embedding = data.get("embedding", [])
         vec = np.array(embedding, dtype=np.float32)
         
         # 📐 L2 Normalization (ensures distances are in [0, 4] range for IndexFlatL2)

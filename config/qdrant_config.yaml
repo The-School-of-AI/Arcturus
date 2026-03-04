@@ -14,10 +14,22 @@ collections:
     distance: cosine        # cosine | euclidean | dot
     is_tenant: true              # multi-tenant; scope by tenant field
     tenant_keyword_field: user_id # payload field for tenant isolation (keyword index)
-    indexed_payload_fields: [category, source]  # required for filtered search in Qdrant Cloud
+    indexed_payload_fields: [category, source, session_id, entity_labels]  # session_id for Neo4j link; entity_ids + entity_labels in payload
 
   test_memories:            # Test collection; mirrors arcturus_memories index setup
     dimension: 768
     distance: cosine
     is_tenant: false
     indexed_payload_fields: [category, source]
+
+  arcturus_rag_chunks:      # RAG document chunks + conversation history
+    dimension: 768         # same embedding model as memories (nomic-embed-text)
+    distance: cosine
+    is_tenant: false       # RAG can add user_id/space_id filter later
+    indexed_payload_fields: [doc, doc_type, session_id]
+
+  test_rag_chunks:         # Test collection; mirrors arcturus_rag_chunks
+    dimension: 768
+    distance: cosine
+    is_tenant: false
+    indexed_payload_fields: [doc]

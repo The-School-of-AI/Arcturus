@@ -26,6 +26,11 @@
   - Added signed inbound webhook endpoint with fail-closed secret requirement.
   - Added webhook dispatch lifecycle endpoints (`dispatch`, `deliveries`, `dlq replay`) with retry/dead-letter behavior.
   - Added integration trace events persisted to `data/gateway/integration_events.jsonl`.
+- Implemented Days 11-15 hardening scope for P15 Gateway:
+  - strict idempotency for mutating APIs,
+  - hard monthly usage governance,
+  - cron timezone + execution history,
+  - webhook dispatch duplicate-prevention improvements.
 
 ## 2. Architecture Changes
 - Added new package and modules:
@@ -44,7 +49,17 @@
   - `core/gateway_services/forge_adapter.py`
   - `core/gateway_services/exceptions.py`
 - Updated `api.py` to include `gateway_api.v1.router` while leaving existing `/api/*` routers unchanged.
-- New persistence artifacts (runtime):
+- Added Days 11-15 modules:
+  - `gateway_api/idempotency.py`
+  - `gateway_api/usage_governance.py`
+- Extended existing modules for Days 11-15:
+  - `gateway_api/key_store.py` (monthly quotas persisted per key)
+  - `gateway_api/auth.py` (`AuthContext` quota fields)
+  - `gateway_api/metering.py` (governance-denied and non-billable accounting)
+  - `gateway_api/rate_limiter.py` (combined rate-limit + governance enforcement helper)
+  - `gateway_api/webhooks.py` (dispatch lease/in-progress reliability controls)
+  - `core/scheduler.py` (timezone-aware scheduling + persisted execution history)
+- Persistence artifacts (runtime):
   - `data/gateway/api_keys.json`
   - `data/gateway/key_audit.jsonl`
   - `data/gateway/metering_events.jsonl`
@@ -53,9 +68,11 @@
   - `data/gateway/webhook_deliveries.jsonl`
   - `data/gateway/webhook_dlq.jsonl`
   - `data/gateway/integration_events.jsonl`
+  - `data/gateway/idempotency_records.json`
+  - `data/system/job_history.jsonl`
 
 ## 3. API And UI Changes
-- API changes:
+- API changes from Phase 1/2:
   - Added public `/api/v1` gateway endpoints listed in Scope Delivered.
   - Added admin-only key management via `x-gateway-admin-key`.
   - Admin key management routes (`/api/v1/keys*`) fail closed unless `ARCTURUS_GATEWAY_ADMIN_KEY` is explicitly configured; unset config returns `503` with `admin_key_not_configured`.
@@ -72,61 +89,98 @@
   - Inbound webhook signature validation fails closed unless `ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET` is configured (`503` `webhook_signing_not_configured`).
   - Added scope enforcement (`search:read`, `chat:write`, `embeddings:write`, `memory:*`, `agents:run`, `cron:*`, `webhooks:write`, `usage:read`, etc.).
   - Added rate-limit response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After`.
+- API changes from Days 11-15:
+  - Added strict idempotency requirement on mutating routes (user-auth and admin-auth mutations).
+  - Added idempotency response headers:
+    - `X-Idempotency-Status: created|replayed`
+    - `X-Idempotency-Key: <value>`
+  - Added idempotency error contracts:
+    - `400 idempotency_key_required`
+    - `409 idempotency_key_conflict`
+    - `409 idempotency_request_in_progress`
+  - Added usage governance enforcement and headers:
+    - `429 usage_quota_exceeded`
+    - `X-Usage-Month`, `X-Usage-Requests-Limit`, `X-Usage-Requests-Remaining`, `X-Usage-Units-Limit`, `X-Usage-Units-Remaining`
+  - Extended key contracts:
+    - `monthly_request_quota`
+    - `monthly_unit_quota`
+  - Extended cron contracts:
+    - `timezone` on create/list responses
+    - `GET /api/v1/cron/jobs/{job_id}/history`
 - UI changes:
-  - No frontend UI changes in Day 1 scope (API management UI deferred).
+  - No frontend API management UI changes in delivered P15 backend phases.
 
 ## 4. Mandatory Test Gate Definition
-- Acceptance file: tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py
-- Integration file: tests/integration/test_gateway_to_oracle_spark_forge.py
-- CI check: p15-gateway-api
+- Acceptance file: `tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py`
+- Integration file: `tests/integration/test_gateway_to_oracle_spark_forge.py`
+- CI check: `p15-gateway-api`
+- Additional phase-focused suites:
+  - `tests/unit/gateway_api`
+  - `tests/api/p15_gateway`
 
 ## 5. Test Evidence
-- New/updated gateway tests added and passing:
-  - `tests/unit/gateway_api/test_gateway_auth.py`
-  - `tests/unit/gateway_api/test_gateway_key_store_and_metering.py`
-  - `tests/unit/gateway_api/test_gateway_rate_limiter.py`
-  - `tests/unit/gateway_api/test_gateway_adapters_and_tracing.py`
-  - `tests/unit/gateway_api/test_gateway_webhooks_security_and_dispatch.py`
-  - `tests/api/p15_gateway/test_gateway_v1_contracts.py`
-- Command:
+- Phase 1/2 gateway suite:
   - `uv run python -m pytest -q tests/unit/gateway_api tests/api/p15_gateway`
-  - Result: `25 passed`
-- Updated P15 acceptance/integration behavioral gate tests passing:
+  - Result (prior phase): `25 passed`
+- Phase 2 acceptance/integration:
   - `uv run python -m pytest -q tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py tests/integration/test_gateway_to_oracle_spark_forge.py`
-  - Result: `13 passed`
+  - Result (prior phase): `13 passed`
+- Days 11-15 focused phase suite:
+  - `uv run python -m pytest -q tests/unit/gateway_api tests/api/p15_gateway tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py tests/integration/test_gateway_to_oracle_spark_forge.py`
+  - Result: `54 passed`
+- Full project gate:
+  - `uv run ./ci/run_project_gate.sh p15-gateway-api tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py tests/integration/test_gateway_to_oracle_spark_forge.py`
+  - Project contract tests result: `17 passed`
+  - Baseline backend result: `382 passed, 2 skipped`
+  - Baseline frontend result: `111 passed`
 
 ## 6. Existing Baseline Regression Status
-- Command: scripts/test_all.sh quick
 - Executed via project gate command:
   - `uv run ./ci/run_project_gate.sh p15-gateway-api tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py tests/integration/test_gateway_to_oracle_spark_forge.py`
-- Status: **passing**
+- Prior phase baseline snapshot:
   - P15 gate tests: `13 passed`
   - Backend baseline: `334 passed, 2 skipped`
+  - Frontend baseline: `111 passed`
+- Current Days 11-15 baseline snapshot:
+  - Project contract tests: `17 passed`
+  - Backend baseline: `382 passed, 2 skipped`
   - Frontend baseline: `111 passed`
 
 ## 7. Security And Safety Impact
 - API keys are stored hashed (SHA-256) in persistent storage; plaintext is only returned once at create/rotate time.
-- Scope-based authorization added per endpoint.
-- Rate-limiting and usage metering added to reduce abuse exposure and improve observability.
-- Admin key protection added for key lifecycle endpoints.
-- No default admin secret is accepted; if `ARCTURUS_GATEWAY_ADMIN_KEY` is unset, `/api/v1/keys*` remains unavailable (`503` fail-closed response).
+- Scope-based authorization enforced per endpoint.
+- Rate-limiting and usage metering reduce abuse exposure and improve observability.
+- Admin key protection is fail-closed when `ARCTURUS_GATEWAY_ADMIN_KEY` is unset.
 - Inbound signed webhook validation is fail-closed when `ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET` is unset.
-- Webhook delivery lifecycle now supports controlled retries and dead-letter handling via API-triggered dispatch.
+- Webhook delivery lifecycle supports controlled retries and dead-letter handling via API-triggered dispatch.
+- Days 11-15 hardening additions:
+  - Mutating API operations require explicit idempotency keys to prevent duplicate side effects.
+  - Inbound webhook replay handling is deduplicated server-side without breaking contract compatibility.
+  - Monthly quota governance blocks over-consumption deterministically.
 
 ## 8. Known Gaps
-- Webhook dispatch is API-invoked (manual/triggered) rather than always-on background worker.
+- Webhook dispatch is API-invoked/manual rather than always-on background worker.
 - Chat endpoint is OpenAI-subset and intentionally rejects `stream=true`.
-- Usage/billing is metering-only; billing settlement logic not implemented.
+- Usage/billing is metering-only; settlement logic is not implemented.
 - Spark integration currently uses `AppGenerator` as Phase 2 adapter base; dedicated Spark service package is deferred.
+- Persistence remains JSON/JSONL file-based; no distributed/shared coordination is implemented.
+- Quota governance is key-level only; organization-level policy hierarchy is not implemented.
 
 ## 9. Rollback Plan
 - Remove `app.include_router(gateway_v1_router.router)` from `api.py`.
 - Delete `gateway_api/` package and new `core/gateway_services/*.py` files.
 - Delete added tests under `tests/unit/gateway_api/` and `tests/api/p15_gateway/`.
 - Remove generated `data/gateway/*` files if cleanup is needed.
+- Days 11-15 rollback specifics:
+  - Remove idempotency and governance calls from `gateway_api/v1/*` route handlers.
+  - Remove `gateway_api/idempotency.py` and `gateway_api/usage_governance.py` imports/usages.
+  - Revert scheduler timezone/history changes in `core/scheduler.py`.
+  - Remove/clean generated artifacts if needed:
+    - `data/gateway/idempotency_records.json`
+    - `data/system/job_history.jsonl`
 
 ## 10. Demo Steps
-- Script: scripts/demos/p15_gateway.sh
+- Script: `scripts/demos/p15_gateway.sh`
 - Set `ARCTURUS_GATEWAY_ADMIN_KEY` in the environment, then generate an API key via `x-gateway-admin-key` using `POST /api/v1/keys`.
 - Set `ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET` before using signed inbound webhook endpoint.
 - Call `POST /api/v1/search` and `POST /api/v1/chat/completions` with `x-api-key`.
@@ -135,4 +189,8 @@
 - Create webhook subscription via `POST /api/v1/webhooks`, trigger with `POST /api/v1/webhooks/trigger`.
 - Validate signed inbound flow via `POST /api/v1/webhooks/inbound/{source}` using `x-gateway-signature` and `x-gateway-timestamp`.
 - Process queued deliveries with `POST /api/v1/webhooks/dispatch`, inspect state with `GET /api/v1/webhooks/deliveries`, and replay failures with `POST /api/v1/webhooks/dlq/{delivery_id}/replay`.
-- Inspect generated gateway files under `data/gateway/` for key audit, metering, integration trace, and webhook lifecycle evidence.
+- Inspect generated gateway files under `data/gateway/` for key audit, metering, integration trace, idempotency, and webhook lifecycle evidence.
+- Days 11-15 demo coverage includes:
+  - idempotent replay behavior on mutating routes,
+  - cron timezone + history retrieval,
+  - usage governance quota exceed (`429 usage_quota_exceeded`).
