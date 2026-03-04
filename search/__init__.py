@@ -10,6 +10,10 @@ from search.synthesizer import (
     SynthesisResult, Citation, _deduplicate_sources,
 )
 from search.deep_research import DeepResearchOrchestrator, DeepResearchEvent
+from search.research_utils import (
+    fix_citations, extract_sub_queries, extract_followup_queries,
+    extract_contradiction_queries, build_source_index, preprocess_sources,
+)
 
 __all__ = [
     "FocusConfig", "get_focus_config", "list_focus_modes", "apply_focus",
@@ -18,4 +22,6 @@ __all__ = [
     "synthesize", "identify_gaps", "resolve_contradictions", "final_synthesize",
     "SynthesisResult", "Citation", "_deduplicate_sources",
     "DeepResearchOrchestrator", "DeepResearchEvent",
+    "fix_citations", "extract_sub_queries", "extract_followup_queries",
+    "extract_contradiction_queries", "build_source_index", "preprocess_sources",
 ]

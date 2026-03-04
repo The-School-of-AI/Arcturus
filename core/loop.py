@@ -589,16 +589,11 @@ class AgentLoop4:
             if "T001" in context.plan_graph.nodes:
                 focus_instruction = ""
                 if focus_mode:
-                    focus_labels = {
-                        "academic": "Focus on academic and scholarly angles — peer-reviewed research, theoretical frameworks, key researchers, institutions, and landmark papers.",
-                        "news": "Focus on recent events, breaking developments, policy changes, and current affairs angles.",
-                        "code": "Focus on technical implementation, APIs, libraries, frameworks, code architecture, and developer ecosystem.",
-                        "finance": "Focus on financial aspects — market data, companies, valuations, economic impact, investment angles, and regulatory landscape.",
-                        "writing": "Focus on narrative craft, communication styles, audience analysis, and editorial perspectives.",
-                    }
+                    from search.focus_modes import get_focus_config
+                    focus_cfg = get_focus_config(focus_mode)
                     focus_instruction = (
                         f"\nFOCUS MODE: {focus_mode.upper()}\n"
-                        f"{focus_labels.get(focus_mode, 'Apply general research best practices.')}\n"
+                        f"{focus_cfg.decomposition_hint}\n"
                         f"Weight your queries toward this focus while still maintaining breadth.\n"
                     )
 
@@ -639,7 +634,8 @@ class AgentLoop4:
             # Extract sub-queries
             gs = context.plan_graph.graph['globals_schema']
             decomposed_raw = gs.get("decomposed_queries_T001")
-            sub_queries = self._extract_sub_queries(decomposed_raw)
+            from search.research_utils import extract_sub_queries
+            sub_queries = extract_sub_queries(decomposed_raw)
 
             if not sub_queries:
                 log_step("No sub-queries extracted, falling back to original query", symbol="⚠️")
@@ -842,7 +838,9 @@ class AgentLoop4:
             # ── Phase 4a: Targeted Deep Search (follow-up queries from gap analysis) ──
             deep_write_keys = []
             followup_ids = []
-            followup_queries = self._extract_followup_queries(context, followup_queries_key)
+            from search.research_utils import extract_followup_queries
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            followup_queries = extract_followup_queries(gs.get(followup_queries_key))
 
             if followup_queries:
                 followup_nodes = []
@@ -889,7 +887,9 @@ class AgentLoop4:
             # ── Phase 4.5: Contradiction Resolution Search ──
             contradiction_write_keys = []
             contradiction_ids = []
-            contradiction_queries = self._extract_contradiction_queries(context, contradiction_queries_key, contradictions_key)
+            from search.research_utils import extract_contradiction_queries
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            contradiction_queries = extract_contradiction_queries(gs.get(contradiction_queries_key), gs.get(contradictions_key))
 
             if contradiction_queries:
                 contradiction_nodes = []
@@ -957,9 +957,15 @@ class AgentLoop4:
         # ══════════════════════════════════════════════════════════════
         if dr_meta['completed_phase'] < 5:
             # ── Build source index and pre-process sources before synthesis ──
+            from search.research_utils import build_source_index, preprocess_sources
             all_retriever_keys = successful_write_keys + deep_write_keys + contradiction_write_keys
-            self._build_source_index(context, all_retriever_keys)
-            self._preprocess_sources(context, all_retriever_keys, sub_queries)
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            focus = context.plan_graph.graph.get('focus_mode', '')
+            source_idx = build_source_index(gs, all_retriever_keys)
+            log_step(f"Built source index: {len(source_idx)} unique sources", symbol="📋")
+            dims = preprocess_sources(gs, all_retriever_keys, sub_queries, focus)
+            total = sum(len(d["sources"]) for d in dims)
+            log_step(f"Pre-processed sources: {total} sources across {len(dims)} dimensions", symbol="📊")
 
             synth_id = f"T{str(node_offset).zfill(3)}"
             synth_key = f"research_synthesis_{synth_id}"
@@ -1128,235 +1134,48 @@ class AgentLoop4:
         fmt_key = dr_meta.get('fmt_key', '')
 
         # ── Post-process: Fix citations with real URLs from source_index ──
-        if synth_key:
-            self._fix_citations(context, synth_key)
-        if fmt_key:
-            self._fix_citations(context, fmt_key)
-
-        log_step("Deep research complete", symbol="✅")
-
-    def _fix_citations(self, context, output_key: str):
-        """Post-process markdown to replace placeholder/fake URLs with real source_index URLs.
-
-        Handles these patterns:
-          [[N]](any-url)  → [[N]](real-url)
-          [[N]]           → [[N]](real-url)
-          [N]             → [[N]](real-url) (only bare numeric refs)
-        """
-        import re as _re
-
+        from search.research_utils import fix_citations
         gs = context.plan_graph.graph.get('globals_schema', {})
         source_index = gs.get("source_index", {})
-        if not source_index:
-            return
+        if source_index:
+            for key in (synth_key, fmt_key):
+                if not key:
+                    continue
+                text = gs.get(key)
+                if not text or not isinstance(text, str):
+                    # Also check node output for markdown_report
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        out = node.get("output", {})
+                        if isinstance(out, dict):
+                            text = out.get("markdown_report") or out.get(key)
+                            if text and isinstance(text, str):
+                                break
+                    if not text or not isinstance(text, str):
+                        continue
+                fixed = fix_citations(text, source_index)
+                if fixed != text:
+                    gs[key] = fixed
+                    # Update in node outputs too
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        out = node.get("output", {})
+                        if isinstance(out, dict):
+                            if "markdown_report" in out and isinstance(out["markdown_report"], str):
+                                out["markdown_report"] = fix_citations(out["markdown_report"], source_index)
+                            if key in out and isinstance(out[key], str):
+                                out[key] = fix_citations(out[key], source_index)
+                    log_step(f"Fixed citations in {key} with real URLs from source_index", symbol="🔗")
 
-        text = gs.get(output_key)
-        if not text or not isinstance(text, str):
-            # Also check node output for markdown_report
-            for node_id in context.plan_graph.nodes:
-                node = context.plan_graph.nodes[node_id]
-                out = node.get("output", {})
-                if isinstance(out, dict):
-                    text = out.get("markdown_report") or out.get(output_key)
-                    if text and isinstance(text, str):
-                        break
-            if not text or not isinstance(text, str):
-                return
-
-        original_text = text
-
-        # Pattern 1: [[N]](url) → replace url with real one
-        def replace_bracketed_with_url(match):
-            n = match.group(1)
-            src = source_index.get(n) or source_index.get(str(n))
-            if src and src.get("url"):
-                title = src.get("title", f"Source {n}")
-                return f"[[{n}] {title}]({src['url']})"
-            return match.group(0)
-
-        text = _re.sub(r'\[\[(\d+)\]\]\([^)]*\)', replace_bracketed_with_url, text)
-
-        # Pattern 2: [[N]] without URL → add real URL
-        def replace_bracketed_no_url(match):
-            n = match.group(1)
-            src = source_index.get(n) or source_index.get(str(n))
-            if src and src.get("url"):
-                title = src.get("title", f"Source {n}")
-                return f"[[{n}] {title}]({src['url']})"
-            return match.group(0)
-
-        text = _re.sub(r'\[\[(\d+)\]\](?!\()', replace_bracketed_no_url, text)
-
-        # Pattern 3: bare [N] (single bracket, not already [[N]]) → [[N] Title](real-url)
-        # Negative lookbehind for [ to avoid re-matching [[N]] patterns already handled above
-        # Negative lookahead for ] and ( to avoid matching [N](url) or [N][ref]
-        def replace_bare_ref(match):
-            n = match.group(1)
-            src = source_index.get(n) or source_index.get(str(n))
-            if src and src.get("url"):
-                title = src.get("title", f"Source {n}")
-                return f"[[{n}] {title}]({src['url']})"
-            return match.group(0)
-
-        text = _re.sub(r'(?<!\[)\[(\d{1,2})\](?!\(|\[|\])', replace_bare_ref, text)
-
-        if text != original_text:
-            # Update in globals_schema
-            gs[output_key] = text
-            # Update in node output
-            for node_id in context.plan_graph.nodes:
-                node = context.plan_graph.nodes[node_id]
-                out = node.get("output", {})
-                if isinstance(out, dict):
-                    if "markdown_report" in out and isinstance(out["markdown_report"], str):
-                        out["markdown_report"] = self._apply_citation_fix(out["markdown_report"], source_index)
-                    if output_key in out and isinstance(out[output_key], str):
-                        out[output_key] = self._apply_citation_fix(out[output_key], source_index)
-            log_step(f"Fixed citations in {output_key} with real URLs from source_index", symbol="🔗")
-
-    def _apply_citation_fix(self, text: str, source_index: dict) -> str:
-        """Apply citation URL replacement to a text string."""
-        import re as _re
-
-        def replace_with_url(match):
-            n = match.group(1)
-            src = source_index.get(n) or source_index.get(str(n))
-            if src and src.get("url"):
-                title = src.get("title", f"Source {n}")
-                return f"[[{n}] {title}]({src['url']})"
-            return match.group(0)
-
-        # Replace [[N]](any-url) with real URL
-        text = _re.sub(r'\[\[(\d+)\]\]\([^)]*\)', replace_with_url, text)
-        # Replace [[N]] without URL
-        text = _re.sub(r'\[\[(\d+)\]\](?!\()', replace_with_url, text)
-        # Replace [[N] any-title](any-url) with real URL
-        text = _re.sub(r'\[\[(\d+)\][^\]]*\]\([^)]*\)', replace_with_url, text)
-        # Replace bare [N] (single bracket) with real URL
-        text = _re.sub(r'(?<!\[)\[(\d{1,2})\](?!\(|\[|\])', replace_with_url, text)
-        return text
-
-    def _extract_sub_queries(self, decomposed_raw) -> list:
-        """Robustly extract sub-queries from ThinkerAgent T001 output."""
-        import json as _json
-
-        if decomposed_raw is None:
-            return []
-
-        # String → parse
-        if isinstance(decomposed_raw, str):
-            try:
-                decomposed_raw = _json.loads(decomposed_raw)
-            except (_json.JSONDecodeError, TypeError):
-                return []
-
-        # List → validate items
-        if isinstance(decomposed_raw, list):
-            result = []
-            for item in decomposed_raw:
-                if isinstance(item, dict) and "query" in item:
-                    result.append(item)
-                elif isinstance(item, str):
-                    result.append({"query": item, "dimension": "general"})
-            return result
-
-        # Dict → look for 'decomposed_queries' key
-        if isinstance(decomposed_raw, dict):
-            queries = decomposed_raw.get("decomposed_queries")
-            if queries:
-                return self._extract_sub_queries(queries)
-            # Nested output
-            nested = decomposed_raw.get("output")
-            if isinstance(nested, dict):
-                queries = nested.get("decomposed_queries")
-                if queries:
-                    return self._extract_sub_queries(queries)
-
-        return []
-
-    def _extract_followup_queries(self, context, followup_queries_key: str) -> list:
-        """Extract follow-up queries from globals_schema. Returns list of query strings, capped at 3."""
-        import json as _json
-
-        gs = context.plan_graph.graph.get('globals_schema', {})
-        raw = gs.get(followup_queries_key)
-        if raw is None:
-            return []
-
-        # String → parse
-        if isinstance(raw, str):
-            try:
-                raw = _json.loads(raw)
-            except (_json.JSONDecodeError, TypeError):
-                return []
-
-        # List → extract query strings directly
-        if isinstance(raw, list):
-            result = [q if isinstance(q, str) else q.get("query", str(q)) for q in raw]
-            return [q for q in result if q.strip()][:3]
-
-        # Dict → look for followup_queries key (or variants)
-        if isinstance(raw, dict):
-            for key in ("followup_queries", "follow_up_queries", "deep_queries", "targeted_queries"):
-                queries = raw.get(key)
-                if queries and isinstance(queries, list):
-                    result = [q if isinstance(q, str) else q.get("query", str(q)) for q in queries]
-                    return [q for q in result if q.strip()][:3]
-
-        return []
-
-    def _extract_contradiction_queries(self, context, contradiction_queries_key: str, contradictions_key: str = None) -> list:
-        """Extract contradiction-specific verification queries from globals_schema.
-        First tries the dedicated contradiction_queries key, then falls back to
-        generating queries from the contradictions list.
-        Returns list of query strings, capped at 3."""
-        import json as _json
-
-        gs = context.plan_graph.graph.get('globals_schema', {})
-
-        # Primary: look for explicit contradiction_queries in globals_schema
-        raw = gs.get(contradiction_queries_key)
-        if raw is not None:
-            if isinstance(raw, str):
-                try:
-                    raw = _json.loads(raw)
-                except (_json.JSONDecodeError, TypeError):
-                    raw = None
-
-            if isinstance(raw, list) and raw:
-                result = [q if isinstance(q, str) else q.get("query", str(q)) for q in raw]
-                return [q for q in result if q.strip()][:3]
-
-        # Fallback: generate queries from contradictions list
-        if contradictions_key:
-            contradictions_raw = gs.get(contradictions_key)
-            if contradictions_raw is not None:
-                if isinstance(contradictions_raw, str):
-                    try:
-                        contradictions_raw = _json.loads(contradictions_raw)
-                    except (_json.JSONDecodeError, TypeError):
-                        contradictions_raw = None
-
-                if isinstance(contradictions_raw, list) and contradictions_raw:
-                    generated_queries = []
-                    for c in contradictions_raw[:3]:
-                        if isinstance(c, str) and len(c) > 20:
-                            generated_queries.append(f"verify: {c[:150]}")
-                        elif isinstance(c, dict):
-                            claim = c.get("claim") or c.get("claim_a") or c.get("details") or c.get("claim_1", "")
-                            if claim and len(claim) > 20:
-                                generated_queries.append(f"verify: {claim[:150]}")
-                    if generated_queries:
-                        return generated_queries
-
-        return []
+        log_step("Deep research complete", symbol="✅")
 
     def _auto_build_source_index(self, context):
         """Auto-build source_index from ALL completed RetrieverAgent outputs.
         Called after each RetrieverAgent completes in _execute_dag.
         Works for both standard and deep research modes.
         """
-        # Collect write keys from all completed RetrieverAgent nodes
+        from search.research_utils import build_source_index
+
         retriever_write_keys = []
         for node_id, node_data in context.plan_graph.nodes(data=True):
             if node_id == "ROOT":
@@ -1365,198 +1184,23 @@ class AgentLoop4:
                 retriever_write_keys.extend(node_data.get("writes", []))
 
         if retriever_write_keys:
-            self._build_source_index(context, retriever_write_keys)
-
-    def _build_source_index(self, context, write_keys: list) -> dict:
-        """Build a deduplicated source index from retriever outputs.
-        Returns: {"1": {"url": "...", "title": "...", "snippet": "..."}, ...}
-        Also stores it in globals_schema["source_index"].
-        """
-        import json as _json
-
-        gs = context.plan_graph.graph.get('globals_schema', {})
-        seen_urls = set()
-        source_index = {}
-        counter = 1
-
-        for key in write_keys:
-            raw = gs.get(key)
-            if raw is None:
-                continue
-
-            # Parse if string
-            if isinstance(raw, str):
-                try:
-                    raw = _json.loads(raw)
-                except (_json.JSONDecodeError, TypeError):
-                    continue
-
-            # Handle dict wrapper: some retrievers return {"key": [sources]}
-            # or MCP TextContent format: {"content": [{"type": "text", "text": "[{sources}]"}]}
-            if isinstance(raw, dict):
-                # Unwrap MCP TextContent format first
-                content_list = raw.get("content")
-                if isinstance(content_list, list) and content_list:
-                    first = content_list[0]
-                    if isinstance(first, dict) and first.get("type") == "text" and "text" in first:
-                        # This is MCP TextContent — parse the inner JSON text
-                        try:
-                            raw = _json.loads(first["text"])
-                        except (_json.JSONDecodeError, TypeError):
-                            continue
-                    else:
-                        # Regular dict wrapper — look for the first list value
-                        raw = content_list
-                else:
-                    # Look for the first list value inside the dict
-                    for v in raw.values():
-                        if isinstance(v, list) and v:
-                            raw = v
-                            break
-                    else:
-                        continue
-
-            # Handle list of source dicts or URL strings
-            sources = raw if isinstance(raw, list) else []
-            for src in sources:
-                if isinstance(src, str):
-                    # Plain URL string — add with no content
-                    url = src.strip()
-                    if url and url.startswith("http") and url not in seen_urls:
-                        seen_urls.add(url)
-                        source_index[str(counter)] = {
-                            "url": url,
-                            "title": "",
-                            "snippet": ""
-                        }
-                        counter += 1
-                elif isinstance(src, dict):
-                    url = src.get("url", "")
-                    if not url or url in seen_urls:
-                        continue
-                    content = src.get("content", "")
-                    if isinstance(content, str) and content.startswith("[error]"):
-                        continue
-                    seen_urls.add(url)
-                    source_index[str(counter)] = {
-                        "url": url,
-                        "title": src.get("title", ""),
-                        "snippet": content[:200] if isinstance(content, str) else ""
-                    }
-                    counter += 1
-
-        gs["source_index"] = source_index
-        log_step(f"Built source index: {len(source_index)} unique sources", symbol="📋")
-        return source_index
-
-    def _preprocess_sources(self, context, write_keys: list, sub_queries: list) -> list:
-        """Pre-process retriever outputs into organized, deduplicated structure by dimension.
-        Returns list of dimension dicts and stores as globals_schema["processed_sources"].
-        """
-        import json as _json
-
-        gs = context.plan_graph.graph.get('globals_schema', {})
-        source_index = gs.get("source_index", {})
-
-        # Build reverse lookup: url -> source index number
-        url_to_index = {}
-        for idx, info in source_index.items():
-            url_to_index[info.get("url", "")] = idx
-
-        # Map write_keys to dimensions from sub_queries
-        dimensions = []
-        for i, key in enumerate(write_keys):
-            dim_label = "general"
-            if i < len(sub_queries):
-                sq = sub_queries[i]
-                dim_label = sq.get("dimension", f"dimension_{i+1}") if isinstance(sq, dict) else f"dimension_{i+1}"
-
-            raw = gs.get(key)
-            if raw is None:
-                continue
-            if isinstance(raw, str):
-                try:
-                    raw = _json.loads(raw)
-                except (_json.JSONDecodeError, TypeError):
-                    continue
-
-            # Unwrap MCP TextContent format: {"content": [{"type": "text", "text": "[{sources}]"}]}
-            if isinstance(raw, dict):
-                content_list = raw.get("content")
-                if isinstance(content_list, list) and content_list:
-                    first = content_list[0]
-                    if isinstance(first, dict) and first.get("type") == "text" and "text" in first:
-                        try:
-                            raw = _json.loads(first["text"])
-                        except (_json.JSONDecodeError, TypeError):
-                            continue
-
-            sources = raw if isinstance(raw, list) else []
-            dim_sources = []
-            for src in sources:
-                if not isinstance(src, dict):
-                    continue
-                url = src.get("url", "")
-                content = src.get("content", "")
-                if content.startswith("[error]") or not url:
-                    continue
-                idx = url_to_index.get(url, "?")
-                # Code focus mode: larger excerpts to preserve code blocks
-                focus = context.plan_graph.graph.get('focus_mode', '')
-                max_chars = 12000 if focus == "code" else 8000
-                dim_sources.append({
-                    "index": idx,
-                    "url": url,
-                    "title": src.get("title", ""),
-                    "excerpt": content[:max_chars]
-                })
-
-            if dim_sources:
-                dimensions.append({
-                    "dimension": dim_label,
-                    "sources": dim_sources
-                })
-
-        gs["processed_sources"] = dimensions
-        total = sum(len(d["sources"]) for d in dimensions)
-        log_step(f"Pre-processed sources: {total} sources across {len(dimensions)} dimensions", symbol="📊")
-        return dimensions
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            build_source_index(gs, retriever_write_keys)
 
     def _build_retriever_prompt(self, query_text: str, focus_mode: str = None) -> str:
         """Build RetrieverAgent prompt with optional focus_mode constraints."""
+        from search.focus_modes import get_focus_config
+
         prompt = (
             f"Search for: '{query_text}'. "
             f"Use search_web_with_text_content with string='{query_text}'"
         )
 
-        focus_constraints = {
-            "academic": (
-                " site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov",
-                "Prioritize peer-reviewed papers and academic sources. Format citations in APA."
-            ),
-            "news": (
-                " news OR latest OR breaking",
-                "Prioritize recent news from the last 7 days. Include publication dates."
-            ),
-            "code": (
-                " site:github.com OR site:stackoverflow.com OR documentation",
-                "Prioritize code repositories and technical docs. Extract code snippets."
-            ),
-            "finance": (
-                " site:sec.gov OR financial report OR earnings",
-                "Prioritize financial data, SEC filings, market data. Extract numbers."
-            ),
-            "writing": (
-                "",
-                "Focus on editorial content, style guides, writing techniques."
-            ),
-        }
-
-        if focus_mode and focus_mode in focus_constraints:
-            search_suffix, instruction = focus_constraints[focus_mode]
-            if search_suffix:
-                prompt += f". Append to search: '{search_suffix}'"
-            prompt += f" {instruction}"
+        if focus_mode:
+            cfg = get_focus_config(focus_mode)
+            if cfg.search_suffix:
+                prompt += f". Append to search: ' {cfg.search_suffix}'"
+            prompt += f" {cfg.retriever_instruction}"
 
         prompt += (
             " and integer=15. "
@@ -1566,43 +1210,27 @@ class AgentLoop4:
 
     async def _direct_web_search(self, query: str, limit: int = 5) -> str:
         """Direct web search bypassing MCP server for parallel deep research.
-        Replicates search_web_with_text_content logic from server_browser.py.
+        Delegates to search.crawl_pipeline.CrawlPipeline.
         Returns JSON string of results (same format as MCP tool output).
         """
         import json as _json
-        from mcp_servers.tools.switch_search_method import smart_search
-        from mcp_servers.tools.web_tools_async import smart_web_extract
-
-        EXTRACT_TIMEOUT = 8
-
-        async def _extract_single(url: str, rank: int) -> dict:
-            try:
-                web_result = await asyncio.wait_for(smart_web_extract(url), timeout=EXTRACT_TIMEOUT)
-                text = web_result.get("best_text", "")[:8000]
-                text = text.replace('\n', ' ').replace('  ', ' ').strip()
-                return {
-                    "url": url,
-                    "title": web_result.get("title", ""),
-                    "content": text if text else "[error] No readable content found",
-                    "images": web_result.get("images", []),
-                    "rank": rank
-                }
-            except asyncio.TimeoutError:
-                return {"url": url, "title": "", "content": f"[error] Timeout after {EXTRACT_TIMEOUT}s", "rank": rank}
-            except Exception as e:
-                return {"url": url, "title": "", "content": f"[error] {str(e)}", "rank": rank}
+        from dataclasses import asdict
+        from search.crawl_pipeline import CrawlPipeline
 
         try:
             limit = min(max(limit, 1), 20)
-            urls = await smart_search(query, limit)
-
-            if not urls:
+            pipeline = CrawlPipeline()
+            docs = await pipeline.search_and_extract([query], top_k=limit)
+            results = []
+            for d in docs:
+                results.append({
+                    "url": d.url,
+                    "title": d.title,
+                    "content": d.content if d.error is None else f"[error] {d.error}",
+                    "rank": d.rank,
+                })
+            if not results:
                 return _json.dumps([{"url": "", "title": "", "content": "[error] No search results found", "rank": 1}])
-
-            target_urls = urls[:limit]
-            tasks = [_extract_single(url, i + 1) for i, url in enumerate(target_urls)]
-            results = await asyncio.gather(*tasks)
-            results = sorted(results, key=lambda r: r["rank"])
             return _json.dumps(results)
         except Exception as e:
             return _json.dumps([{"url": "", "title": "", "content": f"[error] {str(e)}", "rank": 1}])
