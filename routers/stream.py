@@ -6,6 +6,7 @@ import json
 
 router = APIRouter(tags=["Stream"])
 
+
 @router.get("/events")
 async def event_stream(request: Request):
     """

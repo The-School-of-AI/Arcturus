@@ -144,6 +144,10 @@ class AgentLoop4:
         self.agent_runner = AgentRunner(multi_mcp)
         self.context = None  # Reference for external stopping
         self._tasks = set()  # Track active async tasks for immediate cancellation
+        self._query_approval_event = None  # asyncio.Event for query approval gate
+        self._pending_queries = None
+        self._approved_queries = None
+        self._queries_rejected = False
         
         # Load profile for strategy settings
         from core.profile_loader import get_profile
@@ -214,13 +218,19 @@ class AgentLoop4:
                 session_id=self.context.plan_graph.graph.get("session_id", ""),
                 resumed=True,
             ):
-                return await self._execute_dag(self.context)
+                # Deep research uses a multi-phase coordinator that dynamically creates
+                # nodes between phases. Route back through it so it can resume from the
+                # last completed phase (including re-showing the query approval gate).
+                if self.context.plan_graph.graph.get('research_mode') == 'deep_research':
+                    return await self._expand_deep_research_dag(self.context)
+                else:
+                    return await self._execute_dag(self.context)
             
         except Exception as e:
             log_error(f"Failed to resume session: {e}")
             raise
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, research_mode="standard", focus_mode=None):
         """
         Main agent loop: bootstrap context with Query node, optionally run file distiller,
         then planning loop (PlannerAgent) -> merge plan -> execute DAG. Handles replanning when
@@ -264,6 +274,8 @@ class AgentLoop4:
                 # Inject multi_mcp immediately
                 self.context.multi_mcp = self.multi_mcp
                 self.context.plan_graph.graph['globals_schema'].update(globals_schema)
+                self.context.plan_graph.graph['research_mode'] = research_mode
+                self.context.plan_graph.graph['focus_mode'] = focus_mode
                 self.context._save_session()
                 log_step("✅ Session initialized with Query processing", symbol="🌱")
             except Exception as e:
@@ -304,18 +316,77 @@ class AgentLoop4:
                     # This ensures the plan is Verified and Refined before execution
 
                     async def run_planner():
+                        # In standard mode, exclude the deep_research skill so the planner
+                        # generates a simple plan instead of a 6-phase deep research pipeline
+                        planner_exclude = ["deep_research"] if research_mode != "deep_research" else []
                         return await self.agent_runner.run_agent(
                             "PlannerAgent",
                             {
                                 "original_query": query,
                                 "planning_strategy": self.strategy_name,
+                                "research_mode": research_mode,
+                                "focus_mode": focus_mode,
                                 "globals_schema": self.context.plan_graph.graph.get("globals_schema", {}),
                                 "file_manifest": file_manifest,
                                 "file_profiles": file_profiles,
                                 "memory_context": memory_context
                             },
-                            use_system2=True
+                            use_system2=True,
+                            exclude_skills=planner_exclude
                         )
+
+                    def _normalize_plan_output(plan_result):
+                        """Normalize and recover plan_graph from various model output formats.
+
+                        Returns True if plan_graph is present after normalization.
+                        """
+                        output = plan_result.get('output', {})
+                        if not isinstance(output, dict):
+                            return False
+
+                        # Case 1: plan_graph already present
+                        if 'plan_graph' in output:
+                            return True
+
+                        # Case 2: nodes/edges at top level (model omitted plan_graph wrapper)
+                        if 'nodes' in output and 'edges' in output:
+                            log_step("Normalizing plan output: wrapping top-level nodes/edges into plan_graph", symbol="🔧")
+                            plan_result['output']['plan_graph'] = {
+                                'nodes': plan_result['output'].pop('nodes'),
+                                'edges': plan_result['output'].pop('edges')
+                            }
+                            return True
+
+                        # Case 3: JSON parse failed, raw text in final_answer — try re-extraction
+                        if 'final_answer' in output:
+                            log_step("Attempting plan_graph recovery from raw response", symbol="🔧")
+                            try:
+                                from core.json_parser import parse_llm_json
+                                recovered = parse_llm_json(output['final_answer'])
+                                if isinstance(recovered, dict):
+                                    if 'plan_graph' in recovered:
+                                        plan_result['output'] = recovered
+                                        return True
+                                    if 'nodes' in recovered and 'edges' in recovered:
+                                        plan_result['output'] = recovered
+                                        plan_result['output']['plan_graph'] = {
+                                            'nodes': plan_result['output'].pop('nodes'),
+                                            'edges': plan_result['output'].pop('edges')
+                                        }
+                                        return True
+                            except Exception:
+                                pass
+
+                        return False
+
+                    async def run_planner_validated():
+                        """Run planner and validate output has plan_graph, raising on failure."""
+                        result = await run_planner()
+                        if not result.get("success"):
+                            raise RuntimeError(f"Planning failed: {result.get('error', 'unknown')}")
+                        if not _normalize_plan_output(result):
+                            raise RuntimeError("PlannerAgent output missing 'plan_graph' key.")
+                        return result
 
                     # WATCHTOWER: Planner phase span
                     with agent_plan_span() as plan_span:
@@ -324,20 +395,19 @@ class AgentLoop4:
                             plan_span.set_attribute("is_retry", True)
 
                         plan_result = await self._track_task(
-                            retry_with_backoff(run_planner, on_retry=on_plan_retry)
+                            retry_with_backoff(
+                                run_planner_validated,
+                                on_retry=on_plan_retry,
+                                retryable_errors=(
+                                    asyncio.TimeoutError, ConnectionError,
+                                    TimeoutError, RuntimeError,
+                                ),
+                            )
                         )
                         attach_plan_graph_to_span(plan_span, plan_result)
 
                     if self.context.stop_requested:
                         break
-
-                    if not plan_result["success"]:
-                        self.context.mark_failed("Query", plan_result['error'])
-                        raise RuntimeError(f"Planning failed: {plan_result['error']}")
-
-                    if 'plan_graph' not in plan_result['output']:
-                        self.context.mark_failed("Query", "Output missing plan_graph")
-                        raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key.")
 
                     # ===== AUTO-CLARIFICATION CHECK =====
                     AUTO_CLARYFY_THRESHOLD = 0.7
@@ -398,10 +468,10 @@ class AgentLoop4:
                     self._merge_plan_into_context(new_plan_graph)
 
                     try:
-                        # WATCHTOWER: DAG execution span (contains execute_node spans)
-                        with agent_execute_dag_span(
-                            session_id=self.context.plan_graph.graph.get("session_id", ""),
-                        ):
+                        # Phase 4: Execute DAG (with deep research expansion)
+                        if research_mode == "deep_research":
+                            await self._track_task(self._expand_deep_research_dag(self.context))
+                        else:
                             await self._track_task(self._execute_dag(self.context))
 
                         if self.context.stop_requested:
@@ -466,16 +536,739 @@ class AgentLoop4:
         
         return has_new_leaf_clarification
 
+    # ===== DEEP RESEARCH: ENGINE-DRIVEN DAG EXPANSION =====
+
+    async def _expand_deep_research_dag(self, context):
+        """
+        Engine-driven DAG expansion for deep research mode.
+
+        Replaces PlannerAgent full plan generation with deterministic,
+        phase-by-phase graph expansion. Each phase:
+        1. Executes current pending nodes
+        2. Reads completed outputs
+        3. Creates next phase nodes/edges
+        4. Merges into graph (UI sees new nodes on next poll)
+        5. Executes new nodes
+
+        Phases:
+          1: T001 ThinkerAgent (query decomposition) + Query Approval Gate
+          2: N × RetrieverAgent (parallel search, one per sub-query)
+          3: ThinkerAgent (gap analysis)
+          4: Follow-up + contradiction searches
+          5: SummarizerAgent (synthesis with citations)
+          6: FormatterAgent (final report)
+
+        Resume support: Tracks completed phases in _dr_meta so that on
+        resume, already-completed phases are skipped and execution
+        continues from where it stopped.
+        """
+        focus_mode = context.plan_graph.graph.get('focus_mode')
+        original_query = context.plan_graph.graph.get('original_query', '')
+
+        # ── Resume support: load or initialize phase metadata ──
+        dr_meta = context.plan_graph.graph.get('_dr_meta')
+        is_resume = dr_meta is not None
+
+        if not is_resume:
+            dr_meta = {'completed_phase': 0}
+            context.plan_graph.graph['_dr_meta'] = dr_meta
+
+            # ── Strip planner's nodes beyond T001 (first run only) ──
+            # The PlannerAgent creates a full plan (T001-T00N), but deep research mode
+            # replaces T002+ with engine-controlled nodes. If we don't remove them,
+            # _execute_dag will run the planner's T002-T00N with wrong prompts
+            # before the engine gets a chance to create its own.
+            keep_nodes = {"ROOT", "Query", "T001"}
+            remove_ids = [n for n in context.plan_graph.nodes if n not in keep_nodes]
+            for node_id in remove_ids:
+                context.plan_graph.remove_node(node_id)
+            if remove_ids:
+                log_step(f"Stripped {len(remove_ids)} planner nodes — engine will rebuild phases 2-6", symbol="🔧")
+
+            # ── Override T001 prompt with improved research decomposition (first run only) ──
+            if "T001" in context.plan_graph.nodes:
+                focus_instruction = ""
+                if focus_mode:
+                    from search.focus_modes import get_focus_config
+                    focus_cfg = get_focus_config(focus_mode)
+                    focus_instruction = (
+                        f"\nFOCUS MODE: {focus_mode.upper()}\n"
+                        f"{focus_cfg.decomposition_hint}\n"
+                        f"Weight your queries toward this focus while still maintaining breadth.\n"
+                    )
+
+                context.plan_graph.nodes["T001"]["agent_prompt"] = (
+                    f"You are a research strategist. Decompose the following query into 5-8 comprehensive "
+                    f"sub-queries that independent search agents will execute in parallel.\n\n"
+                    f"QUERY: '{original_query}'\n"
+                    f"{focus_instruction}\n"
+                    f"STRATEGY:\n"
+                    f"- Consider every plausible interpretation and domain the query could refer to\n"
+                    f"- For each domain, cover: definitions & fundamentals, technical depth, types & classifications, "
+                    f"key players & real-world applications, recent trends\n"
+                    f"- If the query implies geographic, temporal, or industry context, add queries scoped to that context\n"
+                    f"- Include one synthesis query that compares/contrasts across identified domains\n"
+                    f"- Each sub-query must be a complete, self-contained search string\n\n"
+                    f"OUTPUT: JSON with key 'decomposed_queries' — a list of "
+                    f"{{\"query\": \"<full search string>\", \"dimension\": \"<short label>\"}}"
+                )
+        else:
+            log_step(f"Resuming deep research from phase {dr_meta['completed_phase']}", symbol="▶️")
+
+        # ══════════════════════════════════════════════════════════════
+        # Phase 1: Execute T001 (Query Decomposition) + Approval Gate
+        # ══════════════════════════════════════════════════════════════
+        if dr_meta['completed_phase'] < 1:
+            log_step("Deep Research Phase 1: Query decomposition", symbol="🔬")
+            await self._track_task(self._execute_dag(context))
+
+            if context.stop_requested:
+                return
+
+            # Check T001 completed
+            t001_data = context.plan_graph.nodes.get("T001", {})
+            if t001_data.get("status") != "completed":
+                log_error(f"T001 did not complete (status: {t001_data.get('status')}). Cannot expand.")
+                return
+
+            # Extract sub-queries
+            gs = context.plan_graph.graph['globals_schema']
+            decomposed_raw = gs.get("decomposed_queries_T001")
+            from search.research_utils import extract_sub_queries
+            sub_queries = extract_sub_queries(decomposed_raw)
+
+            if not sub_queries:
+                log_step("No sub-queries extracted, falling back to original query", symbol="⚠️")
+                sub_queries = [{"query": original_query, "dimension": "general"}]
+
+            sub_queries = sub_queries[:8]  # Cap at 8
+            num_queries = len(sub_queries)
+            log_step(f"Decomposed into {num_queries} sub-queries", symbol="📋")
+
+            # ── Query Approval Gate ──
+            # Pause and wait for user to approve decomposed queries before spawning retrievers
+            self._query_approval_event = asyncio.Event()
+            self._pending_queries = sub_queries
+            self._approved_queries = None
+
+            await event_bus.publish("query_approval_required", "AgentLoop4", {
+                "run_id": context.plan_graph.graph.get("session_id", ""),
+                "queries": sub_queries,
+                "original_query": original_query,
+            })
+            log_step("Waiting for user to approve research queries...", symbol="⏳")
+
+            await self._query_approval_event.wait()
+
+            # Check if user rejected the queries
+            if self._queries_rejected:
+                log_step("User rejected research queries — aborting", symbol="🛑")
+                self._query_approval_event = None
+                self._pending_queries = None
+                self._approved_queries = None
+                self._queries_rejected = False
+                self.stop()
+                return context
+
+            # Use approved queries (may have been modified by user) or fallback to original
+            if self._approved_queries is not None:
+                sub_queries = self._approved_queries
+                num_queries = len(sub_queries)
+                log_step(f"User approved {num_queries} queries", symbol="✅")
+
+            self._query_approval_event = None
+            self._pending_queries = None
+            self._approved_queries = None
+            self._queries_rejected = False
+
+            # Save Phase 1 completion
+            dr_meta.update({
+                'completed_phase': 1,
+                'sub_queries': sub_queries,
+                'num_queries': num_queries,
+            })
+            context._save_session()
+
+        # Restore Phase 1 results
+        sub_queries = dr_meta['sub_queries']
+        num_queries = dr_meta['num_queries']
+
+        # ══════════════════════════════════════════════════════════════
+        # Phase 2: Create N RetrieverAgent Nodes (Parallel)
+        # ══════════════════════════════════════════════════════════════
+        if dr_meta['completed_phase'] < 2:
+            retriever_nodes = []
+            retriever_edges = []
+            retriever_ids = []
+            retriever_write_keys = []
+
+            for i, sq in enumerate(sub_queries):
+                node_id = f"T{str(i + 2).zfill(3)}"  # T002, T003, ...
+                q_text = sq.get("query", original_query) if isinstance(sq, dict) else str(sq)
+                dimension = sq.get("dimension", f"dim_{i+1}") if isinstance(sq, dict) else f"dim_{i+1}"
+                write_key = f"initial_sources_{node_id}"
+
+                retriever_nodes.append({
+                    "id": node_id,
+                    "description": f"Search: {dimension}"[:120],
+                    "agent": "RetrieverAgent",
+                    "agent_prompt": self._build_retriever_prompt(q_text, focus_mode),
+                    "reads": ["decomposed_queries_T001"],
+                    "writes": [write_key],
+                    "status": "pending"
+                })
+                retriever_edges.append({"source": "T001", "target": node_id})
+                retriever_ids.append(node_id)
+                retriever_write_keys.append(write_key)
+
+            # _merge_plan_into_context skips already-completed nodes
+            self._merge_plan_into_context({"nodes": retriever_nodes, "edges": retriever_edges})
+            await event_bus.publish("dag_expanded", "AgentLoop4", {
+                "phase": 2, "new_nodes": retriever_ids,
+                "message": f"Searching {num_queries} dimensions with 15 URLs each"
+            })
+
+            log_step(f"Deep Research Phase 2: {num_queries} parallel searches", symbol="🔍")
+            # Only execute retrievers that are still pending (skip already-completed on resume)
+            pending_retriever_ids = [rid for rid in retriever_ids
+                                     if context.plan_graph.nodes.get(rid, {}).get("status") == "pending"]
+            if pending_retriever_ids:
+                await self._execute_steps_parallel(context, pending_retriever_ids)
+
+            if context.stop_requested:
+                return
+
+            # Filter to only successfully completed retrievers
+            successful_ids = [rid for rid in retriever_ids
+                              if context.plan_graph.nodes.get(rid, {}).get("status") == "completed"]
+            successful_write_keys = [f"initial_sources_{rid}" for rid in successful_ids]
+
+            if not successful_ids:
+                log_error("All RetrieverAgents failed. Cannot continue deep research.")
+                return
+
+            # Save Phase 2 completion
+            dr_meta.update({
+                'completed_phase': 2,
+                'retriever_ids': retriever_ids,
+                'retriever_write_keys': retriever_write_keys,
+                'successful_ids': successful_ids,
+                'successful_write_keys': successful_write_keys,
+            })
+            context._save_session()
+
+        # Restore Phase 2 results
+        retriever_ids = dr_meta.get('retriever_ids', [])
+        retriever_write_keys = dr_meta.get('retriever_write_keys', [])
+        successful_ids = dr_meta.get('successful_ids', [])
+        successful_write_keys = dr_meta.get('successful_write_keys', [])
+
+        if not successful_ids:
+            log_error("All RetrieverAgents failed. Cannot continue deep research.")
+            return
+
+        # ══════════════════════════════════════════════════════════════
+        # Phase 3: Gap Analysis ThinkerAgent
+        # ══════════════════════════════════════════════════════════════
+        if dr_meta['completed_phase'] < 3:
+            gap_id = f"T{str(num_queries + 2).zfill(3)}"
+            gap_analysis_key = f"gap_analysis_{gap_id}"
+            followup_queries_key = f"followup_queries_{gap_id}"
+            contradictions_key = f"contradictions_{gap_id}"
+            contradiction_queries_key = f"contradiction_queries_{gap_id}"
+
+            gap_node = {
+                "id": gap_id,
+                "description": "Analyze gaps and contradictions across sources",
+                "agent": "ThinkerAgent",
+                "agent_prompt": (
+                    f"Analyze all collected research sources for coverage gaps, contradictions, "
+                    f"and weak evidence. Read: {', '.join(successful_write_keys)}. "
+                    f"Original query: '{original_query}'. "
+                    f"Output JSON with these EXACT keys: "
+                    f"'{gap_analysis_key}' (string summary of gaps found), "
+                    f"'{followup_queries_key}' (list of 1-3 targeted search queries to fill the most critical gaps), "
+                    f"'{contradictions_key}' (list of conflicting claims between sources — be specific about which sources disagree and on what), "
+                    f"'{contradiction_queries_key}' (list of 1-3 targeted search queries specifically designed to VERIFY and RESOLVE each detected contradiction — "
+                    f"each query should seek authoritative evidence to determine which claim is correct. "
+                    f"If no contradictions are found, return an empty list)."
+                ),
+                "reads": successful_write_keys,
+                "writes": [gap_analysis_key, followup_queries_key, contradictions_key, contradiction_queries_key],
+                "status": "pending"
+            }
+            gap_edges = [{"source": rid, "target": gap_id} for rid in successful_ids]
+
+            self._merge_plan_into_context({"nodes": [gap_node], "edges": gap_edges})
+            await event_bus.publish("dag_expanded", "AgentLoop4", {
+                "phase": 3, "new_nodes": [gap_id],
+                "message": "Analyzing gaps and contradictions"
+            })
+
+            log_step(f"Deep Research Phase 3: Gap analysis ({gap_id})", symbol="🔎")
+            await self._track_task(self._execute_dag(context))
+
+            if context.stop_requested:
+                return
+
+            # Save Phase 3 completion
+            dr_meta.update({
+                'completed_phase': 3,
+                'gap_id': gap_id,
+                'gap_analysis_key': gap_analysis_key,
+                'followup_queries_key': followup_queries_key,
+                'contradictions_key': contradictions_key,
+                'contradiction_queries_key': contradiction_queries_key,
+                'node_offset': num_queries + 3,
+            })
+            context._save_session()
+
+        # Restore Phase 3 results
+        gap_id = dr_meta.get('gap_id', '')
+        gap_analysis_key = dr_meta.get('gap_analysis_key', '')
+        followup_queries_key = dr_meta.get('followup_queries_key', '')
+        contradictions_key = dr_meta.get('contradictions_key', '')
+        contradiction_queries_key = dr_meta.get('contradiction_queries_key', '')
+        node_offset = dr_meta.get('node_offset', num_queries + 3)
+
+        # ══════════════════════════════════════════════════════════════
+        # Phase 4: Follow-up + Contradiction Searches
+        # ══════════════════════════════════════════════════════════════
+        if dr_meta['completed_phase'] < 4:
+            # ── Phase 4a: Targeted Deep Search (follow-up queries from gap analysis) ──
+            deep_write_keys = []
+            followup_ids = []
+            from search.research_utils import extract_followup_queries
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            followup_queries = extract_followup_queries(gs.get(followup_queries_key))
+
+            if followup_queries:
+                followup_nodes = []
+                followup_edges = []
+
+                for i, fq in enumerate(followup_queries):
+                    fq_id = f"T{str(node_offset + i).zfill(3)}"
+                    fq_write_key = f"deep_sources_{fq_id}"
+                    followup_nodes.append({
+                        "id": fq_id,
+                        "description": f"Deep search: {fq[:80]}",
+                        "agent": "RetrieverAgent",
+                        "agent_prompt": self._build_retriever_prompt(fq, focus_mode),
+                        "reads": [gap_analysis_key],
+                        "writes": [fq_write_key],
+                        "status": "pending"
+                    })
+                    followup_edges.append({"source": gap_id, "target": fq_id})
+                    followup_ids.append(fq_id)
+                    deep_write_keys.append(fq_write_key)
+
+                self._merge_plan_into_context({"nodes": followup_nodes, "edges": followup_edges})
+                await event_bus.publish("dag_expanded", "AgentLoop4", {
+                    "phase": 4, "new_nodes": followup_ids,
+                    "message": f"Deep searching {len(followup_queries)} follow-up queries"
+                })
+
+                log_step(f"Deep Research Phase 4: {len(followup_queries)} targeted follow-up searches", symbol="🔬")
+                pending_followup_ids = [fid for fid in followup_ids
+                                        if context.plan_graph.nodes.get(fid, {}).get("status") == "pending"]
+                if pending_followup_ids:
+                    await self._execute_steps_parallel(context, pending_followup_ids)
+                node_offset += len(followup_queries)
+
+                if context.stop_requested:
+                    return
+
+                # Filter to successfully completed follow-up retrievers
+                deep_write_keys = [f"deep_sources_{fid}" for fid in followup_ids
+                                   if context.plan_graph.nodes.get(fid, {}).get("status") == "completed"]
+            else:
+                log_step("Deep Research Phase 4: No follow-up queries needed — skipping", symbol="⏩")
+
+            # ── Phase 4.5: Contradiction Resolution Search ──
+            contradiction_write_keys = []
+            contradiction_ids = []
+            from search.research_utils import extract_contradiction_queries
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            contradiction_queries = extract_contradiction_queries(gs.get(contradiction_queries_key), gs.get(contradictions_key))
+
+            if contradiction_queries:
+                contradiction_nodes = []
+                contradiction_edges = []
+
+                for i, cq in enumerate(contradiction_queries):
+                    cq_id = f"T{str(node_offset + i).zfill(3)}"
+                    cq_write_key = f"contradiction_sources_{cq_id}"
+                    contradiction_nodes.append({
+                        "id": cq_id,
+                        "description": f"Verify: {cq[:80]}",
+                        "agent": "RetrieverAgent",
+                        "agent_prompt": self._build_retriever_prompt(cq, focus_mode),
+                        "reads": [gap_analysis_key],
+                        "writes": [cq_write_key],
+                        "status": "pending"
+                    })
+                    # Wire from gap analysis so all contradiction searches can run in parallel
+                    contradiction_edges.append({"source": gap_id, "target": cq_id})
+                    contradiction_ids.append(cq_id)
+                    contradiction_write_keys.append(cq_write_key)
+
+                self._merge_plan_into_context({"nodes": contradiction_nodes, "edges": contradiction_edges})
+                await event_bus.publish("dag_expanded", "AgentLoop4", {
+                    "phase": "4.5", "new_nodes": contradiction_ids,
+                    "message": f"Verifying {len(contradiction_queries)} contradictions with retriever agents"
+                })
+
+                log_step(f"Deep Research Phase 4.5: {len(contradiction_queries)} contradiction resolution searches", symbol="⚖️")
+                pending_contradiction_ids = [cid for cid in contradiction_ids
+                                             if context.plan_graph.nodes.get(cid, {}).get("status") == "pending"]
+                if pending_contradiction_ids:
+                    await self._execute_steps_parallel(context, pending_contradiction_ids)
+                node_offset += len(contradiction_queries)
+
+                if context.stop_requested:
+                    return
+
+                # Filter to successfully completed contradiction retrievers
+                contradiction_write_keys = [f"contradiction_sources_{cid}" for cid in contradiction_ids
+                                            if context.plan_graph.nodes.get(cid, {}).get("status") == "completed"]
+            else:
+                log_step("Deep Research Phase 4.5: No contradictions to resolve — skipping", symbol="⏩")
+
+            # Save Phase 4 completion
+            dr_meta.update({
+                'completed_phase': 4,
+                'followup_ids': followup_ids,
+                'deep_write_keys': deep_write_keys,
+                'contradiction_ids': contradiction_ids,
+                'contradiction_write_keys': contradiction_write_keys,
+                'node_offset': node_offset,
+            })
+            context._save_session()
+
+        # Restore Phase 4 results
+        followup_ids = dr_meta.get('followup_ids', [])
+        deep_write_keys = dr_meta.get('deep_write_keys', [])
+        contradiction_ids = dr_meta.get('contradiction_ids', [])
+        contradiction_write_keys = dr_meta.get('contradiction_write_keys', [])
+        node_offset = dr_meta.get('node_offset', num_queries + 3)
+
+        # ══════════════════════════════════════════════════════════════
+        # Phase 5: SummarizerAgent (synthesis)
+        # ══════════════════════════════════════════════════════════════
+        if dr_meta['completed_phase'] < 5:
+            # ── Build source index and pre-process sources before synthesis ──
+            from search.research_utils import build_source_index, preprocess_sources
+            all_retriever_keys = successful_write_keys + deep_write_keys + contradiction_write_keys
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            focus = context.plan_graph.graph.get('focus_mode', '')
+            source_idx = build_source_index(gs, all_retriever_keys)
+            log_step(f"Built source index: {len(source_idx)} unique sources", symbol="📋")
+            dims = preprocess_sources(gs, all_retriever_keys, sub_queries, focus)
+            total = sum(len(d["sources"]) for d in dims)
+            log_step(f"Pre-processed sources: {total} sources across {len(dims)} dimensions", symbol="📊")
+
+            synth_id = f"T{str(node_offset).zfill(3)}"
+            synth_key = f"research_synthesis_{synth_id}"
+            synth_reads = ["processed_sources", "source_index", gap_analysis_key]
+
+            # Build focus-mode-specific synthesis instructions
+            focus_synth_extra = ""
+            if focus_mode == "code":
+                focus_synth_extra = (
+                    "FOCUS MODE: CODE. You MUST preserve ALL code blocks from sources. "
+                    "Wrap every code snippet in fenced markdown code blocks with the correct language tag "
+                    "(```python, ```javascript, etc.). Include complete function signatures, class definitions, "
+                    "and usage examples. Do NOT paraphrase or summarize code — include it verbatim. "
+                    "Organize code examples by dimension/topic. For each code block, explain what it does "
+                    "and cite its source using [[N]](url). "
+                )
+
+            synth_node = {
+                "id": synth_id,
+                "description": "Synthesize all sources into cited narrative",
+                "agent": "SummarizerAgent",
+                "agent_prompt": (
+                    f"THIS IS A DEEP RESEARCH SYNTHESIS. You are producing an EXHAUSTIVE, DEFINITIVE report. "
+                    f"Synthesize ALL research sources into a comprehensive narrative that extracts EVERY piece "
+                    f"of information from EVERY source. This report will be presented to a senior executive. "
+                    f"Read 'processed_sources' (organized by research dimension with excerpts) "
+                    f"and 'source_index' (mapping source numbers to REAL URLs and titles). "
+                    f"Original query: '{original_query}'. "
+                    f"{focus_synth_extra}"
+                    f"EXHAUSTIVENESS REQUIREMENTS: "
+                    f"1. Cover EVERY research dimension with 3-4 substantive paragraphs each. "
+                    f"2. Cite EVERY source at least once using [[N]](url) format where url is the ACTUAL URL "
+                    f"from source_index or processed_sources — NEVER use example.com or placeholder URLs. "
+                    f"3. Extract ALL specific data points: numbers, dates, percentages, names, quotes from source excerpts. "
+                    f"4. Include comparison tables where multiple sources provide comparable data. "
+                    f"5. Include per-paragraph confidence scoring (HIGH/MEDIUM/LOW). "
+                    f"6. Surface and RESOLVE contradictions explicitly — state which position has stronger evidence. "
+                    f"7. Each source in processed_sources has 'url' and 'index' fields — use those exact URLs. "
+                    f"8. MINIMUM 3000 words. Every paragraph must have specific data, not generic statements. "
+                    f"9. Leave NOTHING out. If a source was retrieved, its information MUST appear in the report."
+                ),
+                "reads": synth_reads,
+                "writes": [synth_key],
+                "status": "pending"
+            }
+
+            # Wire synthesis to gap analysis + all follow-up retrievers + contradiction retrievers
+            synth_edges = [{"source": gap_id, "target": synth_id}]
+            for fid in followup_ids:
+                synth_edges.append({"source": fid, "target": synth_id})
+            for cid in contradiction_ids:
+                synth_edges.append({"source": cid, "target": synth_id})
+
+            self._merge_plan_into_context({
+                "nodes": [synth_node],
+                "edges": synth_edges
+            })
+            await event_bus.publish("dag_expanded", "AgentLoop4", {
+                "phase": 5, "new_nodes": [synth_id],
+                "message": "Synthesizing sources with citations"
+            })
+
+            log_step(f"Deep Research Phase 5: Synthesis ({synth_id})", symbol="📝")
+            await self._track_task(self._execute_dag(context))
+
+            if context.stop_requested:
+                return
+
+            # Save Phase 5 completion
+            dr_meta.update({
+                'completed_phase': 5,
+                'synth_id': synth_id,
+                'synth_key': synth_key,
+            })
+            context._save_session()
+
+        # Restore Phase 5 results
+        synth_id = dr_meta.get('synth_id', '')
+        synth_key = dr_meta.get('synth_key', '')
+
+        # ══════════════════════════════════════════════════════════════
+        # Phase 6: FormatterAgent (final report)
+        # ══════════════════════════════════════════════════════════════
+        if dr_meta['completed_phase'] < 6:
+            fmt_id = f"T{str(node_offset + 1).zfill(3)}"
+            fmt_key = f"formatted_report_{fmt_id}"
+
+            # Build focus-mode-specific formatter instructions
+            focus_fmt_extra = ""
+            if focus_mode == "code":
+                focus_fmt_extra = (
+                    "FOCUS MODE: CODE. The report MUST include ALL code blocks from the synthesis. "
+                    "Preserve every fenced code block verbatim — do NOT remove, truncate, or summarize code. "
+                    "Use proper syntax highlighting (```python, ```javascript, etc.). "
+                    "Add a dedicated '## Code Examples' or '## Implementation' section grouping all code snippets. "
+                    "For each code block include: source citation, language, and brief explanation. "
+                )
+
+            fmt_node = {
+                "id": fmt_id,
+                "description": "Format final research report",
+                "agent": "FormatterAgent",
+                "agent_prompt": (
+                    f"Generate the DEFINITIVE, EXHAUSTIVE final research report. "
+                    f"This is a deep research report being prepared as if for the Washington Post — "
+                    f"expect at least 4000-5000 words of detailed, data-rich content. "
+                    f"Original query: '{original_query}'. "
+                    f"Use all_globals_schema to find ALL available data — dig deep into raw source data, "
+                    f"not just summaries. Extract specific numbers, dates, names, percentages, and quotes. "
+                    f"{focus_fmt_extra}"
+                    f"REQUIRED SECTIONS: "
+                    f"1. Executive Summary (7-10 sentences with key takeaways) "
+                    f"2. Key Findings (numbered, with confidence levels and citations) "
+                    f"3. Detailed Analysis (6-8 subsections organized by research dimension, "
+                    f"each with 4-5 paragraphs of specific, data-rich content) "
+                    f"4. Contradictions & Debates (where sources disagree, with resolution analysis) "
+                    f"5. Methodology (search queries, sources analyzed, date range) "
+                    f"6. Complete Citation List (clickable markdown links). "
+                    f"CRITICAL: Use source_index to get REAL URLs for citations — NEVER use example.com or placeholder URLs. "
+                    f"Preserve all [[N]](url) citations from the synthesis exactly as-is. "
+                    f"Include comparison tables where data allows. "
+                    f"If some data is missing, note it but still produce the best report possible. "
+                    f"Output the report under BOTH 'markdown_report' AND '{fmt_key}' keys in your JSON response."
+                ),
+                "reads": [synth_key, "source_index"],
+                "writes": [fmt_key],
+                "status": "pending"
+            }
+
+            self._merge_plan_into_context({
+                "nodes": [fmt_node],
+                "edges": [{"source": synth_id, "target": fmt_id}]
+            })
+            await event_bus.publish("dag_expanded", "AgentLoop4", {
+                "phase": 6, "new_nodes": [fmt_id],
+                "message": "Generating final report"
+            })
+
+            log_step(f"Deep Research Phase 6: Report formatting ({fmt_id})", symbol="📄")
+            await self._track_task(self._execute_dag(context))
+
+            # ── Fallback: Ensure FormatterAgent always produces output ──
+            fmt_status = context.plan_graph.nodes.get(fmt_id, {}).get("status")
+            if fmt_status != "completed":
+                log_step("FormatterAgent didn't complete — running fallback with available data", symbol="⚠️")
+                # Reset formatter to pending and clear dependency edges so it can run
+                if fmt_id in context.plan_graph.nodes:
+                    context.plan_graph.nodes[fmt_id]["status"] = "pending"
+                    context.plan_graph.nodes[fmt_id]["error"] = None
+                # Remove incoming edges so get_ready_steps() won't block on failed predecessors
+                predecessors = list(context.plan_graph.predecessors(fmt_id))
+                for pred in predecessors:
+                    context.plan_graph.remove_edge(pred, fmt_id)
+                await self._track_task(self._execute_dag(context))
+
+            # Save Phase 6 completion
+            dr_meta.update({
+                'completed_phase': 6,
+                'fmt_id': fmt_id,
+                'fmt_key': fmt_key,
+            })
+            context._save_session()
+
+        # Restore Phase 6 results
+        fmt_id = dr_meta.get('fmt_id', '')
+        fmt_key = dr_meta.get('fmt_key', '')
+
+        # ── Post-process: Fix citations with real URLs from source_index ──
+        from search.research_utils import fix_citations
+        gs = context.plan_graph.graph.get('globals_schema', {})
+        source_index = gs.get("source_index", {})
+        if source_index:
+            for key in (synth_key, fmt_key):
+                if not key:
+                    continue
+                text = gs.get(key)
+                if not text or not isinstance(text, str):
+                    # Also check node output for markdown_report
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        out = node.get("output", {})
+                        if isinstance(out, dict):
+                            text = out.get("markdown_report") or out.get(key)
+                            if text and isinstance(text, str):
+                                break
+                    if not text or not isinstance(text, str):
+                        continue
+                fixed = fix_citations(text, source_index)
+                if fixed != text:
+                    gs[key] = fixed
+                    # Update in node outputs too
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        out = node.get("output", {})
+                        if isinstance(out, dict):
+                            if "markdown_report" in out and isinstance(out["markdown_report"], str):
+                                out["markdown_report"] = fix_citations(out["markdown_report"], source_index)
+                            if key in out and isinstance(out[key], str):
+                                out[key] = fix_citations(out[key], source_index)
+                    log_step(f"Fixed citations in {key} with real URLs from source_index", symbol="🔗")
+
+        log_step("Deep research complete", symbol="✅")
+
+    def _auto_build_source_index(self, context):
+        """Auto-build source_index from ALL completed RetrieverAgent outputs.
+        Called after each RetrieverAgent completes in _execute_dag.
+        Works for both standard and deep research modes.
+        """
+        from search.research_utils import build_source_index
+
+        retriever_write_keys = []
+        for node_id, node_data in context.plan_graph.nodes(data=True):
+            if node_id == "ROOT":
+                continue
+            if node_data.get("agent") == "RetrieverAgent" and node_data.get("status") == "completed":
+                retriever_write_keys.extend(node_data.get("writes", []))
+
+        if retriever_write_keys:
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            build_source_index(gs, retriever_write_keys)
+
+    def _build_retriever_prompt(self, query_text: str, focus_mode: str = None) -> str:
+        """Build RetrieverAgent prompt with optional focus_mode constraints."""
+        from search.focus_modes import get_focus_config
+
+        prompt = (
+            f"Search for: '{query_text}'. "
+            f"Use search_web_with_text_content with string='{query_text}'"
+        )
+
+        if focus_mode:
+            cfg = get_focus_config(focus_mode)
+            if cfg.search_suffix:
+                prompt += f". Append to search: ' {cfg.search_suffix}'"
+            prompt += f" {cfg.retriever_instruction}"
+
+        prompt += (
+            " and integer=15. "
+            "Return all results with URLs, titles, and extracted text."
+        )
+        return prompt
+
+    async def _direct_web_search(self, query: str, limit: int = 5) -> str:
+        """Direct web search bypassing MCP server for parallel deep research.
+        Delegates to search.crawl_pipeline.CrawlPipeline.
+        Returns JSON string of results (same format as MCP tool output).
+        """
+        import json as _json
+        from dataclasses import asdict
+        from search.crawl_pipeline import CrawlPipeline
+
+        try:
+            limit = min(max(limit, 1), 20)
+            pipeline = CrawlPipeline()
+            docs = await pipeline.search_and_extract([query], top_k=limit)
+            results = []
+            for d in docs:
+                results.append({
+                    "url": d.url,
+                    "title": d.title,
+                    "content": d.content if d.error is None else f"[error] {d.error}",
+                    "rank": d.rank,
+                })
+            if not results:
+                return _json.dumps([{"url": "", "title": "", "content": "[error] No search results found", "rank": 1}])
+            return _json.dumps(results)
+        except Exception as e:
+            return _json.dumps([{"url": "", "title": "", "content": f"[error] {str(e)}", "rank": 1}])
+
+    async def _emit_source_progress_helper(self, step_id, total_sources):
+        """Emit source reading progress events for the UI."""
+        interval = max(0.6, 8.0 / total_sources)
+        for i in range(1, total_sources + 1):
+            await asyncio.sleep(interval)
+            await event_bus.publish("source_progress", "AgentLoop4", {
+                "step_id": step_id,
+                "current": i,
+                "total": total_sources,
+                "message": f"Reading source {i}/{total_sources}..."
+            })
+
     def _merge_plan_into_context(self, new_plan_graph):
         """Merge the planned nodes into the existing bootstrap context"""
         new_nodes = new_plan_graph.get("nodes", [])
         new_edges = new_plan_graph.get("edges", [])
-        
+
         # Track which new nodes have incoming edges to detect orphans
         nodes_with_incoming_edges = set()
+        # Track successfully added node IDs (to skip edges referencing rejected nodes)
+        added_node_ids = set(self.context.plan_graph.nodes)  # includes existing nodes (ROOT, Query)
+
+        # Build set of valid agent types from registry
+        from core.registry import AgentRegistry
+        valid_agents = set(AgentRegistry.list_agents().keys())
 
         # Add new nodes
         for node in new_nodes:
+            # Validate agent type — reject hallucinated agents before they enter the graph
+            agent_type = node.get("agent", "")
+            if agent_type and agent_type not in valid_agents:
+                log_step(f"Invalid agent '{agent_type}' in plan node {node.get('id', '?')} — skipping (valid: {', '.join(sorted(valid_agents))})", symbol="⚠️")
+                continue
+
             # Prepare node data with defaults
             node_data = node.copy()
             # Set defaults if not present in the plan
@@ -490,28 +1283,40 @@ class AgentLoop4:
             }
             for k, v in defaults.items():
                 node_data.setdefault(k, v)
-                
+
             # Avoid overwriting already completed nodes if they somehow appear in the new plan
             if node["id"] in self.context.plan_graph:
-                 existing_status = self.context.plan_graph.nodes[node["id"]].get("status")
-                 if existing_status == "completed":
-                      continue
+                existing_status = self.context.plan_graph.nodes[node["id"]].get("status")
+                if existing_status == "completed":
+                    continue
 
             self.context.plan_graph.add_node(node["id"], **node_data)
-            
+            added_node_ids.add(node["id"])
+
         # Add new edges (redirect ROOT -> First Step to Query -> First Step)
         for edge in new_edges:
-            # Robustly handle different edge formats or missing keys
-            source = edge.get("source") or edge.get("from")
-            target = edge.get("target") or edge.get("to")
-            
+            # Robustly handle different edge formats: list [src, tgt] or dict {source, target}
+            if isinstance(edge, (list, tuple)) and len(edge) >= 2:
+                source, target = str(edge[0]), str(edge[1])
+            elif isinstance(edge, dict):
+                source = edge.get("source") or edge.get("from")
+                target = edge.get("target") or edge.get("to")
+            else:
+                log_step(f"⚠️ Skipping malformed edge: {edge}", symbol="⚠️")
+                continue
+
             if not source or not target:
                 log_step(f"⚠️ Skipping malformed edge: {edge}", symbol="⚠️")
                 continue
-            
+
             # Redirect dependencies: If a node depends on ROOT, make it depend on Query
             if source == "ROOT":
                 source = "Query"
+
+            # Skip edges referencing rejected/non-existent nodes to prevent phantom nodes
+            if source not in added_node_ids or target not in added_node_ids:
+                log_step(f"⚠️ Skipping edge {source}→{target}: references node not in graph", symbol="⚠️")
+                continue
 
             self.context.plan_graph.add_edge(source, target)
             nodes_with_incoming_edges.add(target)
@@ -519,7 +1324,7 @@ class AgentLoop4:
         # 🛡️ AUTO-CONNECT: If a new node has NO incoming edges, connect it to "Query"
         # This fixes cases where PlannerAgent returns nodes but forgets the edges
         for node in new_nodes:
-            if node["id"] not in nodes_with_incoming_edges:
+            if node["id"] in added_node_ids and node["id"] not in nodes_with_incoming_edges:
                 log_step(f"🔗 Auto-connected orphan node {node['id']} to Query", symbol="🔗")
                 self.context.plan_graph.add_edge("Query", node["id"])
         
@@ -582,7 +1387,11 @@ class AgentLoop4:
         console = Console()
         
         # 🔧 DEBUGGING MODE: No Live display, just regular prints
-        max_iterations = self.max_steps
+        # Each DAG step needs one iteration, plus headroom for retries (MAX_STEP_RETRIES=2 per step).
+        # Deep research needs more iterations (6+ phases with retries).
+        is_deep_research = context.plan_graph.graph.get('research_mode') == 'deep_research'
+        num_steps = sum(1 for n in context.plan_graph.nodes if n != "ROOT")
+        max_iterations = max(self.max_steps * 3, 15) if is_deep_research else max(num_steps * 3, self.max_steps)
         iteration = 0
         
         # ===== COST THRESHOLD ENFORCEMENT =====
@@ -591,6 +1400,9 @@ class AgentLoop4:
         max_cost = settings.get("agent", {}).get("max_cost_per_run", 0.50)
         warn_cost = settings.get("agent", {}).get("warn_at_cost", 0.25)
         cost_warning_shown = False
+
+        stall_counter = 0  # Counts consecutive iterations with no progress
+        MAX_STALL = 20     # Break out after this many stalled iterations
 
         while not context.all_done():
             if context.stop_requested:
@@ -601,13 +1413,10 @@ class AgentLoop4:
                         context.plan_graph.nodes[n_id]["status"] = "stopped"
                 context._save_session()
                 break
-            
-            # Get ready nodes
+
+            # Get ready nodes (only returns pending nodes with all deps completed)
             ready_steps = context.get_ready_steps()
-            
-            # 🛡️ DEFENSIVE: Filter out steps that are not pending (prevents loops)
-            ready_steps = [s for s in ready_steps if context.plan_graph.nodes[s]["status"] == "pending"]
-            
+
             if not ready_steps:
                 # Check for running steps or waiting steps
                 running_or_waiting = any(
@@ -616,18 +1425,50 @@ class AgentLoop4:
                 )
                 
                 if not running_or_waiting:
-                    # No ready steps and nothing running - check for orphans or completion
-                    is_complete = all(
-                        context.plan_graph.nodes[n]['status'] in ['completed', 'skipped', 'cost_exceeded']
-                        for n in context.plan_graph.nodes
-                        if n != "ROOT"
-                    )
-                    if is_complete:
-                        break
-                
-                # Poll until we have work or completion
+                    # Cascade failures: mark pending steps blocked by non-completed predecessors
+                    blocked_steps = []
+                    non_complete_terminal = {'failed', 'skipped', 'cost_exceeded', 'stopped'}
+                    for n in context.plan_graph.nodes:
+                        if n == "ROOT":
+                            continue
+                        if context.plan_graph.nodes[n].get('status') == 'pending':
+                            preds = list(context.plan_graph.predecessors(n))
+                            if any(context.plan_graph.nodes[p].get('status') in non_complete_terminal for p in preds):
+                                blocked_steps.append(n)
+
+                    if blocked_steps:
+                        for step_id in blocked_steps:
+                            visualizer.mark_failed(step_id, "upstream dependency failed")
+                            context.mark_failed(step_id, "Skipped: upstream dependency failed")
+                            log_step(f"⏭️ Skipping {step_id}: upstream dependency failed", symbol="⏭️")
+                        continue  # Re-check — cascaded failures may unblock or complete the graph
+
+                    # Deadlock detection: pending nodes exist but none are blocked by
+                    # failed predecessors — likely phantom nodes, cycles, or missing edges
+                    remaining_pending = [
+                        n for n in context.plan_graph.nodes
+                        if n != "ROOT" and context.plan_graph.nodes[n].get('status') == 'pending'
+                    ]
+                    if remaining_pending:
+                        log_step(f"Deadlock: {len(remaining_pending)} unreachable pending nodes — marking failed", symbol="⚠️")
+                        for n_id in remaining_pending:
+                            visualizer.mark_failed(n_id, "unreachable: no viable execution path")
+                            context.mark_failed(n_id, "Unreachable: no viable execution path (possible cycle or missing dependency)")
+                        continue  # Re-check all_done()
+
+                    # Nothing pending, nothing running — we're done
+                    break
+
+                # Wait for progress (with stall detection)
+                stall_counter += 1
+                if stall_counter >= MAX_STALL:
+                    log_error(f"🛑 DAG stalled: {MAX_STALL} iterations with no progress. Breaking out.")
+                    break
                 await asyncio.sleep(0.5)
                 continue
+
+            # Reset stall counter — we have work to do
+            stall_counter = 0
 
             # Show current state (only when we found work to do)
             try:
@@ -648,9 +1489,7 @@ class AgentLoop4:
                 step_data = context.get_step_data(step_id)
                 desc = step_data.get("agent_prompt", step_data.get("description", "No description"))[:60]
                 log_step(f"🔄 Starting {step_id} ({step_data['agent']}): {desc}...", symbol="🚀")
-                
-                visualizer.mark_running(step_id)
-                context.mark_running(step_id)
+
                 tasks.append(self._track_task(self._execute_step(step_id, context)))
 
             results = await self._track_task(asyncio.gather(*tasks, return_exceptions=True))
@@ -662,18 +1501,26 @@ class AgentLoop4:
             for step_id, result in zip(ready_steps, results):
                 step_data = context.get_step_data(step_id)
                 retry_count = step_data.get('_retry_count', 0)
-                
+
+                # Guard against None or unexpected result types
+                if result is None or (not isinstance(result, (dict, Exception))):
+                    # _execute_step returned something unexpected — treat as failure
+                    visualizer.mark_failed(step_id, "No result returned")
+                    context.mark_failed(step_id, "Step returned no result")
+                    log_error(f"❌ {step_id}: _execute_step returned {type(result).__name__}")
+                    continue
+
                 # ✅ HANDLE AWAITING INPUT
                 if isinstance(result, dict) and result.get("status") == "waiting_input":
-                     visualizer.mark_waiting(step_id) 
-                     context.plan_graph.nodes[step_id]["status"] = "waiting_input"
-                     # Preserve partial output
-                     if "output" in result:
-                         context.plan_graph.nodes[step_id]["output"] = result["output"]
-                     context._save_session()
-                     log_step(f"⏳ {step_id}: Waiting for user input...", symbol="⏳")
-                     continue
-                
+                    visualizer.mark_waiting(step_id)
+                    context.plan_graph.nodes[step_id]["status"] = "waiting_input"
+                    # Preserve partial output
+                    if "output" in result:
+                        context.plan_graph.nodes[step_id]["output"] = result["output"]
+                    context._save_session()
+                    log_step(f"⏳ {step_id}: Waiting for user input...", symbol="⏳")
+                    continue
+
                 if isinstance(result, Exception):
                     # Check if we should retry this step
                     if retry_count < MAX_STEP_RETRIES:
@@ -688,6 +1535,19 @@ class AgentLoop4:
                     visualizer.mark_completed(step_id)
                     await context.mark_done(step_id, result["output"])
                     log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+                    completed_now = sum(1 for n in context.plan_graph.nodes
+                                        if n != "ROOT" and context.plan_graph.nodes[n].get("status") == "completed")
+                    total_now = sum(1 for n in context.plan_graph.nodes if n != "ROOT")
+                    await event_bus.publish("step_complete", "AgentLoop4", {
+                        "step_id": step_id,
+                        "agent": step_data["agent"],
+                        "progress": f"{completed_now}/{total_now}",
+                        "message": f"Completed {step_data['agent']} ({completed_now}/{total_now})"
+                    })
+
+                    # Auto-build source_index after RetrieverAgent completes
+                    if step_data["agent"] == "RetrieverAgent":
+                        self._auto_build_source_index(context)
 
                     # ── Voice streaming: push this node's output immediately ──
                     # If a stream queue is registered (voice pipeline is listening),
@@ -753,17 +1613,24 @@ class AgentLoop4:
 
         # Final state: render layout and persist status
         console.print(visualizer.get_layout())
-        
+
+        # 🔧 CLEANUP: Mark any steps stuck in non-terminal states as failed
+        for n_id in context.plan_graph.nodes:
+            node_status = context.plan_graph.nodes[n_id].get("status")
+            if node_status in ('pending', 'running'):
+                context.mark_failed(n_id, f"Marked failed: loop ended with step in '{node_status}' state")
+                log_step(f"🧹 Cleaned up {n_id}: {node_status} → failed", symbol="🧹")
+
         # Determine and save final status (stopped/failed/completed)
         if context.stop_requested:
-             context.plan_graph.graph['status'] = 'stopped'
+            context.plan_graph.graph['status'] = 'stopped'
         elif any(context.plan_graph.nodes[n]['status'] == 'failed' for n in context.plan_graph.nodes):
-             context.plan_graph.graph['status'] = 'failed'
+            context.plan_graph.graph['status'] = 'failed'
         elif context.all_done():
-             context.plan_graph.graph['status'] = 'completed'
+            context.plan_graph.graph['status'] = 'completed'
         else:
-             # Max iterations or stalled
-             context.plan_graph.graph['status'] = 'failed'
+            # Max iterations or stalled
+            context.plan_graph.graph['status'] = 'failed'
         
         context._auto_save()
         
@@ -781,205 +1648,403 @@ class AgentLoop4:
 
             console.print("🎉 All tasks completed!")
 
-    async def _execute_step(self, step_id, context):
-        """
-        Execute a single step in the DAG: emit step_start, get inputs from graph, run agent
-        (with retries), handle tool calls and iterations. Returns success/failure with output.
+    async def _execute_steps_parallel(self, context, step_ids: list):
+        """Execute steps in true parallel (deep research only).
+        Each task processes its own result and publishes completion immediately."""
+        if not step_ids:
+            return
 
-        WATCHTOWER: Span for each agent step (PlannerAgent, CoderAgent, FormatterAgent, etc.).
-        - Span name: agent_loop.execute_node
-        - Attributes: node_id, agent type, session_id
-        - LLM calls inside the agent become children of this span
-        """
+        log_step(f"⚡ Executing {len(step_ids)} agents in parallel: {step_ids}", symbol="⚡")
+
+        for step_id in step_ids:
+            context.mark_running(step_id)
+            step_data = context.get_step_data(step_id)
+            desc = step_data.get("description", "")[:60]
+            log_step(f"🔄 Starting {step_id} ({step_data['agent']}): {desc}", symbol="🚀")
+
+        MAX_STEP_RETRIES = 2
+
+        async def _run_and_process(step_id):
+            """Run step + process result + publish completion — all inside the parallel task."""
+            step_data = context.get_step_data(step_id)
+            retry_count = 0
+
+            while retry_count <= MAX_STEP_RETRIES:
+                try:
+                    result = await self._execute_step(step_id, context, direct_search=True)
+                except Exception as e:
+                    result = e
+
+                if isinstance(result, Exception):
+                    retry_count += 1
+                    if retry_count <= MAX_STEP_RETRIES:
+                        context.plan_graph.nodes[step_id]['status'] = 'pending'
+                        context.mark_running(step_id)
+                        log_step(f"🔄 Retry {step_id} ({retry_count}/{MAX_STEP_RETRIES}): {result}", symbol="🔄")
+                        continue
+                    else:
+                        context.mark_failed(step_id, str(result))
+                        log_error(f"❌ Failed {step_id}: {result}")
+                        return
+
+                if result is None or not isinstance(result, dict):
+                    context.mark_failed(step_id, "Step returned no result")
+                    log_error(f"❌ {step_id}: returned {type(result).__name__}")
+                    return
+
+                if result.get("success"):
+                    await context.mark_done(step_id, result["output"])
+                    log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+                    await event_bus.publish("step_complete", "AgentLoop4", {
+                        "step_id": step_id,
+                        "agent": step_data["agent"],
+                        "message": f"Completed {step_data['agent']}"
+                    })
+                    return
+                else:
+                    retry_count += 1
+                    if retry_count <= MAX_STEP_RETRIES:
+                        context.plan_graph.nodes[step_id]['status'] = 'pending'
+                        context.mark_running(step_id)
+                        log_step(f"🔄 Retry {step_id} ({retry_count}/{MAX_STEP_RETRIES}): {result.get('error', 'Unknown')}", symbol="🔄")
+                        continue
+                    else:
+                        context.mark_failed(step_id, result.get("error", "Unknown error"))
+                        log_error(f"❌ Failed {step_id}: {result.get('error')}")
+                        return
+
+        tasks = {
+            step_id: asyncio.create_task(_run_and_process(step_id))
+            for step_id in step_ids
+        }
+        for t in tasks.values():
+            self._tasks.add(t)
+
+        await asyncio.gather(*tasks.values(), return_exceptions=True)
+
+        for t in tasks.values():
+            self._tasks.discard(t)
+
+        # Build source_index once after ALL retrievers complete
+        self._auto_build_source_index(context)
+
+    async def _execute_step(self, step_id, context, direct_search=False):
+        """Execute a single step with call_self support"""
+        # 📡 EMIT PROGRESS EVENT — count total and completed steps for progress
+        total_steps = sum(1 for n in context.plan_graph.nodes if n != "ROOT")
+        completed_steps = sum(1 for n in context.plan_graph.nodes
+                              if n != "ROOT" and context.plan_graph.nodes[n].get("status") == "completed")
         step_data = context.get_step_data(step_id)
         agent_type = step_data["agent"]
-        session_id_val = context.plan_graph.graph.get("session_id", "")
-        retry_attempt = step_data.get("_retry_count", 0)
-        with agent_execute_node_span(step_id, agent_type, session_id_val, retry_attempt=retry_attempt) as span:
-            # 📡 EMIT EVENT
-            await event_bus.publish("step_start", "AgentLoop4", {"step_id": step_id})
+        desc = step_data.get("description", "")[:80]
 
-            # Get inputs from NetworkX graph
-            inputs = context.get_inputs(step_data.get("reads", []))
+        # Validate agent type exists in registry
+        from core.registry import AgentRegistry
+        if not AgentRegistry.get(agent_type):
+            error_msg = f"Unknown agent type: {agent_type} (Not found in Registry). Available: {', '.join(AgentRegistry.list_agents().keys())}"
+            log_error(error_msg)
+            return {"success": False, "error": error_msg}
 
-            # 🔧 HELPER FUNCTION: Build agent input (consistent for both iterations)
-            def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
-                payload = {
-                    "step_id": step_id,
-                    "agent_prompt": instruction or step_data.get("agent_prompt", step_data["description"]),
-                    "reads": step_data.get("reads", []),
-                    "writes": step_data.get("writes", []),
-                    "inputs": inputs,
-                    "original_query": context.plan_graph.graph['original_query'],
-                    "session_context": {
-                        "session_id": context.plan_graph.graph['session_id'],
-                        "created_at": context.plan_graph.graph['created_at'],
-                        "file_manifest": context.plan_graph.graph['file_manifest'],
-                        "memory_context": getattr(context, 'memory_context', None)
-                    },
-                    **({"previous_output": previous_output} if previous_output else {}),
-                    **({"iteration_context": iteration_context} if iteration_context else {})
+        await event_bus.publish("step_start", "AgentLoop4", {
+            "step_id": step_id,
+            "agent": agent_type,
+            "description": desc,
+            "progress": f"{completed_steps + 1}/{total_steps}",
+            "message": f"Running {agent_type} ({completed_steps + 1}/{total_steps}): {desc}"
+        })
+        
+        # Get inputs from NetworkX graph
+        inputs = context.get_inputs(step_data.get("reads", []))
+
+        # Auto-inject source_index for SummarizerAgent and FormatterAgent
+        if agent_type in ("SummarizerAgent", "FormatterAgent"):
+            gs = context.plan_graph.graph.get('globals_schema', {})
+            if "source_index" in gs and "source_index" not in inputs:
+                inputs["source_index"] = gs["source_index"]
+
+        # 🔧 HELPER FUNCTION: Build agent input (consistent for both iterations)
+        def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
+            # Base payload for all agents
+            payload = {
+                "step_id": step_id,
+                "agent_prompt": instruction or step_data.get("agent_prompt", step_data["description"]),
+                "reads": step_data.get("reads", []),
+                "writes": step_data.get("writes", []),
+                "inputs": inputs,
+                "original_query": context.plan_graph.graph['original_query'],
+                "session_context": {
+                    "session_id": context.plan_graph.graph['session_id'],
+                    "created_at": context.plan_graph.graph['created_at'],
+                    "file_manifest": context.plan_graph.graph['file_manifest'],
+                    "memory_context": getattr(context, 'memory_context', None) # 🧠 Universal Injection
+                },
+                **({"previous_output": previous_output} if previous_output else {}),
+                **({"iteration_context": iteration_context} if iteration_context else {})
+            }
+            
+            # Formatter-specific additions
+            if agent_type == "FormatterAgent":
+                payload["all_globals_schema"] = context.plan_graph.graph['globals_schema'].copy()
+                
+            return payload
+
+        # Execute with ReAct Loop (Max 15 turns)
+        max_turns = 15
+        current_input = build_agent_input()
+        iterations_data = []
+
+        for turn in range(1, max_turns + 1):
+            log_step(f"🔄 {agent_type} Iteration {turn}/{max_turns}", symbol="🔄")
+
+            # Run Agent (with retry for transient failures like rate limits)
+            async def run_agent_step():
+                return await self.agent_runner.run_agent(agent_type, current_input)
+
+            try:
+                result = await retry_with_backoff(run_agent_step)
+            except Exception as e:
+                # All retries exhausted, return failure
+                return {"success": False, "error": f"Agent failed after retries: {str(e)}"}
+
+            if not result["success"]:
+                return result
+
+            output = result["output"]
+
+            # 🔧 ROBUSTNESS: Ensure output is a dict (Gemma may return a list)
+            if isinstance(output, list):
+                if len(output) > 0 and isinstance(output[0], dict):
+                    output = output[0]
+                else:
+                    log_step(f"⚠️ {agent_type} returned a list instead of dict, wrapping", symbol="⚠️")
+                    output = {"raw_output": output}
+            elif not isinstance(output, dict):
+                output = {"raw_output": str(output)}
+
+            # ✅ CHECK FOR CLARIFICATION REQUEST (HALT)
+            if output.get("clarificationMessage"):
+                return {
+                    "success": True,
+                    "status": "waiting_input",
+                    "output": output
                 }
-                if agent_type == "FormatterAgent":
-                    payload["all_globals_schema"] = context.plan_graph.graph['globals_schema'].copy()
-                return payload
 
-            max_turns = 15
-            current_input = build_agent_input()
-            iterations_data = []
+            iterations_data.append({"iteration": turn, "output": output})
 
-            # ReAct loop: agent can call tools, call_self, or produce final output
-            for turn in range(1, max_turns + 1):
-                with agent_iteration_span(step_id, agent_type, session_id_val, turn, max_turns) as iter_span:
-                    log_step(f"🔄 {agent_type} Iteration {turn}/{max_turns}", symbol="🔄")
+            if context.stop_requested:
+                log_step(f"🛑 {agent_type}: Stop requested, aborting iteration {turn}", symbol="🛑")
+                return {"success": False, "error": "Stop requested"}
 
-                    # Run agent step (with retries for transient failures)
-                    async def run_agent_step():
-                        return await self.agent_runner.run_agent(agent_type, current_input)
+            step_data = context.get_step_data(step_id)
+            step_data['iterations'] = iterations_data
 
-                    def on_retry(attempt):
-                        iter_span.set_attribute("retry_attempt", attempt)
-                        iter_span.set_attribute("is_retry", True)
+            # 1. Check for 'call_tool' (ReAct)
+            if output.get("call_tool"):
+                tool_call = output["call_tool"]
+                # 🔧 ROBUSTNESS: tool_call might be a list (Gemma quirk)
+                if isinstance(tool_call, list) and len(tool_call) > 0:
+                    tool_call = tool_call[0] if isinstance(tool_call[0], dict) else {"name": str(tool_call[0])}
+                elif not isinstance(tool_call, dict):
+                    tool_call = {"name": str(tool_call)}
+                tool_name = tool_call.get("name")
+                tool_args = tool_call.get("arguments", {})
+                # 🔧 ROBUSTNESS: Ensure tool_args is a dict (Gemma may output a list)
+                if isinstance(tool_args, list):
+                    log_step(f"⚠️ Tool args is a list, converting to dict", symbol="⚠️")
+                    tool_args = {f"arg_{i}": v for i, v in enumerate(tool_args)}
+                elif not isinstance(tool_args, dict):
+                    tool_args = {"value": tool_args}
 
-                    try:
-                        result = await retry_with_backoff(run_agent_step, on_retry=on_retry)
-                    except Exception as e:
-                        span.set_status(Status(StatusCode.ERROR, str(e)))
-                        span.record_exception(e)
-                        return {"success": False, "error": f"Agent failed after retries: {str(e)}"}
+                log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
+                await event_bus.publish("tool_call", "AgentLoop4", {
+                    "step_id": step_id,
+                    "agent": agent_type,
+                    "tool_name": tool_name,
+                    "message": f"{agent_type} calling {tool_name}..."
+                })
 
-                    if not result["success"]:
-                        iter_span.set_attribute("trigger", "error")
-                        return result
+                tool_executed = False
+                skill_tool_result = None
 
-                    output = result["output"]
+                # 1a. Try local skill tools first, then MCP route
+                try:
+                    from core.registry import AgentRegistry
+                    from shared.state import get_skill_manager
 
-                    # Clarification requested - pause for user input
-                    if output.get("clarificationMessage"):
-                        iter_span.set_attribute("trigger", "clarification")
-                        return {
-                            "success": True,
-                            "status": "waiting_input",
-                            "output": output
-                        }
+                    agent_config = AgentRegistry.get(agent_type)
+                    skill_mgr = get_skill_manager()
 
-                    iterations_data.append({"iteration": turn, "output": output})
-
-                    if context.stop_requested:
-                        iter_span.set_attribute("trigger", "stopped")
-                        log_step(f"🛑 {agent_type}: Stop requested, aborting iteration {turn}", symbol="🛑")
-                        return {"success": False, "error": "Stop requested"}
-
-                    step_data = context.get_step_data(step_id)
-                    step_data['iterations'] = iterations_data
-
-                    # 1. Check for 'call_tool' (ReAct)
-                    if output.get("call_tool"):
-                        iter_span.set_attribute("trigger", "tool_call")
-                        tool_call = output["call_tool"]
-                        tool_name = tool_call.get("name")
-                        tool_args = tool_call.get("arguments", {})
-
-                        log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
-
-                        tool_executed = False
-                        skill_tool_result = None
-
-                        # Try local skill tools first, then MCP route
-                        try:
-                            from core.registry import AgentRegistry
-                            from shared.state import get_skill_manager
-
-                            agent_config = AgentRegistry.get(agent_type)
-                            skill_mgr = get_skill_manager()
-
-                            if agent_config and "skills" in agent_config:
-                                possible_skills = agent_config["skills"]
-                                for skill_name in possible_skills:
-                                    skill = skill_mgr.get_skill(skill_name)
-                                    if skill:
-                                        for tool in skill.get_tools():
-                                            if getattr(tool, 'name', None) == tool_name:
-                                                log_step(f"🧩 Executing Local Skill Tool: {tool_name}", symbol="🧩")
-                                                if asyncio.iscoroutinefunction(tool.func):
-                                                    skill_tool_result = await tool.func(**tool_args)
-                                                else:
-                                                    skill_tool_result = tool.func(**tool_args)
-                                                tool_executed = True
-                                                break
-                                    if tool_executed:
+                    if agent_config and "skills" in agent_config:
+                        possible_skills = agent_config["skills"]
+                        for skill_name in possible_skills:
+                            skill = skill_mgr.get_skill(skill_name)
+                            if skill:
+                                for tool in skill.get_tools():
+                                    if getattr(tool, 'name', None) == tool_name:
+                                        log_step(f"🧩 Executing Local Skill Tool: {tool_name}", symbol="🧩")
+                                        if asyncio.iscoroutinefunction(tool.func):
+                                            skill_tool_result = await tool.func(**tool_args)
+                                        else:
+                                            skill_tool_result = tool.func(**tool_args)
+                                        tool_executed = True
                                         break
+                            if tool_executed:
+                                break
 
-                        except Exception as e:
-                            log_error(f"Local Skill Tool Execution Failed: {e}")
-                            tool_executed = True
-                            skill_tool_result = f"Error executing local skill tool: {str(e)}"
+                except Exception as e:
+                    log_error(f"Local Skill Tool Execution Failed: {e}")
+                    tool_executed = True
+                    skill_tool_result = f"Error executing local skill tool: {str(e)}"
 
-                        # Execute tool via MCP when not a local skill
-                        if not tool_executed:
-                            try:
-                                mcp_result = await self.multi_mcp.route_tool_call(tool_name, tool_args)
-                                if hasattr(mcp_result, 'content'):
-                                    if isinstance(mcp_result.content, list):
-                                        skill_tool_result = "\n".join([str(item.text) for item in mcp_result.content if hasattr(item, "text")])
-                                    else:
-                                        skill_tool_result = str(mcp_result.content)
-                                else:
-                                    skill_tool_result = str(mcp_result)
-                            except Exception as e:
-                                log_error(f"Tool Execution Failed: {e}")
-                                current_input = build_agent_input(
-                                    instruction="The tool execution failed. Try a different approach or tool.",
-                                    previous_output=output,
-                                    iteration_context={"tool_result": f"Error: {str(e)}"}
-                                )
-                                continue
+                # 1b. Direct search bypass (parallel deep research)
+                if not tool_executed and direct_search and tool_name == "search_web_with_text_content":
+                    try:
+                        query = tool_args.get("string", "")
+                        num_results = tool_args.get("integer", 5)
+                        log_step(f"⚡ Direct search (parallel): {query[:60]}...", symbol="⚡")
 
-                        # Feed tool result back to agent for next iteration
-                        result_str = str(skill_tool_result)
-                        iterations_data[-1]["tool_result"] = result_str
-                        log_step(f"✅ Tool Result", payload={"result_preview": result_str[:200] + "..."}, symbol="🔌")
-                        instruction = output.get("thought", "Use the tool result to generate the final output.")
-                        if turn == max_turns - 1:
-                            instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
+                        total_sources = min(max(num_results, 1), 20)
+                        progress_task = asyncio.create_task(self._emit_source_progress_helper(step_id, total_sources))
+
+                        skill_tool_result = await self._direct_web_search(query, num_results)
+
+                        if progress_task and not progress_task.done():
+                            progress_task.cancel()
+                        tool_executed = True
+                    except Exception as e:
+                        log_error(f"Direct search failed, falling back to MCP: {e}")
+                        # tool_executed stays False → falls through to MCP
+
+                # 1c. Fallback to MultiMCP
+                if not tool_executed:
+                    try:
+                        # Stream per-source progress for search tools
+                        progress_task = None
+                        if tool_name == "search_web_with_text_content":
+                            total_sources = min(max(tool_args.get("integer", 5), 1), 20)
+                            async def _emit_source_progress():
+                                # Sources extract concurrently (~1-8s each).
+                                # Emit progress ticks so the UI shows "Reading source N/M..."
+                                interval = max(0.6, 8.0 / total_sources)
+                                for i in range(1, total_sources + 1):
+                                    await asyncio.sleep(interval)
+                                    await event_bus.publish("source_progress", "AgentLoop4", {
+                                        "step_id": step_id,
+                                        "current": i,
+                                        "total": total_sources,
+                                        "message": f"Reading source {i}/{total_sources}..."
+                                    })
+                            progress_task = asyncio.create_task(_emit_source_progress())
+
+                        # Execute tool via MultiMCP
+                        mcp_result = await self.multi_mcp.route_tool_call(tool_name, tool_args)
+
+                        # Cancel progress emitter once tool completes
+                        if progress_task and not progress_task.done():
+                            progress_task.cancel()
+
+                        # Serialize result content
+                        if hasattr(mcp_result, 'content'):
+                            if isinstance(mcp_result.content, list):
+                                skill_tool_result = "\n".join([str(item.text) for item in mcp_result.content if hasattr(item, "text")])
+                            else:
+                                skill_tool_result = str(mcp_result.content)
+                        else:
+                            skill_tool_result = str(mcp_result)
+
+                    except Exception as e:
+                        if progress_task and not progress_task.done():
+                            progress_task.cancel()
+                        log_error(f"Tool Execution Failed: {e}")
+                        # Feed error back to agent
                         current_input = build_agent_input(
-                            instruction=instruction,
+                            instruction="The tool execution failed. Try a different approach or tool.",
                             previous_output=output,
-                            iteration_context={"tool_result": result_str}
+                            iteration_context={"tool_result": f"Error: {str(e)}"}
                         )
                         continue
 
-                    # 2. Check for call_self (Legacy/Advanced recursion)
-                    elif output.get("call_self"):
-                        iter_span.set_attribute("trigger", "call_self")
-                        if context._has_executable_code(output):
-                            execution_result = await context._auto_execute_code(step_id, output)
-                            iterations_data[-1]["execution_result"] = execution_result
-                            if execution_result.get("status") == "success":
-                                execution_data = execution_result.get("result", {})
-                                inputs = {**inputs, **execution_data}
-                        current_input = build_agent_input(
-                            instruction=output.get("next_instruction", "Continue the task"),
-                            previous_output=output,
-                            iteration_context=output.get("iteration_context", {})
-                        )
-                        continue
+                # Common success path
+                result_str = str(skill_tool_result)
 
-                    # 3. Final output (no tool/self call) - execute code if present, then return
-                    else:
-                        iter_span.set_attribute("trigger", "final")
-                        if context.stop_requested:
-                            return {"success": False, "error": "Stop requested"}
-                        if context._has_executable_code(output):
-                            execution_result = await context._auto_execute_code(step_id, output)
-                            iterations_data[-1]["execution_result"] = execution_result
-                            # Merge so mark_done skips re-execution (avoids duplicate code.execution span)
-                            output = context._merge_execution_results(output, execution_result)
-                        return {"success": True, "output": output}
+                # ✅ SAVE RESULT TO HISTORY
+                iterations_data[-1]["tool_result"] = result_str
 
-            log_error(f"Max iterations ({max_turns}) reached for {step_id}. Returning last output (incomplete).")
+                # 📡 EMIT TOOL RESULT EVENT with source count
+                source_count = 0
+                try:
+                    import json as _json
+                    parsed = _json.loads(result_str) if result_str.startswith("[") else None
+                    if isinstance(parsed, list):
+                        source_count = len(parsed)
+                except Exception:
+                    pass
+                await event_bus.publish("tool_result", "AgentLoop4", {
+                    "step_id": step_id,
+                    "tool_name": tool_name,
+                    "source_count": source_count,
+                    "message": f"Processed {source_count} sources from {tool_name}" if source_count else f"Tool {tool_name} completed"
+                })
+
+                # Log result (truncated)
+                log_step(f"✅ Tool Result", payload={"result_preview": result_str[:200] + "..."}, symbol="🔌")
+
+                # Prepare input for next iteration
+                instruction = output.get("thought", "Use the tool result to generate the final output.")
+                if turn == max_turns - 1:
+                    instruction += " \n\n⚠️ WARNING: This is your FINAL turn. You MUST provide the final 'output' now. Do not call any more tools. Summarize what you have."
+
+                current_input = build_agent_input(
+                    instruction=instruction,
+                    previous_output=output,
+                    iteration_context={"tool_result": result_str}
+                )
+                continue
+
+            # 2. Check for call_self (Legacy/Advanced recursion)
+            elif output.get("call_self"):
+                # Handle code execution if needed
+                if context._has_executable_code(output):
+                    execution_result = await context._auto_execute_code(step_id, output)
+
+                    # ✅ SAVE RESULT TO HISTORY
+                    iterations_data[-1]["execution_result"] = execution_result
+
+                    if execution_result.get("status") == "success":
+                        execution_data = execution_result.get("result", {})
+                        if isinstance(execution_data, dict):
+                            inputs = {**inputs, **execution_data}
+                        else:
+                            inputs["execution_result"] = execution_data
+
+                # Prepare input for next iteration
+                current_input = build_agent_input(
+                    instruction=output.get("next_instruction", "Continue the task"),
+                    previous_output=output,
+                    iteration_context=output.get("iteration_context", {})
+                )
+                continue
+
+            # 3. Success (No tool call, just output) - Execute code for final iteration
+            else:
+                # ✅ LAST-SECOND STOP CHECK
+                if context.stop_requested:
+                    return {"success": False, "error": "Stop requested"}
+
+                # Execute code if present and merge into output
+                if context._has_executable_code(output):
+                    execution_result = await context._auto_execute_code(step_id, output)
+                    iterations_data[-1]["execution_result"] = execution_result
+                    # Merge execution results into the output and flag as already executed
+                    # so mark_done doesn't re-execute
+                    output = context._merge_execution_results(output, execution_result)
+                    output["_code_already_executed"] = True
+                    result = {**result, "output": output}
+                return result
+
+        # If loop finishes without returning (max turns reached): Return PARTIAL SUCCESS to allow graph continuation
+        log_error(f"Max iterations ({max_turns}) reached for {step_id}. Returning last output (incomplete).")
         last_output = iterations_data[-1]["output"] if iterations_data else {"error": "No output produced"}
-        # Ensure it has a valid structure if possible, or just pass it through
         return {"success": True, "output": last_output}
 
     async def _handle_failures(self, context):

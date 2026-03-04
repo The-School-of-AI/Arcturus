@@ -8,6 +8,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import AgentNode from './AgentNode';
 import CustomEdge from './CustomEdge';
+import ResearchProgress from './ResearchProgress';
 import { useAppStore } from '@/store';
 import { API_BASE } from '@/lib/api';
 
@@ -95,6 +96,7 @@ export const GraphCanvas: React.FC = () => {
             >
                 <Background color="#888" gap={20} size={1} className="opacity-20" />
                 <Controls className="glass-panel border-border fill-white" />
+                <ResearchProgress />
                 <div className="absolute top-4 right-4 z-50">
                     <button
                         onClick={() => window.open(`${API_BASE}/optimizer/skeletons`, '_blank')}

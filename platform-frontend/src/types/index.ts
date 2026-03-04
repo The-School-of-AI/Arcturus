@@ -12,6 +12,7 @@ export interface Run {
     model: string;
     ragEnabled: boolean;
     total_tokens?: number;
+    mode?: 'standard' | 'deep_research';
 }
 
 export interface AgentNodeData {

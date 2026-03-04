@@ -10,6 +10,7 @@ export interface API_Run {
     query: string;
     model?: string;  // Model used for this run
     total_tokens?: number;
+    mode?: string;  // "standard" or "deep_research"
 }
 
 export interface API_RunDetail {
@@ -32,14 +33,17 @@ export const api = {
             status: r.status as Run['status'],
             model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true,
-            total_tokens: r.total_tokens
+            total_tokens: r.total_tokens,
+            mode: (r.mode as Run['mode']) || 'standard'
         }));
     },
 
     // Trigger new run (model optional - backend uses settings default if not provided)
-    createRun: async (query: string, model?: string): Promise<API_Run> => {
-        const payload: { query: string; model?: string } = { query };
+    createRun: async (query: string, model?: string, mode?: string, focusMode?: string): Promise<API_Run> => {
+        const payload: { query: string; model?: string; mode?: string; focus_mode?: string } = { query };
         if (model) payload.model = model;
+        if (mode) payload.mode = mode;
+        if (focusMode) payload.focus_mode = focusMode;
         const res = await axios.post(`${API_BASE}/runs`, payload);
         return res.data;
     },

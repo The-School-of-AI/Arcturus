@@ -103,6 +103,27 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
         }
     }, [request]);
 
+    const handleClose = useCallback(() => {
+        if (!request) return;
+        setIsVisible(false);
+        onDecision('deny');
+    }, [request, onDecision]);
+
+    // Close on Escape key
+    useEffect(() => {
+        if (!request || !isVisible) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                handleClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [request, isVisible, handleClose]);
+
     const handleDecision = useCallback((action: PermissionDecision['action']) => {
         if (!request) return;
 
@@ -144,8 +165,8 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
     );
 
     return (
-        <div className={containerClasses}>
-            <div className={cardClasses}>
+        <div className={containerClasses} onClick={variant === 'modal' ? handleClose : undefined}>
+            <div className={cardClasses} onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className={cn(
                     "px-5 py-4 flex items-center gap-3 border-b",
@@ -158,7 +179,7 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
                             <Shield className={cn("w-5 h-5", riskColors[request.risk])} />
                         )}
                     </div>
-                    <div>
+                    <div className="flex-1">
                         <h3 className="font-semibold text-foreground">
                             {variant === 'review' ? 'Review Changes' : 'Agent Permission Request'}
                         </h3>
@@ -166,6 +187,13 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
                             {request.risk.toUpperCase()} RISK
                         </p>
                     </div>
+                    <button
+                        onClick={handleClose}
+                        className="p-1.5 rounded-lg hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Close"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
 
                 {/* Content */}

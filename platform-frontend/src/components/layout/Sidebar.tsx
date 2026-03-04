@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
@@ -109,6 +110,17 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isOptimizing, setIsOptimizing] = React.useState(false);
+    const [researchMode, setResearchMode] = React.useState<"standard" | "deep_research">("standard");
+    const [focusMode, setFocusMode] = React.useState("general");
+
+    // Reset dialog state when closed
+    React.useEffect(() => {
+        if (!isNewRunOpen) {
+            setNewQuery("");
+            setResearchMode("standard");
+            setFocusMode("general");
+        }
+    }, [isNewRunOpen]);
 
     // Filter runs
     const filteredRuns = React.useMemo(() => {
@@ -122,8 +134,11 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const handleStartRun = async () => {
         if (!newQuery.trim()) return;
         setIsNewRunOpen(false);
-        await createNewRun(newQuery);
+        const fm = researchMode === 'deep_research' ? focusMode : undefined;
+        await createNewRun(newQuery, undefined, researchMode, fm);
         setNewQuery("");
+        setResearchMode("standard");
+        setFocusMode("general");
     };
 
     return (
@@ -227,6 +242,36 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                     </Button>
                                                 </div>
                                             </div>
+                                            {/* Research Mode — Toggle + Inline Focus */}
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setResearchMode(researchMode === "standard" ? "deep_research" : "standard")}
+                                                    className={cn(
+                                                        "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 border",
+                                                        researchMode === "deep_research"
+                                                            ? "bg-primary/15 text-primary border-primary/30 shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
+                                                            : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:border-border"
+                                                    )}
+                                                >
+                                                    <Search className="w-3 h-3" />
+                                                    Deep Research
+                                                </button>
+                                                {researchMode === 'deep_research' && (
+                                                    <Select value={focusMode} onValueChange={setFocusMode}>
+                                                        <SelectTrigger className="h-[30px] w-auto min-w-[110px] bg-muted/50 border-border/50 text-foreground text-xs rounded-full px-3 animate-in fade-in slide-in-from-left-2 duration-200">
+                                                            <SelectValue placeholder="General" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="general">General</SelectItem>
+                                                            <SelectItem value="academic">Academic</SelectItem>
+                                                            <SelectItem value="news">News</SelectItem>
+                                                            <SelectItem value="code">Code</SelectItem>
+                                                            <SelectItem value="finance">Finance</SelectItem>
+                                                            <SelectItem value="writing">Writing</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            </div>
                                         </div>
                                         <DialogFooter>
                                             <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
@@ -266,6 +311,11 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                                 : "text-foreground group-hover:text-foreground/80"
                                                     )}>
                                                         {run.name}
+                                                        {run.mode === 'deep_research' && (
+                                                            <span className="inline-flex ml-2.5 align-middle px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-tight bg-primary/15 text-primary border border-primary/20">
+                                                                Deep Research
+                                                            </span>
+                                                        )}
                                                     </p>
                                                 </div>
                                                 {/* Build App Button - Top Right */}

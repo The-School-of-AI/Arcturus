@@ -258,6 +258,8 @@ app.include_router(nexus_router.router, prefix="/api")
 from routers import studio as studio_router
 from routers import admin as admin_router
 app.include_router(studio_router.router, prefix="/api")
+from routers import search as search_router
+app.include_router(search_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
 from routers import voice as voice_router
 app.include_router(voice_router.router, prefix="/api")

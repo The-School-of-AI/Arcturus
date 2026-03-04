@@ -183,14 +183,18 @@ async def pull_ollama_model(request: PullModelRequest):
 
 @router.get("/gemini/status")
 async def get_gemini_status():
-    """Check if Gemini API key is configured via environment variable"""
+    """Check if Gemini and OpenRouter API keys are configured"""
     try:
         import os
-        api_key = os.environ.get("GEMINI_API_KEY", "")
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
         return {
             "status": "success",
-            "configured": bool(api_key),
-            "key_preview": f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else None
+            "configured": bool(gemini_key) or bool(openrouter_key),
+            "gemini_configured": bool(gemini_key),
+            "openrouter_configured": bool(openrouter_key),
+            "gemini_key_preview": f"{gemini_key[:8]}...{gemini_key[-4:]}" if len(gemini_key) > 12 else None,
+            "openrouter_key_preview": f"{openrouter_key[:8]}...{openrouter_key[-4:]}" if len(openrouter_key) > 12 else None,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

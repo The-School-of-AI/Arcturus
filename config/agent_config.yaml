@@ -4,6 +4,7 @@ agents:
     mcp_servers: []
     skills:
     - planner
+    - deep_research
     - web_clipper
     - research_scientist
     - agent-manager-skill
@@ -31,7 +32,9 @@ agents:
     - git_commit
     - firecrawl-scraper
     description: |
-      Thinks, writes, and automatically executes required code in a single atomic step.
+      Executes Python code for computation, data analysis, file manipulation, and chart generation.
+      Use ONLY for tasks requiring code execution (calculations, data transforms, plotting).
+      Do NOT use for web searches or data retrieval — use RetrieverAgent instead.
   RetrieverAgent:
     model: gemini
     mcp_servers:
@@ -40,7 +43,10 @@ agents:
     - yahoo_finance
     skills:
     - retriever
-    description: Gathers raw external or document-based info.
+    description: |
+      Fetches data from web searches, URLs, documents, RAG, and yahoo_finance tools.
+      Use for ALL web search, content extraction, and data retrieval tasks.
+      This is the primary agent for gathering external information.
   SummarizerAgent:
     model: gemini
     mcp_servers:
@@ -48,19 +54,23 @@ agents:
     - rag
     skills:
     - summarizer
-    description: Synthesizes final answers.
+    description: |
+      Synthesizes gathered data into comprehensive narratives with inline citations.
+      Use after data retrieval to merge multiple sources into a cohesive answer.
   DistillerAgent:
     model: gemini
     mcp_servers: []
     skills:
     - distiller
-    description: Synthesizes summaries or bullets.
+    description: Condenses long text into concise bullet-point summaries.
   ThinkerAgent:
     model: gemini
     mcp_servers: []
     skills:
     - thinker
-    description: Clusters, compares, or resolves logic.
+    description: |
+      Performs logical reasoning, comparison, gap analysis, query decomposition, and clustering.
+      Use for analysis tasks that require reasoning but no code execution or data retrieval.
   FormatterAgent:
     model: gemini
     mcp_servers: []

@@ -1,6 +1,4 @@
 import os
-import time
-import asyncio
 import json
 import yaml
 from pathlib import Path
@@ -17,19 +15,39 @@ MODELS_JSON = ROOT / "config" / "models.json"
 MODELS_YAML = ROOT / "config" / "models.yaml"
 PROFILE_YAML = ROOT / "config" / "profiles.yaml"
 
+# OpenRouter config
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_DEFAULT_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025"
+
+# Map bare Gemini model names to OpenRouter model IDs
+GEMINI_TO_OPENROUTER = {
+    "gemini-2.5-flash": "google/gemini-2.5-flash",
+    "gemini-2.5-flash-lite": "google/gemini-2.5-flash-lite",
+    "gemini-2.5-pro": "google/gemini-2.5-pro",
+    "gemini-2.0-flash": "google/gemini-2.0-flash-001",
+    "gemini-3.0-flash": "google/gemini-3-flash-preview",
+    "gemini-3.0-pro": "google/gemini-3-pro-preview",
+}
+
+def _resolve_openrouter_model(model_name: str) -> str:
+    """Convert a bare Gemini model name to its OpenRouter equivalent."""
+    if model_name.startswith("google/"):
+        return model_name  # Already an OpenRouter model ID
+    return GEMINI_TO_OPENROUTER.get(model_name, OPENROUTER_DEFAULT_MODEL)
+
 class ModelManager:
     def __init__(self, model_name: str = None, provider: str = None, role: str = None):
         """
         Initialize ModelManager with flexible model specification.
-        
+
         Args:
             model_name: The model to use (key from models.json or raw name).
-            provider: Optional explicit provider ("gemini" or "ollama").
+            provider: Optional explicit provider ("gemini", "openrouter", or "ollama").
             role: Optional role ("planner", "verifier") from models.yaml.
         """
         self.config = json.loads(MODELS_JSON.read_text())
         self.profile = yaml.safe_load(PROFILE_YAML.read_text())
-        
+
         # Load Role Config
         if MODELS_YAML.exists():
             self.role_config = yaml.safe_load(MODELS_YAML.read_text())
@@ -40,11 +58,8 @@ class ModelManager:
         if role:
             if role not in self.role_config.get("roles", {}):
                 raise ValueError(f"Unknown role: '{role}'. Available: {list(self.role_config.get('roles', {}).keys())}")
-            
-            # Override model_name with the one defined for the role
+
             model_name = self.role_config["roles"][role]
-            # Verify explicit provider setting isn't conflicting? 
-            # We assume role config implies the correct provider via the model definition or name.
 
         # Load settings for Ollama URL
         try:
@@ -53,22 +68,31 @@ class ModelManager:
         except:
             self.ollama_base_url = "http://127.0.0.1:11434"
 
-        # 🎯 NEW: Support explicit provider specification (from settings)
         if provider:
-            self.model_type = provider
             self.text_model_key = model_name or "gemini-2.5-flash"
-            
+
             if provider == "gemini":
-                # Gemini: model_name is the actual Gemini model like "gemini-2.5-flash"
+                # Use native Google Gemini API
+                self.model_type = "gemini"
                 self.model_info = {
                     "type": "gemini",
                     "model": self.text_model_key,
                     "api_key_env": "GEMINI_API_KEY"
                 }
-                api_key = os.getenv("GEMINI_API_KEY")
-                self.client = genai.Client(api_key=api_key)
+                self.client = None
+            elif provider == "openrouter":
+                # Use OpenRouter API
+                self.model_type = "openrouter"
+                resolved_model = _resolve_openrouter_model(self.text_model_key)
+                self.model_info = {
+                    "type": "openrouter",
+                    "model": resolved_model,
+                    "api_key_env": "OPENROUTER_API_KEY",
+                    "base_url": OPENROUTER_BASE_URL
+                }
+                self.client = None
             elif provider == "ollama":
-                # Ollama: model_name is the Ollama model like "phi4" or "llama3:8b"
+                self.model_type = "ollama"
                 self.model_info = {
                     "type": "ollama",
                     "model": self.text_model_key,
@@ -77,32 +101,37 @@ class ModelManager:
                         "chat": f"{self.ollama_base_url}/api/chat"
                     }
                 }
-                self.client = None  # Ollama uses HTTP, no client needed
+                self.client = None
             else:
                 raise ValueError(f"Unknown provider: {provider}")
         else:
-            # 🔄 LEGACY: Lookup in models.json by key
+            # LEGACY: Lookup in models.json by key
             if model_name:
                 self.text_model_key = model_name
             else:
                 self.text_model_key = self.profile["llm"]["text_generation"]
-            
-            # Validate that the model exists in config
+
             if self.text_model_key not in self.config["models"]:
                 available_models = list(self.config["models"].keys())
                 raise ValueError(f"Model '{self.text_model_key}' not found in models.json. Available: {available_models}")
-                
+
             self.model_info = self.config["models"][self.text_model_key]
             self.model_type = self.model_info["type"]
-            self.config_from_file = True # Flag to indicate this came from models.json
+            self.config_from_file = True
 
-            # Initialize client based on model type
+            # Native Gemini type from models.json
             if self.model_type == "gemini":
-                api_key = os.getenv("GEMINI_API_KEY")
-                self.client = genai.Client(api_key=api_key)
+                self.model_info = {
+                    "type": "gemini",
+                    "model": self.model_info.get("model", "gemini-2.5-flash"),
+                    "api_key_env": self.model_info.get("api_key_env", "GEMINI_API_KEY")
+                }
+                self.client = None
+            elif self.model_type == "openrouter":
+                self.client = None
             # Ollama doesn't need a persistent client
 
-        # 🔒 STRICT MODE ENFORCEMENT
+        # STRICT MODE ENFORCEMENT
         if role == "verifier":
             enforce_local = self.role_config.get("settings", {}).get("enforce_local_verifier", False)
             if enforce_local and self.model_type != "ollama":
@@ -125,6 +154,8 @@ class ModelManager:
                 # Route to provider-specific implementation
                 if self.model_type == "gemini":
                     result = await self._gemini_generate(prompt)
+                elif self.model_type == "openrouter":
+                    result = await self._openrouter_generate(prompt)
                 elif self.model_type == "ollama":
                     result = await self._ollama_generate(prompt)
                 else:
@@ -164,47 +195,55 @@ class ModelManager:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 raise
+        """Generate content with support for text and images.
+
+        Contents can contain:
+        - str: Text content
+        - PIL.Image: Image to process (will be base64-encoded for Ollama)
+        """
+        if self.model_type == "gemini":
+            return await self._gemini_generate_content(contents)
+        elif self.model_type == "openrouter":
+            return await self._openrouter_generate_content(contents)
+        elif self.model_type == "ollama":
+            return await self._ollama_generate_content(contents)
+
+        raise NotImplementedError(f"Unsupported model type: {self.model_type}")
 
     async def _ollama_generate_content(self, contents: list) -> str:
         """Generate content with Ollama, supporting multimodal models like gemma3, llava, etc."""
         import base64
         import io
         from PIL import Image as PILImage
-        
+
         text_parts = []
         images_base64 = []
-        
+
         for content in contents:
             if isinstance(content, str):
                 text_parts.append(content)
             elif hasattr(content, 'save'):  # PIL Image check
-                # Convert PIL Image to base64
                 try:
                     img = content
-                    # Convert to RGB if necessary
                     if img.mode in ('RGBA', 'P'):
                         img = img.convert('RGB')
-                    
-                    # Resize if too large (Ollama has limits)
+
                     MAX_DIM = 1024
                     if img.width > MAX_DIM or img.height > MAX_DIM:
                         img.thumbnail((MAX_DIM, MAX_DIM), PILImage.Resampling.LANCZOS)
-                    
-                    # Encode to base64
+
                     buf = io.BytesIO()
                     img.save(buf, format="JPEG", quality=85)
                     encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
                     images_base64.append(encoded)
                 except Exception as e:
                     print(f"⚠️ Failed to encode image for Ollama: {e}")
-        
+
         prompt = "\n".join(text_parts)
-        
+
         if images_base64:
-            # Use Ollama's multimodal format with images array
             return await self._ollama_generate_with_images(prompt, images_base64)
         else:
-            # Text-only fallback
             return await self._ollama_generate(prompt)
 
     async def _ollama_generate_with_images(self, prompt: str, images: list) -> str:
@@ -217,7 +256,7 @@ class ModelManager:
                     json={
                         "model": self.model_info["model"],
                         "prompt": prompt,
-                        "images": images,  # Base64 encoded images
+                        "images": images,
                         "stream": False
                     }
                 ) as response:
@@ -227,61 +266,8 @@ class ModelManager:
         except Exception as e:
             raise RuntimeError(f"Ollama multimodal generation failed: {str(e)}")
 
-    # --- Rate Limiting Helper ---
-    _last_call = 0
-    _lock = asyncio.Lock()
-
-    async def _wait_for_rate_limit(self):
-        """Enforce ~15 RPM limit for Gemini (4s interval)"""
-        async with ModelManager._lock:
-            now = time.time()
-            elapsed = now - ModelManager._last_call
-            if elapsed < 4.5: # 4.5s buffer for safety
-                sleep_time = 4.5 - elapsed
-                # print(f"[Rate Limit] Sleeping for {sleep_time:.2f}s...")
-                await asyncio.sleep(sleep_time)
-            ModelManager._last_call = time.time()
-
-
-    async def _gemini_generate(self, prompt: str) -> str:
-        await self._wait_for_rate_limit()
-        try:
-            # ✅ CORRECT: Use synchronous SDK client in thread to bypass aiohttp/DNS issues common on macOS
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model_info["model"],
-                contents=prompt
-            )
-            return response.text.strip()
-
-        except ServerError as e:
-            # ✅ FIXED: Raise the exception instead of returning it
-            raise e
-        except Exception as e:
-            # ✅ Handle other potential errors
-            raise RuntimeError(f"Gemini generation failed: {str(e)}")
-
-    async def _gemini_generate_content(self, contents: list) -> str:
-        """Generate content with support for text and images using Gemini SDK"""
-        try:
-            # ✅ Use synchronous SDK client in thread (text + images)
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model_info["model"],
-                contents=contents
-            )
-            return response.text.strip()
-
-        except ServerError as e:
-            # ✅ FIXED: Raise the exception instead of returning it
-            raise e
-        except Exception as e:
-            # ✅ Handle other potential errors
-            raise RuntimeError(f"Gemini content generation failed: {str(e)}")
-
     async def _ollama_generate(self, prompt: str) -> str:
         try:
-            # ✅ Use aiohttp for truly async requests
             import aiohttp
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -293,3 +279,87 @@ class ModelManager:
                     return result["response"].strip()
         except Exception as e:
             raise RuntimeError(f"Ollama generation failed: {str(e)}")
+
+    async def _openrouter_generate(self, prompt: str) -> str:
+        """Generate text using OpenRouter's OpenAI-compatible API."""
+        try:
+            import aiohttp
+            api_key = os.getenv(self.model_info.get("api_key_env", "OPENROUTER_API_KEY"))
+            base_url = self.model_info.get("base_url", OPENROUTER_BASE_URL)
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self.model_info["model"],
+                        "messages": [{"role": "user", "content": prompt}],
+                    }
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    return result["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            raise RuntimeError(f"OpenRouter generation failed: {str(e)}")
+
+    async def _openrouter_generate_content(self, contents: list) -> str:
+        """Generate content with OpenRouter, extracting text from multimodal inputs."""
+        text_parts = []
+        for content in contents:
+            if isinstance(content, str):
+                text_parts.append(content)
+        prompt = "\n".join(text_parts)
+        return await self._openrouter_generate(prompt)
+
+    async def _gemini_generate(self, prompt: str) -> str:
+        """Generate text using the native Google Gemini API."""
+        try:
+            from google import genai
+            api_key = os.getenv(self.model_info.get("api_key_env", "GEMINI_API_KEY"))
+            if not api_key:
+                raise RuntimeError("GEMINI_API_KEY not set in environment")
+            client = genai.Client(api_key=api_key)
+            response = await client.aio.models.generate_content(
+                model=self.model_info["model"],
+                contents=prompt
+            )
+            return response.text.strip()
+        except Exception as e:
+            raise RuntimeError(f"Gemini generation failed: {str(e)}")
+
+    async def _gemini_generate_content(self, contents: list) -> str:
+        """Generate content with native Gemini API, supporting text and images."""
+        try:
+            import base64
+            import io
+            from google import genai
+            from google.genai import types
+
+            api_key = os.getenv(self.model_info.get("api_key_env", "GEMINI_API_KEY"))
+            if not api_key:
+                raise RuntimeError("GEMINI_API_KEY not set in environment")
+            client = genai.Client(api_key=api_key)
+
+            parts = []
+            for content in contents:
+                if isinstance(content, str):
+                    parts.append(types.Part.from_text(text=content))
+                elif hasattr(content, 'save'):  # PIL Image
+                    img = content
+                    if img.mode in ('RGBA', 'P'):
+                        img = img.convert('RGB')
+                    buf = io.BytesIO()
+                    img.save(buf, format="JPEG", quality=85)
+                    image_bytes = buf.getvalue()
+                    parts.append(types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"))
+
+            response = await client.aio.models.generate_content(
+                model=self.model_info["model"],
+                contents=parts
+            )
+            return response.text.strip()
+        except Exception as e:
+            raise RuntimeError(f"Gemini multimodal generation failed: {str(e)}")

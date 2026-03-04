@@ -1,12 +1,16 @@
 import random
 import asyncio
 import httpx
+import os
 from typing import List
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import urllib.parse
 from playwright.async_api import async_playwright
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # MCP Protocol Safety: Redirect print to stderr
 def print(*args, **kwargs):
@@ -14,6 +18,8 @@ def print(*args, **kwargs):
     sys.stderr.flush()
 
 SEARCH_ENGINES = [
+    "brave_api",
+    "google_custom_search",
     "duck_http",
     "duck_playwright",
     "bing_playwright",
@@ -52,6 +58,80 @@ def get_random_headers():
         "Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 Version/16.6 Mobile Safari/604.1"
     ]
     return {"User-Agent": random.choice(user_agents)}
+
+async def use_brave_api(query: str, limit: int = 10, freshness: str = "") -> List[str]:
+    """Search using Brave Search API. Returns list of URLs."""
+    api_key = os.getenv("BRAVE_API_KEY")
+    if not api_key:
+        print("[brave_api] BRAVE_API_KEY not set, skipping")
+        return []
+
+    await rate_limiter.acquire("brave_api")
+
+    url = "https://api.search.brave.com/res/v1/web/search"
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": api_key,
+    }
+    params = {"q": query, "count": min(limit, 20)}
+    if freshness:
+        params["freshness"] = freshness
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=headers, params=params, timeout=15.0)
+        r.raise_for_status()
+        data = r.json()
+
+        links = []
+        web_results = data.get("web", {}).get("results", [])
+        for result in web_results:
+            href = result.get("url", "")
+            if href and href.startswith("http") and href not in links:
+                links.append(href)
+
+        if not links:
+            print("[brave_api] No links found in results")
+
+        return links
+
+_FRESHNESS_TO_DATE_RESTRICT = {"pd": "d1", "pw": "w1", "pm": "m1", "py": "y1"}
+
+async def use_google_custom_search(query: str, limit: int = 10, freshness: str = "") -> List[str]:
+    """Search using Google Custom Search JSON API. Returns list of URLs."""
+    api_key = os.getenv("GOOGLE_CUSTOM_SEARCH_API_KEY")
+    engine_id = os.getenv("GOOGLE_CUSTOM_SEARCH_ENGINE_ID")
+    if not api_key or not engine_id:
+        print("[google_custom_search] API key or engine ID not set, skipping")
+        return []
+
+    await rate_limiter.acquire("google_custom_search")
+
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "key": api_key,
+        "cx": engine_id,
+        "q": query,
+        "num": min(limit, 10),
+    }
+    if freshness and freshness in _FRESHNESS_TO_DATE_RESTRICT:
+        params["dateRestrict"] = _FRESHNESS_TO_DATE_RESTRICT[freshness]
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, params=params, timeout=15.0)
+        r.raise_for_status()
+        data = r.json()
+
+        links = []
+        for item in data.get("items", []):
+            href = item.get("link", "")
+            if href and href.startswith("http") and href not in links:
+                links.append(href)
+
+        if not links:
+            print("[google_custom_search] No links found in results")
+
+        return links
 
 async def use_duckduckgo_http(query: str) -> List[str]:
     await rate_limiter.acquire("duck_http")
@@ -163,14 +243,15 @@ async def use_playwright_search(query: str, engine: str) -> List[str]:
 
     return urls
 
-async def smart_search(query: str, limit: int = 5) -> List[str]:
-    # random.shuffle(SEARCH_ENGINES) # Disable shuffle to prioritize duck_http
-
+async def smart_search(query: str, limit: int = 5, freshness: str = "") -> List[str]:
     for engine in SEARCH_ENGINES:
         print(f"Trying engine: {engine}")
         try:
-            if engine == "duck_http":
-                # Only use duck_http for first attempt if query likely to succeed
+            if engine == "brave_api":
+                results = await use_brave_api(query, limit=limit, freshness=freshness)
+            elif engine == "google_custom_search":
+                results = await use_google_custom_search(query, limit=limit, freshness=freshness)
+            elif engine == "duck_http":
                 results = await use_duckduckgo_http(query)
             else:
                 results = await use_playwright_search(query, engine)
