@@ -536,7 +536,7 @@ class TTSService:
 
         if not self._speech_key or not self._speech_region:
             print("⚠️ [TTS] AZURE_SPEECH_KEY or AZURE_SPEECH_REGION not set. "
-                  "TTS will log to console only.")
+                  "Add them to the project root .env. TTS will log to console only.")
             return
 
         try:

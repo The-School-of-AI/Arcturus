@@ -106,11 +106,11 @@ class VoiceWakeService:
 
                 state = self.orchestrator.state if self.orchestrator else "IDLE"
 
-                # ── HARD GATE: no wake or STT during SPEAKING ─────────────────
-                # While TTS is playing, do NOT run the wake engine. Speaker output
-                # (echo) can false-trigger wake detection and interrupt without the
-                # user saying the wake word. Run wake only when not SPEAKING.
-                if state != "SPEAKING":
+                # ── HARD GATE: no wake detection during SPEAKING or DICTATING ─
+                # During SPEAKING: speaker echo can false-trigger wake detection.
+                # During DICTATING: user is actively speaking; we never want a
+                #   mid-dictation "Arcturus" to abort the session.
+                if state not in ("SPEAKING", "DICTATING"):
                     self.engine.process(pcm)
 
                 if not self.orchestrator:
@@ -126,7 +126,19 @@ class VoiceWakeService:
                     self._barge.observe_ambient(pcm)
                     self._barge.reset_speech_streak()
 
+                elif state == "DICTATING":
+                    # Feed STT continuously — all speech is raw dictation content.
+                    # Barge-in and wake detection are suppressed (on_wake already
+                    # guards against DICTATING, but skipping detect is cheaper).
+                    if self.orchestrator.stt:
+                        self.orchestrator.stt.push_audio(pcm)
+                    # Keep updating ambient floor so barge-in thresholds stay calibrated
+                    # for when dictation ends and we return to LISTENING.
+                    self._barge.observe_ambient(pcm)
+                    self._barge.reset_speech_streak()
+
                 elif state in ("IDLE", "THINKING"):
+
                     # Keep learning ambient noise while idle/thinking.
                     self._barge.observe_ambient(pcm)
                     self._barge.reset_speech_streak()
@@ -135,36 +147,45 @@ class VoiceWakeService:
                     # --- PRODUCTION BARGE-IN (Interruption) ---
                     # While speaking, we check for continuous user speech.
                     # 1. Skip if still in grace window (prevents start-of-speech echo false-triggers).
-                    if not tts_in_barge_in_grace_window():
-                        # Buffer this frame for potential STT pre-fill on barge-in.
-                        self._barge_in_buffer.append(pcm)
-
-                        # 2. Check if user is speaking over us
-                        interrupted, rms, ratio = self._barge.should_interrupt(pcm)
-                        if interrupted:
-                            print(f"⚡ [Voice] VAD Barge-in detected! (RMS: {rms:.1f}, Ratio: {ratio:.2f}x)")
-
-                            # Pre-fill STT with buffered speech BEFORE calling on_wake()
-                            # so the frames are already queued when state → LISTENING.
-                            # on_wake(BARGE_IN) deliberately skips stt.cancel() to keep them.
-                            if self.orchestrator and self.orchestrator.stt:
-                                n_frames = len(self._barge_in_buffer)
-                                for buffered_pcm in self._barge_in_buffer:
-                                    self.orchestrator.stt.push_audio(buffered_pcm)
-                                print(f"🔊 [Voice] Pre-filled STT with {n_frames} buffered frames (~{n_frames * 32}ms)")
-                            self._barge_in_buffer.clear()
-
-                            # NOW trigger wake flow — state → LISTENING, TTS cancel, nexus abort
-                            self.on_wake({"type": "BARGE_IN"})
-
-                            self._barge.reset_speech_streak()
-                            continue
-                    
-                    # 3. If TTS finished but orchestrator state is lagging
-                    if not tts_is_speaking():
+                    if tts_in_barge_in_grace_window():
+                        # Actively suppress: clear buffer and reset streak so no
+                        # energy from the TTS attack phase carries over into the
+                        # post-grace detection window.
                         self._barge_in_buffer.clear()
-                        self._barge.observe_ambient(pcm)
                         self._barge.reset_speech_streak()
+
+                    else:
+                        # 2. If TTS already finished but orchestrator state is lagging,
+                        #    don't falsely barge-in — just reset and wait for state update.
+                        if not tts_is_speaking():
+                            self._barge_in_buffer.clear()
+                            self._barge.observe_ambient(pcm)
+                            self._barge.reset_speech_streak()
+
+                        else:
+                            # Buffer this frame for potential STT pre-fill on barge-in.
+                            self._barge_in_buffer.append(pcm)
+
+                            # 3. Check if user is speaking over us
+                            interrupted, rms, ratio = self._barge.should_interrupt(pcm)
+                            if interrupted:
+                                print(f"⚡ [Voice] VAD Barge-in detected! (RMS: {rms:.1f}, Ratio: {ratio:.2f}x)")
+
+                                # Pre-fill STT with buffered speech BEFORE calling on_wake()
+                                # so the frames are already queued when state → LISTENING.
+                                # on_wake(BARGE_IN) deliberately skips stt.cancel() to keep them.
+                                if self.orchestrator and self.orchestrator.stt:
+                                    n_frames = len(self._barge_in_buffer)
+                                    for buffered_pcm in self._barge_in_buffer:
+                                        self.orchestrator.stt.push_audio(buffered_pcm)
+                                    print(f"🔊 [Voice] Pre-filled STT with {n_frames} buffered frames (~{n_frames * 32}ms)")
+                                self._barge_in_buffer.clear()
+
+                                # NOW trigger wake flow — state → LISTENING, TTS cancel, nexus abort
+                                self.on_wake({"type": "BARGE_IN"})
+
+                                self._barge.reset_speech_streak()
+                                continue
                 else:
                     self._barge_in_buffer.clear()
                     self._barge.reset_speech_streak()

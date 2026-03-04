@@ -13,12 +13,18 @@ class SkillConfig(BaseModel):
     enabled: bool = True
     params: Dict[str, Any] = {}
 
+class SkillContext(BaseModel):
+    run_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    config: Dict[str, Any] = {}
+
 class Skill(ABC):
     name: str = "base_skill"
     description: str = "Base skill description"
     
     def __init__(self, config: Optional[SkillConfig] = None):
         self.config = config or SkillConfig()
+        self.context = SkillContext()
 
     @property
     def prompt_text(self) -> str:
@@ -27,12 +33,6 @@ class Skill(ABC):
 
     def get_system_prompt_additions(self) -> str:
         """Return text to begin appended to the system prompt."""
-        # For compatibility with older skills that define on_run_start
-        if hasattr(self, 'on_run_start'):
-            # Note: old on_run_start took 'initial_prompt'. 
-            # We might need to handle this carefully if it expects it.
-            # But most just return a string to append.
-            return ""
         return ""
 
     def get_tools(self) -> List[Any]:
@@ -56,5 +56,3 @@ class Skill(ABC):
 
 # Alias for compatibility
 BaseSkill = Skill
-
-

@@ -10,6 +10,7 @@
 - **Streaming TTS**: Both Azure Speech and Piper (local) support real-time word-by-word streaming for "instant-on" responses.
 - **Sandbox Tool Aliasing**: Intelligent resolution for halluncinated tool names (e.g. `fetchsearchurls` → `fetch_search_urls`) to ensure voice commands resolve reliably.
 - **Clean Spoken Output**: Comprehensive 13-step text cleaner that strips markdown, Python error traces, and internal role labels (like "Captain") before synthesis.
+- **Dictation Mode**: Long-form speech → document input. Say "start dictation", speak freely, and the pipeline accumulates every STT fragment into a persistent `.txt` document saved under `memory/dictation/`. Retrievable via REST API.
 - **User query**: Forwarded to the nexus as a channel
 - **30-second follow-up window**: No wake word required for 30 seconds after agent response
 - Configurable engine selection and STT provider through `voice/config.py`
@@ -98,8 +99,8 @@ voice/
 ├── agent.py                   # Voice agent: LLM intent extraction via ModelManager
 ├── tts_service.py             # Azure Speech TTS (cloud, streaming)
 ├── piper_tts_service.py       # Piper TTS (local, streaming ONNX)
+├── dictation_service.py       # DictationSession: long-form speech → document buffer + autosave
 ├── .env                       # API keys (PICOVOICE_ACCESS_KEY, DEEPGRAM_API_KEY)
-├── keywords/
 │   └── hey_arcturus.ppn       # Custom Porcupine wake word model
 └── models/
     └── hey_jarvis_v0.1.tflite # OpenWakeWord model (alternate)
@@ -244,6 +245,7 @@ api.py (lifespan startup)
 | Agent integration | ✅ Done | `agent.py` uses `ModelManager` for intent extraction |
 | TTS pipeline | ✅ Done | Azure Speech and Piper-TTS (local) both support streaming playback |
 | Barge-in / Interruption | ✅ Done | Optimized VAD with STT pre-fill buffer to prevent data loss |
+| Dictation mode | ✅ Done | `DictationSession` + `DICTATING` orchestrator state; REST API: `/voice/dictation/start`, `/stop`, `/current` |
 | Error Masking | ✅ Done | TTS cleaner masks raw Python exceptions with friendly message |
 | Hallucination Handling | ✅ Done | Sandbox allows for common tool-calling spelling/casing variants |
 | `tflite-runtime` on Windows/Py3.13 | ⚠️ Blocked | OpenWakeWord requires `tflite-runtime` which is unavailable for Python 3.13 on Windows. Use Porcupine engine or switch `inference_framework="onnx"` |

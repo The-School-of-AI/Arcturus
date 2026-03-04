@@ -183,6 +183,13 @@ async def lifespan(app: FastAPI):
     try:
         if hasattr(app.state, 'orchestrator'):
             orch = app.state.orchestrator
+            # Cleanly finalise any active dictation session so the file is saved
+            if getattr(orch, 'state', None) == 'DICTATING':
+                try:
+                    orch.stop_dictation()
+                    print("✅ [Voice] Dictation session finalised on shutdown.")
+                except Exception as de:
+                    print(f"⚠️ [Voice] Dictation stop on shutdown failed: {de}")
             orch._cancel_all()
             if orch.wake:
                 orch.wake.stop()    # kills Porcupine native thread + PortAudio stream
@@ -190,6 +197,7 @@ async def lifespan(app: FastAPI):
                 orch.stt.stop()    # closes Deepgram/Whisper connection
     except Exception as e:
         print(f"⚠️ [Voice] Shutdown error: {e}")
+
 
 app = FastAPI(lifespan=lifespan)
 

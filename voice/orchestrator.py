@@ -72,9 +72,17 @@ class Orchestrator:
         # unblocks immediately instead of waiting up to 500ms on evt.wait().
         self._barge_in_event = threading.Event()
 
+        # ── Dictation session (set when state == DICTATING) ──────────────
+        from voice.dictation_service import DictationSession
+        self._dictation_session: DictationSession | None = None
+
         # ── Session logger (conversation context + JSON persistence) ──
         from voice.session_logger import VoiceSessionLogger
         self.session_logger = VoiceSessionLogger()
+
+        # ── Intent gate: classify utterances before routing to any pipeline ──
+        from voice.intent_gate import IntentRouter
+        self.intent_router = IntentRouter(self)
 
     # ─────────────── State transitions ───────────────
     def _set_state(self, new_state: str) -> None:
@@ -116,6 +124,14 @@ class Orchestrator:
         with self._lock:
             prev_state = self.state
 
+            # ── DICTATING guard ───────────────────────────────────────────
+            # While dictation is active, user speech is expected and will
+            # continuously trigger the barge-in / VAD system.  Ignore ALL
+            # wake / barge-in events so we never tear down the dictation
+            # session.  Only an explicit stop_dictation() call exits this mode.
+            if prev_state == "DICTATING":
+                return
+
             if prev_state in ("SPEAKING", "THINKING"):
                 print(f"⚡ [Orchestrator] Wake during {prev_state} → LISTENING")
             else:
@@ -148,13 +164,46 @@ class Orchestrator:
         if prev_state == "IDLE":
             self.session_logger.start_session()
 
+
     # ─────────────── STT fragment received ───────────────
     def on_text(self, fragment: str):
         """
         Called by STT every time a final transcript fragment arrives.
-        Buffers the fragment and (re)starts the silence timer.
+        - In DICTATING state: routed to the active DictationSession.
+        - In LISTENING state: buffered and (re)starts the silence timer.
         """
         with self._lock:
+            if self.state == "DICTATING":
+                if not self._dictation_session:
+                    return
+
+                # ── Voice stop commands ───────────────────────────────────
+                # Check for stop phrases BEFORE pushing to the session so
+                # the command itself is not recorded as dictation content.
+                _stop_phrases = (
+                    "stop dictation",
+                    "end dictation",
+                    "stop recording",
+                    "end recording",
+                    "finish dictation",
+                    "stop",          # bare "stop" is unambiguous inside dictation
+                )
+                _frag_lower = fragment.strip().lower().rstrip(".,!?")
+                if any(_frag_lower == phrase or _frag_lower.endswith(phrase)
+                       for phrase in _stop_phrases):
+                    print(f"⏹️ [Dictation] Stop command detected: \"{fragment}\"")
+                    # Run stop_dictation() in a daemon thread so the TTS
+                    # announcement and file-save don't block the STT callback.
+                    threading.Thread(
+                        target=self.stop_dictation,
+                        daemon=True,
+                    ).start()
+                    return
+
+                # Normal fragment — push to document buffer
+                self._dictation_session.push_fragment(fragment)
+                return
+
             if self.state != "LISTENING":
                 return
 
@@ -169,6 +218,86 @@ class Orchestrator:
             self._silence_timer.daemon = True
             self._silence_timer.start()
 
+    # ─────────────── Dictation Mode ───────────────
+
+    def start_dictation(self) -> str:
+        """
+        Enter DICTATING mode: STT stays active, but every transcript fragment
+        goes to a DictationSession document buffer instead of Nexus.
+
+        Returns the new session_id.  TTS is silenced; any in-progress run
+        is cancelled.
+        """
+        import uuid
+        from voice.dictation_service import DictationSession
+
+        with self._lock:
+            prev_state = self.state
+            session_id = f"dict_{__import__('datetime').datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+            self._dictation_session = DictationSession(session_id)
+            self._utterance_buffer.clear()
+            self._cancel_silence_timer()
+            self._set_state("DICTATING")
+
+        print(f"🎤 [Orchestrator] Dictation STARTED (session: {session_id}, prev: {prev_state})")
+
+        # Cancel any TTS and ongoing Nexus run
+        self.tts.cancel()
+        self._stop_active_run_async()
+        self.tts.speak("Dictation mode on. Speak freely, I\'m listening.")
+
+        return session_id
+
+    def stop_dictation(self) -> dict:
+        """
+        Exit DICTATING mode.  Finalises the document, saves it to disk,
+        and returns a summary dict:
+            {
+              "session_id": str,
+              "text": str,          # full plain-text document
+              "word_count": int,
+              "saved_to": str,      # file path
+            }
+        After this call the Orchestrator returns to IDLE (ready for wake word).
+        """
+        with self._lock:
+            if self.state != "DICTATING" or not self._dictation_session:
+                return {"error": "Not currently in dictation mode"}
+            session = self._dictation_session
+            self._dictation_session = None
+            self._set_state("IDLE")
+
+        saved_path = session.finish()
+        doc = session.get_document()
+
+        print(f"⏹️ [Orchestrator] Dictation STOPPED — {session.word_count} words.")
+        self.tts.speak(f"Dictation stopped. {session.word_count} words saved.")
+
+        return {
+            "session_id": session.session_id,
+            "text": doc,
+            "word_count": session.word_count,
+            "saved_to": saved_path,
+        }
+
+    def get_dictation_status(self) -> dict:
+        """Return the current dictation state and live document preview."""
+        with self._lock:
+            if self.state != "DICTATING" or not self._dictation_session:
+                return {"active": False}
+            session = self._dictation_session
+
+        text = session.get_document()
+        return {
+            "active": True,
+            "session_id": session.session_id,
+            "started_at": session.started_at,
+            "fragment_count": session.fragment_count,
+            "word_count": session.word_count,
+            "preview": text[:500] + ("..." if len(text) > 500 else ""),
+            "text": text,
+        }
+
     # ─────────────── Silence timeout → dispatch ───────────────
     def _on_silence_timeout(self):
         """Fires when no new STT text has arrived for SILENCE_THRESHOLD_SEC."""
@@ -182,26 +311,14 @@ class Orchestrator:
             if not full_query:
                 return
 
-            print(f"🗨️ [Orchestrator] Complete query: \"{full_query}\"")
-            self._set_state("THINKING")
+            print(f"🗨️ [Orchestrator] Complete utterance: \"{full_query}\"")
 
-        # Choose the TTS dispatch path based on the backend
-        use_streaming = self._should_use_streaming()
-
-        if use_streaming:
-            print("🔄 [Orchestrator] Using STREAMED TTS path")
-            threading.Thread(
-                target=self._nexus_then_speak_streamed,
-                args=(full_query,),
-                daemon=True,
-            ).start()
-        else:
-            # Original path: wait for full output, then speak
-            threading.Thread(
-                target=self._nexus_then_speak,
-                args=(full_query,),
-                daemon=True,
-            ).start()
+        # ── Intent Gate ────────────────────────────────────────────────
+        # Classify the utterance first.  Only non-DICTATION paths set
+        # state=THINKING and enter the Nexus pipeline.
+        # IntentRouter handles state transitions internally.
+        self._set_state("THINKING")
+        self.intent_router.route(full_query)
 
     def _should_use_streaming(self) -> bool:
         """
@@ -230,6 +347,169 @@ class Orchestrator:
             return result
 
         print(f"⚠️ [Orchestrator] Unknown TTS type: {type(self.tts)}")
+        return False
+
+    # ─────────────── Nexus mid-run clarification ───────────────
+
+    def _check_nexus_clarification(self, run_id: str) -> dict | None:
+        """
+        Poll the live Nexus run graph for a ClarificationAgent node that is
+        in ``waiting_input`` status.
+
+        Returns a dict  ``{"node_id": str, "message": str, "options": list}``
+        when a pending clarification is found, otherwise ``None``.
+
+        This is safe to call every ~2 s from the wait loop — it is a cheap
+        HTTP GET that hits the session file on disk.
+        """
+        try:
+            resp = requests.get(
+                f"{NEXUS_BASE_URL}/runs/{run_id}",
+                timeout=(1.0, 3.0),
+            )
+            if not resp.ok:
+                return None
+            data = resp.json()
+            nodes = data.get("graph", {}).get("nodes", [])
+            for node in nodes:
+                if (
+                    node.get("data", {}).get("status") == "waiting_input"
+                    and node.get("data", {}).get("agent") == "ClarificationAgent"
+                ):
+                    output = node.get("data", {}).get("output") or {}
+                    message = output.get("clarificationMessage", "")
+                    options = output.get("options", [])
+                    if message:
+                        return {
+                            "node_id": node.get("id", ""),
+                            "message": message,
+                            "options": options,
+                        }
+        except Exception as e:
+            print(f"⚠️ [Orchestrator] _check_nexus_clarification error: {e}")
+        return None
+
+    def _handle_nexus_clarification(self, run_id: str, clarification: dict) -> bool:
+        """
+        Voice round-trip for a mid-run ClarificationAgent pause:
+
+          1. Speak the clarification question (+ options if any) via TTS.
+          2. Set state → LISTENING and wait for the user's STT response
+             (up to CLARIFICATION_ANSWER_TIMEOUT_SEC).
+          3. POST the answer to  ``/api/runs/{run_id}/input``.
+          4. Return True if an answer was collected and submitted, False on
+             barge-in / timeout / stop.
+
+        State machine contract
+        ----------------------
+        Enters:  THINKING
+        Exits:   THINKING  (run resumes) or LISTENING (barge-in / abort)
+        """
+        message = clarification["message"]
+        options = clarification.get("options", [])
+
+        # Build spoken prompt
+        spoken_q = message
+        if options:
+            spoken_q += ". Options are: " + "; ".join(options) + "."
+        spoken_q = self._markdown_to_speech(spoken_q)
+
+        print(f"❓ [Orchestrator] Nexus clarification: {spoken_q[:120]}")
+
+        # ── Speak the question ─────────────────────────────────────────────
+        with self._lock:
+            self._set_state("SPEAKING")
+        self.tts.speak(spoken_q)
+        with self._lock:
+            if self.state != "SPEAKING":
+                # Barge-in during the question — abort
+                print("⚡ [Orchestrator] Barge-in during clarification question — aborting.")
+                return False
+            self._set_state("LISTENING")
+            self._utterance_buffer.clear()
+
+        # ── Wait for the user's answer via STT ────────────────────────────
+        # We wait synchronously here (we're already in a daemon thread).
+        # A threading.Event is set by a one-shot silence timer created below.
+        answer_event = threading.Event()
+        captured_answer: list[str] = []  # mutable container
+
+        CLARIFICATION_ANSWER_TIMEOUT_SEC = 20.0  # user has 20 s to answer
+        CHECK_INTERVAL = 0.1  # poll every 100 ms
+
+        elapsed = 0.0
+        while elapsed < CLARIFICATION_ANSWER_TIMEOUT_SEC:
+            # Check for barge-in / state change
+            with self._lock:
+                if self.state not in ("LISTENING", "SPEAKING"):
+                    print("⚡ [Orchestrator] State changed during clarification listen — aborting.")
+                    return False
+
+            # Check if silence timer fired (utterance_buffer was cleared by the
+            # orchestrator's own silence timer path inside _on_silence_timeout).
+            # We detect the answer by watching _utterance_buffer transitions:
+            # on_text() fills it, _on_silence_timeout() drains it.
+            # Since _on_silence_timeout sets state→THINKING and calls route(),
+            # we intercept the *raw* buffer just before it's drained.
+            # Simpler approach: just watch state — when it flips to THINKING
+            # the silence timer already fired with user's answer in the buffer.
+            # But we want the buffer BEFORE it is cleared.  So we watch for
+            # a non-empty buffer + a configurable quiet period instead.
+
+            with self._lock:
+                buf = list(self._utterance_buffer)
+
+            if buf:
+                # Wait one more silence-threshold to give STT time to finish
+                time.sleep(SILENCE_THRESHOLD_SEC + 0.1)
+                with self._lock:
+                    # Grab whatever was accumulated; _on_silence_timeout may
+                    # have already cleared it — in that case we missed it.
+                    final_buf = list(self._utterance_buffer)
+                    if not final_buf and buf:
+                        # Timeout already fired — use what we saw earlier
+                        final_buf = buf
+                if final_buf:
+                    captured_answer.append(" ".join(final_buf).strip())
+                    break
+
+            self._barge_in_event.wait(timeout=CHECK_INTERVAL)
+            if self._barge_in_event.is_set():
+                print("⚡ [Orchestrator] Barge-in during clarification listening — aborting.")
+                return False
+            elapsed += CHECK_INTERVAL
+
+        if not captured_answer or not captured_answer[0]:
+            print("⏰ [Orchestrator] No clarification answer received within timeout.")
+            # Speak a timeout notice and return to THINKING so the run can
+            # be cancelled or the user can try again.
+            self.tts.speak("I didn't catch your answer. Please try again.")
+            with self._lock:
+                self._set_state("THINKING")
+            return False
+
+        answer_text = captured_answer[0]
+        print(f"✅ [Orchestrator] Clarification answer: \"{answer_text}\"")
+
+        # ── POST the answer to Nexus ───────────────────────────────────────
+        try:
+            resp = requests.post(
+                f"{NEXUS_BASE_URL}/runs/{run_id}/input",
+                json={"node_id": clarification["node_id"], "response": answer_text},
+                timeout=(1.0, 4.0),
+            )
+            if resp.ok:
+                print(f"📨 [Orchestrator] Clarification submitted for run {run_id}.")
+                with self._lock:
+                    self._set_state("THINKING")
+                return True
+            else:
+                print(f"⚠️ [Orchestrator] /runs/{run_id}/input returned {resp.status_code}: {resp.text}")
+        except Exception as e:
+            print(f"❌ [Orchestrator] Failed to submit clarification: {e}")
+
+        with self._lock:
+            self._set_state("THINKING")
         return False
 
     # ─────────────── Nexus → event → TTS ───────────────
@@ -306,10 +586,12 @@ class Orchestrator:
 
         print(f"⏳ [Orchestrator] Waiting for Nexus run {run_id}...")
 
-        # Wait for completion — check barge-in every 0.5s,
+        # Wait for completion — check clarification + barge-in every 50ms,
         # speak a progress ping every PROGRESS_PING_SEC to reassure the user.
         deadline = time.time() + RUN_TIMEOUT_SEC
         last_ping = time.time()
+        last_clarification_check = time.time()
+        CLARIFICATION_CHECK_INTERVAL = 2.0   # poll run graph every 2 s
         _PROGRESS_PHRASES = [
             "Still working on it, almost there!",
             "This one's taking a moment, hang tight.",
@@ -327,12 +609,28 @@ class Orchestrator:
                     self._stop_active_run_async()
                     return
 
-            # Periodic spoken ping so the user knows we’re still alive
             now = time.time()
+
+            # ── Nexus mid-run clarification check ─────────────────────────
+            if now - last_clarification_check >= CLARIFICATION_CHECK_INTERVAL:
+                last_clarification_check = now
+                clarification = self._check_nexus_clarification(run_id)
+                if clarification:
+                    print(f"🔔 [Orchestrator] ClarificationAgent waiting — entering voice clarification loop.")
+                    answered = self._handle_nexus_clarification(run_id, clarification)
+                    if not answered:
+                        pop_run_result(run_id)
+                        self._stop_active_run_async()
+                        self._set_active_run(None)
+                        return
+                    last_ping = time.time()
+                    last_clarification_check = time.time()
+                    continue
+
+            # ── Periodic spoken ping ───────────────────────────────────────
             if now - last_ping >= PROGRESS_PING_SEC:
                 ping = next(_ping_cycle)
                 print(f"📣 [Orchestrator] Progress ping: {ping}")
-                # Set state to SPEAKING so VAD echo suppression kicks in
                 with self._lock:
                     self._set_state("SPEAKING")
                 self.tts.speak(ping)
@@ -340,12 +638,10 @@ class Orchestrator:
                     if self.state == "SPEAKING":
                         self._set_state("THINKING")
                 last_ping = time.time()
-                # Re-check event — run may have completed during ping
                 if evt.is_set():
                     break
 
             # Wake every 50ms to check _barge_in_event for instant abort.
-            # Also check every 0.5s for state (catches edge cases).
             self._barge_in_event.wait(timeout=0.05)
             if self._barge_in_event.is_set():
                 with self._lock:
@@ -708,6 +1004,8 @@ class Orchestrator:
 
         # Wait for the Nexus run to complete (or timeout / barge-in)
         deadline = time.time() + RUN_TIMEOUT_SEC
+        last_clarification_check_s = time.time()
+        CLARIFICATION_CHECK_INTERVAL_S = 2.0
 
         while not evt.is_set() and time.time() < deadline:
             with self._lock:
@@ -720,6 +1018,28 @@ class Orchestrator:
                     self._stop_active_run_async()
                     self._set_active_run(None)
                     return
+
+            now_s = time.time()
+
+            # ── Nexus mid-run clarification check (streamed path) ──────────
+            # Only run when TTS is not actively consuming (cur_state == THINKING)
+            # to avoid speaking the question over an in-progress stream.
+            if cur_state == "THINKING" and now_s - last_clarification_check_s >= CLARIFICATION_CHECK_INTERVAL_S:
+                last_clarification_check_s = now_s
+                clarification_s = self._check_nexus_clarification(run_id)
+                if clarification_s:
+                    print(f"🔔 [Orchestrator] [STREAMED] ClarificationAgent waiting — entering voice clarification loop.")
+                    answered_s = self._handle_nexus_clarification(run_id, clarification_s)
+                    if not answered_s:
+                        pop_run_result(run_id)
+                        finish_stream(run_id)
+                        pop_stream_queue(run_id)
+                        self._stop_active_run_async()
+                        self._set_active_run(None)
+                        return
+                    last_clarification_check_s = time.time()
+                    continue
+
             # Wake every 50ms on _barge_in_event for instant abort on barge-in.
             self._barge_in_event.wait(timeout=0.05)
             if self._barge_in_event.is_set():
@@ -808,8 +1128,9 @@ class Orchestrator:
         """Called by VAD barge-in or external interrupt. Cancels TTS and enters LISTENING."""
         with self._lock:
             prev = self.state
-            # Non-negotiable: only allow barge-in interruption in SPEAKING state.
-            if prev != "SPEAKING":
+            # Non-negotiable: only allow interruption in SPEAKING state.
+            # DICTATING is also excluded — continuous user speech is expected there.
+            if prev not in ("SPEAKING",):
                 return
             self._set_state("INTERRUPTED")
             print(f"⚡ [Orchestrator] Interrupt: {prev} → INTERRUPTED")
@@ -823,6 +1144,7 @@ class Orchestrator:
         self.stt.cancel()  # drop stale STT buffer
         # Stop the active Nexus run so it doesn't complete silently.
         self._stop_active_run_async()
+
 
     # ─────────────── Helpers ───────────────
     def _enter_follow_up(self):

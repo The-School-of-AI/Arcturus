@@ -1,8 +1,24 @@
 # voice/config.py
+#
+# API keys are read from the PROJECT ROOT .env (the same file used by all
+# other Arcturus modules).  Do NOT place a separate voice/.env file —
+# keys defined there would shadow the global ones and cause confusion.
+# Keys needed by voice modules:
+#   PICOVOICE_ACCESS_KEY  — wake word detection (Porcupine)
+#   DEEPGRAM_API_KEY      — cloud STT (Deepgram Nova-2)
+#   AZURE_SPEECH_KEY      — TTS (Azure Neural Speech)
+#   AZURE_SPEECH_REGION   — TTS region (e.g. "eastus")
 
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 
 _VOICE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = Path(_VOICE_DIR).parent
+
+# Load the project root .env once for the entire voice package.
+# override=False means already-set env vars (e.g. from a shell export) win.
+load_dotenv(_PROJECT_ROOT / ".env", override=False)
 
 VOICE_CONFIG = {
     # Master switch
@@ -23,7 +39,7 @@ VOICE_CONFIG = {
         # Sensitivity: 0.0 (least sensitive) → 1.0 (most sensitive)
         # Higher = fewer missed detections, but more false positives.
         # 0.75 is a good balance for real-world noisy environments.
-        "sensitivity": 0.75,
+        "sensitivity": 0.6,
     },
 
     # -----------------------------
@@ -83,19 +99,22 @@ VOICE_CONFIG = {
     # distant talkers, background TV, or speaker echo triggering interruption.
     # Stricter values reduce self-interrupt when TTS is picked up by the mic.
     "barge_in": {
-        # Suppress barge-in detection for this long after TTS starts
-        # (attack phase / echo leakage). 400ms is enough to avoid initial echo burst.
-        "grace_ms": 400,
+        # Suppress barge-in detection for this long after TTS starts.
+        # Azure TTS has 200-600ms of synthesis latency before audio reaches the speaker,
+        # so 1000ms was only ~400-800ms of real echo suppression. 1500ms is safer.
+        "grace_ms": 1500,
 
         # Continuous speech required before interrupt.
         # 120ms = lower bound of the 120-200ms design band → fastest reliable detection.
         "min_speech_ms": 120,
 
         # Energy must be at least this multiple of ambient noise floor.
-        "energy_ratio": 2.5,
+        "energy_ratio": 2.7,
 
-        # Near-field gates (int16 RMS units). Balanced for responsive near-field detection.
-        "min_absolute_rms": 900,
+        # Near-field gates (int16 RMS units).
+        # 1100 provides a harder gate against speaker echo in quiet rooms where the
+        # noise floor is very low (making the ratio gate easier to trip).
+        "min_absolute_rms": 1100,
         "min_rms_above_noise": 250,
     },
 

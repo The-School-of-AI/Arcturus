@@ -186,3 +186,71 @@ async def clear_current_session(request: Request):
         "status": "ok",
         "saved_to": path,
     }
+
+
+# ── Dictation Mode ─────────────────────────────────────────────
+
+@router.post("/voice/dictation/start")
+async def start_dictation(request: Request):
+    """
+    Enter Dictation Mode: STT stays active, but every transcript fragment
+    is accumulated into a long-form document instead of being sent to Nexus.
+
+    The TTS announces entry into dictation mode.  Any ongoing TTS/Nexus run
+    is cancelled.
+
+    Response:
+    {
+        "status": "dictating",
+        "session_id": "dict_20260302_..."
+    }
+    """
+    orch = request.app.state.orchestrator
+    session_id = orch.start_dictation()
+    return {"status": "dictating", "session_id": session_id}
+
+
+@router.post("/voice/dictation/stop")
+async def stop_dictation(request: Request):
+    """
+    Stop Dictation Mode, finalise the document, and save it to disk.
+    Orchestrator returns to IDLE after this call.
+
+    Response:
+    {
+        "status": "stopped",
+        "session_id": "dict_...",
+        "word_count": 142,
+        "text": "The full dictated document...",
+        "saved_to": "memory/dictation/2026/03/dictation_dict_....txt"
+    }
+    """
+    orch = request.app.state.orchestrator
+    result = orch.stop_dictation()
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"status": "stopped", **result}
+
+
+@router.get("/voice/dictation/current")
+async def get_dictation_status(request: Request):
+    """
+    Return the current dictation state and a live preview of the document
+    being built.  Useful for UI polling while dictation is active.
+
+    Response (when active):
+    {
+        "active": true,
+        "session_id": "dict_...",
+        "started_at": "2026-03-02T...",
+        "fragment_count": 12,
+        "word_count": 94,
+        "preview": "First 500 chars...",
+        "text": "Full text so far..."
+    }
+
+    Response (when inactive):
+    { "active": false }
+    """
+    orch = request.app.state.orchestrator
+    return orch.get_dictation_status()

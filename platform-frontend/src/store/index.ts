@@ -546,6 +546,13 @@ export const useAppStore = create<AppState>()(
                 eventSource.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
+
+                        // --- HANDLE NAVIGATION EVENTS ---
+                        if (data.type === 'navigation' && data.data?.tab) {
+                            console.log("🚀 [EventBus] Navigation Command:", data.data.tab);
+                            get().setSidebarTab(data.data.tab);
+                        }
+
                         // Add to events list (keep last 200)
                         set(state => {
                             const newEvents = [...state.events, data];

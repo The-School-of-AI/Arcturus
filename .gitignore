@@ -91,3 +91,5 @@ benchmark_results.txt
 # Added by Arcturus
 .arcturus/
 .arcturus
+.voice_sessions/
+/uv.lock
