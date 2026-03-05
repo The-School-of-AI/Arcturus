@@ -13,6 +13,7 @@
 - **Backend**: Created `canvas/` module to encapsulate all A2UI logic.
 - **Frontend**: Created `features/canvas/` directory for React host and widgets.
 - **Data Flow**: `Agent Script -> REST API -> CanvasRuntime -> WebSocket -> CanvasHost -> WidgetRegistry -> Render`.
+- **Cross-App Triggering**: `CanvasRuntime` is registered as a global singleton in `shared/state.py` (via `get_canvas_runtime()`). This fulfills the architectural requirement that **Canvas must be triggerable from all other applications (Voice, Run, Presentation)** directly in Python without HTTP loopbacks.
 - **Persistence**: Snapshots are saved/loaded on API lifespan events in `api.py`.
 
 ## 3. API And UI Changes
@@ -80,7 +81,7 @@ Server response: 200
 ## 9. Rollback Plan
 - **Frontend**: Revert `AppLayout.tsx` and `Sidebar.tsx` changes.
 
-## 10. Extended Scope: Phase 3 Infrastructure
+## 11. Extended Scope: Phase 3 Infrastructure
 ### [Day 2 Update] Infrastructure Hardening & Windows Compatibility
 We have successfully sanitized the codebase for Windows compatibility (resolving `UnicodeEncodeError`) and verified core infrastructure stability.
 
@@ -102,7 +103,7 @@ Agent Output: summary...
 - **Task 47: FileReader Skill**: Extracted robust file access tool. Verified via General Agent (Phase3Tester) successfully reading `README.md`.
 - **Task 48: Snake Game E2E**: Verified "Plan-to-Code" pipeline with a functional game at `output/snake.html` (Preview link generated).
 
-## 11. Demo Steps
+## 10. Demo Steps
 1. Start API: `uv run uvicorn api:app --reload`
 2. Start Frontend: `npm run dev`
 3. Open `http://localhost:5173/` and click **Canvas icon**.

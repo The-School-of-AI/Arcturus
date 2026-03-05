@@ -40,3 +40,8 @@ dependencies = [
     "rank_bm25>=0.2.2",
     "apscheduler>=3.11.2",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "docs*", ".venv*", "node_modules*", "platform-frontend*"]
