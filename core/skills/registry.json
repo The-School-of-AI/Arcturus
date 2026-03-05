@@ -168,6 +168,14 @@
     "class_name": "BrowserSkill",
     "type": "python"
   },
+  "unified_extraction": {
+    "path": "core/skills/library/unified_extraction",
+    "version": "1.0.0",
+    "description": "Unified extraction contract v1.0: memories, preferences, and graph (entities, relationships, user_facts) in one JSON output",
+    "intent_triggers": [],
+    "class_name": "UnifiedExtractionSkill",
+    "type": "python"
+  },
   "debugger_agent": {
     "path": "core/skills/library/debugger_agent",
     "version": "1.0.0",
@@ -201,20 +209,20 @@
     "class_name": "SystemMonitorSkill",
     "type": "python"
   },
-  "appgenerationprompt": {
-    "path": "core/skills/library/appgenerationprompt",
-    "version": "1.0.0",
-    "description": "Skill derived from AppGenerationPrompt.md",
-    "intent_triggers": [],
-    "class_name": "AppgenerationpromptSkill",
-    "type": "python"
-  },
   "entity_extraction": {
     "path": "core/skills/library/entity_extraction",
     "version": "1.0.0",
     "description": "Extracts entities and relationships from memory text for the knowledge graph",
     "intent_triggers": [],
     "class_name": "EntityExtractionSkill",
+    "type": "python"
+  },
+  "appgenerationprompt": {
+    "path": "core/skills/library/appgenerationprompt",
+    "version": "1.0.0",
+    "description": "Skill derived from AppGenerationPrompt.md",
+    "intent_triggers": [],
+    "class_name": "AppgenerationpromptSkill",
     "type": "python"
   },
   "decision": {
@@ -239,6 +247,14 @@
     "description": "Skill derived from summarizer.md",
     "intent_triggers": [],
     "class_name": "SummarizerSkill",
+    "type": "python"
+  },
+  "file_reader": {
+    "path": "core/skills/library/file_reader",
+    "version": "1.0.0",
+    "description": "Allows reading and searching files within the project workspace.",
+    "intent_triggers": [],
+    "class_name": "FileReadSkill",
     "type": "python"
   },
   "thinker": {
