@@ -203,6 +203,14 @@
     "class_name": "SchedulerSkill",
     "type": "python"
   },
+  "entity_extraction": {
+    "path": "core\\skills\\library\\entity_extraction",
+    "version": "1.0.0",
+    "description": "Extracts entities and relationships from memory text for the knowledge graph",
+    "intent_triggers": [],
+    "class_name": "EntityExtractionSkill",
+    "type": "python"
+  },
   "summarizer": {
     "path": "core\\skills\\library\\summarizer",
     "version": "1.0.0",

@@ -14,6 +14,8 @@ class AuthContext(BaseModel):
     scopes: list[str]
     rpm_limit: int
     burst_limit: int
+    monthly_request_quota: int = 100_000
+    monthly_unit_quota: int = 500_000
 
 
 def _error_payload(code: str, message: str) -> dict:
@@ -57,6 +59,8 @@ async def require_api_key(
         scopes=record.get("scopes", []),
         rpm_limit=record.get("rpm_limit", 120),
         burst_limit=record.get("burst_limit", 60),
+        monthly_request_quota=record.get("monthly_request_quota", 100_000),
+        monthly_unit_quota=record.get("monthly_unit_quota", 500_000),
     )
 
 

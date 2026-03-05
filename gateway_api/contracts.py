@@ -37,6 +37,8 @@ class GatewayAPIKeyCreateRequest(BaseModel):
     scopes: List[str] = Field(default_factory=lambda: DEFAULT_KEY_SCOPES.copy())
     rpm_limit: int = Field(default=120, ge=1, le=10_000)
     burst_limit: int = Field(default=60, ge=1, le=10_000)
+    monthly_request_quota: int = Field(default=100_000, ge=1, le=100_000_000)
+    monthly_unit_quota: int = Field(default=500_000, ge=1, le=100_000_000)
 
 
 class GatewayAPIKeyUpdateRequest(BaseModel):
@@ -44,6 +46,8 @@ class GatewayAPIKeyUpdateRequest(BaseModel):
     scopes: Optional[List[str]] = None
     rpm_limit: Optional[int] = Field(default=None, ge=1, le=10_000)
     burst_limit: Optional[int] = Field(default=None, ge=1, le=10_000)
+    monthly_request_quota: Optional[int] = Field(default=None, ge=1, le=100_000_000)
+    monthly_unit_quota: Optional[int] = Field(default=None, ge=1, le=100_000_000)
     status: Optional[Literal["active", "revoked"]] = None
 
 
@@ -53,6 +57,8 @@ class GatewayAPIKeyOut(BaseModel):
     scopes: List[str]
     rpm_limit: int
     burst_limit: int
+    monthly_request_quota: int
+    monthly_unit_quota: int
     status: Literal["active", "revoked"]
     secret_prefix: str
     created_at: str
@@ -190,6 +196,7 @@ class GatewayCronJobCreateRequest(BaseModel):
     cron: str = Field(min_length=5, max_length=100)
     agent_type: str = Field(default="PlannerAgent", min_length=1)
     query: str = Field(min_length=1)
+    timezone: str = Field(default="UTC", min_length=1, max_length=100)
 
 
 class GatewayCronJobOut(BaseModel):
@@ -198,11 +205,22 @@ class GatewayCronJobOut(BaseModel):
     cron_expression: str
     agent_type: str
     query: str
+    timezone: str = "UTC"
     enabled: bool
     status: str
     last_run: Optional[str] = None
     next_run: Optional[str] = None
     last_output: Optional[str] = None
+
+
+class GatewayCronJobHistoryOut(BaseModel):
+    job_id: str
+    run_id: str
+    status: Literal["success", "failed"]
+    started_at: str
+    finished_at: str
+    error: Optional[str] = None
+    output_summary: Optional[str] = None
 
 
 class GatewayWebhookSubscriptionCreateRequest(BaseModel):
@@ -263,7 +281,7 @@ class GatewayWebhookDeliveryOut(BaseModel):
     subscription_id: str
     target_url: str
     event_type: str
-    status: Literal["queued", "retry_pending", "delivered", "dead_letter"]
+    status: Literal["queued", "retry_pending", "in_progress", "delivered", "dead_letter"]
     attempt: int
     timestamp: str
     updated_at: str
@@ -320,6 +338,8 @@ class GatewayUsageResponse(BaseModel):
     status_counts: Dict[str, int]
     endpoints: Dict[str, int]
     units: int
+    governance_denied_requests: int = 0
+    non_billable_requests: int = 0
 
 
 class GatewayUsageAllResponse(BaseModel):

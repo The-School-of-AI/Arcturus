@@ -111,3 +111,9 @@ agents:
     - python_coding
     - debugging
     description: Specialized workspace assistant for deep code analysis and interactive debugging.
+  SafetyAgent:
+    model: gemini
+    mcp_servers: []
+    skills: []
+    description: |
+      Reviews outputs for safety, policy, and content guidelines.

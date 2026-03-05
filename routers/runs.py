@@ -6,22 +6,26 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
-
 from ops.tracing import run_span, agent_execute_node_span
 from opentelemetry.trace import Status, StatusCode
-
 from shared.state import (
     active_loops,
     get_multi_mcp,
     get_remme_store,
     get_remme_extractor,
     signal_run_complete,
+    push_stream_chunk,
+    finish_stream,
+    has_stream_queue,
+    get_stream_chunk_count,
     PROJECT_ROOT,
 )
 from core.loop import AgentLoop4
 from core.graph_adapter import nx_to_reactflow
 from remme.utils import get_embedding
 from config.settings_loader import settings
+from core.skills.manager import skill_manager
+
 
 router = APIRouter(tags=["Runs"])
 
@@ -36,6 +40,8 @@ remme_extractor = get_remme_extractor()
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
+    source: str = "web" # "web" or "voice"
+    stream: bool = False # Whether the caller expects a streaming response
     
     def __init__(self, **data):
         super().__init__(**data)
@@ -139,7 +145,7 @@ def _extract_voice_output(context) -> str:
     return "I've completed your request."
 
 
-async def process_run(run_id: str, query: str):
+async def process_run(run_id: str, query: str, source: str = "web", stream: bool = False, skill_id: str = None):
     """
     Background task: retrieve Remme memories, run agent loop, extract new memories.
     WATCHTOWER: Root span for the entire agent run.
@@ -149,21 +155,38 @@ async def process_run(run_id: str, query: str):
     """
     with run_span(run_id, query or "") as span:
         try:
+            # 0. SKILL MATCHING & START HOOK
+            skill = None
+            if not skill_id:
+                skill_id = skill_manager.match_intent(query)
+            
+            if skill_id:
+                skill = skill_manager.get_skill(skill_id)
+                if skill:
+                    print(f"[{run_id}] 🧠 Skill Detected: {skill_id}")
+                    skill.context.run_id = run_id
+                    skill.context.agent_id = source
+                    skill.context.config = {"source": source}
+                    
+                    # Call On Start Hook (allows prompt modification)
+                    query = await skill.on_run_start(query)
+                    print(f"[{run_id}] 🧠 Skill '{skill_id}' modified prompt.")
+
             # 1. RETRIEVE MEMORIES (Remme)
-            # Search for past relevant facts to inject into this run
+            # Orchestration: memory_retriever handles semantic recall, entity recall, graph expansion, merge
             memory_context = ""
-            context = None  # Initialize for safe access in finally block
             results = []
+            context = None  # Initialize for safe access in finally block
             try:
-                emb = get_embedding(query, task_type="search_query")
-                results = remme_store.search(emb, query_text=query, k=3)
-                if results:
-                    memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
-                    memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
-                    print(f" Remme: Injected {len(results)} memories into run {run_id}")
+                from memory.memory_retriever import retrieve
+                memory_context, results = retrieve(
+                    query,
+                    session_id=run_id,
+                )
+                if memory_context:
+                    print(f" Remme: Injected memory context into run {run_id}")
             except Exception as e:
                 print(f"⚠️ Remme Retrieval Failed: {e}")
-
             loop = AgentLoop4(multi_mcp=multi_mcp)
             # Register the LOOP instance immediately so we can stop it
             active_loops[run_id] = loop
@@ -193,6 +216,11 @@ async def process_run(run_id: str, query: str):
             span.set_status(Status(StatusCode.ERROR, str(e)))
             span.record_exception(e)
             print(f"Run {run_id} failed: {e}")
+            if skill:
+                 try:
+                     await skill.on_run_failure(str(e))
+                 except Exception as fe:
+                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
         finally:
             # Clean up
             if run_id in active_loops:
@@ -230,6 +258,23 @@ async def process_run(run_id: str, query: str):
                     existing_memories=results
                 )
 
+                def _resolve_memory_id(alias_or_id: str, existing: list) -> Optional[str]:
+                    """Resolve T001-style alias (or slug_T002) to real Qdrant point ID; pass-through UUIDs/integers."""
+                    if not alias_or_id or not existing:
+                        return alias_or_id
+                    import re
+                    s = str(alias_or_id).strip()
+                    # Exact T001, T002, ...
+                    m = re.match(r"^T(\d+)$", s, re.IGNORECASE)
+                    if not m:
+                        # LLM sometimes returns slug-style id, e.g. jons_office_location_T002
+                        m = re.search(r"T(\d+)$", s, re.IGNORECASE)
+                    if m:
+                        idx = int(m.group(1)) - 1
+                        if 0 <= idx < len(existing) and existing[idx].get("id"):
+                            return existing[idx]["id"]
+                    return alias_or_id
+
                 if commands:
                     for cmd in commands:
                         if not isinstance(cmd, dict):
@@ -238,20 +283,24 @@ async def process_run(run_id: str, query: str):
 
                         action = cmd.get("action")
                         text = cmd.get("text")
-                        target_id = cmd.get("id")
+                        target_id_raw = cmd.get("id")
+                        target_id = _resolve_memory_id(target_id_raw, results) if target_id_raw else None
 
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                remme_store.add(
+                                    text, emb, category="derived", source=f"run_{run_id}",
+                                    metadata={"session_id": run_id},
+                                )
                                 print(f"✅ Remme: Added new fact: {text}")
                             elif action == "update" and target_id and text:
                                 emb = get_embedding(text, task_type="search_document")
                                 remme_store.update(target_id, text=text, embedding=emb)
-                                print(f"🔄 Remme: Updated fact {target_id}: {text}")
+                                print(f"🔄 Remme: Updated fact {target_id_raw or target_id}: {text}")
                             elif action == "delete" and target_id:
                                 remme_store.delete(target_id)
-                                print(f"🗑️ Remme: Deleted fact {target_id}")
+                                print(f"🗑️ Remme: Deleted fact {target_id_raw or target_id}")
                         except Exception as e:
                             print(f"❌ Remme Action Failed: {e}")
 
@@ -415,6 +464,64 @@ async def process_run(run_id: str, query: str):
                             final_result["summary"] = output_str.strip() if output_str else "Completed."
                 except Exception as e:
                     print(f"⚠️ Extraction Error: {e}")
+                    # Ensure output is always set, even if extraction failed
+                    if "output" not in final_result:
+                        final_result["output"] = "I've processed your request."
+
+            # ── Voice pipeline: signal completion ──────────────────────────────
+            # NOTE: Text chunks are pushed incrementally per-node by _execute_dag
+            # (via push_stream_chunk). Here we only need to:
+            #   1. Close the stream queue with finish_stream (TTS consumer: no more chunks)
+            #   2. Signal the completion Event (for the Event-based / non-streamed path)
+            voice_output = final_result.get("output", "I've completed your request.")
+            
+            # --- PREVENT SPEAKING ERRORS ---
+            if final_result.get("status") == "failed":
+                # Use a polite generic message instead of technical error strings
+                # (Technical errors are still visible in the UI 'error' field)
+                voice_output = "I'm sorry, I encountered an error while processing your request."
+            
+            # If skill provided a summary, use it for voice
+            if skill and final_result.get("status") == "completed":
+                try:
+                    print(f"[{run_id}] 🧠 Executing Success Hook for skill: {skill_id}")
+                    skill_result = await skill.on_run_success(final_result)
+                    if skill_result and isinstance(skill_result, dict):
+                        if "summary" in skill_result:
+                            final_result["skill_summary"] = skill_result["summary"]
+                            if source == "voice":
+                                voice_output = skill_result["summary"]
+                        if "file_path" in skill_result:
+                            final_result["skill_file_path"] = skill_result["file_path"]
+                except Exception as se:
+                    print(f"⚠️ [Skill] Success hook failed for {skill_id}: {se}")
+                    
+            output_len = len(voice_output) if voice_output else 0
+            try:
+                if has_stream_queue(run_id):
+                    # Chunks were already pushed incrementally — just close the stream.
+                    if get_stream_chunk_count(run_id) == 0:
+                        if not voice_output or not voice_output.strip():
+                            voice_output = "I've completed your request."
+                        push_stream_chunk(run_id, voice_output)
+                        print(f"📡 [Voice] Fallback: pushed full output for run {run_id} ({output_len} chars)")
+                    else:
+                        print(f"📡 [Voice] Closing stream for run {run_id} "
+                              f"(chunks were pushed incrementally)")
+
+                    finish_stream(run_id)
+                elif source == "voice" and stream:
+                    # Only warn if it's a voice run and we EXPECTED streaming but the queue is missing
+                    print(f"⚠️ [Voice] No stream queue registered for run {run_id}! "
+                          f"Response not queued for TTS: "
+                          f"{voice_output[:100] if output_len > 100 else voice_output}")
+
+                # Signal run complete (for the Event-based / non-streaming path)
+                signal_run_complete(run_id, voice_output)
+            except Exception as e:
+                print(f"❌ [Voice] Failed to signal voice pipeline: {e}")
+                import traceback
+                traceback.print_exc()
 
             return final_result
 
@@ -426,7 +533,7 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     run_id = str(int(datetime.now().timestamp()))
     
     # Start background execution
-    background_tasks.add_task(process_run, run_id, request.query)
+    background_tasks.add_task(process_run, run_id, request.query, request.source, request.stream)
     
     return {
         "id": run_id,

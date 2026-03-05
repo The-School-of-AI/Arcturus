@@ -1,0 +1,58 @@
+# Product Comparison Template
+# Used specifically for comparing products, services, or alternatives
+
+name: "product_comparison"
+description: "Side-by-side comparison of products, services, or alternatives"
+
+metadata:
+  title_pattern: "Comparison: {query}"
+  suggested_queries:
+    - "iPhone vs Samsung Galaxy"
+    - "AWS vs Azure vs GCP"
+    - "Tesla vs Toyota Prius"
+  target_length: "medium"
+  estimated_render_time: "4-6s"
+
+sections:
+  - type: "overview"
+    title: "Comparison Overview"
+    required: true
+    priority: 1
+    description: "Summary of items being compared"
+    
+  - type: "comparison"
+    title: "Feature Comparison"
+    required: true
+    priority: 2
+    description: "Detailed feature-by-feature breakdown"
+    
+  - type: "data"
+    title: "Specifications & Metrics"
+    required: true
+    priority: 3
+    description: "Quantitative comparison data"
+    
+  - type: "detail"
+    title: "In-Depth Analysis"
+    required: false
+    priority: 4
+    description: "Detailed pros and cons analysis"
+    
+  - type: "source"
+    title: "Sources & Reviews"
+    required: true
+    priority: 5
+    description: "Source materials and expert reviews"
+
+rendering:
+  max_sections: 5
+  citation_style: "inline"
+  include_toc: true
+  export_formats: ["html", "markdown", "pdf"]
+  comparison_table_required: true
+  
+validation:
+  min_sections: 3
+  require_citations: true
+  require_comparison_table: true
+  max_response_time: "6s"

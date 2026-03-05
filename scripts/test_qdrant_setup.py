@@ -2,9 +2,9 @@
 """
 Test script to verify Qdrant setup and basic operations.
 
-Uses collection "test_memories" from config/qdrant_config.yaml, which includes
-indexed_payload_fields [category, source]. Indexes are created automatically on
-connection and are required for filtered search in Qdrant Cloud.
+Tests two vector stores:
+1. Remme memories — uses "test_memories" collection (indexed_payload_fields: category, source)
+2. RAG chunks — uses "arcturus_rag_chunks" collection
 
 Run this after starting Qdrant with: docker-compose up -d
 """
@@ -16,9 +16,16 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Load .env so QDRANT_URL and QDRANT_API_KEY are available (for Cloud)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(project_root / ".env")
+except ImportError:
+    pass
+
 import numpy as np
 from memory.vector_store import get_vector_store, VectorStoreProtocol
-from core.utils import log_step, log_error
+from memory.rag_store import get_rag_vector_store
 
 
 def test_connection():
@@ -176,39 +183,108 @@ def test_delete(store: VectorStoreProtocol, memory_id: str):
         print(f"  ❌ Failed to delete memory")
 
 
+# =============================================================================
+# RAG Vector Store Tests (test_rag_chunks collection)
+# =============================================================================
+
+
+def test_rag_connection():
+    """Test RAG store connection to Qdrant (uses test_rag_chunks collection)."""
+    print("\n🔍 Testing RAG Qdrant Connection (via get_rag_vector_store)...")
+    try:
+        store = get_rag_vector_store(provider="qdrant", collection_name="test_rag_chunks")
+        print("  ✅ Successfully connected to RAG Qdrant store!")
+        return store
+    except Exception as e:
+        print(f"  ❌ Failed to connect: {e}")
+        return None
+
+
+def test_rag_add_and_search(rag_store):
+    """Test adding RAG chunks and searching."""
+    print("\n📝 Testing RAG Add and Search Operations...")
+    dimension = 768
+    entries = [
+        {"chunk_id": "test_doc_0", "doc": "Notes/test.md", "chunk": "Python is great for ML.", "page": 1},
+        {"chunk_id": "test_doc_1", "doc": "Notes/test.md", "chunk": "Machine learning uses Python.", "page": 1},
+        {"chunk_id": "test_doc_2", "doc": "Docs/other.md", "chunk": "Cooking recipes here.", "page": 1},
+    ]
+    embeddings = [np.random.rand(dimension).astype(np.float32) for _ in entries]
+    rag_store.add_chunks(entries=entries, embeddings=embeddings)
+    print(f"  ✅ Added {len(entries)} chunks")
+    query_vec = np.random.rand(dimension).astype(np.float32)
+    results = rag_store.search(query_vec, k=3)
+    print(f"  ✅ Search returned {len(results)} results: {[r[0] for r in results]}")
+    assert len(results) >= 1, "RAG search should return at least one result"
+    for chunk_id, score in results:
+        assert isinstance(chunk_id, str), "chunk_id should be string"
+        assert isinstance(score, (int, float)), "score should be numeric"
+    return entries
+
+
+def test_rag_delete_by_doc(rag_store):
+    """Test deleting RAG chunks by document path."""
+    print("\n🗑️ Testing RAG Delete by Doc...")
+    deleted = rag_store.delete_by_doc("Docs/other.md")
+    print(f"  ✅ delete_by_doc returned {deleted}")
+    # Add a chunk for test_doc, then delete to verify
+    entries = [{"chunk_id": "del_test_0", "doc": "to_delete.md", "chunk": "Temp chunk.", "page": 1}]
+    embeddings = [np.random.rand(768).astype(np.float32)]
+    rag_store.add_chunks(entries=entries, embeddings=embeddings)
+    rag_store.delete_by_doc("to_delete.md")
+    print("  ✅ delete_by_doc completed")
+
+
+def test_rag_get_metadata(rag_store):
+    """Test get_metadata for BM25/corpus retrieval."""
+    print("\n📊 Testing RAG get_metadata...")
+    meta = rag_store.get_metadata()
+    print(f"  ✅ get_metadata returned {len(meta)} entries")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)
     print("🧪 Qdrant Vector Store Test Suite")
     print("=" * 60)
-    
-    # Test 1: Connection
+
+    # --- Remme memories (test_memories collection) ---
+    print("\n" + "-" * 40)
+    print("Part 1: Remme Memories (test_memories)")
+    print("-" * 40)
+
     store = test_connection()
     if not store:
         sys.exit(1)
-    
-    # Test 2: Add and Search
+
     added_ids = test_add_and_search(store)
     if not added_ids:
         print("❌ Failed to add test memories")
         sys.exit(1)
-    
-    # Test 3: Get and Update
+
     test_get_and_update(store, added_ids[0])
-    
-    # Test 4: Filtering
     test_filtering(store)
-    
-    # Test 5: Count and Get All
     test_count_and_get_all(store)
-    
-    # Test 6: Delete
-    test_delete(store, added_ids[-1])  # Delete last one
-    
+    test_delete(store, added_ids[-1])
+
+    # --- RAG chunks (test_rag_chunks collection) ---
+    print("\n" + "-" * 40)
+    print("Part 2: RAG Chunks (test_rag_chunks)")
+    print("-" * 40)
+
+    rag_store = test_rag_connection()
+    if not rag_store:
+        print("❌ Failed to connect to RAG store (is Qdrant running?)")
+        sys.exit(1)
+
+    test_rag_add_and_search(rag_store)
+    test_rag_delete_by_doc(rag_store)
+    test_rag_get_metadata(rag_store)
+
     print("\n" + "=" * 60)
     print("✅ All tests completed!")
     print("=" * 60)
-    print("\n💡 Note: Test memories were added with random embeddings.")
+    print("\n💡 Note: Test data uses random embeddings.")
     print("   In production, use actual embedding models for meaningful results.")
 
 

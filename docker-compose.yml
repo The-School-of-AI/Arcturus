@@ -35,3 +35,20 @@ services:
       - "4318:4318"     # OTLP HTTP
     restart: unless-stopped
 
+  neo4j:
+    image: neo4j:5
+    container_name: arcturus-neo4j
+    ports:
+      - "7474:7474"   # HTTP (browser UI)
+      - "7687:7687"   # Bolt
+    volumes:
+      - ./data/neo4j:/data
+    environment:
+      - NEO4J_AUTH=neo4j/arcturus-neo4j
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

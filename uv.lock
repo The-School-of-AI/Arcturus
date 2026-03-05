@@ -3025,6 +3025,18 @@ wheels = [
 ]
 
 [[package]]
+name = "neo4j"
+version = "6.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytz" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1b/01/d6ce65e4647f6cb2b9cca3b813978f7329b54b4e36660aaec1ddf0ccce7a/neo4j-6.1.0.tar.gz", hash = "sha256:b5dde8c0d8481e7b6ae3733569d990dd3e5befdc5d452f531ad1884ed3500b84", size = 239629, upload-time = "2026-01-12T11:27:34.777Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/5c/ee71e2dd955045425ef44283f40ba1da67673cf06404916ca2950ac0cd39/neo4j-6.1.0-py3-none-any.whl", hash = "sha256:3bd93941f3a3559af197031157220af9fd71f4f93a311db687bd69ffa417b67d", size = 325326, upload-time = "2026-01-12T11:27:33.196Z" },
+]
+
+[[package]]
 name = "nest-asyncio"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3720,6 +3732,22 @@ wheels = [
 ]
 
 [[package]]
+name = "piper-tts"
+version = "1.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "onnxruntime" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/2f/df92a56383bbfb7a3a35ff539ba4081932bef0daf920ec089ab7269e1493/piper_tts-1.4.1.tar.gz", hash = "sha256:bf0640db9fe512392f0cf570d445f76b3894b29fbab6f81be42b784fd8f0afe0", size = 4364811, upload-time = "2026-02-05T09:58:25.233Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/1c/e9a6695e19aa5c80b3ac4f70dd432fe3dcf99519458ad149f73af5b0fa44/piper_tts-1.4.1-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:76467df3abe0a0dd8d53e4e7d769ceb1669796e7188954182257be4cf79ddae0", size = 13822406, upload-time = "2026-02-05T09:58:13.246Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/56/633c64944a9ae13d5183989de1519e5eb30e5e6b668942d97ca03b04c53a/piper_tts-1.4.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:a99d93a2eb2805aa7059996069f8448c86ce7704200ec0bf9f9099f035494dc7", size = 13830418, upload-time = "2026-02-05T09:58:15.561Z" },
+    { url = "https://files.pythonhosted.org/packages/df/95/c4c4163cf0f636eec0ccb3adc63c70fb74334ff28e41e176f0ca0415496e/piper_tts-1.4.1-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3dbc990b4e28c680a44e26dc7a880b3e1068e06ffc1deecc8690929895ffb005", size = 13841987, upload-time = "2026-02-05T09:58:18.259Z" },
+    { url = "https://files.pythonhosted.org/packages/39/42/b44ae16ef80d86173518aafe2a493a826b46f9fe4fba1b82cd575117d5ac/piper_tts-1.4.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5aa533364c15248d2932bcc362eb0740de7cd28dc34233de8df2ee3c6f2adf00", size = 13841873, upload-time = "2026-02-05T09:58:20.428Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/d9/bc628449230681cf49af5e289974a076b22e98ecd017108ef0e679be4e00/piper_tts-1.4.1-cp39-abi3-win_amd64.whl", hash = "sha256:058c025f2a929180d034ed8c333f6b9dd286178703be2133efbafba7f4db13ff", size = 13831941, upload-time = "2026-02-05T09:58:22.562Z" },
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.9.2"
 source = { registry = "https://pypi.org/simple" }
@@ -4350,6 +4378,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-asyncio"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/2c/8af215c0f776415f3590cac4f9086ccefd6fd463befeae41cd4d3f193e5a/pytest_asyncio-1.3.0.tar.gz", hash = "sha256:d7f52f36d231b80ee124cd216ffb19369aa168fc10095013c6b014a34d3ee9e5", size = 50087, upload-time = "2025-11-10T16:07:47.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/35/f8b19922b6a25bc0880171a2f1a003eaeb93657475193ab516fd87cac9da/pytest_asyncio-1.3.0-py3-none-any.whl", hash = "sha256:611e26147c7f77640e6d0a92a38ed17c3e9848063698d5c93d5aa7aa11cebff5", size = 15075, upload-time = "2025-11-10T16:07:45.537Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -4905,6 +4946,7 @@ dependencies = [
     { name = "mcp", extra = ["cli"] },
     { name = "mem0ai" },
     { name = "memo" },
+    { name = "neo4j" },
     { name = "networkx" },
     { name = "noisereduce" },
     { name = "numpy" },
@@ -4914,6 +4956,7 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "openwakeword" },
     { name = "pillow" },
+    { name = "piper-tts" },
     { name = "playwright" },
     { name = "pocketsphinx" },
     { name = "psutil" },
@@ -4940,6 +4983,11 @@ dependencies = [
     { name = "zeroconf" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest-asyncio" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.11.18" },
@@ -4964,6 +5012,7 @@ requires-dist = [
     { name = "mcp", extras = ["cli"], specifier = ">=1.6.0" },
     { name = "mem0ai", specifier = ">=1.0.4" },
     { name = "memo", specifier = ">=0.2.4" },
+    { name = "neo4j", specifier = ">=5.14.0" },
     { name = "networkx", specifier = ">=3.4.2" },
     { name = "noisereduce", specifier = ">=3.0.3" },
     { name = "numpy", specifier = ">=2.4.0" },
@@ -4973,6 +5022,7 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = ">=1.28.0" },
     { name = "openwakeword", specifier = ">=0.6.0" },
     { name = "pillow", specifier = ">=11.2.1" },
+    { name = "piper-tts", specifier = ">=1.2.0" },
     { name = "playwright", specifier = ">=1.52.0" },
     { name = "pocketsphinx", specifier = ">=5.0.4" },
     { name = "psutil", specifier = ">=7.2.2" },
@@ -4998,6 +5048,9 @@ requires-dist = [
     { name = "websocket-client", specifier = ">=1.9.0" },
     { name = "zeroconf", specifier = ">=0.148.0" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest-asyncio", specifier = ">=1.3.0" }]
 
 [[package]]
 name = "scikit-learn"
