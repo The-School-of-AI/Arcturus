@@ -21,6 +21,7 @@ WEBHOOK_DELIVERIES_FILE = DATA_DIR / "webhook_deliveries.jsonl"
 WEBHOOK_DLQ_FILE = DATA_DIR / "webhook_dlq.jsonl"
 WEBHOOK_SIGNING_SECRET_ENV = "ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET"
 DEFAULT_TIMESTAMP_TOLERANCE_SECONDS = 300
+DEFAULT_DISPATCH_LEASE_SECONDS = 30
 
 
 class WebhookSigningNotConfigured(RuntimeError):
@@ -112,6 +113,18 @@ def _latest_delivery_states(events: List[Dict[str, Any]]) -> Dict[str, Dict[str,
             continue
         state[delivery_id] = event
     return state
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 class WebhookService:
@@ -255,34 +268,50 @@ class WebhookService:
         delivered = 0
         retried = 0
         dead_lettered = 0
+        selected: List[Dict[str, Any]] = []
+        dispatch_owner = f"dispatch_{secrets.token_hex(6)}"
+        now = datetime.now(timezone.utc)
+        lease_expires_at = now + timedelta(seconds=DEFAULT_DISPATCH_LEASE_SECONDS)
+        lease_expires_at_iso = lease_expires_at.isoformat()
 
         async with self._lock:
             rows = _read_jsonl(self.deliveries_file)
             latest_map = _latest_delivery_states(rows)
 
-        now = datetime.now(timezone.utc)
-        pending: List[Dict[str, Any]] = []
-        for item in latest_map.values():
-            status = item.get("status")
-            if status not in {"queued", "retry_pending"}:
-                continue
+            candidates: List[Dict[str, Any]] = []
+            for item in latest_map.values():
+                status = item.get("status")
+                if status not in {"queued", "retry_pending", "in_progress"}:
+                    continue
 
-            next_attempt_at = item.get("next_attempt_at")
-            if next_attempt_at:
-                try:
-                    retry_at = datetime.fromisoformat(next_attempt_at)
-                    if retry_at.tzinfo is None:
-                        retry_at = retry_at.replace(tzinfo=timezone.utc)
-                    if retry_at > now:
+                if status == "in_progress":
+                    lease_until = _parse_datetime(item.get("lease_expires_at"))
+                    if lease_until is not None and lease_until > now:
                         continue
-                except ValueError:
-                    pass
 
-            pending.append(item)
+                next_attempt_at = item.get("next_attempt_at")
+                retry_at = _parse_datetime(next_attempt_at)
+                if retry_at is not None and retry_at > now:
+                    continue
 
-        pending.sort(key=lambda item: item.get("updated_at", item.get("timestamp", "")))
+                candidates.append(item)
 
-        for delivery in pending[: max(1, limit)]:
+            candidates.sort(
+                key=lambda item: item.get("updated_at", item.get("timestamp", ""))
+            )
+
+            for delivery in candidates[: max(1, limit)]:
+                leased = {
+                    **delivery,
+                    "status": "in_progress",
+                    "lease_owner": dispatch_owner,
+                    "lease_expires_at": lease_expires_at_iso,
+                    "updated_at": _utc_now_iso(),
+                }
+                _append_jsonl(self.deliveries_file, leased)
+                selected.append(leased)
+
+        for delivery in selected:
             scanned += 1
             attempt = int(delivery.get("attempt", 0)) + 1
             ok, error_message = await self._deliver_once(delivery)
@@ -297,6 +326,8 @@ class WebhookService:
                     "updated_at": update_time,
                     "last_error": None,
                     "next_attempt_at": None,
+                    "lease_owner": None,
+                    "lease_expires_at": None,
                 }
                 async with self._lock:
                     _append_jsonl(self.deliveries_file, event)
@@ -311,6 +342,8 @@ class WebhookService:
                     "updated_at": update_time,
                     "last_error": error_message,
                     "next_attempt_at": None,
+                    "lease_owner": None,
+                    "lease_expires_at": None,
                 }
                 async with self._lock:
                     _append_jsonl(self.deliveries_file, event)
@@ -327,6 +360,8 @@ class WebhookService:
                 "updated_at": update_time,
                 "last_error": error_message,
                 "next_attempt_at": retry_at.isoformat(),
+                "lease_owner": None,
+                "lease_expires_at": None,
             }
             async with self._lock:
                 _append_jsonl(self.deliveries_file, event)
@@ -359,6 +394,8 @@ class WebhookService:
             "last_error": None,
             "next_attempt_at": _utc_now_iso(),
             "updated_at": _utc_now_iso(),
+            "lease_owner": None,
+            "lease_expires_at": None,
             "replayed": True,
         }
 
@@ -391,6 +428,8 @@ class WebhookService:
             "attempt": 0,
             "next_attempt_at": now,
             "last_error": None,
+            "lease_owner": None,
+            "lease_expires_at": None,
         }
 
     async def _deliver_once(self, delivery: Dict[str, Any]) -> tuple[bool, str | None]:

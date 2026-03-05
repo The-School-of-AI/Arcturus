@@ -1091,9 +1091,16 @@ app.on('ready', () => {
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
 
-    // Start backends
-    startBackend('uv', ['run', 'api.py'], 'API');
-    startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
+    // Start backends (skip if ARCTURUS_SKIP_BACKEND=1 for pdb/IDE debugging)
+    const skipBackend = process.env.ARCTURUS_SKIP_BACKEND === '1';
+    if (skipBackend) {
+        console.log('[Arcturus] ARCTURUS_SKIP_BACKEND=1: not spawning API/RAG. Run manually in another terminal for pdb debugging:');
+        console.log('[Arcturus]   cd <repo-root> && uv run api.py');
+        console.log('[Arcturus]   cd <repo-root> && uv run python mcp_servers/server_rag.py');
+    } else {
+        startBackend('uv', ['run', 'api.py'], 'API');
+        startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
+    }
 
     setupTerminalHandlers();
     setupFSHandlers();

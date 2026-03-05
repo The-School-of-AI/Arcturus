@@ -97,3 +97,51 @@ def test_webhook_dispatch_retries_then_moves_to_dlq(tmp_path):
     assert len(dead_letter_rows) == 1
     assert dead_letter_rows[0]["status"] == "dead_letter"
     assert (tmp_path / "dlq.jsonl").exists()
+
+
+def test_webhook_concurrent_dispatch_does_not_double_deliver(tmp_path):
+    service = WebhookService(
+        subscriptions_file=tmp_path / "subs.json",
+        deliveries_file=tmp_path / "deliveries.jsonl",
+        dlq_file=tmp_path / "dlq.jsonl",
+    )
+
+    asyncio.run(
+        service.create_subscription(
+            target_url="https://example.com/webhook",
+            event_types=["task.complete"],
+            secret="delivery-secret",
+            active=True,
+        )
+    )
+    asyncio.run(
+        service.trigger_event(
+            event_type="task.complete",
+            payload={"run_id": "parallel"},
+            source="unit_test",
+            trace_id="trc_parallel",
+        )
+    )
+
+    call_count = {"count": 0}
+
+    async def _deliver_once(delivery):
+        del delivery
+        call_count["count"] += 1
+        await asyncio.sleep(0.05)
+        return True, None
+
+    service._deliver_once = _deliver_once  # type: ignore[method-assign]
+
+    async def _run_parallel():
+        return await asyncio.gather(
+            service.dispatch_pending(limit=10, max_attempts=1, base_backoff_seconds=0),
+            service.dispatch_pending(limit=10, max_attempts=1, base_backoff_seconds=0),
+        )
+
+    first, second = asyncio.run(_run_parallel())
+    assert first["delivered"] + second["delivered"] == 1
+    assert call_count["count"] == 1
+
+    delivered_rows = asyncio.run(service.list_deliveries(status="delivered", limit=10))
+    assert len(delivered_rows) == 1

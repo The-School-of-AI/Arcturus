@@ -7,8 +7,9 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently \"vite --host\" \"cd .. && uv run api.py\" --names \"FRONT,BACK\" --prefix-colors \"cyan,magenta\"",
+    "dev:all": "concurrently \"vite --host\" \"cd .. && docker compose up -d mongodb qdrant && uv run api.py\" --names \"FRONT,BACK\" --prefix-colors \"cyan,magenta\"",
     "electron:dev": "concurrently --kill-others \"npm run dev\" \"wait-on http://localhost:5173 && electron .\" --names \"VITE,ELECTRON\" --prefix-colors \"cyan,blue\"",
+    "electron:dev:debug": "ARCTURUS_SKIP_BACKEND=1 npm run electron:dev",
     "electron:dev:all": "powershell -Command \"Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\" ; npm run electron:dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
