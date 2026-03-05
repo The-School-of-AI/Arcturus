@@ -27,6 +27,8 @@ class Capability(str, Enum):
     FILES = "files"
     GPS = "gps"
     DOCUMENT_SCAN = "document_scan"
+    OFFLINE_SYNC = "offline_sync"
+    CONFLICT_RESOLUTION = "conflict_resolution"
 
 
 @dataclass
@@ -39,6 +41,7 @@ class DeviceNode:
     status: NodeStatus = NodeStatus.ONLINE
     capabilities: List[Capability] = field(default_factory=list)
     last_seen: float = field(default_factory=time.time)
+    vector_clock: Dict[str, int] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -50,6 +53,7 @@ class DeviceNode:
             "status": self.status.value,
             "capabilities": [c.value for c in self.capabilities],
             "last_seen": self.last_seen,
+            "vector_clock": self.vector_clock,
             "metadata": self.metadata,
         }
 
@@ -63,6 +67,7 @@ class DeviceNode:
             status=NodeStatus(data.get("status", "online")),
             capabilities=[Capability(c) for c in data.get("capabilities", [])],
             last_seen=data.get("last_seen", time.time()),
+            vector_clock=data.get("vector_clock", {}),
             metadata=data.get("metadata", {}),
         )
 
@@ -78,6 +83,8 @@ class NodeInvocation:
     params: Dict[str, Any] = field(default_factory=dict)
     attachment_id: Optional[str] = None  # Reference to binary data in vault/storage
     timestamp: float = field(default_factory=time.time)
+    idempotency_key: Optional[str] = None
+    local_timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -88,4 +95,6 @@ class NodeInvocation:
             "params": self.params,
             "attachment_id": self.attachment_id,
             "timestamp": self.timestamp,
+            "idempotency_key": self.idempotency_key,
+            "local_timestamp": self.local_timestamp,
         }

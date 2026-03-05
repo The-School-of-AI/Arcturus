@@ -15,6 +15,8 @@ import uuid
 from collections import deque
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from core.utils import log_step
+
 
 from channels.base import ChannelAdapter
 
@@ -58,6 +60,18 @@ class MobileAdapter(ChannelAdapter):
         messages = list(outbox)
         outbox.clear()
         return messages
+
+    def acknowledge_messages(self, session_id: str, message_ids: List[str]):
+        """Acknowledge receipt of messages (placeholder for robust delivery)."""
+        log_step(f"ACK received for {len(message_ids)} messages in session {session_id}")
+
+    def nack_messages(self, session_id: str, messages: List[Dict[str, Any]]):
+        """Re-enqueue messages that failed to sync on the mobile device."""
+        outbox = self.get_outbox(session_id)
+        # Re-enqueue at the front of the outbox (FIFO priority)
+        for msg in reversed(messages):
+            outbox.appendleft(msg)
+        log_step(f"NACK received: re-enqueued {len(messages)} messages for session {session_id}")
 
     async def initialize(self) -> None:
         """Initialize the Mobile adapter."""
