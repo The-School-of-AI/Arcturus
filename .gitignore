@@ -39,6 +39,7 @@ Notes/
 
 # Logs & Runtime State
 memory/
+storage/
 *.log
 server.log
 benchmark_results.txt
