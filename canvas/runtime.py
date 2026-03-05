@@ -160,17 +160,21 @@ class CanvasRuntime:
     async def _save_specific_local_files(self, comp, props):
         """Helper to save specific state to user-requested local files."""
         try:
+            from shared.state import PROJECT_ROOT
+            storage_dir = PROJECT_ROOT / "storage" / "canvas"
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
             component_type = comp.component if hasattr(comp, "component") else comp.get("component")
             
             # 1. Whiteboard -> Canvas_Pic_Current.json
             if component_type == "Whiteboard" and "elements" in props:
-                path = Path("Canvas_Pic_Current.json")
+                path = storage_dir / "Canvas_Pic_Current.json"
                 out = {"elements": props["elements"], "appState": props.get("appState", {})}
                 path.write_text(json.dumps(out, indent=2), encoding="utf-8")
 
             # 2. Kanban -> Kanban_Current.json
             if component_type == "Kanban" and "initialTasks" in props:
-                path = Path("Kanban_Current.json")
+                path = storage_dir / "Kanban_Current.json"
                 out = {"tasks": props["initialTasks"]}
                 path.write_text(json.dumps(out, indent=2), encoding="utf-8")
         except Exception as e:
@@ -182,8 +186,12 @@ class CanvasRuntime:
             if "," in snapshot_base64:
                 snapshot_base64 = snapshot_base64.split(",")[1]
             
+            from shared.state import PROJECT_ROOT
+            storage_dir = PROJECT_ROOT / "storage" / "canvas"
+            storage_dir.mkdir(parents=True, exist_ok=True)
+            
             img_data = base64.b64decode(snapshot_base64)
-            path = Path("Canvas_Pic_Current.png")
+            path = storage_dir / "Canvas_Pic_Current.png"
             path.write_bytes(img_data)
             logger.info(f"Successfully saved image snapshot to {path}")
         except Exception as e:
