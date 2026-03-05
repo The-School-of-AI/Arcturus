@@ -20,6 +20,8 @@ def test_key_store_create_rotate_revoke_persists_json_and_audit(tmp_path):
     )
     assert record["key_id"].startswith("gwk_")
     assert plaintext.startswith("arc_")
+    assert record["monthly_request_quota"] == 100_000
+    assert record["monthly_unit_quota"] == 500_000
 
     validated = asyncio.run(store.validate_api_key(plaintext))
     assert validated is not None
@@ -66,3 +68,28 @@ def test_metering_writes_event_and_rollup(tmp_path):
     assert usage["requests"] == 1
     assert usage["status_counts"]["200"] == 1
     assert usage["endpoints"]["POST /api/v1/search"] == 1
+
+
+def test_metering_tracks_governance_denied_without_incrementing_billable_usage(tmp_path):
+    events_file = tmp_path / "metering_events.jsonl"
+    metering = GatewayMeteringStore(events_file=events_file, data_dir=tmp_path)
+
+    asyncio.run(
+        metering.record(
+            key_id="gwk_test",
+            method="POST",
+            path="/api/v1/search",
+            status_code=429,
+            latency_ms=3.0,
+            units=1,
+            governance_denied=True,
+            billable=False,
+        )
+    )
+
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    usage = asyncio.run(metering.get_usage_for_key("gwk_test", month))
+    assert usage["requests"] == 0
+    assert usage["units"] == 0
+    assert usage["governance_denied_requests"] == 1
+    assert usage["non_billable_requests"] == 1

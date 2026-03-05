@@ -1,0 +1,62 @@
+# Topic Overview Template
+# Used for general queries that need comprehensive coverage of a topic
+
+name: "topic_overview"
+description: "A comprehensive overview template covering all key aspects of a topic"
+
+metadata:
+  title_pattern: "Overview: {query}"
+  suggested_queries:
+    - "market analysis"
+    - "technology overview"
+    - "industry trends"
+    - "company profile"
+  target_length: "medium"  # short, medium, long
+  estimated_render_time: "3-5s"
+
+# Section configuration - defines which agents to run and in what order
+sections:
+  - type: "overview"
+    title: "Executive Summary"
+    required: true
+    priority: 1
+    description: "High-level summary and key insights"
+    
+  - type: "detail"
+    title: "Detailed Analysis"
+    required: true
+    priority: 2
+    description: "In-depth exploration of the topic"
+    
+  - type: "data"
+    title: "Key Metrics & Data"
+    required: false
+    priority: 3
+    description: "Quantitative data, charts, and tables"
+    
+  - type: "comparison"
+    title: "Comparisons & Alternatives"
+    required: false
+    priority: 4
+    description: "Comparative analysis when applicable"
+    conditional: "has_comparison_keywords"
+    
+  - type: "source"
+    title: "Sources & References"
+    required: true
+    priority: 5
+    description: "Source materials and further reading"
+
+# Rendering configuration
+rendering:
+  max_sections: 5
+  citation_style: "inline"
+  include_toc: true
+  export_formats: ["html", "markdown", "pdf"]
+  
+# Quality gates
+validation:
+  min_sections: 2
+  require_citations: true
+  require_data_element: true  # at least one chart, table, or structured data
+  max_response_time: "5s"

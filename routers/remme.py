@@ -6,7 +6,6 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 import requests
-import pdb
 
 from shared.state import (
     get_remme_store,
@@ -126,8 +125,10 @@ async def background_smart_scan():
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                # Mark source as the run_id so we don't scan again
-                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                remme_store.add(
+                                    text, emb, category="derived", source=f"run_{run_id}",
+                                    metadata={"session_id": run_id},
+                                )
                                 processed_count += 1
                             elif action == "update" and tid and text:
                                 emb = get_embedding(text, task_type="search_document")

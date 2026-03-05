@@ -76,6 +76,11 @@ except ImportError:
 
 from config.settings_loader import settings, get_ollama_url, get_model, get_timeout
 
+# RAG vector store: Qdrant or FAISS (default). Switch via RAG_VECTOR_STORE_PROVIDER=qdrant
+def _get_rag_store():
+    from memory.rag_store import get_rag_vector_store
+    return get_rag_vector_store(index_dir=ROOT / "faiss_index")
+
 mcp = FastMCP("Local Storage RAG")
 
 # --- Settings from centralized config ---
@@ -91,7 +96,8 @@ MAX_CHUNK_LENGTH = settings["rag"]["max_chunk_length"]
 TOP_K = settings["rag"]["top_k"]
 OLLAMA_TIMEOUT = get_timeout()
 ROOT = Path(__file__).parent.resolve()
-BASE_DATA_DIR = ROOT.parent / "data"
+PROJECT_ROOT = ROOT.parent
+BASE_DATA_DIR = PROJECT_ROOT / "data"
 MEMORY_SUMMARIES_DIR = ROOT.parent / "memory" / "session_summaries_index"
 SYNC_TARGET_DIR = BASE_DATA_DIR / "conversation_history"
 
@@ -123,9 +129,12 @@ def get_rg_path():
 
 
 def get_embedding(text: str) -> np.ndarray:
-    result = requests.post(EMBED_URL, json={"model": EMBED_MODEL, "prompt": text}, timeout=OLLAMA_TIMEOUT)
+    result = requests.post(EMBED_URL, json={"model": EMBED_MODEL, "input": text}, timeout=OLLAMA_TIMEOUT)
     result.raise_for_status()
-    return np.array(result.json()["embedding"], dtype=np.float32)
+    data = result.json()
+    # Ollama /api/embed returns "embeddings" (plural); legacy used "embedding" (singular)
+    emb = data["embeddings"][0] if data.get("embeddings") else data.get("embedding", [])
+    return np.array(emb, dtype=np.float32)
 
 def chunk_text(text, size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     words = text.split()
@@ -528,27 +537,24 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
     Optionally provide doc_path to search within a specific document only.
     """
     global _bm25_index
-    ensure_faiss_ready()
+    ensure_rag_ready()
     mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path})")
     
     try:
-        metadata = json.loads((ROOT / "faiss_index" / "metadata.json").read_text())
+        meta_path = ROOT / "faiss_index" / "metadata.json"
+        if not meta_path.exists():
+            return ["No documents indexed yet. Run reindex_documents first."]
+        metadata = json.loads(meta_path.read_text())
         
         # 1. Analyze query for intent and entities
         analysis = analyze_query(query)
         mcp_log("SEARCH", f"Intent: {analysis.intent}, Entities: {analysis.entities}")
         
-        # 2. FAISS vector search
-        index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
-        query_vec = get_embedding(query).reshape(1, -1)
-        D, I = index.search(query_vec, k=50 if doc_path else 30)
-        
-        faiss_results = []
-        for rank, idx in enumerate(I[0]):
-            if idx < 0 or idx >= len(metadata):
-                continue
-            chunk_id = metadata[idx].get('chunk_id', f'idx_{idx}')
-            faiss_results.append((chunk_id, float(D[0][rank])))
+        # 2. Vector search (Qdrant or FAISS)
+        rag_store = _get_rag_store()
+        query_vec = get_embedding(query)
+        k = 50 if doc_path else 30
+        faiss_results = rag_store.search(query_vec, k=k)
         
         # 3. BM25 keyword search (if available)
         bm25_results = []
@@ -1435,7 +1441,7 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
 
     mcp_log("INFO", f"Loaded cache with {len(CACHE_META)} files, ledger with {len(ledger_data.get('files', {}))} files")
 
-    index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
+    rag_store = _get_rag_store()
 
     files_to_process = []
     if specific_files:
@@ -1506,16 +1512,17 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
                         # 1. Cleanup old entries if exist
                         if rel_path in CACHE_META:
                             metadata = [m for m in metadata if m.get("doc") != rel_path]
-                            
-                        # 2. Add new
-                        if index is None:
-                            dim = len(new_embs[0])
-                            index = faiss.IndexFlatL2(dim)
-                        
-                        index.add(np.stack(new_embs))
                         metadata.extend(new_meta)
-                        CACHE_META[rel_path] = fhash # Update cache
-                        
+                        CACHE_META[rel_path] = fhash  # Update cache
+
+                        # 2. Add to vector store (Qdrant or FAISS)
+                        remove_doc = rel_path if rel_path in CACHE_META else None
+                        rag_store.add_chunks(
+                            entries=new_meta,
+                            embeddings=new_embs,
+                            remove_doc=remove_doc,
+                        )
+
                         # Update ledger with new format
                         from datetime import datetime
                         ledger_data["files"][rel_path] = {
@@ -1525,13 +1532,11 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
                             "chunk_count": len(new_embs),
                             "error": None
                         }
-                        
-                        # 3. INCREMENTAL SAVE (Crash-safe)
+
+                        # 3. INCREMENTAL SAVE (Crash-safe) - metadata.json for BM25
                         try:
                             CACHE_FILE.write_text(json.dumps(CACHE_META, indent=2))
                             METADATA_FILE.write_text(json.dumps(metadata, indent=2))
-                            faiss.write_index(index, str(INDEX_FILE))
-                            # Also save ledger
                             LEDGER_FILE.write_text(json.dumps(ledger_data, indent=2))
                         except Exception as e:
                             mcp_log("WARN", f"Incremental save failed: {e}")
@@ -1637,7 +1642,7 @@ async def index_images() -> str:
 
     captions_ledger = json.loads(CAPTIONS_FILE.read_text()) if CAPTIONS_FILE.exists() else {}
     metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
-    index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
+    rag_store = _get_rag_store()
 
     # Find pending images
     all_images = list(IMG_DIR.glob("*.png")) + list(IMG_DIR.glob("*.jpg"))
@@ -1694,28 +1699,28 @@ async def index_images() -> str:
 
     # Save Updates
     if new_embeddings:
-        if index is None:
-             index = faiss.IndexFlatL2(len(new_embeddings[0]))
-        index.add(np.stack(new_embeddings))
+        rag_store.add_chunks(entries=new_meta, embeddings=new_embeddings)
         metadata.extend(new_meta)
-        
         CAPTIONS_FILE.write_text(json.dumps(captions_ledger, indent=2))
         METADATA_FILE.write_text(json.dumps(metadata, indent=2))
-        faiss.write_index(index, str(INDEX_FILE))
-        
         return f"Successfully processed {len(new_embeddings)} images. Index updated."
     
     return "Processed images but no valid captions generated."
 
 
-def ensure_faiss_ready():
-    index_path = ROOT / "faiss_index" / "index.bin"
+def ensure_rag_ready():
+    """Ensure RAG index exists. For FAISS: index.bin + metadata.json. For Qdrant: metadata.json only."""
     meta_path = ROOT / "faiss_index" / "metadata.json"
-    if not (index_path.exists() and meta_path.exists()):
-        mcp_log("INFO", "Index not found — running process_documents()...")
+    index_path = ROOT / "faiss_index" / "index.bin"
+    use_qdrant = os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant"
+    if not meta_path.exists():
+        mcp_log("INFO", "RAG index not found — running process_documents()...")
+        process_documents()
+    elif not use_qdrant and not index_path.exists():
+        mcp_log("INFO", "FAISS index not found — running process_documents()...")
         process_documents()
     else:
-        mcp_log("INFO", "Index already exists. Skipping regeneration.")
+        mcp_log("INFO", "RAG index ready.")
 
 
 # =============================================================================
@@ -1804,42 +1809,23 @@ def start_background_services():
     def process_file_callback(abs_path: Path, rel_path: str) -> dict:
         """Callback for scheduler to process a single file."""
         try:
-            # Load existing index and metadata
-            INDEX_FILE = INDEX_CACHE / "index.bin"
             METADATA_FILE = INDEX_CACHE / "metadata.json"
-            
             metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
-            index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
-            
-            # Remove old entries for this file
             metadata = [m for m in metadata if m.get("doc") != rel_path]
-            
-            # Process the file
+
             result = process_single_file(abs_path, BASE_DATA_DIR, {})
-            
             if result.get("status") == "SUCCESS":
                 new_embs = result.get("embeddings", [])
                 new_meta = result.get("metadata", [])
-                
                 if new_embs:
-                    if index is None:
-                        dim = len(new_embs[0])
-                        index = faiss.IndexFlatL2(dim)
-                    
-                    index.add(np.stack(new_embs))
+                    rag_store = _get_rag_store()
+                    rag_store.add_chunks(entries=new_meta, embeddings=new_embs, remove_doc=rel_path)
                     metadata.extend(new_meta)
-                    
-                    # Save atomically
                     METADATA_FILE.write_text(json.dumps(metadata, indent=2))
-                    faiss.write_index(index, str(INDEX_FILE))
-                    
-                    # Rebuild BM25 index
                     if BM25_AVAILABLE:
                         _bm25_index.build_from_metadata(metadata)
                         _bm25_index.save(str(INDEX_CACHE / "bm25_index.pkl"))
-                    
                     return {"chunk_count": len(new_embs)}
-            
             return {"chunk_count": 0}
         except Exception as e:
             mcp_log("ERROR", f"Process callback failed for {rel_path}: {e}")
@@ -1849,16 +1835,14 @@ def start_background_services():
         """Callback for scheduler to remove a file from the index."""
         try:
             METADATA_FILE = INDEX_CACHE / "metadata.json"
-            
             if METADATA_FILE.exists():
                 metadata = json.loads(METADATA_FILE.read_text())
                 new_metadata = [m for m in metadata if m.get("doc") != rel_path]
-                
                 if len(new_metadata) != len(metadata):
+                    rag_store = _get_rag_store()
+                    rag_store.delete_by_doc(rel_path)
                     METADATA_FILE.write_text(json.dumps(new_metadata, indent=2))
-                    mcp_log("INFO", f"Removed {rel_path} from metadata ({len(metadata) - len(new_metadata)} chunks)")
-                    
-                    # Rebuild BM25
+                    mcp_log("INFO", f"Removed {rel_path} from index ({len(metadata) - len(new_metadata)} chunks)")
                     if BM25_AVAILABLE:
                         _bm25_index.build_from_metadata(new_metadata)
                         _bm25_index.save(str(INDEX_CACHE / "bm25_index.pkl"))
