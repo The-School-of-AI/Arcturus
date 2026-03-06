@@ -91,3 +91,7 @@ benchmark_results.txt
 # Added by Arcturus
 .arcturus/
 .arcturus
+
+# Other personal files
+HOWTOGETSLACKBOT.md
+P01-Delivery-Status.md

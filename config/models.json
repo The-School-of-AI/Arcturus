@@ -64,7 +64,7 @@
     },
     "nomic": {
       "type": "huggingface",
-      "model": "nomic-ai/nomic-embed-text-v1",
+      "model": "nomic-embed-text:v1.5",
       "embedding_dimension": 768
     }
   }

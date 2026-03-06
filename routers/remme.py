@@ -87,7 +87,6 @@ async def background_smart_scan():
                     remme_store.mark_run_scanned(run_id)
                     continue
 
-                pdb.set_trace()
                 hist = [{"role": "user", "content": query}]
                 if output:
                     hist.append({"role": "assistant", "content": output})

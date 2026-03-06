@@ -47,6 +47,8 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.28.0",
     "opentelemetry-instrumentation-fastapi>=0.49b0",
     "pymongo>=4.10.0",
+    "pytest",
+    "ruff>=0.4.0",
 
 
     "memo>=0.2.4",
@@ -68,3 +70,14 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = ["agents*", "config*", "core*", "mcp_servers*", "memory*", "ops*", "remme*", "routers*", "shared*", "tools*", "ui*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/F = pycodestyle errors + pyflakes; W = warnings; I = isort
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # line too long — handled by formatter, not enforced here
+]

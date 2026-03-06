@@ -526,6 +526,92 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
             return final_result
 
 
+# === Helpers ===
+
+def _extract_output_str(data: dict) -> str:
+    """Extract the best human-readable output string from a saved session graph.
+
+    Priority:
+    1. FormatterAgent node output (markdown_report / formatted_report)
+    2. Any node with a substantial string output (largest wins)
+    3. Falls back to empty string if nothing found.
+
+    Args:
+        data: Parsed session JSON (node-link format from NetworkX).
+
+    Returns:
+        Cleaned output string, or empty string if nothing substantial found.
+    """
+    output_str = ""
+    nodes = data.get("nodes", [])
+
+    # 1. FormatterAgent output first (The Final Report)
+    for node in nodes:
+        node_agent = node.get("agent", "")
+        out = node.get("output", {})
+        if node_agent == "FormatterAgent" or "Format" in node_agent:
+            if isinstance(out, dict):
+                md = out.get("markdown_report")
+                if not md:
+                    for k, v in out.items():
+                        if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
+                            md = v
+                            break
+                if md:
+                    output_str = md
+                    break
+                if isinstance(out.get("output"), str) and len(out["output"]) > 100:
+                    output_str = out["output"]
+                    break
+
+    # 2. Fallback: largest string output across all non-ROOT nodes
+    if not output_str:
+        for node in reversed(nodes):
+            if node.get("id") == "ROOT":
+                continue
+            out = node.get("output", {})
+
+            def _find_largest_string(d):
+                largest = ""
+                for v in d.values():
+                    if isinstance(v, str):
+                        if len(v) > len(largest):
+                            largest = v
+                    elif isinstance(v, dict):
+                        sub = _find_largest_string(v)
+                        if len(sub) > len(largest):
+                            largest = sub
+                return largest
+
+            if isinstance(out, dict):
+                largest_str = _find_largest_string(out)
+                if len(largest_str) > 50:
+                    output_str = largest_str
+                    break
+            elif isinstance(out, str) and len(out) > 50:
+                output_str = out
+                break
+
+    # 3. Strip JSON wrapper / markdown fences if present
+    if output_str:
+        if (output_str.startswith("{") and output_str.endswith("}")) or \
+                (output_str.startswith("[") and output_str.endswith("]")):
+            try:
+                parsed = json.loads(output_str)
+                if isinstance(parsed, dict):
+                    for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
+                        if parsed.get(k) and isinstance(parsed[k], str) and len(parsed[k]) > 50:
+                            output_str = parsed[k]
+                            break
+            except Exception:
+                pass
+        import re
+        output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
+        output_str = re.sub(r'\n```$', '', output_str)
+
+    return output_str.strip()
+
+
 # === Endpoints ===
 
 @router.post("/runs")
@@ -644,6 +730,53 @@ async def get_run(run_id: str):
         }
         
     raise HTTPException(status_code=404, detail="Run not found")
+
+
+@router.get("/runs/{run_id}/output")
+async def get_run_output(run_id: str):
+    """Return the extracted text output of a completed run.
+
+    Designed for programmatic consumers (e.g. the Nexus channel gateway) that
+    need the final agent reply as plain text rather than the ReactFlow graph.
+
+    Returns:
+        {
+            "run_id": str,
+            "status": "running" | "completed" | "failed" | "not_found",
+            "output": str | None
+        }
+    """
+    # Still running — no output yet
+    if run_id in active_loops:
+        return {"run_id": run_id, "status": "running", "output": None}
+
+    # Search disk for the saved session
+    summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    found_file = None
+    for path in summaries_dir.rglob(f"session_{run_id}.json"):
+        found_file = path
+        break
+
+    if not found_file:
+        return {"run_id": run_id, "status": "not_found", "output": None}
+
+    data = json.loads(found_file.read_text())
+
+    # Determine overall run status from node statuses
+    nodes = data.get("nodes", [])
+    node_statuses = [n.get("status", "pending") for n in nodes if n.get("id") != "ROOT"]
+    if any(s == "failed" for s in node_statuses):
+        run_status = "failed"
+    else:
+        run_status = data.get("graph", {}).get("status", "completed")
+
+    output_str = _extract_output_str(data)
+
+    return {
+        "run_id": run_id,
+        "status": run_status,
+        "output": output_str if output_str else None,
+    }
 
 
 @router.post("/runs/{run_id}/input")

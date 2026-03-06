@@ -19,6 +19,7 @@ import {
   IconCode,
   IconDeviceLaptop,
   IconHistory,
+  IconLoader2,
   IconPaperclip,
   IconPlus,
   IconProgress,
@@ -27,7 +28,16 @@ import {
   IconWand,
   IconWorld,
 } from "@tabler/icons-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+const API_BASE = "http://localhost:8000";
+const POLL_INTERVAL_MS = 500;
+const POLL_TIMEOUT_MS = 30_000;
+
+interface ChatMessage {
+  role: "user" | "bot";
+  content: string;
+}
 
 export default function Ai03() {
   const [input, setInput] = useState("");
@@ -35,23 +45,133 @@ export default function Ai03() {
   const [selectedAgent, setSelectedAgent] = useState("Agent");
   const [selectedPerformance, setSelectedPerformance] = useState("High");
   const [autoMode, setAutoMode] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const sessionId = sessionIdRef.current;
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      // 1. POST to webchat inbound endpoint
+      const postResp = await fetch(`${API_BASE}/api/nexus/webchat/inbound`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          sender_id: sessionId,
+          sender_name: "WebChat User",
+          text,
+        }),
+      });
+
+      if (!postResp.ok) {
+        throw new Error(`Inbound POST failed: ${postResp.status}`);
+      }
+
+      // 2. Poll for reply
+      const deadline = Date.now() + POLL_TIMEOUT_MS;
+      let reply: string | null = null;
+
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+        const getResp = await fetch(
+          `${API_BASE}/api/nexus/webchat/messages/${sessionId}`
+        );
+        if (!getResp.ok) continue;
+
+        const data = await getResp.json();
+        const msgs: { text: string }[] = data.messages ?? [];
+        if (msgs.length > 0) {
+          reply = msgs.map((m) => m.text).join("\n\n");
+          break;
+        }
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          content: reply ?? "Agent did not respond in time. Please try again.",
+        },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", content: `Error: ${String(err)}` },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
     }
   };
 
   return (
-    <div className="w-xl">
+    <div className="w-xl flex flex-col gap-2">
+      {/* Message history */}
+      {(messages.length > 0 || loading) && (
+        <div className="bg-background border border-border rounded-2xl p-3 flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={cn("flex", {
+                "justify-end": msg.role === "user",
+                "justify-start": msg.role === "bot",
+              })}
+            >
+              <div
+                className={cn(
+                  "max-w-[80%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap",
+                  {
+                    "bg-primary text-primary-foreground": msg.role === "user",
+                    "bg-muted text-foreground": msg.role === "bot",
+                  }
+                )}
+              >
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-muted text-muted-foreground rounded-xl px-3 py-2 text-sm flex items-center gap-1.5">
+                <IconLoader2 className="size-3.5 animate-spin" />
+                Thinking…
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {/* Input area */}
       <div className="bg-background border border-border rounded-2xl overflow-hidden">
         <input
           ref={fileInputRef}
           type="file"
           multiple
           className="sr-only"
-          onChange={(e) => { }}
+          onChange={() => {}}
         />
 
         <div className="px-3 pt-3 pb-2 grow">
@@ -59,6 +179,7 @@ export default function Ai03() {
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Ask anything"
               className="w-full bg-transparent! p-0 border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder-muted-foreground resize-none border-none outline-none text-sm min-h-10 max-h-[25vh]"
               rows={1}
@@ -98,21 +219,21 @@ export default function Ai03() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-[calc(1rem-6px)] text-xs"
-                    onClick={() => { }}
+                    onClick={() => {}}
                   >
                     <IconCode size={16} className="opacity-60" />
                     Code Interpreter
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-[calc(1rem-6px)] text-xs"
-                    onClick={() => { }}
+                    onClick={() => {}}
                   >
                     <IconWorld size={16} className="opacity-60" />
                     Web Search
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-[calc(1rem-6px)] text-xs"
-                    onClick={() => { }}
+                    onClick={() => {}}
                   >
                     <IconHistory size={16} className="opacity-60" />
                     Chat History
@@ -141,11 +262,15 @@ export default function Ai03() {
           <div>
             <Button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || loading}
               className="size-7 p-0 rounded-full bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSubmit}
             >
-              <IconSend className="size-3 fill-primary" />
+              {loading ? (
+                <IconLoader2 className="size-3 animate-spin" />
+              ) : (
+                <IconSend className="size-3 fill-primary" />
+              )}
             </Button>
           </div>
         </div>

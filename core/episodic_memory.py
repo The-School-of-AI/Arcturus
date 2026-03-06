@@ -91,21 +91,25 @@ class MemorySkeletonizer:
                     # Capture Tool Calls
                     if output.get("call_tool"):
                         tool_call = output["call_tool"]
-                        actions.append({
-                            "type": "tool",
-                            "name": tool_call.get("name"),
-                            # We might strip arguments if they are huge text blocks, 
-                            # but short args like search queries are valuable.
-                            "args": str(tool_call.get("arguments", ""))[:200] 
-                        })
+                        if isinstance(tool_call, dict):
+                            actions.append({
+                                "type": "tool",
+                                "name": tool_call.get("name"),
+                                # We might strip arguments if they are huge text blocks,
+                                # but short args like search queries are valuable.
+                                "args": str(tool_call.get("arguments", ""))[:200]
+                            })
                     
                     # Capture Code Execution
                     if output.get("call_self"):
+                        call_self = output["call_self"]
+                        snippet = ""
+                        if isinstance(call_self, dict):
+                            snippet = call_self.get("code", "")[:500]
                         actions.append({
                             "type": "code",
                             "lang": "python",
-                            # Code is the recipe! Keep it.
-                            "snippet": output.get("call_self", {}).get("code", "")[:500] 
+                            "snippet": snippet,
                         })
                         
             s_node["actions"] = actions

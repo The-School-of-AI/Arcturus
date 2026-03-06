@@ -1,6 +1,6 @@
 {
   "watchtower": {
-    "enabled": true,
+    "enabled": false,
     "mongodb_uri": "mongodb://localhost:27017",
     "jaeger_endpoint": "http://localhost:4318/v1/traces"
   },
@@ -9,7 +9,7 @@
     "timeout": 300
   },
   "models": {
-    "embedding": "nomic-embed-text",
+    "embedding": "nomic-embed-text:v1.5",
     "semantic_chunking": "gemma3:4b",
     "image_captioning": "gemma3:4b",
     "memory_extraction": "gemma3:4b",

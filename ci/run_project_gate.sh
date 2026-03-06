@@ -20,6 +20,11 @@ if [[ ! -f "$INTEGRATION_PATH" ]]; then
   exit 1
 fi
 
+echo "[gate:$CHECK_NAME] Running lint/typecheck on touched P01 paths"
+if [ "$CHECK_NAME" = "p01-nexus-gateway" ]; then
+  python -m ruff check gateway/ channels/ routers/nexus.py shared/state.py
+fi
+
 echo "[gate:$CHECK_NAME] Running project contract tests"
 python -m pytest -q "$ACCEPTANCE_PATH" "$INTEGRATION_PATH"
 

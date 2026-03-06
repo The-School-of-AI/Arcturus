@@ -20,16 +20,25 @@ from routers import nexus as nexus_router
 
 
 def _make_client() -> TestClient:
-    """Build a minimal FastAPI app with only the nexus router."""
-    # Reset shared bus singleton and outboxes so each test is isolated.
+    """Build a minimal FastAPI app with only the nexus router.
+
+    Pins create_mock_agent as the agent factory so tests are deterministic
+    and do not depend on a running FastAPI server (create_runs_agent requires one).
+    """
+    from gateway.bus import MessageBus
+    from gateway.formatter import MessageFormatter
+    from gateway.router import MessageRouter, create_mock_agent
     import shared.state as state
-    state._message_bus = None
+
     WebChatAdapter._outboxes.clear()
+    formatter = MessageFormatter()
+    router = MessageRouter(agent_factory=create_mock_agent, formatter=formatter)
+    bus = MessageBus(router=router, formatter=formatter, adapters={"webchat": WebChatAdapter()})
+    state._message_bus = bus
+    nexus_router._bus = bus
 
     app = FastAPI()
     app.include_router(nexus_router.router, prefix="/api")
-    # Also reset the router's cached bus reference
-    nexus_router._bus = None
     return TestClient(app)
 
 

@@ -35,6 +35,18 @@ class ChannelAdapter(ABC):
         """
         pass
 
+    async def send_typing_indicator(self, recipient_id: str, **kwargs) -> None:
+        """Send a typing/processing indicator on this channel.
+
+        Default implementation is a no-op.  Channels with native typing API
+        support (Telegram, Discord, Teams, Matrix, WebChat) override this.
+
+        Args:
+            recipient_id: Channel-specific recipient identifier.
+            **kwargs: Channel-specific options.
+        """
+        pass
+
     @abstractmethod
     async def initialize(self) -> None:
         """Initialize the channel adapter (connect, authenticate, etc.)."""
