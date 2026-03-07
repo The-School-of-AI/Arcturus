@@ -33,6 +33,17 @@ class VoiceWakeService:
         # At 16kHz / 512 samples per frame = 32ms/frame → 16 frames ≈ 512ms
         self._barge_in_buffer: deque = deque(maxlen=16)
 
+        # After barge-in is detected, accumulate speech for this many seconds
+        # before pushing frames to STT and firing on_wake. This gives the user
+        # time to finish their sentence before text aggregation begins.
+        self._BARGE_IN_HOLD_SEC: float = 2.0
+
+        # Timestamp when barge-in was first detected (None = no active hold).
+        self._barge_in_detected_at: float | None = None
+
+        # Accumulated frames during the hold window (unbounded — holds up to ~2s of speech).
+        self._barge_in_hold_buffer: list = []
+
         # Robust barge-in detector (separate from wake/VAD/STT path).
         bi = VOICE_CONFIG.get("barge_in", {}) or {}
         self._barge = BargeInDetector(
@@ -168,22 +179,35 @@ class VoiceWakeService:
 
                             # 3. Check if user is speaking over us
                             interrupted, rms, ratio = self._barge.should_interrupt(pcm)
-                            if interrupted:
-                                print(f"⚡ [Voice] VAD Barge-in detected! (RMS: {rms:.1f}, Ratio: {ratio:.2f}x)")
 
-                                # Pre-fill STT with buffered speech BEFORE calling on_wake()
-                                # so the frames are already queued when state → LISTENING.
-                                # on_wake(BARGE_IN) deliberately skips stt.cancel() to keep them.
-                                if self.orchestrator and self.orchestrator.stt:
-                                    n_frames = len(self._barge_in_buffer)
-                                    for buffered_pcm in self._barge_in_buffer:
-                                        self.orchestrator.stt.push_audio(buffered_pcm)
-                                    print(f"🔊 [Voice] Pre-filled STT with {n_frames} buffered frames (~{n_frames * 32}ms)")
-                                self._barge_in_buffer.clear()
+                            if self._barge_in_detected_at is not None:
+                                # ── HOLD WINDOW: barge-in already detected, accumulate ──
+                                # Keep collecting frames silently until the hold expires.
+                                self._barge_in_hold_buffer.append(pcm)
+                                elapsed = time.time() - self._barge_in_detected_at
+                                if elapsed >= self._BARGE_IN_HOLD_SEC:
+                                    # Hold expired — now push everything to STT and fire wake
+                                    all_frames = list(self._barge_in_buffer) + self._barge_in_hold_buffer
+                                    if self.orchestrator and self.orchestrator.stt:
+                                        for buffered_pcm in all_frames:
+                                            self.orchestrator.stt.push_audio(buffered_pcm)
+                                        print(f"🔊 [Voice] Barge-in hold expired ({self._BARGE_IN_HOLD_SEC:.1f}s). "
+                                              f"Pushed {len(all_frames)} frames (~{len(all_frames) * 32}ms) to STT.")
+                                    self._barge_in_buffer.clear()
+                                    self._barge_in_hold_buffer.clear()
+                                    self._barge_in_detected_at = None
 
-                                # NOW trigger wake flow — state → LISTENING, TTS cancel, nexus abort
-                                self.on_wake({"type": "BARGE_IN"})
+                                    # Trigger wake flow — state → LISTENING, TTS cancel, nexus abort
+                                    self.on_wake({"type": "BARGE_IN"})
+                                    self._barge.reset_speech_streak()
+                                continue
 
+                            elif interrupted:
+                                # ── FIRST DETECTION: start the hold window ──
+                                print(f"⚡ [Voice] VAD Barge-in detected! (RMS: {rms:.1f}, Ratio: {ratio:.2f}x) "
+                                      f"— holding {self._BARGE_IN_HOLD_SEC:.1f}s before STT aggregation.")
+                                self._barge_in_detected_at = time.time()
+                                self._barge_in_hold_buffer.clear()
                                 self._barge.reset_speech_streak()
                                 continue
                 else:
