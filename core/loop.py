@@ -77,12 +77,23 @@ async def retry_with_backoff(
     raise last_exception
 
 
+import re
+
 # ── Voice streaming helper ─────────────────────────────────────────────────
 # Nodes to skip for voice streaming (they produce metadata, not user-facing text)
 _VOICE_SKIP_AGENTS = {
-    "PlannerAgent", "ClarificationAgent", "DistillerAgent", "QueryAgent",
+    "PlannerAgent", "DistillerAgent", "QueryAgent",
 }
 _VOICE_MIN_CHARS = 40  # Don't speak very short outputs
+
+# Patterns for catching technical leakage
+_VOICE_ERROR_KEYWORDS = (
+    r'NameError|TypeError|ValueError|AttributeError|KeyError|IndexError|'
+    r'RuntimeError|ImportError|ModuleNotFoundError|ZeroDivisionError|'
+    r'SyntaxError|IndentationError|UnboundLocalError|RecursionError|'
+    r'AssertionError|OSError|FileNotFoundError|Exception|Traceback'
+)
+_VOICE_ERROR_RE = re.compile(rf'\b({_VOICE_ERROR_KEYWORDS})\b', re.IGNORECASE)
 
 
 def _extract_node_chunk(step_id: str, agent_type: str, output) -> str | None:
@@ -118,22 +129,31 @@ def _extract_node_chunk(step_id: str, agent_type: str, output) -> str | None:
         if not text:
             best = ""
             for k, v in output.items():
-                if k == "error" or k == "traceback":
+                # Skip tech labels
+                if k in ("error", "traceback", "status", "cost"):
                     continue
                 if isinstance(v, str) and len(v) > len(best):
                     best = v
             text = best or None
 
     elif isinstance(output, str):
-        # Basic heuristic for avoiding speaking technical errors directly
-        if output.lower().startswith("error:") or "traceback (most recent call last):" in output.lower():
-            return None
         text = output
 
-    if not text or len(text.strip()) < _VOICE_MIN_CHARS:
+    if not text:
         return None
 
-    return text.strip()
+    # ── Guard: never speak raw Python exception strings ─────────────────────
+    # If the text (especially a short summary) contains technical error words
+    # replace it with None so voice skips this chunk.
+    normalized = text.strip()
+    if (len(normalized) < 400 and _VOICE_ERROR_RE.search(normalized)) or "traceback (most" in normalized.lower():
+        print(f"⚠️ [Voice] Skip chunk: detected technical error in {step_id} output.")
+        return None
+
+    if len(normalized) < _VOICE_MIN_CHARS:
+        return None
+
+    return normalized
 # ──────────────────────────────────────────────────────────────────────────
 
 

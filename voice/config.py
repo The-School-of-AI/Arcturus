@@ -34,7 +34,7 @@ VOICE_CONFIG = {
     # -----------------------------
     "porcupine": {
         # Path to custom .ppn file (recommended)
-        "keyword_path": os.path.join(_VOICE_DIR, "keywords", "hey_arcturus.ppn"),
+        "keyword_path": os.path.join(_VOICE_DIR, "keywords", "Hey-Arcturus_en_windows_v4_0_0.ppn"),
 
         # Sensitivity: 0.0 (least sensitive) → 1.0 (most sensitive)
         # Higher = fewer missed detections, but more false positives.
