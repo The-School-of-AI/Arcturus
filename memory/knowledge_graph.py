@@ -237,10 +237,10 @@ class KnowledgeGraph:
                 m.category = $category,
                 m.source = $source{match_extras}
             WITH m
-            MATCH (u:User {user_id: $user_id})
+            MATCH (u:User {{user_id: $user_id}})
             MERGE (u)-[:HAS_MEMORY]->(m)
             WITH m
-            MATCH (s:Session {session_id: $session_id})
+            MATCH (s:Session {{session_id: $session_id}})
             MERGE (m)-[:FROM_SESSION]->(s)
             """,
             {
