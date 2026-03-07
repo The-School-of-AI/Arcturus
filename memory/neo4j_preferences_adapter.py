@@ -10,48 +10,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-# Mapping: (namespace, key) -> (path_in_response, append_to_list).
-# path is tuple like ("preferences", "output_contract", "verbosity").
-# append_to_list: if True, value is appended to a list at that path.
-FACT_TO_HUB_PATH: List[Tuple[str, str, Tuple[str, ...], bool]] = [
-    # preferences.output_contract
-    ("preferences.output_contract", "verbosity.default", ("preferences", "output_contract", "verbosity"), False),
-    ("preferences.output_contract", "verbosity", ("preferences", "output_contract", "verbosity"), False),
-    ("preferences.output_contract", "format.default", ("preferences", "output_contract", "format"), False),
-    ("preferences.output_contract", "format", ("preferences", "output_contract", "format"), False),
-    ("preferences.output_contract", "tone", ("preferences", "output_contract", "tone_constraints"), True),
-    ("preferences.output_contract", "clarifications", ("preferences", "output_contract", "clarifications"), False),
-    # tooling
-    ("tooling.package_manager", "python", ("preferences", "tooling", "package_manager", "python"), False),
-    ("tooling.package_manager", "javascript", ("preferences", "tooling", "package_manager", "javascript"), False),
-    ("preferences", "frameworks_frontend", ("preferences", "tooling", "frameworks", "frontend"), True),
-    ("preferences", "frameworks_backend", ("preferences", "tooling", "frameworks", "backend"), True),
-    # operating_context
-    ("operating.environment", "os", ("operating_context", "os"), False),
-    ("operating.environment", "location", ("operating_context", "location"), False),
-    ("operating_context", "location", ("operating_context", "location"), False),
-    ("operating.context", "primary_languages", ("operating_context", "primary_languages"), True),
-    ("operating", "primary_languages", ("operating_context", "primary_languages"), True),
-    # soft_identity
-    ("identity.food", "dietary_style", ("soft_identity", "food_and_dining", "dietary_style"), False),
-    ("identity.food", "cuisine_likes", ("soft_identity", "food_and_dining", "cuisine_likes"), True),
-    ("identity.food", "cuisine_dislikes", ("soft_identity", "food_and_dining", "cuisine_dislikes"), True),
-    ("identity.food", "favorite_foods", ("soft_identity", "food_and_dining", "favorite_foods"), True),
-    ("identity", "pet_affinity", ("soft_identity", "pets_and_animals", "affinity"), False),
-    ("identity", "pet_names", ("soft_identity", "pets_and_animals", "pet_names"), True),
-    ("identity", "music_genres", ("soft_identity", "media_and_entertainment", "music_genres"), True),
-    ("identity", "movie_genres", ("soft_identity", "media_and_entertainment", "movie_genres"), True),
-    ("identity", "humor_tolerance", ("soft_identity", "communication_style", "humor_tolerance"), False),
-    ("identity", "small_talk_tolerance", ("soft_identity", "communication_style", "small_talk_tolerance"), False),
-    ("identity", "hobbies", ("soft_identity", "interests_and_hobbies", "personal_hobbies"), True),
-    ("identity", "personal_hobbies", ("soft_identity", "interests_and_hobbies", "personal_hobbies"), True),
-    ("identity", "professional_interests", ("soft_identity", "interests_and_hobbies", "professional_interests"), True),
-    ("identity", "learning_interests", ("soft_identity", "interests_and_hobbies", "learning_interests"), True),
-    ("identity", "side_projects", ("soft_identity", "interests_and_hobbies", "side_projects"), True),
-    ("identity", "industry", ("soft_identity", "professional_context", "industry"), False),
-    ("identity", "role_type", ("soft_identity", "professional_context", "role_type"), False),
-    ("identity", "experience_level", ("soft_identity", "professional_context", "experience_level"), False),
-]
+from memory.fact_field_registry import get_fact_to_hub_mappings
+
+# Mapping: (namespace, key) -> (path_in_response, append_to_list). Built from registry.
+FACT_TO_HUB_PATH: List[Tuple[str, str, Tuple[str, ...], bool]] = get_fact_to_hub_mappings()
 
 
 def _set_nested(d: Dict[str, Any], path: Tuple[str, ...], value: Any, append: bool) -> None:
@@ -199,10 +161,15 @@ def build_preferences_from_neo4j(user_id: str) -> Dict[str, Any]:
         if path_tup is None:
             result["soft_identity"]["extras"][f"{ns}.{key}"] = val
             continue
-        prev = used.get(path_tup, (0, None))
-        if confidence > prev[0] or (confidence == prev[0] and last_seen and (prev[1] or "") < str(last_seen)):
-            used[path_tup] = (confidence, str(last_seen) if last_seen else None)
-            _set_nested(result, path_tup, val, append)
+        # For append=True (list merge), always add from every matching fact
+        # For append=False, use confidence/last_seen to resolve conflicts
+        if append:
+            _set_nested(result, path_tup, val, append=True)
+        else:
+            prev = used.get(path_tup, (0, None))
+            if confidence > prev[0] or (confidence == prev[0] and last_seen and (prev[1] or "") < str(last_seen)):
+                used[path_tup] = (confidence, str(last_seen) if last_seen else None)
+                _set_nested(result, path_tup, val, append=False)
 
     avg_conf = (sum(u[0] for u in used.values()) / len(used)) if used else 0
     total_ev = evidence.get("total_events", 0)

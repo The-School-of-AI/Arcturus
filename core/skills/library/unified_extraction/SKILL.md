@@ -41,9 +41,14 @@ Return a single JSON object with these keys only (use empty arrays when nothing 
 
 - `preferences.output_contract` — verbosity.default, format, tone
 - `identity.food` — dietary_style, cuisine_likes, favorite_foods
+- `identity` — personal_hobbies (list), professional_interests (list), learning_interests (list)
 - `operating.environment` — os, location
 - `tooling.package_manager` — python, javascript
 - `identity.work` — company, role
+
+For hobbies/interests, use `namespace: "identity"`, `key: "personal_hobbies"`, `value_type: "json"`, `value_json: ["Running"]` (or append to existing).
+Single hobby additions (e.g. "I have a new hobby - Running") can use `key: "personal_hobbies"` with a one-item list.
+Alternate keys like `identity.hobby`/`hobby` or `identity`/`hobby` are normalized to `personal_hobbies` via the fact field registry.
 
 Use `entity_ref` (e.g. `"Concept::vegetarian"`) when a fact refers to an entity.
 

@@ -86,6 +86,7 @@ FACT_DERIVATION_TABLE: List[Tuple[str, str, str]] = [
     ("operating.environment", "location", "LIVES_IN"),
     ("preferences", "*", "PREFERS"),
     ("identity.food", "*", "PREFERS"),
+    ("identity.hobby", "*", "PREFERS"),
     ("identity.", "*", "KNOWS"),
 ]
 
@@ -519,6 +520,56 @@ class KnowledgeGraph:
             return records[0]["id"]
         return None
 
+    def merge_list_fact(
+        self,
+        user_id: str,
+        namespace: str,
+        key: str,
+        values: List[Any],
+        confidence: float = 0.8,
+    ) -> bool:
+        """
+        Merge values into an existing list-valued Fact, or create it if missing.
+        Used by ingest after fact_normalizer produces canonical list facts.
+        """
+        if not self._enabled or not user_id or not namespace or not key:
+            return False
+        valid: List[Any] = []
+        for v in values or []:
+            s = str(v).strip() if v is not None else ""
+            if s and s.lower() != "null" and s not in [str(x).strip() for x in valid]:
+                valid.append(s)
+        if not valid:
+            return False
+        records = self._run_query(
+            """
+            MATCH (u:User {user_id: $user_id})-[:HAS_FACT]->(f:Fact {namespace: $ns, key: $key})
+            RETURN properties(f) AS props
+            """,
+            {"user_id": user_id, "ns": namespace, "key": key},
+        )
+        if records:
+            p = records[0].get("props") or {}
+            current = p.get("value_json")
+            if isinstance(current, list):
+                for v in valid:
+                    if v not in current:
+                        current = list(current) + [v]
+            else:
+                current = list(valid)
+        else:
+            current = list(valid)
+        self.upsert_fact(
+            user_id=user_id,
+            namespace=namespace,
+            key=key,
+            value_type="json",
+            value_json=current,
+            confidence=confidence,
+            source_mode="extraction",
+        )
+        return True
+
     def create_evidence(
         self,
         evidence_id: str,
@@ -774,19 +825,22 @@ class KnowledgeGraph:
                 source_memory_ids=[memory_id],
             )
 
-        # Fact + Evidence (unified extraction path): upsert facts, create evidence, derive User–Entity
+        # Fact + Evidence (unified extraction path): normalize, upsert facts, create evidence
         if facts:
+            from memory.fact_normalizer import normalize_facts
+
+            facts = normalize_facts(facts)
             for f in facts:
-                ns = f.get("namespace", "") if isinstance(f, dict) else getattr(f, "namespace", "")
-                k = f.get("key", "") if isinstance(f, dict) else getattr(f, "key", "")
+                ns = f.get("namespace", "")
+                k = f.get("key", "")
                 if not ns or not k:
                     continue
-                vt = f.get("value_type", "text") if isinstance(f, dict) else getattr(f, "value_type", "text")
-                val = f.get("value") if isinstance(f, dict) else getattr(f, "value", None)
-                vt_text = f.get("value_text") if isinstance(f, dict) else getattr(f, "value_text", None)
-                vt_num = f.get("value_number") if isinstance(f, dict) else getattr(f, "value_number", None)
-                vt_bool = f.get("value_bool") if isinstance(f, dict) else getattr(f, "value_bool", None)
-                vt_json = f.get("value_json") if isinstance(f, dict) else getattr(f, "value_json", None)
+                vt = f.get("value_type", "text")
+                val = f.get("value")
+                vt_text = f.get("value_text")
+                vt_num = f.get("value_number")
+                vt_bool = f.get("value_bool")
+                vt_json = f.get("value_json")
                 if vt_text is None and val is not None and vt == "text":
                     vt_text = str(val)
                 if vt_num is None and val is not None and vt == "number":
@@ -795,7 +849,27 @@ class KnowledgeGraph:
                     vt_bool = bool(val)
                 if vt_json is None and val is not None and vt == "json":
                     vt_json = val
-                entity_ref = f.get("entity_ref") if isinstance(f, dict) else getattr(f, "entity_ref", None)
+                entity_ref = f.get("entity_ref")
+                append = f.get("append", False)
+
+                # List-valued facts: merge into existing, create evidence
+                if append:
+                    vals = f.get("value_json") or (f.get("value") if isinstance(f.get("value"), list) else [f.get("value")] if f.get("value") is not None else [])
+                    if vals and self.merge_list_fact(user_id, ns, k, vals, confidence=0.8):
+                        ev_id = str(uuid.uuid4())
+                        ev_source_ref = memory_id
+                        ev_source_type = "extraction"
+                        if evidence_events:
+                            first_ev = evidence_events[0]
+                            ev_source_ref = first_ev.get("source_ref", memory_id) if isinstance(first_ev, dict) else getattr(first_ev, "source_ref", memory_id)
+                            ev_source_type = first_ev.get("source_type", "extraction") if isinstance(first_ev, dict) else getattr(first_ev, "source_type", "extraction")
+                        self.create_evidence(
+                            evidence_id=ev_id, source_type=ev_source_type, source_ref=ev_source_ref or memory_id,
+                            user_id=user_id, namespace=ns, key=k,
+                            session_id=session_id, memory_id=memory_id,
+                        )
+                    continue
+
                 self.upsert_fact(
                     user_id=user_id,
                     namespace=ns,
@@ -904,17 +978,20 @@ class KnowledgeGraph:
                     confidence=float(rel.get("confidence", 1.0)) if isinstance(rel, dict) else getattr(rel, "confidence", 1.0),
                     source_memory_ids=memory_ids,
                 )
+        from memory.fact_normalizer import normalize_facts
+
+        facts = normalize_facts(facts)
         for f in facts:
-            ns = getattr(f, "namespace", "") or (f.get("namespace", "") if isinstance(f, dict) else "")
-            k = getattr(f, "key", "") or (f.get("key", "") if isinstance(f, dict) else "")
+            ns = f.get("namespace", "")
+            k = f.get("key", "")
             if not ns or not k:
                 continue
-            vt = getattr(f, "value_type", "text") or (f.get("value_type", "text") if isinstance(f, dict) else "text")
-            val = getattr(f, "value", None) if not isinstance(f, dict) else f.get("value")
-            vt_text = getattr(f, "value_text", None) if not isinstance(f, dict) else f.get("value_text")
-            vt_num = getattr(f, "value_number", None) if not isinstance(f, dict) else f.get("value_number")
-            vt_bool = getattr(f, "value_bool", None) if not isinstance(f, dict) else f.get("value_bool")
-            vt_json = getattr(f, "value_json", None) if not isinstance(f, dict) else f.get("value_json")
+            vt = f.get("value_type", "text")
+            val = f.get("value")
+            vt_text = f.get("value_text")
+            vt_num = f.get("value_number")
+            vt_bool = f.get("value_bool")
+            vt_json = f.get("value_json")
             if vt_text is None and val is not None and vt == "text":
                 vt_text = str(val)
             if vt_num is None and val is not None and vt == "number":
@@ -923,7 +1000,24 @@ class KnowledgeGraph:
                 vt_bool = bool(val)
             if vt_json is None and val is not None and vt == "json":
                 vt_json = val
-            entity_ref = getattr(f, "entity_ref", None) if not isinstance(f, dict) else f.get("entity_ref")
+            entity_ref = f.get("entity_ref")
+            append = f.get("append", False)
+            if append:
+                vals = f.get("value_json") or (f.get("value") if isinstance(f.get("value"), list) else [f.get("value")] if f.get("value") is not None else [])
+                if vals and self.merge_list_fact(user_id, ns, k, vals, confidence=0.8):
+                    ev_id = str(uuid.uuid4())
+                    ev_source_ref = session_id
+                    ev_source_type = "extraction"
+                    if evidence_events:
+                        first_ev = evidence_events[0]
+                        ev_source_ref = first_ev.get("source_ref", session_id) if isinstance(first_ev, dict) else getattr(first_ev, "source_ref", session_id)
+                        ev_source_type = first_ev.get("source_type", "extraction") if isinstance(first_ev, dict) else getattr(first_ev, "source_type", "extraction")
+                    self.create_evidence(
+                        evidence_id=ev_id, source_type=ev_source_type, source_ref=ev_source_ref or session_id,
+                        user_id=user_id, namespace=ns, key=k,
+                        session_id=session_id, memory_id=memory_ids[0] if memory_ids else None,
+                    )
+                continue
             self.upsert_fact(
                 user_id=user_id,
                 namespace=ns,
