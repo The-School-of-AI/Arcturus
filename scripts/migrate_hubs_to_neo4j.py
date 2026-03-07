@@ -205,9 +205,15 @@ def extract_facts_from_soft_identity(data: Dict[str, Any]) -> List[Tuple[str, st
         for x in (ih.get("professional_interests", []) or []):
             if x:
                 facts.append(("identity", "professional_interests", x, "text", meta_conf))
+        for x in (ih.get("personal_hobbies", []) or []):
+            if x:
+                facts.append(("identity", "personal_hobbies", x, "text", meta_conf))
         for x in (ih.get("learning_interests", []) or []):
             if x:
                 facts.append(("identity", "learning_interests", x, "text", meta_conf))
+        for x in (ih.get("side_projects", []) or []):
+            if x:
+                facts.append(("identity", "side_projects", x, "text", meta_conf))
 
     pc = data.get("professional_context", {})
     if pc:
