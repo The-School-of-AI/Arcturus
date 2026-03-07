@@ -818,17 +818,19 @@ class Orchestrator:
         text = md_text
 
         # ── Guard: never speak raw Python exception strings ─────────────────
-        # If the entire text looks like an exception (NameError, TypeError, etc.)
-        # replace it with a graceful spoken fallback.
-        _EXCEPTION_PATTERN = re.compile(
-            r'^(NameError|TypeError|ValueError|AttributeError|KeyError|'
-            r'IndexError|RuntimeError|ImportError|ModuleNotFoundError|'
-            r'ZeroDivisionError|AssertionError|OSError|FileNotFoundError|'
-            r'StopIteration|GeneratorExit|SystemExit|Exception|BaseException|'
-            r'Traceback \(most recent call last\))',
-            re.MULTILINE
+        # Catch common exception names and traceback headers.
+        # We look for these keywords anywhere as distinct words to avoid leakage
+        # if the LLM wraps them in conversational filler.
+        _EXCEPTION_KEYWORDS = (
+            r'NameError|TypeError|ValueError|AttributeError|KeyError|IndexError|'
+            r'RuntimeError|ImportError|ModuleNotFoundError|ZeroDivisionError|'
+            r'SyntaxError|IndentationError|UnboundLocalError|RecursionError|'
+            r'AssertionError|OSError|FileNotFoundError|Exception|Traceback'
         )
-        if _EXCEPTION_PATTERN.search(text.strip()):
+        _EXCEPTION_RE = re.compile(rf'\b({_EXCEPTION_KEYWORDS})\b', re.IGNORECASE)
+
+        # If a short string contains a technical exception name, it's likely a failure report.
+        if (len(text) < 300 and _EXCEPTION_RE.search(text)) or "traceback (most recent call last)" in text.lower():
             print(f"⚠️ [Orchestrator] Suppressing error string from TTS: {text[:120]!r}")
             return "I ran into a small issue while processing that. Please try again."
 
