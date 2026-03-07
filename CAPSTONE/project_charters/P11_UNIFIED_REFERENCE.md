@@ -25,7 +25,7 @@
 | **Retrieval gap (semantic returns 0)** | ✅ Addressed | Entity-first path runs independently; k=10; graph expansion; multi-tenant safe |
 | **Memory delete & orphan cleanup** | ✅ Done | `delete_memory` in `knowledge_graph.py`; qdrant_store calls it on delete |
 | **Session-level extraction** | ⏳ Not done | §8.2 — one pass for memories + preferences + entities from session |
-| **Preferences unification** | ⏳ In progress | Steps 1–4 done; step 5 migration, step 7 UI edit remain |
+| **Preferences unification** | ⏳ In progress | Steps 1–5 done; step 7 UI edit remains |
 | **Spaces / space_id** | ⏳ Reserved | §8.4 — no code; hook documented for when Spaces are added |
 | **Entity-friendly Qdrant payload** | ⏳ Optional | §8.1 — beyond `entity_ids` + optional `entity_labels`; not implemented |
 | **Expansion depth** | ⏳ Future | One-hop only; `depth` parameter reserved for multi-hop |
@@ -242,6 +242,8 @@ Use this section as the single list of what to do next; update as you complete i
 
 **Step 4 (Adapter):** Done. `memory/neo4j_preferences_adapter.py` — `build_preferences_from_neo4j(user_id)` reads Facts from Neo4j via `kg.get_facts_for_user()` and `kg.get_evidence_count_for_user()`, maps Fact namespace+key to hub-shaped response (output_contract, operating_context, soft_identity, evidence, meta), resolves conflicts by confidence and last_seen_at. `GET /remme/preferences` uses adapter when MNEMO_ENABLED; fallback to JSON hubs when disabled. `get_remme_profile` also uses adapter when MNEMO_ENABLED for profile prompt context.
 
+**Step 5 (Migration):** Done. `scripts/migrate_hubs_to_neo4j.py` loads `preferences_hub.json`, `operating_context_hub.json`, `soft_identity_hub.json` from `memory/user_model/`, maps hub fields to Fact `(namespace, key, value)` with `source_mode=migration`, upserts Facts and creates Evidence nodes. Usage: `uv run python scripts/migrate_hubs_to_neo4j.py` or `--dry-run`. Null/empty values skipped. Add to §9.3 migrations list as needed.
+
 ### 8.1 Optional: Entity-friendly payload in Qdrant
 
 - **Idea:** Store something more readable than raw `entity_ids` in Qdrant (e.g. composite keys like `Person::Jon`, `Company::Google`, or a small list of `{type, name}` objects) so we can do entity-based matching or display without always querying Neo4j.
@@ -306,6 +308,7 @@ Use this section as the single list of what to do next; update as you complete i
 - **Qdrant:** `uv run python scripts/test_qdrant_setup.py`
 - **All migrations:** `uv run python scripts/migrate_all_memories.py` (default: docker); or `migrate_all_memories.py cloud`. This runs FAISS→Qdrant (memories), RAG→Qdrant, then Qdrant→Neo4j.
 - **Neo4j only backfill:** `uv run python scripts/migrate_memories_to_neo4j.py`
+- **Hubs → Neo4j (one-time):** `uv run python scripts/migrate_hubs_to_neo4j.py` (or `--dry-run`)
 - **Use Qdrant in app:** `VECTOR_STORE_PROVIDER=qdrant` (and `RAG_VECTOR_STORE_PROVIDER=qdrant` if desired). Neo4j: `NEO4J_ENABLED=true` and connection vars.
 
 ### 9.4 Rollback
