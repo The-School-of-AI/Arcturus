@@ -1093,41 +1093,42 @@ class KnowledgeGraph:
         """
         if not self._enabled or not user_id:
             return []
+        # Use properties(f) so we only read keys that exist on each node; avoids Neo4j
+        # warnings for missing value_number/value_bool/value_json on text-only facts.
         records = self._run_query(
             """
             MATCH (u:User {user_id: $user_id})-[:HAS_FACT]->(f:Fact)
-            RETURN f.namespace AS namespace, f.key AS key, f.value_type AS value_type,
-                   f.value_text AS value_text, f.value_number AS value_number,
-                   f.value_bool AS value_bool, f.value_json AS value_json,
-                   f.confidence AS confidence, f.last_seen_at AS last_seen_at
+            RETURN properties(f) AS props
             """,
             {"user_id": user_id},
         )
         out = []
         for r in records:
-            vt = r.get("value_type") or "text"
+            p = r.get("props") or {}
+            vt = (p.get("value_type") or "text").lower()
             if vt == "number":
-                val = r.get("value_number")
+                val = p.get("value_number")
             elif vt == "bool":
-                val = r.get("value_bool")
-            elif vt == "json" and r.get("value_json"):
+                val = p.get("value_bool")
+            elif vt == "json" and p.get("value_json") is not None:
                 try:
-                    val = json.loads(r["value_json"]) if isinstance(r["value_json"], str) else r["value_json"]
+                    vj = p["value_json"]
+                    val = json.loads(vj) if isinstance(vj, str) else vj
                 except Exception:
-                    val = r.get("value_json")
+                    val = p.get("value_json")
             else:
-                val = r.get("value_text")
+                val = p.get("value_text")
             out.append({
-                "namespace": r.get("namespace") or "",
-                "key": r.get("key") or "",
-                "value_type": r.get("value_type") or "text",
-                "value_text": r.get("value_text"),
-                "value_number": r.get("value_number"),
-                "value_bool": r.get("value_bool"),
+                "namespace": p.get("namespace") or "",
+                "key": p.get("key") or "",
+                "value_type": p.get("value_type") or "text",
+                "value_text": p.get("value_text"),
+                "value_number": p.get("value_number"),
+                "value_bool": p.get("value_bool"),
                 "value_json": val if vt == "json" else None,
                 "value": val,
-                "confidence": float(r.get("confidence") or 0),
-                "last_seen_at": r.get("last_seen_at"),
+                "confidence": float(p.get("confidence") or 0),
+                "last_seen_at": p.get("last_seen_at"),
             })
         return out
 
