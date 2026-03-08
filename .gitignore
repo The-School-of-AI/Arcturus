@@ -96,6 +96,13 @@ S15A.egg-info/
 .arcturus/
 .arcturus
 
+# Project 13: Orbit - Local State & Private Drafts
+Canvas_Pic_Current.json
+memory/remme_staging.json
+memory/episodes/
+
 # PR Body Drafts
+scripts/github/PR_body*.md
+scripts/github/Pr_Body*.md
 scripts/github/PR_Body_*.md
 scripts/github/Pr_Body_*.md
