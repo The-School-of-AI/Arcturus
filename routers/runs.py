@@ -41,9 +41,10 @@ remme_extractor = get_remme_extractor()
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
-    source: str = "web" # "web" or "voice"
-    stream: bool = False # Whether the caller expects a streaming response
-    
+    source: str = "web"  # "web" or "voice"
+    stream: bool = False  # Whether the caller expects a streaming response
+    space_id: Optional[str] = None  # Phase 3C: optional space to scope session and retrieval
+
     def __init__(self, **data):
         super().__init__(**data)
         if self.model is None:
@@ -146,7 +147,14 @@ def _extract_voice_output(context) -> str:
     return "I've completed your request."
 
 
-async def process_run(run_id: str, query: str, source: str = "web", stream: bool = False, skill_id: str = None):
+async def process_run(
+    run_id: str,
+    query: str,
+    source: str = "web",
+    stream: bool = False,
+    skill_id: str = None,
+    space_id: Optional[str] = None,
+):
     """
     Background task: retrieve Remme memories, run agent loop, extract new memories.
     WATCHTOWER: Root span for the entire agent run.
@@ -180,9 +188,20 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
             context = None  # Initialize for safe access in finally block
             try:
                 from memory.memory_retriever import retrieve
+                # Phase 3C: use space_id from request, or from existing session
+                _space_id = space_id
+                if _space_id is None:
+                    try:
+                        from memory.knowledge_graph import get_knowledge_graph
+                        kg = get_knowledge_graph()
+                        if kg and kg.enabled:
+                            _space_id = kg.get_space_for_session(run_id)
+                    except Exception:
+                        pass
                 memory_context, results = retrieve(
                     query,
                     session_id=run_id,
+                    space_id=_space_id,
                 )
                 if memory_context:
                     print(f" Remme: Injected memory context into run {run_id}")
@@ -298,9 +317,13 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
+                                meta = {"session_id": run_id}
+                                if space_id:
+                                    meta["space_id"] = space_id
                                 added = remme_store.add(
                                     text, emb, category="derived", source=f"run_{run_id}",
-                                    metadata={"session_id": run_id},
+                                    metadata=meta,
+                                    space_id=space_id,
                                     skip_kg_ingest=is_mnemo_enabled(),
                                 )
                                 if added and isinstance(added, dict) and added.get("id"):
@@ -326,6 +349,7 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
                             kg_result = kg.ingest_from_unified_extraction(
                                 user_id, run_id, session_memory_ids, extraction,
                                 category="derived", source="session",
+                                space_id=space_id,
                             )
                             entity_ids = kg_result.get("entity_ids", [])
                             entity_labels = kg_result.get("entity_labels", [])
@@ -567,8 +591,10 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     run_id = str(int(datetime.now().timestamp()))
     
-    # Start background execution
-    background_tasks.add_task(process_run, run_id, request.query, request.source, request.stream)
+    # Start background execution (Phase 3C: pass space_id for session scoping)
+    background_tasks.add_task(
+        process_run, run_id, request.query, request.source, request.stream, None, request.space_id
+    )
     
     return {
         "id": run_id,

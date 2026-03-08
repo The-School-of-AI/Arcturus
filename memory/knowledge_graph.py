@@ -207,8 +207,12 @@ class KnowledgeGraph:
         self,
         session_id: str,
         original_query: Optional[str] = None,
+        space_id: Optional[str] = None,
     ) -> str:
-        """Get or create Session node."""
+        """
+        Get or create Session node. Phase 3C: optional space_id links (Session)-[:IN_SPACE]->(Space).
+        When space_id provided (and not __global__), session belongs to that space.
+        """
         self._run_write(
             """
             MERGE (s:Session {session_id: $session_id})
@@ -224,7 +228,35 @@ class KnowledgeGraph:
                 "original_query": original_query or "",
             },
         )
+        use_space = space_id and space_id != SPACE_ID_GLOBAL
+        if use_space:
+            self._run_write(
+                """
+                MATCH (s:Session {session_id: $session_id}), (sp:Space {space_id: $space_id})
+                MERGE (s)-[:IN_SPACE]->(sp)
+                """,
+                {"session_id": session_id, "space_id": space_id},
+            )
         return session_id
+
+    def get_space_for_session(self, session_id: str) -> Optional[str]:
+        """
+        Return space_id for session if it has (Session)-[:IN_SPACE]->(Space). Else None.
+        Phase 3C.
+        """
+        if not self._enabled or not session_id:
+            return None
+        records = self._run_query(
+            """
+            MATCH (s:Session {session_id: $session_id})-[:IN_SPACE]->(sp:Space)
+            RETURN sp.space_id AS space_id
+            LIMIT 1
+            """,
+            {"session_id": session_id},
+        )
+        if records and records[0].get("space_id"):
+            return records[0]["space_id"]
+        return None
 
     def create_space(
         self,
@@ -1030,7 +1062,7 @@ class KnowledgeGraph:
         if not self._enabled or not user_id or not session_id or not memory_ids:
             return {}
         self.get_or_create_user(user_id)
-        self.get_or_create_session(session_id)
+        self.get_or_create_session(session_id, space_id=space_id)
         entity_map: Dict[Tuple[str, str], str] = {}
         entities = getattr(extraction, "entities", None) or (extraction.get("entities", []) if isinstance(extraction, dict) else [])
         entity_relationships = getattr(extraction, "entity_relationships", None) or (extraction.get("entity_relationships", []) if isinstance(extraction, dict) else [])
