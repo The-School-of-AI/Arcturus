@@ -53,12 +53,78 @@ async def get_traces(
         {"$sort": {"start_time": -1}},
         {"$limit": limit},
         {
+            "$addFields": {
+                "session_id": {
+                    "$arrayElemAt": [
+                        {
+                            "$map": {
+                                "input": {
+                                    "$filter": {
+                                        "input": "$spans",
+                                        "as": "s",
+                                        "cond": {
+                                            "$and": [
+                                                {"$ne": [{"$ifNull": ["$$s.attributes.session_id", ""]}, ""]},
+                                            ]
+                                        },
+                                    }
+                                },
+                                "as": "s",
+                                "in": "$$s.attributes.session_id",
+                            }
+                        },
+                        0,
+                    ]
+                },
+                "cost_usd": {
+                    "$reduce": {
+                        "input": "$spans",
+                        "initialValue": 0,
+                        "in": {
+                            "$add": [
+                                "$$value",
+                                {"$toDouble": {"$ifNull": ["$$this.attributes.cost_usd", "0"]}},
+                            ]
+                        },
+                    }
+                },
+                "input_tokens": {
+                    "$reduce": {
+                        "input": "$spans",
+                        "initialValue": 0,
+                        "in": {
+                            "$add": [
+                                "$$value",
+                                {"$toInt": {"$ifNull": ["$$this.attributes.input_tokens", "0"]}},
+                            ]
+                        },
+                    }
+                },
+                "output_tokens": {
+                    "$reduce": {
+                        "input": "$spans",
+                        "initialValue": 0,
+                        "in": {
+                            "$add": [
+                                "$$value",
+                                {"$toInt": {"$ifNull": ["$$this.attributes.output_tokens", "0"]}},
+                            ]
+                        },
+                    }
+                },
+            }
+        },
+        {
             "$project": {
                 "trace_id": "$_id",
                 "start_time": 1,
                 "duration_ms": 1,
                 "has_error": {"$eq": ["$status", 1]},
                 "span_count": {"$size": "$spans"},
+                "session_id": 1,
+                "cost_usd": 1,
+                "input_tokens": 1,
+                "output_tokens": 1,
             }
         },
     ]
@@ -67,6 +133,8 @@ async def get_traces(
     for t in traces:
         if "start_time" in t:
             t["start_time"] = t["start_time"].isoformat()
+        if "cost_usd" in t:
+            t["cost_usd"] = round(float(t.get("cost_usd", 0)), 6)
     return {"traces": traces}
 
 
@@ -120,6 +188,98 @@ async def get_metrics_summary(
         "error_count": row.get("error_count", 0),
         "hours": hours,
     }
+
+
+@router.get("/cost/summary")
+async def get_cost_summary(
+    hours: int = Query(24, ge=1, le=168),
+    group_by: str = Query("agent", description="Group by: agent | model | trace"),
+):
+    """Aggregate cost from llm.generate spans. Requires attributes.cost_usd."""
+    coll = _get_spans_collection()
+    since = datetime.utcnow() - timedelta(hours=hours)
+    match = {
+        "start_time": {"$gte": since},
+        "name": "llm.generate",
+        "attributes.cost_usd": {"$exists": True},
+    }
+    pipeline = [
+        {"$match": match},
+        {
+            "$group": {
+                "_id": None,
+                "total_cost_usd": {"$sum": {"$toDouble": "$attributes.cost_usd"}},
+                "trace_ids": {"$addToSet": "$trace_id"},
+                "by_agent": {"$push": {"agent": "$attributes.agent", "cost": "$attributes.cost_usd"}},
+                "by_model": {"$push": {"model": "$attributes.model", "cost": "$attributes.cost_usd"}},
+            }
+        },
+    ]
+    cursor = coll.aggregate(pipeline)
+    row = next(cursor, None)
+    if not row:
+        return {"total_cost_usd": 0.0, "trace_count": 0, "by_agent": {}, "by_model": {}, "hours": hours}
+
+    total = float(row.get("total_cost_usd", 0))
+    trace_ids = list(row.get("trace_ids", []))
+    by_agent_raw = row.get("by_agent", [])
+    by_model_raw = row.get("by_model", [])
+
+    def _sum_by_key(items: list, key: str) -> dict:
+        out = {}
+        for x in items:
+            k = x.get(key) or "unknown"
+            c = float(x.get("cost", 0))
+            out[k] = out.get(k, 0) + c
+        return {k: round(v, 6) for k, v in out.items()}
+
+    by_agent = _sum_by_key(by_agent_raw, "agent")
+    by_model = _sum_by_key(by_model_raw, "model")
+
+    result = {
+        "total_cost_usd": round(total, 6),
+        "trace_count": len(trace_ids),
+        "by_agent": by_agent,
+        "by_model": by_model,
+        "hours": hours,
+    }
+    if group_by == "trace":
+        trace_pipeline = [
+            {"$match": match},
+            {"$group": {"_id": "$trace_id", "cost": {"$sum": {"$toDouble": "$attributes.cost_usd"}}}},
+            {"$sort": {"cost": -1}},
+            {"$limit": 100},
+        ]
+        trace_cursor = coll.aggregate(trace_pipeline)
+        result["by_trace"] = [{"trace_id": r["_id"], "cost_usd": round(float(r["cost"]), 6)} for r in trace_cursor]
+    return result
+
+
+@router.get("/errors/summary")
+async def get_errors_summary(
+    hours: int = Query(24, ge=1, le=168),
+):
+    """Aggregate spans with status=error. Group by agent or span name."""
+    coll = _get_spans_collection()
+    since = datetime.utcnow() - timedelta(hours=hours)
+    match = {"start_time": {"$gte": since}, "status": "error"}
+    pipeline = [
+        {"$match": match},
+        {
+            "$group": {
+                "_id": {"$ifNull": ["$attributes.agent", "$name"]},
+                "count": {"$sum": 1},
+                "trace_ids": {"$addToSet": "$trace_id"},
+            }
+        },
+        {"$sort": {"count": -1}},
+        {"$limit": 50},
+    ]
+    cursor = coll.aggregate(pipeline)
+    rows = list(cursor)
+    error_count = sum(r["count"] for r in rows)
+    by_agent = {r["_id"]: {"count": r["count"], "sample_trace_ids": list(r["trace_ids"])[:5]} for r in rows}
+    return {"error_count": error_count, "by_agent": by_agent, "hours": hours}
 
 
 @router.get("/traces/view", response_class=HTMLResponse)

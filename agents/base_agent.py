@@ -6,6 +6,7 @@ from core.model_manager import ModelManager
 from core.json_parser import parse_llm_json
 from core.utils import log_step, log_error
 from ops.tracing import set_span_context
+from ops.cost import ConfigurableCostCalculator
 
 from PIL import Image
 from datetime import datetime
@@ -17,30 +18,19 @@ class AgentRunner:
         # Config loading is now handled by core.bootstrap and AgentRegistry
         # We lazy-load on first run if needed.
     
-    def calculate_cost(self, input_text: str, output_text: str) -> dict:
-        """Calculate cost and token usage"""
-        # Approximate tokens = words * 1.5
-        input_words = len(input_text.split()) if input_text else 0
-        output_words = len(output_text.split()) if output_text else 0
-        
-        input_tokens = int(input_words * 1.5)
-        output_tokens = int(output_words * 1.5)
-        
-        # Cost per million tokens
-        input_cost_per_million = 0.1  # $0.1 per 1M input tokens
-        output_cost_per_million = 0.4  # $0.4 per 1M output tokens
-        
-        input_cost = (input_tokens / 1_000_000) * input_cost_per_million
-        output_cost = (output_tokens / 1_000_000) * output_cost_per_million
-        
-        total_cost = input_cost + output_cost
-        
-        return {
-            "cost": total_cost,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "total_tokens": input_tokens + output_tokens
-        }
+    def calculate_cost(
+        self,
+        input_text: str,
+        output_text: str,
+        model_key: str = "gemini-2.5-flash",
+        provider: str = "gemini",
+    ) -> dict:
+        """Calculate cost and token usage via CostCalculator. Fallback: word-based estimate."""
+        input_tokens = max(0, len(input_text or "") // 4)
+        output_tokens = max(0, len(output_text or "") // 4)
+        calculator = ConfigurableCostCalculator()
+        result = calculator.compute(input_tokens, output_tokens, model_key, provider)
+        return result.to_dict()
 
     async def run_agent(self, agent_type: str, input_data: dict, image_path: Optional[str] = None, use_system2: bool = False) -> dict:
         """Run a specific agent with input data and optional image. use_system2=True enables Reasoning Loop."""
@@ -294,14 +284,11 @@ class AgentRunner:
 
                 log_step(f"🟩 {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="🟩")
 
-                # Calculate input text for costing
                 input_text = str(input_data)
-
-                # Calculate output text for costing
                 output_text = str(output)
-
-                # Calculate cost and tokens
-                cost_data = self.calculate_cost(input_text, output_text)
+                cost_data = self.calculate_cost(
+                    input_text, output_text, model_key=model_name, provider=model_provider
+                )
 
                 # Add cost data and model info to result
                 if isinstance(output, dict):
