@@ -222,11 +222,15 @@ async def process_run(run_id: str, query: str, source: str = "web", stream: bool
                      await skill.on_run_failure(str(e))
                  except Exception as fe:
                      print(f"⚠️ [Skill] Failure hook failed: {fe}")
-            if skill:
-                 try:
-                     await skill.on_run_failure(str(e))
-                 except Exception as fe:
-                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
+            # Voice: always signal so the user gets a spoken response instead of hanging
+            if source == "voice":
+                try:
+                    if has_stream_queue(run_id):
+                        push_stream_chunk(run_id, "I'm sorry, I couldn't complete that request.")
+                        finish_stream(run_id)
+                    signal_run_complete(run_id, "I'm sorry, I couldn't complete that request.")
+                except Exception as sig_err:
+                    print(f"⚠️ [Voice] Failed to signal run failure: {sig_err}")
         finally:
             # Clean up
             if run_id in active_loops:

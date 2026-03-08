@@ -563,10 +563,9 @@ class Orchestrator:
         history_prefix = self.session_logger.get_history_prompt(max_turns=8)
         enriched_query = f"{history_prefix}{query}" if history_prefix else query
 
-        run_id = self._start_nexus_run(enriched_query)
+        run_id = self._start_nexus_run(enriched_query, stream=False)
         if not run_id:
             print("❌ [Orchestrator] Failed to start Nexus run.")
-            # Log failed attempt
             self.session_logger.log_turn(
                 user_transcript=query,
                 tts_text=None,
@@ -576,6 +575,9 @@ class Orchestrator:
                 source="nexus",
                 extra={"error": "Failed to start Nexus run"},
             )
+            with self._lock:
+                self._set_state("SPEAKING")
+            self.tts.speak("I couldn't start that request. Please try again.")
             self._enter_follow_up()
             return
         self._set_active_run(run_id)
@@ -950,7 +952,7 @@ class Orchestrator:
         history_prefix = self.session_logger.get_history_prompt(max_turns=8)
         enriched_query = f"{history_prefix}{query}" if history_prefix else query
 
-        run_id = self._start_nexus_run(enriched_query)
+        run_id = self._start_nexus_run(enriched_query, stream=True)
         if not run_id:
             print("❌ [Orchestrator] Failed to start Nexus run.")
             self.session_logger.log_turn(
@@ -962,6 +964,9 @@ class Orchestrator:
                 source="nexus",
                 extra={"error": "Failed to start Nexus run"},
             )
+            with self._lock:
+                self._set_state("SPEAKING")
+            self.tts.speak("I couldn't start that request. Please try again.")
             self._enter_follow_up()
             return
         self._set_active_run(run_id)

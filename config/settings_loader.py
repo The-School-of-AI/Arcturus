@@ -88,7 +88,7 @@ def get_ollama_url(endpoint: str = "generate") -> str:
 
 def get_model(purpose: str) -> str:
     """Get model name for a specific purpose."""
-    return load_settings()["models"].get(purpose, "gemma3:4b")
+    return load_settings()["models"].get(purpose, "phi4")
 
 def get_timeout() -> int:
     """Get Ollama timeout in seconds."""

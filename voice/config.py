@@ -246,7 +246,7 @@ VOICE_CONFIG = {
     "intent_gate": {
         "use_llm": False,
         "fallback_to_rules": True,
-        "model": "gemma3:4b",  # Ollama model when use_llm True; must exist in config/models.json
+        "model": "phi4",  # Ollama model when use_llm True; must exist in config/models.json
     },
 }
 
