@@ -1149,8 +1149,8 @@ app.on('ready', () => {
         console.log('[Arcturus]   cd <repo-root> && uv run api.py');
         console.log('[Arcturus]   cd <repo-root> && uv run python mcp_servers/server_rag.py');
     } else {
-        startBackend('uv', ['run', 'api.py'], 'API');
-        startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
+        startBackend('python', ['-m', 'uv', 'run', 'api.py'], 'API');
+        startBackend('python', ['-m', 'uv', 'run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
     }
 
     setupTerminalHandlers();

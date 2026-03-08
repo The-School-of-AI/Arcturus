@@ -1,7 +1,9 @@
 {
   "browser": {
-    "command": "uv",
+    "command": "python",
     "args": [
+      "-m",
+      "uv",
       "run",
       "server_browser.py"
     ],
@@ -9,8 +11,10 @@
     "enabled": true
   },
   "rag": {
-    "command": "uv",
+    "command": "python",
     "args": [
+      "-m",
+      "uv",
       "run",
       "server_rag.py"
     ],
@@ -18,8 +22,10 @@
     "enabled": true
   },
   "sandbox": {
-    "command": "uv",
+    "command": "python",
     "args": [
+      "-m",
+      "uv",
       "run",
       "server_sandbox.py"
     ],
@@ -27,8 +33,10 @@
     "enabled": true
   },
   "multimodal": {
-    "command": "uv",
+    "command": "python",
     "args": [
+      "-m",
+      "uv",
       "run",
       "server_multimodal.py"
     ],
@@ -36,8 +44,10 @@
     "enabled": true
   },
   "internal": {
-    "command": "uv",
+    "command": "python",
     "args": [
+      "-m",
+      "uv",
       "run",
       "server_internal.py"
     ],
