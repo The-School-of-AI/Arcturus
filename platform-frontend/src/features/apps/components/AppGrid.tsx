@@ -279,6 +279,43 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
                 return <div className="w-full h-full" />;
             case 'divider':
                 return <DividerCard {...commonProps} />;
+            case 'html_diagram':
+            case 'visual_explainer':
+                const showTitle = config.showTitle !== false && label;
+                const html = data.html;
+                const url = data.url;
+                const useSrcdoc = typeof html === 'string' && html.trim().length > 0;
+                const useSrc = !useSrcdoc && typeof url === 'string' && url.trim().length > 0;
+                return (
+                    <div className="flex flex-col h-full w-full overflow-hidden rounded-lg bg-card">
+                        {showTitle && (
+                            <div className="shrink-0 px-3 py-2 border-b border-border">
+                                <h3 className="text-sm font-semibold text-foreground truncate">{label}</h3>
+                            </div>
+                        )}
+                        <div className="flex-1 min-h-0 relative">
+                            {useSrcdoc ? (
+                                <iframe
+                                    title={label || 'Diagram'}
+                                    srcDoc={html}
+                                    sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                                    className="w-full h-full border-0 rounded-b-lg bg-background"
+                                />
+                            ) : useSrc ? (
+                                <iframe
+                                    title={label || 'Diagram'}
+                                    src={url}
+                                    sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                                    className="w-full h-full border-0 rounded-b-lg bg-background"
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground text-sm p-4">
+                                    No content (set data.html or data.url)
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
 
             // Charts & Data
             case 'metric':

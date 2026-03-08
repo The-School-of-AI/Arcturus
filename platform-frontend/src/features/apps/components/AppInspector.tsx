@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, View, Component, EyeOff, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Settings2, Zap, Palette, Database, Info, Trash2, Clock, Terminal, Eye, View, Component, EyeOff, ChevronDown, ChevronRight, X, LayoutTemplate } from 'lucide-react';
+import { GenerateDiagramModal } from '@/features/canvas/GenerateDiagramModal';
 import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,6 +115,15 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return <CodeBlockCard title="" {...commonProps} />;
         case 'json':
             return <JSONViewerCard title="" {...commonProps} />;
+        case 'html_diagram':
+        case 'visual_explainer':
+            return (
+                <div className="p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                    <LayoutTemplate className="w-8 h-8 opacity-50" />
+                    <span className="text-[10px] font-medium">HTML Diagram</span>
+                    <span className="text-[9px] opacity-70">Set data.html or Generate with API</span>
+                </div>
+            );
 
         // Blocks - inline previews (to avoid import complexity)
         case 'stats_trending':
@@ -1151,6 +1161,14 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
         { name: 'Code Content', key: 'code', type: 'textarea' },
         { name: 'Language', key: 'language', type: 'select', options: ['python', 'javascript', 'typescript', 'json', 'sql', 'bash'] },
     ],
+    html_diagram: [
+        { name: 'HTML content', key: 'html', type: 'textarea' },
+        { name: 'Or URL', key: 'url', type: 'text' },
+    ],
+    visual_explainer: [
+        { name: 'HTML content', key: 'html', type: 'textarea' },
+        { name: 'Or URL', key: 'url', type: 'text' },
+    ],
     image: [
         { name: 'Image URL', key: 'url', type: 'image_upload' },
         { name: 'Alt Text', key: 'alt', type: 'text' },
@@ -1426,6 +1444,7 @@ const CARD_DATA_FIELDS: Record<string, { name: string; key: string; type: 'text'
 
 export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
     const [activeTab, setActiveTab] = useState<'config' | 'triggers' | 'style'>('config');
+    const [generateDiagramModalOpen, setGenerateDiagramModalOpen] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         appearance: true,
         border: true,
@@ -1644,6 +1663,21 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 {(!selectedCard.config?.dataSource || selectedCard.config?.dataSource === 'local') && (
                                     <div className="space-y-3 pt-2 border-t border-border/50">
                                         <div className="text-[10px] text-primary font-bold uppercase">Edit Card Data</div>
+
+                                        {(selectedCard.type === 'html_diagram' || selectedCard.type === 'visual_explainer') && (
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full gap-2 text-xs h-9 border-primary/30 text-primary hover:bg-primary/10"
+                                                    onClick={() => setGenerateDiagramModalOpen(true)}
+                                                >
+                                                    <LayoutTemplate className="w-3.5 h-3.5" />
+                                                    Generate with API
+                                                </Button>
+                                            </div>
+                                        )}
 
                                         {CARD_DATA_FIELDS[selectedCard.type]?.map(field => (
                                             <div key={field.key} className="space-y-1">
@@ -2040,6 +2074,18 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
                 )}
             </div>
+
+            {(selectedCard?.type === 'html_diagram' || selectedCard?.type === 'visual_explainer') && (
+                <GenerateDiagramModal
+                    open={generateDiagramModalOpen}
+                    onClose={() => setGenerateDiagramModalOpen(false)}
+                    onSuccess={(html, diagramTitle) => {
+                        if (!selectedCard) return;
+                        updateAppCardData(selectedCard.id, { ...selectedCard.data, html });
+                        updateAppCardLabel(selectedCard.id, diagramTitle);
+                    }}
+                />
+            )}
         </div>
     );
 };

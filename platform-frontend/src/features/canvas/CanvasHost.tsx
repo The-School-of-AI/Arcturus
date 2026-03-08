@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import SandboxFrame from './SandboxFrame';
 import { getWidget } from './WidgetRegistry';
+import { GenerateDiagramModal } from './GenerateDiagramModal';
+import { API_BASE } from '@/lib/api';
+import { LayoutTemplate } from 'lucide-react';
 
 interface CanvasHostProps {
     surfaceId: string;
@@ -12,7 +15,8 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
     const [dataModel, setDataModel] = useState<any>({});
     const [isSandbox, setIsSandbox] = useState(false);
     const [htmlContent, setHtmlContent] = useState('');
-
+    const [htmlTitle, setHtmlTitle] = useState<string | null>(null);
+    const [generateModalOpen, setGenerateModalOpen] = useState(false);
     // WebSocket connection to the backend
     const socketUrl = `ws://localhost:8000/api/canvas/ws/${surfaceId}`;
 
@@ -42,11 +46,27 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                     // If we are in sandbox mode, we'd forward this. 
                     // For widget mode, we might handle it differently.
                     break;
+                case 'updateHtml':
+                    setHtmlContent(msg.html ?? '');
+                    setHtmlTitle(msg.title ?? null);
+                    setIsSandbox(true);
+                    break;
                 default:
                     console.warn('Unknown message type:', msg.type);
             }
         }
     }, [lastJsonMessage]);
+
+    const handleGenerateSuccess = useCallback(async (html: string, title: string) => {
+        const res = await fetch(`${API_BASE}/canvas/test-update/${surfaceId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ html, title }),
+        });
+        if (!res.ok) {
+            throw new Error(await res.text());
+        }
+    }, [surfaceId]);
 
     const handleUserEvent = useCallback((componentId: string, eventType: string, data: any = {}) => {
         sendJsonMessage({
@@ -92,14 +112,31 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                     <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
                     <span className="text-xs font-mono uppercase tracking-wider text-gray-400">
                         Surface: {surfaceId}
+                        {isSandbox && htmlTitle ? ` - ${htmlTitle}` : ''}
                     </span>
                 </div>
-                <div className="flex space-x-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setGenerateModalOpen(true)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-[10px] font-medium uppercase tracking-wider transition-colors"
+                        title="Generate diagram"
+                    >
+                        <LayoutTemplate className="w-3.5 h-3.5" />
+                        Generate diagram
+                    </button>
+                    <div className="flex space-x-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+                    </div>
                 </div>
             </div>
+            <GenerateDiagramModal
+                open={generateModalOpen}
+                onClose={() => setGenerateModalOpen(false)}
+                onSuccess={handleGenerateSuccess}
+            />
 
             <div className="flex-1 p-4 overflow-auto">
                 {isSandbox ? (

@@ -17,7 +17,7 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
     # Push initial state if it exists
     state = runtime.get_surface_state(surface_id)
     if state:
-        from canvas.schema import UpdateComponentsMessage, UpdateDataModelMessage
+        from canvas.schema import UpdateComponentsMessage, UpdateDataModelMessage, UpdateHtmlMessage
         # Send components
         if state.get("components"):
             msg = UpdateComponentsMessage(surfaceId=surface_id, components=state["components"])
@@ -25,6 +25,10 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
         # Send data
         if state.get("data"):
             msg = UpdateDataModelMessage(surfaceId=surface_id, data=state["data"])
+            await websocket.send_json(msg.model_dump())
+        # Send html
+        if state.get("html"):
+            msg = UpdateHtmlMessage(surfaceId=surface_id, html=state["html"], title=state.get("html_title"))
             await websocket.send_json(msg.model_dump())
     
     try:
@@ -59,4 +63,6 @@ async def test_update_canvas(surface_id: str, payload: dict):
         await runtime.push_components(surface_id, payload["components"])
     if "data" in payload:
         await runtime.update_data(surface_id, payload["data"])
+    if "html" in payload:
+        await runtime.push_html(surface_id, payload["html"], payload.get("title"))
     return {"status": "ok"}

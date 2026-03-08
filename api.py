@@ -275,7 +275,8 @@ app.include_router(pages_router.router, prefix="/api")
 from gateway_api.v1 import router as gateway_v1_router
 app.include_router(gateway_v1_router.router)
 
-
+from routers import visual_explainer as visual_explainer_router
+app.include_router(visual_explainer_router.router, prefix="/api")
 
 
 @app.get("/health")

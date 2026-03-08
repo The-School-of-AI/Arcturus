@@ -36,8 +36,10 @@ agents:
     - debugging
     - git_commit
     - firecrawl-scraper
-    description: |
-      Thinks, writes, and automatically executes required code in a single atomic step.
+    description: 'Thinks, writes, and automatically executes required code in a single
+      atomic step.
+
+      '
   RetrieverAgent:
     model: gemini
     mcp_servers:
@@ -72,8 +74,11 @@ agents:
     mcp_servers: []
     skills:
     - formatter
-    description: |
-      Beautifies final outputs into human-readable formats (Markdown, HTML, tables).
+    - web_clipper
+    description: 'Beautifies final outputs into human-readable formats (Markdown,
+      HTML, tables).
+
+      '
   ClarificationAgent:
     model: gemini
     mcp_servers: []
@@ -85,8 +90,9 @@ agents:
     mcp_servers: []
     skills:
     - qa
-    description: |
-      Reviews and critiques final or interim products.
+    description: 'Reviews and critiques final or interim products.
+
+      '
   TestAgent:
     model: ollama
     mcp_servers: []
@@ -116,6 +122,7 @@ agents:
     - coder
     - python_coding
     - debugging
+    - visual_explainer
     description: Specialized workspace assistant for deep code analysis and interactive debugging.
   SafetyAgent:
     model: gemini

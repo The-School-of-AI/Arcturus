@@ -211,6 +211,14 @@
     "type": "python",
     "version": "1.0.0"
   },
+  "visual_explainer": {
+    "class_name": "VisualExplainerSkill",
+    "description": "Core skill for prioritizing rich, visual, browser-renderable HTML artifacts.",
+    "intent_triggers": [],
+    "path": "core/skills/library/visual_explainer",
+    "type": "python",
+    "version": "1.0.0"
+  },
   "scheduler": {
     "class_name": "SchedulerSkill",
     "description": "Skill derived from scheduler.md",
