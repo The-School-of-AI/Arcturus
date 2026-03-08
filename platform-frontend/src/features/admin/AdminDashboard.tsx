@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Activity, DollarSign, AlertTriangle } from 'lucide-react';
+import { Activity, DollarSign, AlertTriangle, Heart } from 'lucide-react';
 import { TracesPanel } from './components/TracesPanel';
 import { CostPanel } from './components/CostPanel';
 import { ErrorsPanel } from './components/ErrorsPanel';
+import { HealthPanel } from './components/HealthPanel';
 import { cn } from '@/lib/utils';
 
-type TabId = 'traces' | 'cost' | 'errors';
+type TabId = 'traces' | 'cost' | 'errors' | 'health';
 
 export const AdminDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabId>('traces');
@@ -14,6 +15,7 @@ export const AdminDashboard: React.FC = () => {
         { id: 'traces', label: 'Traces', icon: Activity },
         { id: 'cost', label: 'Cost', icon: DollarSign },
         { id: 'errors', label: 'Errors', icon: AlertTriangle },
+        { id: 'health', label: 'Health', icon: Heart },
     ];
 
     return (
@@ -21,7 +23,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="border-b border-border px-6 py-4">
                 <h1 className="text-xl font-bold uppercase tracking-tighter">Watchtower Admin</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Distributed tracing, cost analytics, and error monitoring
+                    Distributed tracing, cost analytics, error monitoring, and service health
                 </p>
             </div>
             <div className="flex border-b border-border">
@@ -45,6 +47,7 @@ export const AdminDashboard: React.FC = () => {
                 {activeTab === 'traces' && <TracesPanel />}
                 {activeTab === 'cost' && <CostPanel />}
                 {activeTab === 'errors' && <ErrorsPanel />}
+                {activeTab === 'health' && <HealthPanel />}
             </div>
         </div>
     );
