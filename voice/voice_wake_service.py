@@ -9,6 +9,7 @@ from voice.audio_input import AudioInput
 from voice.wake_engine import create_wake_engine
 from voice.config import VOICE_CONFIG
 from voice.barge_in import BargeInDetector, BargeInConfig
+from voice import audio_preprocess
 from shared.state import tts_is_speaking
 
 
@@ -95,6 +96,19 @@ class VoiceWakeService:
                 # None means the read timed out (no audio frame yet) —
                 # just loop so we can re-check _running and stay interruptible
                 if pcm is None:
+                    continue
+
+                # Optional AGC for consistent wake + STT accuracy
+                ap = VOICE_CONFIG.get("audio_preprocess", {}) or {}
+                if ap.get("agc_enabled", False):
+                    pcm = audio_preprocess.agc(
+                        pcm,
+                        target_rms=float(ap.get("agc_target_rms", 2000)),
+                        max_gain=float(ap.get("agc_max_gain", 3.0)),
+                        min_rms_to_adjust=float(ap.get("agc_min_rms_to_adjust", 50)),
+                    )
+                gate_rms = float(ap.get("wake_noise_gate_rms", 0))
+                if gate_rms > 0 and audio_preprocess.noise_gate(pcm, gate_rms) is None:
                     continue
 
                 state = self.orchestrator.state if self.orchestrator else "IDLE"

@@ -4,7 +4,7 @@ import {
     LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
     RefreshCw, Zap, Sparkles, X, FolderPlus, UploadCloud, Search,
     Loader2, ChevronLeft, Notebook, LayoutDashboard, Bell,
-    CalendarClock, Terminal
+    CalendarClock, Terminal, Mic
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,8 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
     skills: { label: 'Skill Store', icon: Zap, color: 'text-neon-cyan', subtitleSuffix: 'INSTALLED' },
     ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' },
     scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-neon-cyan', subtitleSuffix: 'JOBS' },
-    console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' }
+    console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' },
+    voice: { label: 'Voice', icon: Mic, color: 'text-cyan-400', subtitleSuffix: 'ECHO' }
 };
 
 export const Header: React.FC = () => {

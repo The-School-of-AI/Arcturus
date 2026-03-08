@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2
+    CalendarClock, Terminal, Zap, Wand2, Mic
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -22,11 +22,12 @@ import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 import { NewsPanel } from '@/components/sidebar/NewsPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
+import { VoicePanel } from '@/features/voice/components/VoicePanel';
 
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio',
+    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'voice',
     active: boolean,
     onClick: () => void
 }) => {
@@ -129,9 +130,9 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     return (
         <div className="h-full flex overflow-hidden">
             {/* NavRail - Left Vertical Bar */}
-            <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
-                {/* Top Tools */}
-                <div className="flex-1 w-full px-2 space-y-2">
+            <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20 min-h-0">
+                {/* Top Tools - scrollable so Voice and all icons are visible */}
+                <div className="flex-1 min-h-0 w-full px-2 space-y-2 overflow-y-auto">
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
                     <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} />
                     <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} />
@@ -150,6 +151,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Terminal} label="Console" tab="console" active={sidebarTab === 'console'} onClick={() => setSidebarTab('console')} />
                     <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
                     <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
+                    <NavIcon icon={Mic} label="Voice" tab="voice" active={sidebarTab === 'voice'} onClick={() => setSidebarTab('voice')} />
                 </div>
 
                 {/* Bottom Tools */}
@@ -162,6 +164,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
             {!hideSubPanel && (
                 <div className="flex-1 min-w-0 bg-transparent border-l border-white/10 shadow-none flex flex-col overflow-hidden relative">
                     {sidebarTab === 'settings' && <SettingsPanel />}
+                    {sidebarTab === 'voice' && <VoicePanel />}
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">
 

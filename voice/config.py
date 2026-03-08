@@ -99,6 +99,17 @@ VOICE_CONFIG = {
     },
 
     # -----------------------------
+    # Audio preprocessing (AGC = better wake + STT accuracy)
+    # -----------------------------
+    "audio_preprocess": {
+        "agc_enabled": True,
+        "agc_target_rms": 2000.0,
+        "agc_max_gain": 3.0,
+        "agc_min_rms_to_adjust": 50.0,
+        "wake_noise_gate_rms": 0,   # 0 = disabled; 100–300 to skip very quiet frames
+    },
+
+    # -----------------------------
     # STT configuration
     # -----------------------------
     # Provider: "whisper" (local, private) or "deepgram" (cloud, faster)
@@ -108,6 +119,11 @@ VOICE_CONFIG = {
         # Shared
         "sample_rate": 16000,
         "noise_reduce": True,
+        "noise_reduction": {
+            "prop_decrease": 0.75,
+            "n_std_thresh_stationary": 1.5,
+            "n_fft": 512,
+        },
 
         # Whisper-specific (local)
         "whisper": {

@@ -1,0 +1,28 @@
+{
+  "session_id": "vs_20260228_145102_f0bb64",
+  "started_at": "2026-02-28T09:21:02.367619+00:00",
+  "ended_at": "2026-02-28T09:24:45.398411+00:00",
+  "total_turns": 2,
+  "turns": [
+    {
+      "turn_number": 1,
+      "timestamp": "2026-02-28T09:22:01.156820+00:00",
+      "user_transcript": "What is today's news?",
+      "tts_text": "Today's News Digest\n\nMajor International Developments\n\nUS and Israel Launch Attack on Iran: Tensions in the Middle East have escalated significantly as the United States and Israel have reportedly launched an attack on Iran. Former President Trump stated that major combat operations have commenced. The Israel Defense Forces have confirmed that Iran has initiated retaliatory strikes towards Israel.\n\nUS Embassy Staff Authorized to Depart Israel: Amidst rising tensions, the US embassy in Israel has authorized its staff to depart. The UK has also closed its embassy, and there are travel warnings issued for the Middle East as the crisis worsens. This development comes as fears of a wider conflict increase.",
+      "run_id": "1772270467",
+      "persona": null,
+      "latency_ms": 53667.1,
+      "source": "nexus-streamed"
+    },
+    {
+      "turn_number": 2,
+      "timestamp": "2026-02-28T09:22:39.681361+00:00",
+      "user_transcript": "Here, address.",
+      "tts_text": "The following is a concise news digest based on the provided information.\n\nToday's News Digest\n\nMajor International Developments\n\nUS and Israel Launch Attack on Iran; Iran Retaliates\nTensions in the Middle East have dramatically escalated following reports of an attack on Iran by the United States and Israel. Former President Trump has stated that major combat operations have commenced. The Israel Defense Forces (IDF) have confirmed that Iran has initiated retaliatory strikes targeting Israel. This exchange raises significant concerns about a wider regional conflict.\n\nDiplomatic and Travel Impacts\nIn response to the escalating crisis, the United States has authorized its embassy staff in Israel to depart. The United Kingdom has closed its embassy in the region.",
+      "run_id": "1772270528",
+      "persona": null,
+      "latency_ms": 31281.5,
+      "source": "nexus-streamed"
+    }
+  ]
+}

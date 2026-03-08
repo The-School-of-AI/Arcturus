@@ -128,15 +128,20 @@ class DeepgramSTTService:
             self._audio_buffer.clear()
 
     def _denoise(self, audio: np.ndarray) -> np.ndarray:
-        """Apply stationary noise reduction, same as local STTService."""
+        """Apply stationary noise reduction; params from voice.config when set."""
         try:
+            from voice.config import VOICE_CONFIG
+            nr_cfg = VOICE_CONFIG.get("stt", {}).get("noise_reduction", {}) or {}
+            prop_decrease = float(nr_cfg.get("prop_decrease", 0.75))
+            n_std = float(nr_cfg.get("n_std_thresh_stationary", 1.5))
+            n_fft = int(nr_cfg.get("n_fft", 512))
             return nr.reduce_noise(
                 y=audio,
                 sr=self.sample_rate,
                 stationary=True,
-                prop_decrease=0.75,
-                n_fft=512,
-                n_std_thresh_stationary=1.5,
+                prop_decrease=prop_decrease,
+                n_fft=n_fft,
+                n_std_thresh_stationary=n_std,
             )
         except Exception as e:
             print(f"⚠️ [DeepgramSTT] Noise reduction failed: {e}")

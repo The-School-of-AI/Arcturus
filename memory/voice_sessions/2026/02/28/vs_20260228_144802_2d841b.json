@@ -1,0 +1,18 @@
+{
+  "session_id": "vs_20260228_144802_2d841b",
+  "started_at": "2026-02-28T09:18:02.927599+00:00",
+  "ended_at": "2026-02-28T09:18:48.341201+00:00",
+  "total_turns": 1,
+  "turns": [
+    {
+      "turn_number": 1,
+      "timestamp": "2026-02-28T09:18:18.335850+00:00",
+      "user_transcript": "What is today's news?",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772270287",
+      "persona": null,
+      "latency_ms": 10679.9,
+      "source": "nexus-streamed"
+    }
+  ]
+}

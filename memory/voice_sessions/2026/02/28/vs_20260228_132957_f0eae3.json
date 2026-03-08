@@ -1,0 +1,18 @@
+{
+  "session_id": "vs_20260228_132957_f0eae3",
+  "started_at": "2026-02-28T07:59:57.683594+00:00",
+  "ended_at": "2026-02-28T08:00:41.328666+00:00",
+  "total_turns": 1,
+  "turns": [
+    {
+      "turn_number": 1,
+      "timestamp": "2026-02-28T08:00:11.322946+00:00",
+      "user_transcript": "Fetch. meet the local news.",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772265606",
+      "persona": null,
+      "latency_ms": 4862.8,
+      "source": "nexus-streamed"
+    }
+  ]
+}

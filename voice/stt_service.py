@@ -71,19 +71,21 @@ class STTService:
     def _denoise(self, audio: np.ndarray) -> np.ndarray:
         """
         Apply stationary noise reduction via spectral gating.
-        Uses noisereduce's fast algorithm suited for real-time use:
-          - Suppresses steady-state background noise (fans, AC, traffic hum)
-          - Preserves speech transients
-        Falls back to raw audio if anything goes wrong.
+        Params from voice.config VOICE_CONFIG["stt"]["noise_reduction"] when set.
         """
         try:
+            from voice.config import VOICE_CONFIG
+            nr_cfg = VOICE_CONFIG.get("stt", {}).get("noise_reduction", {}) or {}
+            prop_decrease = float(nr_cfg.get("prop_decrease", 0.75))
+            n_std = float(nr_cfg.get("n_std_thresh_stationary", 1.5))
+            n_fft = int(nr_cfg.get("n_fft", 512))
             cleaned = nr.reduce_noise(
                 y=audio,
                 sr=self.sample_rate,
-                stationary=True,       # Fast: assumes noise is stationary
-                prop_decrease=0.75,    # Suppress 75% of detected noise energy
-                n_fft=512,             # Small FFT window for low latency
-                n_std_thresh_stationary=1.5,  # Sensitivity threshold
+                stationary=True,
+                prop_decrease=prop_decrease,
+                n_fft=n_fft,
+                n_std_thresh_stationary=n_std,
             )
             return cleaned
         except Exception as e:

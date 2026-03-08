@@ -211,19 +211,19 @@ class ModelManager:
         """Generate with Ollama using images (for multimodal models)."""
         try:
             import aiohttp
+            url = self.model_info["url"]["chat"]
+            payload = {
+                "model": self.model_info["model"],
+                "messages": [
+                    {"role": "user", "content": prompt, "images": images}
+                ],
+                "stream": False,
+            }
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.model_info["url"]["generate"],
-                    json={
-                        "model": self.model_info["model"],
-                        "prompt": prompt,
-                        "images": images,  # Base64 encoded images
-                        "stream": False
-                    }
-                ) as response:
+                async with session.post(url, json=payload) as response:
                     response.raise_for_status()
                     result = await response.json()
-                    return result["response"].strip()
+                    return (result.get("message", {}).get("content") or "").strip()
         except Exception as e:
             raise RuntimeError(f"Ollama multimodal generation failed: {str(e)}")
 
@@ -281,15 +281,17 @@ class ModelManager:
 
     async def _ollama_generate(self, prompt: str) -> str:
         try:
-            # ✅ Use aiohttp for truly async requests
             import aiohttp
+            url = self.model_info["url"]["chat"]
+            payload = {
+                "model": self.model_info["model"],
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+            }
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.model_info["url"]["generate"],
-                    json = {"model": self.model_info["model"], "prompt": prompt, "stream": False}
-                ) as response:
+                async with session.post(url, json=payload) as response:
                     response.raise_for_status()
                     result = await response.json()
-                    return result["response"].strip()
+                    return (result.get("message", {}).get("content") or "").strip()
         except Exception as e:
             raise RuntimeError(f"Ollama generation failed: {str(e)}")

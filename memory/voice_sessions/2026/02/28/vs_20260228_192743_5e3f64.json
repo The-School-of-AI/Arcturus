@@ -1,0 +1,58 @@
+{
+  "session_id": "vs_20260228_192743_5e3f64",
+  "started_at": "2026-02-28T13:57:43.028357+00:00",
+  "ended_at": "2026-02-28T13:59:02.407658+00:00",
+  "total_turns": 5,
+  "turns": [
+    {
+      "turn_number": 1,
+      "timestamp": "2026-02-28T13:58:02.214197+00:00",
+      "user_transcript": "Hey, Otters.",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772287068",
+      "persona": null,
+      "latency_ms": 14131.1,
+      "source": "nexus-streamed"
+    },
+    {
+      "turn_number": 2,
+      "timestamp": "2026-02-28T13:58:10.310223+00:00",
+      "user_transcript": "What is the",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772287084",
+      "persona": null,
+      "latency_ms": 5668.8,
+      "source": "nexus-streamed"
+    },
+    {
+      "turn_number": 3,
+      "timestamp": "2026-02-28T13:58:25.062207+00:00",
+      "user_transcript": "k. After",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772287100",
+      "persona": null,
+      "latency_ms": 4782.7,
+      "source": "nexus-streamed"
+    },
+    {
+      "turn_number": 4,
+      "timestamp": "2026-02-28T13:58:32.330414+00:00",
+      "user_transcript": "what is the",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772287107",
+      "persona": null,
+      "latency_ms": 4970.1,
+      "source": "nexus-streamed"
+    },
+    {
+      "turn_number": 5,
+      "timestamp": "2026-02-28T13:58:48.920807+00:00",
+      "user_transcript": "What is the stop by yesterday?",
+      "tts_text": "I've completed your request.",
+      "run_id": "1772287122",
+      "persona": null,
+      "latency_ms": 6070.9,
+      "source": "nexus-streamed"
+    }
+  ]
+}

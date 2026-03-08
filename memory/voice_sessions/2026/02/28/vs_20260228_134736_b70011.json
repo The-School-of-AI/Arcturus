@@ -1,0 +1,18 @@
+{
+  "session_id": "vs_20260228_134736_b70011",
+  "started_at": "2026-02-28T08:17:36.370259+00:00",
+  "ended_at": "2026-02-28T08:19:56.112599+00:00",
+  "total_turns": 1,
+  "turns": [
+    {
+      "turn_number": 1,
+      "timestamp": "2026-02-28T08:19:26.107735+00:00",
+      "user_transcript": "So Fetch me the latest news.",
+      "tts_text": "Latest News Report\n\nThis report consolidates recent news information, organized by source to provide a clear overview of available data.\n\nPew Research Center - News Media Tracker\n\n   Focus: Provides data on how Americans use and trust news sources across various platforms.\n   Content: Features an interactive tool allowing users to explore data on 30 major news sources, including awareness, regular news consumption, and trust levels, broken down by age and political party.",
+      "run_id": "1772266663",
+      "persona": null,
+      "latency_ms": 102528.6,
+      "source": "nexus-streamed"
+    }
+  ]
+}

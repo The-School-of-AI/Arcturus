@@ -29,6 +29,20 @@ async def start_listening(request: Request):
     return {"status": "listening"}
 
 
+@router.get("/voice/state")
+async def get_voice_state(request: Request):
+    """
+    Return current orchestrator state for UI polling.
+    States: IDLE | LISTENING | THINKING | SPEAKING.
+    Returns 200 with state "unavailable" if voice pipeline did not start.
+    """
+    orch = getattr(request.app.state, "orchestrator", None)
+    if orch is None:
+        return {"state": "unavailable"}
+    state = getattr(orch, "state", "IDLE")
+    return {"state": state}
+
+
 # ── Voice Personas ─────────────────────────────────────────────
 
 @router.get("/voice/personas")

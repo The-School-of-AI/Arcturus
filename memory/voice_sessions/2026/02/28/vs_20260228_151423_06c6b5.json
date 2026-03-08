@@ -1,0 +1,21 @@
+{
+  "session_id": "vs_20260228_151423_06c6b5",
+  "started_at": "2026-02-28T09:44:23.419839+00:00",
+  "ended_at": "2026-02-28T09:50:00.688237+00:00",
+  "total_turns": 1,
+  "turns": [
+    {
+      "turn_number": 1,
+      "timestamp": "2026-02-28T09:49:30.681187+00:00",
+      "user_transcript": "See me a joke in 2 lines.",
+      "tts_text": null,
+      "run_id": "1772271868",
+      "persona": null,
+      "latency_ms": 302293.2,
+      "source": "nexus",
+      "extra": {
+        "error": "Timed out after 300.0s"
+      }
+    }
+  ]
+}
