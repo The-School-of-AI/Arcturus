@@ -43,6 +43,7 @@ from voice.config import VOICE_CONFIG
 class IntentType(str, enum.Enum):
     DICTATION = "DICTATION"   # write exactly what user says, no inference
     COMMAND   = "COMMAND"     # deterministic UI / skill execution
+    QUERY     = "QUERY"       # single question or request, agent responds once
     AGENTIC   = "AGENTIC"     # multi-step reasoning, tools, memory
 
 
