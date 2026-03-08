@@ -1,17 +1,20 @@
 """
 Central registry for canonical Fact fields (P11 Mnemo).
 
-Single source of truth: defines canonical namespace+key, value_type, hub path,
-append semantics, and aliases. Used by fact_normalizer (ingestion) and
-neo4j_preferences_adapter (read path).
+field_id is the ONLY canonical fact identifier. The LLM must NOT invent
+namespace or key; it selects a valid field_id from this registry.
+Registry owns: field_id → namespace, key, value_type, append, hub_path, aliases.
 
-Add new list-valued fields here with aliases; no changes needed in knowledge_graph
-or adapter.
+Used by: fact_normalizer (ingestion), neo4j_preferences_adapter (read path),
+extractor skill (valid field_ids for prompt).
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 # Field definition: (namespace, key, value_type, hub_path, append)
 # hub_path: tuple for response path, e.g. ("soft_identity", "interests_and_hobbies", "personal_hobbies")
@@ -232,25 +235,53 @@ FIELD_DEFS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# Alias: (namespace, key) -> field_id
-# LLM may output variants; these map to canonical fields
+# Alias: (namespace, key) -> field_id (for adapter read path: Neo4j stores ns+key)
 ALIAS_TO_FIELD: Dict[Tuple[str, str], str] = {}
-for field_id, defn in FIELD_DEFS.items():
+for fid, defn in FIELD_DEFS.items():
     ns = defn["namespace"]
-    key = defn["key"]
-    ALIAS_TO_FIELD[(ns, key)] = field_id
-# Aliases for variants the LLM might output
+    k = defn["key"]
+    ALIAS_TO_FIELD[(ns, k)] = fid
 _ALIAS_OVERRIDES: List[Tuple[str, str, str]] = [
     ("preferences.output_contract", "verbosity", "verbosity.default"),
     ("preferences.output_contract", "format", "format.default"),
     ("operating_context", "location", "location"),
     ("operating", "primary_languages", "primary_languages"),
-    ("identity", "hobbies", "personal_hobbies"),
-    ("identity", "hobby", "personal_hobbies"),
-    ("identity.hobby", "hobby", "personal_hobbies"),
 ]
-for alias_ns, alias_key, field_id in _ALIAS_OVERRIDES:
-    ALIAS_TO_FIELD[(alias_ns, alias_key)] = field_id
+for alias_ns, alias_key, fid in _ALIAS_OVERRIDES:
+    ALIAS_TO_FIELD[(alias_ns, alias_key)] = fid
+
+
+def get_field_def(field_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Lookup field by field_id. Returns full def or None.
+    This is the primary resolution path for extractor output.
+    """
+    if not field_id or not isinstance(field_id, str):
+        return None
+    fid = (field_id or "").strip()
+    return FIELD_DEFS.get(fid) if fid else None
+
+
+def get_valid_field_ids() -> List[str]:
+    """Return sorted list of valid field_ids for extractor prompt."""
+    return sorted(FIELD_DEFS.keys())
+
+
+def resolve_field_id_to_canonical(field_id: str) -> Optional[Tuple[str, str, str, Tuple[str, ...], bool]]:
+    """
+    Resolve field_id to canonical (namespace, key, value_type, hub_path, append).
+    Returns None if field_id is unknown.
+    """
+    defn = get_field_def(field_id)
+    if not defn:
+        return None
+    return (
+        defn["namespace"],
+        defn["key"],
+        defn["value_type"],
+        defn["hub_path"],
+        defn["append"],
+    )
 
 
 def resolve_to_canonical(ns: str, key: str) -> Optional[Tuple[str, str, str, Tuple[str, ...], bool]]:

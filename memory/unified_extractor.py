@@ -35,14 +35,14 @@ from memory.unified_extraction_schema import (
 
 UNIFIED_EXTRACTION_SYSTEM = """You extract structured information from conversation or memory text in a single JSON object.
 
-Output JSON with these keys only (use empty arrays/objects when nothing applies):
-- memories: list of { "action": "add"|"update"|"delete", "text": "...", "id": "T001" or null }. For session: add/update/delete memory commands. For single memory: usually one add with the given text or empty.
+Output JSON with these keys only (use empty arrays when nothing applies):
+- memories: list of { "action": "add"|"update"|"delete", "text": "...", "id": "T001" or null }
 - entities: list of { "type": "Person"|"Company"|"City"|"Concept"|..., "name": "..." }
 - entity_relationships: list of { "from_type", "from_name", "to_type", "to_name", "type": "works_at"|"lives_in"|..., "value"?: "...", "confidence"?: 1.0 }
-- facts: list of user facts/preferences. Each: { "namespace": "preferences.output_contract"|"identity.food"|"operating.environment"|..., "key": "verbosity.default"|"dietary_style"|..., "value_type": "text"|"number"|"bool"|"json", "value": "concise" or use value_text/value_number/value_bool/value_json, "entity_ref"?: "Concept::vegetarian" when fact refers to an entity }
-- evidence_events: list of { "source_type": "extraction", "source_ref": "session_123" or "memory_id", "timestamp"?: "...", "signal_category"?: "...", "raw_excerpt"?: "...", "confidence_delta"?: 0.2 }
+- facts: list of user facts. Each: { "field_id": "<one of {{VALID_FIELD_IDS}}>", "value_type": "text"|"number"|"bool"|"json", "value": "concise" or value_text/value_number/value_bool/value_json, "entity_ref"?: "Concept::vegetarian" }
+  You MUST use only valid field_ids from the list above. Do NOT invent namespace or key.
+- evidence_events: list of { "source_type": "extraction", "source_ref": "session_123" or "memory_id", "timestamp"?: "..." }
 
-Namespace examples: preferences.output_contract (verbosity, format), identity.food (dietary_style), operating.environment (os, location), tooling.package_manager (python, javascript).
 Return ONLY valid JSON, no markdown."""
 
 
@@ -58,7 +58,7 @@ class UnifiedExtractor:
         self._prompt: Optional[str] = None
 
     def _load_prompt(self) -> str:
-        """Load prompt: Skill > file in skill folder > settings > inline fallback (same as entity_extractor)."""
+        """Load prompt: Skill > file in skill folder > settings > inline fallback."""
         if self._prompt is not None:
             return self._prompt
         try:
@@ -66,16 +66,20 @@ class UnifiedExtractor:
             skill = get_skill_manager().get_skill("unified_extraction")
             if skill and skill.prompt_text:
                 self._prompt = skill.prompt_text.strip()
-                return self._prompt
         except Exception:
             pass
-        skill_prompt_path = Path(__file__).parent.parent / "core" / "skills" / "library" / "unified_extraction" / "SKILL.md"
-        if skill_prompt_path.exists():
-            self._prompt = skill_prompt_path.read_text(encoding="utf-8", errors="replace").strip()
-        elif settings.get("unified_extraction", {}).get("extraction_prompt"):
-            self._prompt = settings["unified_extraction"]["extraction_prompt"]
-        else:
-            self._prompt = UNIFIED_EXTRACTION_SYSTEM
+        if self._prompt is None:
+            skill_prompt_path = Path(__file__).parent.parent / "core" / "skills" / "library" / "unified_extraction" / "SKILL.md"
+            if skill_prompt_path.exists():
+                self._prompt = skill_prompt_path.read_text(encoding="utf-8", errors="replace").strip()
+            elif settings.get("unified_extraction", {}).get("extraction_prompt"):
+                self._prompt = settings["unified_extraction"]["extraction_prompt"]
+            else:
+                self._prompt = UNIFIED_EXTRACTION_SYSTEM
+        # Inject valid field_ids from registry
+        from memory.fact_field_registry import get_valid_field_ids
+        valid_ids = ", ".join(get_valid_field_ids())
+        self._prompt = self._prompt.replace("{{VALID_FIELD_IDS}}", valid_ids)
         return self._prompt
 
     def extract_from_session(
@@ -209,17 +213,17 @@ class UnifiedExtractor:
     def _normalize_facts(self, raw: List[Any]) -> List[FactItem]:
         out = []
         for f in raw:
-            if not isinstance(f, dict) or (not f.get("key") and not f.get("namespace")):
+            if not isinstance(f, dict):
                 continue
-            ns = str(f.get("namespace", "")).strip()
-            key = str(f.get("key", "")).strip()
+            field_id = str(f.get("field_id", "")).strip()
+            if not field_id:
+                continue
             vt = str(f.get("value_type", "text")).strip().lower()
             if vt not in ("text", "number", "bool", "json"):
                 vt = "text"
             val = f.get("value")
             out.append(FactItem(
-                namespace=ns,
-                key=key,
+                field_id=field_id,
                 value_type=vt,
                 value=val,
                 value_text=str(val) if vt == "text" and val is not None else f.get("value_text"),

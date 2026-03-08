@@ -1,18 +1,21 @@
 """
-Normalizes raw extracted facts to canonical fields (P11 Mnemo).
+Normalizes extracted facts to canonical fields (P11 Mnemo).
 
-Maps aliases (e.g. identity.hobby/hobby) to canonical (identity/personal_hobbies),
-merges list-valued facts, and returns normalized facts ready for ingestion.
-Used by ingest_memory before upsert.
+LLM emits field_id only. Registry provides canonical (namespace, key).
+Unknown field_id: log warning, route to extras. Never create canonical facts
+from model-invented coordinates.
 """
 
 from __future__ import annotations
 
 import ast
 import json
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from memory.fact_field_registry import resolve_to_canonical
+from memory.fact_field_registry import resolve_field_id_to_canonical
+
+logger = logging.getLogger(__name__)
 
 
 def _get_value(fact: Any) -> Optional[Any]:
@@ -86,39 +89,34 @@ def normalize_facts(
     raw_facts: Optional[List[Any]] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Normalize raw extracted facts to canonical fields.
-    - Maps aliases to canonical (ns, key)
-    - Merges list-valued facts: multiple aliases mapping to same list field become one fact with merged values
-    - Returns list of dicts: {namespace, key, value_type, value, value_text, value_json, append, entity_ref}
+    Normalize facts using field_id only. Registry provides canonical (namespace, key).
+    - Unknown field_id: log warning, route to extras (namespace="extras", key=field_id)
+    - Merges list-valued facts by canonical (ns, key)
+    - Returns: [{namespace, key, value_type, value, value_json, append, entity_ref}]
     """
     if not raw_facts:
         return []
 
-    # Group by (target_ns, target_key); collect values for append fields
-    scalar_facts: Dict[Tuple[str, str], Dict[str, Any]] = {}  # (ns, key) -> fact
-    list_values: Dict[Tuple[str, str], List[Any]] = {}  # (ns, key) -> [values]
+    scalar_facts: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    list_values: Dict[Tuple[str, str], List[Any]] = {}
 
     for f in raw_facts:
-        ns = f.get("namespace", "") if isinstance(f, dict) else getattr(f, "namespace", "")
-        k = f.get("key", "") if isinstance(f, dict) else getattr(f, "key", "")
-        if not ns or not k:
+        field_id = f.get("field_id", "") if isinstance(f, dict) else getattr(f, "field_id", "")
+        field_id = (field_id or "").strip()
+        if not field_id:
             continue
 
-        r = resolve_to_canonical(ns, k)
+        r = resolve_field_id_to_canonical(field_id)
         if not r:
-            # Unknown field: pass through as-is (extras)
-            out = {
-                "namespace": ns,
-                "key": k,
+            logger.warning("Unknown field_id '%s' from extractor; routing to extras", field_id)
+            scalar_facts[("extras", field_id)] = {
+                "namespace": "extras",
+                "key": field_id,
                 "value_type": f.get("value_type", "text") if isinstance(f, dict) else getattr(f, "value_type", "text"),
                 "value": _get_value(f),
                 "append": False,
+                "entity_ref": f.get("entity_ref") if isinstance(f, dict) else getattr(f, "entity_ref", None),
             }
-            if isinstance(f, dict):
-                out["entity_ref"] = f.get("entity_ref")
-            else:
-                out["entity_ref"] = getattr(f, "entity_ref", None)
-            scalar_facts[(ns, k)] = out
             continue
 
         target_ns, target_key, value_type, _hub_path, append = r
@@ -146,20 +144,18 @@ def normalize_facts(
                 }
 
     out_list: List[Dict[str, Any]] = []
-    for (ns, key), fact in scalar_facts.items():
-        if (ns, key) in list_values:
-            continue  # Prefer list merge over scalar for same canonical key
+    for (ns, k), fact in scalar_facts.items():
+        if (ns, k) in list_values:
+            continue
         out_list.append(fact)
-
-    for (ns, key), vals in list_values.items():
+    for (ns, k), vals in list_values.items():
         out_list.append({
             "namespace": ns,
-            "key": key,
+            "key": k,
             "value_type": "json",
             "value_json": vals,
             "value": vals,
             "append": True,
-            "entity_ref": None,  # List facts typically don't have entity_ref
+            "entity_ref": None,
         })
-
     return out_list

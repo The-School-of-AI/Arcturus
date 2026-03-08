@@ -37,10 +37,10 @@ class EntityRelationshipItem(BaseModel):
     confidence: float = 1.0
 
 
-# --- Fact: canonical user fact/preference (namespace + key + value) ---
+# --- Fact: canonical user fact (field_id only; registry owns namespace/key) ---
 class FactItem(BaseModel):
-    namespace: str = ""
-    key: str = ""
+    """LLM emits field_id only. Namespace and key are resolved from the registry."""
+    field_id: str = ""  # Required; must be a valid field_id from fact_field_registry
     value_type: Literal["text", "number", "bool", "json"] = "text"
     value: Optional[Union[str, float, bool, Any]] = None  # LLM may return single value
     value_text: Optional[str] = None
@@ -110,12 +110,16 @@ class UnifiedExtractionResult(BaseModel):
 def _derive_user_facts_from_facts(facts: List[FactItem]) -> List[Dict[str, str]]:
     """
     Derive legacy user_facts (rel_type, type, name) from facts that have entity_ref.
-    entity_ref may be composite key "Type::name" (e.g. "Concept::vegetarian").
-    Used when passing unified result to existing ingest_memory before step 3 writes Fact nodes.
+    Uses registry to resolve field_id → namespace for rel_type derivation.
     """
+    from memory.fact_field_registry import get_field_def
+
     out: List[Dict[str, str]] = []
     for f in facts:
-        if not f.entity_ref or not f.namespace or not f.key:
+        if not f.entity_ref or not f.field_id:
+            continue
+        defn = get_field_def(f.field_id)
+        if not defn:
             continue
         ref = (f.entity_ref or "").strip()
         if "::" in ref:
@@ -127,10 +131,12 @@ def _derive_user_facts_from_facts(facts: List[FactItem]) -> List[Dict[str, str]]
             name = ref
         if not name:
             continue
-        rel_type = "PREFERS"  # default for fact→entity
-        if "identity.work" in f.namespace or "company" in f.key.lower():
+        ns = defn.get("namespace", "")
+        key = defn.get("key", "")
+        rel_type = "PREFERS"
+        if "identity.work" in ns or "company" in key.lower():
             rel_type = "WORKS_AT"
-        elif "identity.location" in f.namespace or "location" in f.key.lower():
+        elif "identity.location" in ns or "location" in key.lower():
             rel_type = "LIVES_IN"
         out.append({"rel_type": rel_type, "type": etype, "name": name})
     return out

@@ -19,10 +19,9 @@ Return a single JSON object with these keys only (use empty arrays when nothing 
   ],
   "facts": [
     {
-      "namespace": "preferences.output_contract"|"identity.food"|"operating.environment"|"...",
-      "key": "verbosity.default"|"dietary_style"|"...",
+      "field_id": "personal_hobbies",
       "value_type": "text"|"number"|"bool"|"json",
-      "value": "concise",
+      "value": "concise or JSON",
       "entity_ref": "Concept::vegetarian"
     }
   ],
@@ -32,25 +31,23 @@ Return a single JSON object with these keys only (use empty arrays when nothing 
 }
 ```
 
-## Memories
+## Facts: field_id only
 
-- For **session input**: add/update/delete commands for the memory store. Use `id: "T001"` to reference existing memories by position.
-- For **single memory input**: usually one add with the given text, or empty if nothing to store.
+You MUST select `field_id` from this list only. Do NOT invent namespace, key, or any storage coordinates.
 
-## Facts (namespace + key)
+Valid field_ids: `{{VALID_FIELD_IDS}}`
 
-- `preferences.output_contract` — verbosity.default, format, tone
-- `identity.food` — dietary_style, cuisine_likes, favorite_foods
-- `identity` — personal_hobbies (list), professional_interests (list), learning_interests (list)
-- `operating.environment` — os, location
-- `tooling.package_manager` — python, javascript
-- `identity.work` — company, role
-
-For hobbies/interests, use `namespace: "identity"`, `key: "personal_hobbies"`, `value_type: "json"`, `value_json: ["Running"]` (or append to existing).
-Single hobby additions (e.g. "I have a new hobby - Running") can use `key: "personal_hobbies"` with a one-item list.
-Alternate keys like `identity.hobby`/`hobby` or `identity`/`hobby` are normalized to `personal_hobbies` via the fact field registry.
+Examples:
+- Hobbies: `field_id: "personal_hobbies"`, `value: ["Running"]` or `value: "Running"`, `value_type: "json"`
+- Dietary: `field_id: "dietary_style"`, `value: "vegetarian"`, `value_type: "text"`
+- Cuisines: `field_id: "cuisine_likes"`, `value: ["Italian", "Mexican"]`, `value_type: "json"`
 
 Use `entity_ref` (e.g. `"Concept::vegetarian"`) when a fact refers to an entity.
+
+## Memories
+
+- Session input: add/update/delete memory commands. Use `id: "T001"` for position reference.
+- Single memory input: usually one add with the given text or empty.
 
 ## Entity Types
 
@@ -60,6 +57,6 @@ Use: Person, Company, City, Location, Concept, Product, Technology, Event, Organ
 
 1. Extract only concrete entities and facts mentioned in the text.
 2. Return ONLY valid JSON, no markdown or explanation.
-3. Keep names normalized (trim, no extra punctuation).
+3. For facts, use ONLY valid field_ids from the list. Never invent namespace or key.
 4. If nothing relevant, return empty arrays.
 5. Prefer extracting at least one entity when the text mentions any named thing, preference, or concept.
