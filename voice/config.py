@@ -10,10 +10,24 @@
 #   AZURE_SPEECH_REGION   — TTS region (e.g. "eastus")
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
 _VOICE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _porcupine_keyword_path():
+    """Return the correct .ppn path for this platform (Porcupine files are platform-specific)."""
+    if sys.platform == "darwin":
+        return os.path.join(_VOICE_DIR, "model", "Hey-Arcturus_en_mac_v4_0_0.ppn")
+    if sys.platform == "win32":
+        return os.path.join(_VOICE_DIR, "keywords", "Hey-Arcturus_en_windows_v4_0_0.ppn")
+    # Linux: try linux .ppn if present, else often mac .ppn works for x86_64
+    linux_ppn = os.path.join(_VOICE_DIR, "keywords", "Hey-Arcturus_en_linux_v4_0_0.ppn")
+    if os.path.isfile(linux_ppn):
+        return linux_ppn
+    return os.path.join(_VOICE_DIR, "model", "Hey-Arcturus_en_mac_v4_0_0.ppn")
 _PROJECT_ROOT = Path(_VOICE_DIR).parent
 
 # Load the project root .env once for the entire voice package.
@@ -33,8 +47,8 @@ VOICE_CONFIG = {
     # Porcupine configuration
     # -----------------------------
     "porcupine": {
-        # Path to custom .ppn file (recommended)
-        "keyword_path": os.path.join(_VOICE_DIR, "keywords", "Hey-Arcturus_en_windows_v4_0_0.ppn"),
+        # Path to custom .ppn file — must match platform (Porcupine .ppn files are platform-specific)
+        "keyword_path": _porcupine_keyword_path(),
 
         # Sensitivity: 0.0 (least sensitive) → 1.0 (most sensitive)
         # Higher = fewer missed detections, but more false positives.

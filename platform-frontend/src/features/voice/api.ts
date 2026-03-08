@@ -12,6 +12,7 @@ export type VoiceState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'unava
 
 export interface VoiceStateResponse {
   state: VoiceState;
+  message?: string | null;
 }
 
 export interface VoicePersonasResponse {

@@ -24,7 +24,7 @@ class AddPersonaRequest(BaseModel):
 
 @router.post("/voice/start")
 async def start_listening(request: Request):
-    orch = request.app.state.orchestrator
+    orch = _orchestrator_required(request)
     orch.on_wake(None)
     return {"status": "listening"}
 
@@ -36,11 +36,12 @@ async def get_voice_state(request: Request):
     States: IDLE | LISTENING | THINKING | SPEAKING.
     Returns 200 with state "unavailable" if voice pipeline did not start.
     """
-    orch = getattr(request.app.state, "orchestrator", None)
+    orch = _get_orchestrator(request)
     if orch is None:
-        return {"state": "unavailable"}
+        reason = getattr(request.app.state, "voice_startup_error", None)
+        return {"state": "unavailable", "message": reason}
     state = getattr(orch, "state", "IDLE")
-    return {"state": state}
+    return {"state": state, "message": None}
 
 
 # ── Voice Personas ─────────────────────────────────────────────
@@ -58,8 +59,12 @@ async def list_personas(request: Request):
             ...
         }
     }
+    Returns empty when voice pipeline is not available.
     """
-    tts = request.app.state.orchestrator.tts
+    orch = _get_orchestrator(request)
+    if orch is None:
+        return {"active": "", "personas": {}}
+    tts = orch.tts
     return {
         "active": tts.active_persona,
         "personas": tts.list_personas(),
@@ -73,7 +78,8 @@ async def set_persona(request: Request, body: SetPersonaRequest):
 
     Body: { "persona": "casual" }
     """
-    tts = request.app.state.orchestrator.tts
+    orch = _orchestrator_required(request)
+    tts = orch.tts
     ok = tts.set_persona(body.persona)
     if not ok:
         available = list(tts.list_personas().keys())
@@ -97,7 +103,8 @@ async def add_persona(request: Request, body: AddPersonaRequest):
             "rate": "0.85", "pitch": "-2Hz", "volume": "soft",
             "description": "Quiet and intimate" }
     """
-    tts = request.app.state.orchestrator.tts
+    orch = _orchestrator_required(request)
+    tts = orch.tts
     tts.add_persona(body.name, body.model_dump(exclude={"name"}))
     return {
         "status": "ok",
@@ -107,6 +114,19 @@ async def add_persona(request: Request, body: AddPersonaRequest):
 
 
 # ── Voice Session Logs ─────────────────────────────────────────
+
+def _get_orchestrator(request: Request):
+    """Return orchestrator or None if voice pipeline is not started."""
+    return getattr(request.app.state, "orchestrator", None)
+
+
+def _orchestrator_required(request: Request):
+    """Return orchestrator or raise 503 if voice pipeline is not started."""
+    orch = _get_orchestrator(request)
+    if orch is None:
+        raise HTTPException(status_code=503, detail="Voice pipeline not available")
+    return orch
+
 
 @router.get("/voice/session")
 async def get_current_session(request: Request):
@@ -120,8 +140,17 @@ async def get_current_session(request: Request):
         "turns": [ ... ],
         "conversation_history": [ {"role": "user", "content": "..."}, ... ]
     }
+    Returns empty session when voice pipeline is not available.
     """
-    logger = request.app.state.orchestrator.session_logger
+    orch = _get_orchestrator(request)
+    if orch is None:
+        return {
+            "session_id": "",
+            "turn_count": 0,
+            "turns": [],
+            "conversation_history": [],
+        }
+    logger = orch.session_logger
     return {
         "session_id": logger.session_id,
         "turn_count": logger.turn_count,
@@ -194,7 +223,10 @@ async def clear_current_session(request: Request):
     """
     End and flush the current voice session (useful for manual reset).
     """
-    logger = request.app.state.orchestrator.session_logger
+    orch = _get_orchestrator(request)
+    if orch is None:
+        return {"status": "ok", "saved_to": None}
+    logger = orch.session_logger
     path = logger.end_session()
     return {
         "status": "ok",
@@ -219,7 +251,7 @@ async def start_dictation(request: Request):
         "session_id": "dict_20260302_..."
     }
     """
-    orch = request.app.state.orchestrator
+    orch = _orchestrator_required(request)
     session_id = orch.start_dictation()
     return {"status": "dictating", "session_id": session_id}
 
@@ -239,7 +271,7 @@ async def stop_dictation(request: Request):
         "saved_to": "memory/dictation/2026/03/dictation_dict_....txt"
     }
     """
-    orch = request.app.state.orchestrator
+    orch = _orchestrator_required(request)
     result = orch.stop_dictation()
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
@@ -266,5 +298,7 @@ async def get_dictation_status(request: Request):
     Response (when inactive):
     { "active": false }
     """
-    orch = request.app.state.orchestrator
+    orch = _get_orchestrator(request)
+    if orch is None:
+        return {"active": False}
     return orch.get_dictation_status()

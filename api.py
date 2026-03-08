@@ -122,7 +122,10 @@ async def lifespan(app: FastAPI):
         print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
         
     except Exception as e:
+        import traceback
         print(f"⚠️ [Voice] Startup failed: {e}")
+        traceback.print_exc()
+        app.state.voice_startup_error = str(e)
 
     # 2. Bootstrap & Validate Registry (Slower metadata checks)
     from core.bootstrap import bootstrap_agents

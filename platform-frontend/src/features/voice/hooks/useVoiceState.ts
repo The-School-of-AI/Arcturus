@@ -10,8 +10,11 @@ export function useVoiceState(active: boolean) {
   const refresh = useCallback(async () => {
     const res = await voiceApi.getState();
     setState(res.state);
-    if (res.state === 'unavailable') setError('Voice unavailable. Check backend and mic.');
-    else setError(null);
+    if (res.state === 'unavailable') {
+      setError(res.message?.trim() || 'Voice unavailable. Check backend and mic.');
+    } else {
+      setError(null);
+    }
   }, []);
 
   useEffect(() => {

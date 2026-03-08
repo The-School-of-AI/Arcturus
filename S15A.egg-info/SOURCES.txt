@@ -42,7 +42,6 @@ core/tool_schema.py
 core/ui_generator.py
 core/user_profiler.py
 core/utils.py
-core/visual_explainer_service.py
 gateway_api/__init__.py
 gateway_api/auth.py
 gateway_api/contracts.py
@@ -110,7 +109,6 @@ routers/skills.py
 routers/stream.py
 routers/studio.py
 routers/tests.py
-routers/visual_explainer.py
 routers/voice.py
 shared/__init__.py
 shared/state.py
