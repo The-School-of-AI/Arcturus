@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
 import { InboxPanel } from '../inbox/InboxPanel';
 import CanvasHost from '@/features/canvas/CanvasHost';
+import useVoice from '@/hooks/useVoice';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -46,14 +47,28 @@ import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
 import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
 
 export const AppLayout: React.FC = () => {
+    // Mount useVoice at the root so wake-word events trigger the Echo tab
+    // switch regardless of which tab the user currently has open.
+    // This is the ONLY place useVoice should be mounted.
+    useVoice();
+
     const {
         viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
         ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode, isInboxOpen, setIsInboxOpen,
-        isSidebarSubPanelOpen
+        isSidebarSubPanelOpen,
+        startEventStream, stopEventStream,
     } = useAppStore();
+
+    // ── Always-on SSE connection ──────────────────────────────────────────────
+    // Must be active at the root level so voice wake / state events are received
+    // on ALL tabs, not just when Console (MissionControl) is open.
+    useEffect(() => {
+        startEventStream();
+        return () => stopEventStream();
+    }, [startEventStream, stopEventStream]);
 
     // Moved isInspectorOpen definition down to include new tabs context
 

@@ -119,6 +119,13 @@ async def lifespan(app: FastAPI):
         voice_wake.start()
         voice_stt.start()
         
+        # ── Inject the running event loop so bg threads can publish events ──
+        # asyncio.get_event_loop() inside an async context returns the correct
+        # running loop. The orchestrator stores this and uses it in _publish()
+        # to safely call run_coroutine_threadsafe from wake/STT threads.
+        import asyncio
+        orchestrator._event_loop = asyncio.get_event_loop()
+        
         app.state.orchestrator = orchestrator
         print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
         

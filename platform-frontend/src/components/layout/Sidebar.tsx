@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, FolderOpen
+    CalendarClock, Terminal, Zap, Wand2, FolderOpen, Mic
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -18,6 +18,7 @@ import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { NotesPanel } from '@/components/sidebar/NotesPanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
+import { EchoPanel } from '@/components/sidebar/EchoPanel';
 import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 import { NewsPanel } from '@/components/sidebar/NewsPanel';
@@ -26,7 +27,7 @@ import { StudioSidebar } from '@/features/studio/StudioSidebar';
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio',
+    tab?: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'echo',
     active: boolean,
     onClick: () => void
 }) => {
@@ -166,6 +167,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} />
                     <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} />
                     <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
+                    <NavIcon icon={Mic} label="Echo" tab="echo" active={sidebarTab === 'echo'} onClick={() => setSidebarTab('echo')} />
                     <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
                     <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} />
 
@@ -207,81 +209,81 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                     </div>
 
                                     <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Run">
-                                            <Plus className="w-4 h-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="bg-card border-border sm:max-w-lg text-foreground">
-                                        <DialogHeader>
-                                            <DialogTitle className="text-foreground text-lg">Start New Agent Run</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-medium text-muted-foreground">Space</Label>
-                                                <Select
-                                                    value={runSpaceId ?? "__global__"}
-                                                    onValueChange={(v) => setRunSpaceId(v === "__global__" ? null : v)}
-                                                >
-                                                    <SelectTrigger className="bg-muted border-input text-foreground">
-                                                        <SelectValue placeholder="Global" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="__global__">Global (all runs)</SelectItem>
-                                                        {spaces.map((s) => (
-                                                            <SelectItem key={s.space_id} value={s.space_id}>
-                                                                {s.name || 'Unnamed Space'}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-medium text-muted-foreground">What should the agent do?</Label>
-                                                <div className="relative">
-                                                    <Input
-                                                        placeholder="e.g., Research latest AI trends..."
-                                                        value={newQuery}
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
-                                                        className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24" // Extra padding for button
-                                                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
-                                                        autoFocus
-                                                        disabled={isOptimizing}
-                                                    />
-                                                </div>
-                                                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                                    <span>Tip: Be specific about tools and outputs.</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        disabled={isOptimizing || !newQuery.trim()}
-                                                        className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
-                                                        onClick={async () => {
-                                                            if (!newQuery) return;
-                                                            setIsOptimizing(true);
-                                                            try {
-                                                                const res = await axios.post(`${API_BASE}/optimizer/preview`, { query: newQuery });
-                                                                if (res.data && res.data.optimized) {
-                                                                    setNewQuery(res.data.optimized);
-                                                                }
-                                                            } catch (e) {
-                                                                console.error("Optimization failed", e);
-                                                            } finally {
-                                                                setIsOptimizing(false);
-                                                            }
-                                                        }}
+                                        <DialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Run">
+                                                <Plus className="w-4 h-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-card border-border sm:max-w-lg text-foreground">
+                                            <DialogHeader>
+                                                <DialogTitle className="text-foreground text-lg">Start New Agent Run</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-medium text-muted-foreground">Space</Label>
+                                                    <Select
+                                                        value={runSpaceId ?? "__global__"}
+                                                        onValueChange={(v) => setRunSpaceId(v === "__global__" ? null : v)}
                                                     >
-                                                        {isOptimizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                                                        {isOptimizing ? "Optimizing..." : "Optimize"}
-                                                    </Button>
+                                                        <SelectTrigger className="bg-muted border-input text-foreground">
+                                                            <SelectValue placeholder="Global" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="__global__">Global (all runs)</SelectItem>
+                                                            {spaces.map((s) => (
+                                                                <SelectItem key={s.space_id} value={s.space_id}>
+                                                                    {s.name || 'Unnamed Space'}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-medium text-muted-foreground">What should the agent do?</Label>
+                                                    <div className="relative">
+                                                        <Input
+                                                            placeholder="e.g., Research latest AI trends..."
+                                                            value={newQuery}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
+                                                            className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24" // Extra padding for button
+                                                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
+                                                            autoFocus
+                                                            disabled={isOptimizing}
+                                                        />
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                                        <span>Tip: Be specific about tools and outputs.</span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={isOptimizing || !newQuery.trim()}
+                                                            className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
+                                                            onClick={async () => {
+                                                                if (!newQuery) return;
+                                                                setIsOptimizing(true);
+                                                                try {
+                                                                    const res = await axios.post(`${API_BASE}/optimizer/preview`, { query: newQuery });
+                                                                    if (res.data && res.data.optimized) {
+                                                                        setNewQuery(res.data.optimized);
+                                                                    }
+                                                                } catch (e) {
+                                                                    console.error("Optimization failed", e);
+                                                                } finally {
+                                                                    setIsOptimizing(false);
+                                                                }
+                                                            }}
+                                                        >
+                                                            {isOptimizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                                                            {isOptimizing ? "Optimizing..." : "Optimize"}
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                                            <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
+                                                <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
                                     </Dialog>
                                 </div>
                                 <button
@@ -400,6 +402,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'mcp' && <McpPanel />}
                     {sidebarTab === 'remme' && <RemmePanel />}
                     {sidebarTab === 'explorer' && <ExplorerPanel />}
+                    {sidebarTab === 'echo' && <EchoPanel />}
                     {sidebarTab === 'studio' && <StudioSidebar />}
 
                     {/* Persist AppsSidebar to prevent reloading app components */}

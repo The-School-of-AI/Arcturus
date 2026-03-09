@@ -273,7 +273,7 @@ def classify(text: str) -> GateDecision:
 
     if not text:
         return GateDecision(
-            intent_type=IntentType.QUERY,
+            intent_type=IntentType.AGENTIC,
             confidence=0.0,
             should_escalate=False,
             requires_clarification=False,
@@ -285,7 +285,6 @@ def classify(text: str) -> GateDecision:
     scores = {
         IntentType.DICTATION: _score_dictation(text),
         IntentType.COMMAND:   _score_command(text),
-        IntentType.QUERY:     _score_query(text),
         IntentType.AGENTIC:   _score_agentic(text),
     }
 
@@ -294,21 +293,13 @@ def classify(text: str) -> GateDecision:
 
     # ── Safety gate: AGENTIC is never auto-selected below threshold ──────────
     if best_intent == IntentType.AGENTIC:
-        if best_score < AGENTIC_CONFIDENCE_THRESHOLD:
-            best_intent = IntentType.QUERY
-            best_score  = max(scores[IntentType.QUERY], 0.55)
-            reasoning = (
-                f"Agentic score {scores[IntentType.AGENTIC]:.2f} < "
-                f"threshold {AGENTIC_CONFIDENCE_THRESHOLD} → downgraded to QUERY"
-            )
-        else:
-            reasoning = f"Agentic confirmed: score={best_score:.2f}"
+        reasoning = f"Agentic confirmed: score={best_score:.2f}"
     elif best_intent == IntentType.DICTATION:
         reasoning = f"Dictation detected: score={best_score:.2f}"
     elif best_intent == IntentType.COMMAND:
         reasoning = f"Command detected: score={best_score:.2f}"
     else:
-        reasoning = f"Query: score={best_score:.2f}"
+        reasoning = f"Agentic: score={best_score:.2f}"
 
     latency_ms = (time.perf_counter() - t0) * 1000
 
@@ -348,9 +339,9 @@ def classify_partial(partial_text: str) -> Optional[IntentType]:
         if re.search(pattern, t):
             return IntentType.DICTATION
 
-    # Early QUERY signal: question word at start
+    # Early QUERY signal: question word at start → AGENTIC (QUERY was never added to IntentType)
     if re.search(r'^(what|how|why|when|who|where|is|are|can)\b', t):
-        return IntentType.QUERY
+        return IntentType.AGENTIC
 
     # Never pre-warm AGENTIC from partial — too risky
     return None
@@ -513,9 +504,7 @@ class IntentRouter:
                 print("⚡ [IntentGate] Command → no skill match, falling back to QUERY")
                 self._route_to_nexus(utterance)
 
-        elif intent == IntentType.QUERY:
-            # ── SINGLE-TURN PATH: answer only, no tool chaining ─────────────
-            self._route_to_nexus(utterance)
+        # IntentType.QUERY does not exist — AGENTIC handles all Q&A via Nexus
 
         elif intent == IntentType.AGENTIC:
             # ── AGENTIC PATH: only reachable with confidence ≥ threshold ─────

@@ -80,8 +80,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio';
-    setSidebarTab: (tab: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio') => void;
+    sidebarTab: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'echo';
+    setSidebarTab: (tab: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'echo') => void;
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
@@ -602,9 +602,16 @@ export const useAppStore = create<AppState>()(
                 };
 
                 eventSource.onerror = (err) => {
-                    console.error("EventSource failed:", err);
+                    console.error("EventSource error — will reconnect in 3s:", err);
                     eventSource.close();
                     set({ isStreaming: false, streamConnection: null });
+                    // Auto-reconnect: clear connection so the next startEventStream call works
+                    setTimeout(() => {
+                        if (!get().streamConnection) {
+                            console.log("🔄 Reconnecting to Event Bus...");
+                            get().startEventStream();
+                        }
+                    }, 3000);
                 };
 
                 set({ streamConnection: eventSource, isStreaming: true });

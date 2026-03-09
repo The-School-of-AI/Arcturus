@@ -84,6 +84,42 @@ class Orchestrator:
         from voice.intent_gate import IntentRouter
         self.intent_router = IntentRouter(self)
 
+        # ── Event loop reference (injected by api.py lifespan) ────────────
+        # asyncio.get_event_loop() from a background thread returns the wrong
+        # loop in Python 3.10+.  api.py stores the real FastAPI loop here.
+        self._event_loop = None
+
+        # ── Polling flag: set True on wake, cleared by GET /voice/wake ────
+        self.wake_detected = False
+
+    # ─────────────── Event bus helper ─────────────────────────────────────
+    def _publish(self, event_type: str, data: dict) -> None:
+        """
+        Fire-and-forget: publish an event onto the FastAPI event loop from
+        any thread (wake word, STT, silence timeout — all run in bg threads).
+
+        Uses self._event_loop when available (injected at startup), otherwise
+        falls back to asyncio.get_event_loop() for compatibility.
+        """
+        import asyncio
+        from core.event_bus import event_bus
+        try:
+            loop = self._event_loop
+            if loop is None or loop.is_closed():
+                # Fallback: try the running loop (works if called from async ctx)
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = asyncio.get_event_loop()
+            if loop and loop.is_running():
+                asyncio.run_coroutine_threadsafe(
+                    event_bus.publish(event_type, "orchestrator", data), loop
+                )
+            else:
+                print(f"[Orchestrator._publish] No running loop — event {event_type!r} dropped")
+        except Exception as exc:
+            print(f"[Orchestrator._publish] Error publishing {event_type!r}: {exc}")
+
     # ─────────────── State transitions ───────────────
     def _set_state(self, new_state: str) -> None:
         """Set state and log transition (state transitions only)."""
@@ -91,6 +127,7 @@ class Orchestrator:
         if prev != new_state:
             print(f"[VoiceState] {prev} → {new_state}")
             self.state = new_state
+            self._publish("voice_state", {"state": new_state})
 
     def _set_active_run(self, run_id: str | None) -> None:
         with self._lock:
@@ -141,9 +178,15 @@ class Orchestrator:
             self._cancel_silence_timer()
             self._utterance_buffer.clear()
             self._set_state("LISTENING")
+            self.wake_detected = True   # consumed by GET /voice/wake polling
 
         # Signal nexus polling loop to unblock instantly (no 500ms wait)
         self._barge_in_event.set()
+
+        try:
+            self._publish("voice_wake", {"barge_in": is_barge_in})
+        except Exception:
+            pass
 
         # Cancel TTS immediately
         self.tts.cancel()
@@ -209,6 +252,12 @@ class Orchestrator:
 
             self._utterance_buffer.append(fragment)
             print(f"   📝 [STT fragment] \"{fragment}\"")
+            
+            try:
+                full_text = " ".join(self._utterance_buffer)
+                self._publish("voice_stt", {"fragment": fragment, "full_text": full_text})
+            except Exception:
+                pass
 
             # (Re)start silence timer
             self._cancel_silence_timer()

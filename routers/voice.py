@@ -25,8 +25,31 @@ class AddPersonaRequest(BaseModel):
 @router.post("/voice/start")
 async def start_listening(request: Request):
     orch = request.app.state.orchestrator
-    orch.on_wake(None)
+    orch.on_wake({})
     return {"status": "listening"}
+
+
+@router.get("/voice/wake")
+async def get_wake_state(request: Request):
+    """
+    Polling-friendly endpoint: returns whether a wake word has been detected
+    since the last call, then clears the flag.
+
+    The frontend polls this at ~1s intervals as a reliable fallback to the SSE
+    stream. Zero asyncio involvement — purely synchronous state read.
+    """
+    orch = getattr(request.app.state, "orchestrator", None)
+    if orch is None:
+        return {"wake": False, "state": "IDLE"}
+
+    woke = orch.wake_detected
+    if woke:
+        orch.wake_detected = False   # consume: next poll returns False
+
+    return {
+        "wake": woke,
+        "state": getattr(orch, "state", "IDLE"),
+    }
 
 
 # ── Voice Personas ─────────────────────────────────────────────
