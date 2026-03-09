@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2, AlertCircle, Upload } from 'lucide-react';
+import { Wand2, Loader2, CheckCircle, XCircle, Presentation, FileText, Table2, AlertCircle, Upload, Eye } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ExportButton } from '@/features/forge/components/ExportPanel';
+import { SlidePreviewModal } from '@/features/forge/components/preview/SlidePreviewModal';
 
 // === Sub-viewers ===
 
@@ -290,6 +291,7 @@ export function StudioWorkspace() {
     const isGenerating = useAppStore(s => s.isGenerating);
     const isApproving = useAppStore(s => s.isApproving);
     const setOpen = useAppStore(s => s.setIsStudioModalOpen);
+    const [previewOpen, setPreviewOpen] = useState(false);
 
     // Empty state
     if (!artifact && !isGenerating) {
@@ -359,6 +361,18 @@ export function StudioWorkspace() {
                         )}
                         {artifact.type === 'sheet' && (
                             <UploadDataButton artifactId={artifact.id} />
+                        )}
+                        {artifact.type === 'slides' && (
+                            <>
+                                <button
+                                    onClick={() => setPreviewOpen(true)}
+                                    className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-muted/30 text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
+                                >
+                                    <Eye className="w-3 h-3" />
+                                    Preview
+                                </button>
+                                <SlidePreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
+                            </>
                         )}
                         {['slides', 'document', 'sheet'].includes(artifact.type) && (
                             <ExportButton artifactId={artifact.id} artifactType={artifact.type} />

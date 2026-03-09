@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ExportPanel } from './ExportPanel';
+import { SlidePreviewModal } from './preview/SlidePreviewModal';
 
 // --- Type helpers ---
 
@@ -218,6 +219,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
     const [editInstruction, setEditInstruction] = useState('');
     const [expandedRevisionId, setExpandedRevisionId] = useState<string | null>(null);
     const [expandedRevisionData, setExpandedRevisionData] = useState<any>(null);
+    const [previewOpen, setPreviewOpen] = useState(false);
 
     const meta = TYPE_META[artifact.type] || TYPE_META.document;
     const Icon = meta.icon;
@@ -327,6 +329,22 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                 <JsonTree data={artifact.content_tree} />
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Preview (slides only) */}
+                {artifact.type === 'slides' && artifact.content_tree && (
+                    <div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPreviewOpen(true)}
+                            className="w-full gap-2"
+                        >
+                            <Eye className="w-3.5 h-3.5" />
+                            Preview Slides
+                        </Button>
+                        <SlidePreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
                     </div>
                 )}
 
