@@ -396,10 +396,8 @@ def test_16_variant_theme_export_pipeline(orchestrator, storage, mock_llm) -> No
     assert export_result["status"] == "completed"
 
 
-def test_17_quality_rejection_preserves_artifact_state(orchestrator, storage, mock_llm) -> None:
-    """Failed strict export does not modify artifact content_tree or revision_head_id."""
-    from core.schemas.studio_schema import Artifact as ArtifactModel
-
+def test_17_strict_export_repairs_without_mutating_artifact(orchestrator, storage, mock_llm) -> None:
+    """Strict export repairs layout on export copy but preserves stored artifact content_tree."""
     result = _run(orchestrator.generate_outline(
         prompt="Create slides",
         artifact_type=ArtifactType.slides,
@@ -407,7 +405,6 @@ def test_17_quality_rejection_preserves_artifact_state(orchestrator, storage, mo
     art_id = result["artifact_id"]
     art_data = _run(orchestrator.approve_and_generate_draft(art_id))
     rev_before = art_data["revision_head_id"]
-    ct_before = art_data["content_tree"]
 
     # Force overflow in stored content tree
     loaded = storage.load_artifact(art_id)
@@ -417,11 +414,12 @@ def test_17_quality_rejection_preserves_artifact_state(orchestrator, storage, mo
     export_result = _run(orchestrator.export_artifact(
         art_id, ExportFormat.pptx, strict_layout=True
     ))
-    assert export_result["status"] == "failed"
+    assert export_result["status"] == "completed"
 
-    # Artifact state unchanged by failed export
+    # Artifact state unchanged — repair only affects export copy
     reloaded = storage.load_artifact(art_id)
     assert reloaded.revision_head_id == rev_before
+    assert len(reloaded.content_tree["slides"][1]["elements"][0]["content"]) == 2500
 
 
 # --- Phase 4: Document pipeline integration tests ---

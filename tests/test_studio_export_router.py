@@ -168,17 +168,17 @@ def test_get_export_job_global(monkeypatch, tmp_path):
 
 # === Phase 3: Strict layout + theme variant tests ===
 
-def test_export_strict_layout_failure(monkeypatch):
+def test_export_strict_layout_repairs_and_completes(monkeypatch):
     class FakeOrchestrator:
         async def export_artifact(self, artifact_id, export_format, theme_id=None, strict_layout=False, generate_images=False):
-            return {"id": _UUID_JOB, "status": "failed" if strict_layout else "completed",
-                    "format": "pptx", "error": "layout violation"}
+            return {"id": _UUID_JOB, "status": "completed",
+                    "format": "pptx"}
 
     monkeypatch.setattr(studio_router, "_get_orchestrator", lambda: FakeOrchestrator())
 
     request = studio_router.ExportArtifactRequest(format="pptx", strict_layout=True)
     result = _run(studio_router.export_artifact(_UUID_1, request))
-    assert result["status"] == "failed"
+    assert result["status"] == "completed"
 
 
 def test_export_strict_layout_opt_out(monkeypatch):

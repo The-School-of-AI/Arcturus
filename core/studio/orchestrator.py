@@ -397,6 +397,10 @@ class ForgeOrchestrator:
             from core.studio.slides.notes import repair_speaker_notes
             export_content_tree = repair_speaker_notes(content_tree_model)
 
+            if strict_layout:
+                from core.studio.slides.layout import repair_layout
+                export_content_tree = repair_layout(export_content_tree)
+
             # Generate images if requested
             slide_images = None
             if generate_images:
@@ -419,8 +423,7 @@ class ForgeOrchestrator:
                 content_tree=export_content_tree,
             )
 
-            layout_ok = validation.get("layout_valid", True) or not strict_layout
-            if validation["valid"] and layout_ok:
+            if validation["valid"]:
                 export_job.status = ExportStatus.completed
                 export_job.output_uri = str(output_path)
                 export_job.file_size_bytes = output_path.stat().st_size
@@ -429,8 +432,7 @@ class ForgeOrchestrator:
                 export_job.completed_at = datetime.now(timezone.utc)
             else:
                 export_job.status = ExportStatus.failed
-                all_errors = validation.get("errors", []) + validation.get("layout_errors", [])
-                export_job.error = "; ".join(all_errors) if all_errors else "Quality validation failed"
+                export_job.error = "; ".join(validation.get("errors", [])) or "Quality validation failed"
                 validation["strict_layout"] = strict_layout
                 export_job.validator_results = validation
                 export_job.completed_at = datetime.now(timezone.utc)
