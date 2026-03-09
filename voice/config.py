@@ -60,8 +60,8 @@ VOICE_CONFIG = {
     # OpenWakeWord configuration
     # -----------------------------
     "openwakeword": {
-        # Path to trained .tflite model
-        "model_path": os.path.join(_VOICE_DIR, "models", "hey_jarvis_v0.1.tflite"),
+        # Path to trained .onnx model
+        "model_path": os.path.join(_VOICE_DIR, "models", "hey_aark_tuh_rus.onnx"),
 
         # Detection threshold (probability)
         # Higher = fewer false positives

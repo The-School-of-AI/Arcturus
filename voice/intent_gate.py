@@ -95,18 +95,33 @@ _COMMAND_VERBS = {
 }
 
 _SKILL_TRIGGERS = {
+    "take a note":  "note_taking",
+    "note down":    "note_taking",
     "dashboard":    "navigation",
     "calendar":     "navigation",
     "email":        "email",
-    "inbox":        "email",
+    "inbox":        "navigation",
     "settings":     "navigation",
     "profile":      "navigation",
     "home":         "navigation",
     "timer":        "timer",
     "alarm":        "timer",
     "reminder":     "reminder",
-    "note":         "note_taking",
-    "note down":    "note_taking",
+    "notes":        "navigation",
+    "note":         "navigation",
+    "rag":          "navigation",
+    "knowledge":    "navigation",
+    "apps":         "navigation",
+    "explorer":     "navigation",
+    "scheduler":    "navigation",
+    "ide":          "navigation",
+    "console":      "navigation",
+    "studio":       "navigation",
+    "skills":       "navigation",
+    "canvas":       "navigation",
+    "mcp":          "navigation",
+    "remme":        "navigation",
+    "runs":         "navigation",
 }
 
 # ── Navigation keyword → tab name mapping ─────────────────────────────────────

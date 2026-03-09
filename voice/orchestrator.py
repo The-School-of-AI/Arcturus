@@ -213,6 +213,14 @@ class Orchestrator:
 
                 # Normal fragment — push to document buffer
                 self._dictation_session.push_fragment(fragment)
+                
+                # (Re)start dictation silence timer
+                self._cancel_silence_timer()
+                self._silence_timer = threading.Timer(
+                    SILENCE_THRESHOLD_SEC, self._on_dictation_silence_timeout
+                )
+                self._silence_timer.daemon = True
+                self._silence_timer.start()
                 return
 
             if self.state != "LISTENING":
@@ -337,6 +345,17 @@ class Orchestrator:
         # IntentRouter handles state transitions internally.
         self._set_state("THINKING")
         self.intent_router.route(full_query)
+
+    def _on_dictation_silence_timeout(self):
+        """Fires when no new STT text has arrived for SILENCE_THRESHOLD_SEC in dictation mode."""
+        print(f"⏰ [Orchestrator] Dictation silence timeout reached.")
+        
+        # Stop dictation
+        result = self.stop_dictation()
+        
+        # Navigate to notes
+        if not "error" in result:
+            self.intent_router._execute_navigation("show notes")
 
     def _should_use_streaming(self) -> bool:
         """
