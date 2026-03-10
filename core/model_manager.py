@@ -59,7 +59,10 @@ class ModelManager:
             if role not in self.role_config.get("roles", {}):
                 raise ValueError(f"Unknown role: '{role}'. Available: {list(self.role_config.get('roles', {}).keys())}")
 
+            # Override model_name with the one defined for the role
             model_name = self.role_config["roles"][role]
+            # Verify explicit provider setting isn't conflicting?
+            # We assume role config implies the correct provider via the model definition or name.
 
         # Load settings for Ollama URL
         try:
@@ -111,6 +114,7 @@ class ModelManager:
             else:
                 self.text_model_key = self.profile["llm"]["text_generation"]
 
+            # Validate that the model exists in config
             if self.text_model_key not in self.config["models"]:
                 available_models = list(self.config["models"].keys())
                 raise ValueError(f"Model '{self.text_model_key}' not found in models.json. Available: {available_models}")
@@ -228,10 +232,12 @@ class ModelManager:
                     if img.mode in ('RGBA', 'P'):
                         img = img.convert('RGB')
 
+                    # Resize if too large (Ollama has limits)
                     MAX_DIM = 1024
                     if img.width > MAX_DIM or img.height > MAX_DIM:
                         img.thumbnail((MAX_DIM, MAX_DIM), PILImage.Resampling.LANCZOS)
 
+                    # Encode to base64
                     buf = io.BytesIO()
                     img.save(buf, format="JPEG", quality=85)
                     encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
@@ -304,6 +310,22 @@ class ModelManager:
                     return result["choices"][0]["message"]["content"].strip()
         except Exception as e:
             raise RuntimeError(f"OpenRouter generation failed: {str(e)}")
+
+    async def _wait_for_rate_limit(self):
+        """Enforce ~15 RPM limit for Gemini (4s interval)"""
+        await ModelManager._wait_for_rate_limit_static()
+
+    @staticmethod
+    async def _wait_for_rate_limit_static():
+        """Class-level rate limiter usable without a ModelManager instance."""
+        async with ModelManager._lock:
+            now = time.time()
+            elapsed = now - ModelManager._last_call
+            if elapsed < 4.5: # 4.5s buffer for safety
+                sleep_time = 4.5 - elapsed
+                # print(f"[Rate Limit] Sleeping for {sleep_time:.2f}s...")
+                await asyncio.sleep(sleep_time)
+            ModelManager._last_call = time.time()
 
     async def _openrouter_generate_content(self, contents: list) -> str:
         """Generate content with OpenRouter, extracting text from multimodal inputs."""

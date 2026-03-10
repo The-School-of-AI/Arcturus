@@ -1,0 +1,12 @@
+name: Business Department
+description: Handles strategy, market analysis, and business communication tasks.
+agents:
+  - role: strategist
+    description: Identifies opportunities, defines strategy, and sets direction.
+    skills: [analyst]
+  - role: analyst
+    description: Analyses markets, competitors, and business metrics.
+    skills: [analyst]
+  - role: communicator
+    description: Crafts stakeholder communications, decks, and executive summaries.
+    skills: [researcher]

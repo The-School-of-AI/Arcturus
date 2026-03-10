@@ -17,7 +17,7 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
     const socketUrl = `ws://localhost:8000/api/canvas/ws/${surfaceId}`;
 
     const { lastJsonMessage, readyState, sendJsonMessage } = useWebSocket(socketUrl, {
-        shouldReconnect: (closeEvent) => true,
+        shouldReconnect: (_closeEvent: CloseEvent) => true,
         reconnectInterval: 3000,
     });
 

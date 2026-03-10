@@ -71,3 +71,5 @@ scripts/test_all.sh quick
 - Never commit real API keys.
 - Gateway admin endpoints (`/api/v1/keys*`) require `ARCTURUS_GATEWAY_ADMIN_KEY` to be explicitly configured; when unset, admin auth fails closed (`503` `admin_key_not_configured`).
 - Gateway inbound signed webhook endpoint (`/api/v1/webhooks/inbound/*`) requires `ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET`; when unset, signature validation fails closed (`503` `webhook_signing_not_configured`).
+- Gateway mutating endpoints enforce `Idempotency-Key` and replay duplicate requests safely via persisted idempotency records.
+- Gateway usage governance enforces per-key monthly request and unit quotas (`429` `usage_quota_exceeded`) in addition to per-minute rate limits.

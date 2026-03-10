@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from session.schema import CheckpointSnapshot
+from session.alignment import get_git_head_info, get_current_trace_ids
 
 # Checkpoint storage
 DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "memory" / "chronicle_checkpoints"
@@ -60,6 +61,7 @@ def create_checkpoint(
     last_sequence: Optional[int] = None,
     checkpoint_dir: Optional[Path] = None,
     created_at: Optional[str] = None,
+    repo_path: Optional[Path] = None,
 ) -> CheckpointSnapshot:
     """
     Create a deterministic checkpoint snapshot.
@@ -80,6 +82,11 @@ def create_checkpoint(
     events = _load_events_until_sequence(events_file, last_sequence or 0)
     event_count = len(events)
 
+    # Git/checkpoint alignment and cross-module trace linking
+    repo = repo_path or Path.cwd()
+    git_info = get_git_head_info(repo)
+    trace_info = get_current_trace_ids()
+
     snapshot = CheckpointSnapshot(
         checkpoint_id="",  # Set after hash
         session_id=session_id,
@@ -90,6 +97,10 @@ def create_checkpoint(
         graph_snapshot=graph_snap,
         event_entries=events,
         content_hash="",
+        git_commit_sha=git_info.get("git_commit_sha", ""),
+        git_branch=git_info.get("git_branch", ""),
+        trace_id=trace_info.get("trace_id", ""),
+        span_id=trace_info.get("span_id", ""),
     )
     cid = snapshot.compute_content_hash()
     snapshot.checkpoint_id = cid

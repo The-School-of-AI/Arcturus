@@ -64,12 +64,27 @@ async def lifespan(app: FastAPI):
     try:
         # Create essential services 
         voice_agent = Agent()
-        tts_cfg = VOICE_CONFIG.get("tts", {})
-        voice_tts = TTSService(
-            voice_name=tts_cfg.get("voice_name"),
-            personas=tts_cfg.get("personas"),
-            active_persona=tts_cfg.get("active_persona"),
-        )
+
+        # Choose TTS backend based on config
+        tts_provider = VOICE_CONFIG.get("tts_provider", "azure")
+        if tts_provider == "piper":
+            from voice.piper_tts_service import PiperTTSService
+            piper_cfg = VOICE_CONFIG.get("piper_tts", {})
+            voice_tts = PiperTTSService(
+                model_path=piper_cfg.get("model_path"),
+                length_scale=piper_cfg.get("length_scale", 1.0),
+                sentence_silence=piper_cfg.get("sentence_silence", 0.15),
+                speaker_id=piper_cfg.get("speaker_id"),
+            )
+            print(f"🔊 [Voice] TTS provider: Piper (local, streaming={piper_cfg.get('streaming_enabled', False)})")
+        else:
+            tts_cfg = VOICE_CONFIG.get("tts", {})
+            voice_tts = TTSService(
+                voice_name=tts_cfg.get("voice_name"),
+                personas=tts_cfg.get("personas"),
+                active_persona=tts_cfg.get("active_persona"),
+            )
+            print(f"🔊 [Voice] TTS provider: Azure Speech")
         
         orchestrator = Orchestrator(
             wake_service=None,
@@ -132,15 +147,18 @@ async def lifespan(app: FastAPI):
     # =========================================================
     watchtower = settings.get("watchtower", {})
     if watchtower.get("enabled", True):
-        # Bootstrap TracerProvider with MongoDB + optional Jaeger OTLP exporters
-        from ops.tracing import init_tracing
-        init_tracing(
-            mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
-            jaeger_endpoint=watchtower.get("jaeger_endpoint"),
-            service_name=watchtower.get("service_name", "arcturus")
-        )
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        FastAPIInstrumentor.instrument_app(app)
+        try:
+            from ops.tracing import init_tracing
+            init_tracing(
+                mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
+                jaeger_endpoint=watchtower.get("jaeger_endpoint"),
+                service_name=watchtower.get("service_name", "arcturus"),
+            )
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+            FastAPIInstrumentor.instrument_app(app)
+            print("✅ [Watchtower] Tracing initialized")
+        except Exception as e:
+            print(f"⚠️ [Watchtower] Tracing unavailable (MongoDB not running?): {e}")
     await multi_mcp.start()
     
     # 3. External Dependency Checks (Non-blocking or deferred)
@@ -252,9 +270,14 @@ app.include_router(studio_router.router, prefix="/api")
 from routers import search as search_router
 app.include_router(search_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
+from routers.marketplace import router as marketplace_router
+app.include_router(marketplace_router, prefix="/api/v3")
 from routers import voice as voice_router
 app.include_router(voice_router.router, prefix="/api")
 
+
+from routers import pages as pages_router
+app.include_router(pages_router.router, prefix="/api")
 
 # Gateway API v1 (P15)
 from gateway_api.v1 import router as gateway_v1_router

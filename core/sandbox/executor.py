@@ -186,10 +186,26 @@ class UniversalSandbox:
         return len(violations) == 0, violations
 
     def _get_tool_proxies(self):
-        if not self.multi_mcp: return {}
+        """
+        Build a dict of callable proxies for every MCP tool.
+
+        Each tool is registered under multiple aliases so the LLM's generated
+        code resolves even when it uses a slightly wrong name variant:
+          - Exact name:             fetch_search_urls  (canonical)
+          - No-separator lowercase: fetchsearchurls    (common LLM hallucination)
+          - No-underscore lower:    fetchsearchurls    (same, covered)
+        """
+        if not self.multi_mcp:
+            return {}
+
         proxies = {}
+        all_tool_names = []
+
         for tool in self.multi_mcp.get_all_tools():
-            async def proxy_fn(*args, t=tool.name):
+            canonical = tool.name
+            all_tool_names.append(canonical)
+
+            async def proxy_fn(*args, t=canonical):
                 # Emit source_progress for search tools so the frontend can track URL extraction
                 progress_task = None
                 if t == "search_web_with_text_content" and self.event_bus and self.step_id:
@@ -208,9 +224,12 @@ class UniversalSandbox:
                                 "message": f"Reading source {i}/{total_sources}..."
                             })
                     progress_task = asyncio.create_task(_emit())
+                
                 result = await self.multi_mcp.function_wrapper(t, *args)
+                
                 if progress_task and not progress_task.done():
                     progress_task.cancel()
+                
                 # Emit tool_result for search tools
                 if t == "search_web_with_text_content" and self.event_bus and self.step_id:
                     source_count = 0
@@ -255,7 +274,18 @@ class UniversalSandbox:
                         "message": f"Processed {source_count} sources from {t}" if source_count else f"Tool {t} completed"
                     })
                 return result
-            proxies[tool.name] = proxy_fn
+
+            # Register under canonical name
+            proxies[canonical] = proxy_fn
+
+            # Register under stripped/merged lowercase alias
+            # e.g. fetch_search_urls → fetchsearchurls
+            alias = canonical.replace("_", "").replace("-", "").lower()
+            if alias != canonical and alias not in proxies:
+                proxies[alias] = proxy_fn
+
+        # Store tool names so the safety-net can suggest them
+        self._available_tool_names = all_tool_names
         return proxies
 
     def _build_globals(self, mcp_funcs: dict):

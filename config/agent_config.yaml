@@ -1,4 +1,10 @@
 agents:
+  ManagerAgent:
+    model: gemini
+    mcp_servers: []
+    skills:
+      - manager
+    description: Receives a user request and decomposes it into a DAG of sub-tasks for Worker Agents
   PlannerAgent:
     model: gemini
     mcp_servers: []
@@ -121,3 +127,9 @@ agents:
     - python_coding
     - debugging
     description: Specialized workspace assistant for deep code analysis and interactive debugging.
+  SafetyAgent:
+    model: gemini
+    mcp_servers: []
+    skills: []
+    description: |
+      Reviews outputs for safety, policy, and content guidelines.

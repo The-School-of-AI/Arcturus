@@ -446,10 +446,35 @@ interface StudioSlice {
     fetchArtifacts: () => Promise<void>;
     loadArtifact: (id: string) => Promise<void>;
     createArtifact: (type: 'slides' | 'documents' | 'sheets', prompt: string, title?: string) => Promise<void>;
+    approveError: string | null;
     approveOutline: (id: string) => Promise<void>;
     rejectOutline: (id: string) => Promise<void>;
     setActiveArtifactId: (id: string | null) => void;
     setIsStudioModalOpen: (open: boolean) => void;
+    // Phase 2: Export & Themes
+    studioThemes: any[];
+    isExporting: boolean;
+    exportJobs: any[];
+    activeExportJobId: string | null;
+    exportPollingInterval: ReturnType<typeof setInterval> | null;
+    autoDownloadJobId: { jobId: string; artifactId: string } | null;
+    fetchThemes: (params?: { include_variants?: boolean; base_id?: string; limit?: number }) => Promise<void>;
+    startExport: (artifactId: string, format?: string, themeId?: string, strictLayout?: boolean, generateImages?: boolean) => Promise<void>;
+    fetchExportJobs: (artifactId: string) => Promise<void>;
+    pollExportJob: (artifactId: string, jobId: string) => void;
+    stopExportPolling: () => void;
+    clearAutoDownload: () => void;
+    // Delete & Clear
+    deleteArtifact: (id: string) => Promise<void>;
+    clearAllArtifacts: () => Promise<void>;
+    // Phase 5: Sheet Upload Analysis
+    analyzeSheetUpload: (artifactId: string, file: File) => Promise<void>;
+    // Phase 6: Edit Loop
+    editLoading: boolean;
+    editError: string | null;
+    editConflict: boolean;
+    applyEditInstruction: (artifactId: string, instruction: string, baseRevisionId?: string) => Promise<void>;
+    clearEditState: () => void;
 }
 
 interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
@@ -2424,10 +2449,20 @@ export const useAppStore = create<AppState>()(
             activeArtifact: null,
             isGenerating: false,
             isApproving: false,
+            approveError: null,
             isStudioModalOpen: false,
             setIsStudioModalOpen: (open) => set({ isStudioModalOpen: open }),
             setActiveArtifactId: (id) => {
-                set({ activeArtifactId: id, activeArtifact: null });
+                get().stopExportPolling();
+                set({
+                    activeArtifactId: id,
+                    activeArtifact: null,
+                    approveError: null,
+                    exportJobs: [],
+                    activeExportJobId: null,
+                    isExporting: false,
+                    autoDownloadJobId: null,
+                });
                 if (id) get().loadArtifact(id);
             },
             fetchArtifacts: async () => {
@@ -2442,6 +2477,7 @@ export const useAppStore = create<AppState>()(
                 try {
                     const data = await api.getArtifact(id);
                     set({ activeArtifact: data, activeArtifactId: id });
+                    get().fetchExportJobs(id);
                 } catch (e) {
                     console.error("Failed to load artifact", e);
                 }
@@ -2465,13 +2501,16 @@ export const useAppStore = create<AppState>()(
                 }
             },
             approveOutline: async (id) => {
-                set({ isApproving: true });
+                set({ isApproving: true, approveError: null });
                 try {
                     const data = await api.approveOutline(id, true);
                     set({ activeArtifact: data, activeArtifactId: data.id });
                     await get().fetchArtifacts();
-                } catch (e) {
+                } catch (e: any) {
+                    const detail = e?.response?.data?.detail;
+                    const msg = typeof detail === 'string' ? detail : (e?.message || 'Failed to generate document');
                     console.error("Failed to approve outline", e);
+                    set({ approveError: msg });
                 } finally {
                     set({ isApproving: false });
                 }
@@ -2485,6 +2524,132 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to reject outline", e);
                 }
             },
+
+            // Phase 2: Export & Themes
+            studioThemes: [],
+            isExporting: false,
+            exportJobs: [],
+            activeExportJobId: null,
+            exportPollingInterval: null,
+            autoDownloadJobId: null,
+
+            fetchThemes: async (params) => {
+                if (!params && get().studioThemes.length > 0) return;
+                try {
+                    const data = await api.listThemes(params);
+                    if (!params) set({ studioThemes: data });
+                } catch (e) {
+                    console.error("Failed to fetch themes", e);
+                }
+            },
+
+            startExport: async (artifactId, format, themeId, strictLayout, generateImages) => {
+                set({ isExporting: true });
+                try {
+                    const job = await api.exportArtifact(artifactId, format || 'pptx', themeId, strictLayout, generateImages);
+                    const jobId = job.job_id || job.id;
+                    set({
+                        activeExportJobId: jobId,
+                        exportJobs: [job, ...get().exportJobs],
+                    });
+                    get().pollExportJob(artifactId, jobId);
+                } catch (e) {
+                    console.error("Failed to start export", e);
+                    set({ isExporting: false });
+                }
+            },
+
+            fetchExportJobs: async (artifactId) => {
+                try {
+                    const data = await api.listExportJobs(artifactId);
+                    if (get().activeArtifactId === artifactId) {
+                        set({ exportJobs: data });
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch export jobs", e);
+                }
+            },
+
+            pollExportJob: (artifactId, jobId) => {
+                get().stopExportPolling();
+                const interval = setInterval(async () => {
+                    try {
+                        const job = await api.getExportJob(artifactId, jobId);
+                        const status = job.status;
+                        if (status === 'completed' || status === 'failed') {
+                            get().stopExportPolling();
+                            set({ isExporting: false });
+                            if (status === 'completed') {
+                                set({ autoDownloadJobId: { jobId, artifactId } });
+                            }
+                            if (get().activeArtifactId === artifactId) {
+                                get().fetchExportJobs(artifactId);
+                            }
+                        }
+                    } catch {
+                        get().stopExportPolling();
+                        set({ isExporting: false });
+                    }
+                }, 1500);
+                set({ exportPollingInterval: interval });
+            },
+
+            clearAutoDownload: () => set({ autoDownloadJobId: null }),
+
+            stopExportPolling: () => {
+                const interval = get().exportPollingInterval;
+                if (interval) {
+                    clearInterval(interval);
+                    set({ exportPollingInterval: null });
+                }
+            },
+
+            // Phase 5: Sheet Upload Analysis
+            analyzeSheetUpload: async (artifactId: string, file: File) => {
+                const result = await api.analyzeSheetUpload(artifactId, file);
+                set({ activeArtifact: result });
+                get().fetchArtifacts?.();
+            },
+
+            // Delete & Clear
+            deleteArtifact: async (id: string) => {
+                await api.deleteArtifact(id);
+                const wasActive = get().activeArtifactId === id;
+                set({
+                    studioArtifacts: get().studioArtifacts.filter((a: any) => a.id !== id),
+                    ...(wasActive ? { activeArtifactId: null, activeArtifact: null } : {}),
+                });
+            },
+            clearAllArtifacts: async () => {
+                await api.clearAllArtifacts();
+                set({ studioArtifacts: [], activeArtifactId: null, activeArtifact: null });
+            },
+
+            // Phase 6: Edit Loop
+            editLoading: false,
+            editError: null,
+            editConflict: false,
+            applyEditInstruction: async (artifactId: string, instruction: string, baseRevisionId?: string) => {
+                set({ editLoading: true, editError: null, editConflict: false });
+                try {
+                    const result = await api.editArtifact(artifactId, {
+                        instruction,
+                        base_revision_id: baseRevisionId,
+                    });
+                    set({ activeArtifact: result, editLoading: false });
+                    get().fetchArtifacts?.();
+                } catch (e: any) {
+                    const status = e?.response?.status;
+                    if (status === 409) {
+                        set({ editConflict: true, editLoading: false });
+                    } else {
+                        const detail = e?.response?.data?.detail;
+                        const msg = typeof detail === 'string' ? detail : (e?.message || 'Edit failed');
+                        set({ editError: msg, editLoading: false });
+                    }
+                }
+            },
+            clearEditState: () => set({ editError: null, editConflict: false }),
         }),
         {
             name: 'agent-platform-storage',
