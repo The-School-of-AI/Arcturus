@@ -266,7 +266,7 @@
   "multimodal": [
     {
       "name": "analyze_image",
-      "description": "\n    Perform visual question answering and description extraction on an image.\n    Uses Gemini Vision models to analyze local images.\n    \n    HOW IT WORKS:\n    1. Reads the local image file from the disk.\n    2. Converts the image into a base64 encoded string so that it can be processed by an AI.\n    3. Sends both the user's specific prompt AND the encoded image to the Gemini 2.5 Flash model.\n    4. The AI returns a text description or answers questions based specifically on what it \"sees\" in the image.\n    ",
+      "description": "\nPerform visual question answering and description extraction on an image.\nUses Gemini Vision models to analyze local images.\n\nHOW IT WORKS:\n1. Reads the local image file from the disk.\n2. Converts the image into a base64 encoded string so that it can be processed by an AI.\n3. Sends both the user's specific prompt AND the encoded image to the Gemini 2.5 Flash model.\n4. The AI returns a text description or answers questions based specifically on what it \"sees\" in the image.\n",
       "inputSchema": {
         "properties": {
           "image_path": {
@@ -288,7 +288,7 @@
     },
     {
       "name": "analyze_pdf_document",
-      "description": "\n    Extracts content from a PDF and uses an LLM to answer questions about the document.\n    Good for deep document intelligence.\n    \n    HOW IT WORKS:\n    1. Uses the 'pymupdf4llm' library to reliably parse complex PDF structures into clean Markdown text.\n    2. If the user just wants the raw text, it returns it instantly.\n    3. Otherwise, it injects the extracted PDF text alongside the user's question into the Gemini LLM.\n    4. The LLM acts as an expert reader, scanning the document text and answering the user's prompt (e.g., \"What is the conclusion of this paper?\").\n    ",
+      "description": "\nExtracts content from a PDF and uses an LLM to answer questions about the document.\nGood for deep document intelligence.\n\nHOW IT WORKS:\n1. Uses the 'pymupdf4llm' library to reliably parse complex PDF structures into clean Markdown text.\n2. If the user just wants the raw text, it returns it instantly.\n3. Otherwise, it injects the extracted PDF text alongside the user's question into the Gemini LLM.\n4. The LLM acts as an expert reader, scanning the document text and answering the user's prompt (e.g., \"What is the conclusion of this paper?\").\n",
       "inputSchema": {
         "properties": {
           "pdf_path": {
@@ -310,7 +310,7 @@
     },
     {
       "name": "analyze_data_file",
-      "description": "\n    Parses CSV files, generates statistical summaries (mean, sum, count, min, max for numeric columns),\n    and answers questions about the data. (Excel files must be converted to CSV first).\n    \n    HOW IT WORKS:\n    1. Uses Python's built-in CSV reader to parse the tabular data into columns and rows.\n    2. Analyzes the data types. If a column is mostly numbers, it calculates min, max, and averages automatically.\n    3. Compiles a \"Statistical Summary\" and takes a \"Sample\" of the first 5 rows.\n    4. Sends these summaries to the Gemini LLM instead of sending the whole file (which saves tokens and prevents crashes on huge datasets).\n    5. The AI answers the user's query based on the statistical profile of the data.\n    ",
+      "description": "\nParses CSV files, generates statistical summaries (mean, sum, count, min, max for numeric columns),\nand answers questions about the data. (Excel files must be converted to CSV first).\n\nHOW IT WORKS:\n1. Uses Python's built-in CSV reader to parse the tabular data into columns and rows.\n2. Analyzes the data types. If a column is mostly numbers, it calculates min, max, and averages automatically.\n3. Compiles a \"Statistical Summary\" and takes a \"Sample\" of the first 5 rows.\n4. Sends these summaries to the Gemini LLM instead of sending the whole file (which saves tokens and prevents crashes on huge datasets).\n5. The AI answers the user's query based on the statistical profile of the data.\n",
       "inputSchema": {
         "properties": {
           "file_path": {
@@ -332,7 +332,7 @@
     },
     {
       "name": "analyze_video",
-      "description": "\n    Analyzes a local video file natively using the Gemini File API.\n    Uploads the video, waits for processing, extracts insights, and then cleans up.\n    \n    HOW IT WORKS:\n    1. Uploads the local video file directly to Gemini's secure file storage.\n    2. Polls the API until the video finishes processing on Google's servers.\n    3. Prompts the Gemini model with the user's query against the entire processed video context.\n    4. Automatically deletes the file from the cloud to maintain security and avoid storage costs.\n    ",
+      "description": "\nAnalyzes a local video file natively using the Gemini File API.\nUploads the video, waits for processing, extracts insights, and then cleans up.\n\nHOW IT WORKS:\n1. Uploads the local video file directly to Gemini's secure file storage.\n2. Polls the API until the video finishes processing on Google's servers.\n3. Prompts the Gemini model with the user's query against the entire processed video context.\n4. Automatically deletes the file from the cloud to maintain security and avoid storage costs.\n",
       "inputSchema": {
         "properties": {
           "video_path": {
@@ -356,7 +356,7 @@
   "internal": [
     {
       "name": "search_workspace_files",
-      "description": "\n    Search the local workspace for files containing the given text query.\n    Returns a list of matching file paths and the text snippets where the match was found.\n    \n    HOW IT WORKS:\n    1. Recursively walks through all directories starting from the given base path.\n    2. Skips non-text files and compiled/hidden folders like .git or node_modules to ensure fast searching.\n    3. Opens each text file and scans line-by-line for the user's search query (case-insensitive).\n    4. When a match is found, it extracts the line along with the preceding and succeeding line for \"context\".\n    5. Formats the results into a readable list for the AI agent to understand what the code/documents say.\n    ",
+      "description": "\nSearch the local workspace for files containing the given text query.\nReturns a list of matching file paths and the text snippets where the match was found.\n\nHOW IT WORKS:\n1. Recursively walks through all directories starting from the given base path.\n2. Skips non-text files and compiled/hidden folders like .git or node_modules to ensure fast searching.\n3. Opens each text file and scans line-by-line for the user's search query (case-insensitive).\n4. When a match is found, it extracts the line along with the preceding and succeeding line for \"context\".\n5. Formats the results into a readable list for the AI agent to understand what the code/documents say.\n",
       "inputSchema": {
         "properties": {
           "query": {
@@ -378,7 +378,7 @@
     },
     {
       "name": "search_past_conversations",
-      "description": "\n    Search across episodic memory and previous conversations for the user's project context.\n    Reads from the memory service data store.\n    \n    HOW IT WORKS:\n    1. Locates the centralized 'user_memory.json' database used by Arcturus's memory system.\n    2. Loads all historical memories and tags into memory.\n    3. Scans through the text and metadata tags for matches against the search query.\n    4. Returns a bulleted list of previous conversations or facts that match the query, allowing the agent to \"remember\".\n    ",
+      "description": "\nSearch across episodic memory and previous conversations for the user's project context.\nReads from the memory service data store.\n\nHOW IT WORKS:\n1. Locates the centralized 'user_memory.json' database used by Arcturus's memory system.\n2. Loads all historical memories and tags into memory.\n3. Scans through the text and metadata tags for matches against the search query.\n4. Returns a bulleted list of previous conversations or facts that match the query, allowing the agent to \"remember\".\n",
       "inputSchema": {
         "properties": {
           "query": {
@@ -390,6 +390,62 @@
           "query"
         ],
         "title": "search_past_conversationsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "create_space",
+      "description": "\nCreate a new persistent workspace/collection for an ongoing research project.\n",
+      "inputSchema": {
+        "properties": {
+          "space_name": {
+            "title": "Space Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "space_name"
+        ],
+        "title": "create_spaceArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "add_to_space",
+      "description": "\nAdd a research note, extracted URL, or piece of knowledge to a specific project space.\n",
+      "inputSchema": {
+        "properties": {
+          "space_name": {
+            "title": "Space Name",
+            "type": "string"
+          },
+          "item": {
+            "title": "Item",
+            "type": "string"
+          }
+        },
+        "required": [
+          "space_name",
+          "item"
+        ],
+        "title": "add_to_spaceArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "search_space",
+      "description": "\nRetrieve all compiled knowledge and items stored within a specific project space.\n",
+      "inputSchema": {
+        "properties": {
+          "space_name": {
+            "title": "Space Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "space_name"
+        ],
+        "title": "search_spaceArguments",
         "type": "object"
       }
     }

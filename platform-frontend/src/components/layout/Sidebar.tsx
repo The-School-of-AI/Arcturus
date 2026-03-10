@@ -117,8 +117,8 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // @ts-ignore - Electron natively provides the full system path
-            const path = file.path;
+            // @ts-ignore - Electron natively provides the full system path, but Chrome uses .name
+            const path = file.path || file.name;
             if (path) {
                 setNewQuery(prev => prev + (prev ? " " : "") + `Please do deep research and analyze the content of the file at this location: ${path}`);
             }

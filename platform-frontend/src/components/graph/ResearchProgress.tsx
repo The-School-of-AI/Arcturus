@@ -14,11 +14,11 @@ const ResearchProgress: React.FC = () => {
     const logRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(true);
     const dragOffset = useRef({ x: 0, y: 0 });
 
-    // Reset position and collapse when switching runs
-    useEffect(() => { setPos(null); setExpanded(false); }, [currentRun?.id]);
+    // Reset position and expand when switching runs
+    useEffect(() => { setPos(null); setExpanded(true); }, [currentRun?.id]);
 
     // Set default position (bottom-left, above zoom controls)
     useEffect(() => {

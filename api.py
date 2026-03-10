@@ -3,6 +3,12 @@ import os
 import asyncio
 import subprocess
 from pathlib import Path
+
+# Windows console encoding fix
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
