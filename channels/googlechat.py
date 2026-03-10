@@ -23,7 +23,7 @@ import hmac
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -60,7 +60,7 @@ class GoogleChatAdapter(ChannelAdapter):
         Set ``GOOGLE_CHAT_VERIFICATION_TOKEN`` to enable verification.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the Google Chat adapter.
 
         Args:
@@ -79,7 +79,7 @@ class GoogleChatAdapter(ChannelAdapter):
         self.verification_token: str = (
             cfg.get("verification_token") or os.getenv("GOOGLE_CHAT_VERIFICATION_TOKEN", "")
         )
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create the async HTTP client."""
@@ -90,7 +90,7 @@ class GoogleChatAdapter(ChannelAdapter):
         if self.client:
             await self.client.aclose()
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a Google Chat Space.
 
         Args:
@@ -116,7 +116,7 @@ class GoogleChatAdapter(ChannelAdapter):
             content = f"{content}\n\n{links}" if content else links
 
         # Build the message payload — simple text message
-        payload: Dict[str, Any] = {"text": content, **kwargs}
+        payload: dict[str, Any] = {"text": content, **kwargs}
 
         try:
             if self.webhook_url:

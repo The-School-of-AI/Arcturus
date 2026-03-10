@@ -30,7 +30,7 @@ import hmac
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -60,7 +60,7 @@ class iMessageAdapter(ChannelAdapter):
         ``X-BB-Secret`` header using a shared webhook secret.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the iMessage adapter.
 
         Args:
@@ -79,7 +79,7 @@ class iMessageAdapter(ChannelAdapter):
         self.webhook_secret = (
             cfg.get("webhook_secret") or os.getenv("BLUEBUBBLES_WEBHOOK_SECRET", "")
         )
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create the async HTTP client."""
@@ -90,7 +90,7 @@ class iMessageAdapter(ChannelAdapter):
         if self.client:
             await self.client.aclose()
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to an iMessage address via BlueBubbles.
 
         Args:
@@ -117,7 +117,7 @@ class iMessageAdapter(ChannelAdapter):
 
         url = f"{self.bluebubbles_url}/api/v1/message/text"
         params = {"password": self.password} if self.password else {}
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "chatGuid": recipient_id,
             "tempGuid": f"temp-{datetime.utcnow().timestamp()}",
             "message": content,

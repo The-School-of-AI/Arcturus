@@ -34,7 +34,7 @@ import hmac
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -61,7 +61,7 @@ class TeamsAdapter(ChannelAdapter):
     Formatter: Markdown with heading → **bold** conversion
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the Teams adapter.
 
         Args:
@@ -79,7 +79,7 @@ class TeamsAdapter(ChannelAdapter):
             cfg.get("service_url")
             or os.getenv("TEAMS_SERVICE_URL", "https://smba.trafficmanager.net/apis")
         ).rstrip("/")
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create the async HTTP client."""
@@ -95,7 +95,7 @@ class TeamsAdapter(ChannelAdapter):
         if not self.client:
             return
         url = self.service_url + _BOT_FRAMEWORK_API.format(conversation_id=recipient_id)
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        headers: dict[str, str] = {"Content-Type": "application/json"}
         if self.app_password:
             headers["Authorization"] = f"Bearer {self.app_password}"
         try:
@@ -103,7 +103,7 @@ class TeamsAdapter(ChannelAdapter):
         except Exception:
             pass  # typing is cosmetic — never fail the pipeline
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a Teams conversation via the Bot Framework API.
 
         Args:
@@ -122,7 +122,7 @@ class TeamsAdapter(ChannelAdapter):
 
         url = self.service_url + _BOT_FRAMEWORK_API.format(conversation_id=recipient_id)
         media_attachments = kwargs.pop("attachments", [])
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "type": "message",
             "text": content,
             "textFormat": "markdown",
@@ -137,7 +137,7 @@ class TeamsAdapter(ChannelAdapter):
             ]
 
         # Add Authorization header if app credentials are configured
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        headers: dict[str, str] = {"Content-Type": "application/json"}
         if self.app_password:
             headers["Authorization"] = f"Bearer {self.app_password}"
 

@@ -69,7 +69,7 @@ class SkillManager:
                     logger.error(f"Failed to load skill at {item}: {e}")
 
         # Save registry
-        self.registry_file.write_text(json.dumps(registry, indent=2))
+        self.registry_file.write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n")
         logger.info(f"Skill Registry Updated. {len(registry)} skills available.")
 
     def _load_skill_class(self, file_path: Path) -> Optional[Type[Skill]]:

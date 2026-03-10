@@ -160,4 +160,67 @@ export const api = {
         const res = await axios.get(`${API_BASE}/studio/${artifactId}/revisions/${revisionId}`);
         return res.data;
     },
+
+    // Studio Phase 2 — Export & Themes
+    listThemes: async (params?: {
+        include_variants?: boolean;
+        base_id?: string;
+        limit?: number;
+    }): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio/themes`, { params });
+        return res.data;
+    },
+
+    exportArtifact: async (id: string, format: string, themeId?: string, strictLayout?: boolean, generateImages?: boolean): Promise<any> => {
+        const payload: { format: string; theme_id?: string; strict_layout?: boolean; generate_images?: boolean } = { format };
+        if (themeId) payload.theme_id = themeId;
+        if (strictLayout !== undefined) payload.strict_layout = strictLayout;
+        if (generateImages) payload.generate_images = true;
+        const res = await axios.post(`${API_BASE}/studio/${id}/export`, payload);
+        return res.data;
+    },
+
+    listExportJobs: async (id: string): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/studio/${id}/exports`);
+        return res.data;
+    },
+
+    getExportJob: async (artifactId: string, jobId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/studio/${artifactId}/exports/${jobId}`);
+        return res.data;
+    },
+
+    getExportJobGlobal: async (jobId: string): Promise<any> => {
+        const res = await axios.get(`${API_BASE}/studio/exports/${jobId}`);
+        return res.data;
+    },
+
+    getExportDownloadUrl: (artifactId: string, jobId: string): string => {
+        return `${API_BASE}/studio/${artifactId}/exports/${jobId}/download`;
+    },
+
+    deleteArtifact: async (id: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/studio/${id}`);
+    },
+
+    clearAllArtifacts: async (): Promise<{ deleted: number }> => {
+        const res = await axios.delete(`${API_BASE}/studio`);
+        return res.data;
+    },
+
+    editArtifact: async (artifactId: string, payload: { instruction: string; base_revision_id?: string; mode?: string }): Promise<any> => {
+        const res = await axios.post(`${API_BASE}/studio/${artifactId}/edit`, payload);
+        return res.data;
+    },
+
+    analyzeSheetUpload: async (artifactId: string, file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await axios.post(
+            `${API_BASE}/studio/${artifactId}/sheets/analyze-upload`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        return data;
+    },
 };

@@ -10,9 +10,10 @@ needed — the loop runs entirely inside the FastAPI event loop.
 import asyncio
 import logging
 import os
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -43,7 +44,7 @@ class TelegramAdapter(ChannelAdapter):
     TELEGRAM_API_URL = "https://api.telegram.org/bot"
     _LONG_POLL_TIMEOUT = 30  # seconds per getUpdates call
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize Telegram adapter.
 
         Args:
@@ -55,9 +56,9 @@ class TelegramAdapter(ChannelAdapter):
         if not self.token:
             self.token = os.getenv("TELEGRAM_TOKEN", "")
         self.bot_name = self.config.get("bot_name", "arcturus_bot") if config else "arcturus_bot"
-        self.client: Optional[httpx.AsyncClient] = None
-        self._poll_task: Optional[asyncio.Task] = None
-        self._bus_callback: Optional[Callable] = None
+        self.client: httpx.AsyncClient | None = None
+        self._poll_task: asyncio.Task | None = None
+        self._bus_callback: Callable | None = None
         self._update_offset: int = 0
 
     def set_bus_callback(self, callback: Callable) -> None:
@@ -123,7 +124,7 @@ class TelegramAdapter(ChannelAdapter):
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 30)
 
-    async def _handle_update(self, update: Dict[str, Any]) -> None:
+    async def _handle_update(self, update: dict[str, Any]) -> None:
         """Convert a Telegram update to a MessageEnvelope and roundtrip it."""
         message = update.get("message")
         if not message:
@@ -203,7 +204,7 @@ class TelegramAdapter(ChannelAdapter):
             text = text[cut:].lstrip("\n")
         return chunks
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a Telegram chat.
 
         Long messages (>4096 chars) are automatically split into multiple
@@ -227,7 +228,7 @@ class TelegramAdapter(ChannelAdapter):
 
         media_attachments = kwargs.pop("attachments", [])
         chunks = self._split_message(content, self._MAX_MSG_LEN)
-        last_result: Dict[str, Any] = {}
+        last_result: dict[str, Any] = {}
 
         for i, chunk in enumerate(chunks):
             payload = {

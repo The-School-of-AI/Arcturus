@@ -8,7 +8,7 @@ into a common format for agent processing.
 import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -17,9 +17,9 @@ class MediaAttachment:
 
     media_type: str  # "image", "video", "audio", "document"
     url: str  # URL or file path
-    filename: Optional[str] = None
-    size_bytes: Optional[int] = None
-    mime_type: Optional[str] = None
+    filename: str | None = None
+    size_bytes: int | None = None
+    mime_type: str | None = None
 
 
 @dataclass
@@ -48,22 +48,22 @@ class MessageEnvelope:
     content_type: str = "text"  # "text", "media", "mixed"
 
     # Threading and context
-    thread_id: Optional[str] = None  # For conversation threading
-    conversation_id: Optional[str] = None  # Unique conversation identifier
-    parent_message_id: Optional[str] = None  # If this is a reply
+    thread_id: str | None = None  # For conversation threading
+    conversation_id: str | None = None  # Unique conversation identifier
+    parent_message_id: str | None = None  # If this is a reply
 
     # Media attachments
-    attachments: List[MediaAttachment] = field(default_factory=list)
+    attachments: list[MediaAttachment] = field(default_factory=list)
 
     # Metadata
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Deduplication and idempotency
-    message_hash: Optional[str] = None  # For detecting duplicates
+    message_hash: str | None = None  # For detecting duplicates
 
     # Session/routing context
-    session_id: Optional[str] = None  # Multi-agent routing identifier
+    session_id: str | None = None  # Multi-agent routing identifier
 
     def __post_init__(self):
         """Validate and normalize the envelope after initialization."""
@@ -184,7 +184,7 @@ class MessageEnvelope:
         text: str,
         message_id: str,
         is_bot: bool = False,
-        thread_ts: Optional[str] = None,
+        thread_ts: str | None = None,
         **kwargs,
     ) -> "MessageEnvelope":
         """Create a MessageEnvelope from a Slack event payload.
@@ -261,7 +261,7 @@ class MessageEnvelope:
         text: str,
         message_id: str,
         is_group: bool = False,
-        group_id: Optional[str] = None,
+        group_id: str | None = None,
         is_bot: bool = False,
         **kwargs,
     ) -> "MessageEnvelope":
@@ -357,7 +357,7 @@ class MessageEnvelope:
         text: str,
         message_name: str,
         is_bot: bool = False,
-        thread_name: Optional[str] = None,
+        thread_name: str | None = None,
         **kwargs,
     ) -> "MessageEnvelope":
         """Create a MessageEnvelope from a Google Chat event payload.
@@ -397,7 +397,7 @@ class MessageEnvelope:
         text: str,
         message_id: str,
         is_bot: bool = False,
-        thread_id_in: Optional[str] = None,
+        thread_id_in: str | None = None,
         service_url: str = "",
         **kwargs,
     ) -> "MessageEnvelope":
@@ -447,7 +447,7 @@ class MessageEnvelope:
         text: str,
         message_id: str,
         is_group: bool = False,
-        group_id: Optional[str] = None,
+        group_id: str | None = None,
         is_bot: bool = False,
         **kwargs,
     ) -> "MessageEnvelope":
@@ -531,7 +531,7 @@ class MessageEnvelope:
             },
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert envelope to dictionary for serialization."""
         return {
             "channel": self.channel,

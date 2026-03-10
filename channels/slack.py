@@ -9,7 +9,7 @@ import hmac
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -35,7 +35,7 @@ class SlackAdapter(ChannelAdapter):
 
     SLACK_API_URL = "https://slack.com/api/chat.postMessage"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the Slack adapter.
 
         Args:
@@ -47,7 +47,7 @@ class SlackAdapter(ChannelAdapter):
         cfg = config or {}
         self.token = cfg.get("token") or os.getenv("SLACK_BOT_TOKEN", "")
         self.signing_secret = cfg.get("signing_secret") or os.getenv("SLACK_SIGNING_SECRET", "")
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create the async HTTP client."""
@@ -58,7 +58,7 @@ class SlackAdapter(ChannelAdapter):
         if self.client:
             await self.client.aclose()
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a Slack channel or DM.
 
         Args:
@@ -78,7 +78,7 @@ class SlackAdapter(ChannelAdapter):
             "Content-Type": "application/json",
         }
         media_attachments = kwargs.pop("attachments", [])
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "channel": recipient_id,
             "text": content,
             **kwargs,
@@ -137,7 +137,7 @@ class SlackAdapter(ChannelAdapter):
         if att.media_type == "image":
             blocks = [{"type": "image", "image_url": att.url,
                         "alt_text": att.filename or "image"}]
-            payload: Dict[str, Any] = {"channel": channel_id, "blocks": blocks}
+            payload: dict[str, Any] = {"channel": channel_id, "blocks": blocks}
         else:
             payload = {"channel": channel_id,
                        "text": f"<{att.url}|{att.filename or 'attachment'}>"}
@@ -162,6 +162,6 @@ class SlackAdapter(ChannelAdapter):
         Returns:
             True if the signature is valid, False otherwise.
         """
-        basestring = f"v0:{timestamp}:{body.decode('utf-8')}".encode("utf-8")
+        basestring = f"v0:{timestamp}:{body.decode('utf-8')}".encode()
         computed = "v0=" + hmac.new(secret.encode("utf-8"), basestring, hashlib.sha256).hexdigest()
         return hmac.compare_digest(computed, signature)

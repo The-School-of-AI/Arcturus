@@ -43,7 +43,7 @@ Usage::
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional, Set
+from typing import Any, Literal
 
 from channels.base import ChannelAdapter
 from core.loop import retry_with_backoff
@@ -63,13 +63,13 @@ class BusResult:
     success: bool
     operation: str  # "ingest" | "deliver" | "roundtrip"
     channel: str
-    session_id: Optional[str] = None
-    message_id: Optional[str] = None
-    formatted_text: Optional[str] = None
-    agent_response: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+    session_id: str | None = None
+    message_id: str | None = None
+    formatted_text: str | None = None
+    agent_response: dict[str, Any] | None = None
+    error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "operation": self.operation,
@@ -97,7 +97,7 @@ class MessageBus:
         self,
         router: MessageRouter,
         formatter: MessageFormatter,
-        adapters: Dict[str, ChannelAdapter],
+        adapters: dict[str, ChannelAdapter],
         queue_mode: QueueMode = "serial",
     ):
         """Initialise the MessageBus.
@@ -115,10 +115,10 @@ class MessageBus:
         self.formatter = formatter
         self.adapters = adapters
         self.queue_mode: QueueMode = queue_mode
-        self._seen_hashes: Set[str] = set()
+        self._seen_hashes: set[str] = set()
         # Per-session locks ensure messages within a session are always serialised,
         # regardless of queue_mode.
-        self._session_locks: Dict[str, asyncio.Lock] = {}
+        self._session_locks: dict[str, asyncio.Lock] = {}
 
     async def ingest(self, envelope: MessageEnvelope) -> BusResult:
         """Route an inbound envelope to the appropriate agent.
@@ -322,8 +322,8 @@ class MessageBus:
             return deliver_result
 
     async def roundtrip_many(
-        self, envelopes: List[MessageEnvelope]
-    ) -> List[BusResult]:
+        self, envelopes: list[MessageEnvelope]
+    ) -> list[BusResult]:
         """Process multiple envelopes, respecting the configured queue_mode.
 
         ``serial``: envelopes are processed one at a time in list order.

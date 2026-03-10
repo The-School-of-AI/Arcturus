@@ -237,6 +237,18 @@ def get_skill_manager():
         _skill_manager.initialize()
     return _skill_manager
 
+# Marketplace Bridge instance
+_marketplace_bridge = None
+
+def get_marketplace_bridge():
+    """Get the MarketplaceBridge instance, creating/initializing it if needed."""
+    global _marketplace_bridge
+    if _marketplace_bridge is None:
+        from marketplace.bridge import MarketplaceBridge
+        _marketplace_bridge = MarketplaceBridge()
+        _marketplace_bridge.initialize()
+    return _marketplace_bridge
+
 # Agent Runner instance
 _agent_runner = None
 
@@ -268,8 +280,9 @@ _message_bus = None
 
 def _load_group_activation() -> dict:
     """Read per-channel group_activation policies from config/channels.yaml."""
-    import yaml
     from pathlib import Path
+
+    import yaml
     cfg_path = Path(__file__).parent.parent / "config" / "channels.yaml"
     if not cfg_path.exists():
         return {}
@@ -295,19 +308,19 @@ def get_message_bus():
     """
     global _message_bus
     if _message_bus is None:
+        from channels.discord import DiscordAdapter
+        from channels.googlechat import GoogleChatAdapter
+        from channels.imessage import iMessageAdapter
+        from channels.matrix import MatrixAdapter
+        from channels.signal import SignalAdapter
+        from channels.slack import SlackAdapter
+        from channels.teams import TeamsAdapter
+        from channels.telegram import TelegramAdapter
+        from channels.webchat import WebChatAdapter
+        from channels.whatsapp import WhatsAppAdapter
         from gateway.bus import MessageBus
         from gateway.formatter import MessageFormatter
         from gateway.router import MessageRouter, create_runs_agent
-        from channels.telegram import TelegramAdapter
-        from channels.webchat import WebChatAdapter
-        from channels.slack import SlackAdapter
-        from channels.discord import DiscordAdapter
-        from channels.whatsapp import WhatsAppAdapter
-        from channels.googlechat import GoogleChatAdapter
-        from channels.imessage import iMessageAdapter
-        from channels.teams import TeamsAdapter
-        from channels.signal import SignalAdapter
-        from channels.matrix import MatrixAdapter
         formatter = MessageFormatter()
         group_activation = _load_group_activation()
         router = MessageRouter(

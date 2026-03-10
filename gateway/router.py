@@ -5,7 +5,8 @@ based on channel, conversation ID, and session affinity policies.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from gateway.envelope import MessageEnvelope
 
@@ -34,8 +35,8 @@ class MessageRouter:
     def __init__(
         self,
         agent_factory: Callable[..., Any],
-        formatter: Optional["MessageFormatter"] = None,
-        group_activation: Optional[Dict[str, str]] = None,
+        formatter: "MessageFormatter | None" = None,
+        group_activation: dict[str, str] | None = None,
         bot_mention: str = _DEFAULT_BOT_MENTION,
     ):
         """Initialize the message router.
@@ -51,9 +52,9 @@ class MessageRouter:
         """
         self.agent_factory = agent_factory
         self.formatter = formatter
-        self.group_activation: Dict[str, str] = group_activation or {}
+        self.group_activation: dict[str, str] = group_activation or {}
         self.bot_mention = bot_mention.lower()
-        self.sessions: Dict[str, Any] = {}  # In-memory session map
+        self.sessions: dict[str, Any] = {}  # In-memory session map
 
     def _is_activated(self, envelope: MessageEnvelope) -> bool:
         """Return True if the envelope should be routed to an agent.
@@ -68,7 +69,7 @@ class MessageRouter:
             return self.bot_mention in envelope.content.lower()
         return True  # "always-on" or unknown policy
 
-    async def route(self, envelope: MessageEnvelope) -> Dict[str, Any]:
+    async def route(self, envelope: MessageEnvelope) -> dict[str, Any]:
         """Route a message envelope to the appropriate agent.
 
         Args:
@@ -144,7 +145,7 @@ class MessageRouter:
         self.sessions[session_id] = agent
         return agent
 
-    async def _process_message(self, agent: Any, envelope: MessageEnvelope) -> Dict[str, Any]:
+    async def _process_message(self, agent: Any, envelope: MessageEnvelope) -> dict[str, Any]:
         """Process a message through an agent.
 
         Args:
@@ -168,7 +169,7 @@ class MessageRouter:
         return response
 
     @staticmethod
-    def _mock_agent_response(envelope: MessageEnvelope) -> Dict[str, Any]:
+    def _mock_agent_response(envelope: MessageEnvelope) -> dict[str, Any]:
         """Generate a mock agent response for testing/stub purposes.
 
         Args:
@@ -209,7 +210,7 @@ async def create_mock_agent(session_id: str) -> Any:
             self.session_id = session_id
             self.message_count = 0
 
-        async def process_message(self, envelope: MessageEnvelope) -> Dict[str, Any]:
+        async def process_message(self, envelope: MessageEnvelope) -> dict[str, Any]:
             """Process a message (mock implementation).
 
             Args:
@@ -239,6 +240,7 @@ async def create_mock_agent(session_id: str) -> Any:
 async def _fetch_run_output(run_id: str) -> dict:
     """Read run output directly from the session summary on disk."""
     import json as _json
+
     from shared.state import PROJECT_ROOT
 
     summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
@@ -320,8 +322,9 @@ async def create_runs_agent(session_id: str) -> Any:
             if len(self._history) > max_items:
                 self._history = self._history[-max_items:]
 
-        async def process_message(self, envelope: MessageEnvelope) -> Dict[str, Any]:
+        async def process_message(self, envelope: MessageEnvelope) -> dict[str, Any]:
             from datetime import datetime as _dt
+
             from routers.runs import process_run
 
             run_id = f"nexus_{int(_dt.now().timestamp())}"

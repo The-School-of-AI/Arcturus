@@ -19,7 +19,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -43,7 +43,7 @@ class WhatsAppAdapter(ChannelAdapter):
     Formatter: plain text (WhatsApp renders *bold*/_italic_ natively)
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the WhatsApp adapter.
 
         Args:
@@ -57,7 +57,7 @@ class WhatsAppAdapter(ChannelAdapter):
             cfg.get("bridge_url") or os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
         ).rstrip("/")
         self.bridge_secret = cfg.get("bridge_secret") or os.getenv("WHATSAPP_BRIDGE_SECRET", "")
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create the async HTTP client."""
@@ -68,7 +68,7 @@ class WhatsAppAdapter(ChannelAdapter):
         if self.client:
             await self.client.aclose()
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a WhatsApp number via the Baileys bridge.
 
         Args:
@@ -94,10 +94,10 @@ class WhatsAppAdapter(ChannelAdapter):
             content = f"{content}\n\n{links}" if content else links
 
         url = f"{self.bridge_url}/send"
-        payload: Dict[str, Any] = {"recipient_id": recipient_id, "text": content}
+        payload: dict[str, Any] = {"recipient_id": recipient_id, "text": content}
 
         # Compute HMAC-SHA256 signature over the JSON body if secret is configured
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        headers: dict[str, str] = {"Content-Type": "application/json"}
         if self.bridge_secret:
             body_bytes = json.dumps(payload).encode("utf-8")
             sig = hmac.new(

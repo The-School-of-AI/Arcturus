@@ -7,8 +7,11 @@
 - **session/capture.py**: Async event capture engine (queue + background writer) for low-overhead streaming to NDJSON event logs.
 - **session/checkpoint.py**: Deterministic checkpoint snapshot flow: serialize graph → load events → compute hash → persist. `create_checkpoint`, `list_checkpoints`, `load_checkpoint`.
 
-### Pending (Weeks 2-3)
-- Event wiring into core loop and agent (emit from loop.py, base_agent)
+### Week 2 (Days 6-10): Rewind Engine + State Restoration Invariants ✅
+- **session/rewind.py**: Rewind engine. `restore_from_checkpoint` rebuilds `ExecutionContextManager` from `CheckpointSnapshot`, resets running nodes to pending, verifies 5 state restoration invariants. `rewind_to_latest` selects most recent checkpoint. `list_available_checkpoints` lists sessions.
+- **core/loop.py**: Chronicle event emission wired in — `STEP_START` on `_execute_step` entry, `STEP_COMPLETE` and `STEP_FAILED` after result processing. Checkpoint automatically created after each `STEP_COMPLETE` and `STEP_FAILED`.
+
+### Pending (Week 3)
 - Git-integrated checkpoints (branch arcturus/sessions/v1)
 - Rewind/resume CLI
 - Session Explorer UI enhancements
@@ -20,6 +23,8 @@
   - `schema.py`: Pydantic models for events and checkpoints
   - `capture.py`: SessionCapture class, get_capture() singleton
   - `checkpoint.py`: create_checkpoint, list_checkpoints, load_checkpoint
+  - `rewind.py`: RewindError, RewindResult, restore_from_checkpoint, rewind_to_latest, list_available_checkpoints, verify_restoration_invariants
+- `core/loop.py`: Chronicle hooks added to `_execute_step` and result processing (STEP_START, STEP_COMPLETE, STEP_FAILED events + checkpoint creation)
 - Storage paths:
   - Event logs: `memory/chronicle_events/events_{session_id}.ndjson`
   - Checkpoints: `memory/chronicle_checkpoints/{session_id}/checkpoint_{hash}.json`
@@ -45,7 +50,24 @@
 | test_11_create_checkpoint_deterministic_hash | Same inputs → same checkpoint content hash |
 | test_12_create_checkpoint_persists_and_loads | Checkpoint written to disk; load_checkpoint retrieves it |
 
-Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py -v`
+### Week 2 Tests (in test_rewind_restores_exact_state.py)
+| Test | Description |
+|------|-------------|
+| test_13_restore_from_checkpoint_returns_correct_node_count | Restored context has correct node count |
+| test_14_restore_resets_running_nodes_to_pending | Running nodes reset to pending after restore |
+| test_15_verify_restoration_invariants_no_running_nodes | Invariant check catches running nodes |
+| test_16_list_available_checkpoints_returns_nonempty_after_create | list_available_checkpoints works after checkpoint created |
+
+### Week 2 Integration Tests (in test_chronicle_git_checkpoint_alignment.py)
+| Test | Description |
+|------|-------------|
+| test_06_rewind_module_importable | session.rewind imports cleanly |
+| test_07_checkpoint_and_rewind_roundtrip | Create checkpoint → rewind → node count matches |
+| test_08_rewind_to_latest_selects_newest_checkpoint | rewind_to_latest picks newest by created_at |
+| test_09_restoration_invariants_pass_for_clean_graph | Clean graph passes all invariants |
+| test_10_restoration_invariants_detect_missing_end_time | Invariants flag completed nodes missing end_time |
+
+Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py tests/integration/test_chronicle_git_checkpoint_alignment.py -v`
 
 ## 6. Existing Baseline Regression Status
 - Command: scripts/test_all.sh quick
@@ -55,9 +77,10 @@ Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py 
 - Event logs and checkpoints store session data (prompts, outputs, graph state). Stored under `memory/` in repo. Consider .gitignore for `memory/chronicle_*` if sensitive.
 
 ## 8. Known Gaps
-- Event bus subscription not yet wired (capture emits manually; loop/agent integration in Week 2)
-- No git branch integration for checkpoints
-- Rewind/resume CLI not implemented
+- Git branch integration for checkpoints (arcturus/sessions/v1) not yet implemented (Week 3)
+- Rewind/resume CLI not implemented (Week 3)
+- Session Explorer UI enhancements pending (Week 3)
+- Auto-summarization pending (Week 3)
 
 ## 9. Rollback Plan
 - Remove `session/` package

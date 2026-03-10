@@ -8,7 +8,6 @@ Discord markdown, WebChat HTML, or plain text fallback).
 import html
 import re
 
-
 # Characters that must be escaped in Telegram MarkdownV2
 _TELEGRAM_ESCAPE_CHARS = r"\_*[]()~`>#+-=|{}.!"
 

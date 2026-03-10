@@ -21,6 +21,9 @@ jobs:
       - name: Setup Python
         run: uv python install 3.11
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
       - name: Install backend dependencies
         run: |
           uv sync --python 3.11

@@ -7,7 +7,7 @@ and inbound webhook signature verification using Ed25519 (Discord Interactions A
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -34,7 +34,7 @@ class DiscordAdapter(ChannelAdapter):
 
     DISCORD_API_BASE = "https://discord.com/api/v10"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the Discord adapter.
 
         Args:
@@ -52,7 +52,7 @@ class DiscordAdapter(ChannelAdapter):
         else:
             self.token = raw_token
         self.public_key = cfg.get("public_key") or os.getenv("DISCORD_PUBLIC_KEY", "")
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create the async HTTP client."""
@@ -74,7 +74,7 @@ class DiscordAdapter(ChannelAdapter):
         except Exception:
             pass  # typing is cosmetic — never fail the pipeline
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a Discord text channel.
 
         Args:
@@ -101,7 +101,7 @@ class DiscordAdapter(ChannelAdapter):
             content = content[:1997] + "..."
 
         media_attachments = kwargs.pop("attachments", [])
-        payload: Dict[str, Any] = {"content": content, **kwargs}
+        payload: dict[str, Any] = {"content": content, **kwargs}
 
         try:
             response = await self.client.post(url, json=payload, headers=headers)
@@ -148,7 +148,7 @@ class DiscordAdapter(ChannelAdapter):
         """Send a single media attachment as a Discord embed."""
         url = f"{self.DISCORD_API_BASE}/channels/{channel_id}/messages"
         headers = {"Authorization": self.token, "Content-Type": "application/json"}
-        embed: Dict[str, Any] = {"url": att.url}
+        embed: dict[str, Any] = {"url": att.url}
         if att.media_type == "image":
             embed["image"] = {"url": att.url}
         else:

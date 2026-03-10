@@ -15,7 +15,7 @@ import asyncio
 import uuid
 from collections import deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from channels.base import ChannelAdapter
 
@@ -30,14 +30,14 @@ class WebChatAdapter(ChannelAdapter):
     # Class-level outbox: session_id → bounded deque of message dicts.
     # Using a class-level dict ensures all references to any WebChatAdapter
     # instance share the same outbox store (singleton-like within a process).
-    _outboxes: Dict[str, deque] = {}
+    _outboxes: dict[str, deque] = {}
 
     # Class-level SSE subscriber registry: session_id → list of asyncio.Queue.
     # send_message() pushes to these queues so live SSE connections receive
     # replies immediately without polling.
-    _sse_queues: Dict[str, List[asyncio.Queue]] = {}
+    _sse_queues: dict[str, list[asyncio.Queue]] = {}
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize WebChat adapter."""
         super().__init__("webchat", config)
 
@@ -62,7 +62,7 @@ class WebChatAdapter(ChannelAdapter):
             except asyncio.QueueFull:
                 pass
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Enqueue an outbound message to a WebChat session.
 
         In production this would push via WebSocket. For now, messages are
@@ -77,7 +77,7 @@ class WebChatAdapter(ChannelAdapter):
             Dict with message_id and success flag.
         """
         media_attachments = kwargs.get("attachments", [])
-        msg: Dict[str, Any] = {
+        msg: dict[str, Any] = {
             "message_id": str(uuid.uuid4()),
             "timestamp": datetime.utcnow().isoformat(),
             "channel": "webchat",
@@ -129,7 +129,7 @@ class WebChatAdapter(ChannelAdapter):
         if q in queues:
             queues.remove(q)
 
-    def drain_outbox(self, session_id: str) -> List[Dict[str, Any]]:
+    def drain_outbox(self, session_id: str) -> list[dict[str, Any]]:
         """Return all pending outbound messages for *session_id* and clear the queue.
 
         Called by the polling endpoint so the widget can consume replies.

@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 # === Enums ===
@@ -19,11 +19,56 @@ class OutlineStatus(str, Enum):
     rejected = "rejected"
 
 
+class ExportFormat(str, Enum):
+    pptx = "pptx"
+    docx = "docx"
+    pdf = "pdf"
+    html = "html"
+    xlsx = "xlsx"
+    csv = "csv"
+
+
+class ExportStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
+    failed = "failed"
+
+
 class AssetKind(str, Enum):
     image = "image"
     chart = "chart"
     font = "font"
     theme = "theme"
+
+
+class ChartType(str, Enum):
+    bar = "bar"
+    line = "line"
+    pie = "pie"
+    funnel = "funnel"
+    scatter = "scatter"
+
+
+# === Chart Models ===
+
+class ChartSeries(BaseModel):
+    name: str
+    values: List[float]
+
+
+class ScatterPoint(BaseModel):
+    x: float
+    y: float
+
+
+class ChartSpec(BaseModel):
+    chart_type: Optional[ChartType] = None
+    title: Optional[str] = None
+    categories: List[str] = Field(default_factory=list)
+    series: List[ChartSeries] = Field(default_factory=list)
+    points: List[ScatterPoint] = Field(default_factory=list)
+    x_label: Optional[str] = None
+    y_label: Optional[str] = None
 
 
 # === Content Tree Models ===
@@ -36,10 +81,11 @@ class SlideElement(BaseModel):
 
 class Slide(BaseModel):
     id: str
-    slide_type: str  # title, content, two_column, comparison, timeline, chart, image_text, quote, code, team
+    slide_type: str  # title, content, two_column, comparison, timeline, chart, image_text, quote, code, team, agenda, table
     title: Optional[str] = None
     elements: List[SlideElement] = Field(default_factory=list)
     speaker_notes: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class SlidesContentTree(BaseModel):
@@ -75,14 +121,47 @@ class SheetTab(BaseModel):
     formulas: Dict[str, str] = Field(default_factory=dict)
     column_widths: List[int] = Field(default_factory=list)
 
-    @model_validator(mode="after")
-    def check_column_widths(self):
-        if self.column_widths and self.headers and len(self.column_widths) != len(self.headers):
-            raise ValueError(
-                f"column_widths length ({len(self.column_widths)}) "
-                f"must match headers length ({len(self.headers)})"
-            )
-        return self
+
+# === Sheet Analysis Models ===
+
+
+class SheetNumericSummary(BaseModel):
+    column: str
+    count: int
+    null_count: int
+    mean: Optional[float] = None
+    median: Optional[float] = None
+    std: Optional[float] = None
+    min_val: Optional[float] = None
+    max_val: Optional[float] = None
+
+
+class SheetCorrelation(BaseModel):
+    column_a: str
+    column_b: str
+    pearson_r: float
+
+
+class SheetTrend(BaseModel):
+    column: str
+    direction: str  # "up", "down", "flat"
+    slope: float
+
+
+class SheetAnomaly(BaseModel):
+    column: str
+    row_index: int
+    value: float
+    z_score: float
+
+
+class SheetAnalysisReport(BaseModel):
+    summary_stats: List[SheetNumericSummary] = Field(default_factory=list)
+    correlations: List[SheetCorrelation] = Field(default_factory=list)
+    trends: List[SheetTrend] = Field(default_factory=list)
+    anomalies: List[SheetAnomaly] = Field(default_factory=list)
+    pivot_preview: Optional[Dict[str, Any]] = None
+    warnings: List[str] = Field(default_factory=list)
 
 
 class SheetContentTree(BaseModel):
@@ -90,6 +169,7 @@ class SheetContentTree(BaseModel):
     tabs: List[SheetTab]
     assumptions: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    analysis_report: Optional[SheetAnalysisReport] = None
 
 
 # === Outline Models ===
@@ -109,6 +189,52 @@ class Outline(BaseModel):
     parameters: Dict[str, Any] = Field(default_factory=dict)
 
 
+# === Export Models ===
+
+class ExportJob(BaseModel):
+    id: str
+    artifact_id: str
+    format: ExportFormat
+    status: ExportStatus = ExportStatus.pending
+    output_uri: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    validator_results: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+
+class ExportJobSummary(BaseModel):
+    id: str
+    format: str
+    status: str
+    created_at: datetime
+
+
+# === Theme Models ===
+
+class SlideThemeColors(BaseModel):
+    primary: str
+    secondary: str
+    accent: str
+    background: str
+    text: str
+    text_light: str
+    title_background: Optional[str] = None
+
+
+class SlideTheme(BaseModel):
+    id: str
+    name: str
+    colors: SlideThemeColors
+    font_heading: str
+    font_body: str
+    description: Optional[str] = None
+    base_theme_id: Optional[str] = None
+    variant_seed: Optional[int] = None
+    background_style: Optional[str] = None
+
+
 # === Core Models ===
 
 class Artifact(BaseModel):
@@ -123,6 +249,7 @@ class Artifact(BaseModel):
     theme_id: Optional[str] = None
     revision_head_id: Optional[str] = None
     outline: Optional[Outline] = None
+    exports: List[ExportJobSummary] = Field(default_factory=list)
 
 
 class Revision(BaseModel):
@@ -132,6 +259,9 @@ class Revision(BaseModel):
     change_summary: str
     content_tree_snapshot: Dict[str, Any]
     created_at: datetime
+    edit_instruction: Optional[str] = Field(default=None, description="User instruction that triggered this edit")
+    patch: Optional[Dict[str, Any]] = Field(default=None, description="Patch that was applied to produce this revision")
+    diff: Optional[Dict[str, Any]] = Field(default=None, description="Computed diff between previous and current content trees")
 
 
 class Asset(BaseModel):

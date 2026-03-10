@@ -36,9 +36,10 @@ import asyncio
 import logging
 import os
 import time
+from collections.abc import Callable, Coroutine
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -67,7 +68,7 @@ class MatrixAdapter(ChannelAdapter):
     Formatter: plain text (Matrix clients render Markdown natively)
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialise the Matrix adapter.
 
         Args:
@@ -88,10 +89,10 @@ class MatrixAdapter(ChannelAdapter):
         self.sync_interval = float(
             cfg.get("sync_interval") or os.getenv("MATRIX_SYNC_INTERVAL", "2.0")
         )
-        self.client: Optional[httpx.AsyncClient] = None
-        self._since_token: Optional[str] = None
-        self._poll_task: Optional[asyncio.Task] = None
-        self._bus_callback: Optional[Callable[..., Coroutine]] = None
+        self.client: httpx.AsyncClient | None = None
+        self._since_token: str | None = None
+        self._poll_task: asyncio.Task | None = None
+        self._bus_callback: Callable[..., Coroutine] | None = None
 
     def set_bus_callback(self, callback: Callable[..., Coroutine]) -> None:
         """Register the async callback invoked for each inbound message.
@@ -147,7 +148,7 @@ class MatrixAdapter(ChannelAdapter):
         except Exception:
             pass  # typing is cosmetic — never fail the pipeline
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a text message to a Matrix room.
 
         Args:
@@ -179,7 +180,7 @@ class MatrixAdapter(ChannelAdapter):
             f"/rooms/{recipient_id}/send/m.room.message/{txn_id}"
         )
         media_attachments = kwargs.pop("attachments", [])
-        body: Dict[str, Any] = {"msgtype": "m.text", "body": content, **kwargs}
+        body: dict[str, Any] = {"msgtype": "m.text", "body": content, **kwargs}
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
@@ -265,7 +266,7 @@ class MatrixAdapter(ChannelAdapter):
         if not self.client:
             return
 
-        params: Dict[str, Any] = {"timeout": 0}
+        params: dict[str, Any] = {"timeout": 0}
         if self._since_token:
             params["since"] = self._since_token
 
@@ -287,7 +288,7 @@ class MatrixAdapter(ChannelAdapter):
                 if event.get("type") == "m.room.message":
                     await self._dispatch(room_id, event)
 
-    async def _dispatch(self, room_id: str, event: Dict[str, Any]) -> None:
+    async def _dispatch(self, room_id: str, event: dict[str, Any]) -> None:
         """Process a single Matrix m.room.message event."""
         sender = event.get("sender", "")
 

@@ -1,7 +1,7 @@
 """Base channel adapter interface for Arcturus gateway."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ChannelAdapter(ABC):
@@ -11,7 +11,7 @@ class ChannelAdapter(ABC):
     to normalize inbound messages and format outbound responses.
     """
 
-    def __init__(self, channel_name: str, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, channel_name: str, config: dict[str, Any] | None = None):
         """Initialize the channel adapter.
 
         Args:
@@ -22,7 +22,7 @@ class ChannelAdapter(ABC):
         self.config = config or {}
 
     @abstractmethod
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Send a message to a recipient on this channel.
 
         Args:

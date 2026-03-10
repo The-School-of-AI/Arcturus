@@ -31,7 +31,7 @@ memory/user_model/
 
 # Data & Documents (Large files/datasets)
 data/
-documents/
+/documents/
 mcp_servers/documents/
 mcp_servers/faiss_index/
 classNotes/
@@ -48,6 +48,7 @@ memory/debug_logs/
 *.log
 server.log
 benchmark_results.txt
+S15A.egg-info/
 
 # Environment Secrets
 .env
@@ -88,6 +89,9 @@ benchmark_results.txt
 !platform-frontend/public/*.png
 !platform-frontend/public/*.jpg
 
+# Studio runtime output (generated PPTX artifacts)
+/studio/
+
 # Added by Arcturus
 .arcturus/
 .arcturus
@@ -95,3 +99,7 @@ benchmark_results.txt
 # Other personal files
 HOWTOGETSLACKBOT.md
 P01-Delivery-Status.md
+
+# PR Body Drafts
+scripts/github/PR_Body_*.md
+scripts/github/Pr_Body_*.md
