@@ -209,6 +209,12 @@ class CheckpointSnapshot(BaseModel):
     event_entries: list[dict[str, Any]] = Field(default_factory=list)
     # Content hash for determinism
     content_hash: str = ""
+    # Git alignment: HEAD at checkpoint time (for reproducibility)
+    git_commit_sha: str = ""
+    git_branch: str = ""
+    # Cross-module trace linking: links to Watchtower spans
+    trace_id: str = ""
+    span_id: str = ""
 
     def to_canonical_json(self) -> str:
         """Deterministic JSON for hashing."""
@@ -219,8 +225,10 @@ class CheckpointSnapshot(BaseModel):
         )
 
     def compute_content_hash(self) -> str:
-        """Compute and set content_hash; return it. Hash excludes content_hash and created_at for determinism."""
-        d = self.model_dump(exclude={"content_hash", "created_at"})
+        """Compute and set content_hash; return it. Excludes content_hash, created_at, trace_id, span_id for determinism."""
+        d = self.model_dump(
+            exclude={"content_hash", "created_at", "trace_id", "span_id"}
+        )
         canonical = json.dumps(d, sort_keys=True, ensure_ascii=False)
         self.content_hash = hashlib.sha256(canonical.encode()).hexdigest()[:24]
         return self.content_hash

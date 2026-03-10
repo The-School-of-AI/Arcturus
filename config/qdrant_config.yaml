@@ -14,7 +14,7 @@ collections:
     distance: cosine        # cosine | euclidean | dot
     is_tenant: true              # multi-tenant; scope by tenant field
     tenant_keyword_field: user_id # payload field for tenant isolation (keyword index)
-    indexed_payload_fields: [category, source, session_id, entity_labels]  # session_id for Neo4j link; entity_ids + entity_labels in payload
+    indexed_payload_fields: [category, source, session_id, entity_labels, space_id]  # space_id for Phase 3 filtering
 
   test_memories:            # Test collection; mirrors arcturus_memories index setup
     dimension: 768

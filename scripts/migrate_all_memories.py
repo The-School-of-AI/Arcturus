@@ -5,6 +5,7 @@ Orchestrate all migrations for Arcturus:
 1. FAISS memories → Qdrant memories
 2. RAG FAISS index → Qdrant RAG chunks
 3. Qdrant memories → Neo4j knowledge graph
+4. JSON hubs → Neo4j Fact/Evidence
 
 Usage:
     # Default mode is "docker"
@@ -15,12 +16,12 @@ Usage:
 Modes:
     - docker (default):
         * Runs `docker-compose up -d`
-        * Optionally appends Qdrant + Neo4j environment variables to .env
+        * Optionally appends Qdrant + Neo4j + MNEMO_ENABLED=true to .env
         * Then runs all migrations in order
 
     - cloud:
         * Asks you to create Qdrant + Neo4j cloud accounts
-          and configure the corresponding variables in .env
+          and configure the corresponding variables in .env (including MNEMO_ENABLED=true)
         * Once you confirm, runs all migrations in order
 """
 
@@ -90,11 +91,12 @@ def append_env_vars_for_docker() -> None:
         "NEO4J_URI=bolt://localhost:7687",
         "NEO4J_USER=neo4j",
         "NEO4J_PASSWORD=arcturus-neo4j",
+        "MNEMO_ENABLED=true",
         "# --- End migrate_all_memories.py section ---",
         "",
     ]
 
-    print("\nThe following Qdrant/Neo4j variables can be appended to your .env:")
+    print("\nThe following Qdrant/Neo4j/Mnemo variables can be appended to your .env:")
     print("-" * 60)
     for line in docker_env_lines:
         print(line)
@@ -109,7 +111,7 @@ def append_env_vars_for_docker() -> None:
         with env_path.open("a", encoding="utf-8") as f:
             for line in docker_env_lines:
                 f.write(line + "\n" if not line.endswith("\n") else line)
-        print(f"\n✓ Appended Qdrant/Neo4j variables to {env_path}")
+        print(f"\n✓ Appended Qdrant/Neo4j/Mnemo variables to {env_path}")
     except Exception as e:
         print(f"\nFailed to append to .env: {e}")
 
@@ -137,10 +139,15 @@ def prompt_cloud_setup() -> None:
         "       NEO4J_USER=your-neo4j-username\n"
         "       NEO4J_PASSWORD=your-neo4j-password\n"
     )
+    print(
+        "3) Enable Mnemo (unified extraction + Fact/Evidence):\n"
+        "   - Set in your .env:\n"
+        "       MNEMO_ENABLED=true\n"
+    )
 
     input(
         "Once you've created the accounts and updated .env with the above "
-        "variables, press Enter to continue with the migrations..."
+        "variables (including MNEMO_ENABLED=true), press Enter to continue with the migrations..."
     )
 
 
@@ -151,6 +158,7 @@ def run_migrations_in_order() -> int:
     1) FAISS → Qdrant (memories)
     2) RAG FAISS → Qdrant (RAG chunks)
     3) Qdrant memories → Neo4j
+    4) JSON hubs → Neo4j Fact/Evidence
     """
     print("=" * 60)
     print("Running migrations in order")
@@ -160,6 +168,7 @@ def run_migrations_in_order() -> int:
         "migrate_faiss_to_qdrant.py",
         "migrate_rag_faiss_to_qdrant.py",
         "migrate_memories_to_neo4j.py",
+        "migrate_hubs_to_neo4j.py",
     ]
 
     for script_name in scripts:

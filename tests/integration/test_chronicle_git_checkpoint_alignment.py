@@ -155,3 +155,73 @@ def test_10_restoration_invariants_detect_missing_end_time() -> None:
     g.add_node("StepB", agent="CoderAgent", status="completed", end_time=None, error=None)
     violations = verify_restoration_invariants(graph_snap, g)
     assert any("end_time" in v for v in violations)
+
+
+# === Git/checkpoint alignment and cross-module trace linking ===
+
+
+def test_11_checkpoint_includes_git_commit_when_in_repo() -> None:
+    """Checkpoint includes git_commit_sha when created from a git repo."""
+    from session.checkpoint import create_checkpoint
+    from session.alignment import get_git_head_info
+
+    # Use project root (this repo is a git repo)
+    repo = Path(__file__).resolve().parent.parent.parent
+    if not (repo / ".git").exists():
+        return  # Skip if not in git repo (e.g. extracted tarball)
+    git_info = get_git_head_info(repo)
+    if not git_info.get("git_commit_sha"):
+        return  # Skip if git not available
+
+    graph_snap = {
+        "directed": True,
+        "multigraph": False,
+        "graph": {"session_id": "integ-git", "status": "completed", "created_at": "2025-01-15T12:00:00Z"},
+        "nodes": [{"id": "ROOT", "agent": "System", "status": "completed"}],
+        "edges": [],
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        cp_dir = Path(tmp) / "cp"
+        ev_dir = Path(tmp) / "ev"
+        ev_dir.mkdir()
+        snap = create_checkpoint(
+            "integ-git",
+            "manual",
+            graph_snap,
+            event_log_path=ev_dir / "events_integ-git.ndjson",
+            checkpoint_dir=cp_dir,
+            repo_path=repo,
+        )
+        assert snap.git_commit_sha != ""
+        assert len(snap.git_commit_sha) >= 7
+
+
+def test_12_checkpoint_includes_trace_id_when_under_span() -> None:
+    """Checkpoint includes trace_id when created under run_span (Watchtower cross-module linking)."""
+    import pytest
+
+    from session.checkpoint import create_checkpoint
+    from ops.tracing.spans import run_span
+
+    graph_snap = {
+        "directed": True,
+        "multigraph": False,
+        "graph": {"session_id": "integ-trace", "status": "completed", "created_at": "2025-01-15T12:00:00Z"},
+        "nodes": [{"id": "ROOT", "agent": "System", "status": "completed"}],
+        "edges": [],
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        cp_dir = Path(tmp) / "cp"
+        ev_dir = Path(tmp) / "ev"
+        ev_dir.mkdir()
+        with run_span("integ-trace-run", "test trace linking"):
+            snap = create_checkpoint(
+                "integ-trace",
+                "manual",
+                graph_snap,
+                event_log_path=ev_dir / "events_integ-trace.ndjson",
+                checkpoint_dir=cp_dir,
+            )
+        if not snap.trace_id:
+            pytest.skip("Tracing not initialized (init_tracing not called)")
+        assert len(snap.trace_id) == 32

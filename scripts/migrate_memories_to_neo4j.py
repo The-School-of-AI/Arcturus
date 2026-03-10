@@ -32,6 +32,7 @@ except ImportError:
 from memory.vector_store import get_vector_store
 from memory.knowledge_graph import get_knowledge_graph
 from memory.entity_extractor import EntityExtractor
+from memory.space_constants import SPACE_ID_GLOBAL
 from core.utils import log_step, log_error
 
 
@@ -110,11 +111,10 @@ def main() -> int:
             )
             entity_ids = result.get("entity_ids", result if isinstance(result, list) else [])
             entity_labels = result.get("entity_labels", []) if isinstance(result, dict) else []
-            if entity_ids or entity_labels:
-                meta = {"entity_ids": entity_ids}
-                if entity_labels:
-                    meta["entity_labels"] = entity_labels
-                store.update(memory_id, metadata=meta)
+            meta = {"entity_ids": entity_ids, "space_id": SPACE_ID_GLOBAL}
+            if entity_labels:
+                meta["entity_labels"] = entity_labels
+            store.update(memory_id, metadata=meta)
             print(f"  [{i+1}/{len(to_process)}] {memory_id[:8]}... -> {len(entity_ids)} entities")
             ok += 1
         except Exception as e:

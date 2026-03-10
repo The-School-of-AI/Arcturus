@@ -37,6 +37,9 @@ class FaissVectorStore:
         source: str = "manual",
         metadata: Optional[Dict[str, Any]] = None,
         deduplication_threshold: float = 0.15,
+        session_id: Optional[str] = None,
+        skip_kg_ingest: bool = False,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         # RemmeStore uses 0.15 internally; metadata is not stored
         result = self._store.add(text=text, embedding=embedding, category=category, source=source)

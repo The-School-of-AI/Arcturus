@@ -6,6 +6,9 @@ The normalizer reads raw extracted preferences from staging and:
 2. Creates new fields in 'extras' for unknown concepts
 3. Detects reinforcements and conflicts
 4. Applies via BeliefUpdateEngine
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Unified extractor produces canonical facts;
+ingestion writes to Neo4j Fact/Evidence. Staging and normalizer are not used on the Mnemo path.
 """
 
 import json

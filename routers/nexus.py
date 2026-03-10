@@ -56,6 +56,17 @@ class WebChatInboundRequest(BaseModel):
     message_id: Optional[str] = None
 
 
+class MobileInboundRequest(BaseModel):
+    """Inbound context from the mobile app."""
+
+    session_id: str
+    sender_id: str
+    sender_name: str
+    text: str
+    device_type: str = "mobile"
+    message_id: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -734,3 +745,43 @@ async def signal_inbound(request: Request) -> Dict[str, Any]:
     await bus.roundtrip(envelope)
 
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Mobile inbound (P13 Orbit)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/mobile/inbound")
+async def mobile_inbound(req: MobileInboundRequest):
+    """Receive a message from the mobile app.
+
+    Routes a ``MessageEnvelope`` through the bus with mobile channel identity.
+    """
+    envelope = MessageEnvelope.from_mobile(
+        session_id=req.session_id,
+        sender_id=req.sender_id,
+        sender_name=req.sender_name,
+        text=req.text,
+        message_id=req.message_id or str(uuid.uuid4()),
+        device_type=req.device_type,
+    )
+    result = await _get_bus().roundtrip(envelope)
+    return result.to_dict()
+
+
+@router.get("/mobile/messages/{session_id}")
+async def mobile_poll(session_id: str):
+    """Poll for pending outbound messages for a mobile session."""
+    bus = _get_bus()
+    adapter = bus.adapters.get("mobile")
+    # If no specialized mobile adapter, fallback to webchat for now
+    if not adapter:
+        adapter = bus.adapters.get("webchat")
+
+    messages = adapter.drain_outbox(session_id) if adapter else []
+    return {
+        "session_id": session_id,
+        "messages": messages,
+        "count": len(messages),
+    }

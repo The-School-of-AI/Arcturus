@@ -100,6 +100,11 @@ S15A.egg-info/
 HOWTOGETSLACKBOT.md
 P01-Delivery-Status.md
 
+# Project 13: Orbit - Local State & Private Drafts
+Canvas_Pic_Current.json
+memory/remme_staging.json
+memory/episodes/
+
 # PR Body Drafts
-scripts/github/PR_Body_*.md
-scripts/github/Pr_Body_*.md
+scripts/github/PR_body*.md
+scripts/github/Pr_Body*.md

@@ -225,6 +225,17 @@ def get_remme_extractor():
         _remme_extractor = RemmeExtractor()
     return _remme_extractor
 
+# Unified extractor (P11 Mnemo; used when MNEMO_ENABLED=true)
+_unified_extractor = None
+
+def get_unified_extractor():
+    """Get the UnifiedExtractor instance for Mnemo path (memories + entities + facts + evidence)."""
+    global _unified_extractor
+    if _unified_extractor is None:
+        from memory.unified_extractor import UnifiedExtractor
+        _unified_extractor = UnifiedExtractor()
+    return _unified_extractor
+
 # Skill Manager instance
 _skill_manager = None
 
@@ -317,6 +328,7 @@ def get_message_bus():
         from channels.teams import TeamsAdapter
         from channels.telegram import TelegramAdapter
         from channels.webchat import WebChatAdapter
+        from channels.mobile import MobileAdapter
         from channels.whatsapp import WhatsAppAdapter
         from gateway.bus import MessageBus
         from gateway.formatter import MessageFormatter
@@ -344,6 +356,7 @@ def get_message_bus():
                 "teams": TeamsAdapter(),
                 "signal": SignalAdapter(),
                 "matrix": matrix_adapter,
+                "mobile": MobileAdapter(),
             },
         )
         # Wire inbound polling loops into the bus for message delivery
