@@ -176,6 +176,41 @@ class MessageEnvelope:
         )
 
     @classmethod
+    def from_mobile(
+        cls,
+        session_id: str,
+        sender_id: str,
+        sender_name: str,
+        text: str,
+        message_id: str,
+        **kwargs,
+    ) -> "MessageEnvelope":
+        """Create a MessageEnvelope from a Mobile app message.
+
+        Args:
+            session_id: Mobile session identifier
+            sender_id: Device user identifier
+            sender_name: User's display name
+            text: Message text
+            message_id: Mobile message_id
+            **kwargs: Additional metadata to store
+
+        Returns:
+            MessageEnvelope instance
+        """
+        return cls(
+            channel="mobile",
+            channel_message_id=str(message_id),
+            sender_id=str(sender_id),
+            sender_name=sender_name,
+            content=cls.normalize_text(text),
+            thread_id=session_id,
+            conversation_id=session_id,
+            session_id=session_id,
+            metadata={**kwargs, "device_type": kwargs.get("device_type", "unknown")},
+        )
+
+    @classmethod
     def from_slack(
         cls,
         channel_id: str,
