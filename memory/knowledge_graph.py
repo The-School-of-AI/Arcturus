@@ -572,7 +572,7 @@ class KnowledgeGraph:
             "confidence": confidence,
             "source_mode": source_mode or "extraction",
             "now": now,
-            "space_id": space_id if use_space else None,
+            "space_id": space_id if use_space else SPACE_ID_GLOBAL,
         }
         self._run_write(
             """
@@ -666,7 +666,7 @@ class KnowledgeGraph:
         if not valid:
             return False
         use_space = space_id and space_id != SPACE_ID_GLOBAL
-        params: Dict[str, Any] = {"user_id": user_id, "ns": namespace, "key": key, "space_id": space_id if use_space else None}
+        params: Dict[str, Any] = {"user_id": user_id, "ns": namespace, "key": key, "space_id": space_id if use_space else SPACE_ID_GLOBAL}
         records = self._run_query(
             """
             MATCH (u:User {user_id: $user_id})-[:HAS_FACT]->(f:Fact {namespace: $ns, key: $key, space_id: $space_id})
@@ -726,7 +726,7 @@ class KnowledgeGraph:
             "user_id": user_id,
             "namespace": namespace,
             "key": key,
-            "space_id": space_id if use_space else None,
+            "space_id": space_id if use_space else SPACE_ID_GLOBAL,
         }
         self._run_write(
             """
@@ -818,6 +818,7 @@ class KnowledgeGraph:
             namespace=namespace,
             key=key,
             timestamp=now,
+            space_id=space_id,
         )
         fact_dict = {
             "namespace": namespace,
@@ -1386,14 +1387,16 @@ class KnowledgeGraph:
         params: Dict[str, Any] = {"user_id": user_id}
         if space_ids:
             params["space_ids"] = [s for s in space_ids if s and s != SPACE_ID_GLOBAL]
+            params["global_sentinel"] = SPACE_ID_GLOBAL
             if params["space_ids"]:
                 space_filter = """
-                WHERE f.space_id IS NULL OR f.space_id IN $space_ids
+                WHERE (f.space_id IS NULL OR f.space_id = $global_sentinel OR f.space_id IN $space_ids)
                 """
         elif space_id and space_id != SPACE_ID_GLOBAL:
             params["space_ids"] = [space_id]
+            params["global_sentinel"] = SPACE_ID_GLOBAL
             space_filter = """
-            WHERE f.space_id IS NULL OR f.space_id IN $space_ids
+            WHERE (f.space_id IS NULL OR f.space_id = $global_sentinel OR f.space_id IN $space_ids)
             """
         records = self._run_query(
             """
