@@ -12,6 +12,7 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from gateway_api.storage_utils import read_json_file, write_json_atomic
 from shared.state import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data" / "gateway"
@@ -52,19 +53,12 @@ def _ensure_parent(path: Path) -> None:
 
 
 def _read_json(path: Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return default
+    return read_json_file(path, default)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     _ensure_parent(path)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    temp_path.replace(path)
+    write_json_atomic(path, payload)
 
 
 def _get_lock(path: Path) -> asyncio.Lock:
@@ -407,8 +401,20 @@ def derive_inbound_idempotency_key(
     signature_header: Optional[str],
     timestamp_header: Optional[str],
     raw_body: str,
+    external_event_id: Optional[str] = None,
 ) -> str:
+    source_clean = source.strip().lower()
+    event_id = (external_event_id or "").strip()
+    if event_id:
+        base = f"{source_clean}|event_id|{event_id}"
+        return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
     signature = (signature_header or "").strip()
     timestamp = (timestamp_header or "").strip()
-    base = f"{source}|{signature}|{timestamp}|{raw_body}"
+    # Fallback path keeps the key stable for the same source and request body
+    # even when connector signatures/timestamps rotate across retries.
+    if raw_body.strip():
+        base = f"{source_clean}|body|{raw_body}"
+    else:
+        base = f"{source_clean}|{signature}|{timestamp}|{raw_body}"
     return hashlib.sha256(base.encode("utf-8")).hexdigest()

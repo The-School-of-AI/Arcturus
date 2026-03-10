@@ -91,6 +91,7 @@ packages = [
     "ui",
     "canvas",
     "gateway_api",
+    "gateway_api.connectors",
     "storage",
     "session",
 ]

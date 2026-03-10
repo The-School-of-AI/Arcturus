@@ -1,0 +1,14 @@
+{
+  "name": "@arcturus/gateway-sdk",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "example": "tsx examples/basic_usage.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  }
+}

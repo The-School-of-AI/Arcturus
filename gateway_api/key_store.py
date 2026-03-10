@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
-import json
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from gateway_api.storage_utils import append_jsonl, read_json_file, write_json_atomic
 from shared.state import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data" / "gateway"
@@ -41,25 +41,16 @@ def _ensure_parent(path: Path) -> None:
 
 
 def _read_json(path: Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return default
+    return read_json_file(path, default)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     _ensure_parent(path)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    temp_path.replace(path)
+    write_json_atomic(path, payload)
 
 
 def _append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
-    _ensure_parent(path)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload) + "\n")
+    append_jsonl(path, payload)
 
 
 class GatewayKeyStore:

@@ -122,6 +122,13 @@ def test_derive_inbound_idempotency_key_is_stable_and_sensitive():
         timestamp_header="1700000000",
         raw_body='{"event_type":"task.complete"}',
     )
+    key_c = derive_inbound_idempotency_key(
+        source="github",
+        signature_header="sha256=different",
+        timestamp_header="1700000000",
+        raw_body='{"event_type":"task.error"}',
+    )
 
     assert key_a1 == key_a2
-    assert key_a1 != key_b
+    assert key_a1 == key_b
+    assert key_a1 != key_c

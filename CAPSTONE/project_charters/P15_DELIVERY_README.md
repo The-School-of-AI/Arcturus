@@ -31,6 +31,12 @@
   - hard monthly usage governance,
   - cron timezone + execution history,
   - webhook dispatch duplicate-prevention improvements.
+- Implemented Days 16-20 production hardening and integration demonstration scope:
+  - Added connector normalization and stabilization for `github`, `jira`, and `gmail`.
+  - Added dual-mode inbound webhook auth (gateway-signature mode + connector-specific auth mode).
+  - Added in-repo SDK clients and runnable examples for Python and TypeScript.
+  - Expanded acceptance/integration suites to cover full API walkthrough, connector ingestion, replay safety, demo smoke mode, and p95 gateway-overhead assertion.
+  - Added deterministic `--smoke` demo path in `scripts/demos/p15_gateway.sh`.
 
 ## 2. Architecture Changes
 - Added new package and modules:
@@ -52,6 +58,15 @@
 - Added Days 11-15 modules:
   - `gateway_api/idempotency.py`
   - `gateway_api/usage_governance.py`
+- Added Days 16-20 modules:
+  - `gateway_api/connectors/base.py`
+  - `gateway_api/connectors/github.py`
+  - `gateway_api/connectors/jira.py`
+  - `gateway_api/connectors/gmail.py`
+  - `gateway_api/connectors/registry.py`
+  - `gateway_api/storage_utils.py`
+  - `api/sdks/python/gateway_sdk/client.py`
+  - `api/sdks/typescript/src/client.ts`
 - Extended existing modules for Days 11-15:
   - `gateway_api/key_store.py` (monthly quotas persisted per key)
   - `gateway_api/auth.py` (`AuthContext` quota fields)
@@ -59,6 +74,13 @@
   - `gateway_api/rate_limiter.py` (combined rate-limit + governance enforcement helper)
   - `gateway_api/webhooks.py` (dispatch lease/in-progress reliability controls)
   - `core/scheduler.py` (timezone-aware scheduling + persisted execution history)
+- Extended existing modules for Days 16-20:
+  - `gateway_api/v1/webhooks.py` (connector normalization flow + dual-mode auth path + `GET /api/v1/webhooks/connectors`)
+  - `gateway_api/contracts.py` (connector metadata response types + stricter input bounds)
+  - `gateway_api/idempotency.py` (event-id-preferred inbound dedupe keys)
+  - `gateway_api/webhooks.py` (connector-specific inbound validation)
+  - `gateway_api/key_store.py`, `gateway_api/metering.py`, `gateway_api/integration_tracing.py` (corruption-safe storage reads)
+  - `core/scheduler.py` (project-rooted persistence paths + corruption-safe reads)
 - Persistence artifacts (runtime):
   - `data/gateway/api_keys.json`
   - `data/gateway/key_audit.jsonl`
@@ -107,6 +129,23 @@
   - Extended cron contracts:
     - `timezone` on create/list responses
     - `GET /api/v1/cron/jobs/{job_id}/history`
+- API changes from Days 16-20:
+  - Added connector catalog endpoint:
+    - `GET /api/v1/webhooks/connectors`
+  - Extended inbound webhook handling:
+    - canonical mode (existing): `{event_type, payload}`
+    - connector-raw mode: source-specific normalization for `github|jira|gmail`
+  - Added dual inbound auth modes:
+    - gateway signature mode (`x-gateway-signature`, `x-gateway-timestamp`)
+    - connector-specific mode (`x-hub-signature-256`, `x-atlassian-webhook-token`, `x-goog-channel-token`)
+  - Extended inbound response fields:
+    - `normalized_event_type`
+    - `auth_mode`
+    - `connector_event_id`
+  - Added controlled connector errors:
+    - `400 webhook_event_normalization_failed`
+    - `400 unsupported_connector_source`
+  - Added stricter payload bounds on search/chat/memory/agent/page/studio and webhook contract fields.
 - UI changes:
   - No frontend API management UI changes in delivered P15 backend phases.
 
@@ -133,6 +172,14 @@
   - Project contract tests result: `17 passed`
   - Baseline backend result: `382 passed, 2 skipped`
   - Baseline frontend result: `111 passed`
+- Days 16-20 local validation (venv-backed):
+  - `./.venv/bin/python -m pytest -q tests/unit/gateway_api tests/api/p15_gateway tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py tests/integration/test_gateway_to_oracle_spark_forge.py`
+  - Result: `71 passed`
+  - `./.venv/bin/python -m pytest -q tests/unit/gateway_api/test_gateway_idempotency.py tests/unit/gateway_api/test_gateway_webhook_connectors.py tests/unit/gateway_api/test_gateway_storage_resilience.py tests/unit/gateway_api/test_gateway_sdk_python.py tests/api/p15_gateway/test_gateway_v1_contracts.py tests/acceptance/p15_gateway/test_public_api_webhook_cron_flow.py tests/integration/test_gateway_to_oracle_spark_forge.py`
+  - Result: `51 passed`
+  - `./scripts/demos/p15_gateway.sh --smoke`
+  - Result: `p15_gateway smoke passed`
+  - Gate command contract segment (`PATH=.venv/bin:$PATH ./ci/run_project_gate.sh ...`) result: `23 passed` for acceptance+integration before baseline phase.
 
 ## 6. Existing Baseline Regression Status
 - Executed via project gate command:
@@ -145,6 +192,9 @@
   - Project contract tests: `17 passed`
   - Backend baseline: `382 passed, 2 skipped`
   - Frontend baseline: `111 passed`
+- Current Days 16-20 local note:
+  - Project contract tests execute and pass locally.
+  - Full baseline regression step in local gate run was blocked by missing optional local deps (`ray`, `python-docx`), while phase-focused suites remained green.
 
 ## 7. Security And Safety Impact
 - API keys are stored hashed (SHA-256) in persistent storage; plaintext is only returned once at create/rotate time.
@@ -157,6 +207,10 @@
   - Mutating API operations require explicit idempotency keys to prevent duplicate side effects.
   - Inbound webhook replay handling is deduplicated server-side without breaking contract compatibility.
   - Monthly quota governance blocks over-consumption deterministically.
+- Days 16-20 hardening additions:
+  - Inbound webhook auth now supports fail-closed dual mode (gateway signature + connector-native auth).
+  - Connector payload normalization is explicit and deterministic for supported sources.
+  - Corrupted JSON/JSONL persistence files are preserved as `.corrupt.*` artifacts and do not crash request handling.
 
 ## 8. Known Gaps
 - Webhook dispatch is API-invoked/manual rather than always-on background worker.
@@ -165,6 +219,8 @@
 - Spark integration currently uses `AppGenerator` as Phase 2 adapter base; dedicated Spark service package is deferred.
 - Persistence remains JSON/JSONL file-based; no distributed/shared coordination is implemented.
 - Quota governance is key-level only; organization-level policy hierarchy is not implemented.
+- Connector stabilization scope is limited to `github`, `jira`, and `gmail` for this phase.
+- SDKs are in-repo clients/examples and are not yet versioned/published as external packages.
 
 ## 9. Rollback Plan
 - Remove `app.include_router(gateway_v1_router.router)` from `api.py`.
@@ -178,6 +234,13 @@
   - Remove/clean generated artifacts if needed:
     - `data/gateway/idempotency_records.json`
     - `data/system/job_history.jsonl`
+- Days 16-20 rollback specifics:
+  - Remove connector normalization and routing additions under `gateway_api/connectors/`.
+  - Remove connector-specific auth logic from `gateway_api/webhooks.py` and inbound normalization path in `gateway_api/v1/webhooks.py`.
+  - Remove in-repo SDK directories:
+    - `api/sdks/python/`
+    - `api/sdks/typescript/`
+  - Revert storage-hardening utility usage (`gateway_api/storage_utils.py`) and scheduler path hardening if rollback requires legacy behavior.
 
 ## 10. Demo Steps
 - Script: `scripts/demos/p15_gateway.sh`
@@ -194,3 +257,7 @@
   - idempotent replay behavior on mutating routes,
   - cron timezone + history retrieval,
   - usage governance quota exceed (`429 usage_quota_exceeded`).
+- Days 16-20 demo coverage includes:
+  - connector catalog + connector inbound normalization/auth flow (`github`, `jira`, `gmail`),
+  - deterministic smoke validation (`./scripts/demos/p15_gateway.sh --smoke`),
+  - full API walkthrough spanning search/chat/embeddings/memory/agents/pages/studio/cron/webhooks/usage.

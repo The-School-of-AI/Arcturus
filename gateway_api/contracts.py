@@ -71,7 +71,7 @@ class GatewayAPIKeyCreateResponse(BaseModel):
 
 
 class GatewaySearchRequest(BaseModel):
-    query: str = Field(min_length=1)
+    query: str = Field(min_length=1, max_length=4000)
     limit: int = Field(default=5, ge=1, le=20)
 
 
@@ -92,7 +92,7 @@ class GatewaySearchResponse(BaseModel):
 
 class GatewayChatMessage(BaseModel):
     role: Literal["system", "user", "assistant", "tool"]
-    content: str
+    content: str = Field(min_length=1, max_length=8000)
 
 
 class GatewayChatCompletionsRequest(BaseModel):
@@ -148,9 +148,9 @@ class GatewayEmbeddingsResponse(BaseModel):
 
 
 class GatewayMemoryWriteRequest(BaseModel):
-    text: str = Field(min_length=1)
-    source: str = Field(default="api_v1", min_length=1)
-    category: str = Field(default="general", min_length=1)
+    text: str = Field(min_length=1, max_length=16_000)
+    source: str = Field(default="api_v1", min_length=1, max_length=200)
+    category: str = Field(default="general", min_length=1, max_length=120)
 
 
 class GatewayMemoryReadRequest(BaseModel):
@@ -159,7 +159,7 @@ class GatewayMemoryReadRequest(BaseModel):
 
 
 class GatewayMemorySearchRequest(BaseModel):
-    query: str = Field(min_length=1)
+    query: str = Field(min_length=1, max_length=4000)
     limit: int = Field(default=5, ge=1, le=50)
 
 
@@ -180,7 +180,7 @@ class GatewayMemoryResponse(BaseModel):
 
 
 class GatewayAgentRunRequest(BaseModel):
-    query: str = Field(min_length=1)
+    query: str = Field(min_length=1, max_length=8000)
     wait_for_completion: bool = True
 
 
@@ -194,8 +194,8 @@ class GatewayAgentRunResponse(BaseModel):
 class GatewayCronJobCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     cron: str = Field(min_length=5, max_length=100)
-    agent_type: str = Field(default="PlannerAgent", min_length=1)
-    query: str = Field(min_length=1)
+    agent_type: str = Field(default="PlannerAgent", min_length=1, max_length=120)
+    query: str = Field(min_length=1, max_length=4000)
     timezone: str = Field(default="UTC", min_length=1, max_length=100)
 
 
@@ -224,7 +224,7 @@ class GatewayCronJobHistoryOut(BaseModel):
 
 
 class GatewayWebhookSubscriptionCreateRequest(BaseModel):
-    target_url: str = Field(min_length=1)
+    target_url: str = Field(min_length=1, max_length=1024)
     event_types: List[str] = Field(min_length=1)
     secret: Optional[str] = None
     active: bool = True
@@ -240,7 +240,7 @@ class GatewayWebhookSubscriptionOut(BaseModel):
 
 
 class GatewayWebhookTriggerRequest(BaseModel):
-    event_type: str = Field(min_length=1)
+    event_type: str = Field(min_length=1, max_length=120)
     payload: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -250,7 +250,8 @@ class GatewayWebhookTriggerResponse(BaseModel):
 
 
 class GatewayWebhookInboundRequest(BaseModel):
-    event_type: str = Field(min_length=1)
+    model_config = ConfigDict(extra="allow")
+    event_type: Optional[str] = Field(default=None, min_length=1, max_length=120)
     payload: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -258,7 +259,16 @@ class GatewayWebhookInboundResponse(BaseModel):
     status: Literal["accepted"] = "accepted"
     source: str
     trace_id: str
+    normalized_event_type: str
+    auth_mode: str
+    connector_event_id: Optional[str] = None
     queued_deliveries: int
+
+
+class GatewayWebhookConnectorOut(BaseModel):
+    source: str
+    auth_modes: List[str]
+    event_mappings: Dict[str, str]
 
 
 class GatewayWebhookDispatchRequest(BaseModel):
@@ -296,8 +306,8 @@ class GatewayWebhookReplayResponse(BaseModel):
 
 
 class GatewayPageGenerateRequest(BaseModel):
-    query: str = Field(min_length=1)
-    template: Optional[str] = None
+    query: str = Field(min_length=1, max_length=4000)
+    template: Optional[str] = Field(default=None, max_length=200)
     oracle_limit: int = Field(default=5, ge=1, le=20)
 
 
@@ -314,8 +324,8 @@ class GatewayPageGenerateResponse(BaseModel):
 
 
 class GatewayStudioGenerateRequest(BaseModel):
-    prompt: str = Field(min_length=1)
-    template: Optional[str] = None
+    prompt: str = Field(min_length=1, max_length=8000)
+    template: Optional[str] = Field(default=None, max_length=200)
     oracle_limit: int = Field(default=5, ge=1, le=20)
 
 

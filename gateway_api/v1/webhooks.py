@@ -2,17 +2,23 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.encoders import jsonable_encoder
 
+from gateway_api.connectors import (
+    ConnectorNormalizationError,
+    list_supported_connectors,
+    normalize_event,
+    parse_json_payload,
+)
 from gateway_api.auth import AuthContext, require_scope
 from gateway_api.contracts import (
+    GatewayWebhookConnectorOut,
     GatewayWebhookDeliveryOut,
     GatewayWebhookDispatchRequest,
     GatewayWebhookDispatchResponse,
-    GatewayWebhookInboundRequest,
     GatewayWebhookInboundResponse,
     GatewayWebhookReplayResponse,
     GatewayWebhookSubscriptionCreateRequest,
@@ -40,6 +46,51 @@ from gateway_api.webhooks import (
 
 router = APIRouter(prefix="/webhooks", tags=["Gateway V1"])
 IDEMPOTENCY_HEADER = "Idempotency-Key"
+
+
+def _normalized_headers(request: Request) -> Dict[str, str]:
+    return {str(key).lower(): str(value) for key, value in request.headers.items()}
+
+
+def _normalize_inbound_payload(
+    *,
+    source: str,
+    raw_payload: Dict[str, Any],
+    headers: Dict[str, str],
+) -> tuple[str, Dict[str, Any], str | None, Dict[str, Any]]:
+    event_type = raw_payload.get("event_type")
+    payload = raw_payload.get("payload")
+
+    if isinstance(event_type, str) and isinstance(payload, dict):
+        event_id = raw_payload.get("event_id")
+        if event_id is not None:
+            event_id = str(event_id)
+        return event_type, payload, event_id, {"mode": "canonical"}
+
+    source_key = source.strip().lower()
+    supported = {item["source"] for item in list_supported_connectors()}
+    if source_key not in supported:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "code": "unsupported_connector_source",
+                    "message": f"Unsupported connector source: {source_key}",
+                }
+            },
+        )
+
+    normalized = normalize_event(
+        source=source_key,
+        raw_payload=raw_payload,
+        headers=headers,
+    )
+    return (
+        normalized.event_type,
+        normalized.payload,
+        normalized.external_event_id,
+        normalized.metadata,
+    )
 
 
 def _to_public(subscription: dict) -> GatewayWebhookSubscriptionOut:
@@ -90,6 +141,41 @@ async def list_subscriptions(
 
         subscriptions = await get_webhook_service().list_subscriptions()
         return [_to_public(item) for item in subscriptions]
+    except HTTPException as exc:
+        status_code = exc.status_code
+        if is_usage_quota_exception(exc):
+            governance_denied = True
+        raise
+    finally:
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=not governance_denied,
+        )
+
+
+@router.get("/connectors", response_model=List[GatewayWebhookConnectorOut])
+async def list_connectors(
+    request: Request,
+    response: Response,
+    auth_context: AuthContext = Depends(require_scope("webhooks:read")),
+) -> List[GatewayWebhookConnectorOut]:
+    start = time.perf_counter()
+    status_code = 200
+    usage_units = 1
+    governance_denied = False
+    try:
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+        )
+        usage_units = usage_decision.estimated_units
+        return [GatewayWebhookConnectorOut(**item) for item in list_supported_connectors()]
     except HTTPException as exc:
         status_code = exc.status_code
         if is_usage_quota_exception(exc):
@@ -361,6 +447,7 @@ async def trigger_webhook_event(
     response_model=GatewayWebhookInboundResponse,
     responses={
         401: {"description": "invalid signature"},
+        400: {"description": "normalization/source errors"},
         503: {"description": "signing not configured"},
     },
 )
@@ -368,7 +455,6 @@ async def inbound_webhook(
     source: str,
     request: Request,
     response: Response,
-    payload: GatewayWebhookInboundRequest,
     x_gateway_signature: Optional[str] = Header(default=None, alias="x-gateway-signature"),
     x_gateway_timestamp: Optional[str] = Header(default=None, alias="x-gateway-timestamp"),
 ) -> GatewayWebhookInboundResponse:
@@ -379,19 +465,49 @@ async def inbound_webhook(
     idempotency_context = None
 
     raw_body = (await request.body()).decode("utf-8")
-    derived_key = derive_inbound_idempotency_key(
-        source=source,
-        signature_header=x_gateway_signature,
-        timestamp_header=x_gateway_timestamp,
-        raw_body=raw_body,
-    )
+    headers = _normalized_headers(request)
+    connector_event_id: str | None = None
+    normalized_event_type = ""
+    normalized_payload: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = {}
+    auth_mode = "gateway_signature"
 
     try:
+        raw_payload = parse_json_payload(raw_body)
+        (
+            normalized_event_type,
+            normalized_payload,
+            connector_event_id,
+            metadata,
+        ) = _normalize_inbound_payload(
+            source=source,
+            raw_payload=raw_payload,
+            headers=headers,
+        )
+
+        auth_mode = get_webhook_service().validate_inbound_auth(
+            source=source,
+            headers=headers,
+            raw_body=raw_body,
+        )
+
+        derived_key = derive_inbound_idempotency_key(
+            source=source,
+            signature_header=x_gateway_signature or headers.get("x-hub-signature-256"),
+            timestamp_header=x_gateway_timestamp or headers.get("x-goog-message-number"),
+            raw_body=raw_body,
+            external_event_id=connector_event_id,
+        )
         idempotency_context, replay = await begin_idempotent_request(
             request=request,
             actor="webhook_inbound",
             idempotency_key=derived_key,
-            payload=payload.model_dump(mode="json"),
+            payload={
+                "event_type": normalized_event_type,
+                "payload": normalized_payload,
+                "source": source,
+                "connector_event_id": connector_event_id,
+            },
             response=response,
         )
         if replay is not None:
@@ -399,28 +515,32 @@ async def inbound_webhook(
             status_code = replay.status_code
             return replay
 
-        get_webhook_service().validate_inbound_signature(
-            signature_header=x_gateway_signature,
-            timestamp_header=x_gateway_timestamp,
-            raw_body=raw_body,
-        )
         await record_integration_event(
             trace_id=trace_id,
             flow="webhook_inbound_validation",
             stage="validate",
             status="success",
-            context={"source": source, "event_type": payload.event_type},
+            context={
+                "source": source,
+                "event_type": normalized_event_type,
+                "auth_mode": auth_mode,
+                "connector_event_id": connector_event_id,
+                "metadata": metadata,
+            },
         )
 
         queued = await get_webhook_service().trigger_event(
-            event_type=payload.event_type,
-            payload=payload.payload,
+            event_type=normalized_event_type,
+            payload=normalized_payload,
             source=f"inbound:{source}",
             trace_id=trace_id,
         )
         response_payload = GatewayWebhookInboundResponse(
             source=source,
             trace_id=trace_id,
+            normalized_event_type=normalized_event_type,
+            auth_mode=auth_mode,
+            connector_event_id=connector_event_id,
             queued_deliveries=queued["queued_deliveries"],
         )
 
@@ -436,6 +556,28 @@ async def inbound_webhook(
             )
 
         return response_payload
+    except ConnectorNormalizationError as exc:
+        status_code = 400
+        await record_integration_event(
+            trace_id=trace_id,
+            flow="webhook_inbound_validation",
+            stage="normalize",
+            status="failed",
+            context={"reason": str(exc), "source": source},
+        )
+        detail = {
+            "error": {
+                "code": "webhook_event_normalization_failed",
+                "message": str(exc),
+            }
+        }
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=400,
+                detail=detail,
+            )
+        raise HTTPException(status_code=400, detail=detail) from exc
     except WebhookSigningNotConfigured as exc:
         status_code = 503
         await record_integration_event(
