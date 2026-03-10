@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
     Run,
+    Space,
     PlatformNode,
     PlatformEdge,
     Snapshot,
@@ -23,7 +24,7 @@ interface RunSlice {
     setCurrentRun: (runId: string) => void;
     updateRunStatus: (input: { id: string, status: Run['status'] }) => void;
     fetchRuns: () => Promise<void>;
-    createNewRun: (query: string, model?: string) => Promise<void>;
+    createNewRun: (query: string, model?: string, space_id?: string | null) => Promise<void>;
     refreshCurrentRun: () => Promise<void>;
     pollingInterval: ReturnType<typeof setInterval> | null;
     startPolling: (runId: string) => void;
@@ -79,8 +80,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio') => void;
+    sidebarTab: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio';
+    setSidebarTab: (tab: 'runs' | 'spaces' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio') => void;
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
@@ -233,9 +234,18 @@ interface RemmeSlice {
     memories: Memory[];
     setMemories: (memories: Memory[]) => void;
     fetchMemories: () => Promise<void>;
-    addMemory: (text: string, category?: string) => Promise<void>;
+    addMemory: (text: string, category?: string, space_id?: string | null) => Promise<void>;
     deleteMemory: (id: string) => Promise<void>;
     cleanupDanglingMemories: () => Promise<void>;
+}
+
+// Phase 4: Spaces (Perplexity-style project hubs)
+interface SpacesSlice {
+    spaces: Space[];
+    currentSpaceId: string | null;
+    fetchSpaces: () => Promise<void>;
+    createSpace: (name: string, description?: string) => Promise<Space>;
+    setCurrentSpaceId: (spaceId: string | null) => void;
 }
 
 interface AnalysisHistoryItem {
@@ -458,7 +468,7 @@ interface StudioSlice {
     clearEditState: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, SpacesSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -667,16 +677,17 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            createNewRun: async (query, model) => {
+            createNewRun: async (query, model, space_id) => {
                 try {
-                    const res = await api.createRun(query, model);
+                    const res = await api.createRun(query, model, space_id);
                     const newRun: Run = {
                         id: res.id,
                         name: res.query,
                         createdAt: Date.now(),
                         status: 'running',
                         model: res.model || model || 'default',
-                        ragEnabled: true
+                        ragEnabled: true,
+                        space_id: res.space_id ?? space_id ?? undefined
                     };
                     get().addRun(newRun);
 
@@ -1483,9 +1494,9 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to fetch memories", e);
                 }
             },
-            addMemory: async (text, category = "general") => {
+            addMemory: async (text, category = "general", space_id) => {
                 try {
-                    await api.post(`${API_BASE}/remme/add`, { text, category });
+                    await api.addMemory(text, category, space_id);
                     get().fetchMemories();
                 } catch (e) {
                     console.error("Failed to add memory", e);
@@ -1507,6 +1518,24 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to cleanup dangling memories", e);
                 }
             },
+
+            // --- Spaces Slice (Phase 4) ---
+            spaces: [],
+            currentSpaceId: null,
+            fetchSpaces: async () => {
+                try {
+                    const spaces = await api.getSpaces();
+                    set({ spaces });
+                } catch (e) {
+                    console.error("Failed to fetch spaces", e);
+                }
+            },
+            createSpace: async (name, description) => {
+                const space = await api.createSpace(name, description);
+                set((s) => ({ spaces: [space, ...s.spaces] }));
+                return space;
+            },
+            setCurrentSpaceId: (spaceId) => set({ currentSpaceId: spaceId }),
 
             // --- Explorer Slice ---
             explorerRootPath: null,
@@ -2424,6 +2453,7 @@ export const useAppStore = create<AppState>()(
                 // Persistence for IDE features
                 explorerRootPath: state.explorerRootPath,
                 recentProjects: state.recentProjects,
+                currentSpaceId: state.currentSpaceId, // Phase 4: remember selected space
             }),
         }
     )

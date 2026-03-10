@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Run, PlatformNode, PlatformEdge } from '../types';
+import type { Run, Space, PlatformNode, PlatformEdge } from '../types';
 
 export const API_BASE = 'http://localhost:8000/api';
 
@@ -10,6 +10,7 @@ export interface API_Run {
     query: string;
     model?: string;  // Model used for this run
     total_tokens?: number;
+    space_id?: string | null;  // Phase 4: optional space for run
 }
 
 export interface API_RunDetail {
@@ -32,16 +33,43 @@ export const api = {
             status: r.status as Run['status'],
             model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true,
-            total_tokens: r.total_tokens
+            total_tokens: r.total_tokens,
+            space_id: r.space_id ?? undefined
         }));
     },
 
-    // Trigger new run (model optional - backend uses settings default if not provided)
-    createRun: async (query: string, model?: string): Promise<API_Run> => {
-        const payload: { query: string; model?: string } = { query };
+    // Trigger new run (model optional - backend uses settings default if not provided). Phase 4: optional space_id.
+    createRun: async (query: string, model?: string, space_id?: string | null): Promise<API_Run> => {
+        const payload: { query: string; model?: string; space_id?: string } = { query };
         if (model) payload.model = model;
+        if (space_id) payload.space_id = space_id;
         const res = await axios.post(`${API_BASE}/runs`, payload);
         return res.data;
+    },
+
+    // Phase 4: Spaces (Perplexity-style project hubs)
+    getSpaces: async (): Promise<Space[]> => {
+        try {
+            const res = await axios.get<{ status: string; spaces: Space[] }>(`${API_BASE}/remme/spaces`);
+            return res.data?.spaces ?? [];
+        } catch (e) {
+            console.error('Failed to fetch spaces', e);
+            return [];
+        }
+    },
+
+    createSpace: async (name: string, description?: string): Promise<Space> => {
+        const res = await axios.post<{ status: string; space_id: string; name: string; description: string }>(
+            `${API_BASE}/remme/spaces`,
+            { name, description: description ?? '' }
+        );
+        return { space_id: res.data.space_id, name: res.data.name, description: res.data.description };
+    },
+
+    addMemory: async (text: string, category?: string, space_id?: string | null): Promise<void> => {
+        const payload: { text: string; category?: string; space_id?: string } = { text, category: category ?? 'general' };
+        if (space_id) payload.space_id = space_id;
+        await axios.post(`${API_BASE}/remme/add`, payload);
     },
 
     // Get specific run graph

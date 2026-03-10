@@ -4,7 +4,7 @@ import {
     LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
     RefreshCw, Zap, Sparkles, X, FolderPlus, UploadCloud, Search,
     Loader2, ChevronLeft, Notebook, LayoutDashboard, Bell,
-    CalendarClock, Terminal
+    CalendarClock, Terminal, FolderOpen
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { StatsModal } from '@/components/stats/StatsModal';
 
 const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subtitleSuffix: string }> = {
     runs: { label: 'Agent Runs', icon: PlayCircle, color: 'text-neon-yellow', subtitleSuffix: 'SESSIONS' },
+    spaces: { label: 'Spaces', icon: FolderOpen, color: 'text-neon-yellow', subtitleSuffix: 'PROJECT HUBS' },
     rag: { label: 'RAG Documents', icon: Database, color: 'text-neon-yellow', subtitleSuffix: 'SOURCES' },
     mcp: { label: 'MCP Servers', icon: Box, color: 'text-neon-yellow', subtitleSuffix: 'CONNECTED' },
     remme: { label: 'Memory Vault', icon: Brain, color: 'text-neon-yellow', subtitleSuffix: 'PERSISTENT FACTS' },
@@ -34,7 +35,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
 
 export const Header: React.FC = () => {
     const {
-        currentRun, sidebarTab, runs, savedApps, memories,
+        currentRun, sidebarTab, runs, savedApps, memories, spaces, fetchSpaces,
         analysisHistory, newsSources, ragFiles, mcpServers,
         isRagIndexing, setIsRagNewFolderOpen, fetchRagFiles,
         setIsNewRunOpen, setIsMcpAddOpen, setIsRemmeAddOpen,
@@ -127,6 +128,7 @@ export const Header: React.FC = () => {
     const getCount = () => {
         switch (sidebarTab) {
             case 'runs': return runs.length;
+            case 'spaces': return spaces.length;
             case 'apps': return savedApps.length;
             case 'remme': return memories.length;
             case 'explorer': return analysisHistory.length;
@@ -270,10 +272,11 @@ export const Header: React.FC = () => {
                                 </>
                             )}
 
-                            {(sidebarTab === 'runs' || sidebarTab === 'apps' || sidebarTab === 'explorer' || sidebarTab === 'notes' || sidebarTab === 'skills') && (
+                            {(sidebarTab === 'runs' || sidebarTab === 'spaces' || sidebarTab === 'apps' || sidebarTab === 'explorer' || sidebarTab === 'notes' || sidebarTab === 'skills') && (
                                 <button
                                     onClick={() => {
                                         if (sidebarTab === 'runs') fetchRuns();
+                                        if (sidebarTab === 'spaces') fetchSpaces();
                                         if (sidebarTab === 'apps') fetchApps();
                                         if (sidebarTab === 'notes') fetchNotesFiles();
                                         if (sidebarTab === 'skills') fetchSkillsCount();

@@ -3,6 +3,8 @@ import { useAppStore } from '@/store';
 import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe, PawPrint, ListTree, GitPullRequest } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
@@ -61,15 +63,23 @@ export const RemmePanel: React.FC = () => {
 // ============================================================================
 
 const SnippetsView: React.FC = () => {
-    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen } = useAppStore();
+    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen, spaces, currentSpaceId, fetchSpaces } = useAppStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedMemoryId, setExpandedMemoryId] = useState<string | null>(null);
     const [newMemoryText, setNewMemoryText] = useState("");
+    const [memorySpaceId, setMemorySpaceId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
 
     useEffect(() => {
         fetchMemories();
     }, []);
+
+    useEffect(() => {
+        if (isAddOpen) {
+            setMemorySpaceId(currentSpaceId);
+            fetchSpaces();
+        }
+    }, [isAddOpen, currentSpaceId, fetchSpaces]);
 
     const filteredMemories = useMemo(() => {
         let items = [...memories];
@@ -88,7 +98,7 @@ const SnippetsView: React.FC = () => {
         if (!newMemoryText.trim()) return;
         setIsAdding(true);
         try {
-            await addMemory(newMemoryText);
+            await addMemory(newMemoryText, "general", memorySpaceId);
             setNewMemoryText("");
             setIsAddOpen(false);
         } finally {
@@ -146,6 +156,20 @@ const SnippetsView: React.FC = () => {
             {/* Add Memory Form */}
             {isAddOpen && (
                 <div className="p-3 border-b border-border/50 bg-primary/5 space-y-2">
+                    <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Space</Label>
+                        <Select value={memorySpaceId ?? "__global__"} onValueChange={(v) => setMemorySpaceId(v === "__global__" ? null : v)}>
+                            <SelectTrigger className="h-8 bg-background border-border text-xs">
+                                <SelectValue placeholder="Global" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__global__">Global</SelectItem>
+                                {spaces.map((s) => (
+                                    <SelectItem key={s.space_id} value={s.space_id}>{s.name || 'Unnamed Space'}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <Input
                         className="w-full bg-background border-border rounded-md text-xs h-9"
                         placeholder="Enter a memory... (e.g. 'I love horoscopes and astrology')"

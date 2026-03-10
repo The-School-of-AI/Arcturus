@@ -12,6 +12,13 @@ export interface Run {
     model: string;
     ragEnabled: boolean;
     total_tokens?: number;
+    space_id?: string;  // Phase 4: optional space
+}
+
+export interface Space {
+    space_id: string;
+    name: string;
+    description: string;
 }
 
 export interface AgentNodeData {
