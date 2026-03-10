@@ -650,16 +650,28 @@ async def list_runs():
                         (n.get("total_tokens", 0) or 0) for n in nodes
                     )
                     
+                    run_id = session_file.stem.replace("session_", "")
                     runs.append({
-                        "id": session_file.stem.replace("session_", ""),
-                        "query": query, 
-                        "created_at": created_at, 
+                        "id": run_id,
+                        "query": query,
+                        "created_at": created_at,
                         "status": computed_status,
-                        "total_tokens": total_tokens
+                        "total_tokens": total_tokens,
                     })
-                except:
+                except Exception:
                     continue
-    
+
+    # Phase 4: Enrich with space_id from Neo4j so frontend can filter by space
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        kg = get_knowledge_graph()
+        if kg is not None:
+            for r in runs:
+                space_id = kg.get_space_for_session(r["id"])
+                r["space_id"] = space_id
+    except Exception:
+        pass
+
     # Sort by recent
     return sorted(runs, key=lambda x: x['id'], reverse=True)
 
