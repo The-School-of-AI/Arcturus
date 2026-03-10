@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '@/store';
-import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe, PawPrint, ListTree, GitPullRequest } from 'lucide-react';
+import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe, PawPrint, ListTree, GitPullRequest, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,7 +63,7 @@ export const RemmePanel: React.FC = () => {
 // ============================================================================
 
 const SnippetsView: React.FC = () => {
-    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen, spaces, currentSpaceId, fetchSpaces } = useAppStore();
+    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen, spaces, currentSpaceId, fetchSpaces, setSidebarTab } = useAppStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedMemoryId, setExpandedMemoryId] = useState<string | null>(null);
     const [newMemoryText, setNewMemoryText] = useState("");
@@ -72,7 +72,7 @@ const SnippetsView: React.FC = () => {
 
     useEffect(() => {
         fetchMemories();
-    }, []);
+    }, [currentSpaceId, fetchMemories]);
 
     useEffect(() => {
         if (isAddOpen) {
@@ -80,6 +80,10 @@ const SnippetsView: React.FC = () => {
             fetchSpaces();
         }
     }, [isAddOpen, currentSpaceId, fetchSpaces]);
+
+    const currentSpaceName = currentSpaceId
+        ? spaces.find((s) => s.space_id === currentSpaceId)?.name || 'Space'
+        : 'Global';
 
     const filteredMemories = useMemo(() => {
         let items = [...memories];
@@ -109,18 +113,19 @@ const SnippetsView: React.FC = () => {
     return (
         <div className="flex flex-col h-full">
             {/* Header & Search */}
-            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    <Input
-                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
-                        placeholder="Search your memories..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+            <div className="p-2 border-b border-border/50 bg-muted/20 space-y-2 shrink-0">
+                <div className="flex items-center gap-1.5">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <Input
+                            className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                            placeholder="Search your memories..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
 
-                <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                     <Button
                         variant="ghost"
                         size="icon"
@@ -151,6 +156,14 @@ const SnippetsView: React.FC = () => {
                         <TriangleAlert className="w-4 h-4" />
                     </Button>
                 </div>
+                </div>
+                <button
+                    onClick={() => setSidebarTab('spaces')}
+                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                    <FolderOpen className="w-3 h-3" />
+                    Space: {currentSpaceName}
+                </button>
             </div>
 
             {/* Add Memory Form */}

@@ -72,6 +72,12 @@ export const api = {
         await axios.post(`${API_BASE}/remme/add`, payload);
     },
 
+    getMemories: async (space_id?: string | null): Promise<{ memories: any[] }> => {
+        const params = space_id ? { space_id } : {};
+        const res = await axios.get(`${API_BASE}/remme/memories`, { params });
+        return res.data;
+    },
+
     // Get specific run graph
     // Get specific run graph
     getRunGraph: async (runId: string): Promise<{ nodes: PlatformNode[], edges: PlatformEdge[], graph: any }> => {

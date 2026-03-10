@@ -1488,8 +1488,9 @@ export const useAppStore = create<AppState>()(
             setMemories: (memories) => set({ memories }),
             fetchMemories: async () => {
                 try {
-                    const res = await api.get(`${API_BASE}/remme/memories`);
-                    set({ memories: res.data.memories });
+                    const spaceId = get().currentSpaceId;
+                    const res = await api.getMemories(spaceId);
+                    set({ memories: res.memories });
                 } catch (e) {
                     console.error("Failed to fetch memories", e);
                 }
