@@ -364,7 +364,7 @@ Use this section as the single list of what to do next; update as you complete i
   - **Option B:** Add `space_id` to Qdrant payload and filter vector search; constrain Neo4j paths similarly.
 - **Where to add the hook:** In `memory/knowledge_graph.py`, reads that traverse memories (e.g. `expand_from_entities`, `get_memory_ids_for_entity_names`) should accept optional `space_id`/`space_ids` and constrain to memories in that space. `memory_retriever.retrieve()` would accept optional `space_id` and pass through to Qdrant filter and Neo4j.
 
-### 8.5 Phase 4: Sync Engine (goal — deferred)
+### 8.5 Phase 4: Sync Engine (goal — design done, implementation deferred)
 
 **Original goal (from P11_EXPLANATION):** Cross-device sync so memories are available on all devices (phone, laptop, tablet).
 
@@ -373,7 +373,9 @@ Use this section as the single list of what to do next; update as you complete i
 - **Selective sync:** Some spaces can be local-only (never synced) for privacy.
 - **Offline:** Works offline; syncs when connected.
 
-**Status:** Not started. When moving to Phase 4, implement sync protocol, CRDT library integration, and multi-device tests.
+**Design:** See **CAPSTONE/project_charters/P11_PHASE4_SYNC_ENGINE_DESIGN.md** for full design (CRDT/LWW, offline-first, per-space sync policy, components, protocol, implementation order).
+
+**Status:** Design complete; implementation not started. When moving to Phase 4, follow the design doc then implement sync protocol, merge logic, and multi-device tests.
 
 ### 8.6 Other known gaps (from delivery README)
 
