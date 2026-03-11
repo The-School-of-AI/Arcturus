@@ -1,8 +1,11 @@
 """
 Watchtower Health module: service health checks for admin dashboard.
-Checks MongoDB, Qdrant, Ollama, and MCP gateway.
+Checks MongoDB, Qdrant, Ollama, MCP gateway, Neo4j, agent core,
+and collects system resource metrics.
 """
-from dataclasses import dataclass
+
+import os
+from dataclasses import dataclass, field
 from typing import Any
 
 from config.settings_loader import settings, get_ollama_url
@@ -27,6 +30,30 @@ class HealthResult:
         }
 
 
+@dataclass
+class ResourceSnapshot:
+    """Point-in-time snapshot of system resource usage."""
+
+    cpu_pct: float
+    mem_pct: float
+    disk_pct: float
+    mem_used_mb: float = 0.0
+    mem_total_mb: float = 0.0
+    disk_used_gb: float = 0.0
+    disk_total_gb: float = 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "cpu_pct": self.cpu_pct,
+            "mem_pct": self.mem_pct,
+            "disk_pct": self.disk_pct,
+            "mem_used_mb": self.mem_used_mb,
+            "mem_total_mb": self.mem_total_mb,
+            "disk_used_gb": self.disk_used_gb,
+            "disk_total_gb": self.disk_total_gb,
+        }
+
+
 def check_mongodb() -> HealthResult:
     """Check MongoDB connectivity via watchtower config."""
     import time
@@ -41,7 +68,9 @@ def check_mongodb() -> HealthResult:
         client = MongoClient(uri, serverSelectionTimeoutMS=3000)
         client.admin.command("ping")
         latency_ms = (time.perf_counter() - start) * 1000
-        return HealthResult(service="mongodb", status="ok", latency_ms=round(latency_ms, 2))
+        return HealthResult(
+            service="mongodb", status="ok", latency_ms=round(latency_ms, 2)
+        )
     except Exception as e:
         return HealthResult(service="mongodb", status="down", details=str(e))
     finally:
@@ -63,7 +92,9 @@ def check_qdrant() -> HealthResult:
             resp = client.get(health_url)
             latency_ms = (time.perf_counter() - start) * 1000
         if resp.status_code == 200:
-            return HealthResult(service="qdrant", status="ok", latency_ms=round(latency_ms, 2))
+            return HealthResult(
+                service="qdrant", status="ok", latency_ms=round(latency_ms, 2)
+            )
         return HealthResult(
             service="qdrant",
             status="degraded",
@@ -87,7 +118,9 @@ def check_ollama() -> HealthResult:
             resp = client.get(f"{base}/api/tags")
             latency_ms = (time.perf_counter() - start) * 1000
         if resp.status_code == 200:
-            return HealthResult(service="ollama", status="ok", latency_ms=round(latency_ms, 2))
+            return HealthResult(
+                service="ollama", status="ok", latency_ms=round(latency_ms, 2)
+            )
         return HealthResult(
             service="ollama",
             status="degraded",
@@ -115,7 +148,9 @@ def check_mcp() -> HealthResult:
         configs = getattr(multi_mcp, "server_configs", {})
         enabled = [k for k, v in configs.items() if v.get("enabled", True)]
         if not enabled:
-            return HealthResult(service="mcp_gateway", status="ok", details="No MCP servers configured")
+            return HealthResult(
+                service="mcp_gateway", status="ok", details="No MCP servers configured"
+            )
         return HealthResult(
             service="mcp_gateway",
             status="degraded",
@@ -125,6 +160,95 @@ def check_mcp() -> HealthResult:
         return HealthResult(service="mcp_gateway", status="down", details=str(e))
 
 
+def check_neo4j() -> HealthResult:
+    """Check Neo4j connectivity. Returns ok if reachable, skipped if disabled."""
+    import time
+
+    enabled = os.environ.get("NEO4J_ENABLED", "").lower() in ("true", "1", "yes")
+    if not enabled:
+        return HealthResult(
+            service="neo4j", status="ok", details="Disabled (NEO4J_ENABLED not set)"
+        )
+
+    try:
+        from neo4j import GraphDatabase
+    except ImportError:
+        return HealthResult(
+            service="neo4j", status="down", details="neo4j driver not installed"
+        )
+
+    uri = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+    user = os.environ.get("NEO4J_USER", "neo4j")
+    password = os.environ.get("NEO4J_PASSWORD", "")
+    if not password:
+        return HealthResult(
+            service="neo4j", status="down", details="NEO4J_PASSWORD not set"
+        )
+
+    driver = None
+    try:
+        start = time.perf_counter()
+        driver = GraphDatabase.driver(uri, auth=(user, password))
+        driver.verify_connectivity()
+        latency_ms = (time.perf_counter() - start) * 1000
+        return HealthResult(
+            service="neo4j", status="ok", latency_ms=round(latency_ms, 2)
+        )
+    except Exception as e:
+        return HealthResult(service="neo4j", status="down", details=str(e))
+    finally:
+        if driver is not None:
+            driver.close()
+
+
+def check_agent_core() -> HealthResult:
+    """Check agent core liveness via active_loops state."""
+    try:
+        from shared.state import active_loops
+
+        loop_count = len(active_loops)
+        if loop_count == 0:
+            return HealthResult(
+                service="agent_core",
+                status="ok",
+                details="Idle (no active loops)",
+            )
+        return HealthResult(
+            service="agent_core",
+            status="ok",
+            details=f"{loop_count} active loop(s)",
+        )
+    except Exception as e:
+        return HealthResult(service="agent_core", status="down", details=str(e))
+
+
+def collect_resources() -> ResourceSnapshot:
+    """Collect system resource metrics using psutil."""
+    import psutil
+
+    cpu_pct = psutil.cpu_percent(interval=0.1)
+
+    mem = psutil.virtual_memory()
+    mem_pct = mem.percent
+    mem_used_mb = round(mem.used / (1024 * 1024), 1)
+    mem_total_mb = round(mem.total / (1024 * 1024), 1)
+
+    disk = psutil.disk_usage("/")
+    disk_pct = disk.percent
+    disk_used_gb = round(disk.used / (1024**3), 2)
+    disk_total_gb = round(disk.total / (1024**3), 2)
+
+    return ResourceSnapshot(
+        cpu_pct=cpu_pct,
+        mem_pct=mem_pct,
+        disk_pct=disk_pct,
+        mem_used_mb=mem_used_mb,
+        mem_total_mb=mem_total_mb,
+        disk_used_gb=disk_used_gb,
+        disk_total_gb=disk_total_gb,
+    )
+
+
 def run_all_health_checks() -> list[HealthResult]:
     """Run health checks for all services. Returns list of HealthResult."""
     return [
@@ -132,4 +256,6 @@ def run_all_health_checks() -> list[HealthResult]:
         check_qdrant(),
         check_ollama(),
         check_mcp(),
+        check_neo4j(),
+        check_agent_core(),
     ]
