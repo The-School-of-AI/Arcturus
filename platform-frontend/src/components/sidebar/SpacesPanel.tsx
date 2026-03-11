@@ -126,7 +126,7 @@ export const SpacesPanel: React.FC = () => {
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="space-y-2">
-                            <Label htmlFor="space-name" className="text-sm text-muted-foreground">
+                            <Label htmlFor="space-name" className="text-sm text-muted-foreground dark:text-foreground/80">
                                 Name
                             </Label>
                             <Input
@@ -134,12 +134,12 @@ export const SpacesPanel: React.FC = () => {
                                 placeholder="e.g. Biology 101, Q2 Launch"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                className="bg-muted border-input text-foreground"
+                                className="bg-muted border-input dark:border-muted-foreground/50 text-foreground placeholder:text-muted-foreground dark:placeholder:text-foreground/50"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="space-desc" className="text-sm text-muted-foreground">
+                            <Label htmlFor="space-desc" className="text-sm text-muted-foreground dark:text-foreground/80">
                                 Description (optional)
                             </Label>
                             <Textarea
@@ -147,7 +147,7 @@ export const SpacesPanel: React.FC = () => {
                                 placeholder="Brief description of this space"
                                 value={newDescription}
                                 onChange={(e) => setNewDescription(e.target.value)}
-                                className="bg-muted border-input text-foreground min-h-[60px] resize-none"
+                                className="bg-muted border-input dark:border-muted-foreground/50 text-foreground placeholder:text-muted-foreground dark:placeholder:text-foreground/50 min-h-[60px] resize-none"
                                 rows={2}
                             />
                         </div>
@@ -156,9 +156,9 @@ export const SpacesPanel: React.FC = () => {
                                 id="space-local-only"
                                 checked={keepOnDeviceOnly}
                                 onCheckedChange={(v) => setKeepOnDeviceOnly(v === true)}
-                                className="border-input"
+                                className="border-input dark:border-muted-foreground/70 dark:data-[state=unchecked]:bg-muted/80"
                             />
-                            <Label htmlFor="space-local-only" className="text-sm text-muted-foreground cursor-pointer">
+                            <Label htmlFor="space-local-only" className="text-sm text-muted-foreground dark:text-foreground/80 cursor-pointer">
                                 Keep on this device only (don&apos;t sync to cloud)
                             </Label>
                         </div>
