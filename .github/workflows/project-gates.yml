@@ -77,7 +77,7 @@ jobs:
           python-version: '3.11'
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
 
@@ -85,7 +85,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest ruff mypy types-PyYAML
+          pip install pytest pytest-asyncio ruff mypy types-PyYAML
       - name: Install frontend dependencies
         run: npm ci
         working-directory: platform-frontend

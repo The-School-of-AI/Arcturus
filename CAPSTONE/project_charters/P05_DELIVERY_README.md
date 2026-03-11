@@ -11,6 +11,12 @@
 - **session/rewind.py**: Rewind engine. `restore_from_checkpoint` rebuilds `ExecutionContextManager` from `CheckpointSnapshot`, resets running nodes to pending, verifies 5 state restoration invariants. `rewind_to_latest` selects most recent checkpoint. `list_available_checkpoints` lists sessions.
 - **core/loop.py**: Chronicle event emission wired in — `STEP_START` on `_execute_step` entry, `STEP_COMPLETE` and `STEP_FAILED` after result processing. Checkpoint automatically created after each `STEP_COMPLETE` and `STEP_FAILED`.
 
+### Scope: Git/Checkpoint Alignment + Cross-Module Trace Linking ✅
+- **session/alignment.py**: `get_git_head_info(repo_path)` — captures HEAD commit sha and branch; `get_current_trace_ids()` — captures OpenTelemetry trace_id/span_id from active span.
+- **CheckpointSnapshot**: Extended with `git_commit_sha`, `git_branch`, `trace_id`, `span_id` for alignment and cross-module linking.
+- **create_checkpoint**: Integrates alignment; checkpoints now include git state and trace IDs when available.
+- **Cross-module trace linking**: Chronicle checkpoints link to Watchtower (P14) spans via trace_id/span_id for end-to-end observability.
+
 ### Pending (Week 3)
 - Git-integrated checkpoints (branch arcturus/sessions/v1)
 - Rewind/resume CLI
@@ -20,9 +26,10 @@
 ## 2. Architecture Changes
 
 - New package: `session/` at repo root
-  - `schema.py`: Pydantic models for events and checkpoints
+  - `schema.py`: Pydantic models for events and checkpoints (incl. git_commit_sha, trace_id, span_id)
+  - `alignment.py`: get_git_head_info, get_current_trace_ids for git/checkpoint and trace linking
   - `capture.py`: SessionCapture class, get_capture() singleton
-  - `checkpoint.py`: create_checkpoint, list_checkpoints, load_checkpoint
+  - `checkpoint.py`: create_checkpoint, list_checkpoints, load_checkpoint (integrates alignment)
   - `rewind.py`: RewindError, RewindResult, restore_from_checkpoint, rewind_to_latest, list_available_checkpoints, verify_restoration_invariants
 - `core/loop.py`: Chronicle hooks added to `_execute_step` and result processing (STEP_START, STEP_COMPLETE, STEP_FAILED events + checkpoint creation)
 - Storage paths:
@@ -66,6 +73,8 @@
 | test_08_rewind_to_latest_selects_newest_checkpoint | rewind_to_latest picks newest by created_at |
 | test_09_restoration_invariants_pass_for_clean_graph | Clean graph passes all invariants |
 | test_10_restoration_invariants_detect_missing_end_time | Invariants flag completed nodes missing end_time |
+| test_11_checkpoint_includes_git_commit_when_in_repo | Git alignment: checkpoint has git_commit_sha when in repo |
+| test_12_checkpoint_includes_trace_id_when_under_span | Trace linking: checkpoint has trace_id under run_span |
 
 Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py tests/integration/test_chronicle_git_checkpoint_alignment.py -v`
 
@@ -77,7 +86,7 @@ Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py 
 - Event logs and checkpoints store session data (prompts, outputs, graph state). Stored under `memory/` in repo. Consider .gitignore for `memory/chronicle_*` if sensitive.
 
 ## 8. Known Gaps
-- Git branch integration for checkpoints (arcturus/sessions/v1) not yet implemented (Week 3)
+- Git branch storage (arcturus/sessions/v1) for checkpoints not yet implemented (Week 3); git_commit_sha/branch are captured and stored in checkpoint JSON
 - Rewind/resume CLI not implemented (Week 3)
 - Session Explorer UI enhancements pending (Week 3)
 - Auto-summarization pending (Week 3)
