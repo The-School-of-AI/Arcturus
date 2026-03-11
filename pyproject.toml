@@ -53,6 +53,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.28.0",
     "opentelemetry-instrumentation-fastapi>=0.49b0",
     "pymongo>=4.10.0",
+<<<<<<< Updated upstream
     "ray[default]==2.40.0",
     "memo>=0.2.4",
     "mem0ai>=1.0.4",
@@ -158,3 +159,11 @@ disallow_incomplete_defs = false
 [[tool.mypy.overrides]]
 module = ["ray.*", "google.*", "mcp.*", "PIL.*", "psutil", "yaml"]
 ignore_missing_imports = true
+=======
+    "pytest",
+    "playwright-stealth>=2.0.2",
+]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "browser*", "config*", "core*", "mcp_servers*", "memory*", "ops*", "remme*", "routers*", "shared*", "tools*", "ui*"]
+>>>>>>> Stashed changes

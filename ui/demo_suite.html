@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcturus Demo Suite</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #app {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .demos-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+        }
+
+        .demo-card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .demo-card .description {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .demo-card .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+
+        .demo-card .badge.cron {
+            background: #f093fb;
+        }
+
+        .demo-card .badge.runs {
+            background: #4facfe;
+        }
+
+        .demo-card .badge.rag {
+            background: #43e97b;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.95em;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .status-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .status-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-badge.running {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge.not-started {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .output-container {
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+
+        .output-container.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .results-container h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .json-viewer {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
+        }
+
+        .json-key {
+            color: #667eea;
+        }
+
+        .json-string {
+            color: #43e97b;
+        }
+
+        .json-number {
+            color: #f093fb;
+        }
+
+        .json-boolean {
+            color: #fa709a;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #667eea;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            margin-bottom: -2px;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-button:hover {
+            color: #333;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border-left: 4px solid #c3e6cb;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #bee5eb;
+            font-size: 0.9em;
+        }
+
+        .runtime-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .runtime-item {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .runtime-item .label {
+            color: #999;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .runtime-item .value {
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <h1>🚀 Arcturus Demo Suite</h1>
+            <p>Execute Browser Automation, Data Collection & RAG Pipelines</p>
+        </div>
+
+        <!-- Demos Container -->
+        <div class="demos-container">
+            <!-- CRON Demo -->
+            <div class="demo-card">
+                <span class="badge cron">⏱ CRON</span>
+                <h2>Worldometers CRON</h2>
+                <p class="description">
+                    Automated multi-site data collection on a 2-minute schedule. Fetches live population data, economic indicators, and market indices from Worldometers and Yahoo Finance.
+                </p>
+                <div class="info-box">
+                    <strong>Duration:</strong> ~10 minutes<br>
+                    <strong>Interval:</strong> Every 2 minutes
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" @click="executeCron" :disabled="cronRunning || cronCompleted">
+                        <span v-if="cronRunning"><span class="spinner"></span>Running...</span>
+                        <span v-else-if="cronCompleted">✓ Completed</span>
+                        <span v-else>Execute</span>
+                    </button>
+                    <button v-if="cronCompleted" class="btn btn-secondary" @click="viewCronResults">
+                        View Results
+                    </button>
+                </div>
+                <div v-if="cronStatus" class="timestamp">
+                    Status: <span class="status-badge" :class="cronStatus.toLowerCase()">{{ cronStatus }}</span>
+                </div>
+            </div>
+
+            <!-- RUNS Demo -->
+            <div class="demo-card">
+                <span class="badge runs">🌐 RUNS</span>
+                <h2>Phantom Browser Integration</h2>
+                <p class="description">
+                    Demonstrates the P10 Phantom Browser working within RUNS workflows. Opens a visible browser, navigates multiple websites, and extracts real-time data.
+                </p>
+                <div class="info-box">
+                    <strong>Duration:</strong> ~2-3 minutes<br>
+                    <strong>Websites:</strong> Wikipedia, Yahoo Finance, Worldometers
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" @click="executeRuns" :disabled="runsRunning || runsCompleted">
+                        <span v-if="runsRunning"><span class="spinner"></span>Running...</span>
+                        <span v-else-if="runsCompleted">✓ Completed</span>
+                        <span v-else>Execute</span>
+                    </button>
+                    <button v-if="runsCompleted" class="btn btn-secondary" @click="viewRunsResults">
+                        View Results
+                    </button>
+                </div>
+                <div v-if="runsStatus" class="timestamp">
+                    Status: <span class="status-badge" :class="runsStatus.toLowerCase()">{{ runsStatus }}</span>
+                </div>
+            </div>
+
+            <!-- RAG Demo -->
+            <div class="demo-card">
+                <span class="badge rag">🧠 RAG</span>
+                <h2>ArXiv RAG Pipeline</h2>
+                <p class="description">
+                    Advanced LLM-powered Retrieval-Augmented Generation. Downloads research papers from ArXiv, embeds them with semantic analysis, and performs intelligent local search.
+                </p>
+                <div class="info-box">
+                    <strong>Duration:</strong> ~5-8 minutes<br>
+                    <strong>Papers:</strong> Top 5 from search results
+                </div>
+                <div class="input-group">
+                    <label>ArXiv Search Query</label>
+                    <input 
+                        v-model="ragArxivQuery" 
+                        type="text" 
+                        placeholder="e.g., CNN architecture, transformer models"
+                        @keyup.enter="executeRag"
+                    >
+                </div>
+                <div class="input-group">
+                    <label>RAG Local Search Query</label>
+                    <input 
+                        v-model="ragLocalQuery" 
+                        type="text" 
+                        placeholder="e.g., UNet architecture, backpropagation"
+                        @keyup.enter="executeRag"
+                    >
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" @click="executeRag" :disabled="ragRunning || ragCompleted || !ragArxivQuery.trim() || !ragLocalQuery.trim()">
+                        <span v-if="ragRunning"><span class="spinner"></span>Running...</span>
+                        <span v-else-if="ragCompleted">✓ Completed</span>
+                        <span v-else>Execute</span>
+                    </button>
+                    <button v-if="ragCompleted" class="btn btn-secondary" @click="viewRagResults">
+                        View Results
+                    </button>
+                </div>
+                <div v-if="ragStatus" class="timestamp">
+                    Status: <span class="status-badge" :class="ragStatus.toLowerCase()">{{ ragStatus }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status & Output Panels -->
+        <div v-if="activeTab" class="status-section">
+            <div class="tabs">
+                <button 
+                    v-if="cronCompleted || cronRunning"
+                    class="tab-button" 
+                    :class="{ active: activeTab === 'cron' }"
+                    @click="activeTab = 'cron'"
+                >
+                    📊 CRON Output
+                </button>
+                <button 
+                    v-if="runsCompleted || runsRunning"
+                    class="tab-button" 
+                    :class="{ active: activeTab === 'runs' }"
+                    @click="activeTab = 'runs'"
+                >
+                    🌐 RUNS Output
+                </button>
+                <button 
+                    v-if="ragCompleted || ragRunning"
+                    class="tab-button" 
+                    :class="{ active: activeTab === 'rag' }"
+                    @click="activeTab = 'rag'"
+                >
+                    🧠 RAG Output
+                </button>
+            </div>
+
+            <!-- CRON Output -->
+            <div v-if="activeTab === 'cron'" class="tab-content active">
+                <h3>CRON Worldometers Output</h3>
+                <div v-if="cronRunning" class="info-box">
+                    <span class="spinner"></span> Demo is currently executing... (10 minutes)
+                </div>
+                <div v-else-if="cronOutput" class="output-container">
+                    {{ cronOutput }}
+                </div>
+                <div v-else class="output-container empty">
+                    No output yet. Click "Execute" to start.
+                </div>
+            </div>
+
+            <!-- RUNS Output -->
+            <div v-if="activeTab === 'runs'" class="tab-content active">
+                <h3>RUNS Phantom Browser Output</h3>
+                <div v-if="runsRunning" class="info-box">
+                    <span class="spinner"></span> Demo is currently executing... (2-3 minutes)
+                </div>
+                <div v-else-if="runsOutput" class="output-container">
+                    {{ runsOutput }}
+                </div>
+                <div v-else class="output-container empty">
+                    No output yet. Click "Execute" to start.
+                </div>
+            </div>
+
+            <!-- RAG Output -->
+            <div v-if="activeTab === 'rag'" class="tab-content active">
+                <h3>ArXiv RAG Pipeline Output</h3>
+                <div v-if="ragRunning" class="info-box">
+                    <span class="spinner"></span> Demo is currently executing... (5-8 minutes)
+                </div>
+                <div v-else-if="ragOutput" class="output-container">
+                    {{ ragOutput }}
+                </div>
+                <div v-else class="output-container empty">
+                    No output yet. Click "Execute" to start.
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Display -->
+        <div v-if="displayedResults" class="results-container">
+            <h3>📋 Results</h3>
+            <div v-if="resultsError" class="error-message">
+                {{ resultsError }}
+            </div>
+            <div v-else-if="resultsLoading" class="info-box">
+                <span class="spinner"></span> Loading results...
+            </div>
+            <div v-else class="json-viewer">
+                <pre>{{ JSON.stringify(displayedResults, null, 2) }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // CRON State
+                    cronRunning: false,
+                    cronCompleted: false,
+                    cronStatus: null,
+                    cronOutput: null,
+
+                    // RUNS State
+                    runsRunning: false,
+                    runsCompleted: false,
+                    runsStatus: null,
+                    runsOutput: null,
+
+                    // RAG State
+                    ragRunning: false,
+                    ragCompleted: false,
+                    ragStatus: null,
+                    ragOutput: null,
+                    ragArxivQuery: 'CNN architecture',
+                    ragLocalQuery: 'UNet architecture',
+
+                    // UI State
+                    activeTab: null,
+                    displayedResults: null,
+                    resultsLoading: false,
+                    resultsError: null,
+
+                    // API Base URL (standalone server on port 8001)
+                    apiBase: 'http://localhost:8001/demos'
+                };
+            },
+            methods: {
+                async executeCron() {
+                    this.cronRunning = true;
+                    this.cronStatus = 'running';
+                    this.activeTab = 'cron';
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/cron/execute`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({})
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.cronOutput = `Starting CRON demo...\n${data.message}`;
+                            
+                            // Poll for completion
+                            this.pollCronStatus();
+                        }
+                    } catch (error) {
+                        this.cronStatus = 'failed';
+                        this.cronOutput = `Error: ${error.message}`;
+                        this.cronRunning = false;
+                    }
+                },
+
+                async pollCronStatus() {
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch(`${this.apiBase}/status/cron`);
+                            const data = await response.json();
+
+                            if (data.status !== 'running') {
+                                clearInterval(pollInterval);
+                                this.cronRunning = false;
+                                this.cronCompleted = true;
+                                this.cronStatus = data.status.toUpperCase();
+                                
+                                // Fetch full output
+                                await this.getCronOutput();
+                            }
+                        } catch (error) {
+                            console.error('Poll error:', error);
+                        }
+                    }, 2000);
+
+                    // Safety timeout
+                    setTimeout(() => clearInterval(pollInterval), 700000);
+                },
+
+                async getCronOutput() {
+                    try {
+                        const response = await fetch(`${this.apiBase}/output/cron`);
+                        const data = await response.json();
+                        this.cronOutput = data.output || data.errors;
+                    } catch (error) {
+                        this.cronOutput = `Error fetching output: ${error.message}`;
+                    }
+                },
+
+                async executeRuns() {
+                    this.runsRunning = true;
+                    this.runsStatus = 'running';
+                    this.activeTab = 'runs';
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/runs/execute`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({})
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.runsOutput = `Starting RUNS demo...\n${data.message}`;
+                            
+                            this.pollRunsStatus();
+                        }
+                    } catch (error) {
+                        this.runsStatus = 'failed';
+                        this.runsOutput = `Error: ${error.message}`;
+                        this.runsRunning = false;
+                    }
+                },
+
+                async pollRunsStatus() {
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch(`${this.apiBase}/status/runs`);
+                            const data = await response.json();
+
+                            if (data.status !== 'running') {
+                                clearInterval(pollInterval);
+                                this.runsRunning = false;
+                                this.runsCompleted = true;
+                                this.runsStatus = data.status.toUpperCase();
+                                
+                                await this.getRunsOutput();
+                            }
+                        } catch (error) {
+                            console.error('Poll error:', error);
+                        }
+                    }, 2000);
+
+                    setTimeout(() => clearInterval(pollInterval), 300000);
+                },
+
+                async getRunsOutput() {
+                    try {
+                        const response = await fetch(`${this.apiBase}/output/runs`);
+                        const data = await response.json();
+                        this.runsOutput = data.output || data.errors;
+                    } catch (error) {
+                        this.runsOutput = `Error fetching output: ${error.message}`;
+                    }
+                },
+
+                async executeRag() {
+                    this.ragRunning = true;
+                    this.ragStatus = 'running';
+                    this.activeTab = 'rag';
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/rag/execute`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                arxiv_search: this.ragArxivQuery,
+                                rag_search: this.ragLocalQuery
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.ragOutput = `Starting RAG demo...\n${data.message}`;
+                            
+                            this.pollRagStatus();
+                        }
+                    } catch (error) {
+                        this.ragStatus = 'failed';
+                        this.ragOutput = `Error: ${error.message}`;
+                        this.ragRunning = false;
+                    }
+                },
+
+                async pollRagStatus() {
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch(`${this.apiBase}/status/rag`);
+                            const data = await response.json();
+
+                            if (data.status !== 'running') {
+                                clearInterval(pollInterval);
+                                this.ragRunning = false;
+                                this.ragCompleted = true;
+                                this.ragStatus = data.status.toUpperCase();
+                                
+                                await this.getRagOutput();
+                            }
+                        } catch (error) {
+                            console.error('Poll error:', error);
+                        }
+                    }, 2000);
+
+                    setTimeout(() => clearInterval(pollInterval), 600000);
+                },
+
+                async getRagOutput() {
+                    try {
+                        const response = await fetch(`${this.apiBase}/output/rag`);
+                        const data = await response.json();
+                        this.ragOutput = data.output || data.errors;
+                    } catch (error) {
+                        this.ragOutput = `Error fetching output: ${error.message}`;
+                    }
+                },
+
+                async viewCronResults() {
+                    this.displayedResults = null;
+                    this.resultsLoading = true;
+                    this.resultsError = null;
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/results/cron`);
+                        const data = await response.json();
+                        this.displayedResults = { content: data.content, format: data.format };
+                    } catch (error) {
+                        this.resultsError = `Error loading results: ${error.message}`;
+                    } finally {
+                        this.resultsLoading = false;
+                    }
+                },
+
+                async viewRunsResults() {
+                    this.displayedResults = null;
+                    this.resultsLoading = true;
+                    this.resultsError = null;
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/results/runs`);
+                        const data = await response.json();
+                        this.displayedResults = data.content;
+                    } catch (error) {
+                        this.resultsError = `Error loading results: ${error.message}`;
+                    } finally {
+                        this.resultsLoading = false;
+                    }
+                },
+
+                async viewRagResults() {
+                    this.displayedResults = null;
+                    this.resultsLoading = true;
+                    this.resultsError = null;
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/results/rag`);
+                        const data = await response.json();
+                        this.displayedResults = data.content;
+                    } catch (error) {
+                        this.resultsError = `Error loading results: ${error.message}`;
+                    } finally {
+                        this.resultsLoading = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

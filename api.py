@@ -262,6 +262,7 @@ from routers import studio as studio_router
 from routers import admin as admin_router
 app.include_router(studio_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
+<<<<<<< Updated upstream
 from routers.marketplace import router as marketplace_router
 app.include_router(marketplace_router, prefix="/api/v3")
 from routers import voice as voice_router
@@ -270,6 +271,10 @@ app.include_router(voice_router.router, prefix="/api")
 
 from routers import pages as pages_router
 app.include_router(pages_router.router, prefix="/api")
+=======
+from routers import demo_executor as demo_executor_router
+app.include_router(demo_executor_router.router)
+>>>>>>> Stashed changes
 
 # Gateway API v1 (P15)
 from gateway_api.v1 import router as gateway_v1_router
