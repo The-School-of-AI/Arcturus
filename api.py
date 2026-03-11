@@ -34,6 +34,7 @@ from shared.state import (
     PROJECT_ROOT,
 )
 from routers.remme import background_smart_scan  # Needed for lifespan startup
+from routers.sync import run_sync_background  # Phase 4: startup sync when enabled
 
 from contextlib import asynccontextmanager
 
@@ -171,7 +172,9 @@ async def lifespan(app: FastAPI):
         print("⚠️ Ollama NOT found.")
     # 🧠 Start Smart Sync in background
     asyncio.create_task(background_smart_scan())
-    
+    # Phase 4: run sync (push then pull) on startup when SYNC_ENGINE_ENABLED + SYNC_SERVER_URL
+    asyncio.create_task(run_sync_background())
+
     yield
     
     print("🛑 API Shutting down...")

@@ -298,16 +298,15 @@ async def cleanup_dangling_memories():
 
 
 @router.post("/add")
-async def add_memory(request: AddMemoryRequest):
-    """Manually add a memory. Optional space_id for Phase 3 Spaces. When MNEMO_ENABLED=false, auto-extract to UserModel hubs; when true, ingestion uses unified extractor."""
+async def add_memory(request: AddMemoryRequest, background_tasks: BackgroundTasks):
+    """Manually add a memory. Optional space_id for Phase 3 Spaces. When MNEMO_ENABLED=false, auto-extract to UserModel hubs; when true, ingestion uses unified extractor. Phase 4: triggers background sync when sync engine enabled."""
     try:
         emb = get_embedding(request.text, task_type="search_query")
         add_kwargs: dict = {"category": request.category, "source": "manual"}
         if request.space_id:
             add_kwargs["space_id"] = request.space_id
         memory = remme_store.add(request.text, emb, **add_kwargs)
-        
-        # pdb.set_trace()
+
         from memory.mnemo_config import is_mnemo_enabled
         if not is_mnemo_enabled():
             try:
@@ -325,7 +324,16 @@ async def add_memory(request: AddMemoryRequest):
                 memory["extracted_preferences"] = []
         else:
             memory["extracted_preferences"] = []  # step 3 will ingest via unified extractor in qdrant_store
-        
+
+        # Phase 4: enqueue background sync when sync engine enabled
+        try:
+            from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
+            if is_sync_engine_enabled() and get_sync_server_url():
+                from routers.sync import run_sync_background
+                background_tasks.add_task(run_sync_background)
+        except Exception:
+            pass
+
         return {"status": "success", "memory": memory}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -342,8 +350,8 @@ async def delete_memory(memory_id: str):
 
 
 @router.post("/spaces")
-async def create_space(request: CreateSpaceRequest):
-    """Create a new space for the user. Returns {space_id, name, description}. Phase 3 Spaces."""
+async def create_space(request: CreateSpaceRequest, background_tasks: BackgroundTasks):
+    """Create a new space for the user. Returns {space_id, name, description}. Phase 3 Spaces. Phase 4: triggers background sync when sync engine enabled."""
     try:
         from memory.knowledge_graph import get_knowledge_graph
         from memory.user_id import get_user_id
@@ -359,6 +367,16 @@ async def create_space(request: CreateSpaceRequest):
         )
         if not space_id:
             raise HTTPException(status_code=500, detail="Failed to create space")
+
+        # Phase 4: enqueue background sync when sync engine enabled
+        try:
+            from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
+            if is_sync_engine_enabled() and get_sync_server_url():
+                from routers.sync import run_sync_background
+                background_tasks.add_task(run_sync_background)
+        except Exception:
+            pass
+
         return {"status": "success", "space_id": space_id, "name": request.name or "", "description": request.description or ""}
     except HTTPException:
         raise
