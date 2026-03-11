@@ -32,7 +32,7 @@ export function SlideFrame({
 
   return (
     <div
-      className="relative w-full aspect-[16/9] overflow-hidden select-none"
+      className={`relative w-full aspect-[16/9] overflow-hidden select-none${isThumb ? '' : ' shadow-2xl rounded-lg'}`}
       style={{
         backgroundColor: bgColor,
         fontFamily: `"${theme.font_body}", "Segoe UI", system-ui, sans-serif`,

@@ -85,11 +85,11 @@ function SlidePreviewContent() {
       <DialogTitle className="sr-only">Slide Preview</DialogTitle>
 
       {/* Header */}
-      <div className="h-10 border-b border-border/30 flex items-center px-4 shrink-0">
-        <span className="text-sm font-semibold text-foreground">
+      <div className="h-12 border-b border-border/30 flex items-center px-5 shrink-0">
+        <span className="text-base font-semibold text-foreground tracking-tight">
           Slide Preview
         </span>
-        <span className="text-xs text-muted-foreground ml-2 truncate max-w-[300px]">
+        <span className="text-sm text-muted-foreground ml-3 truncate max-w-[400px]">
           — {activeArtifact.title}
         </span>
       </div>
@@ -105,8 +105,11 @@ function SlidePreviewContent() {
         />
 
         {/* Center: Main Preview */}
-        <div className="flex-1 flex items-center justify-center p-6 bg-charcoal-950/30 min-w-0">
-          <div className="w-full max-w-4xl">
+        <div className="flex-1 flex items-center justify-center p-10 bg-charcoal-950/30 min-w-0">
+          <div
+            key={clampedIndex}
+            className="w-full max-w-4xl animate-slide-fade-in"
+          >
             <SlideRenderer
               slide={activeSlide}
               theme={theme}
@@ -157,7 +160,7 @@ export function SlidePreviewModal({ open, onClose }: { open: boolean; onClose: (
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="fixed inset-4 max-w-none translate-x-0 translate-y-0 left-0 top-0 flex flex-col bg-charcoal-900 rounded-xl border-border/30 overflow-hidden p-0 [&>button:last-child]:top-3 [&>button:last-child]:right-3 [&>button:last-child]:text-muted-foreground [&>button:last-child]:z-10"
+        className="fixed inset-4 max-w-none translate-x-0 translate-y-0 left-0 top-0 flex flex-col bg-charcoal-900 rounded-xl border-border/30 overflow-hidden p-0 animate-modal-scale-in [&>button:last-child]:top-3 [&>button:last-child]:right-3 [&>button:last-child]:text-muted-foreground [&>button:last-child]:z-10"
       >
         <SlidePreviewContent key={openCount} />
       </DialogContent>

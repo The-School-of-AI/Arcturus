@@ -129,7 +129,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                     <DialogTitle>Create Artifact</DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4 py-2">
+                <div className="space-y-5 py-2">
                     {/* Type selector */}
                     <div className="grid grid-cols-3 gap-2">
                         {(['slides', 'documents', 'sheets'] as const).map(t => {
@@ -141,17 +141,39 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                                     key={t}
                                     onClick={() => setType(t)}
                                     className={cn(
-                                        "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-colors",
+                                        "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200",
                                         selected
-                                            ? "border-primary bg-primary/10 text-primary"
+                                            ? "border-primary bg-primary/10 text-primary shadow-md"
                                             : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
                                     )}
                                 >
-                                    <Icon className="w-5 h-5" />
-                                    <span className="text-xs font-medium">{meta.label}</span>
+                                    <Icon className="w-6 h-6" />
+                                    <span className="text-sm font-medium">{meta.label}</span>
                                 </button>
                             );
                         })}
+                    </div>
+
+                    {/* Quick-start templates */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Quick start</label>
+                        <div className="flex flex-wrap gap-1.5">
+                            {[
+                                { label: 'Project Update', text: 'Create a project status update presentation with progress, milestones, and next steps' },
+                                { label: 'Sales Pitch', text: 'Create a sales pitch deck with problem, solution, market opportunity, and call to action' },
+                                { label: 'Team Intro', text: 'Create a team introduction presentation with member bios, roles, and org structure' },
+                                { label: 'Technical Review', text: 'Create a technical architecture review with system diagrams, trade-offs, and recommendations' },
+                            ].map(tpl => (
+                                <button
+                                    key={tpl.label}
+                                    onClick={() => { setPrompt(tpl.text); setType('slides'); }}
+                                    disabled={isGenerating}
+                                    className="px-3 py-1.5 text-xs rounded-full border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+                                >
+                                    {tpl.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Title */}
@@ -162,6 +184,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g., Q4 Sales Report"
                             disabled={isGenerating}
+                            className="bg-white/[0.06] border-white/[0.15]"
                         />
                     </div>
 
@@ -174,7 +197,8 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                             value={prompt}
                             onChange={e => setPrompt(e.target.value)}
                             placeholder="Describe the content you want to generate..."
-                            rows={4}
+                            rows={5}
+                            className="text-sm bg-white/[0.06] border-white/[0.15]"
                             disabled={isGenerating}
                         />
                     </div>
@@ -244,18 +268,18 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
 
     return (
         <ScrollArea className="h-full">
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-8">
                 {/* Header */}
                 <div className="flex items-start gap-3">
-                    <div className={cn("p-2.5 rounded-lg bg-muted/50 border border-border/50", meta.color)}>
-                        <Icon className="w-5 h-5" />
+                    <div className={cn("p-3 rounded-xl bg-muted/50 border border-border/50", meta.color)}>
+                        <Icon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-lg font-semibold text-foreground truncate">
+                        <h2 className="text-xl font-bold text-foreground truncate tracking-tight">
                             {artifact.title || 'Untitled'}
                         </h2>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground capitalize">{artifact.type}</span>
+                            <span className="text-sm text-muted-foreground capitalize">{artifact.type}</span>
                             {outlineStatus && (
                                 <Badge variant="outline" className={cn("text-[10px] uppercase font-bold", STATUS_STYLE[outlineStatus])}>
                                     {outlineStatus}
@@ -336,12 +360,10 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                 {artifact.type === 'slides' && artifact.content_tree && (
                     <div>
                         <Button
-                            variant="outline"
-                            size="sm"
                             onClick={() => setPreviewOpen(true)}
-                            className="w-full gap-2"
+                            className="w-full gap-2 h-10 text-sm"
                         >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye className="w-4 h-4" />
                             Preview Slides
                         </Button>
                         <SlidePreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
@@ -363,7 +385,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                 value={editInstruction}
                                 onChange={(e) => { setEditInstruction(e.target.value); clearEditState(); }}
                                 placeholder="Describe the change (e.g. 'Change slide 3 title to Q2 Results')"
-                                className="min-h-[60px] text-xs"
+                                className="min-h-[100px] text-sm"
                             />
                             <Button
                                 size="sm"
@@ -548,7 +570,7 @@ export function ForgeDashboard() {
                 <div className="p-3 border-b border-border/50 flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-2 flex-1">
                         <Hammer className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-semibold text-foreground tracking-tight">Forge</span>
+                        <span className="text-base font-bold text-foreground tracking-tight">Forge</span>
                     </div>
                     <Button
                         variant="ghost"
@@ -582,9 +604,9 @@ export function ForgeDashboard() {
                 </div>
 
                 {/* Search */}
-                <div className="px-3 py-2 border-b border-border/30">
+                <div className="px-3 py-2.5 border-b border-border/30">
                     <Input
-                        className="h-7 text-xs"
+                        className="h-8 text-sm"
                         placeholder="Search artifacts..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
@@ -595,16 +617,15 @@ export function ForgeDashboard() {
                 <ScrollArea className="flex-1">
                     <div className="p-2 space-y-1">
                         {filtered.length === 0 && (
-                            <div className="text-center text-muted-foreground text-xs py-12 space-y-2">
-                                <Hammer className="w-8 h-8 mx-auto opacity-30" />
-                                <p>No artifacts yet</p>
+                            <div className="text-center text-muted-foreground py-16 space-y-3">
+                                <Hammer className="w-10 h-10 mx-auto opacity-25" />
+                                <p className="text-sm">No artifacts yet</p>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="text-xs"
                                     onClick={() => setCreateOpen(true)}
                                 >
-                                    <Plus className="w-3 h-3 mr-1" />
+                                    <Plus className="w-3.5 h-3.5 mr-1.5" />
                                     Create your first
                                 </Button>
                             </div>
@@ -629,13 +650,13 @@ export function ForgeDashboard() {
                                     <Icon className={cn("w-4 h-4 mt-0.5 shrink-0", meta.color)} />
                                     <div className="flex-1 min-w-0">
                                         <p className={cn(
-                                            "text-[13px] font-medium truncate",
+                                            "text-sm font-medium truncate",
                                             isActive ? "text-primary" : "text-foreground"
                                         )}>
                                             {a.title || 'Untitled'}
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className="text-[10px] text-muted-foreground capitalize">{a.type}</span>
+                                            <span className="text-xs text-muted-foreground capitalize">{a.type}</span>
                                             {outlineStatus && (
                                                 <span className={cn(
                                                     "px-1 py-0 rounded text-[8px] uppercase font-bold tracking-tighter",
@@ -668,23 +689,21 @@ export function ForgeDashboard() {
                 {activeArtifact ? (
                     <ArtifactDetail artifact={activeArtifact} />
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4">
-                        <div className="p-6 bg-muted/30 rounded-full ring-1 ring-border/50">
-                            <Hammer className="w-10 h-10 opacity-40" />
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-6 px-8">
+                        <div className="p-8 bg-muted/20 rounded-2xl ring-1 ring-border/30">
+                            <Hammer className="w-14 h-14 opacity-30" />
                         </div>
-                        <div className="text-center space-y-1">
-                            <h3 className="text-sm font-semibold text-foreground/80">Forge Studio</h3>
-                            <p className="text-xs max-w-[280px]">
-                                Create slides, documents, and spreadsheets with AI. Select an artifact from the list or create a new one.
+                        <div className="text-center space-y-2">
+                            <h3 className="text-2xl font-bold text-foreground/90 tracking-tight">Forge Studio</h3>
+                            <p className="text-sm text-muted-foreground max-w-[360px] leading-relaxed">
+                                Transform your ideas into polished slides, documents, and spreadsheets with AI.
                             </p>
                         </div>
                         <Button
-                            variant="outline"
-                            size="sm"
                             onClick={() => setCreateOpen(true)}
-                            className="mt-2"
+                            className="mt-2 h-10 px-6 text-sm gap-2"
                         >
-                            <Plus className="w-3.5 h-3.5 mr-1.5" />
+                            <Plus className="w-4 h-4" />
                             Create Artifact
                         </Button>
                     </div>
