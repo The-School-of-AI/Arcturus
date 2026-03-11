@@ -14,11 +14,15 @@ interface SlideRendererProps {
   slideIndex: number;
   totalSlides: number;
   isThumb?: boolean;
+  /** Base URL for cached slide images */
+  imageBaseUrl?: string;
+  /** Set of slide IDs whose images are confirmed available */
+  availableImageIds?: ReadonlySet<string>;
 }
 
 const TITLE_BG_TYPES = new Set(['title', 'section_divider']);
 
-export function SlideRenderer({ slide, theme, slideIndex, totalSlides, isThumb = false }: SlideRendererProps) {
+export function SlideRenderer({ slide, theme, slideIndex, totalSlides, isThumb = false, imageBaseUrl, availableImageIds }: SlideRendererProps) {
   const Renderer = RENDERERS[slide.slide_type] ?? RENDERERS.content;
   const useTitleBg = TITLE_BG_TYPES.has(slide.slide_type);
 
@@ -36,6 +40,8 @@ export function SlideRenderer({ slide, theme, slideIndex, totalSlides, isThumb =
         slideIndex={slideIndex}
         totalSlides={totalSlides}
         isThumb={isThumb}
+        imageBaseUrl={imageBaseUrl}
+        availableImageIds={availableImageIds}
       />
     </SlideFrame>
   );

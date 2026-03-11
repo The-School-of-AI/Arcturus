@@ -1,4 +1,5 @@
 import asyncio
+import io
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -37,6 +38,8 @@ class ForgeOrchestrator:
     def __init__(self, storage: StudioStorage):
         self.storage = storage
         self.revision_manager = RevisionManager(storage)
+        # Monotonic counter per artifact to detect stale background image tasks
+        self._image_gen_version: dict[str, int] = {}
 
     async def generate_outline(
         self,
@@ -223,6 +226,11 @@ class ForgeOrchestrator:
         artifact.updated_at = datetime.now(timezone.utc)
         self.storage.save_artifact(artifact)
 
+        # Auto-generate images in the background for slides with image elements
+        if artifact.type == ArtifactType.slides:
+            version = self._image_gen_version[artifact_id] = self._image_gen_version.get(artifact_id, 0) + 1
+            asyncio.create_task(self._generate_and_cache_images(artifact_id, content_tree, version))
+
         return artifact.model_dump(mode="json")
 
     def reject_outline(
@@ -373,6 +381,42 @@ class ForgeOrchestrator:
             )
         return export_job.model_dump(mode="json")
 
+    async def _generate_and_cache_images(
+        self,
+        artifact_id: str,
+        content_tree_dict: dict,
+        version: int,
+    ) -> None:
+        """Background task: generate slide images via Gemini and cache to disk."""
+        try:
+            from core.schemas.studio_schema import SlidesContentTree
+            from core.studio.slides.images import generate_slide_images
+
+            content_tree = SlidesContentTree(**content_tree_dict)
+            images = await generate_slide_images(content_tree)
+
+            # Skip writes if a newer generation was started (edit during generation)
+            if self._image_gen_version.get(artifact_id, 0) != version:
+                logger.info("Skipping stale image generation (v%d) for %s", version, artifact_id)
+                return
+
+            for slide_id, buf in images.items():
+                buf.seek(0)
+                self.storage.save_slide_image(artifact_id, slide_id, buf.read())
+
+            logger.info("Cached %d slide images for artifact %s", len(images), artifact_id)
+        except Exception as e:
+            logger.warning("Background image generation failed for %s: %s", artifact_id, e)
+
+    def _load_cached_images(self, artifact_id: str) -> dict[str, io.BytesIO]:
+        """Load cached slide images from disk into BytesIO buffers."""
+        images: dict[str, io.BytesIO] = {}
+        for slide_id in self.storage.list_slide_images(artifact_id):
+            path = self.storage.load_slide_image_path(artifact_id, slide_id)
+            if path:
+                images[slide_id] = io.BytesIO(path.read_bytes())
+        return images
+
     async def _run_export(
         self,
         artifact_id: str,
@@ -401,16 +445,42 @@ class ForgeOrchestrator:
                 from core.studio.slides.layout import repair_layout
                 export_content_tree = repair_layout(export_content_tree)
 
-            # Generate images if requested
+            # Load images: use cache + generate any missing ones
             slide_images = None
             if generate_images:
-                try:
-                    from core.studio.slides.images import generate_slide_images
-                    slide_images = await generate_slide_images(export_content_tree)
-                except Exception as img_err:
-                    logger.warning(
-                        "Image generation failed, exporting without images: %s", img_err
-                    )
+                cached = self._load_cached_images(artifact_id)
+
+                # Determine which image slides still need generation
+                required_ids = {
+                    s.id for s in export_content_tree.slides
+                    if s.slide_type in ("image_text", "image_full")
+                    and any(el.type == "image" and el.content for el in s.elements)
+                }
+                missing_ids = required_ids - set(cached.keys())
+
+                if missing_ids:
+                    try:
+                        from core.studio.slides.images import generate_slide_images
+                        # Only generate for missing slides to avoid redundant API calls
+                        missing_tree = SlidesContentTree(
+                            deck_title=export_content_tree.deck_title,
+                            slides=[s for s in export_content_tree.slides if s.id in missing_ids],
+                        )
+                        new_images = await generate_slide_images(missing_tree)
+                        for sid, buf in new_images.items():
+                            buf.seek(0)
+                            self.storage.save_slide_image(artifact_id, sid, buf.read())
+                            buf.seek(0)
+                            cached[sid] = buf
+                    except Exception as img_err:
+                        logger.warning(
+                            "Image generation failed, exporting with %d cached images: %s",
+                            len(cached), img_err,
+                        )
+
+                if cached:
+                    slide_images = cached
+                    logger.info("Using %d images for export (%d from cache)", len(cached), len(cached) - len(missing_ids))
 
             output_path = self.storage.get_export_file_path(
                 artifact_id, export_job.id, export_job.format.value
@@ -777,6 +847,15 @@ class ForgeOrchestrator:
         artifact.revision_head_id = revision.id
         artifact.updated_at = datetime.now(timezone.utc)
         self.storage.save_artifact(artifact)
+
+        # Invalidate cached images and re-generate for slides edits
+        if artifact.type == ArtifactType.slides:
+            images_dir = self.storage.base_dir / artifact_id / "images"
+            if images_dir.exists():
+                import shutil
+                shutil.rmtree(images_dir)
+            version = self._image_gen_version[artifact_id] = self._image_gen_version.get(artifact_id, 0) + 1
+            asyncio.create_task(self._generate_and_cache_images(artifact_id, new_tree, version))
 
         return {
             **artifact.model_dump(mode="json"),

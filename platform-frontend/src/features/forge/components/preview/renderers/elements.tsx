@@ -1,5 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
+import {
+  ResponsiveContainer,
+  BarChart, Bar,
+  LineChart, Line,
+  AreaChart, Area,
+  PieChart, Pie, Cell,
+  ScatterChart, Scatter,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+} from 'recharts';
 import type { SlideTheme } from './theme-utils';
 import { isDarkBackground } from './theme-utils';
 
@@ -114,65 +123,214 @@ export function StatCalloutElement({ stats, theme, isThumb }: StatCalloutProps) 
   );
 }
 
-// ── Chart Placeholder ───────────────────────────────────────────────────────
+// ── Chart Preview (recharts) ────────────────────────────────────────────────
 
 interface ChartPlaceholderProps extends ElementProps {
   content: any;
 }
 
-const CHART_ICONS: Record<string, string> = {
-  bar: '\u2581\u2583\u2585\u2587',
-  column: '\u2581\u2583\u2585\u2587',
-  line: '\u279F',
-  area: '\u25E2',
-  pie: '\u25D4',
-  doughnut: '\u25D4',
-  scatter: '\u2022\u2022\u2022',
-  funnel: '\u25BD',
-};
+/** Generate a palette from theme colors + fallbacks for multi-series charts. */
+function chartPalette(theme: SlideTheme): string[] {
+  return [
+    theme.colors.primary,
+    theme.colors.accent,
+    theme.colors.secondary,
+    '#6366f1',
+    '#f59e0b',
+    '#10b981',
+    '#ef4444',
+    '#8b5cf6',
+  ];
+}
 
 export function ChartPlaceholder({ content, theme, isThumb }: ChartPlaceholderProps) {
-  if (!content || typeof content !== 'object') return null;
-  const chartType = content.chart_type || content.type || 'chart';
-  const title = content.title || '';
-  const categories = content.categories?.length || 0;
-  const series = content.series?.length || 0;
-  const icon = CHART_ICONS[chartType.toLowerCase()] || '\u2581\u2583\u2585\u2587';
+  if (!content || typeof content !== 'object') {
+    // String content (e.g. "Revenue growth chart") — show a labeled placeholder
+    const label = typeof content === 'string' ? content : 'Chart';
+    return (
+      <div
+        className={`flex items-center justify-center ${isThumb ? 'text-[4px]' : 'text-xs py-6'}`}
+        style={{ color: theme.colors.text_light }}
+      >
+        [{label}]
+      </div>
+    );
+  }
+
+  const chartType = (content.chart_type || content.type || 'bar').toLowerCase();
+  const title: string = content.title || '';
+  const categories: string[] = Array.isArray(content.categories) ? content.categories : [];
+  const series: { name: string; values: number[] }[] = Array.isArray(content.series) ? content.series : [];
+  const points: { x: number; y: number }[] = Array.isArray(content.points) ? content.points : [];
+
+  // Need at least some data to render a chart
+  const hasCartesianData = categories.length > 0 && series.length > 0;
+  const hasPieData = hasCartesianData;
+  const hasScatterData = points.length > 0 || (series.length > 0 && series[0]?.values?.length > 0);
+
+  const canRender =
+    (chartType === 'scatter' && hasScatterData) ||
+    (chartType === 'pie' || chartType === 'doughnut' ? hasPieData : hasCartesianData);
+
+  // Fall back to a simple label if data is insufficient
+  if (!canRender) {
+    return (
+      <div
+        className={`flex items-center justify-center ${isThumb ? 'text-[4px]' : 'text-xs py-6'}`}
+        style={{ color: theme.colors.text_light }}
+      >
+        [{chartType} chart]
+      </div>
+    );
+  }
+
+  const PALETTE = chartPalette(theme);
+  const textColor = theme.colors.text_light;
+  const gridColor = theme.colors.text_light + '20';
+
+  // Data transforms
+  const cartesianData = categories.map((cat, i) => {
+    const row: Record<string, string | number> = { name: cat };
+    series.forEach(s => { row[s.name] = s.values?.[i] ?? 0; });
+    return row;
+  });
+
+  const pieData = categories.map((cat, i) => ({
+    name: cat,
+    value: series[0]?.values?.[i] ?? 0,
+  }));
+
+  const scatterData = points.length > 0
+    ? points
+    : (series[0]?.values || []).map((v, i) => ({ x: i, y: v }));
+
+  const compact = !!isThumb;
+
+  function renderChart(): React.ReactElement {
+    switch (chartType) {
+      case 'pie':
+      case 'doughnut':
+        return (
+          <PieChart>
+            <Pie
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={chartType === 'doughnut' ? (compact ? '35%' : '45%') : 0}
+              outerRadius={compact ? '85%' : '75%'}
+              label={compact ? false : ({ name, percent }: any) =>
+                `${name} ${(percent * 100).toFixed(0)}%`
+              }
+              labelLine={!compact}
+              fontSize={compact ? 3 : 10}
+            >
+              {pieData.map((_, i) => (
+                <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+              ))}
+            </Pie>
+            {!compact && <Tooltip />}
+          </PieChart>
+        );
+
+      case 'scatter':
+        return (
+          <ScatterChart>
+            {!compact && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+            <XAxis dataKey="x" hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            <YAxis dataKey="y" hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            <Scatter data={scatterData} fill={PALETTE[0]} r={compact ? 2 : 4} />
+            {!compact && <Tooltip />}
+          </ScatterChart>
+        );
+
+      case 'line':
+        return (
+          <LineChart data={cartesianData}>
+            {!compact && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+            <XAxis dataKey="name" hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            <YAxis hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            {series.map((s, i) => (
+              <Line
+                key={s.name}
+                type="monotone"
+                dataKey={s.name}
+                stroke={PALETTE[i % PALETTE.length]}
+                strokeWidth={compact ? 1.5 : 2}
+                dot={!compact}
+              />
+            ))}
+            {!compact && <Tooltip />}
+          </LineChart>
+        );
+
+      case 'area':
+        return (
+          <AreaChart data={cartesianData}>
+            {!compact && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+            <XAxis dataKey="name" hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            <YAxis hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            {series.map((s, i) => (
+              <Area
+                key={s.name}
+                type="monotone"
+                dataKey={s.name}
+                fill={PALETTE[i % PALETTE.length] + '40'}
+                stroke={PALETTE[i % PALETTE.length]}
+                strokeWidth={compact ? 1 : 2}
+              />
+            ))}
+            {!compact && <Tooltip />}
+          </AreaChart>
+        );
+
+      case 'bar':
+      case 'column':
+      case 'funnel':
+      default:
+        return (
+          <BarChart data={cartesianData}>
+            {!compact && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+            <XAxis dataKey="name" hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            <YAxis hide={compact} tick={{ fill: textColor, fontSize: 10 }} />
+            {series.map((s, i) => (
+              <Bar
+                key={s.name}
+                dataKey={s.name}
+                fill={PALETTE[i % PALETTE.length]}
+                radius={[2, 2, 0, 0]}
+              />
+            ))}
+            {!compact && <Tooltip />}
+          </BarChart>
+        );
+    }
+  }
 
   if (isThumb) {
     return (
-      <div
-        className="flex items-center justify-center text-[6px] rounded"
-        style={{ backgroundColor: theme.colors.primary + '10', color: theme.colors.primary }}
-      >
-        {icon}
+      <div className="w-full h-full" style={{ minHeight: 16 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {renderChart()}
+        </ResponsiveContainer>
       </div>
     );
   }
 
   return (
-    <div
-      className="flex flex-col items-center justify-center py-8 rounded-lg border border-dashed"
-      style={{
-        borderColor: theme.colors.primary + '40',
-        backgroundColor: theme.colors.primary + '08',
-      }}
-    >
-      <div className="text-3xl mb-2" style={{ color: theme.colors.primary }}>{icon}</div>
-      <div className="text-sm font-medium" style={{ color: theme.colors.primary }}>
-        {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
-      </div>
+    <div className="w-full">
       {title && (
-        <div className="text-xs mt-1" style={{ color: theme.colors.text_light }}>{title}</div>
-      )}
-      {(categories > 0 || series > 0) && (
-        <div className="text-[10px] mt-1" style={{ color: theme.colors.text_light + 'aa' }}>
-          {[
-            categories > 0 && `${categories} categories`,
-            series > 0 && `${series} series`,
-          ].filter(Boolean).join(', ')}
+        <div
+          className="text-xs font-medium mb-2 text-center"
+          style={{ color: textColor }}
+        >
+          {title}
         </div>
       )}
+      <ResponsiveContainer width="100%" height={220}>
+        {renderChart()}
+      </ResponsiveContainer>
     </div>
   );
 }

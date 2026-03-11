@@ -9,6 +9,8 @@ interface SlideFilmstripProps {
   theme: SlideTheme;
   currentIndex: number;
   onSelect: (index: number) => void;
+  imageBaseUrl?: string;
+  availableImageIds?: ReadonlySet<string>;
 }
 
 /** Canonical render size for thumbnails (scaled down) */
@@ -18,7 +20,7 @@ const SCALE = 0.22;
 const DISPLAY_W = Math.round(THUMB_W * SCALE);  // ~211px
 const DISPLAY_H = Math.round(THUMB_H * SCALE);  // ~119px
 
-export function SlideFilmstrip({ slides, theme, currentIndex, onSelect }: SlideFilmstripProps) {
+export function SlideFilmstrip({ slides, theme, currentIndex, onSelect, imageBaseUrl, availableImageIds }: SlideFilmstripProps) {
   return (
     <ScrollArea className="h-full w-56 border-r border-border/30 bg-charcoal-950/50 shrink-0">
       <div className="p-3 space-y-2.5">
@@ -61,6 +63,8 @@ export function SlideFilmstrip({ slides, theme, currentIndex, onSelect }: SlideF
                   slideIndex={i}
                   totalSlides={slides.length}
                   isThumb
+                  imageBaseUrl={imageBaseUrl}
+                  availableImageIds={availableImageIds}
                 />
               </div>
             </div>

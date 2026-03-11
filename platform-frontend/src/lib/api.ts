@@ -199,6 +199,20 @@ export const api = {
         return `${API_BASE}/studio/${artifactId}/exports/${jobId}/download`;
     },
 
+    // Slide image preview
+    listSlideImages: async (artifactId: string): Promise<string[]> => {
+        const res = await axios.get(`${API_BASE}/studio/${artifactId}/images`);
+        return res.data.slide_ids;
+    },
+
+    getSlideImageUrl: (artifactId: string, slideId: string): string => {
+        return `${API_BASE}/studio/${artifactId}/images/${slideId}`;
+    },
+
+    generateSlideImages: async (artifactId: string): Promise<void> => {
+        await axios.post(`${API_BASE}/studio/${artifactId}/generate-images`);
+    },
+
     deleteArtifact: async (id: string): Promise<void> => {
         await axios.delete(`${API_BASE}/studio/${id}`);
     },

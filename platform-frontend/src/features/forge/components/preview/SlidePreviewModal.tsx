@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useAppStore } from '@/store';
+import { api, API_BASE } from '@/lib/api';
 import { SlideFilmstrip } from './SlideFilmstrip';
 import { SlideRenderer } from './SlideRenderer';
 import { SlideEditPanel } from './SlideEditPanel';
@@ -54,6 +55,51 @@ function SlidePreviewContent() {
     return DEFAULT_THEME;
   }, [studioThemes, selectedThemeId]);
 
+  // Image base URL for preview (will be undefined for non-slides)
+  const imageBaseUrl = activeArtifact?.id
+    ? `${API_BASE}/studio/${activeArtifact.id}/images`
+    : undefined;
+
+  // Poll for available slide images (background generation may still be running)
+  const [availableImageIds, setAvailableImageIds] = useState<ReadonlySet<string>>(new Set());
+  // Match server logic: only count slides that have an image element with string prompt content
+  const expectedImageSlides = useMemo(() => {
+    return slides.filter(s =>
+      (s.slide_type === 'image_text' || s.slide_type === 'image_full')
+      && s.elements.some(el => el.type === 'image' && typeof el.content === 'string' && el.content)
+    ).length;
+  }, [slides]);
+
+  // revision_head_id changes on every edit → restarts polling after backend cache invalidation
+  const revisionHeadId = activeArtifact?.revision_head_id;
+
+  useEffect(() => {
+    // Always clear stale IDs when deps change (handles edit-away-all-images case)
+    setAvailableImageIds(new Set());
+
+    if (!activeArtifact?.id || expectedImageSlides === 0) return;
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const ids = await api.listSlideImages(activeArtifact.id);
+        if (!cancelled) {
+          setAvailableImageIds(prev => {
+            if (ids.length === prev.size && ids.every(id => prev.has(id))) return prev;
+            return new Set(ids);
+          });
+        }
+        // Stop polling once all expected images are available
+        if (ids.length >= expectedImageSlides) return;
+      } catch { /* ignore errors during polling */ }
+      if (!cancelled) pollTimer = setTimeout(poll, 4000);
+    };
+
+    let pollTimer: ReturnType<typeof setTimeout>;
+    poll();
+    return () => { cancelled = true; clearTimeout(pollTimer); };
+  }, [activeArtifact?.id, expectedImageSlides, revisionHeadId]);
+
   // Keyboard navigation
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement)?.tagName;
@@ -102,6 +148,8 @@ function SlidePreviewContent() {
           theme={theme}
           currentIndex={clampedIndex}
           onSelect={setCurrentSlideIndex}
+          imageBaseUrl={imageBaseUrl}
+          availableImageIds={availableImageIds}
         />
 
         {/* Center: Main Preview */}
@@ -115,6 +163,8 @@ function SlidePreviewContent() {
               theme={theme}
               slideIndex={clampedIndex}
               totalSlides={slides.length}
+              imageBaseUrl={imageBaseUrl}
+              availableImageIds={availableImageIds}
             />
           </div>
         </div>

@@ -32,6 +32,10 @@ export interface RendererProps {
   slideIndex: number;
   totalSlides: number;
   isThumb?: boolean;
+  /** Base URL for cached slide images, e.g. "/api/studio/{id}/images" */
+  imageBaseUrl?: string;
+  /** Set of slide IDs whose images are confirmed available on the server */
+  availableImageIds?: ReadonlySet<string>;
 }
 
 /**
