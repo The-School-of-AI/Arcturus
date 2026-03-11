@@ -35,11 +35,13 @@ from core.studio.storage import StudioStorage
 class ForgeOrchestrator:
     """Outline-first generation pipeline for Forge artifacts."""
 
+    # Monotonic counter per artifact to detect stale background image tasks.
+    # Class-level so the version survives across per-request instances.
+    _image_gen_version: dict[str, int] = {}
+
     def __init__(self, storage: StudioStorage):
         self.storage = storage
         self.revision_manager = RevisionManager(storage)
-        # Monotonic counter per artifact to detect stale background image tasks
-        self._image_gen_version: dict[str, int] = {}
 
     async def generate_outline(
         self,
@@ -493,17 +495,17 @@ class ForgeOrchestrator:
                 content_tree=export_content_tree,
             )
 
+            validation["strict_layout"] = strict_layout
+
             if validation["valid"]:
                 export_job.status = ExportStatus.completed
                 export_job.output_uri = str(output_path)
                 export_job.file_size_bytes = output_path.stat().st_size
-                validation["strict_layout"] = strict_layout
                 export_job.validator_results = validation
                 export_job.completed_at = datetime.now(timezone.utc)
             else:
                 export_job.status = ExportStatus.failed
                 export_job.error = "; ".join(validation.get("errors", [])) or "Quality validation failed"
-                validation["strict_layout"] = strict_layout
                 export_job.validator_results = validation
                 export_job.completed_at = datetime.now(timezone.utc)
 

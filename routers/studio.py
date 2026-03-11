@@ -225,8 +225,9 @@ async def trigger_image_generation(artifact_id: str):
         raise HTTPException(status_code=400, detail="No content tree (approve outline first)")
 
     orchestrator = _get_orchestrator()
+    version = ForgeOrchestrator._image_gen_version[artifact_id] = ForgeOrchestrator._image_gen_version.get(artifact_id, 0) + 1
     asyncio.create_task(
-        orchestrator._generate_and_cache_images(artifact_id, artifact.content_tree)
+        orchestrator._generate_and_cache_images(artifact_id, artifact.content_tree, version)
     )
     return {"status": "generating"}
 

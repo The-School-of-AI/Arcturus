@@ -43,19 +43,20 @@ export function SlideBottomBar({
     fetchThemes();
   }, [fetchThemes]);
 
-  // Auto-download handler (mirrors ExportPanel.tsx:494-505)
+  // Auto-download: trigger save dialog when export completes.
+  // Uses getState() to avoid double-fire when ExportPanel also handles this.
   useEffect(() => {
     if (!autoDownloadJobId) return;
     if (autoDownloadJobId.artifactId !== artifactId) return;
     const job = exportJobs.find((j: { id: string; status: string }) => j.id === autoDownloadJobId.jobId && j.status === 'completed');
     if (job) {
+      if (!useAppStore.getState().autoDownloadJobId) return;
       clearAutoDownload();
       handleDownload(job);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoDownloadJobId, exportJobs, artifactId]);
 
-  // Download handler (mirrors ExportPanel.tsx:460-492)
   const handleDownload = async (job: { id: string; format?: string }) => {
     const url = api.getExportDownloadUrl(artifactId, job.id);
     const defaultName = `${artifactTitle || 'slides'}.pptx`;
