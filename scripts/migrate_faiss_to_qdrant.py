@@ -40,6 +40,7 @@ except ImportError:
 
 from memory.user_id import get_user_id
 from memory.vector_store import get_vector_store
+from memory.space_constants import SPACE_ID_GLOBAL
 from core.utils import log_step, log_error
 
 
@@ -148,6 +149,7 @@ def migrate():
                 source=source,
                 metadata={"migrated_from": "faiss", "original_id": m.get("id", "")},
                 deduplication_threshold=0,
+                space_id=SPACE_ID_GLOBAL,
             )
             migrated += 1
             if (i + 1) % 10 == 0:

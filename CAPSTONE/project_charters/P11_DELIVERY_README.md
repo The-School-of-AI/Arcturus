@@ -6,6 +6,10 @@
 
 **Phase 2/3: Neo4j Knowledge Graph** — Entity extraction, graph storage, dual-path retrieval.
 
+**Phase 2.5: Unified Extraction & Preferences** — Fact/Evidence model, field_id registry, session-level extraction, adapter for preferences.
+
+**Phase 3: Spaces (3A, 3B, 3C)** — Space nodes, memory/fact/session scoping, retrieval filtering, APIs.
+
 ### Completed
 
 **Phase 1**
@@ -29,10 +33,45 @@
 - **Enable via env**: `NEO4J_ENABLED=true`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`
 - **Moved RAG chunks to qdrant** Backfill existing chunks to Qdrant
 
-### Deferred (Phase 2+)
-- **Session-level extraction** (design doc §9.2): Single pass for memories + preferences + entities from session summary
-- **Unifying preferences** (design doc §9.3): Move preferences/evidence into Qdrant + Neo4j
-- Spaces and collections (`memory/spaces.py`)
+**Phase 2.5 (Unified Extraction & Preferences)**
+- **Fact and Evidence nodes** (`memory/knowledge_graph.py`): Neo4j schema for Fact, Evidence; `User─HAS_FACT→Fact`, `Fact─SUPPORTED_BY→Evidence`, `Evidence─FROM_SESSION`, `Evidence─FROM_MEMORY`
+- **Fact field registry** (`memory/fact_field_registry.py`): Canonical field definitions with `field_id`; `get_field_scope`, `get_scope_for_namespace_key` for global vs space-scoped facts
+- **Fact normalizer** (`memory/fact_normalizer.py`): Resolves `field_id` via registry; unknown → extras
+- **Unified extractor** (`memory/unified_extractor.py`): `extract_from_session`, `extract_from_memory_text`; single output schema (memories, entities, facts, evidence_events)
+- **Session-level extraction**: Single extraction per session; `skip_kg_ingest` on add when Mnemo enabled; Qdrant `entity_ids` from session extraction
+- **Neo4j preferences adapter** (`memory/neo4j_preferences_adapter.py`): `build_preferences_from_neo4j` reads Facts, returns hub-shaped response
+- **JSON→Neo4j migration** (`scripts/migrate_hubs_to_neo4j.py`): One-time migration of preferences/operating_context/soft_identity to Facts
+- **Enable via env**: `MNEMO_ENABLED=true` gates unified path; when true, `GET /remme/preferences` uses adapter
+
+**Phase 3A (Core Spaces)**
+- **Space node** (`memory/knowledge_graph.py`): Space schema; `create_space`, `get_spaces_for_user`; `(User)-[:OWNS_SPACE]->(Space)`
+- **Memory scoping**: `(Memory)-[:IN_SPACE]->(Space)`; `create_memory(space_id)`; global = no IN_SPACE
+- **Qdrant payload**: `space_id` (default `__global__`); indexed for filtering
+- **Retrieval filtering** (`memory/memory_retriever.py`): `retrieve(space_id, space_ids)` filters Qdrant and Neo4j; no filter = all
+- **APIs**: `POST /remme/spaces` (create), `GET /remme/spaces` (list); `AddMemoryRequest.space_id`
+- **Migration scripts**: `space_id=__global__` for migrated points
+
+**Phase 3B (Fact Scope Rules)**
+- **Fact unique constraint**: `(user_id, namespace, key, space_id)`; `space_id` null = global
+- **Fact scoping**: `(Fact)-[:IN_SPACE]->(Space)` for space-scoped facts per registry
+- **Ingestion**: Facts get `space_id` when `get_scope_for_namespace_key(ns, k) == "space"`
+- **Preferences filter**: `build_preferences_from_neo4j(space_id, space_ids)`; `GET /remme/preferences?space_id=&space_ids=`
+
+**Phase 3C (Session Scoping)**
+- **Session–Space link**: `(Session)-[:IN_SPACE]->(Space)`; `get_or_create_session(space_id)`; `get_space_for_session(session_id)`
+- **Run scoping**: `RunRequest.space_id`; `process_run` passes `space_id` to retrieval and ingestion
+- **Memories inherit space** from session when provided
+
+### Next: Space Introduction in UI
+
+**First priority after Phase 3** — Add Space UI so users can create, select, and manage spaces:
+- Create space (call `POST /remme/spaces`)
+- Space selector when starting a run or adding a memory
+- Pass `space_id` in `POST /runs` and `POST /remme/add` when a space is selected
+- List and manage spaces (call `GET /remme/spaces`)
+
+### Deferred
+- Space introduction in UI (first priority; see **Next** above)
 - Cross-device sync (`memory/sync.py`), CRDT
 - Lifecycle manager (`memory/lifecycle.py`), importance scoring, archival
 - Frontend: knowledge graph explorer, spaces manager
@@ -47,17 +86,29 @@ memory/vector_store.py           — get_vector_store() factory, VectorStoreProt
 memory/backends/qdrant_store.py  — QdrantVectorStore; add() triggers _ingest_to_knowledge_graph
 memory/backends/faiss_store.py   — FaissVectorStore (wraps RemmeStore)
 memory/qdrant_config.py          — get_collection_config(), get_qdrant_url(), get_qdrant_api_key()
-config/qdrant_config.yaml        — Collection specs; session_id, entity_labels indexed
+config/qdrant_config.yaml        — Collection specs; session_id, entity_labels, space_id indexed
 scripts/migrate_faiss_to_qdrant.py   — FAISS → Qdrant memories (used by migrate_all_memories.py)
 scripts/test_qdrant_setup.py
 
 # Phase 2/3 (Neo4j Knowledge Graph)
-memory/knowledge_graph.py        — Neo4j client, schema, resolve_entity_candidates, expand_from_entities
+memory/knowledge_graph.py        — Neo4j client, schema (User, Memory, Session, Entity, Fact, Evidence, Space)
 memory/entity_extractor.py       — LLM extraction; extract_from_query for query NER
-memory/memory_retriever.py       — Dual-path retrieval (semantic + entity recall), graph expansion
+memory/memory_retriever.py       — Dual-path retrieval (semantic + entity recall), graph expansion, space filter
 core/skills/library/entity_extraction/ — Entity extraction skill (SKILL.md, registry)
 scripts/migrate_memories_to_neo4j.py  — Backfill Qdrant → Neo4j (used by migrate_all_memories.py)
 scripts/migrate_all_memories.py       — Run all migrations in order (FAISS→Qdrant memories, RAG→Qdrant, Qdrant→Neo4j)
+
+# Phase 2.5 (Unified Extraction, Fact/Evidence, Preferences)
+memory/fact_field_registry.py    — field_id → canonical; get_field_scope, get_scope_for_namespace_key
+memory/fact_normalizer.py        — normalize_facts(facts with field_id)
+memory/unified_extraction_schema.py — UnifiedExtractionResult, FactItem (field_id)
+memory/unified_extractor.py      — extract_from_session, extract_from_memory_text
+memory/neo4j_preferences_adapter.py — build_preferences_from_neo4j (reads Facts, returns hub shape)
+core/skills/library/unified_extraction/ — Unified extraction skill (SKILL.md)
+scripts/migrate_hubs_to_neo4j.py — One-time JSON hubs → Neo4j Facts
+
+# Phase 3 (Spaces)
+memory/space_constants.py        — SPACE_ID_GLOBAL = "__global__"
 ```
 
 ### Data Flow
@@ -67,12 +118,13 @@ RemMe / Oracle / Planner
     → QdrantVectorStore (url/api_key from qdrant_config or QDRANT_* env)
       → QdrantClient → Qdrant (local Docker or Cloud)
       → On add: _ingest_to_knowledge_graph → EntityExtractor → KnowledgeGraph → Neo4j
+      → Session add: skip_kg_ingest; ingest_from_unified_extraction uses session extraction
     → FaissVectorStore (default, backward compatible)
 
 Memory retrieval (runs.py → memory_retriever.retrieve)
-  → Path 1: Semantic recall (Qdrant vector search, k=10)
+  → Path 1: Semantic recall (Qdrant vector search, k=10; optional space_id/space_ids filter)
   → Path 2: Entity recall (query NER → Neo4j resolve → memory_ids → Qdrant fetch) — runs independently
-  → Graph expansion from semantic entity_ids
+  → Graph expansion from semantic entity_ids (space-scoped when filter provided)
   → Merge → fused context for agent
 ```
 
@@ -83,16 +135,23 @@ Memory retrieval (runs.py → memory_retriever.retrieve)
 ## 3. API And UI Changes
 
 ### Backend
-- **No new REST endpoints**; vector store and knowledge graph are internal to RemMe memory flow
+- **New REST endpoints (Phase 3)**:
+  - `POST /api/remme/spaces` — Create space (`CreateSpaceRequest`: name, description)
+  - `GET /api/remme/spaces` — List user spaces
+  - `POST /api/remme/add` — Add memory (optional `space_id` in body)
+  - `GET /api/remme/preferences` — Get preferences (optional `space_id`, `space_ids` query params)
+  - `POST /api/runs` — Start run (optional `space_id` in body)
 - **Env vars**:
   - Phase 1: `VECTOR_STORE_PROVIDER` (qdrant|faiss), `QDRANT_URL`, `QDRANT_API_KEY`
   - Phase 2/3: `NEO4J_ENABLED` (true|false), `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`
+  - Phase 2.5/3: `MNEMO_ENABLED` (true|false) — gates unified extractor, Neo4j Fact/Evidence, adapter
 - **Programmatic**:
   - `from memory.vector_store import get_vector_store; store = get_vector_store(provider="qdrant")`
   - `from memory.knowledge_graph import get_knowledge_graph; kg = get_knowledge_graph()` (when `NEO4J_ENABLED=true`)
 
 ### Frontend
-- No new UI; memory retrieval and knowledge graph remain internal to agent flow
+- No new UI yet; memory retrieval and knowledge graph remain internal to agent flow
+- **Next: Space introduction in UI** — create/select space, pass `space_id` when starting runs or adding memories
 
 ## 4. Mandatory Test Gate Definition
 - Acceptance file: `tests/acceptance/p11_mnemo/test_memory_influences_planner_output.py`
@@ -128,6 +187,14 @@ uv run python scripts/test_qdrant_setup.py
 ✅ All tests completed!
 ```
 
+### Space Scenarios (Phase 3)
+```bash
+uv run pytest tests/unit/memory/test_space_scenarios.py -v -m "not slow"
+```
+```
+16 passed — space constants, registry scope, RunRequest, memory_retriever filter, adapter params
+```
+
 ## 6. Existing Baseline Regression Status
 - **Command**: `scripts/test_all.sh quick`
 - **Expected**: Backend and frontend tests pass; no regressions from P11 changes
@@ -135,14 +202,12 @@ uv run python scripts/test_qdrant_setup.py
 
 ## 7. Security And Safety Impact
 - **Qdrant credentials**: `QDRANT_URL` and `QDRANT_API_KEY` stored in `.env` (gitignored); never committed
-- **No new public endpoints**: Vector store access is internal; no new attack surface
+- **Phase 3 APIs**: `POST /api/remme/spaces`, `GET /api/remme/spaces`, `GET /api/remme/preferences` (with optional space filter); require same auth as existing RemMe endpoints
 - **Local Docker**: No auth by default; suitable for dev only
 - **Qdrant Cloud**: Uses API key authentication; ensure keys are scoped and rotated as needed
 
 ## 8. Known Gaps
-- **Session-level extraction** (design doc §9.2): Entities currently extracted from memory text only; session summary could produce memories + preferences + entities in one pass
-- **Unifying preferences** (design doc §9.3): Preferences/evidence in JSON vs Qdrant/Neo4j — potential drift
-- **Spaces & collections**: No space management or shared spaces yet
+- **Space introduction in UI**: Backend ready; users cannot yet create/select spaces in the UI (first priority)
 - **Graph expansion depth & payload:** `expand_from_entities` currently does one-hop expansion; `depth` is reserved for future multi-hop traversal. Entity-friendly payloads (composite keys or richer labels in Qdrant) remain optional and are not yet implemented beyond `entity_ids` + optional `entity_labels`.
 - **Sync**: No cross-device or CRDT sync
 - **Lifecycle**: No importance scoring, archival, or contradiction resolution

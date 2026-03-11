@@ -2,6 +2,9 @@
 REMME Staging Store - Temporary storage for extracted preferences before normalization.
 
 The staging queue holds raw extracted preferences until the normalizer processes them.
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Unified extractor produces canonical facts
+directly; ingestion writes to Neo4j Fact/Evidence. Staging is not used on the Mnemo path.
 """
 
 import json

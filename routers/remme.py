@@ -3,9 +3,10 @@ import asyncio
 import json
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 import requests
+import pdb
 
 from shared.state import (
     get_remme_store,
@@ -27,6 +28,26 @@ remme_extractor = get_remme_extractor()
 class AddMemoryRequest(BaseModel):
     text: str
     category: str = "general"
+    space_id: str | None = None
+
+
+class CreateSpaceRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class UpdateFactRequest(BaseModel):
+    """Request body for UI-driven fact edit (step 7). All fields except namespace, key, value_type are optional."""
+    namespace: str
+    key: str
+    value_type: str = "text"  # text | number | bool | json
+    value: str | float | bool | list | dict | None = None
+    value_text: str | None = None
+    value_number: float | None = None
+    value_bool: bool | None = None
+    value_json: list | dict | None = None
+    entity_ref: str | None = None
+    space_id: str | None = None
 
 
 # === Background Tasks ===
@@ -87,7 +108,6 @@ async def background_smart_scan():
                     remme_store.mark_run_scanned(run_id)
                     continue
 
-                pdb.set_trace()
                 hist = [{"role": "user", "content": query}]
                 if output:
                     hist.append({"role": "assistant", "content": output})
@@ -105,30 +125,41 @@ async def background_smart_scan():
                 except Exception:
                     pass
                 
-                # Extract memories AND preferences using new format
-                result = await asyncio.to_thread(extractor.extract, query, hist, existing)
-                
-                # Handle both new tuple format and legacy list format
-                if isinstance(result, tuple):
-                    commands, preferences = result
+                # Extract memories (and preferences when legacy path)
+                from memory.mnemo_config import is_mnemo_enabled
+                extraction = None
+                if is_mnemo_enabled():
+                    from shared.state import get_unified_extractor
+                    unified = get_unified_extractor()
+                    extraction = await asyncio.to_thread(
+                        unified.extract_from_session, query, hist, existing
+                    )
+                    commands = [{"action": m.action, "text": m.text, "id": m.id} for m in extraction.memories]
+                    preferences = None
                 else:
-                    commands = result
-                    preferences = {}
+                    result = await asyncio.to_thread(extractor.extract, query, hist, existing)
+                    if isinstance(result, tuple):
+                        commands, preferences = result
+                    else:
+                        commands = result
+                        preferences = {}
                 
-                # Apply memory commands to store
+                session_memory_ids = []
                 if commands:
                     for cmd in commands:
                         action = cmd.get("action")
                         text = cmd.get("text")
                         tid = cmd.get("id")
-                        
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                remme_store.add(
+                                added = remme_store.add(
                                     text, emb, category="derived", source=f"run_{run_id}",
                                     metadata={"session_id": run_id},
+                                    skip_kg_ingest=is_mnemo_enabled(),
                                 )
+                                if added and isinstance(added, dict) and added.get("id"):
+                                    session_memory_ids.append(added["id"])
                                 processed_count += 1
                             elif action == "update" and tid and text:
                                 emb = get_embedding(text, task_type="search_document")
@@ -137,8 +168,29 @@ async def background_smart_scan():
                         except Exception as e:
                             print(f"❌ RemMe Action Failed: {e}")
                 
-                # Write preferences to staging queue (will be normalized later)
-                if preferences:
+                if is_mnemo_enabled() and extraction and session_memory_ids:
+                    try:
+                        from memory.knowledge_graph import get_knowledge_graph
+                        from memory.user_id import get_user_id
+                        kg = get_knowledge_graph()
+                        if kg and kg.enabled:
+                            user_id = get_user_id()
+                            kg_result = kg.ingest_from_unified_extraction(
+                                user_id, run_id, session_memory_ids, extraction,
+                                category="derived", source="session",
+                            )
+                            entity_ids = kg_result.get("entity_ids", [])
+                            entity_labels = kg_result.get("entity_labels", [])
+                            if entity_ids or entity_labels:
+                                meta = {"entity_ids": entity_ids}
+                                if entity_labels:
+                                    meta["entity_labels"] = entity_labels
+                                for mid in session_memory_ids:
+                                    remme_store.update(mid, metadata=meta)
+                    except Exception as e:
+                        print(f"⚠️ RemMe Neo4j session ingestion failed: {e}")
+                
+                if not is_mnemo_enabled() and preferences:
                     try:
                         from remme.staging import get_staging_store
                         staging = get_staging_store()
@@ -244,27 +296,32 @@ async def cleanup_dangling_memories():
 
 @router.post("/add")
 async def add_memory(request: AddMemoryRequest):
-    """Manually add a memory and auto-extract to UserModel hubs."""
+    """Manually add a memory. Optional space_id for Phase 3 Spaces. When MNEMO_ENABLED=false, auto-extract to UserModel hubs; when true, ingestion uses unified extractor."""
     try:
         emb = get_embedding(request.text, task_type="search_query")
-        memory = remme_store.add(request.text, emb, category=request.category, source="manual")
+        add_kwargs: dict = {"category": request.category, "source": "manual"}
+        if request.space_id:
+            add_kwargs["space_id"] = request.space_id
+        memory = remme_store.add(request.text, emb, **add_kwargs)
         
-        # Auto-extract preferences from this single memory
-        try:
-            from remme.bootstrap import extract_from_memories, apply_extraction_to_hubs
-            
-            print(f"🔄 Auto-extracting preferences from: '{request.text[:50]}...'")
-            extraction = await extract_from_memories([{"text": request.text, "category": request.category}])
-            
-            if extraction:
-                changes = apply_extraction_to_hubs(extraction)
-                print(f"✅ Auto-extracted {len(changes)} preferences from new memory")
-                memory["extracted_preferences"] = changes
-            else:
+        # pdb.set_trace()
+        from memory.mnemo_config import is_mnemo_enabled
+        if not is_mnemo_enabled():
+            try:
+                from remme.bootstrap import extract_from_memories, apply_extraction_to_hubs
+                print(f"🔄 Auto-extracting preferences from: '{request.text[:50]}...'")
+                extraction = await extract_from_memories([{"text": request.text, "category": request.category}])
+                if extraction:
+                    changes = apply_extraction_to_hubs(extraction)
+                    print(f"✅ Auto-extracted {len(changes)} preferences from new memory")
+                    memory["extracted_preferences"] = changes
+                else:
+                    memory["extracted_preferences"] = []
+            except Exception as e:
+                print(f"⚠️ Auto-extraction failed (memory still saved): {e}")
                 memory["extracted_preferences"] = []
-        except Exception as e:
-            print(f"⚠️ Auto-extraction failed (memory still saved): {e}")
-            memory["extracted_preferences"] = []
+        else:
+            memory["extracted_preferences"] = []  # step 3 will ingest via unified extractor in qdrant_store
         
         return {"status": "success", "memory": memory}
     except Exception as e:
@@ -277,6 +334,42 @@ async def delete_memory(memory_id: str):
     try:
         remme_store.delete(memory_id)
         return {"status": "success", "id": memory_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/spaces")
+async def create_space(request: CreateSpaceRequest):
+    """Create a new space for the user. Returns {space_id, name, description}. Phase 3 Spaces."""
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        from memory.user_id import get_user_id
+        kg = get_knowledge_graph()
+        if not kg or not kg.enabled:
+            raise HTTPException(status_code=503, detail="Neo4j not enabled")
+        user_id = get_user_id()
+        space_id = kg.create_space(user_id, name=request.name, description=request.description)
+        if not space_id:
+            raise HTTPException(status_code=500, detail="Failed to create space")
+        return {"status": "success", "space_id": space_id, "name": request.name or "", "description": request.description or ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/spaces")
+async def list_spaces():
+    """List spaces owned by the user. Phase 3 Spaces."""
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        from memory.user_id import get_user_id
+        kg = get_knowledge_graph()
+        if not kg or not kg.enabled:
+            return {"status": "success", "spaces": []}
+        user_id = get_user_id()
+        spaces = kg.get_spaces_for_user(user_id)
+        return {"status": "success", "spaces": spaces}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -319,45 +412,85 @@ async def get_remme_profile():
         
         # 3. Load Preferences for styling and content
         try:
-            from remme.hubs.preferences_hub import get_preferences_hub
-            from remme.hubs.operating_context_hub import get_operating_context_hub
-            from remme.hubs.soft_identity_hub import get_soft_identity_hub
-            
-            prefs_hub = get_preferences_hub()
-            context_hub = get_operating_context_hub()
-            soft_hub = get_soft_identity_hub()
-            
-            # Gather relevant bits for the prompt
-            context_data = {
-                "tech_stack": {
-                    "os": context_hub.get_os(),
-                    "shell": context_hub.get_shell(),
-                    "languages": context_hub.get_primary_languages(),
-                    "location": context_hub.data.environment.location_region.value
-                },
-                "output_contract": {
-                    "verbosity": prefs_hub.get_verbosity(),
-                    "tones": prefs_hub.get_tone_constraints(),
-                    "avoid": prefs_hub.get_avoid_patterns()
-                },
-                "traits": soft_hub.data.meta.get("traits", {}),
-                "interests": {
-                    "professional": soft_hub.data.interests_and_hobbies.professional_interests,
-                    "hobbies": soft_hub.data.interests_and_hobbies.personal_hobbies
-                },
-                "meta": {
-                    "total_evidence": (
-                        prefs_hub.data.meta.evidence_count + 
-                        context_hub.data.meta.evidence_count + 
-                        soft_hub.data.meta.evidence_count
-                    ),
-                    "overall_confidence": max(
-                        prefs_hub.data.meta.confidence,
-                        context_hub.data.meta.confidence,
-                        soft_hub.data.meta.confidence
-                    )
+            from memory.mnemo_config import is_mnemo_enabled
+            if is_mnemo_enabled():
+                from memory.neo4j_preferences_adapter import build_preferences_from_neo4j
+                from memory.user_id import get_user_id
+                prefs_data = build_preferences_from_neo4j(get_user_id())
+                if prefs_data:
+                    prefs = prefs_data.get("preferences", {})
+                    oc = prefs_data.get("operating_context", {})
+                    soft = prefs_data.get("soft_identity", {})
+                    meta = prefs_data.get("meta", {})
+                    oc_out = prefs.get("output_contract", {})
+                    interests = soft.get("interests_and_hobbies", {})
+                    context_data = {
+                        "tech_stack": {
+                            "os": oc.get("os", "unknown"),
+                            "shell": oc.get("shell", "unknown"),
+                            "languages": oc.get("primary_languages", []),
+                            "location": oc.get("location")
+                        },
+                        "output_contract": {
+                            "verbosity": oc_out.get("verbosity", "detailed"),
+                            "tones": oc_out.get("tone_constraints", []),
+                            "avoid": prefs.get("anti_preferences", {})
+                        },
+                        "traits": soft.get("extras", {}),
+                        "interests": {
+                            "professional": interests.get("professional_interests", []),
+                            "hobbies": interests.get("personal_hobbies", [])
+                        },
+                        "meta": {
+                            "total_evidence": meta.get("total_evidence", 0),
+                            "overall_confidence": meta.get("overall_confidence", 0.5)
+                        }
+                    }
+                else:
+                    context_data = {
+                        "meta": {"overall_confidence": 0.5, "total_evidence": 0},
+                        "output_contract": {"verbosity": "detailed", "tones": []},
+                        "tech_stack": {"os": "unknown", "shell": "unknown", "languages": [], "location": None},
+                        "traits": {},
+                        "interests": {"professional": [], "hobbies": []}
+                    }
+            else:
+                from remme.hubs.preferences_hub import get_preferences_hub
+                from remme.hubs.operating_context_hub import get_operating_context_hub
+                from remme.hubs.soft_identity_hub import get_soft_identity_hub
+                prefs_hub = get_preferences_hub()
+                context_hub = get_operating_context_hub()
+                soft_hub = get_soft_identity_hub()
+                context_data = {
+                    "tech_stack": {
+                        "os": context_hub.get_os(),
+                        "shell": context_hub.get_shell(),
+                        "languages": context_hub.get_primary_languages(),
+                        "location": context_hub.data.environment.location_region.value
+                    },
+                    "output_contract": {
+                        "verbosity": prefs_hub.get_verbosity(),
+                        "tones": prefs_hub.get_tone_constraints(),
+                        "avoid": prefs_hub.get_avoid_patterns()
+                    },
+                    "traits": getattr(soft_hub.data.meta, "traits", {}) if hasattr(soft_hub.data, "meta") else {},
+                    "interests": {
+                        "professional": soft_hub.data.interests_and_hobbies.professional_interests,
+                        "hobbies": soft_hub.data.interests_and_hobbies.personal_hobbies
+                    },
+                    "meta": {
+                        "total_evidence": (
+                            prefs_hub.data.meta.evidence_count +
+                            context_hub.data.meta.evidence_count +
+                            soft_hub.data.meta.evidence_count
+                        ),
+                        "overall_confidence": max(
+                            prefs_hub.data.meta.confidence,
+                            context_hub.data.meta.confidence,
+                            soft_hub.data.meta.confidence
+                        )
+                    }
                 }
-            }
             
             # Format as readable block
             pref_block = f"""
@@ -456,15 +589,71 @@ A high-level overview of who the user appears to be, their primary drivers, and 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/preferences")
-async def get_user_preferences():
-    """Get all UserModel preferences for frontend display."""
+@router.put("/preferences/facts")
+async def update_fact(request: UpdateFactRequest):
+    """Update or create a fact from UI (step 7). Requires MNEMO_ENABLED. Backend-ready; no UI changes yet."""
     try:
+        from memory.mnemo_config import is_mnemo_enabled
+        if not is_mnemo_enabled():
+            raise HTTPException(
+                status_code=501,
+                detail="UI fact edits require MNEMO_ENABLED=true. Use legacy JSON hubs when disabled.",
+            )
+        from memory.user_id import get_user_id
+        from memory.knowledge_graph import get_knowledge_graph
+        kg = get_knowledge_graph()
+        if not kg or not getattr(kg, "enabled", False):
+            raise HTTPException(status_code=503, detail="Neo4j knowledge graph not available.")
+        user_id = get_user_id()
+        fid = kg.upsert_fact_from_ui(
+            user_id=user_id,
+            namespace=request.namespace,
+            key=request.key,
+            value_type=request.value_type,
+            value=request.value,
+            value_text=request.value_text,
+            value_number=request.value_number,
+            value_bool=request.value_bool,
+            value_json=request.value_json,
+            entity_ref=request.entity_ref,
+            space_id=request.space_id,
+        )
+        if not fid:
+            raise HTTPException(status_code=400, detail="Failed to upsert fact.")
+        return {"status": "success", "fact_id": fid}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/preferences")
+async def get_user_preferences(
+    space_id: str | None = Query(None, description="Filter preferences to global + this space"),
+    space_ids: str | None = Query(None, description="Comma-separated space IDs to include (alternative to space_id)"),
+):
+    """Get all UserModel preferences for frontend display. When MNEMO_ENABLED, reads from Neo4j via adapter; else from JSON hubs. Phase 3B: optional space_id/space_ids filter."""
+    try:
+        from memory.mnemo_config import is_mnemo_enabled
+        if is_mnemo_enabled():
+            from memory.neo4j_preferences_adapter import build_preferences_from_neo4j
+            from memory.user_id import get_user_id
+            space_ids_list = [s.strip() for s in (space_ids or "").split(",") if s.strip()] or None
+            result = build_preferences_from_neo4j(
+                get_user_id(),
+                space_id=space_id,
+                space_ids=space_ids_list,
+            )
+            if result:
+                return result
+
         from remme.hubs.preferences_hub import get_preferences_hub
         from remme.hubs.operating_context_hub import get_operating_context_hub
         from remme.hubs.soft_identity_hub import get_soft_identity_hub
         from remme.engines.evidence_log import get_evidence_log
-        
+
         prefs_hub = get_preferences_hub()
         context_hub = get_operating_context_hub()
         soft_hub = get_soft_identity_hub()

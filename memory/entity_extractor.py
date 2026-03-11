@@ -4,6 +4,10 @@ Entity Extractor — Extracts entities and relationships from memory text for th
 Uses LLM (Ollama) to produce structured entities, entity-entity relationships,
 and user-centric facts (LIVES_IN, WORKS_AT, KNOWS, PREFERS).
 Model and prompt follow the same config/skill pattern as remme/extractor.py.
+
+NOTE when MNEMO_ENABLED=true (permanently): extract() is unused for memory ingestion
+(qdrant_store uses unified extractor). extract_from_query() remains in use for NER
+in memory_retriever entity-first retrieval.
 """
 
 from __future__ import annotations

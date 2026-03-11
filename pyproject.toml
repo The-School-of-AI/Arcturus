@@ -92,11 +92,13 @@ packages = [
     "canvas",
     "gateway_api",
     "storage",
+    "session",
 ]
 
 
 [dependency-groups]
 dev = [
+    "pytest-asyncio>=1.3.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "types-PyYAML>=6.0",

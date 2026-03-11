@@ -21,6 +21,7 @@ try:
         Filter,
         FieldCondition,
         MatchValue,
+        MatchAny,
     )
 except ImportError:
     raise ImportError(
@@ -31,6 +32,7 @@ from core.utils import log_step, log_error
 
 from memory.backends.base import VectorStoreProtocol
 from memory.qdrant_config import get_collection_config, get_default_collection, get_qdrant_url, get_qdrant_api_key
+from memory.space_constants import SPACE_ID_GLOBAL
 from memory.user_id import get_user_id
 
 
@@ -115,10 +117,11 @@ class QdrantVectorStore:
                     log_error(f"Failed to create payload index for {field}: {e}")
 
     def _ingest_to_knowledge_graph(self, memory_id: str, text: str, payload: Dict[str, Any]) -> None:
-        """Extract entities, write to Neo4j, update Qdrant payload with entity_ids."""
+        """Extract entities (and facts when Mnemo), write to Neo4j, update Qdrant payload with entity_ids."""
+        # pdb.set_trace()
         try:
             from memory.knowledge_graph import get_knowledge_graph
-            from memory.entity_extractor import EntityExtractor
+            from memory.mnemo_config import is_mnemo_enabled
 
             kg = get_knowledge_graph()
             if not kg or not kg.enabled:
@@ -127,10 +130,28 @@ class QdrantVectorStore:
             if not user_id:
                 return
             session_id = payload.get("session_id") or "unknown"
-            extractor = EntityExtractor()
-            extracted = extractor.extract(text)
-            print(f"[QdrantVectorStore] Extracted entities {extracted} from the text {text}") # TODO
-            # pdb.set_trace()
+            if is_mnemo_enabled():
+                from shared.state import get_unified_extractor
+                unified = get_unified_extractor()
+                extraction = unified.extract_from_memory_text(text)
+                legacy = extraction.to_legacy_entity_result()
+                entities = legacy.get("entities")
+                entity_relationships = legacy.get("entity_relationships")
+                user_facts = legacy.get("user_facts")
+                facts = list(extraction.facts) if extraction.facts else None
+                evidence_events = list(extraction.evidence_events) if extraction.evidence_events else None
+            else:
+                from memory.entity_extractor import EntityExtractor
+                extractor = EntityExtractor()
+                extracted = extractor.extract(text)
+                entities = extracted.get("entities")
+                entity_relationships = extracted.get("entity_relationships")
+                user_facts = extracted.get("user_facts")
+                facts = None
+                evidence_events = None
+            space_id_val = payload.get("space_id")
+            if space_id_val == SPACE_ID_GLOBAL:
+                space_id_val = None
             result = kg.ingest_memory(
                 memory_id=memory_id,
                 text=text,
@@ -138,9 +159,12 @@ class QdrantVectorStore:
                 session_id=session_id,
                 category=payload.get("category", "general"),
                 source=payload.get("source", "manual"),
-                entities=extracted.get("entities"),
-                entity_relationships=extracted.get("entity_relationships"),
-                user_facts=extracted.get("user_facts"),
+                space_id=space_id_val,
+                entities=entities,
+                entity_relationships=entity_relationships,
+                user_facts=user_facts,
+                facts=facts,
+                evidence_events=evidence_events,
             )
             entity_ids = result.get("entity_ids", result if isinstance(result, list) else [])
             entity_labels = result.get("entity_labels", []) if isinstance(result, dict) else []
@@ -168,6 +192,8 @@ class QdrantVectorStore:
         metadata: Optional[Dict[str, Any]] = None,
         deduplication_threshold: float = 0.15,
         session_id: Optional[str] = None,
+        skip_kg_ingest: bool = False,
+        space_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         embedding_list = embedding.tolist() if isinstance(embedding, np.ndarray) else list(embedding)
         if deduplication_threshold > 0:
@@ -200,13 +226,16 @@ class QdrantVectorStore:
             payload["session_id"] = source.replace("run_", "")
         if metadata:
             payload.update(metadata)
+        payload["space_id"] = space_id or (metadata or {}).get("space_id") or SPACE_ID_GLOBAL
 
         point = PointStruct(id=memory_id, vector=embedding_list, payload=payload)
         self.client.upsert(collection_name=self.collection_name, points=[point])
         log_step(f"💾 Added memory: {memory_id[:8]}... ({len(text)} chars)", symbol="📝")
 
-        # Neo4j knowledge graph ingestion (if enabled)
-        self._ingest_to_knowledge_graph(memory_id, text, payload)
+        # Neo4j knowledge graph ingestion (if enabled). Skip when add comes from session pipeline;
+        # session extraction is ingested via ingest_from_unified_extraction (entities from full context).
+        if not skip_kg_ingest:
+            self._ingest_to_knowledge_graph(memory_id, text, payload)
 
         return {"id": memory_id, **payload}
 
@@ -222,10 +251,16 @@ class QdrantVectorStore:
         merged_filter = self._tenant_filter(filter_metadata)
         search_filter = None
         if merged_filter:
-            conditions = [
-                FieldCondition(key=key, match=MatchValue(value=value))
-                for key, value in merged_filter.items()
-            ]
+            conditions = []
+            for key, value in merged_filter.items():
+                if key == "space_ids" and isinstance(value, list):
+                    conditions.append(
+                        FieldCondition(key="space_id", match=MatchAny(any=value))
+                    )
+                else:
+                    conditions.append(
+                        FieldCondition(key=key, match=MatchValue(value=value))
+                    )
             if conditions:
                 search_filter = Filter(must=conditions)
 

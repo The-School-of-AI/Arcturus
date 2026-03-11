@@ -5,6 +5,9 @@ Manages what is feasible in the user's environment:
 - OS, shell, hardware constraints
 - Developer posture (languages, tools)
 - Service access (cloud, databases, AI)
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Operating context becomes Neo4j Fact
+nodes. Adapter reads from Neo4j; JSON hub is no longer the source of truth.
 """
 
 from datetime import datetime

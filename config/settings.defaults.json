@@ -9,6 +9,7 @@
         "image_captioning": "gemma3:4b",
         "memory_extraction": "qwen3-vl:8b",
         "entity_extraction": "gemma3:4b",
+        "unified_extraction": "gemma3:4b",
         "insights_provider": "ollama"
     },
     "rag": {

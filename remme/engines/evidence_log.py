@@ -3,6 +3,9 @@ EvidenceLog - Append-only audit trail of signals.
 
 Tracks what signals created or modified beliefs in the UserModel hubs.
 Provides traceability for debugging and preventing hallucinated personalization.
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Evidence becomes Neo4j Evidence nodes
+linked to Fact (SUPPORTED_BY). JSON evidence_log is no longer used.
 """
 
 import hashlib

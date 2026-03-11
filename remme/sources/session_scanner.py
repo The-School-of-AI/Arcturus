@@ -3,6 +3,10 @@ Session Scanner - Extracts preferences from session summaries.
 
 Scans memory/session_summaries_index/ for user preferences expressed
 during conversations and adds them to staging queue.
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Session extraction uses unified
+extractor and Neo4j ingestion; staging is not used. background_smart_scan uses
+unified extractor directly.
 """
 
 import json

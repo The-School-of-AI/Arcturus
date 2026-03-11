@@ -137,6 +137,14 @@
     "type": "python",
     "version": "1.0.0"
   },
+  "manager": {
+    "class_name": "ManagerSkill",
+    "description": "Decomposer prompt for the ManagerAgent \u2014 breaks user requests into DAG sub-tasks.",
+    "intent_triggers": [],
+    "path": "core/skills/library/manager",
+    "type": "python",
+    "version": "1.0.0"
+  },
   "market_analyst": {
     "class_name": "MarketAnalystSkill",
     "description": "Analyzes stock markets and news using Yahoo Finance and Web Search",
@@ -265,6 +273,14 @@
     "description": "Skill derived from thinker.md",
     "intent_triggers": [],
     "path": "core/skills/library/thinker",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "unified_extraction": {
+    "class_name": "UnifiedExtractionSkill",
+    "description": "Extracts memories, entities, relationships, facts, and evidence from conversation or memory text (Mnemo unified path)",
+    "intent_triggers": [],
+    "path": "core/skills/library/unified_extraction",
     "type": "python",
     "version": "1.0.0"
   },

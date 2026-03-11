@@ -6,6 +6,10 @@ Manages:
 - Tooling defaults (frameworks, package managers)
 - Autonomy settings (what actions are allowed)
 - Anti-preferences (patterns to avoid)
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Preferences become Neo4j Fact nodes.
+Adapter (step 4) reads from Neo4j and exposes hub-shaped output; JSON hub is no longer
+the source of truth.
 """
 
 from datetime import datetime
