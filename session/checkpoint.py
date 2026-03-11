@@ -145,8 +145,8 @@ def _create_checkpoint_impl(
     snapshot.checkpoint_id = cid
 
     # Persist
-    cp_dir.mkdir(parents=True, exist_ok=True)
-    session_cp_dir = cp_dir / session_id
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    session_cp_dir = checkpoint_dir / session_id
     session_cp_dir.mkdir(parents=True, exist_ok=True)
     cp_file = session_cp_dir / f"checkpoint_{cid}.json"
     with open(cp_file, "w", encoding="utf-8") as f:
