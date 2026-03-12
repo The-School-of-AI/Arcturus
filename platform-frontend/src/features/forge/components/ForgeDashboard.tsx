@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ExportPanel } from './ExportPanel';
 import { SlidePreviewModal } from './preview/SlidePreviewModal';
+import { ArtifactPromptBanner } from './ArtifactPromptBanner';
 
 // --- Type helpers ---
 
@@ -293,6 +294,8 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                         )}
                     </div>
                 </div>
+
+                <ArtifactPromptBanner key={artifact.id} prompt={artifact.creation_prompt} />
 
                 {/* Outline Section */}
                 {artifact.outline && (
