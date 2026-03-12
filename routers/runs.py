@@ -163,9 +163,12 @@ async def process_run(
     - Child spans (agent_loop.run, llm.generate) inherit trace_id automatically
     """
     with run_span(run_id, query or "") as span:
+        skill = None
+        context = None
+        memory_context = ""
+        results = []
         try:
             # 0. SKILL MATCHING & START HOOK
-            skill = None
             if not skill_id:
                 skill_id = skill_manager.match_intent(query)
             
@@ -173,9 +176,15 @@ async def process_run(
                 skill = skill_manager.get_skill(skill_id)
                 if skill:
                     print(f"[{run_id}] 🧠 Skill Detected: {skill_id}")
-                    skill.context.run_id = run_id
-                    skill.context.agent_id = source
-                    skill.context.config = {"source": source}
+                    skill_context = getattr(skill, "context", None)
+                    if skill_context is None:
+                        from types import SimpleNamespace
+
+                        skill_context = SimpleNamespace(run_id=None, agent_id=None, config={})
+                        setattr(skill, "context", skill_context)
+                    skill_context.run_id = run_id
+                    skill_context.agent_id = source
+                    skill_context.config = {"source": source, "query": query}
                     
                     # Call On Start Hook (allows prompt modification)
                     query = await skill.on_run_start(query)
@@ -183,9 +192,6 @@ async def process_run(
 
             # 1. RETRIEVE MEMORIES (Remme)
             # Orchestration: memory_retriever handles semantic recall, entity recall, graph expansion, merge
-            memory_context = ""
-            results = []
-            context = None  # Initialize for safe access in finally block
             try:
                 from memory.memory_retriever import retrieve
                 # Phase 3C: use space_id from request, or from existing session

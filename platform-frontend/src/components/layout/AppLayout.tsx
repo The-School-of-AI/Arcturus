@@ -44,6 +44,7 @@ import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDas
 import { MissionControl } from '@/features/console/components/MissionControl';
 import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
 import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
+import { AdminDashboard } from '@/features/admin/AdminDashboard';
 
 export const AppLayout: React.FC = () => {
     const {
@@ -68,7 +69,7 @@ export const AppLayout: React.FC = () => {
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
-    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || !isSidebarSubPanelOpen;
+    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -229,6 +230,8 @@ export const AppLayout: React.FC = () => {
                                     <ForgeDashboard />
                                 ) : sidebarTab === 'console' ? (
                                     <MissionControl />
+                                ) : sidebarTab === 'admin' ? (
+                                    <AdminDashboard />
                                 ) : sidebarTab === 'canvas' ? (
                                     <CanvasHost surfaceId="main-canvas" />
                                 ) : (

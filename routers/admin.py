@@ -2,11 +2,12 @@
 Watchtower Admin API - Trace queries and metrics.
 No auth for Days 1-5; add in Days 11-15.
 """
-from datetime import datetime, timedelta
 from fastapi import APIRouter, Query
 from fastapi.responses import HTMLResponse
 from pymongo import MongoClient
+
 from config.settings_loader import settings
+from ops.admin.spans_repository import SpansRepository
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -19,107 +20,20 @@ def _get_spans_collection():
     return client["watchtower"]["spans"]
 
 
+def _repo() -> SpansRepository:
+    """Repository instance using current spans collection."""
+    return SpansRepository(_get_spans_collection())
+
+
 @router.get("/traces")
 async def get_traces(
     run_id: str | None = Query(None, description="Filter by run_id"),
     limit: int = Query(50, ge=1, le=200),
-    since: str | None = Query(None, description="ISO timestamp for time-range start"),
+    since: str | None = Query(None, description="ISO timestamp for time-range start; use for incremental fetch"),
 ):
     """Query traces from MongoDB. Returns distinct trace_ids with summary."""
-    coll = _get_spans_collection()
-    match = {}
-    if run_id:
-        match["attributes.run_id"] = run_id
-    if since:
-        try:
-            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
-            match["start_time"] = {"$gte": since_dt}
-        except ValueError:
-            pass
-
-    pipeline = [
-        {"$match": match} if match else {"$match": {}},
-        {"$sort": {"start_time": -1}},
-        {"$limit": limit * 10},
-        {
-            "$group": {
-                "_id": "$trace_id",
-                "spans": {"$push": "$$ROOT"},
-                "start_time": {"$min": "$start_time"},
-                "duration_ms": {"$sum": "$duration_ms"},
-                "status": {"$max": {"$cond": [{"$eq": ["$status", "error"]}, 1, 0]}},
-            }
-        },
-        {"$sort": {"start_time": -1}},
-        {"$limit": limit},
-        {
-            "$project": {
-                "trace_id": "$_id",
-                "start_time": 1,
-                "duration_ms": 1,
-                "has_error": {"$eq": ["$status", 1]},
-                "span_count": {"$size": "$spans"},
-            }
-        },
-    ]
-    cursor = coll.aggregate(pipeline)
-    traces = list(cursor)
-    for t in traces:
-        if "start_time" in t:
-            t["start_time"] = t["start_time"].isoformat()
+    traces = _repo().get_traces(run_id=run_id, limit=limit, since=since)
     return {"traces": traces}
-
-
-@router.get("/traces/{trace_id}")
-async def get_trace_detail(trace_id: str):
-    """Get all spans for a trace, build tree."""
-    coll = _get_spans_collection()
-    spans = list(coll.find({"trace_id": trace_id}).sort("start_time", 1))
-    for s in spans:
-        if "start_time" in s:
-            s["start_time"] = s["start_time"].isoformat()
-        if "end_time" in s:
-            s["end_time"] = s["end_time"].isoformat()
-        if "_id" in s:
-            del s["_id"]
-    return {"trace_id": trace_id, "spans": spans}
-
-
-@router.get("/metrics/summary")
-async def get_metrics_summary(
-    hours: int = Query(24, ge=1, le=168),
-):
-    """Aggregate metrics from spans: total traces, avg duration, error rate."""
-    coll = _get_spans_collection()
-    since = datetime.utcnow() - timedelta(hours=hours)
-    pipeline = [
-        {"$match": {"start_time": {"$gte": since}}},
-        {
-            "$group": {
-                "_id": "$trace_id",
-                "duration_ms": {"$sum": "$duration_ms"},
-                "has_error": {"$max": {"$cond": [{"$eq": ["$status", "error"]}, 1, 0]}},
-            }
-        },
-        {
-            "$group": {
-                "_id": None,
-                "total_traces": {"$sum": 1},
-                "avg_duration_ms": {"$avg": "$duration_ms"},
-                "error_count": {"$sum": "$has_error"},
-            }
-        },
-    ]
-    cursor = coll.aggregate(pipeline)
-    row = next(cursor, None)
-    if not row:
-        return {"total_traces": 0, "avg_duration_ms": 0, "error_count": 0, "hours": hours}
-    return {
-        "total_traces": row.get("total_traces", 0),
-        "avg_duration_ms": round(row.get("avg_duration_ms", 0), 2),
-        "error_count": row.get("error_count", 0),
-        "hours": hours,
-    }
 
 
 @router.get("/traces/view", response_class=HTMLResponse)
@@ -146,3 +60,85 @@ tr:hover{background:#0f3460;}
 </html>
 """
     return HTMLResponse(html)
+
+
+@router.get("/traces/{trace_id}")
+async def get_trace_detail(trace_id: str):
+    """Get all spans for a trace, build tree."""
+    spans = _repo().get_trace_detail(trace_id)
+    return {"trace_id": trace_id, "spans": spans}
+
+
+@router.get("/metrics/summary")
+async def get_metrics_summary(
+    hours: int = Query(24, ge=1, le=168),
+):
+    """Aggregate metrics from spans: total traces, avg duration, error rate."""
+    return _repo().get_metrics_summary(hours)
+
+
+@router.get("/cost/summary")
+async def get_cost_summary(
+    hours: int = Query(24, ge=1, le=168),
+    group_by: str = Query("agent", description="Group by: agent | model | trace"),
+):
+    """Aggregate cost from llm.generate spans. Requires attributes.cost_usd."""
+    return _repo().get_cost_summary(hours, group_by)
+
+
+@router.get("/errors/summary")
+async def get_errors_summary(
+    hours: int = Query(24, ge=1, le=168),
+):
+    """Aggregate spans with status=error. Group by agent or span name."""
+    return _repo().get_errors_summary(hours)
+
+
+@router.get("/health")
+async def get_health():
+    """Current health status of MongoDB, Qdrant, Ollama, MCP gateway."""
+    from ops.health import run_all_health_checks
+
+    results = run_all_health_checks()
+    return {"services": [r.to_dict() for r in results]}
+
+
+def _get_health_repo():
+    """Get HealthRepository for health_checks collection."""
+    from ops.health.repository import HealthRepository
+
+    watchtower = settings.get("watchtower", {})
+    uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
+    client = MongoClient(uri)
+    return HealthRepository(client["watchtower"]["health_checks"])
+
+
+@router.get("/health/history")
+async def get_health_history(
+    hours: int = Query(24, ge=1, le=168),
+    service: str | None = Query(None, description="Filter by service name"),
+    limit: int = Query(500, ge=1, le=2000),
+):
+    """Historical health snapshots within a time window."""
+    repo = _get_health_repo()
+    snapshots = repo.get_history(hours=hours, service=service, limit=limit)
+    return {"snapshots": snapshots, "hours": hours, "count": len(snapshots)}
+
+
+@router.get("/health/uptime")
+async def get_health_uptime(
+    hours: int = Query(24, ge=1, le=720),
+):
+    """Per-service uptime percentages over a time window."""
+    repo = _get_health_repo()
+    uptimes = repo.compute_all_uptimes(hours=hours)
+    return {"uptimes": uptimes, "hours": hours}
+
+
+@router.get("/health/resources")
+async def get_health_resources():
+    """Latest system resource snapshot (CPU, memory, disk)."""
+    from ops.health import collect_resources
+
+    snapshot = collect_resources()
+    return {"resources": snapshot.to_dict()}

@@ -1,8 +1,10 @@
 {
   "watchtower": {
-    "enabled": false,
+    "enabled": true,
     "mongodb_uri": "mongodb://localhost:27017",
-    "jaeger_endpoint": "http://localhost:4318/v1/traces"
+    "jaeger_endpoint": "http://localhost:4318/v1/traces",
+    "health_check_interval_seconds": 60,
+    "alert_rules": []
   },
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
