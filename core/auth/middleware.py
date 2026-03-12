@@ -37,17 +37,20 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not user_id:
             guest_id = request.headers.get("X-User-Id")
             if guest_id:
+                # Strip prefix if present
+                clean_guest_id = guest_id.replace("guest_", "") if guest_id.startswith("guest_") else guest_id
                 try:
                     # Validate it's a valid UUID
-                    val = uuid.UUID(guest_id)
+                    val = uuid.UUID(clean_guest_id)
                     user_id = str(val)
                 except ValueError:
                     pass
         
         # 3. If this is a protected route and we still have no identity, reject it early.
-        # Check path strictly
+        # Check path strictly, supporting both /path and /api/path mappings
         path = request.url.path
-        if path.startswith("/runs") or path.startswith("/remme") or path.startswith("/api/sync"):
+        if path.startswith("/runs") or path.startswith("/remme") or path.startswith("/api/sync") \
+           or path.startswith("/api/runs") or path.startswith("/api/remme"):
             if not user_id:
                 return JSONResponse(
                     status_code=401, 

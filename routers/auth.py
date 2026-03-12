@@ -70,7 +70,9 @@ async def register(user_data: UserCreate, db: Session = Depends(get_session)):
     if user_data.guest_id:
         try:
             # Check UUID validity
-            guest_uuid = uuid.UUID(user_data.guest_id)
+            gid_str = str(user_data.guest_id)
+            clean_guest_id = gid_str.replace("guest_", "") if gid_str.startswith("guest_") else gid_str
+            guest_uuid = uuid.UUID(clean_guest_id)
             migration_success = await migrate_guest_to_registered(guest_uuid, new_user.id)
             if migration_success:
                 new_user.migrated_guest_ids = list(new_user.migrated_guest_ids or []) + [str(guest_uuid)]
@@ -114,7 +116,9 @@ async def login(user_data: UserLogin, db: Session = Depends(get_session)):
     # 3. Handle Guest Migration 
     if user_data.guest_id:
         try:
-            guest_uuid = uuid.UUID(user_data.guest_id)
+            gid_str = str(user_data.guest_id)
+            clean_guest_id = gid_str.replace("guest_", "") if gid_str.startswith("guest_") else gid_str
+            guest_uuid = uuid.UUID(clean_guest_id)
             # Idempotency check
             migrated_list = user.migrated_guest_ids or []
             # Note: SQLite JSON lists often return strings if not mapped strictly 
