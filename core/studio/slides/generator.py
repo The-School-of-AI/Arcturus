@@ -2,6 +2,7 @@
 
 import hashlib
 import random
+import re
 
 from core.studio.slides.types import NARRATIVE_ARC, SLIDE_TYPE_ELEMENTS
 
@@ -56,6 +57,57 @@ def clamp_slide_count(requested: int | float | str | None = None) -> int:
         return DEFAULT_SLIDES
 
     return max(MIN_SLIDES, min(MAX_SLIDES, normalized))
+
+
+_SLIDE_COUNT_RE = re.compile(r'\b(\d+)[\s-]*(?:slide|page)s?\b', re.IGNORECASE)
+
+
+def resolve_slide_count(
+    parameters: dict | None,
+    user_prompt: str | None = None,
+) -> int:
+    """Resolve slide count for initial generation.
+
+    Priority: explicit parameter > prompt parse > DEFAULT_SLIDES.
+    NOTE: outline_item_count is NOT used here — it's only used after
+    outline edits (see approve_and_generate_draft).
+    """
+    # 1. Explicit parameter (from API field or stored outline parameters)
+    if parameters and parameters.get("slide_count") is not None:
+        return clamp_slide_count(parameters["slide_count"])
+
+    # 2. Parse from user prompt text
+    if user_prompt:
+        m = _SLIDE_COUNT_RE.search(user_prompt)
+        if m:
+            return clamp_slide_count(int(m.group(1)))
+
+    # 3. Default
+    return DEFAULT_SLIDES
+
+
+def normalize_slide_outline(outline, parameters=None, user_prompt=None):
+    """Normalize a slides outline after LLM generation.
+
+    - Resolves slide_count from parameters/prompt
+    - Stores resolved slide_count in outline.parameters
+    - Trims outline items if LLM generated too many
+    """
+    params = parameters or (outline.parameters if hasattr(outline, "parameters") else {}) or {}
+
+    resolved = resolve_slide_count(params, user_prompt)
+
+    # Store resolved slide_count in outline parameters
+    if hasattr(outline, "parameters") and outline.parameters is not None:
+        outline.parameters["slide_count"] = resolved
+    elif hasattr(outline, "parameters"):
+        outline.parameters = {"slide_count": resolved}
+
+    # Trim outline items if LLM generated too many
+    if hasattr(outline, "items") and len(outline.items) > resolved:
+        outline.items = outline.items[:resolved]
+
+    return outline
 
 
 def plan_slide_sequence(
@@ -144,11 +196,12 @@ def enforce_slide_count(
     content_tree: "SlidesContentTree",
     target_count: int | None = None,
 ) -> "SlidesContentTree":
-    """Enforce [MIN_SLIDES, MAX_SLIDES] range on a content tree.
+    """Enforce slide count on a content tree.
 
-    - Over MAX_SLIDES: keep first + last slide, trim body from the end
-    - Under MIN_SLIDES: insert filler 'content' slides before the closing slide
-    - Within range: no-op (returns content_tree unchanged)
+    When target_count is provided: trim/pad to exactly that count (clamped to
+    [MIN_SLIDES, MAX_SLIDES]).  When target_count is None: only enforce the
+    global [MIN_SLIDES, MAX_SLIDES] range (preserves legacy behavior for
+    patch_apply.py edits).
 
     Returns a new SlidesContentTree (does not mutate the input).
     """
@@ -156,22 +209,30 @@ def enforce_slide_count(
     if len(slides) == 0:
         raise ValueError("Cannot enforce slide count on empty slides list")
 
-    # Over MAX: trim body slides from the end (preserve first and last)
-    if len(slides) > MAX_SLIDES:
+    if target_count is not None:
+        target = clamp_slide_count(target_count)
+        effective_max = target
+        effective_min = target
+    else:
+        effective_max = MAX_SLIDES
+        effective_min = MIN_SLIDES
+
+    # Over effective_max: trim body slides from the end (preserve first and last)
+    if len(slides) > effective_max:
         opening = slides[0]
         closing = slides[-1]
         body = slides[1:-1]
-        body = body[: MAX_SLIDES - 2]
+        body = body[: effective_max - 2]
         slides = [opening] + body + [closing]
 
-    # Under MIN: pad with filler content slides before closing.
+    # Under effective_min: pad with filler content slides before closing.
     # For a single-slide deck, preserve that original slide in the first slot.
-    if len(slides) < MIN_SLIDES:
+    if len(slides) < effective_min:
         from core.schemas.studio_schema import Slide, SlideElement
         if len(slides) == 1:
             opening = slides[0]
             padded = [opening]
-            filler_count = MIN_SLIDES - 1
+            filler_count = effective_min - 1
             for i in range(filler_count):
                 tmpl = _FILLER_TEMPLATES[i % len(_FILLER_TEMPLATES)]
                 filler = Slide(
@@ -188,7 +249,7 @@ def enforce_slide_count(
         else:
             closing = slides[-1]
             body = slides[:-1]
-            filler_count = MIN_SLIDES - len(slides)
+            filler_count = effective_min - len(slides)
             for i in range(filler_count):
                 tmpl = _FILLER_TEMPLATES[i % len(_FILLER_TEMPLATES)]
                 filler = Slide(

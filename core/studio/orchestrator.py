@@ -80,6 +80,11 @@ class ForgeOrchestrator:
             parameters=parameters,
         )
 
+        # Slides-specific outline normalization
+        if artifact_type == ArtifactType.slides:
+            from core.studio.slides.generator import normalize_slide_outline
+            outline = normalize_slide_outline(outline, parameters, prompt)
+
         # Document-specific outline normalization
         if artifact_type == ArtifactType.document:
             from core.studio.documents.generator import normalize_document_outline
@@ -127,6 +132,13 @@ class ForgeOrchestrator:
         # Apply optional modifications
         if modifications:
             _apply_outline_modifications(artifact, modifications)
+            # If items were modified, recompute slide_count from the new outline
+            if "items" in modifications and artifact.type == ArtifactType.slides:
+                from core.studio.slides.generator import clamp_slide_count
+                new_count = len(artifact.outline.items)
+                if artifact.outline.parameters is None:
+                    artifact.outline.parameters = {}
+                artifact.outline.parameters["slide_count"] = clamp_slide_count(new_count)
 
         # Mark outline as approved
         artifact.outline.status = OutlineStatus.approved
@@ -169,10 +181,10 @@ class ForgeOrchestrator:
             )
             raise
 
-        # Slides-specific: enforce slide count range [8, 15]
+        # Slides-specific: enforce target slide count
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.generator import enforce_slide_count
-            content_tree_model = enforce_slide_count(content_tree_model)
+            content_tree_model = enforce_slide_count(content_tree_model, target_count=target_count)
 
             # Phase 3: notes quality repair pass
             from core.studio.slides.notes import repair_speaker_notes
