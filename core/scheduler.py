@@ -240,6 +240,12 @@ class SchedulerService:
                     skill_result = await skill.on_run_success(
                         result if isinstance(result, dict) else {"output": str(result)}
                     )
+                # 3. Execution (The standard run, now skill-aware)
+                result = await process_run(run_id, job.query, skill_id=job.skill_id)
+                
+                # Update job output using skill summary if available
+                skill_summary = result.get("skill_summary") if result else None
+                skill_file_path = result.get("skill_file_path") if result else None
 
                 success_msg = f"✅ Job '{job.name}' completed successfully."
                 await event_bus.publish(
@@ -256,11 +262,14 @@ class SchedulerService:
                     if skill_result
                     else (result.get("summary") if result else "Success")
                 )
+                
+                # Update job with result
+                job.last_output = skill_summary if skill_summary else (result.get("summary") if result else "Success")
                 self.save_jobs()
 
                 notif_body = f"Job '{job.name}' finished.\n\n"
-                if skill_result and skill_result.get("summary"):
-                    notif_body += f"**Summary**: {skill_result['summary']}\n\n"
+                if skill_summary:
+                    notif_body += f"**Summary**: {skill_summary}\n\n"
                 elif result and result.get("summary"):
                     notif_body += f"**Summary**: {result['summary'][:200]}...\n\n"
 
@@ -274,8 +283,8 @@ class SchedulerService:
                     metadata={
                         "job_id": job.id,
                         "run_id": run_id,
-                        "file_path": skill_result.get("file_path") if skill_result else None,
-                    },
+                        "file_path": skill_file_path
+                    }
                 )
 
                 finished_at = datetime.now().isoformat()
@@ -319,6 +328,7 @@ class SchedulerService:
                     error=str(e),
                 )
 
+        # Parse cron expression (simple space-separated 5 fields)
         try:
             self.scheduler.add_job(
                 job_wrapper,

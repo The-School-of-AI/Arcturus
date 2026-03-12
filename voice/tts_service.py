@@ -300,7 +300,7 @@ class TTSService:
 
     # ── Streaming TTS (queue-based, same pattern as Piper) ─────
 
-    def speak_streamed(self, text_queue: queue.Queue, sentinel=None):
+    def speak_streamed(self, text_queue: queue.Queue, sentinel=None, on_sentence_callback=None):
         """
         Consume text chunks from *text_queue* and start speaking as
         soon as a complete sentence is available.
@@ -315,6 +315,7 @@ class TTSService:
                          The producer pushes *sentinel* (default None)
                          when done.
             sentinel:    Value that signals "no more chunks".
+            on_sentence_callback: Optional callable(str) fired for each spoken sentence.
 
         This method **blocks** until all chunks are spoken or
         cancel() is called.
@@ -338,6 +339,8 @@ class TTSService:
                 full_text.append(chunk)
             joined = " ".join(full_text)
             print(f"   📢 [TTS-Fallback] {joined}")
+            if on_sentence_callback:
+                on_sentence_callback(joined)
             with self._lock:
                 self._is_speaking = False
             return
@@ -360,7 +363,7 @@ class TTSService:
                 if chunk is sentinel:
                     # Flush remaining buffer
                     if buffer.strip():
-                        self._speak_sentence(buffer.strip())
+                        self._speak_sentence(buffer.strip(), on_sentence_callback)
                         spoken_count += 1
                     break
 
@@ -380,7 +383,7 @@ class TTSService:
                         with self._lock:
                             if self._cancelled or cancel_tts_event.is_set():
                                 break
-                        self._speak_sentence(sentence)
+                        self._speak_sentence(sentence, on_sentence_callback)
                         spoken_count += 1
 
             if spoken_count == 0:
@@ -395,7 +398,7 @@ class TTSService:
                 self._is_speaking = False
             tts_mark_stop()
 
-    def _speak_sentence(self, sentence: str):
+    def _speak_sentence(self, sentence: str, on_sentence_callback=None):
         """
         Synthesise one sentence via Azure Neural TTS and play it.
         Used by speak_streamed() for streaming sentence-by-sentence.
@@ -406,6 +409,11 @@ class TTSService:
         preview = sentence[:80]
         persona_tag = f" [{self._active_persona_name}]" if self._active_persona_name else ""
         print(f"   🗣️ [TTS]{persona_tag} \"{preview}{'...' if len(sentence) > 80 else ''}\"")
+        
+        # Fire callback before speaking so it appears on UI instantly
+        if on_sentence_callback:
+            on_sentence_callback(sentence)
+
         # Streaming path must not call speak() (it would toggle is_speaking and reset grace).
         ssml = self._wrap_with_prosody(sentence)
         self._synthesizer_speak_ssml_blocking(ssml)
@@ -536,7 +544,7 @@ class TTSService:
 
         if not self._speech_key or not self._speech_region:
             print("⚠️ [TTS] AZURE_SPEECH_KEY or AZURE_SPEECH_REGION not set. "
-                  "TTS will log to console only.")
+                  "Add them to the project root .env. TTS will log to console only.")
             return
 
         try:

@@ -27,6 +27,8 @@ from remme.utils import get_embedding
 from config.settings_loader import settings
 from core.skills.manager import skill_manager
 
+from core.skills.manager import skill_manager
+
 
 router = APIRouter(tags=["Runs"])
 
@@ -251,6 +253,11 @@ async def process_run(
             span.set_status(Status(StatusCode.ERROR, str(e)))
             span.record_exception(e)
             print(f"Run {run_id} failed: {e}")
+            if skill:
+                 try:
+                     await skill.on_run_failure(str(e))
+                 except Exception as fe:
+                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
             if skill:
                  try:
                      await skill.on_run_failure(str(e))
@@ -590,6 +597,23 @@ async def process_run(
                     print(f"⚠️ [Voice] No stream queue registered for run {run_id}! "
                           f"Response not queued for TTS: "
                           f"{voice_output[:100] if output_len > 100 else voice_output}")
+
+                # 4. SKILL SUCCESS HOOK
+                if skill:
+                    try:
+                        print(f"[{run_id}] 🧠 Executing Success Hook for skill: {skill_id}")
+                        skill_result = await skill.on_run_success(final_result)
+                        if skill_result and isinstance(skill_result, dict):
+                            if "summary" in skill_result:
+                                final_result["skill_summary"] = skill_result["summary"]
+                                # Update voice output if skill provided a specific summary
+                                # (e.g. for "check my email", the skill summary is better than the agent's raw output)
+                                if source == "voice":
+                                    voice_output = skill_result["summary"]
+                            if "file_path" in skill_result:
+                                final_result["skill_file_path"] = skill_result["file_path"]
+                    except Exception as se:
+                        print(f"⚠️ [Skill] Success hook failed for {skill_id}: {se}")
 
                 # Signal run complete (for the Event-based / non-streaming path)
                 signal_run_complete(run_id, voice_output)

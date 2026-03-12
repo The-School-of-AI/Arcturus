@@ -168,7 +168,7 @@ class PiperTTSService:
 
     # ── Core: speak_streamed() — streaming chunks ─────────────
 
-    def speak_streamed(self, text_queue: queue.Queue, sentinel=None):
+    def speak_streamed(self, text_queue: queue.Queue, sentinel=None, on_sentence_callback=None):
         """
         Consume text chunks from *text_queue* and start speaking as
         soon as a complete sentence is available.
@@ -182,6 +182,7 @@ class PiperTTSService:
                          The producer pushes *sentinel* (default None)
                          when done.
             sentinel:    Value that signals "no more chunks".
+            on_sentence_callback: Optional callable(str) fired for each spoken sentence.
 
         This method **blocks** until all chunks are spoken or
         cancel() is called.
@@ -204,6 +205,8 @@ class PiperTTSService:
                 full_text.append(chunk)
             joined = " ".join(full_text)
             print(f"   📢 [PiperTTS-Fallback] {joined}")
+            if on_sentence_callback:
+                on_sentence_callback(joined)
             with self._lock:
                 self._is_speaking = False
             return
@@ -226,7 +229,7 @@ class PiperTTSService:
                 if chunk is sentinel:
                     # Flush remaining buffer
                     if buffer.strip():
-                        self._speak_sentence(buffer.strip())
+                        self._speak_sentence(buffer.strip(), on_sentence_callback)
                         spoken_count += 1
                     break
 
@@ -246,7 +249,7 @@ class PiperTTSService:
                         with self._lock:
                             if self._cancelled or cancel_tts_event.is_set():
                                 break
-                        self._speak_sentence(sentence)
+                        self._speak_sentence(sentence, on_sentence_callback)
                         spoken_count += 1
 
             if spoken_count == 0:
@@ -287,13 +290,18 @@ class PiperTTSService:
 
     # ── Private helpers ────────────────────────────────────────
 
-    def _speak_sentence(self, sentence: str):
+    def _speak_sentence(self, sentence: str, on_sentence_callback=None):
         """Synthesize one sentence and play it.  Used by both speak() and speak_streamed()."""
         sentence = self._clean_for_speech(sentence)
         if not sentence:
             return
         preview = sentence[:80]
         print(f"   🗣️ [PiperTTS] \"{preview}{'...' if len(sentence) > 80 else ''}\"")
+        
+        # Fire callback before speaking so it appears on UI instantly
+        if on_sentence_callback:
+            on_sentence_callback(sentence)
+
         self._synthesize_and_play_streaming(sentence)
 
     def _ensure_playback_stream(self, sample_rate: int):

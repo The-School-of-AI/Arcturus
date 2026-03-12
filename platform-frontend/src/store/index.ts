@@ -21,7 +21,7 @@ interface RunSlice {
     runs: Run[];
     currentRun: Run | null;
     addRun: (run: Run) => void;
-    setCurrentRun: (runId: string) => void;
+    setCurrentRun: (runId: string | null) => void;
     updateRunStatus: (input: { id: string, status: Run['status'] }) => void;
     fetchRuns: () => Promise<void>;
     createNewRun: (query: string, model?: string, space_id?: string | null) => Promise<void>;
@@ -80,8 +80,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin') => void;
+    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo') => void;
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
@@ -583,6 +583,13 @@ export const useAppStore = create<AppState>()(
                 eventSource.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
+
+                        // --- HANDLE NAVIGATION EVENTS ---
+                        if (data.type === 'navigation' && data.data?.tab) {
+                            console.log("🚀 [EventBus] Navigation Command:", data.data.tab);
+                            get().setSidebarTab(data.data.tab);
+                        }
+
                         // Add to events list (keep last 200)
                         set(state => {
                             const newEvents = [...state.events, data];
@@ -595,9 +602,16 @@ export const useAppStore = create<AppState>()(
                 };
 
                 eventSource.onerror = (err) => {
-                    console.error("EventSource failed:", err);
+                    console.error("EventSource error — will reconnect in 3s:", err);
                     eventSource.close();
                     set({ isStreaming: false, streamConnection: null });
+                    // Auto-reconnect: clear connection so the next startEventStream call works
+                    setTimeout(() => {
+                        if (!get().streamConnection) {
+                            console.log("🔄 Reconnecting to Event Bus...");
+                            get().startEventStream();
+                        }
+                    }, 3000);
                 };
 
                 set({ streamConnection: eventSource, isStreaming: true });

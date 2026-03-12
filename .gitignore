@@ -106,3 +106,4 @@ scripts/github/PR_body*.md
 scripts/github/Pr_Body*.md
 scripts/github/PR_Body_*.md
 scripts/github/Pr_Body_*.md
+.voice_sessions/

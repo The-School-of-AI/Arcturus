@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI):
         )
 
         stt_cfg = VOICE_CONFIG.get("stt", {})
-        stt_provider = VOICE_CONFIG.get("stt_provider", "whisper")
+        stt_provider = VOICE_CONFIG.get("stt_provider", "deepgram")
         sample_rate = stt_cfg.get("sample_rate", 16000)
         noise_reduce = stt_cfg.get("noise_reduce", True)
 
@@ -123,7 +123,13 @@ async def lifespan(app: FastAPI):
 
         voice_wake.start()
         voice_stt.start()
-
+        
+        # ── Inject the running event loop so bg threads can publish events ──
+        # asyncio.get_event_loop() inside an async context returns the correct
+        # running loop. The orchestrator stores this and uses it in _publish()
+        # to safely call run_coroutine_threadsafe from wake/STT threads.
+        import asyncio
+        orchestrator._event_loop = asyncio.get_event_loop()
         app.state.orchestrator = orchestrator
         print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
 
@@ -227,6 +233,13 @@ async def lifespan(app: FastAPI):
     try:
         if hasattr(app.state, "orchestrator"):
             orch = app.state.orchestrator
+            # Cleanly finalise any active dictation session so the file is saved
+            if getattr(orch, 'state', None) == 'DICTATING':
+                try:
+                    orch.stop_dictation()
+                    print("✅ [Voice] Dictation session finalised on shutdown.")
+                except Exception as de:
+                    print(f"⚠️ [Voice] Dictation stop on shutdown failed: {de}")
             orch._cancel_all()
             if orch.wake:
                 orch.wake.stop()  # kills Porcupine native thread + PortAudio stream

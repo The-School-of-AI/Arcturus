@@ -4,12 +4,8 @@ import pvporcupine
 import os
 import logging
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load .env from voice/ dir AND project root to ensure keys are found
-_VOICE_DIR = Path(__file__).resolve().parent
-_PROJECT_ROOT = _VOICE_DIR.parent
-load_dotenv(_PROJECT_ROOT / ".env")
+# API keys are loaded centrally by voice/config.py — no local load_dotenv needed.
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +16,7 @@ class PorcupineWakeEngine:
         if not access_key:
             raise ValueError(
                 "❌ PICOVOICE_ACCESS_KEY not found in environment. "
-                "Set it in voice/.env or the project root .env"
+                "Add it to the project root .env file."
             )
 
         if not os.path.exists(keyword_path):
