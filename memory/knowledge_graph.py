@@ -33,7 +33,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from core.utils import log_error, log_step
-from memory.space_constants import SPACE_ID_GLOBAL, SYNC_POLICY_SYNC
+from memory.space_constants import SPACE_ID_GLOBAL, SYNC_POLICY_SYNC, SYNC_POLICY_SHARED
 from memory.user_id import get_user_id
 
 # Optional Neo4j dependency
@@ -298,7 +298,8 @@ class KnowledgeGraph:
         if not self._enabled or not uid:
             return ""
         space_id = str(uuid.uuid4())
-        policy = (sync_policy or SYNC_POLICY_SYNC).strip() or SYNC_POLICY_SYNC
+        raw = (sync_policy or SYNC_POLICY_SYNC).strip() or SYNC_POLICY_SYNC
+        policy = raw if raw in ("sync", "local_only", "shared") else SYNC_POLICY_SYNC
         now_ts = datetime.now().isoformat()
         device_id = ""
         try:
@@ -359,6 +360,117 @@ class KnowledgeGraph:
             }
             out.append(rec)
         return out
+
+    def get_spaces_shared_with_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List spaces shared with this user (not owned). Returns same shape as get_spaces_for_user, with is_shared=True."""
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid:
+            return []
+        records = self._run_query(
+            """
+            MATCH (sp:Space)-[:SHARED_WITH]->(u:User {user_id: $user_id})
+            RETURN sp.space_id AS space_id, sp.name AS name, sp.description AS description,
+                   sp.sync_policy AS sync_policy, sp.version AS version,
+                   sp.device_id AS device_id, sp.updated_at AS updated_at
+            ORDER BY sp.name ASC
+            """,
+            {"user_id": uid},
+        )
+        out = []
+        for r in records:
+            if not r.get("space_id"):
+                continue
+            rec = {
+                "space_id": r["space_id"],
+                "name": r.get("name") or "",
+                "description": r.get("description") or "",
+                "sync_policy": r.get("sync_policy") or SYNC_POLICY_SYNC,
+                "version": r.get("version") or 1,
+                "device_id": r.get("device_id") or "",
+                "updated_at": str(r.get("updated_at", "")) if r.get("updated_at") else "",
+                "is_shared": True,
+            }
+            out.append(rec)
+        return out
+
+    def get_all_spaces_for_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List spaces owned by user plus spaces shared with user. Owned first, then shared; each has is_shared True only if shared."""
+        owned = self.get_spaces_for_user(user_id=user_id)
+        shared = self.get_spaces_shared_with_user(user_id=user_id)
+        seen = {s["space_id"] for s in owned}
+        for s in shared:
+            if s["space_id"] not in seen:
+                seen.add(s["space_id"])
+                owned.append(s)
+        return owned
+
+    def share_space_with(
+        self,
+        space_id: str,
+        shared_with_user_id: str,
+        owner_user_id: Optional[str] = None,
+    ) -> bool:
+        """Share a space with another user. Caller must own the space. Creates (Space)-[:SHARED_WITH]->(User)."""
+        uid = owner_user_id or get_user_id()
+        if not self._enabled or not space_id or not shared_with_user_id or not uid:
+            return False
+        if uid == shared_with_user_id:
+            return True  # no-op: owner already has access
+        # Verify owner
+        check = self._run_query(
+            "MATCH (u:User {user_id: $owner})-[:OWNS_SPACE]->(sp:Space {space_id: $space_id}) RETURN 1 AS x LIMIT 1",
+            {"owner": uid, "space_id": space_id},
+        )
+        if not check:
+            return False
+        self.get_or_create_user(shared_with_user_id)
+        self._run_write(
+            """
+            MATCH (sp:Space {space_id: $space_id})
+            MATCH (u:User {user_id: $user_id})
+            MERGE (sp)-[:SHARED_WITH]->(u)
+            """,
+            {"space_id": space_id, "user_id": shared_with_user_id},
+        )
+        return True
+
+    def unshare_space(self, space_id: str, user_id_to_remove: str, owner_user_id: Optional[str] = None) -> bool:
+        """Remove a user from a space's shared list. Caller must own the space."""
+        uid = owner_user_id or get_user_id()
+        if not self._enabled or not space_id or not user_id_to_remove or not uid:
+            return False
+        check = self._run_query(
+            "MATCH (u:User {user_id: $owner})-[:OWNS_SPACE]->(sp:Space {space_id: $space_id}) RETURN 1 AS x LIMIT 1",
+            {"owner": uid, "space_id": space_id},
+        )
+        if not check:
+            return False
+        self._run_write(
+            """
+            MATCH (sp:Space {space_id: $space_id})-[r:SHARED_WITH]->(u:User {user_id: $user_id})
+            DELETE r
+            """,
+            {"space_id": space_id, "user_id": user_id_to_remove},
+        )
+        return True
+
+    def can_user_access_space(self, user_id: Optional[str], space_id: Optional[str]) -> bool:
+        """Return True if user is owner of the space or space is shared with them. Global space always allowed."""
+        if not space_id or space_id == SPACE_ID_GLOBAL:
+            return True
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid:
+            return False
+        r = self._run_query(
+            """
+            MATCH (sp:Space {space_id: $space_id})
+            OPTIONAL MATCH (u:User {user_id: $user_id})-[:OWNS_SPACE]->(sp)
+            OPTIONAL MATCH (sp)-[:SHARED_WITH]->(u2:User {user_id: $user_id})
+            RETURN (u IS NOT NULL OR u2 IS NOT NULL) AS can_access
+            """,
+            {"space_id": space_id, "user_id": uid},
+        )
+        return bool(r and r[0].get("can_access"))
 
     def upsert_space(
         self,

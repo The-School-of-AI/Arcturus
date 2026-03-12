@@ -33,8 +33,9 @@ Update **§2 Status at a glance** and **§8 Remaining / next steps** as work pro
 | **Session-level extraction** | ⏳ Deferred | One pass for memories + preferences + entities from session; see §8.2 |
 | **Retrieval scoping by space** | ⏳ Future | List/filter done; full retrieval scoping deferred; see §8.4 |
 | **Phase 4: Sync Engine** | ✅ Core done | CRDT-based sync (LWW), push/pull API, selective sync; see §8.5 |
-| **Phase 5: Lifecycle Manager** | ⏳ Deferred | Importance, archival, contradiction resolution; UI edit frontend; user_id FE; see §8.8 |
-| **UI edit (frontend + backend)** | ⏳ Phase 5 | Backend ready; frontend deferred |
+| **Shared Space (new step)** | ✅ Implemented | sync_policy "shared"; space templates (Computer Only, Personal, Workspace, Custom); share by user_id; no global injection when run in a space; see §8.8a |
+| **Phase 5: Lifecycle Manager** | ⏳ Deferred | Importance, archival, contradiction resolution; user_id FE; see §8.8 |
+| **UI edit (frontend + backend)** | ⏳ Deferred | Backend ready; frontend deferred to Phase 5 |
 | **Entity-friendly Qdrant payload** | ⏳ Optional | §8.1 — beyond `entity_ids` + optional `entity_labels` |
 | **Expansion depth** | ⏳ Future | One-hop only; `depth` parameter reserved for multi-hop |
 | **user_id: FE ownership** | ⏳ Phase 5 | Move user_id to frontend for server deployment; see §8.7 |
@@ -224,6 +225,7 @@ Neo4j stores **extracted entities and relationships** from Remme memories. Link 
 | REFERS_TO | Fact → Entity | Fact references an entity |
 | SUPERSEDES | Fact → Fact | Fact supersedes another |
 | IN_SPACE | Session → Space, Fact → Space | Session/fact belongs to space; absent = global |
+| SHARED_WITH | Space → User | Shared Space: space is shared with this user (can view and contribute) |
 | CONTRADICTS | (Phase 5) | Reserved for conflicting facts |
 
 ### 6.3 Qdrant payload (arcturus_memories)
@@ -309,7 +311,7 @@ Query
 - **memory/space_constants.py:** `SPACE_ID_GLOBAL = "__global__"` for global memories/facts.
 - **routers/remme.py:** `POST /remme/spaces`, `GET /remme/spaces`, `GET /remme/memories?space_id=`, `POST /remme/add` with `space_id`; create_memory passes space_id.
 - **routers/runs.py:** `POST /runs` with `space_id`; `list_runs` enriches with `space_id` via `get_space_for_session`; `get_or_create_session(run_id, space_id)` at run start.
-- **platform-frontend:** SpacesPanel, getSpaces/createSpace/addMemory(space_id)/getMemories(space_id)/createRun(space_id); SpacesSlice; runs filtered by currentSpaceId.
+- **platform-frontend:** SpacesPanel, getSpaces/createSpace/addMemory(space_id)/getMemories(space_id)/createRun(space_id); SpacesSlice; runs filtered by currentSpaceId. **Shared Space:** space_constants SYNC_POLICY_SHARED; sync/policy treats shared as syncable; memory_retriever does not inject global when space_id is set; space templates (Computer Only, Personal, Workspace, Custom) with guest gray-out; share_space_with, get_all_spaces_for_user, can_user_access_space; POST /remme/spaces/{id}/share; frontend template-based create and shareSpace API.
 
 ---
 
@@ -329,7 +331,29 @@ Use this section as the single list of what to do next; update as you complete i
 
 **Step 6 (Spaces):** Done (Phase 3). Spaces & Collections UI, create/list/select spaces; runs and memories filtered by space; Fact uses `SPACE_ID_GLOBAL` for global scope. Full retrieval scoping by space deferred; see §8.4.
 
-**Step 7 (UI edit pipeline):** Backend done. `knowledge_graph.upsert_fact_from_ui()`, `PUT /remme/preferences/facts` with `UpdateFactRequest` (namespace, key, value_type, value/...). **Frontend deferred to Phase 5.**
+**Step 7 (UI edit pipeline):** Backend done. `knowledge_graph.upsert_fact_from_ui()`, `PUT /remme/preferences/facts` with `UpdateFactRequest` (namespace, key, value_type, value/...). **Frontend deferred** (moved to Phase 5 / deferred list).
+
+### 8.8a Shared Space (new step — before Lifecycle Manager)
+
+**Goal:** Enhance spaces with sync_policy "shared", pre-configured space templates, and shared-space collaboration. Memory context for runs must not inject global-space memories/entities when the run is in a specific space.
+
+**Deliverables:**
+
+1. **sync_policy "shared"** — New policy in addition to `sync` and `local_only`. Shared spaces sync to cloud so they can be shared with other users. `memory/space_constants.py`: `SYNC_POLICY_SHARED = "shared"`. Sync engine: treat "shared" as synced (like "sync").
+
+2. **Pre-configured space templates** (displayed on Space panel when user goes to create/choose a space):
+   - **Computer Only** (Guest + Logged-in): `sync_policy=local_only`. Brief description: e.g. "Stays on this device only; not synced."
+   - **Personal** (Logged-in only; Guest: grayed out, "Log in to use"): `sync_policy=sync`. Description: e.g. "Syncs across your devices; private."
+   - **Workspace** (Logged-in only; Guest: grayed out): `sync_policy=shared`. Description: e.g. "Syncs and can be shared with others."
+   - **Custom** (Logged-in only; Guest: grayed out): User chooses sync_policy. Description: e.g. "Choose sync behavior yourself."
+
+   When creating a new space from a template, user can set a **name** and optional **brief description** for the space.
+
+3. **Shared space** — A space with `sync_policy=shared` can be shared with other users by **email or username**. Shared users can see the space's content and contribute (add memories, run in that space). Backend: Neo4j relationship (Space)-[:SHARED_WITH]->(User); API to share space with list of user_ids (and optionally resolve email/username to user_id when auth supports it). List spaces API returns both owned and shared-with-me spaces.
+
+4. **Memory retriever and run: no global injection when in a space** — When a run has a non-global `space_id`, memory context must **not** include global-space memories or entities; only memories/entities in that space are injected. When `space_id` is `__global__` or absent, behavior unchanged (global-only or unscoped as today). Implemented in `memory_retriever.retrieve()`: when `space_id` is set and ≠ `SPACE_ID_GLOBAL`, filter to that space only (exclude `__global__` from Qdrant and Neo4j filters).
+
+**Order:** Implement Shared Space step before starting Phase 5 Lifecycle Manager. UI-edit steps remain deferred.
 
 ### 8.1 Optional: Entity-friendly payload in Qdrant
 
@@ -370,7 +394,7 @@ Use this section as the single list of what to do next; update as you complete i
 
 - **Sync Engine** (`memory/sync/`): CRDT-style LWW merge; conflict-free replication across devices.
 - **Conflict resolution:** LWW (last-writer-wins) by (updated_at, device_id).
-- **Selective sync:** Per-space `sync_policy` (sync | local_only); global space always syncs.
+- **Selective sync:** Per-space `sync_policy` (sync | local_only | shared); global space always syncs. "shared" syncs like "sync" and enables sharing with other users.
 - **Offline:** Local store is source of truth; push/pull when connected.
 
 **Implemented (Phase 4 core):**
@@ -416,6 +440,8 @@ Use this section as the single list of what to do next; update as you complete i
 - **Decay & archival:** Old, unused memories archived (still searchable, not in active top results).
 - **Contradiction resolution:** If user says "I like X" then "I hate X", flag both and ask to clarify; CONTRADICTS relationship in schema reserved for this.
 - **Privacy controls:** Mark memories as private / shareable / public (or per-space visibility).
+
+**Shared Space (Step 8.8a)** is implemented before Phase 5; see §8.8a.
 
 **Phase 5 items** (to implement when starting Phase 5):
 

@@ -245,7 +245,7 @@ interface SpacesSlice {
     spaces: Space[];
     currentSpaceId: string | null;
     fetchSpaces: () => Promise<void>;
-    createSpace: (name: string, description?: string, sync_policy?: 'sync' | 'local_only') => Promise<Space>;
+    createSpace: (name: string, description?: string, sync_policy?: 'sync' | 'local_only' | 'shared') => Promise<Space>;
     setCurrentSpaceId: (spaceId: string | null) => void;
     isSpacesModalOpen: boolean;
     setIsSpacesModalOpen: (open: boolean) => void;

@@ -15,10 +15,14 @@ export interface Run {
     space_id?: string;  // Phase 4: optional space
 }
 
+export type SpaceSyncPolicy = 'sync' | 'local_only' | 'shared';
+
 export interface Space {
     space_id: string;
     name: string;
     description: string;
+    sync_policy?: SpaceSyncPolicy;
+    is_shared?: boolean;
 }
 
 export interface AgentNodeData {

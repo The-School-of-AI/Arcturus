@@ -107,18 +107,24 @@ def retrieve(
     filter_metadata: Optional[Dict[str, Any]] = None
     if session_id:
         filter_metadata = {"session_id": session_id}
-    # Phase 3: space filter. When space_id/space_ids provided: global + specified spaces.
-    # Qdrant: filter payload space_id IN [__global__, ...requested]
-    # Neo4j: filter to memories with no IN_SPACE (global) or IN_SPACE to requested UUIDs
+    # Phase 3 / Shared Space: space filter.
+    # When run is in a specific space (space_id != __global__): do NOT inject global memories/entities —
+    # only that space. When space_id is __global__ or None: only global or unscoped (no cross-space leak).
     from memory.space_constants import SPACE_ID_GLOBAL
     _qdrant_space_ids: Optional[List[str]] = None
     _neo4j_space_ids: Optional[List[str]] = None
     if space_ids:
         _neo4j_space_ids = [s for s in space_ids if s and s != SPACE_ID_GLOBAL]
-        _qdrant_space_ids = list(dict.fromkeys([SPACE_ID_GLOBAL] + _neo4j_space_ids))
+        # Include global only if explicitly in space_ids (e.g. when viewing Global space)
+        _qdrant_space_ids = list(dict.fromkeys(([SPACE_ID_GLOBAL] if SPACE_ID_GLOBAL in space_ids else []) + _neo4j_space_ids))
     elif space_id and space_id != SPACE_ID_GLOBAL:
+        # Run in a specific space: only that space (no global injection)
         _neo4j_space_ids = [space_id]
-        _qdrant_space_ids = [SPACE_ID_GLOBAL, space_id]
+        _qdrant_space_ids = [space_id]
+    elif space_id == SPACE_ID_GLOBAL:
+        # Explicit Global space: only global (no per-space memories)
+        _qdrant_space_ids = [SPACE_ID_GLOBAL]
+        _neo4j_space_ids = [SPACE_ID_GLOBAL]  # Neo4j: sp IS NULL OR sp.space_id IN $space_ids → global only
     if _qdrant_space_ids and filter_metadata is None:
         filter_metadata = {}
     if _qdrant_space_ids:

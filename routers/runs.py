@@ -604,7 +604,19 @@ async def process_run(
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     run_id = str(int(datetime.now().timestamp()))
     user_id = get_current_user_id()
-    
+
+    # Shared Space: verify user has access to the space (owner or shared-with)
+    if request.space_id:
+        try:
+            from memory.knowledge_graph import get_knowledge_graph
+            kg = get_knowledge_graph()
+            if kg and kg.enabled and not kg.can_user_access_space(user_id, request.space_id):
+                raise HTTPException(status_code=403, detail="You do not have access to this space")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
     # Start background execution (Phase 3C: pass space_id for session scoping)
     background_tasks.add_task(
         process_run, run_id, request.query, request.source, request.stream, None, request.space_id, user_id

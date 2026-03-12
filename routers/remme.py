@@ -34,7 +34,7 @@ class AddMemoryRequest(BaseModel):
 class CreateSpaceRequest(BaseModel):
     name: str | None = None
     description: str | None = None
-    sync_policy: str | None = None  # Phase 4: "sync" | "local_only"
+    sync_policy: str | None = None  # Phase 4: "sync" | "local_only" | "shared" (Shared Space step)
 
 
 class UpdateFactRequest(BaseModel):
@@ -299,8 +299,19 @@ async def cleanup_dangling_memories():
 
 @router.post("/add")
 async def add_memory(request: AddMemoryRequest, background_tasks: BackgroundTasks):
-    """Manually add a memory. Optional space_id for Phase 3 Spaces. When MNEMO_ENABLED=false, auto-extract to UserModel hubs; when true, ingestion uses unified extractor. Phase 4: triggers background sync when sync engine enabled."""
+    """Manually add a memory. Optional space_id for Phase 3 Spaces. Shared Space: must have access (owner or shared-with). When MNEMO_ENABLED=false, auto-extract to UserModel hubs; when true, ingestion uses unified extractor. Phase 4: triggers background sync when sync engine enabled."""
     try:
+        if request.space_id:
+            try:
+                from memory.knowledge_graph import get_knowledge_graph
+                from memory.user_id import get_user_id
+                kg = get_knowledge_graph()
+                if kg and kg.enabled and not kg.can_user_access_space(get_user_id(), request.space_id):
+                    raise HTTPException(status_code=403, detail="You do not have access to this space")
+            except HTTPException:
+                raise
+            except Exception:
+                pass
         emb = get_embedding(request.text, task_type="search_query")
         add_kwargs: dict = {"category": request.category, "source": "manual"}
         if request.space_id:
@@ -358,9 +369,12 @@ async def create_space(request: CreateSpaceRequest, background_tasks: Background
         from core.auth.context import get_is_guest
 
         get_user_id()  # ensure identity present (middleware already enforced for protected routes)
-        # Enforce Space Rules: Guests can only create local_only spaces (design §7)
+        # Enforce Space Rules: Guests can only create local_only (Computer Only) spaces
         if get_is_guest():
             request.sync_policy = "local_only"
+        # Normalize: allow sync | local_only | shared
+        if request.sync_policy and request.sync_policy not in ("sync", "local_only", "shared"):
+            request.sync_policy = "sync"
 
         kg = get_knowledge_graph()
         if not kg or not kg.enabled:
@@ -376,7 +390,7 @@ async def create_space(request: CreateSpaceRequest, background_tasks: Background
         # Phase 4: enqueue background sync when sync engine enabled
         try:
             from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
-            if is_sync_engine_enabled() and get_sync_server_url() and request.sync_policy != 'local_only':
+            if is_sync_engine_enabled() and get_sync_server_url() and request.sync_policy not in ("local_only",):
                 from routers.sync import run_sync_background
                 background_tasks.add_task(run_sync_background)
         except Exception:
@@ -391,15 +405,47 @@ async def create_space(request: CreateSpaceRequest, background_tasks: Background
 
 @router.get("/spaces")
 async def list_spaces():
-    """List spaces owned by the user. Phase 3 Spaces."""
+    """List spaces owned by the user plus spaces shared with them. Phase 3 Spaces; Shared Space: includes shared."""
     try:
         from memory.knowledge_graph import get_knowledge_graph
         from memory.user_id import get_user_id
         kg = get_knowledge_graph()
         if not kg or not kg.enabled:
             return {"status": "success", "spaces": []}
-        spaces = kg.get_spaces_for_user()
+        spaces = kg.get_all_spaces_for_user()
         return {"status": "success", "spaces": spaces}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ShareSpaceRequest(BaseModel):
+    """Share a space with other users by user_id. Email/username resolution can be added when auth supports it."""
+    user_ids: list[str] = []
+
+
+@router.post("/spaces/{space_id}/share")
+async def share_space(space_id: str, body: ShareSpaceRequest):
+    """Share a space with the given user_ids. Caller must own the space. Shared Space step."""
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        from memory.user_id import get_user_id
+        kg = get_knowledge_graph()
+        if not kg or not kg.enabled:
+            raise HTTPException(status_code=503, detail="Neo4j not enabled")
+        uid = get_user_id()
+        if not uid:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        owned_ids = [s["space_id"] for s in kg.get_spaces_for_user(user_id=uid)]
+        if space_id not in owned_ids:
+            raise HTTPException(status_code=403, detail="You do not own this space")
+        added = 0
+        for u in body.user_ids:
+            if u and u.strip():
+                if kg.share_space_with(space_id, u.strip(), owner_user_id=uid):
+                    added += 1
+        return {"status": "success", "space_id": space_id, "shared_count": added}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
