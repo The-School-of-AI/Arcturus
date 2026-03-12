@@ -402,7 +402,7 @@ Return ONLY valid JSON in this exact format:
   "ops": [
     {{
       "op": "SET|INSERT_AFTER|DELETE",
-      "path": "<JSONPath-like path relative to target>",
+      "path": "<dot-notation path, numeric indices only>",
       "value": "<new value for SET>",
       "item": "<item to insert for INSERT_AFTER>",
       "id_key": "<key for idempotency on INSERT_AFTER>"
@@ -423,6 +423,8 @@ Operation types:
 
 Rules:
 - Path is relative to the resolved target (e.g., if target is slide 3, path "title" means slide 3's title)
+- Path format: dot notation with numeric indices ONLY. Valid: "title", "content", "elements[0].content". NEVER use filter expressions like elements[?(@.id == "e7")] — instead use target kind "slide_element" with "element_id".
+- To edit a specific element by id, set target kind to "slide_element" with "element_id" — then path is relative to that element (e.g. "content", "type").
 - Use only existing target ids/indices from the target map
 - IMPORTANT: "title", "speaker_notes", "deck_title", "subtitle", "heading" are plain strings. Never set them to objects/dicts — use a simple string value.
 - Return ONLY the JSON object, no markdown fences or explanations"""
@@ -452,6 +454,8 @@ Please fix the patch and return ONLY valid JSON matching the Patch schema:
 
 Rules:
 - Fix the error identified above
+- Path format: dot notation with numeric indices ONLY. Valid: "title", "content", "elements[0].content". NEVER use filter expressions like elements[?(@.id == "e7")] — instead use target kind "slide_element" with "element_id".
+- To edit a specific element by id, set target kind to "slide_element" with "element_id" — then path is relative to that element (e.g. "content", "type").
 - Use only valid target kinds and existing ids from the target map
 - IMPORTANT: "title", "speaker_notes", "deck_title", "subtitle", "heading" are plain strings. Never set them to objects/dicts — use a simple string value.
 - Return ONLY the JSON object, no markdown fences or explanations"""
