@@ -509,7 +509,7 @@ export const useAppStore = create<AppState>()(
                 if (state.authStatus === 'logged_in' && state.authUserId) return; // user is currently logged in
                 
                 const isLocalMigrationEnabled = import.meta.env.VITE_ENABLE_LOCAL_MIGRATION === 'true';
-
+                console.log('isLocalMigrationEnabled', isLocalMigrationEnabled);
                 // Try to fetch legacy guest ID if enabled, even if they already have a persisted random guest ID
                 if (isLocalMigrationEnabled && state.authStatus === 'guest') {
                     try {
@@ -537,7 +537,7 @@ export const useAppStore = create<AppState>()(
                 // Return to guest mode, try to fetch legacy ID first if local_migration is enabled
                 let guestId = `guest_${crypto.randomUUID()}`;
                 const isLocalMigrationEnabled = import.meta.env.VITE_ENABLE_LOCAL_MIGRATION === 'true';
-                
+                console.log('isLocalMigrationEnabled', isLocalMigrationEnabled);
                 if (isLocalMigrationEnabled) {
                     try {
                         const res = await axios.get(`${AUTH_API_BASE}/auth/legacy-guest-id`);
@@ -1568,7 +1568,9 @@ export const useAppStore = create<AppState>()(
             fetchMemories: async () => {
                 try {
                     const spaceId = get().currentSpaceId;
-                    const res = await api.getMemories(spaceId);
+                    // When Global (null), pass __global__ so backend returns only unscoped memories
+                    const filterSpaceId = spaceId ?? '__global__';
+                    const res = await api.getMemories(filterSpaceId);
                     set({ memories: res.memories });
                 } catch (e) {
                     console.error("Failed to fetch memories", e);

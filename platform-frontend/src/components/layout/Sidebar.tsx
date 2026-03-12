@@ -129,11 +129,14 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         }
     }, [isNewRunOpen, currentSpaceId, fetchSpaces]);
 
-    // Filter runs by search and by space (Phase 4). When a space is selected, show only runs in that space.
+    // Filter runs by search and by space (Phase 4). Global = only unscoped runs; space = only runs in that space.
     const filteredRuns = React.useMemo(() => {
         let list = runs;
         if (currentSpaceId) {
             list = list.filter((r) => r.space_id === currentSpaceId);
+        } else {
+            // Global: show only runs with no space (unscoped)
+            list = list.filter((r) => !r.space_id || r.space_id === '__global__');
         }
         if (searchQuery.trim()) {
             list = list.filter((run) =>
