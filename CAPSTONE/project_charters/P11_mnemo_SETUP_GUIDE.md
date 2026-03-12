@@ -485,5 +485,19 @@ Leave `SYNC_ENGINE_ENABLED` unset or `false`. No push/pull, no startup sync, no 
 
 ---
 
+## Phase 5: Authentication & Cloud Hub (Frontend)
+
+By default, the Arcturus Electron/Web frontend will communicate with your local backend at `http://localhost:8000/api` for both data operations and authentication/syncing.
+
+To connect your frontend to a **Cloud Hub** for cross-device synchronization and centralized authentication, create a `.env` file in the `platform-frontend/` directory and configure the Auth API base URL:
+
+```ini
+VITE_AUTH_API_BASE=https://hub.arcturus.ai
+```
+
+When this variable is set, the frontend will transparently route all `/auth/*` and `/sync/*` requests to your Cloud Hub, while keeping all local data operations (like saving memories or interacting with local LLMs) completely on your local device. If no variable is set, it safely falls back to Localhost.
+
+---
+
 **Ready to proceed?** Once Qdrant is running and tests pass, run the migration scripts to move existing FAISS data to Qdrant. Optionally enable Neo4j and backfill memories for dual-path retrieval. 🚀
 

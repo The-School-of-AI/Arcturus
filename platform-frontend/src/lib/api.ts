@@ -3,12 +3,14 @@ import type { Run, Space, PlatformNode, PlatformEdge } from '../types';
 import { useAppStore } from '../store';
 
 export const API_BASE = 'http://localhost:8000/api';
+// Dedicated base URL for Auth and Sync operations (Cloud Hub)
+export const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_BASE || 'http://localhost:8000';
 
 // --- Axios Interceptors for Auth ---
 axios.interceptors.request.use(
     (config) => {
         // Skip auth store access if it's not initialized yet or if it's a completely external URL
-        if (config.url && config.url.startsWith(API_BASE)) {
+        if (config.url && (config.url.startsWith(API_BASE) || config.url.startsWith(AUTH_API_BASE))) {
             const state = useAppStore.getState();
             if (state.authStatus === 'logged_in' && state.authToken) {
                 config.headers['Authorization'] = `Bearer ${state.authToken}`;

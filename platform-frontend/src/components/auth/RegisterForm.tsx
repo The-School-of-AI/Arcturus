@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store';
-import { api } from '@/lib/api';
+import { api, AUTH_API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ export const RegisterForm = ({ onSuccess }: { onSuccess: () => void }) => {
                 payload.guest_id = currentGuestId;
             }
 
-            const res = await api.post('/auth/register', payload);
+            const res = await api.post(`${AUTH_API_BASE}/auth/register`, payload);
 
             if (res.data.access_token) {
                 setAuthUserId(res.data.user_id, 'logged_in', res.data.access_token);

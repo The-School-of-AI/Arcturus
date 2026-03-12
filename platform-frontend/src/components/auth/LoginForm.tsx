@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store';
-import { api } from '@/lib/api';
+import { api, AUTH_API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ export const LoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
             // Assume standard OAuth2 password request if FastAPI Form, but we will send JSON for now
             // Update: FastAPI typically uses form data for /token, but our custom /auth/login could use JSON
-            const res = await api.post('/auth/login', payload);
+            const res = await api.post(`${AUTH_API_BASE}/auth/login`, payload);
 
             if (res.data.access_token) {
                 setAuthUserId(res.data.user_id, 'logged_in', res.data.access_token);
