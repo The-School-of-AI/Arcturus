@@ -109,9 +109,14 @@ async def get_rag_documents(space_id: str | None = Query(None, description="Filt
                 files = filtered
             else:
                 # Notes convention: data/Notes/__global__/ and data/Notes/{space_id}/
-                for item in files:
-                    if item.get("name") == "Notes" and item.get("type") == "folder" and item.get("children"):
-                        item["children"] = _filter_tree_by_space(item["children"], space_id) or []
+                notes_item = next((x for x in files if x.get("name") == "Notes" and x.get("type") == "folder"), None)
+                if notes_item and notes_item.get("children"):
+                    filtered_notes = _filter_tree_by_space(notes_item["children"], space_id)
+                    if filtered_notes:
+                        notes_item["children"] = filtered_notes
+                        files = [notes_item]
+                    else:
+                        files = []
         return {"files": files}
     except Exception as e:
         import traceback
