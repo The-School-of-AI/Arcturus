@@ -87,25 +87,28 @@ class MemorySkeletonizer:
             if "iterations" in node:
                 for iter_data in node["iterations"]:
                     output = iter_data.get("output", {})
+                    if not isinstance(output, dict):
+                        continue
                     
                     # Capture Tool Calls
                     if output.get("call_tool"):
                         tool_call = output["call_tool"]
                         actions.append({
                             "type": "tool",
-                            "name": tool_call.get("name"),
+                            "name": tool_call.get("name") if isinstance(tool_call, dict) else str(tool_call),
                             # We might strip arguments if they are huge text blocks, 
                             # but short args like search queries are valuable.
-                            "args": str(tool_call.get("arguments", ""))[:200] 
+                            "args": str(tool_call.get("arguments", ""))[:200] if isinstance(tool_call, dict) else ""
                         })
                     
                     # Capture Code Execution
                     if output.get("call_self"):
+                        call_self = output.get("call_self", {})
                         actions.append({
                             "type": "code",
                             "lang": "python",
                             # Code is the recipe! Keep it.
-                            "snippet": output.get("call_self", {}).get("code", "")[:500] 
+                            "snippet": call_self.get("code", "")[:500] if isinstance(call_self, dict) else str(call_self)[:500]
                         })
                         
             s_node["actions"] = actions

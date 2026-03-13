@@ -2,9 +2,14 @@
 
 Provides TestClient with mocked MongoDB and health checks so tests run without
 external services (MongoDB, Qdrant, Ollama).
+
+P14.4: Also mocks feature flags, diagnostics, throttle, cache, and config.
 """
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
+import json
+import tempfile
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -17,13 +22,47 @@ def _make_mock_spans_collection():
     """Create a mock MongoDB spans collection for admin API tests."""
 
     def _aggregate(pipeline):
-        # Infer endpoint from pipeline structure (check most specific first)
+        # Infer endpoint from pipeline structure.
+        # Order matters: check most specific patterns first.
         pipeline_str = str(pipeline)
-        has_cost_group = "total_cost_usd" in pipeline_str
+        has_trace_group = "'_id': '$trace_id'" in pipeline_str
+        has_session_group = "attributes.session_id" in pipeline_str
         has_metrics_group = "total_traces" in pipeline_str
+        has_cost_group = "total_cost_usd" in pipeline_str
         has_error_group = "$ifNull" in pipeline_str and "trace_ids" in pipeline_str
-        has_trace_group = "$trace_id" in pipeline_str and "trace_id" in pipeline_str
 
+        if has_trace_group:
+            # get_traces
+            return iter(
+                [
+                    {
+                        "_id": "abc123def456",
+                        "trace_id": "abc123def456",
+                        "start_time": datetime.now(timezone.utc),
+                        "duration_ms": 150.5,
+                        "has_error": False,
+                        "span_count": 5,
+                        "session_id": "sess-1",
+                        "cost_usd": 0.001234,
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                    }
+                ]
+            )
+        if has_session_group:
+            # list_sessions
+            return iter(
+                [
+                    {
+                        "_id": "sess-001",
+                        "start_time": datetime.now(timezone.utc),
+                        "end_time": datetime.now(timezone.utc),
+                        "span_count": 10,
+                        "total_cost_usd": 0.05,
+                        "agents": ["ThinkerAgent", "CoderAgent"],
+                    }
+                ]
+            )
         if has_cost_group:
             # get_cost_summary
             return iter(
@@ -52,24 +91,6 @@ def _make_mock_spans_collection():
             return iter(
                 [
                     {"_id": "llm.generate", "count": 2, "trace_ids": ["t1", "t2"]},
-                ]
-            )
-        if has_trace_group:
-            # get_traces
-            return iter(
-                [
-                    {
-                        "_id": "abc123def456",
-                        "trace_id": "abc123def456",
-                        "start_time": datetime.now(timezone.utc),
-                        "duration_ms": 150.5,
-                        "has_error": False,
-                        "span_count": 5,
-                        "session_id": "sess-1",
-                        "cost_usd": 0.001234,
-                        "input_tokens": 100,
-                        "output_tokens": 50,
-                    }
                 ]
             )
         return iter([])
@@ -121,14 +142,54 @@ def _make_mock_resource_snapshot():
 
 
 @pytest.fixture
-def admin_client():
-    """TestClient for admin API with mocked MongoDB and health."""
+def admin_client(tmp_path):
+    """TestClient for admin API with mocked MongoDB, health, and P14.4 admin controls."""
     app = FastAPI()
     app.include_router(admin_router.router, prefix="/api")
 
     mock_coll = _make_mock_spans_collection()
     mock_health_repo = _make_mock_health_repo()
     mock_resources = _make_mock_resource_snapshot()
+
+    # P14.4: Create temp feature flags file for isolation
+    flags_path = tmp_path / "feature_flags.json"
+    flags_path.write_text(json.dumps({
+        "deep_research": True,
+        "voice_wake": True,
+        "multi_agent": False,
+        "cost_tracking": True,
+        "semantic_cache": True,
+        "health_scheduler": True,
+    }))
+
+    # P14.4: Create temp settings defaults for config/diff
+    defaults_path = tmp_path / "settings.defaults.json"
+    defaults_path.write_text(json.dumps({
+        "models": {"default": "gemini-2.5-flash"},
+        "agent": {"max_cost_per_run": 0.50},
+    }))
+
+    # P14.4: Mock diagnostics
+    mock_diagnostics = {
+        "overall": "pass",
+        "summary": {"pass": 5, "warn": 1, "fail": 0},
+        "checks": [
+            {"check": "python_version", "status": "pass", "message": "Python 3.11.5"},
+            {"check": "config_file", "status": "pass", "message": "settings.json is valid"},
+        ],
+    }
+
+    # P14.4: Mock throttle
+    mock_throttle = {
+        "hourly": {"window": "hourly", "hours": 1, "spent_usd": 0.1, "budget_usd": 2.0, "remaining_usd": 1.9, "usage_pct": 5.0, "throttled": False},
+        "daily": {"window": "daily", "hours": 24, "spent_usd": 0.5, "budget_usd": 10.0, "remaining_usd": 9.5, "usage_pct": 5.0, "throttled": False},
+        "allowed": True,
+        "reason": "Within budget",
+    }
+
+    # Import and create a FeatureFlagStore pointing at temp file
+    from ops.admin.feature_flags import FeatureFlagStore
+    temp_flag_store = FeatureFlagStore(path=flags_path)
 
     with (
         patch.object(admin_router, "_get_spans_collection", return_value=mock_coll),
@@ -143,6 +204,10 @@ def admin_client():
             ],
         ),
         patch("ops.health.collect_resources", return_value=mock_resources),
+        # P14.4 mocks
+        patch("routers.admin.flag_store" if False else "ops.admin.feature_flags.flag_store", temp_flag_store),
+        patch("ops.admin.diagnostics.run_diagnostics", return_value=mock_diagnostics),
     ):
         with TestClient(app) as client:
             yield client
+

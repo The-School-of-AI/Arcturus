@@ -1,0 +1,8 @@
+{
+  "cost_tracking": true,
+  "deep_research": true,
+  "health_scheduler": true,
+  "multi_agent": false,
+  "semantic_cache": true,
+  "voice_wake": true
+}

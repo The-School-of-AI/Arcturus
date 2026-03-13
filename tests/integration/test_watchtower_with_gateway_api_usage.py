@@ -135,3 +135,82 @@ def test_10_ops_cost_module_provides_configurable_calculator() -> None:
     assert hasattr(result, "output_tokens")
     assert result.input_tokens == 1000
     assert result.output_tokens == 500
+
+
+# ---------------------------------------------------------------------------
+# P14.4: Admin Controls integration tests
+# ---------------------------------------------------------------------------
+
+
+def test_11_admin_flags_module_provides_feature_flag_store() -> None:
+    """ops.admin.feature_flags.FeatureFlagStore can get/set/list flags."""
+    import tempfile
+    import json
+    from pathlib import Path
+    from ops.admin.feature_flags import FeatureFlagStore
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / "flags.json"
+        store = FeatureFlagStore(path=path)
+
+        # File should be auto-created with defaults
+        assert path.exists()
+
+        # list_all returns flags
+        flags = store.list_all()
+        assert isinstance(flags, list)
+        assert len(flags) >= 4
+
+        # get/set works
+        store.set("test_flag", True)
+        assert store.get("test_flag") is True
+
+        store.set("test_flag", False)
+        assert store.get("test_flag") is False
+
+        # delete works
+        assert store.delete("test_flag") is True
+        assert store.get("test_flag") is False  # returns default
+
+
+def test_12_admin_diagnostics_module_returns_results() -> None:
+    """ops.admin.diagnostics.run_diagnostics returns overall, summary, checks."""
+    from unittest.mock import patch
+
+    # Mock health checks to avoid network calls
+    mock_results = [
+        type("R", (), {"to_dict": lambda self: {"service": "mongodb", "status": "ok", "latency_ms": 1.0, "details": None}})(),
+        type("R", (), {"to_dict": lambda self: {"service": "qdrant", "status": "ok", "latency_ms": 2.0, "details": None}})(),
+    ]
+
+    with patch("ops.admin.diagnostics.run_all_health_checks" if False else "ops.health.run_all_health_checks", return_value=mock_results):
+        from ops.admin.diagnostics import run_diagnostics
+        result = run_diagnostics()
+
+    assert "overall" in result
+    assert result["overall"] in ("pass", "warn", "fail")
+    assert "summary" in result
+    assert "checks" in result
+    assert isinstance(result["checks"], list)
+    assert len(result["checks"]) >= 5  # env checks + service checks
+
+
+def test_13_admin_throttle_policy_reads_cost_data() -> None:
+    """ops.admin.throttle.ThrottlePolicy returns usage summary."""
+    from unittest.mock import MagicMock
+    from ops.admin.throttle import ThrottlePolicy
+
+    # Mock spans collection that returns zero cost
+    mock_coll = MagicMock()
+    mock_coll.aggregate.return_value = iter([])
+
+    policy = ThrottlePolicy(spans_collection=mock_coll)
+    summary = policy.get_usage_summary()
+
+    assert "hourly" in summary
+    assert "daily" in summary
+    assert "allowed" in summary
+    assert summary["allowed"] is True
+    assert summary["hourly"]["spent_usd"] == 0.0
+    assert summary["daily"]["spent_usd"] == 0.0
+

@@ -1,12 +1,15 @@
 """
-Watchtower Admin API - Trace queries and metrics.
-No auth for Days 1-5; add in Days 11-15.
+Watchtower Admin API — Trace queries, metrics, and P14.4 Admin Controls.
+
+P14.1-14.3 (traces, cost, errors, health) endpoints are at the top.
+P14.4 (feature flags, cache, config, diagnostics, sessions, throttle) added below.
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 from pymongo import MongoClient
 
-from config.settings_loader import settings
+from config.settings_loader import settings, load_settings, reload_settings, save_settings
 from ops.admin.spans_repository import SpansRepository
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -142,3 +145,301 @@ async def get_health_resources():
 
     snapshot = collect_resources()
     return {"resources": snapshot.to_dict()}
+
+
+# ===================================================================
+# P14.4 — Admin Controls
+# ===================================================================
+
+
+# ---------------------------------------------------------------------------
+# Feature Flags
+# ---------------------------------------------------------------------------
+
+
+@router.get("/flags")
+async def list_flags():
+    """List all feature flags with their state and lifecycle type."""
+    from ops.admin.feature_flags import flag_store
+
+    return {"flags": flag_store.list_all()}
+
+
+class FlagToggleRequest(BaseModel):
+    enabled: bool
+
+
+@router.put("/flags/{name}")
+async def toggle_flag(name: str, body: FlagToggleRequest, request: Request):
+    """
+    Toggle a feature flag.
+
+    Lifecycle-managed flags (voice_wake, health_scheduler) will also
+    stop/start the corresponding background service.
+    """
+    from ops.admin.feature_flags import flag_store, LIFECYCLE_FLAGS
+
+    result = flag_store.set(name, body.enabled)
+
+    # Lifecycle hooks: actually stop/start background services
+    if name in LIFECYCLE_FLAGS:
+        try:
+            if name == "voice_wake" and hasattr(request.app.state, "orchestrator"):
+                orch = request.app.state.orchestrator
+                if body.enabled:
+                    if orch.wake and not getattr(orch.wake, "_running", False):
+                        orch.wake.start()
+                        result["lifecycle_action"] = "started"
+                else:
+                    if orch.wake:
+                        orch.wake.stop()
+                        result["lifecycle_action"] = "stopped"
+
+            elif name == "health_scheduler" and hasattr(request.app.state, "health_scheduler"):
+                scheduler = request.app.state.health_scheduler
+                if body.enabled:
+                    import asyncio
+                    asyncio.create_task(scheduler.start())
+                    result["lifecycle_action"] = "started"
+                else:
+                    import asyncio
+                    asyncio.create_task(scheduler.stop())
+                    result["lifecycle_action"] = "stopped"
+
+        except Exception as e:
+            result["lifecycle_error"] = str(e)
+
+    return result
+
+
+@router.delete("/flags/{name}")
+async def delete_flag(name: str):
+    """Delete a feature flag."""
+    from ops.admin.feature_flags import flag_store
+
+    existed = flag_store.delete(name)
+    if not existed:
+        raise HTTPException(status_code=404, detail=f"Flag '{name}' not found")
+    return {"deleted": name}
+
+
+# ---------------------------------------------------------------------------
+# Cache Management
+# ---------------------------------------------------------------------------
+
+
+@router.get("/cache")
+async def list_caches():
+    """Enumerate known caches with basic stats."""
+    import os
+    from pathlib import Path
+
+    caches = []
+
+    # 1. Settings cache
+    caches.append({
+        "name": "settings",
+        "description": "In-memory settings cache (config/settings.json)",
+        "flushable": True,
+    })
+
+    # 2. FAISS index
+    faiss_dir = Path("data/faiss_index")
+    faiss_size = 0
+    faiss_files = 0
+    if faiss_dir.exists():
+        for f in faiss_dir.rglob("*"):
+            if f.is_file():
+                faiss_files += 1
+                faiss_size += f.stat().st_size
+    caches.append({
+        "name": "faiss",
+        "description": "FAISS vector index (data/faiss_index/)",
+        "files": faiss_files,
+        "size_mb": round(faiss_size / (1024 * 1024), 2),
+        "flushable": False,  # Destructive — not safe to flush without re-index
+    })
+
+    # 3. MCP sessions
+    try:
+        from shared.state import get_multi_mcp
+        mcp = get_multi_mcp()
+        session_count = len(getattr(mcp, "sessions", {}))
+        caches.append({
+            "name": "mcp_sessions",
+            "description": "Active MCP server sessions",
+            "sessions": session_count,
+            "flushable": False,
+        })
+    except Exception:
+        pass
+
+    return {"caches": caches}
+
+
+@router.post("/cache/{name}/flush")
+async def flush_cache(name: str):
+    """Flush a specific cache by name."""
+    if name == "settings":
+        reload_settings()
+        return {"flushed": "settings", "message": "Settings cache reloaded from disk"}
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Cache '{name}' is not flushable or does not exist. Only 'settings' is safely flushable.",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Config Management (delegates to existing settings_loader)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/config")
+async def get_config():
+    """Return current live config (settings.json)."""
+    current = reload_settings()
+    return {"config": current}
+
+
+@router.get("/config/diff")
+async def get_config_diff():
+    """Show differences between current settings and defaults."""
+    import json
+    from pathlib import Path
+
+    defaults_path = Path("config/settings.defaults.json")
+    if not defaults_path.exists():
+        raise HTTPException(status_code=404, detail="settings.defaults.json not found")
+
+    defaults = json.loads(defaults_path.read_text(encoding="utf-8"))
+    current = reload_settings()
+
+    def _diff(d1: dict, d2: dict, prefix: str = "") -> list:
+        changes = []
+        all_keys = set(list(d1.keys()) + list(d2.keys()))
+        for key in sorted(all_keys):
+            path = f"{prefix}.{key}" if prefix else key
+            v1 = d1.get(key)
+            v2 = d2.get(key)
+            if isinstance(v1, dict) and isinstance(v2, dict):
+                changes.extend(_diff(v1, v2, path))
+            elif v1 != v2:
+                changes.append({
+                    "path": path,
+                    "default": v1,
+                    "current": v2,
+                })
+        return changes
+
+    differences = _diff(defaults, current)
+    return {
+        "total_changes": len(differences),
+        "differences": differences,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Diagnostics (arcturus doctor)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/diagnostics")
+async def run_diagnostics_endpoint():
+    """Run automated health check and system diagnostics."""
+    from ops.admin.diagnostics import run_diagnostics
+
+    return run_diagnostics()
+
+
+# ---------------------------------------------------------------------------
+# Sessions (simplified user management for single-user system)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/sessions")
+async def list_sessions(
+    limit: int = Query(20, ge=1, le=100),
+    hours: int = Query(24, ge=1, le=720),
+):
+    """List recent sessions derived from trace data (spans grouped by session_id)."""
+    from datetime import datetime, timedelta
+
+    coll = _get_spans_collection()
+    since = datetime.utcnow() - timedelta(hours=hours)
+
+    pipeline = [
+        {
+            "$match": {
+                "start_time": {"$gte": since},
+                "attributes.session_id": {"$exists": True, "$ne": ""},
+            }
+        },
+        {
+            "$group": {
+                "_id": "$attributes.session_id",
+                "start_time": {"$min": "$start_time"},
+                "end_time": {"$max": "$end_time"},
+                "span_count": {"$sum": 1},
+                "total_cost_usd": {
+                    "$sum": {"$toDouble": {"$ifNull": ["$attributes.cost_usd", "0"]}}
+                },
+                "agents": {"$addToSet": "$attributes.agent"},
+            }
+        },
+        {"$sort": {"start_time": -1}},
+        {"$limit": limit},
+    ]
+
+    rows = list(coll.aggregate(pipeline))
+    sessions = []
+    for r in rows:
+        sessions.append({
+            "session_id": r["_id"],
+            "start_time": r["start_time"].isoformat() if hasattr(r["start_time"], "isoformat") else str(r["start_time"]),
+            "end_time": r["end_time"].isoformat() if hasattr(r["end_time"], "isoformat") else str(r["end_time"]),
+            "span_count": r["span_count"],
+            "total_cost_usd": round(float(r.get("total_cost_usd", 0)), 6),
+            "agents": [a for a in r.get("agents", []) if a],
+        })
+    return {"sessions": sessions, "hours": hours, "count": len(sessions)}
+
+
+# ---------------------------------------------------------------------------
+# Throttle (global cost budget)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/throttle")
+async def get_throttle():
+    """Get current cost usage vs hourly/daily budgets."""
+    from ops.admin.throttle import ThrottlePolicy
+
+    try:
+        coll = _get_spans_collection()
+    except Exception:
+        coll = None
+    policy = ThrottlePolicy(spans_collection=coll)
+    return policy.get_usage_summary()
+
+
+class ThrottleUpdateRequest(BaseModel):
+    daily_budget_usd: float | None = None
+    hourly_budget_usd: float | None = None
+
+
+@router.put("/throttle")
+async def update_throttle(body: ThrottleUpdateRequest):
+    """Update global cost budget limits."""
+    current = reload_settings()
+    wt = current.setdefault("watchtower", {})
+    throttle = wt.setdefault("throttle", {})
+
+    if body.daily_budget_usd is not None:
+        throttle["daily_budget_usd"] = body.daily_budget_usd
+    if body.hourly_budget_usd is not None:
+        throttle["hourly_budget_usd"] = body.hourly_budget_usd
+
+    save_settings()
+    return {"message": "Throttle updated", "throttle": throttle}
+
