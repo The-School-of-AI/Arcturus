@@ -80,22 +80,43 @@
 - **Tests**: Unit (merge, policy), integration (two devices converge, B pushes A receives, apply-latency &lt;150ms, load three devices + one pull, reconnection second pull idempotent)
 - **Setup**: `P11_mnemo_SETUP_GUIDE.md` — Phase 4 section (one-server vs two-stores, env vars)
 
-### Next: Phase 5 and remaining
+**Phase A (RAG/Memories scope)**
+- Migration scripts set `user_id` and `space_id` on migrated memories and RAG chunks; `migrate_rag_faiss_to_qdrant.py` and `migrate_faiss_to_qdrant.py` support `--space-id` / `MIGRATION_SPACE_ID` (default `__global__`).
 
-**First priority** — Phase 5 (see P11_UNIFIED_REFERENCE.md §8.8):
-1. **Optional login/register** (first): Guest user_id, register, login, associate guest data to account, migrate sessions/memories to logged-in user_id; then sync auth can use login token.
-2. **UI edit (frontend)** for preferences/facts; backend ready (`PUT /remme/preferences/facts`).
-3. **user_id FE ownership** (may be partly addressed by login).
-4. **Lifecycle Manager** (`memory/lifecycle.py`): importance scoring, archival, contradiction resolution.
-5. **Other**: expansion depth, retrieval scoping by space, graph explorer, spaces manager.
+**Phase B (Episodic + Notes)**
+- **Episodic:** Stored in Qdrant collection `arcturus_episodic` with `user_id`, `space_id`; `search_episodes`, `get_recent_episodes`; sync engine builds episodic deltas when provider is qdrant. **Legacy:** `EPISODIC_STORE_PROVIDER=legacy` reads/writes `memory/episodic_skeletons/skeleton_*.json`; sync engine applies episodic changes to local JSON when legacy.
+- **Notes:** RAG with path-derived `space_id`; Notes under `data/Notes/` indexed with `space_id` (e.g. `__global__` or per-folder). No separate Notes env; follows `RAG_VECTOR_STORE_PROVIDER`.
 
-### Deferred / remaining
-- **Auth on sync endpoints**: Deferred to Phase 5 (login); sync currently accepts body `user_id` with no auth.
-- **Lifecycle manager**: Importance, archival, contradiction resolution (Phase 5).
-- **Session-level extraction**: Single pass for memories + preferences + entities from session (§8.2).
-- **Retrieval scoping by space**: List/filter done; full retrieval constrained by space deferred.
-- **Frontend**: Graph explorer, spaces manager (beyond current panel/modal).
-- **Performance**: P95 &lt; 250ms retrieval benchmark; qdrant index tuning.
+**Phase C (BM25 → Qdrant, hybrid search)**
+- Sparse vectors (e.g. `text-bm25`) for memories and RAG; client-side FastEmbed (BM25-style; SPLADE optional); Qdrant prefetch + RRF fusion. Config: `config/qdrant_config.yaml` `sparse_vectors` per collection. Design: `P11_PHASEC_BM25_HYBRID_SEARCH_DESIGN.md`.
+
+**Phase D (3.3 Real-time indexing verification)**
+- Timing in `qdrant_store.add()`: logs `upsert_ms`, `kg_ms`, `total_ms` for each add. Benchmark: `scripts/benchmark_realtime_indexing.py` — validates memory available for vector search within ~100 ms (add with `skip_kg_ingest=True`), verifies search returns new memory, optional full add+KG timing.
+
+**Phase E (4.2 Auto-recommend space)**
+- **Backend:** `GET /remme/recommend-space?text=&current_space_id=` — suggests `space_id` from semantic similarity of draft text to existing memories per space (most frequent space in top-k results). No auto-organization; suggestion only.
+- **Frontend:** Add Memory (RemmePanel) calls `recommendSpace(text, currentSpaceId)` debounced (500 ms); space selector updates to suggested space; user can override.
+
+**Defect fix (global space memories)**
+- **Issue:** When viewing Global space, memories with missing/empty `space_id` (legacy or pre-Spaces data) were excluded because list filtered only on `space_id == "__global__"`.
+- **Fix:** `qdrant_store.get_all()` when `space_id == "__global__"` now uses filter: `(space_id == "__global__" OR space_id is empty)` so Global view shows both explicitly global and legacy unscoped memories (still tenant-scoped by `user_id`).
+
+### Remaining
+
+**Original delivery goal:** All items from the original P11 Mnemo scope (Phases 1–4, 3.5, Phase A–E) are delivered. Nothing from the original goal remains.
+
+**Defects and hardening**
+- **Sync auth:** Sync endpoints accept `user_id` in body with no authentication; should be tied to login/session when multi-tenant.
+- **Guest / not-logged-in:** When `user_id` is from file fallback (`VITE_ENABLE_LOCAL_MIGRATION=true`), server restart or missing file can regenerate a new `user_id`, so previously stored memories may not appear until migration or same-id restored; consider persisting guest id in frontend and sending with requests.
+- **Retrieval latency:** P95 &lt; 250 ms retrieval target not yet benchmarked; run and record.
+- **Real-time indexing:** Phase D benchmark exists; if KG ingest dominates latency, consider async KG ingestion so add returns after upsert while KG runs in background.
+
+**Future / optional (not part of original delivery)**
+- **Phase 5 (already partially done in codebase):** Login/register, Lifecycle Manager (importance, archival, contradiction), user_id FE ownership, UI edit for preferences/facts. See P11_UNIFIED_REFERENCE.md §8.8.
+- **Session-level extraction:** Single pass for memories + preferences + entities from session (§8.2).
+- **Retrieval scoping by space:** List/filter done; full retrieval constrained by space implemented in codebase; verify end-to-end.
+- **Frontend:** Graph explorer, spaces manager (beyond current panel/modal).
+- **Qdrant index tuning:** Dimension, distance, sparse config per collection as needed.
 
 ## 2. Architecture Changes
 
@@ -251,15 +272,13 @@ uv run pytest tests/integration/test_sync_two_devices_converge.py -v -m slow
 - **Qdrant Cloud**: Uses API key authentication; ensure keys are scoped and rotated as needed
 
 ## 8. Known Gaps
-- **Phase 5 (next)**: Optional login/register, UI edit for preferences/facts, user_id FE ownership, Lifecycle Manager (importance, archival, contradiction resolution). See P11_UNIFIED_REFERENCE.md §8.8.
-- **Sync auth**: Sync endpoints accept `user_id` in body with no authentication; to be tied to login when Phase 5 login is implemented.
-- **Graph expansion depth & payload:** `expand_from_entities` currently one-hop; `depth` reserved for multi-hop. Entity-friendly payloads beyond `entity_ids` + optional `entity_labels` remain optional.
-- **Session-level extraction**: Single pass for memories + preferences + entities from session not yet implemented (§8.2).
-- **Retrieval scoping by space**: List/filter by space done; full retrieval constrained to space deferred (§8.4).
-- **Lifecycle**: No importance scoring, archival, or contradiction resolution (Phase 5).
-- **Retrieval latency**: P95 < 250ms target to be benchmarked; not yet measured.
-- **Frontend**: Graph explorer, spaces manager (beyond current panel/modal) deferred.
-- **Acceptance/integration**: Structural tests in place; feature-level tests (memory influences planner, cross-project retrieval) to be expanded per charter contract.
+- See **Remaining** (above) for defects and hardening (sync auth, guest user_id stability, retrieval P95 benchmark, async KG option) and for future/optional work (Phase 5 UI edit, session-level extraction, graph explorer, etc.).
+- **Phase 5:** Login/register and Lifecycle (importance, archival, contradiction) are implemented in codebase; UI edit for preferences/facts is backend-ready, frontend deferred. See P11_UNIFIED_REFERENCE.md §8.8.
+- **Sync auth:** Sync endpoints accept `user_id` in body with no authentication.
+- **Graph expansion depth:** One-hop only; `depth` reserved for multi-hop. Entity-friendly payload beyond `entity_ids`/`entity_labels` optional.
+- **Session-level extraction:** Single pass for memories + preferences + entities from session not yet implemented (§8.2).
+- **Retrieval latency:** P95 < 250 ms target to be benchmarked.
+- **Acceptance/integration:** Structural tests in place; feature-level tests to be expanded per charter.
 
 ## 9. Rollback Plan
 - **Config rollback**: Set `VECTOR_STORE_PROVIDER=faiss` (or unset); application reverts to FAISS

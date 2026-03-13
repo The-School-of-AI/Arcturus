@@ -35,11 +35,17 @@ Update **§2 Status at a glance** and **§8 Remaining / next steps** as work pro
 | **Phase 4: Sync Engine** | ✅ Core done | CRDT-based sync (LWW), push/pull API, selective sync; see §8.5 |
 | **Shared Space (new step)** | ✅ Implemented | sync_policy "shared"; space templates (Computer Only, Personal, Workspace, Custom, More Templates… e.g. Startup Research, Home Renovation); shared spaces (share by user_id, SHARED_WITH); no global injection when run in a space; see §8.8a |
 | **Login / register (Phase 5 first)** | ✅ Done | Register, login, guest vs logged-in; migration API; auth token with requests; see §8.8 |
-| **Phase 5: Lifecycle Manager** | ⏳ Deferred | Importance, archival, contradiction resolution; user_id FE; see §8.8 |
-| **UI edit (frontend + backend)** | ⏳ Deferred (post Phase 5) | Backend ready; frontend deferred to after Phase 5; see §8.9 |
+| **Phase 5: Lifecycle Manager** | ✅ Core done | Importance, archival, contradiction; visibility; see §8.8. UI edit frontend deferred. |
+| **Phase A (RAG/Memories scope)** | ✅ Done | Migrations set user_id + space_id (e.g. __global__); migrate_rag_faiss_to_qdrant, migrate_faiss_to_qdrant support --space-id / MIGRATION_SPACE_ID |
+| **Phase B (Episodic + Notes)** | ✅ Done | Episodic in Qdrant (arcturus_episodic) with space_id; EPISODIC_STORE_PROVIDER (qdrant \| legacy); Notes RAG path-derived space_id; see §4.4 |
+| **Phase C (BM25 → Qdrant, hybrid)** | ✅ Done | Sparse vectors (text-bm25), FastEmbed, prefetch + RRF; design P11_PHASEC_BM25_HYBRID_SEARCH_DESIGN.md; see §4.4 |
+| **Phase D (3.3 Real-time indexing)** | ✅ Done | Timing in add() (upsert/kg/total ms); scripts/benchmark_realtime_indexing.py for ~100 ms target; see §4.4 |
+| **Phase E (4.2 Auto-recommend space)** | ✅ Done | GET /remme/recommend-space; RemmePanel debounced space suggestion in Add Memory; see §4.4 |
+| **Global space memories fix** | ✅ Done | get_all(space_id=__global__) returns points with space_id==__global__ OR empty (legacy); tenant-scoped; see §4.4 |
+| **UI edit (frontend)** | ⏳ Deferred (post Phase 5) | Backend ready; frontend deferred; see §8.9 |
 | **Entity-friendly Qdrant payload** | ⏳ Optional | §8.1 — beyond `entity_ids` + optional `entity_labels` |
 | **Expansion depth** | ⏳ Future | One-hop only; `depth` parameter reserved for multi-hop |
-| **user_id: FE ownership** | ⏳ Phase 5 | Move user_id to frontend for server deployment; see §8.7 |
+| **user_id: FE ownership** | ✅ Done | Frontend/context; backend accepts JWT/X-User-Id; file fallback gated; see §8.7 |
 
 ---
 
@@ -57,8 +63,8 @@ Update **§2 Status at a glance** and **§8 Remaining / next steps** as work pro
 - **Phase 2/3:** Neo4j knowledge graph (entities, relationships, dual-path retrieval). **Core done.**
 - **Phase 2.5:** Unified extractor with registry-owned fact identity (field_id). **Done.**
 - **Phase 3:** Spaces & Collections (Perplexity-style project hubs). **Done.** Create/list/select spaces; runs and memories filtered by space. Retrieval scoping by space deferred. Session-level extraction deferred.
-- **Phase 4:** **Sync Engine** — Cross-device sync (CRDT-based), conflict resolution, selective sync. **Deferred.**
-- **Phase 5:** **Lifecycle Manager** — Smart memory management: importance scoring, decay & archival, contradiction resolution, privacy controls; user_id FE ownership. **Deferred.** UI edit frontend is deferred to post–Phase 5 (backend done).
+- **Phase 4:** **Sync Engine** — Cross-device sync (CRDT-based), conflict resolution, selective sync. **Done.** See §8.5.
+- **Phase 5:** **Lifecycle Manager** — Importance, archival, contradiction, visibility, user_id from context. **Core done.** UI edit frontend deferred to post–Phase 5 (backend ready). See §8.8.
 
 **Current systems (pre-Mnemo):**
 
@@ -127,7 +133,29 @@ Update **§2 Status at a glance** and **§8 Remaining / next steps** as work pro
 
 ### 4.3 Deferred (from delivery README)
 
-- Session-level extraction (§8.2), full retrieval scoping by space (§8.4), **Phase 4 Sync Engine**, **Phase 5 Lifecycle Manager**, frontend (graph explorer, spaces manager), performance tuning (e.g. retrieval P95 < 250ms benchmark). **UI edit frontend** deferred to post–Phase 5 (§8.9).
+- Session-level extraction (§8.2); **UI edit frontend** deferred to post–Phase 5 (§8.9). Phase 4 Sync Engine and Phase 5 Lifecycle core are implemented; see §2 and §4.4.
+
+### 4.4 Phase A–E and defect fix (delivered)
+
+**Phase A (RAG/Memories scope)**  
+- Migration scripts set `user_id` and `space_id` on migrated memories and RAG chunks. `migrate_rag_faiss_to_qdrant.py` and `migrate_faiss_to_qdrant.py` support `--space-id` / `MIGRATION_SPACE_ID` (default `__global__`).
+
+**Phase B (Episodic + Notes)**  
+- **Episodic:** Qdrant collection `arcturus_episodic` with `user_id`, `space_id`; `search_episodes`, `get_recent_episodes`; sync engine builds episodic deltas when provider is qdrant. **Legacy:** `EPISODIC_STORE_PROVIDER=legacy` reads/writes `memory/episodic_skeletons/skeleton_*.json`; sync engine applies episodic changes to local JSON when legacy. **Notes:** RAG with path-derived `space_id`; follows `RAG_VECTOR_STORE_PROVIDER`.
+
+**Phase C (BM25 → Qdrant, hybrid search)**  
+- Sparse vectors (e.g. `text-bm25`) for memories and RAG; client-side FastEmbed (BM25-style; SPLADE optional); Qdrant prefetch + RRF fusion. Config: `config/qdrant_config.yaml` `sparse_vectors` per collection. Design: `P11_PHASEC_BM25_HYBRID_SEARCH_DESIGN.md`.
+
+**Phase D (3.3 Real-time indexing verification)**  
+- Timing in `qdrant_store.add()`: logs `upsert_ms`, `kg_ms`, `total_ms`. `scripts/benchmark_realtime_indexing.py` validates memory available for vector search within ~100 ms (add with `skip_kg_ingest=True`), verifies search returns new memory, optional full add+KG timing.
+
+**Phase E (4.2 Auto-recommend space)**  
+- **Backend:** `GET /remme/recommend-space?text=&current_space_id=` — suggests `space_id` from semantic similarity of draft text to existing memories (most frequent space in top-k). Suggestion only; no auto-organization.  
+- **Frontend:** Add Memory (RemmePanel) calls `recommendSpace(text, currentSpaceId)` debounced (500 ms); space selector updates to suggested space; user can override.
+
+**Defect fix: Global space memories**  
+- **Issue:** When viewing Global space, memories with missing/empty `space_id` (legacy) were excluded (filter was only `space_id == "__global__"`).  
+- **Fix:** `qdrant_store.get_all()` when `space_id == "__global__"` now uses filter `(space_id == "__global__" OR space_id is empty)` so Global view shows both explicitly global and legacy unscoped memories (still tenant-scoped by `user_id`).
 
 ---
 
@@ -410,15 +438,18 @@ Use this section as the single list of what to do next; update as you complete i
 
 **Env:** `SYNC_ENGINE_ENABLED=true`, `SYNC_SERVER_URL` (e.g. http://localhost:8000/api), optional `DEVICE_ID`.
 
-### 8.6 Other known gaps (from delivery README)
+### 8.6 Defects and hardening
+
+- **Sync auth:** Sync endpoints accept `user_id` in body with no authentication; should be tied to login/session for multi-tenant.
+- **Guest / not-logged-in:** When `user_id` is from file fallback (`VITE_ENABLE_LOCAL_MIGRATION=true`), server restart or missing file can regenerate a new `user_id`; previously stored memories may not appear. Consider persisting guest id in frontend and sending with every request.
+- **Retrieval P95 < 250 ms:** Target not yet benchmarked; run and record.
+- **Real-time indexing:** If KG ingest dominates add latency, consider async KG ingestion (return after upsert, run KG in background).
+
+### 8.6b Other known gaps (from delivery README)
 
 - Expansion depth: one-hop only; `depth` reserved for multi-hop.
-- Retrieval scoping by space: deferred (Phase 3 Spaces UI done; retrieval still global).
-- **Phase 4 Sync Engine:** deferred (see §8.5).
-- **Phase 5 Lifecycle Manager:** deferred (see §8.8).
 - Frontend (graph explorer, spaces manager): deferred.
-- Retrieval P95 < 250ms: to be benchmarked.
-- Acceptance/integration tests: structural tests in place; feature-level tests (memory influences planner, cross-project retrieval) to be expanded per charter.
+- Acceptance/integration tests: structural tests in place; feature-level tests to be expanded per charter.
 
 ### 8.7 user_id: frontend ownership (Phase 5, for server deployment)
 
@@ -557,7 +588,9 @@ Items deferred from Phase 3 Spaces or from Phase 5; to consider after Phase 5. *
 | Space constants | `memory/space_constants.py` — SPACE_ID_GLOBAL |
 | Qdrant config | `config/qdrant_config.yaml`; loader: `memory/qdrant_config.py` |
 | Spaces API (Phase 3) | `routers/remme.py` — POST/GET /remme/spaces; GET /remme/memories?space_id= |
+| Recommend space (Phase E) | `routers/remme.py` — GET /remme/recommend-space?text=&current_space_id= |
 | Sync Engine (Phase 4) | `memory/sync/` — SyncEngine, get_sync_engine; `routers/sync.py` — /api/sync/push, pull, trigger |
+| Real-time indexing benchmark (Phase D) | `scripts/benchmark_realtime_indexing.py` — validates ~100 ms time-to-searchable |
 | Delivery checklist (fixed) | `CAPSTONE/project_charters/P11_DELIVERY_README.md` |
 | Setup (Qdrant, Neo4j) | `CAPSTONE/project_charters/P11_mnemo_SETUP_GUIDE.md` |
 
