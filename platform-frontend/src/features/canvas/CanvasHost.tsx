@@ -3,6 +3,7 @@ import useWebSocket, { ReadyState } from 'react-use-websocket';
 import SandboxFrame from './SandboxFrame';
 import { getWidget } from './WidgetRegistry';
 import { GenerateDiagramModal } from './GenerateDiagramModal';
+import { useTheme } from '@/components/theme';
 import { API_BASE } from '@/lib/api';
 import { LayoutTemplate } from 'lucide-react';
 
@@ -11,6 +12,7 @@ interface CanvasHostProps {
 }
 
 const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
+    const { theme } = useTheme();
     const [components, setComponents] = useState<any[]>([]);
     const [dataModel, setDataModel] = useState<any>({});
     const [isSandbox, setIsSandbox] = useState(false);
@@ -106,11 +108,11 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-2xl border border-gray-700">
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+        <div className="flex flex-col h-full bg-card text-card-foreground rounded-xl overflow-hidden shadow-lg border border-border">
+            <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border">
                 <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-xs font-mono uppercase tracking-wider text-gray-400">
+                    <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-destructive'}`} />
+                    <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                         Surface: {surfaceId}
                         {isSandbox && htmlTitle ? ` - ${htmlTitle}` : ''}
                     </span>
@@ -119,16 +121,16 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                     <button
                         type="button"
                         onClick={() => setGenerateModalOpen(true)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-[10px] font-medium uppercase tracking-wider transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-border text-[10px] font-medium uppercase tracking-wider transition-colors"
                         title="Generate diagram"
                     >
                         <LayoutTemplate className="w-3.5 h-3.5" />
                         Generate diagram
                     </button>
                     <div className="flex space-x-1">
-                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
                     </div>
                 </div>
             </div>
@@ -138,10 +140,11 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                 onSuccess={handleGenerateSuccess}
             />
 
-            <div className="flex-1 p-4 overflow-auto">
+            <div className="flex-1 p-4 overflow-auto bg-background/30">
                 {isSandbox ? (
                     <SandboxFrame
                         html={htmlContent}
+                        theme={theme}
                         onEvent={(e) => handleUserEvent('sandbox', e.type, e.data)}
                     />
                 ) : (
@@ -149,7 +152,7 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                         {components.length > 0 ? (
                             components.filter(c => !components.some(other => other.children?.includes(c.id))).map(renderComponent)
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-500 italic space-y-2">
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground italic space-y-2">
                                 <svg className="w-12 h-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
