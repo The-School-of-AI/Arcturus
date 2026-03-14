@@ -6,10 +6,13 @@
 - **Dual STT providers**:  Deepgram Nova-2 (cloud, low-latency) and faster-Whisper (local, private) — switchable via config
 - **Auto-punctuation & formatting**: Both STT providers configured for punctuation, smart formatting, and numeral conversion
 - **Barge-in / Interruption**: High-performance continuous VAD detection during TTS. Supports immediate cancellation of TTS and Nexus runs.
+- **Barge-in Safety Hold**: A 2-second accumulation window after detection to ensure user speech is fully captured before STT aggregation begins.
 - **STT Pre-filling**: A ring buffer captures the last 500ms of audio during barge-in detection and pushes it to STT, ensuring no user speech is lost during the interruption phase.
 - **Streaming TTS**: Both Azure Speech and Piper (local) support real-time word-by-word streaming for "instant-on" responses.
-- **Sandbox Tool Aliasing**: Intelligent resolution for halluncinated tool names (e.g. `fetchsearchurls` → `fetch_search_urls`) to ensure voice commands resolve reliably.
+- **Sandbox Tool Aliasing**: Intelligent resolution for hallucinated tool names (e.g. `fetchsearchurls` → `fetch_search_urls`) to ensure voice commands resolve reliably.
 - **Clean Spoken Output**: Comprehensive 13-step text cleaner that strips markdown, Python error traces, and internal role labels (like "Captain") before synthesis.
+- **Dictation Mode**: Long-form speech → document input. Say "start dictation", speak freely, and the pipeline accumulates every STT fragment into a persistent `.txt` document saved under `memory/dictation/`. Retrievable via REST API.
+- **Echo Panel (UI)**: Real-time visual feedback for voice states (Idle, Listening, Thinking, Speaking) with streaming transcript display and wake-word indicators.
 - **User query**: Forwarded to the nexus as a channel
 - **30-second follow-up window**: No wake word required for 30 seconds after agent response
 - Configurable engine selection and STT provider through `voice/config.py`
@@ -29,50 +32,54 @@ The Arcturus Voice Architecture is a state-driven pipeline designed for low-late
 ┌──────────┐
 │  Mic In  │
 └────┬─────┘
-     ↓
+     ↓ Accumulate (2s hold)
 ┌──────────────┐
 │ Wake Word    │  (always on, offline)
-│ Detector     │  Porcupine / Pocketsphinx/ OpenWakeWord
+│ Detector     │  Porcupine / Pocketsphinx / OpenWakeWord
 └────┬─────────┘
      │ detected
      ↓
 ┌──────────────┐
-│ Audio Stream │───────────────┐
-└────┬─────────┘               │
-     ↓                         │ interrupt
-┌──────────────┐               │
-│ STT          │◄──────────────┘
-│ Whisper(local)│
-│ Deepgram(cloud)│
-└────┬─────────┘
-     ↓ raw text
-
-┌──────────────┐
-│ NEXUS        │ 
+│ Intent Gate  │  (Classification & Routing)
+│ (DICTATION)  │──► [Direct to File]
+│ (COMMAND)    │──► [Direct UI Event]
+│ (AGENTIC)    │──► [To Nexus Queue]
+└────┬─────────┘ 
+     │ (QUERY/AGENTIC)
+     ↓                        
+┌──────────────┐               ┌──────────────┐
+│ STT          │◄──────────────┤ Barge-in VAD │
+│ Whisper(loc) │               │ detected?    │
+│ Deepgram(cld)│               └──────┬───────┘
+└────┬─────────┘                      │
+     ↓ raw text                       │ interrupt
+┌──────────────┐                      │
+│ NEXUS (Loop) │◄─────────────────────┘
 └────┬─────────┘
      ↓ response tokens
 ┌──────────────┐
-│ TTS          │
+│ TTS (Stream) │
 └────┬─────────┘
      ↓
-  🔊 Speaker
+   🔊 Speaker
 ```
 
 The system follows a synchronous state-machine pattern:
-1. **Orchestration**: The `Orchestrator` manages the lifecycle of a voice interaction. It transitions between `IDLE`, `LISTENING` (transcribing), and `SPEAKING` (synthesizing) states, ensuring that only one phase is active at a time while allowing for immediate cancellation/preemption.
-2. **Perception**:
-    - **Wake Word**: The `VoiceWakeService` (Porcupine-based) listens for the "Hey Arcturus" trigger.
-    - **STT**: Once triggered, audio is streamed to either Whisper (local) or Deepgram Nova-2 (cloud) for transcription, selected via `stt_provider` in config.
-3. **Reasoning**: The `Orchestrator` forwards the  text to the NEXUS `Agent`, which uses `ModelManager` for response generation.
-5. **Action**: The agent's text output is piped to the `TTSService` for audio synthesis and playback.
+1. **Orchestration**: The `Orchestrator` manages the lifecycle of a voice interaction. It transitions between `IDLE`, `LISTENING` (transcribing), `THINKING` (nexus processing), and `SPEAKING` (synthesizing) states.
+2. **Intent Gating**: Before a full plan is generated, the `IntentRouter` classifies the utterance. **COMMAND**s (like navigation) bypass the heavy Agent Loop and trigger UI events directly in <100ms.
+3. **Perception**:
+    - **Wake Word**: The `VoiceWakeService` listens for the trigger.
+    - **STT**: Audio is streamed to choice provider. If barge-in is detected, the `BargeInDetector` triggers a 2-second safety hold to finish capturing user speech.
+4. **Reasoning**: The `Orchestrator` forwards the refined text to the NEXUS `Agent`.
+5. **Action**: The agent's output is streamed to the `TTSService`. Interruption (vocal barge-in) triggers an immediate Nexus `stop()` and TTS `cancel()`.
 
 ### 2.2 Design Principles
 
-| Principle | Detail |
-|---|---|
 | **Interruptibility** | Optimized Barge-in (NumPy-based VAD) interrupts TTS and Nexus runs in <50ms with zero lost speech (STT pre-fill) |
+| **Deterministic Intent Routing** | `IntentRouter` matches navigation and media commands via regex/fast-paths before LLM invocation |
 | **Tool Hallucination Shield** | Sandbox uses fuzzy name aliasing to resolve common LLM tool-calling typos during voice sessions |
 | **Clean Audio Path** | 13-step regex cleaner ensures user never hears markdown artifacts or raw Python exceptions |
+| **Asynchronous Wait Loop** | Orchestrator polls for agent results while concurrently handling mid-run clarifications and barge-ins |
 | **Always-on detection** | Wake word detector runs in a dedicated daemon thread, consuming minimal CPU |
 | **Separation of concerns** | Each pipeline stage (wake → STT → Agent → TTS) is an independent module |
 | **Engine-agnostic** | Factory pattern (`create_wake_engine()`) allows swapping between Porcupine and OpenWakeWord via config |
@@ -91,6 +98,7 @@ voice/
 ├── porcupine_engine.py        # Porcupine wake word engine (Hey Arcturus)
 ├── openwakeword_engine.py     # OpenWakeWord engine (alternate, TFLite-based)
 ├── voice_wake_service.py      # Audio loop: mic → wake/barge-in detection + STT pre-fill buffer
+├── intent_gate.py             # Layer 1 Router: Classifies DICTATION vs COMMAND vs AGENTIC
 ├── stt_service.py             # Local STT via faster-whisper (small model, CPU/CUDA)
 ├── deepgram_stt_service.py    # Cloud STT via Deepgram Nova-2 (WebSocket streaming)
 ├── text_refiner.py            # LLM post-processor (Gemini 2.5 Flash Lite)
@@ -98,8 +106,8 @@ voice/
 ├── agent.py                   # Voice agent: LLM intent extraction via ModelManager
 ├── tts_service.py             # Azure Speech TTS (cloud, streaming)
 ├── piper_tts_service.py       # Piper TTS (local, streaming ONNX)
+├── dictation_service.py       # DictationSession: long-form speech → document buffer + autosave
 ├── .env                       # API keys (PICOVOICE_ACCESS_KEY, DEEPGRAM_API_KEY)
-├── keywords/
 │   └── hey_arcturus.ppn       # Custom Porcupine wake word model
 └── models/
     └── hey_jarvis_v0.1.tflite # OpenWakeWord model (alternate)
@@ -175,10 +183,10 @@ api.py (lifespan startup)
 - **Safety:** Falls back to raw text if LLM fails or returns garbage
 - **Configurable:** Toggle on/off and change model via `voice/config.py` → `text_refiner`
 
-### 2.8 TTS — Text-to-Speech (🔲 placeholder)
+### 2.8 TTS — Text-to-Speech (✅ implemented)
 
-- **Choice:** Azure Speech | `piper-tts` (local), fallback: Coqui TTS
-- **Rule:** TTS must obey hard stop within <50ms on interrupt.
+- **Choice**: Azure Speech | `piper-tts` (local)
+- **Rule**: TTS must obey hard stop within <50ms on interrupt.
 
 ### 2.9 Agent (✅ implemented)
 
@@ -186,6 +194,30 @@ api.py (lifespan startup)
 - **Prompt:** Extracts user INTENT and ACTION from refined transcript
 - **Response:** Concise 1–2 sentence verbal response for voice playback
 - Skills: "Explain X", "Summarise", "Answer concisely"
+
+### 2.10 Voice Actions & Intent Routing
+
+The Arcturus Voice Pipeline uses a multi-tier **Intent Gate** (`intent_gate.py`) to classify user speech before expensive reasoning begins. This ensures that simple instructions are executed with sub-second latency.
+
+| Intent Type | Trigger Signal | Action |
+|---|---|---|
+| **DICTATION** | "Start dictation", "Write this down" | Routes audio to `DictationSession`; bypasses Nexus agentic logic. |
+| **COMMAND** | "Open dashboard", "Go to IDE" | Deterministic UI events published to the Event Bus in <100ms. |
+| **QUERY** | "How's the weather", "What is X" | Single-turn LLM response via Nexus; skips complex planning. |
+| **AGENTIC** | "Fix the bug in X", "Analyze the logs" | Full multi-step `AgentLoop4` execution with tool-calling. |
+
+#### Navigation Command Mappings:
+- **"Open/Go to [Tab]"** signals the `IntentRouter` to fire a `navigation` event to the Vite frontend.
+- Supported destinations: `dashboard`, `explorer`, `notes`, `rag`, `settings`, `ide`, `mcp`, `apps`.
+
+### 2.11 Multi-turn Clarification Flow
+
+Unlike standard chat, the voice pipeline handles ambiguity as a blocking state. If the Nexus `PlannerAgent` identifies missing information, it auto-injects a `ClarificationAgent` node.
+
+1. **Detection**: Orchestrator polls the run graph and finds a `waiting_input` node with agent `ClarificationAgent`.
+2. **Engagement**: Orchestrator interrupts any background background processes and speaks the `clarificationMessage` via TTS.
+3. **Wait Loop**: The system enters a 20-second synchronous listening window.
+4. **Resumption**: Once the user answers, the text is POSTed to the Nexus input endpoint, and the plan execution continues automatically.
 
 ---
 
@@ -195,6 +227,7 @@ api.py (lifespan startup)
 - **Voice Router**: Added `/api/voice/start` (POST) to allow triggering the voice listening state via the web UI or external events.
 - **Provider Selection at Startup**: `api.py` reads `VOICE_CONFIG["stt_provider"]` and instantiates either `STTService` (Whisper) or `DeepgramSTTService` — the Orchestrator is provider-agnostic.
 - **Startup Log**: The console prints `✅ [Voice] Pipeline WARM and listening (Provider: whisper|deepgram)` on successful initialization.
+- **Echo Sidebar Integration**: Dedicated UI panel in the platform for real-time interaction status and manual trigger bypass.
 
 ---
 
@@ -213,7 +246,7 @@ api.py (lifespan startup)
 - ✅ Deepgram STT streams and transcribes via WebSocket (cloud)
 - ✅ TextRefiner post-processes raw transcripts (punctuation, numbers, grammar)
 - ✅ Orchestrator logs refined text to console with diff view when refinement occurs
-- 🔲 Full STT → Refiner → Agent → TTS roundtrip with voice playback (agent responds, TTS pending)
+- ✅ Full STT → Refiner → Agent → TTS roundtrip with voice playback (End-to-end pipeline verified)
 
 ---
 
@@ -243,10 +276,12 @@ api.py (lifespan startup)
 | Text refinement | ✅ Done | LLM post-processing via Gemini 2.5 Flash Lite |
 | Agent integration | ✅ Done | `agent.py` uses `ModelManager` for intent extraction |
 | TTS pipeline | ✅ Done | Azure Speech and Piper-TTS (local) both support streaming playback |
-| Barge-in / Interruption | ✅ Done | Optimized VAD with STT pre-fill buffer to prevent data loss |
+| Barge-in / Interruption | ✅ Done | Optimized VAD with 2s Safety Hold and STT pre-fill buffer |
+| Dictation mode | ✅ Done | `DictationSession` + `DICTATING` orchestrator state; REST API support |
 | Error Masking | ✅ Done | TTS cleaner masks raw Python exceptions with friendly message |
 | Hallucination Handling | ✅ Done | Sandbox allows for common tool-calling spelling/casing variants |
 | `tflite-runtime` on Windows/Py3.13 | ⚠️ Blocked | OpenWakeWord requires `tflite-runtime` which is unavailable for Python 3.13 on Windows. Use Porcupine engine or switch `inference_framework="onnx"` |
+
 
 ---
 
@@ -263,9 +298,10 @@ api.py (lifespan startup)
 
 1. Ensure `PICOVOICE_ACCESS_KEY` is set in `voice/.env`
 2. Ensure `GEMINI_API_KEY` is set in `.env` (for TextRefiner)
-3. (Optional) Set `DEEPGRAM_API_KEY` in `voice/.env` if using Deepgram provider
-4. Start the API: `uv run api.py`
-5. Observe startup logs:
+3. Set `DEEPGRAM_API_KEY` in `.env` if using Deepgram provider
+4. Set `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` in `.env` if using Azure TTS
+5. Start the API: `uv run api.py`
+6. Observe startup logs:
    ```
    ✅ [TextRefiner] Initialized (model: gemini/gemini-2.5-flash-lite)
    ✅ [Voice] Pipeline WARM and listening (Provider: whisper)

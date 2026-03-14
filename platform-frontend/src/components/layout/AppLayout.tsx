@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Meteors } from '../ui/meteors';
 import { InboxPanel } from '../inbox/InboxPanel';
 import CanvasHost from '@/features/canvas/CanvasHost';
+import useVoice from '@/hooks/useVoice';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -44,16 +45,31 @@ import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDas
 import { MissionControl } from '@/features/console/components/MissionControl';
 import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
 import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
+import { AdminDashboard } from '@/features/admin/AdminDashboard';
 
 export const AppLayout: React.FC = () => {
+    // Mount useVoice at the root so wake-word events trigger the Echo tab
+    // switch regardless of which tab the user currently has open.
+    // This is the ONLY place useVoice should be mounted.
+    useVoice();
+
     const {
         viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
         ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode, isInboxOpen, setIsInboxOpen,
-        isSidebarSubPanelOpen
+        isSidebarSubPanelOpen,
+        startEventStream, stopEventStream, currentRun
     } = useAppStore();
+
+    // ── Always-on SSE connection ──────────────────────────────────────────────
+    // Must be active at the root level so voice wake / state events are received
+    // on ALL tabs, not just when Console (MissionControl) is open.
+    useEffect(() => {
+        startEventStream();
+        return () => stopEventStream();
+    }, [startEventStream, stopEventStream]);
 
     // Moved isInspectorOpen definition down to include new tabs context
 
@@ -64,11 +80,13 @@ export const AppLayout: React.FC = () => {
         if (sidebarTab === 'rag' && showRagInsights) return true;
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
+        if (sidebarTab === 'echo' && currentRun) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, currentRun]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
-    const hideSidebarSubPanel = isInspectorOpen || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || !isSidebarSubPanelOpen;
+    // Echo should NOT be hidden when inspector is open, because the conversation is the primary surface.
+    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -229,6 +247,13 @@ export const AppLayout: React.FC = () => {
                                     <ForgeDashboard />
                                 ) : sidebarTab === 'console' ? (
                                     <MissionControl />
+                                ) : sidebarTab === 'admin' ? (
+                                    <AdminDashboard />
+                                ) : sidebarTab === 'echo' ? (
+                                    <>
+                                        <GraphCanvas />
+                                        <RunTimeline />
+                                    </>
                                 ) : sidebarTab === 'canvas' ? (
                                     <CanvasHost surfaceId="main-canvas" />
                                 ) : (
