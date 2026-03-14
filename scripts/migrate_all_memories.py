@@ -85,6 +85,7 @@ def append_env_vars_for_docker() -> None:
         "# --- Added by migrate_all_memories.py (docker mode) ---",
         "VECTOR_STORE_PROVIDER=qdrant",
         "RAG_VECTOR_STORE_PROVIDER=qdrant",
+        "EPISODIC_STORE_PROVIDER=qdrant",
         "QDRANT_URL=http://localhost:6333",
         "# QDRANT_API_KEY=your-local-or-cloud-api-key-if-needed",
         "NEO4J_ENABLED=true",
@@ -131,6 +132,7 @@ def prompt_cloud_setup() -> None:
         "       QDRANT_API_KEY=your-qdrant-api-key\n"
         "       VECTOR_STORE_PROVIDER=qdrant\n"
         "       RAG_VECTOR_STORE_PROVIDER=qdrant\n"
+        "       EPISODIC_STORE_PROVIDER=qdrant\n"
     )
     print(
         "2) Create / configure a Neo4j Aura (or self-hosted reachable) instance:\n"
