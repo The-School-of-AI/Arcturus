@@ -8,10 +8,57 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 
 export type DiagramType = 'table' | 'mermaid' | 'architecture';
+
+const DEFAULT_MERMAID_CODE = `flowchart LR
+A[Developer Commit] --> B[GitHub Repo]
+B --> C{Trigger CI}
+C --> D[Run Lint]
+C --> E[Run Unit Tests]
+C --> F[Security Scan]
+D --> G[Build Docker Image]
+E --> G
+F --> G
+G --> H[Push to Container Registry]
+H --> I{Deploy Target}
+I --> J[Dev Environment]
+I --> K[Staging]
+I --> L[Production]
+J --> M[Integration Tests]
+K --> N[UAT Tests]
+L --> O[Blue/Green Deployment]
+O --> P[Monitoring & Alerts]`;
+
+const ARCH_VARIANTS = [
+    { value: '', label: 'Default' },
+    { value: 'hero', label: 'Hero' },
+    { value: 'accent', label: 'Accent' },
+    { value: 'green', label: 'Green' },
+    { value: 'orange', label: 'Orange' },
+    { value: 'sage', label: 'Sage' },
+    { value: 'teal', label: 'Teal' },
+    { value: 'plum', label: 'Plum' },
+    { value: 'recessed', label: 'Recessed' },
+] as const;
+
+export interface ArchitectureSection {
+    title: string;
+    description: string;
+    items: string;
+    variant: string;
+    label: string;
+}
+
+const defaultArchSection = (): ArchitectureSection => ({
+    title: 'Backend',
+    description: 'API and services',
+    items: 'REST API\nWebSocket\nDB',
+    variant: '',
+    label: '',
+});
 
 interface GenerateDiagramModalProps {
     open: boolean;
@@ -35,34 +82,42 @@ function parseTableInput(headersStr: string, rowsStr: string): { headers: string
     return { headers, rows };
 }
 
-function parseArchitectureSections(sectionTitle: string, sectionDesc: string, sectionItemsStr: string) {
-    const items = sectionItemsStr
-        .split('\n')
-        .map((i) => i.trim())
-        .filter(Boolean);
-    return [{ title: sectionTitle || 'Section', description: sectionDesc || '', items }];
-}
-
 export function GenerateDiagramModal({ open, onClose, onSuccess }: GenerateDiagramModalProps) {
     const [type, setType] = useState<DiagramType>('table');
     const [title, setTitle] = useState('');
     const [tableHeaders, setTableHeaders] = useState('A, B');
     const [tableRows, setTableRows] = useState('[["1", "2"], ["3", "4"]]');
-    const [mermaidCode, setMermaidCode] = useState('graph LR\n  A --> B --> C');
-    const [archSectionTitle, setArchSectionTitle] = useState('Backend');
-    const [archSectionDesc, setArchSectionDesc] = useState('API and services');
-    const [archSectionItems, setArchSectionItems] = useState('REST API\nWebSocket\nDB');
+    const [mermaidCode, setMermaidCode] = useState(DEFAULT_MERMAID_CODE);
+    const [archSubtitle, setArchSubtitle] = useState('');
+    const [archSections, setArchSections] = useState<ArchitectureSection[]>([defaultArchSection()]);
+    const [archFlowLabels, setArchFlowLabels] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    const addArchSection = useCallback(() => {
+        setArchSections((prev) => [...prev, defaultArchSection()]);
+        setArchFlowLabels((prev) => [...prev, '']);
+    }, []);
+    const removeArchSection = useCallback((index: number) => {
+        setArchSections((prev) => prev.filter((_, i) => i !== index));
+        setArchFlowLabels((prev) => {
+            const next = prev.slice();
+            if (index < next.length) next.splice(index, 1);
+            return next;
+        });
+    }, []);
+    const updateArchSection = useCallback((index: number, patch: Partial<ArchitectureSection>) => {
+        setArchSections((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+    }, []);
 
     const resetForm = useCallback(() => {
         setTitle('');
         setTableHeaders('A, B');
         setTableRows('[["1", "2"], ["3", "4"]]');
-        setMermaidCode('graph LR\n  A --> B --> C');
-        setArchSectionTitle('Backend');
-        setArchSectionDesc('API and services');
-        setArchSectionItems('REST API\nWebSocket\nDB');
+        setMermaidCode(DEFAULT_MERMAID_CODE);
+        setArchSubtitle('');
+        setArchSections([defaultArchSection()]);
+        setArchFlowLabels([]);
         setError('');
     }, []);
 
@@ -80,8 +135,18 @@ export function GenerateDiagramModal({ open, onClose, onSuccess }: GenerateDiagr
             return mermaidCode.trim();
         }
         if (type === 'architecture') {
-            const sections = parseArchitectureSections(archSectionTitle, archSectionDesc, archSectionItems);
-            return { sections };
+            const sections = archSections.map((s) => ({
+                title: s.title || 'Section',
+                description: s.description || '',
+                items: s.items.split('\n').map((i) => i.trim()).filter(Boolean),
+                ...(s.variant ? { variant: s.variant } : {}),
+                ...(s.label ? { label: s.label } : {}),
+            }));
+            const flowLabels = archFlowLabels.slice(0, Math.max(0, archSections.length - 1)).filter((l) => l.trim());
+            const payload: Record<string, unknown> = { sections };
+            if (archSubtitle.trim()) payload.subtitle = archSubtitle.trim();
+            if (flowLabels.length) payload.flowLabels = flowLabels;
+            return payload;
         }
         return {};
     };
@@ -161,6 +226,18 @@ export function GenerateDiagramModal({ open, onClose, onSuccess }: GenerateDiagr
                         />
                     </div>
 
+                    {type === 'architecture' && (
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium">Subtitle (optional)</label>
+                            <Input
+                                value={archSubtitle}
+                                onChange={(e) => setArchSubtitle(e.target.value)}
+                                placeholder="e.g. High-level overview"
+                                className="bg-muted"
+                            />
+                        </div>
+                    )}
+
                     {type === 'table' && (
                         <>
                             <div className="space-y-1">
@@ -199,36 +276,100 @@ export function GenerateDiagramModal({ open, onClose, onSuccess }: GenerateDiagr
                     )}
 
                     {type === 'architecture' && (
-                        <>
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium">Section title</label>
-                                <Input
-                                    value={archSectionTitle}
-                                    onChange={(e) => setArchSectionTitle(e.target.value)}
-                                    placeholder="e.g. Backend"
-                                    className="bg-muted"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium">Section description</label>
-                                <Input
-                                    value={archSectionDesc}
-                                    onChange={(e) => setArchSectionDesc(e.target.value)}
-                                    placeholder="Short description"
-                                    className="bg-muted"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium">Items (one per line)</label>
-                                <textarea
-                                    value={archSectionItems}
-                                    onChange={(e) => setArchSectionItems(e.target.value)}
-                                    placeholder="REST API&#10;WebSocket"
-                                    rows={4}
-                                    className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm resize-none"
-                                />
-                            </div>
-                        </>
+                        <div className="space-y-4">
+                            {archSections.map((section, index) => (
+                                <div key={index} className="rounded-lg border border-border p-3 space-y-2 bg-muted/30">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-muted-foreground">Section {index + 1}</span>
+                                        <div className="flex gap-1">
+                                            {archSections.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={() => removeArchSection(index)}
+                                                    title="Remove section"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium">Title</label>
+                                            <Input
+                                                value={section.title}
+                                                onChange={(e) => updateArchSection(index, { title: e.target.value })}
+                                                placeholder="e.g. Backend"
+                                                className="bg-muted h-8 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium">Variant</label>
+                                            <select
+                                                value={section.variant}
+                                                onChange={(e) => updateArchSection(index, { variant: e.target.value })}
+                                                className="w-full rounded-md border border-input bg-muted h-8 text-sm px-2"
+                                            >
+                                                {ARCH_VARIANTS.map((v) => (
+                                                    <option key={v.value || 'default'} value={v.value}>{v.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Label (optional, monospace above title)</label>
+                                        <Input
+                                            value={section.label}
+                                            onChange={(e) => updateArchSection(index, { label: e.target.value })}
+                                            placeholder="Section label"
+                                            className="bg-muted h-8 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Description</label>
+                                        <Input
+                                            value={section.description}
+                                            onChange={(e) => updateArchSection(index, { description: e.target.value })}
+                                            placeholder="Short description"
+                                            className="bg-muted h-8 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium">Items (one per line)</label>
+                                        <textarea
+                                            value={section.items}
+                                            onChange={(e) => updateArchSection(index, { items: e.target.value })}
+                                            placeholder="REST API&#10;WebSocket"
+                                            rows={3}
+                                            className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm resize-none"
+                                        />
+                                    </div>
+                                    {index < archSections.length - 1 && (
+                                        <div className="space-y-1 pt-1">
+                                            <label className="text-xs font-medium">Flow label after this section</label>
+                                            <Input
+                                                value={archFlowLabels[index] ?? ''}
+                                                onChange={(e) => {
+                                                    const next = [...archFlowLabels];
+                                                    while (next.length <= index) next.push('');
+                                                    next[index] = e.target.value;
+                                                    setArchFlowLabels(next);
+                                                }}
+                                                placeholder="e.g. pipeline entry"
+                                                className="bg-muted h-8 text-sm"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={addArchSection} className="w-full">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add section
+                            </Button>
+                        </div>
                     )}
 
                     {error && (

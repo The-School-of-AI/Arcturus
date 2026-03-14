@@ -189,6 +189,16 @@ Vertical or horizontal timeline with a central line (CSS pseudo-element). Phase 
 ### Dashboard / Metrics Overview
 Card grid layout. Hero numbers large and prominent. Sparklines via inline SVG `<polyline>`. Progress bars via CSS `linear-gradient` on a div. For real charts (bar, line, pie), use **Chart.js via CDN** (see `./references/libraries.md`). KPI cards with trend indicators (up/down arrows, percentage deltas).
 
+## API: Architecture diagrams (programmatic)
+
+When generating **architecture** diagrams you can call the Visual Explainer API instead of writing HTML by hand. Send `POST /api/visual-explainer/generate` with `type: "architecture"` and a `content` object:
+
+- **sections**: array of `{ title, description?, items?, variant?, label? }`. Each section is a card. `items` is a list of strings (bullets). `variant` is optional: `hero` | `accent` | `green` | `orange` | `sage` | `teal` | `plum` | `recessed` (matches reference template depth/color). `label` is an optional monospace label above the section title.
+- **subtitle**: optional string under the main title.
+- **flowLabels**: optional array of strings; `flowLabels[i]` is rendered as a flow arrow with label between section `i` and section `i+1`.
+
+The API returns self-contained HTML that matches the reference template (theme, depth tiers, flow arrows, staggered animation). Use this when the diagram is section-based and you have structured data; use hand-written HTML when you need pipelines, inner grids, or custom layout not covered by sections + flow labels.
+
 ## File Structure
 
 Every diagram is a single self-contained `.html` file. No external assets except CDN links (fonts, optional libraries). Structure:

@@ -10,11 +10,19 @@ router = APIRouter(prefix="/visual-explainer", tags=["visual-explainer"])
 class GenerateRequest(BaseModel):
     type: str  # "architecture" | "table" | "mermaid" | "raw"
     title: str = ""
-    content: Any = {}  # structure depends on type
+    content: Any = {}  # structure depends on type (see docstring below)
 
 
 class GenerateResponse(BaseModel):
     html: str
+
+
+# Architecture content shape (when type="architecture"):
+#   sections: list of { title, description?, items?, variant?, label? }
+#     variant: optional "hero" | "accent" | "green" | "orange" | "sage" | "teal" | "plum" | "recessed"
+#     label: optional monospace label above section title
+#   subtitle?: string (shown under main title)
+#   flowLabels?: list of strings; flowLabels[i] rendered between section[i] and section[i+1]
 
 
 @router.post("/generate", response_model=GenerateResponse)
