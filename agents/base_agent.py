@@ -188,25 +188,19 @@ class AgentRunner:
                     except Exception as e:
                         log_error(f"Episodic retrieval hook failed: {e}")
 
-                # 3d. Inject Factual Memory (Semantic Injection)
+                # 3d. Inject P11 Mnemo Context (Semantic + Graph)
                 factual_context = ""
-                if agent_type in ["SummarizerAgent", "RetrieverAgent", "CoderAgent"]:
-                    try:
-                        from memory.mem0_store import MemoryStore
-                        store = MemoryStore()
-                        query = input_data.get("task") or input_data.get("original_query") or ""
-                        if query:
-                            facts = store.search(query, limit=3)
-                            if facts:
-                                factual_context = "\n\n## Memories of User Preferences & Facts\n"
-                                factual_context += "Use these stored facts to inform your response:\n"
-                                for f in facts:
-                                    if isinstance(f, dict):
-                                        factual_context += f"- {f.get('memory', f.get('content', str(f)))}\n"
-                                    else:
-                                        factual_context += f"- {str(f)}\n"
-                    except Exception as e:
-                        log_error(f"Factual memory hook failed: {e}")
+                try:
+                    query = input_data.get("task") or input_data.get("original_query") or ""
+                    if query:
+                        from memory.memory_retriever import retrieve
+                        import os
+                        user_id = os.environ.get("USER_ID", "default_user")  # fallback
+                        mem_context, _ = retrieve(query, session_id=session_id, user_id=user_id)
+                        if mem_context:
+                            factual_context = f"\n\n{mem_context}"
+                except Exception as e:
+                    log_error(f"Mnemo retrieval hook failed: {e}")
 
                 # 3e. Inject System Profile (Cortex-R settings)
                 profile_context = ""

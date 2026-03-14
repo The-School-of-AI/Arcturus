@@ -26,6 +26,8 @@ memory/remme_index/scanned_runs.json
 memory/remme_index/device_id.json
 memory/remme_index/user_id.json
 memory/user_model/
+memory/chronicle_checkpoints/
+memory/chronicle_events/
 **/cpython-*.pyc
 
 

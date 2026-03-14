@@ -21,6 +21,8 @@ class SwarmRunner:
         self,
         swarm_token_budget: int | None = None,
         swarm_cost_budget_usd: float | None = None,
+        max_task_retries: int | None = None,
+        task_timeout_seconds: int | None = None,
     ):
         self.manager: ManagerAgent | None = None
         self.workers: dict[str, WorkerAgent] = {}
@@ -29,9 +31,10 @@ class SwarmRunner:
         # Load swarm strategy settings from profiles.yaml
         # (same pattern as AgentLoop4 reading max_steps)
         profile = get_profile()
-        self.max_task_retries: int = profile.get("strategy.max_task_retries", 2)
+        self.max_task_retries: int = max_task_retries if max_task_retries is not None else profile.get("strategy.max_task_retries", 2)
         self.swarm_token_budget: int = swarm_token_budget if swarm_token_budget is not None else profile.get("strategy.swarm_token_budget", 50000)
         self.swarm_cost_budget_usd: float = swarm_cost_budget_usd if swarm_cost_budget_usd is not None else profile.get("strategy.swarm_cost_budget_usd", 0.50)
+        self.task_timeout_seconds: int = task_timeout_seconds if task_timeout_seconds is not None else profile.get("strategy.task_timeout_seconds", 300)
 
         # Runtime accumulators (reset each run_tasks call)
         self._tokens_used: int = 0
@@ -51,7 +54,7 @@ class SwarmRunner:
         self.manager = ManagerAgent.remote()  # type: ignore[attr-defined]
         logger.info("Manager Agent initialized.")
 
-    async def run_request(self, user_request: str) -> list[dict[str, Any]]:
+    async def run_request(self, user_request: str, session_id: str | None = None) -> list[dict[str, Any]]:
         """
         Main entry point:
         1. Decompose request into tasks (via LLM ManagerAgent).
@@ -64,15 +67,37 @@ class SwarmRunner:
         task_dicts = await self.manager.decompose_task.remote(user_request)  # type: ignore[union-attr]
         logger.info(f"Decomposed into {len(task_dicts)} tasks.")
 
-        return await self.run_tasks(task_dicts)
+        return await self.run_tasks(task_dicts, session_id=session_id)
 
-    async def run_tasks(self, task_dicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    async def build_pipeline_graph(self, tasks: list[dict[str, Any]], session_id: str | None = None) -> list[dict[str, Any]]:
+        """
+        Executes a set of tasks in a strict linear Pipeline topology.
+        Automatically wires dependencies as A -> B -> C regardless of the input payload.
+        """
+        for i in range(1, len(tasks)):
+            tasks[i]["dependencies"] = [tasks[i-1].get("id", f"task_{i-1}")]
+        return await self.run_tasks(tasks, session_id=session_id)
+
+    async def build_consensus_graph(self, parallel_tasks: list[dict[str, Any]], judge_task: dict[str, Any], session_id: str | None = None) -> list[dict[str, Any]]:
+        """
+        Executes a set of parallel tasks (e.g., multiple agents researching the same topic)
+        and funnels all their outputs into a final Judge task for synthesis/consensus.
+        """
+        judge_task["dependencies"] = [t.get("id") for t in parallel_tasks]
+        tasks = parallel_tasks + [judge_task]
+        return await self.run_tasks(tasks, session_id=session_id)
+
+    async def run_tasks(self, task_dicts: list[dict[str, Any]], session_id: str | None = None) -> list[dict[str, Any]]:
         """
         Builds the DAG from a list of task dicts and executes it.
         Can be called directly in tests to bypass the LLM decomposition step.
         """
+        import uuid
+        self.session_id = session_id or f"swarm_{uuid.uuid4().hex[:8]}"
+        
         # Reset graph and budget accumulators for fresh run
         self.graph = nx.DiGraph()
+        self.graph.graph["session_id"] = self.session_id
         self._tokens_used = 0
         self._cost_usd = 0.0
 
@@ -157,16 +182,93 @@ class SwarmRunner:
             futures_map = {}  # future → node_id
             for node_id in ready_nodes:
                 task = self.graph.nodes[node_id]["task"]
+                
+                # 📼 Chronicle: emit STEP_START
+                try:
+                    from session.capture import get_capture
+                    from session.schema import EventType
+                    import asyncio
+                    
+                    _chronicle = get_capture()
+                    _sid = self.session_id
+                    
+                    asyncio.create_task(_chronicle.emit(
+                        EventType.STEP_START,
+                        {
+                            "step_id": task.id,
+                            "agent": task.assigned_to,
+                            "task_title": task.title,
+                        },
+                        session_id=_sid,
+                    ))
+                except Exception as exc:
+                    logger.debug(f"[SwarmRunner] Chronicle STEP_START emit failed: {exc}")
+
                 worker = self.workers[task.assigned_to]
                 future = worker.process_task.remote(task.model_dump())  # type: ignore[attr-defined]
                 futures_map[future] = node_id
 
-            # Await and handle results individually
-            for future, node_id in futures_map.items():
+            # Await and handle results asynchronously to avoid head-of-line blocking
+            async def _wait_and_catch(fut, nid, timeout):
+                import asyncio
+                try:
+                    res = await asyncio.wait_for(fut, timeout=timeout)
+                    return nid, res, None
+                except Exception as e:
+                    return nid, None, e
+
+            import asyncio
+            wait_tasks = [
+                asyncio.create_task(_wait_and_catch(fut, nid, getattr(self, 'task_timeout_seconds', 300)))
+                for fut, nid in futures_map.items()
+            ]
+
+            for completed_task in asyncio.as_completed(wait_tasks):
+                node_id, res, err = await completed_task
                 task = self.graph.nodes[node_id]["task"]
                 retries = self.graph.nodes[node_id]["retries"]
-                try:
-                    res = await future
+                
+                if err:
+                    e = err
+                    if retries < self.max_task_retries:
+                        logger.warning(
+                            f"Task '{task.title}' failed (attempt {retries + 1}/{self.max_task_retries}). Retrying... Error: {e}"
+                        )
+                        self.graph.nodes[node_id]["retries"] += 1
+                        # Task stays in graph, will be picked up in next iteration
+                    else:
+                        logger.error(
+                            f"Task '{task.title}' failed after {retries + 1} attempts."
+                        )
+                        task.status = TaskStatus.FAILED
+                        task.result = f"Failed after {retries + 1} attempts: {type(e).__name__} - {e}"
+                        failed_tasks[node_id] = task
+
+                        # 📼 Chronicle: emit STEP_FAILED and checkpoint
+                        try:
+                            from session.capture import get_capture
+                            from session.schema import EventType
+                            from session.checkpoint import create_checkpoint
+                            import networkx as nx
+                            import asyncio
+                            
+                            _chronicle = get_capture()
+                            _sid = self.session_id
+                            
+                            asyncio.create_task(_chronicle.emit(
+                                EventType.STEP_FAILED,
+                                {
+                                    "step_id": task.id,
+                                    "agent": task.assigned_to,
+                                    "error": str(e),
+                                },
+                                session_id=_sid,
+                            ))
+                            
+                            create_checkpoint(_sid, "step_failed", self.graph, last_sequence=_chronicle._sequence)
+                        except Exception as exc:
+                            logger.debug(f"[SwarmRunner] Chronicle STEP_FAILED failed: {exc}")
+                else:
                     t_obj = Task(**res)
                     self.graph.nodes[node_id]["task"] = t_obj
                     completed_tasks[node_id] = t_obj
@@ -178,6 +280,34 @@ class SwarmRunner:
                         f"Task '{t_obj.title}' completed. "
                         f"Cost so far: ${self._cost_usd:.4f} / ${self.swarm_cost_budget_usd:.2f}"
                     )
+
+                    # 📼 Chronicle: emit STEP_COMPLETE and checkpoint
+                    try:
+                        from session.capture import get_capture
+                        from session.schema import EventType
+                        from session.checkpoint import create_checkpoint
+                        import networkx as nx
+                        import asyncio
+                        
+                        _chronicle = get_capture()
+                        _sid = self.session_id
+                        
+                        asyncio.create_task(_chronicle.emit(
+                            EventType.STEP_COMPLETE,
+                            {
+                                "step_id": t_obj.id,
+                                "agent": t_obj.assigned_to,
+                                "cost": t_obj.cost_usd,
+                                "input_tokens": t_obj.token_used,
+                                "output_tokens": 0,
+                                "status": "completed",
+                            },
+                            session_id=_sid,
+                        ))
+                        
+                        create_checkpoint(_sid, "step_complete", self.graph, last_sequence=_chronicle._sequence)
+                    except Exception as exc:
+                        logger.debug(f"[SwarmRunner] Chronicle STEP_COMPLETE failed: {exc}")
 
                     # Hard budget stop
                     if self._cost_usd >= self.swarm_cost_budget_usd:
@@ -195,27 +325,11 @@ class SwarmRunner:
                             t.result = "Blocked: swarm cost budget exceeded."
                             failed_tasks[nid] = t
                         # Close any unawaited coroutine futures from this batch
-                        # (no-op for real Ray ObjectRefs; prevents warning with in-process test doubles)
                         import asyncio as _asyncio
                         for f in futures_map:
                             if _asyncio.iscoroutine(f):
                                 f.close()
                         break
-
-                except Exception as e:
-                    if retries < self.max_task_retries:
-                        logger.warning(
-                            f"Task '{task.title}' failed (attempt {retries + 1}/{self.max_task_retries}). Retrying... Error: {e}"
-                        )
-                        self.graph.nodes[node_id]["retries"] += 1
-                        # Task stays in graph, will be picked up in next iteration
-                    else:
-                        logger.error(
-                            f"Task '{task.title}' failed after {retries + 1} attempts. Marking FAILED."
-                        )
-                        task.status = TaskStatus.FAILED
-                        task.result = f"Failed after {retries + 1} attempts: {e}"
-                        failed_tasks[node_id] = task
 
         all_tasks = list(completed_tasks.values()) + list(failed_tasks.values())
         return [t.model_dump() for t in all_tasks]

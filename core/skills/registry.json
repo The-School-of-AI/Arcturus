@@ -3,7 +3,7 @@
     "class_name": "AppgenerationpromptSkill",
     "description": "Skill derived from AppGenerationPrompt.md",
     "intent_triggers": [],
-    "path": "core/skills/library/appgenerationprompt",
+    "path": "core\\skills\\library\\appgenerationprompt",
     "type": "python",
     "version": "1.0.0"
   },
@@ -11,7 +11,7 @@
     "class_name": "ApphydrationpromptSkill",
     "description": "Skill derived from AppHydrationPrompt.md",
     "intent_triggers": [],
-    "path": "core/skills/library/apphydrationprompt",
+    "path": "core\\skills\\library\\apphydrationprompt",
     "type": "python",
     "version": "1.0.0"
   },
@@ -19,7 +19,7 @@
     "class_name": "ApprefinementpromptSkill",
     "description": "Skill for refining existing app UI based on user input",
     "intent_triggers": [],
-    "path": "core/skills/library/apprefinementprompt",
+    "path": "core\\skills\\library\\apprefinementprompt",
     "type": "python",
     "version": "1.0.0"
   },
@@ -27,7 +27,7 @@
     "class_name": "BackendgenerationpromptSkill",
     "description": "Skill derived from BackendGenerationPrompt.md",
     "intent_triggers": [],
-    "path": "core/skills/library/backendgenerationprompt",
+    "path": "core\\skills\\library\\backendgenerationprompt",
     "type": "python",
     "version": "1.0.0"
   },
@@ -35,7 +35,7 @@
     "class_name": "BrowserSkill",
     "description": "Skill derived from browser.md",
     "intent_triggers": [],
-    "path": "core/skills/library/browser",
+    "path": "core\\skills\\library\\browser",
     "type": "python",
     "version": "1.0.0"
   },
@@ -43,7 +43,7 @@
     "class_name": "ClarificationSkill",
     "description": "Skill derived from clarification.md",
     "intent_triggers": [],
-    "path": "core/skills/library/clarification",
+    "path": "core\\skills\\library\\clarification",
     "type": "python",
     "version": "1.0.0"
   },
@@ -51,7 +51,7 @@
     "class_name": "CoderSkill",
     "description": "Skill derived from coder.md",
     "intent_triggers": [],
-    "path": "core/skills/library/coder",
+    "path": "core\\skills\\library\\coder",
     "type": "python",
     "version": "1.0.0"
   },
@@ -59,7 +59,7 @@
     "class_name": "DebuggerAgentSkill",
     "description": "Skill derived from debugger_agent.md",
     "intent_triggers": [],
-    "path": "core/skills/library/debugger_agent",
+    "path": "core\\skills\\library\\debugger_agent",
     "type": "python",
     "version": "1.0.0"
   },
@@ -67,7 +67,7 @@
     "class_name": "DecisionSkill",
     "description": "Skill derived from decision.md",
     "intent_triggers": [],
-    "path": "core/skills/library/decision",
+    "path": "core\\skills\\library\\decision",
     "type": "python",
     "version": "1.0.0"
   },
@@ -75,7 +75,7 @@
     "class_name": "DistillerSkill",
     "description": "Skill derived from distiller.md",
     "intent_triggers": [],
-    "path": "core/skills/library/distiller",
+    "path": "core\\skills\\library\\distiller",
     "type": "python",
     "version": "1.0.0"
   },
@@ -83,7 +83,7 @@
     "class_name": "EntityExtractionSkill",
     "description": "Extracts entities and relationships from memory text for the knowledge graph",
     "intent_triggers": [],
-    "path": "core/skills/library/entity_extraction",
+    "path": "core\\skills\\library\\entity_extraction",
     "type": "python",
     "version": "1.0.0"
   },
@@ -91,7 +91,7 @@
     "class_name": "FileReadSkill",
     "description": "Allows reading and searching files within the project workspace.",
     "intent_triggers": [],
-    "path": "core/skills/library/file_reader",
+    "path": "core\\skills\\library\\file_reader",
     "type": "python",
     "version": "1.0.0"
   },
@@ -109,7 +109,7 @@
       "financial model",
       "create sheet"
     ],
-    "path": "core/skills/library/forge_outline",
+    "path": "core\\skills\\library\\forge_outline",
     "type": "python",
     "version": "1.0.0"
   },
@@ -117,7 +117,7 @@
     "class_name": "FormatterSkill",
     "description": "Skill derived from formatter.md",
     "intent_triggers": [],
-    "path": "core/skills/library/formatter",
+    "path": "core\\skills\\library\\formatter",
     "type": "python",
     "version": "1.0.0"
   },
@@ -125,7 +125,7 @@
     "class_name": "FormatterOldWithHtmlSkill",
     "description": "Skill derived from formatter_old_with_html.md",
     "intent_triggers": [],
-    "path": "core/skills/library/formatter_old_with_html",
+    "path": "core\\skills\\library\\formatter_old_with_html",
     "type": "python",
     "version": "1.0.0"
   },
@@ -133,7 +133,7 @@
     "class_name": "IdeAgentPromptSkill",
     "description": "Skill derived from ide_agent_prompt.md",
     "intent_triggers": [],
-    "path": "core/skills/library/ide_agent_prompt",
+    "path": "core\\skills\\library\\ide_agent_prompt",
     "type": "python",
     "version": "1.0.0"
   },
@@ -159,7 +159,7 @@
       "funding",
       "market"
     ],
-    "path": "core/skills/library/market_analyst",
+    "path": "core\\skills\\library\\market_analyst",
     "type": "python",
     "version": "1.0.0"
   },
@@ -167,7 +167,7 @@
     "class_name": "PlannerSkill",
     "description": "Skill derived from planner.md",
     "intent_triggers": [],
-    "path": "core/skills/library/planner",
+    "path": "core\\skills\\library\\planner",
     "type": "python",
     "version": "1.0.0"
   },
@@ -175,7 +175,7 @@
     "class_name": "QaSkill",
     "description": "Skill derived from qa.md",
     "intent_triggers": [],
-    "path": "core/skills/library/qa",
+    "path": "core\\skills\\library\\qa",
     "type": "python",
     "version": "1.0.0"
   },
@@ -183,7 +183,7 @@
     "class_name": "RAGSkill",
     "description": "Provides RAG capabilities and the search_knowledge_base tool.",
     "intent_triggers": [],
-    "path": "core/skills/library/rag",
+    "path": "core\\skills\\library\\rag",
     "type": "python",
     "version": "1.0.0"
   },
@@ -191,7 +191,7 @@
     "class_name": "RagSemanticChunkingSkill",
     "description": "Skill derived from rag_semantic_chunking.md",
     "intent_triggers": [],
-    "path": "core/skills/library/rag_semantic_chunking",
+    "path": "core\\skills\\library\\rag_semantic_chunking",
     "type": "python",
     "version": "1.0.0"
   },
@@ -199,7 +199,7 @@
     "class_name": "RemmeExtractionSkill",
     "description": "Skill derived from remme_extraction.md",
     "intent_triggers": [],
-    "path": "core/skills/library/remme_extraction",
+    "path": "core\\skills\\library\\remme_extraction",
     "type": "python",
     "version": "1.0.0"
   },
@@ -207,7 +207,7 @@
     "class_name": "ReporttoapppromptSkill",
     "description": "Skill derived from ReportToAppPrompt.md",
     "intent_triggers": [],
-    "path": "core/skills/library/reporttoappprompt",
+    "path": "core\\skills\\library\\reporttoappprompt",
     "type": "python",
     "version": "1.0.0"
   },
@@ -215,7 +215,7 @@
     "class_name": "RetrieverSkill",
     "description": "Skill derived from retriever.md",
     "intent_triggers": [],
-    "path": "core/skills/library/retriever",
+    "path": "core\\skills\\library\\retriever",
     "type": "python",
     "version": "1.0.0"
   },
@@ -223,7 +223,7 @@
     "class_name": "SchedulerSkill",
     "description": "Skill derived from scheduler.md",
     "intent_triggers": [],
-    "path": "core/skills/library/scheduler",
+    "path": "core\\skills\\library\\scheduler",
     "type": "python",
     "version": "1.0.0"
   },
@@ -231,7 +231,7 @@
     "class_name": "SummarizerSkill",
     "description": "Skill derived from summarizer.md",
     "intent_triggers": [],
-    "path": "core/skills/library/summarizer",
+    "path": "core\\skills\\library\\summarizer",
     "type": "python",
     "version": "1.0.0"
   },
@@ -248,7 +248,7 @@
       "memory",
       "disk"
     ],
-    "path": "core/skills/library/system_monitor",
+    "path": "core\\skills\\library\\system_monitor",
     "type": "python",
     "version": "1.0.0"
   },
@@ -256,7 +256,7 @@
     "class_name": "TestAgentSkill",
     "description": "Skill derived from test_agent.md",
     "intent_triggers": [],
-    "path": "core/skills/library/test_agent",
+    "path": "core\\skills\\library\\test_agent",
     "type": "python",
     "version": "1.0.0"
   },
@@ -285,7 +285,7 @@
       "save website",
       "download html"
     ],
-    "path": "core/skills/library/web_clipper",
+    "path": "core\\skills\\library\\web_clipper",
     "type": "python",
     "version": "1.0.0"
   },
