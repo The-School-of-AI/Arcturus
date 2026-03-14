@@ -97,6 +97,10 @@
 - **Backend:** `GET /remme/recommend-space?text=&current_space_id=` — suggests `space_id` from semantic similarity of draft text to existing memories per space (most frequent space in top-k results). No auto-organization; suggestion only.
 - **Frontend:** Add Memory (RemmePanel) calls `recommendSpace(text, currentSpaceId)` debounced (500 ms); space selector updates to suggested space; user can override.
 
+**Retrieval P95 benchmark**
+- **Script:** `scripts/benchmark_retrieval.py` — measures top-k retrieval (embed + vector search) P50/P95/P99 latency. Target: P95 &lt; 250 ms.
+- **Result (run 2025-03):** P95 39.8 ms (PASS), P50 27.2 ms, P99 667.9 ms. Run: `VITE_ENABLE_LOCAL_MIGRATION=true uv run python scripts/benchmark_retrieval.py`.
+
 **Defect fix (global space memories)**
 - **Issue:** When viewing Global space, memories with missing/empty `space_id` (legacy or pre-Spaces data) were excluded because list filtered only on `space_id == "__global__"`.
 - **Fix:** `qdrant_store.get_all()` when `space_id == "__global__"` now uses filter: `(space_id == "__global__" OR space_id is empty)` so Global view shows both explicitly global and legacy unscoped memories (still tenant-scoped by `user_id`).
@@ -108,7 +112,7 @@
 **Defects and hardening**
 - **Sync auth:** Sync endpoints accept `user_id` in body with no authentication; should be tied to login/session when multi-tenant.
 - **Guest / not-logged-in:** When `user_id` is from file fallback (`VITE_ENABLE_LOCAL_MIGRATION=true`), server restart or missing file can regenerate a new `user_id`, so previously stored memories may not appear until migration or same-id restored; consider persisting guest id in frontend and sending with requests.
-- **Retrieval latency:** P95 &lt; 250 ms retrieval target not yet benchmarked; run and record.
+- **Retrieval latency:** P95 &lt; 250 ms target — benchmarked via `scripts/benchmark_retrieval.py` (P95 39.8 ms, PASS).
 - **Real-time indexing:** Phase D benchmark exists; if KG ingest dominates latency, consider async KG ingestion so add returns after upsert while KG runs in background.
 
 **Future / optional (not part of original delivery)**
@@ -272,12 +276,12 @@ uv run pytest tests/integration/test_sync_two_devices_converge.py -v -m slow
 - **Qdrant Cloud**: Uses API key authentication; ensure keys are scoped and rotated as needed
 
 ## 8. Known Gaps
-- See **Remaining** (above) for defects and hardening (sync auth, guest user_id stability, retrieval P95 benchmark, async KG option) and for future/optional work (Phase 5 UI edit, session-level extraction, graph explorer, etc.).
+- See **Remaining** (above) for defects and hardening (sync auth, guest user_id stability, async KG option) and for future/optional work (Phase 5 UI edit, session-level extraction, graph explorer, etc.). Retrieval P95 benchmark: done.
 - **Phase 5:** Login/register and Lifecycle (importance, archival, contradiction) are implemented in codebase; UI edit for preferences/facts is backend-ready, frontend deferred. See P11_UNIFIED_REFERENCE.md §8.8.
 - **Sync auth:** Sync endpoints accept `user_id` in body with no authentication.
 - **Graph expansion depth:** One-hop only; `depth` reserved for multi-hop. Entity-friendly payload beyond `entity_ids`/`entity_labels` optional.
 - **Session-level extraction:** Single pass for memories + preferences + entities from session not yet implemented (§8.2).
-- **Retrieval latency:** P95 < 250 ms target to be benchmarked.
+- **Retrieval latency:** P95 < 250 ms target benchmarked via `scripts/benchmark_retrieval.py` (P95 39.8 ms, PASS).
 - **Acceptance/integration:** Structural tests in place; feature-level tests to be expanded per charter.
 
 ## 9. Rollback Plan
