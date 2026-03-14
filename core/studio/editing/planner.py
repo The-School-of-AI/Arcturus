@@ -145,6 +145,42 @@ def _validate_and_normalize_patch(
     return patch_dict
 
 
+async def plan_patch_repair(
+    artifact_type: str,
+    instruction: str,
+    content_tree: Dict[str, Any],
+    failed_patch: Dict[str, Any],
+    error_message: str,
+) -> Dict[str, Any]:
+    """Re-plan a patch after the first one failed during apply.
+
+    Sends the failed patch + error message to the LLM via a repair prompt
+    so it can correct the operation (e.g. switch INSERT_AFTER to SET).
+    """
+    from core.json_parser import parse_llm_json
+    from core.model_manager import ModelManager
+    from core.studio.prompts import get_edit_repair_prompt
+
+    target_map = build_target_map(artifact_type, content_tree)
+    failed_json = json.dumps(failed_patch, indent=2)
+
+    repair_prompt = get_edit_repair_prompt(
+        artifact_type, instruction, failed_json, error_message, target_map
+    )
+
+    mm = ModelManager()
+    raw = await mm.generate_text(repair_prompt)
+
+    try:
+        parsed = parse_llm_json(raw)
+        patch = Patch(**parsed)
+        patch_dict = patch.model_dump(mode="json")
+        patch_dict = _validate_and_normalize_patch(patch_dict, content_tree)
+        return patch_dict
+    except Exception as exc:
+        raise ValueError(f"Repair patch failed: {exc}") from exc
+
+
 async def plan_patch(
     artifact_type: str,
     instruction: str,

@@ -74,7 +74,9 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
     // Auto-prefix with slide context
     const prefix = `On slide ${slideIndex + 1} (${activeSlide.slide_type}, title: '${activeSlide.title || 'untitled'}'): `;
     await applyEditInstruction(artifactId, prefix + instruction.trim(), revisionHeadId);
-    setInstruction('');
+    // Only clear instruction if the edit was applied (editError means no_changes or failure, editConflict means 409)
+    const { editError: err, editConflict: conflict } = useAppStore.getState();
+    if (!err && !conflict) setInstruction('');
     // Refresh revisions
     try {
       const data = await api.listRevisions(artifactId);

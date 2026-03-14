@@ -821,10 +821,26 @@ class ForgeOrchestrator:
                 outline=artifact.outline.model_dump(mode="json") if artifact.outline else None,
             )
 
-        # 4. Apply patch
-        new_tree, warnings = apply_patch_to_content_tree(
-            artifact.type.value, artifact.content_tree, patch_dict
-        )
+        # 4. Apply patch (retry once on apply failure by re-planning with error context)
+        try:
+            new_tree, warnings = apply_patch_to_content_tree(
+                artifact.type.value, artifact.content_tree, patch_dict
+            )
+        except ValueError as apply_err:
+            if _patch_override is not None:
+                raise  # Don't retry test overrides
+            logger.warning("Patch apply failed: %s — retrying with repair prompt", apply_err)
+            from core.studio.editing.planner import plan_patch_repair
+            patch_dict = await plan_patch_repair(
+                artifact_type=artifact.type.value,
+                instruction=instruction,
+                content_tree=artifact.content_tree,
+                failed_patch=patch_dict,
+                error_message=str(apply_err),
+            )
+            new_tree, warnings = apply_patch_to_content_tree(
+                artifact.type.value, artifact.content_tree, patch_dict
+            )
 
         # 5. Compute diff
         diff = compute_revision_diff(

@@ -419,7 +419,8 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                 onClick={async () => {
                                     if (!editInstruction.trim()) return;
                                     await applyEditInstruction(artifact.id, editInstruction.trim(), artifact.revision_head_id);
-                                    setEditInstruction('');
+                                    const { editError: err, editConflict: conflict } = useAppStore.getState();
+                                    if (!err && !conflict) setEditInstruction('');
                                     // Reload revisions after edit
                                     try {
                                         const data = await api.listRevisions(artifact.id);

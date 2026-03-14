@@ -2427,7 +2427,17 @@ export const useAppStore = create<AppState>()(
                         instruction,
                         base_revision_id: baseRevisionId,
                     });
-                    set({ activeArtifact: result, editLoading: false });
+                    // Surface "no_changes" status as a warning so the user knows the edit had no effect
+                    const editStatus = result?.edit_result?.status;
+                    if (editStatus === 'no_changes') {
+                        const warnings = result?.edit_result?.warnings ?? [];
+                        const msg = warnings.length > 0
+                            ? warnings.join('; ')
+                            : 'No changes were made by this edit. Try a more specific instruction.';
+                        set({ activeArtifact: result, editLoading: false, editError: msg });
+                    } else {
+                        set({ activeArtifact: result, editLoading: false });
+                    }
                     get().fetchArtifacts?.();
                 } catch (e: any) {
                     const status = e?.response?.status;
