@@ -110,7 +110,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
 
     // Spaces moved to header modal; redirect if persisted tab was 'spaces'
     React.useEffect(() => {
-        if (sidebarTab === 'spaces') {
+        if ((sidebarTab as string) === 'spaces') {
             setSidebarTab('runs');
         }
     }, [sidebarTab, setSidebarTab]);
