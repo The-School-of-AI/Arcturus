@@ -56,11 +56,9 @@ __author__ = "Browser Team"
 # ORIGINAL BROWSER CAPABILITIES
 # ============================================================================
 
-from .auth import AuthHandler
 from .controller import BrowserController
 from .extractor import PageExtractor
 from .logic import AgentLoop, LLMClassifier, TaskComplexity
-from .recorder import ActionRecorder
 from .telemetry import BrowserTelemetry
 from .workflow import WorkflowSequencer
 
@@ -104,13 +102,11 @@ from .agents.kura_agent import KuraAgent, AgentRole, AgentVote, DebateResult
 
 __all__ = [
     # Original Browser Capabilities
-    "AuthHandler",
     "BrowserController",
     "PageExtractor",
     "AgentLoop",
     "LLMClassifier",
     "TaskComplexity",
-    "ActionRecorder",
     "BrowserTelemetry",
     "WorkflowSequencer",
     
