@@ -52,7 +52,7 @@ channels:
     public_key_env: DISCORD_PUBLIC_KEY
     parse_mode: markdown
     policies:
-      group_activation: mention-only
+      group_activation: always-on
       max_retries: 3
       retry_backoff_seconds: 1.0
 
@@ -163,7 +163,7 @@ channels:
     # Matrix clients render their own Markdown; we send plain text
     parse_mode: plain
     policies:
-      group_activation: mention-only
+      group_activation: always-on
       dm_allowlist: []
       max_retries: 3
       retry_backoff_seconds: 1.0

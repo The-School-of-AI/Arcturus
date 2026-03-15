@@ -200,16 +200,24 @@ async def slack_events(request: Request) -> dict[str, Any]:
 
     # 3. Route message events through the bus.
     event = payload.get("event", {})
-    if event.get("type") == "message" and not event.get("bot_id"):
+    _text = MessageEnvelope.normalize_text(event.get("text", ""))
+    _subtype = event.get("subtype", "")
+    if (
+        event.get("type") == "message"
+        and not event.get("bot_id")
+        and not _subtype  # skip message_changed, message_deleted, etc.
+        and _text  # skip empty/whitespace-only messages (prevents ValueError in envelope)
+    ):
         envelope = MessageEnvelope.from_slack(
             channel_id=event.get("channel", "unknown"),
             sender_id=event.get("user", "unknown"),
             sender_name=event.get("user", "unknown"),
-            text=event.get("text", ""),
+            text=_text,
             message_id=event.get("ts", str(uuid.uuid4())),
             thread_ts=event.get("thread_ts"),
         )
-        await bus.roundtrip(envelope)
+        # Fire-and-forget: return 200 OK immediately so Slack doesn't retry.
+        asyncio.create_task(bus.roundtrip(envelope))
 
     # Slack requires a 200 OK with any body to acknowledge receipt.
     return {"ok": True}
@@ -254,6 +262,9 @@ async def discord_events(request: Request) -> dict[str, Any]:
         if not _DiscordAdapter.verify_signature(body, timestamp, signature, public_key):
             raise HTTPException(status_code=401, detail="Invalid Discord signature")
 
+    # DEBUG: log full payload to diagnose routing
+    print(f"[DISCORD DEBUG] payload type={payload.get('type')} keys={list(payload.keys())}")
+
     # 2. PING handshake (Discord requires type=1 response).
     if payload.get("type") == 1:
         return {"type": 1}
@@ -287,8 +298,31 @@ async def discord_events(request: Request) -> dict[str, Any]:
             text=text,
             message_id=interaction_id,
         )
-        await bus.roundtrip(envelope)
-        # Discord Interactions requires an immediate acknowledgement
+        interaction_token = payload.get("token", "")
+        application_id = payload.get("application_id", "")
+
+        async def _run_and_reply():
+            # Remove hash so the dedup guard doesn't skip this as a duplicate
+            if envelope.message_hash:
+                bus._seen_hashes.discard(envelope.message_hash)
+            result = await bus.ingest(envelope)
+            print(f"[DISCORD] ingest success={result.success} agent_response={result.agent_response}")
+            reply = ""
+            if result.agent_response:
+                reply = result.agent_response.get("reply", "")
+            print(f"[DISCORD] reply ({len(reply)} chars): {reply[:80]}")
+            if not reply:
+                reply = "The agent could not complete your request."
+            # Truncate to Discord's 2000-char limit
+            if len(reply) > 2000:
+                reply = reply[:1997] + "..."
+            import httpx
+            follow_up_url = f"https://discord.com/api/v10/webhooks/{application_id}/{interaction_token}/messages/@original"
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                await client.patch(follow_up_url, json={"content": reply})
+
+        asyncio.create_task(_run_and_reply())
+        # Return deferred acknowledgement immediately so Discord doesn't time out
         return {"type": 5}  # DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
 
     elif event_type == "message" or payload.get("channel_id"):

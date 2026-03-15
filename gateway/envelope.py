@@ -77,12 +77,20 @@ class MessageEnvelope:
             self.message_hash = self._compute_hash()
 
     def _compute_hash(self) -> str:
-        """Compute a deduplication hash from channel, sender, content, and timestamp.
+        """Compute a deduplication hash.
+
+        Uses the stable ``channel_message_id`` when available (Matrix event_id,
+        Telegram message_id, Discord snowflake, etc.) so that re-delivering the
+        same event from a poll loop always produces the same hash.  Falls back to
+        hashing channel + sender + content when no stable ID exists.
 
         Returns:
             First 16 hex characters of SHA-256 over key fields.
         """
-        raw = f"{self.channel}:{self.sender_id}:{self.content}:{self.timestamp.isoformat()}"
+        if self.channel_message_id:
+            raw = f"{self.channel}:{self.channel_message_id}"
+        else:
+            raw = f"{self.channel}:{self.sender_id}:{self.content}"
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
     @staticmethod

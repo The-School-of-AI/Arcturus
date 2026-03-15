@@ -136,10 +136,12 @@ class MessageBus:
             envelope.message_hash,
         )
         # Idempotency: skip envelopes we have already processed.
+        print(f"[BUS.ingest] hash={envelope.message_hash} seen={envelope.message_hash in self._seen_hashes}")
         if envelope.message_hash and envelope.message_hash in self._seen_hashes:
             logger.info(
                 "Bus.ingest: duplicate message_hash=%s — skipped", envelope.message_hash
             )
+            print(f"[BUS.ingest] SKIPPING duplicate")
             return BusResult(
                 success=True,
                 operation="ingest",
@@ -152,6 +154,7 @@ class MessageBus:
 
         try:
             routing = await self.router.route(envelope)
+            print(f"[BUS.ingest] routing={str(routing)[:300]}")
             return BusResult(
                 success=True,
                 operation="ingest",
@@ -162,6 +165,7 @@ class MessageBus:
             )
         except Exception as exc:
             logger.exception("Bus.ingest failed: %s", exc)
+            print(f"[BUS.ingest] EXCEPTION: {exc}")
             return BusResult(
                 success=False,
                 operation="ingest",

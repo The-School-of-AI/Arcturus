@@ -105,6 +105,11 @@ Canvas_Pic_Current.json
 memory/remme_staging.json
 memory/episodes/
 
+# Runtime state (machine-specific, changes every run)
+memory/matrix_since_token.txt
+memory/chronicle_events/
+memory/chronicle_checkpoints/
+
 # PR Body Drafts
 scripts/github/PR_body*.md
 scripts/github/Pr_Body*.md

@@ -90,9 +90,31 @@ class MatrixAdapter(ChannelAdapter):
             cfg.get("sync_interval") or os.getenv("MATRIX_SYNC_INTERVAL", "2.0")
         )
         self.client: httpx.AsyncClient | None = None
-        self._since_token: str | None = None
         self._poll_task: asyncio.Task | None = None
         self._bus_callback: Callable[..., Coroutine] | None = None
+        # Persist since_token across restarts so we never replay old history
+        self._since_token_path = Path(__file__).parent.parent / "memory" / "matrix_since_token.txt"
+        self._since_token: str | None = self._load_since_token()
+
+    def _load_since_token(self) -> str | None:
+        """Load a persisted since_token from disk (survives restarts)."""
+        try:
+            if self._since_token_path.exists():
+                token = self._since_token_path.read_text().strip()
+                if token:
+                    logger.info("Matrix: loaded since_token from disk")
+                    return token
+        except Exception:
+            pass
+        return None
+
+    def _save_since_token(self, token: str) -> None:
+        """Persist the since_token to disk so restarts don't replay history."""
+        try:
+            self._since_token_path.parent.mkdir(parents=True, exist_ok=True)
+            self._since_token_path.write_text(token)
+        except Exception as exc:
+            logger.debug("Matrix: could not save since_token: %s", exc)
 
     def set_bus_callback(self, callback: Callable[..., Coroutine]) -> None:
         """Register the async callback invoked for each inbound message.
@@ -200,6 +222,7 @@ class MatrixAdapter(ChannelAdapter):
                     error_msg = err_data.get("error") or f"HTTP {response.status_code}"
                 except Exception:
                     error_msg = f"HTTP {response.status_code}"
+                logger.error("Matrix send_message failed: %s (room=%s)", error_msg, recipient_id)
                 return {
                     "message_id": None,
                     "timestamp": datetime.utcnow().isoformat(),
@@ -278,7 +301,10 @@ class MatrixAdapter(ChannelAdapter):
             return
 
         data = response.json()
-        self._since_token = data.get("next_batch", self._since_token)
+        new_token = data.get("next_batch")
+        if new_token and new_token != self._since_token:
+            self._since_token = new_token
+            self._save_since_token(new_token)
 
         # Walk joined rooms for new message events
         rooms = data.get("rooms", {}).get("join", {})
@@ -294,6 +320,10 @@ class MatrixAdapter(ChannelAdapter):
 
         # Skip messages sent by the bot itself to prevent reply loops
         if sender == self.user_id:
+            return
+
+        # Skip server/system senders (e.g. @server:matrix.org automated messages)
+        if sender.startswith("@server:") or sender.startswith("@_"):
             return
 
         content = event.get("content", {})

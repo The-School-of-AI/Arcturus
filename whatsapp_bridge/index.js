@@ -21,11 +21,15 @@
  *   LOG_LEVEL            Pino log level (default: info)
  */
 
+// Load .env from this directory before reading any process.env vars
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
+
 const {
   default: makeWASocket,
   DisconnectReason,
   useMultiFileAuthState,
   isJidGroup,
+  fetchLatestBaileysVersion,
 } = require("@whiskeysockets/baileys");
 const axios = require("axios");
 const express = require("express");
@@ -62,7 +66,13 @@ async function startBaileys() {
 
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
+  // Fetch the latest WhatsApp Web version from WA servers to avoid 405 failures
+  // caused by the bundled version becoming outdated after WhatsApp updates.
+  const { version } = await fetchLatestBaileysVersion();
+  logger.info({ version }, "Using WhatsApp Web version");
+
   sock = makeWASocket({
+    version,
     auth: state,
     printQRInTerminal: false, // We handle QR ourselves via qrcode-terminal
     logger: pino({ level: "silent" }), // Suppress Baileys internal logs

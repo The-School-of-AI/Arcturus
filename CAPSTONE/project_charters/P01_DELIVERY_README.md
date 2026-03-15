@@ -2,6 +2,25 @@
 
 ## 1. Scope Delivered
 
+**Week 4+ - WhatsApp, Matrix Live Verification & Channel Blockers Documented (2026-03-13/14):**
+- ✅ **WhatsApp live-verified (2026-03-13)**: Baileys bridge end-to-end — inbound message → AgentLoop4 → reply delivered to WhatsApp
+- ✅ **Matrix live-verified (2026-03-13)**: Polling sync + `_since_token` persistence fix — inbound message → AgentLoop4 → reply delivered to Matrix room
+- ✅ **channels/imessage.py**: BlueBubbles bridge + inbound handler curl-verified (2026-03-14); real-time webhooks blocked by Private API requirement (macOS SIP)
+- ✅ **channels/setup_docs/imessage.md**: Updated with Private API limitation, Full Disk Access + Accessibility permission requirements, `isFromMe: true` gotcha, curl simulation test
+- ✅ **channels/setup_docs/teams.md**: Updated with Azure tenant blocker note — personal account in Microsoft-managed tenant cannot register Azure Bot
+- ✅ **channels/channels_setup_readme.md**: Status table updated to reflect live/partial/blocked state for all 10 channels
+- ✅ **WhatsApp live fixes**: `require("dotenv").config()` in bridge (WHATSAPP_BRIDGE_SECRET was empty → 403); `fetchLatestBaileysVersion()` in bridge (bundled version caused 405); compact JSON HMAC in `channels/whatsapp.py` (Python JSON spaces ≠ Node JSON → sig mismatch)
+- ✅ **Matrix live fixes**: `_since_token` persisted to `memory/matrix_since_token.txt` (prevents history replay on restart); `_compute_hash()` uses `channel_message_id` when available (timestamp hash changed each poll → dedup never fired); skip `@server:*` and `@_*` senders (system messages)
+
+**Week 4 - Discord Live Verification & Hardening (2026-03-11):**
+- ✅ **PyNaCl**: Added to dependencies — required for Discord Ed25519 signature verification (was missing, caused all inbound Discord requests to return 401)
+- ✅ **config/channels.yaml**: `discord.policies.group_activation` changed `mention-only` → `always-on` — slash commands don't contain `@arcturus` so mention-only silently dropped all messages
+- ✅ **routers/nexus.py**: Discord type=2 handler refactored — `asyncio.create_task(_run_and_reply())` fires agent async, returns `{"type": 5}` immediately to Discord (avoids 3s timeout); `_run_and_reply()` PATCHes interaction webhook with agent reply
+- ✅ **core/skills/base.py**: Added `SkillContext` dataclass + `self.context = SkillContext()` to `Skill.__init__` — fixes `AttributeError: 'MarketAnalystSkill' object has no attribute 'context'` crashing all runs
+- ✅ **core/skills/base.py**: Added `on_run_failure()` and `on_run_success()` no-op stubs to `BaseSkill` — fixes `AttributeError: 'MarketAnalystSkill' object has no attribute 'on_run_failure'`
+- ✅ **gateway/router.py**: Output extraction filter — rejects raw Python code fragments leaking from intermediate nodes into final reply (guards against `return {`, `json.loads(`, `import `, `def `, `results =` prefixes)
+- ✅ **channels/setup_docs/discord.md**: Complete Discord setup guide — Developer Portal steps, tunnel options (ngrok/localtunnel/cloudflared), slash command registration, troubleshooting table
+
 **Week 3+ - End-to-End Agent Wiring & Hardening (2026-03-01):**
 - ✅ **gateway/router.py**: Refactored `create_runs_agent` from HTTP-based (POST /api/runs + poll GET) to **in-process** — calls `process_run()` directly, avoiding self-request deadlocks in single-process uvicorn
 - ✅ **gateway/router.py**: `_fetch_run_output()` reads session summaries from disk (`memory/session_summaries_index/session_{run_id}.json`) via `nx.node_link_data()` format
@@ -237,6 +256,26 @@ uv run python -m pytest tests/acceptance/p01_nexus/ \
   tests/test_signal_roundtrip.py tests/test_matrix_roundtrip.py -v
 ```
 
+**Live WhatsApp integration verified (2026-03-13 — real agent):**
+- Inbound message via Baileys bridge → bus.roundtrip() → AgentLoop4 → reply delivered to WhatsApp ✅
+- Root cause fixes: dotenv load in bridge, fetchLatestBaileysVersion(), compact HMAC JSON ✅
+
+**Live Matrix integration verified (2026-03-13 — real agent):**
+- Polling sync loop → bus.roundtrip() → AgentLoop4 → PUT m.room.message reply ✅
+- `_since_token` persisted to disk (prevents history replay on restart) ✅
+- Dedup hash fix: uses `channel_message_id` (stable) not timestamp (changes each poll) ✅
+
+**iMessage partial verification (2026-03-14):**
+- BlueBubbles ping: `{"status":200,"data":"pong"}` ✅
+- Arcturus inbound handler: curl POST → `{"ok":true}` ✅
+- Real-time webhook blocked: requires BlueBubbles Private API (needs SIP disabled on macOS) ⚠️
+
+**Channels blocked by external platform access (not counted against P01 — all code complete):**
+- Google Chat: requires Google Workspace — personal Gmail cannot create bots
+- Microsoft Teams: Azure Bot registration blocked by tenant access issue (Microsoft Services tenant)
+- Signal: requires Java 17+, signal-cli, dedicated phone number
+- iMessage full loop: requires Private API (macOS SIP disabled)
+
 **Live Slack integration verified (Week 3 — real agent):**
 - Messages routed via `create_runs_agent` → `process_run()` (in-process) → AgentLoop4 ✅
 - `group_activation: always-on` required (Slack sends `<@USER_ID>` not `@botname`) ✅
@@ -246,6 +285,13 @@ uv run python -m pytest tests/acceptance/p01_nexus/ \
 - TelegramAdapter._poll_loop() → bus.roundtrip() → AgentLoop4 → reply via sendMessage ✅
 - Conversation history maintained across messages (10-turn rolling window) ✅
 - Long replies auto-chunked at 4096-char Telegram limit ✅
+
+**Live Discord integration verified (2026-03-11 — real agent):**
+- `/ask message:hello` → dino-bot replies via real AgentLoop4 ✅
+- Ed25519 signature verification working (`PyNaCl` installed) ✅
+- Deferred response flow: `{"type": 5}` returned immediately, agent reply PATCHed via webhook ✅
+- `config/channels.yaml` `group_activation: always-on` required for slash commands ✅
+- Setup guide: `channels/setup_docs/discord.md` ✅
 
 **Live Slack integration verified (Week 2 — mock agent):**
 - "hello Arcturus" → reply `[Session C04KYFS5DV2] Processed: hello Arcturus` ✅
@@ -294,9 +340,11 @@ P01 changes are fully additive and non-breaking:
 - ✅ **All 10 channel adapters complete** — P01 channel scope fully delivered
 
 **Remaining (out-of-P01-scope):**
-- **Cross-message memory**: Fresh AgentLoop4 per message — in-memory rolling history (10 turns) provides short-term continuity; persistent cross-session memory requires P15 scope
-- **DM security policy**: Pairing-code flow blocked — no identity layer yet (P12 scope)
-- **Media transcoding**: `MediaAttachment` in envelope; no per-channel format conversion
+- **Persistent cross-session memory**: P15 (`feat-P15-gateway-week-4`) **is merged into master** — provides `gateway_api/` (rate limiting, metering, auth) and `POST /gateway/v1/chat/completions`. However P15's chat endpoint calls bare `process_run()` with no `session_id` field — conversation history not wired through. P01's 10-turn rolling history lives in `RunsAgentAdapter` (Nexus bus) and is not connected to P15's endpoint. Integration requires: (1) add `session_id` to `GatewayChatCompletionsRequest`; (2) route through `RunsAgentAdapter` instead of bare `process_run()`.
+- **HC7 / Aegis policy enforcement**: P12 branches (`students/p12/week1`, `week2`) have `safety/policy_engine.py` + `safety/prompt_injection.py` but **neither is merged into master**. HC7 remains open until P12 lands.
+- **HC8 / Cross-project failure propagation**: P12 not in master; no cross-project failure wiring in place yet.
+- **DM security policy**: Pairing-code flow blocked — P12 identity layer not yet merged into master.
+- **Media transcoding**: `MediaAttachment` in envelope; no per-channel format conversion.
 
 ---
 

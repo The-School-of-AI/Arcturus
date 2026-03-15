@@ -97,16 +97,18 @@ class WhatsAppAdapter(ChannelAdapter):
         payload: dict[str, Any] = {"recipient_id": recipient_id, "text": content}
 
         # Compute HMAC-SHA256 signature over the JSON body if secret is configured
+        # Node's JSON.stringify produces compact JSON (no spaces).
+        # We must match that exactly for HMAC-SHA256 signature verification.
+        compact_body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self.bridge_secret:
-            body_bytes = json.dumps(payload).encode("utf-8")
             sig = hmac.new(
-                self.bridge_secret.encode("utf-8"), body_bytes, hashlib.sha256
+                self.bridge_secret.encode("utf-8"), compact_body, hashlib.sha256
             ).hexdigest()
             headers["X-WA-Secret"] = sig
 
         try:
-            response = await self.client.post(url, json=payload, headers=headers)
+            response = await self.client.post(url, content=compact_body, headers=headers)
             data = response.json()
 
             if response.status_code == 200 and data.get("ok"):

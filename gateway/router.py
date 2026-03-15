@@ -346,7 +346,7 @@ async def create_runs_agent(session_id: str) -> Any:
             self._history.append({"role": "user", "content": envelope.content})
 
             try:
-                await process_run(run_id, contextual_query)
+                run_result = await process_run(run_id, contextual_query)
                 print(f"[NEXUS] process_run({run_id}) completed successfully")
             except Exception as exc:
                 print(f"[NEXUS] process_run({run_id}) RAISED: {exc}")
@@ -360,9 +360,30 @@ async def create_runs_agent(session_id: str) -> Any:
                     "sender_id": envelope.sender_id,
                 }
 
-            result = await _fetch_run_output(run_id)
-            print(f"[NEXUS] _fetch_run_output({run_id}) = status={result.get('status')}, output_len={len(str(result.get('output', '') or ''))}")
-            if not result.get("output"):
+            # 1. Try to get output directly from process_run return value
+            output_text = ""
+            if isinstance(run_result, dict):
+                raw = run_result.get("output", "") or ""
+                # Reject raw Python code fragments / bare JSON blobs leaked from intermediate nodes
+                _code_signals = ("return {", "json.loads(", "import ", "def ", "results =")
+                _stripped = raw.lstrip()
+                _is_code_fragment = any(_stripped.startswith(s) for s in _code_signals)
+                # Also reject bare dict/list blobs (start with { or [ and contain Python-ish keys)
+                _is_raw_json = (
+                    (_stripped.startswith("{") or _stripped.startswith("["))
+                    and ("':" in _stripped or '":' in _stripped or "'," in _stripped)
+                )
+                if raw and not _is_code_fragment and not _is_raw_json:
+                    output_text = raw
+                print(f"[NEXUS] process_run returned output ({len(output_text)} chars)")
+
+            # 2. Fall back to disk if process_run didn't return output
+            if not output_text:
+                result = await _fetch_run_output(run_id)
+                output_text = result.get("output", "") or ""
+                print(f"[NEXUS] _fetch_run_output({run_id}) = output_len={len(output_text)}")
+
+            if not output_text:
                 print(f"[NEXUS] WARNING: No output found for {run_id}!")
                 self._history.append({"role": "assistant", "content": "(no output)"})
                 self._trim_history()
@@ -373,7 +394,7 @@ async def create_runs_agent(session_id: str) -> Any:
                     "sender_id": envelope.sender_id,
                 }
 
-            reply = result["output"]
+            reply = output_text
             # Truncate stored history to avoid bloating future prompts
             self._history.append({"role": "assistant", "content": reply[:500]})
             self._trim_history()
