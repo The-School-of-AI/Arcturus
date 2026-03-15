@@ -1,16 +1,24 @@
 import yaml
 import json
+import os
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from core.model_manager import ModelManager
-from core.json_parser import parse_llm_json
-from core.utils import log_step, log_error
-from ops.tracing import set_span_context
-from ops.cost import ConfigurableCostCalculator
 
 from PIL import Image
-from datetime import datetime
-import os
+
+from core.json_parser import parse_llm_json
+from core.model_manager import ModelManager
+from core.utils import log_error, log_step
+from ops.tracing import set_span_context
+from ops.cost import ConfigurableCostCalculator
+from core.episodic_memory import *
+from safety.audit import log_safety_event
+from safety.canary import attach_canary_to_context, detect_canary_leak, generate_canary
+from safety.input_scanner import scan_input
+from safety.jailbreak import detect_jailbreak
+from safety.policy_engine import PolicyEngine
+from safety.instruction_hierarchy import enforce_hierarchy
 
 class AgentRunner:
     def __init__(self, multi_mcp):
@@ -25,7 +33,7 @@ class AgentRunner:
         model_key: str = "gemini-2.5-flash",
         provider: str = "gemini",
     ) -> dict:
-        """Calculate cost and token usage via CostCalculator. Fallback: word-based estimate."""
+        """Calculate cost and token usage via ConfigurableCostCalculator. Fallback: word-based estimate."""
         input_tokens = max(0, len(input_text or "") // 4)
         output_tokens = max(0, len(output_text or "") // 4)
         calculator = ConfigurableCostCalculator()
@@ -46,10 +54,11 @@ class AgentRunner:
             
         if not config:
             raise ValueError(f"Unknown agent type: {agent_type} (Not found in Registry)")
-
+        
         session_ctx = input_data.get("session_context") or {}
         session_id = session_ctx.get("session_id", "")
         span_ctx = {"agent": agent_type, "node_id": input_data.get("step_id", "Query"), "session_id": session_id}
+        
         with set_span_context(span_ctx):
             try:
                 # 1. Load prompt template
@@ -65,45 +74,45 @@ class AgentRunner:
                 try:
                     from shared.state import get_skill_manager
                     skill_manager = get_skill_manager()
-
+                    
                     # 1. Load Configured Skills
                     active_skills = []
                     for skill_name in config.get("skills", []):
                         skill = skill_manager.get_skill(skill_name)
                         if skill:
                             active_skills.append(skill)
-
+                            
                     # 2. Apply Skills
                     skill_prompts = []
                     for skill in active_skills:
                         meta = skill.get_metadata()
-
+                        
                         # Get prompt additions
                         additions = skill.get_system_prompt_additions()
                         if additions:
                             skill_prompts.append(additions)
-
+                        
                         # Get tools from skill
                         skill_tools_list.extend(skill.get_tools())
-
+                        
                         log_step(f"🧩 Applied Skill: {meta.name}", symbol="🧩")
-
+                    
                     if skill_prompts:
                         # Append skill prompts to the main prompt template
                         prompt_template = prompt_template.strip() + "\n\n" + "\n\n".join(skill_prompts)
-
+                        
                 except Exception as e:
                     log_error(f"Failed to inject skills: {e}")
 
                 # 2. Get tools from specified MCP servers (if any)
                 tools_text = ""
                 all_tools = []
-
+                
                 if config.get("mcp_servers"):
                     mcp_tools = self.multi_mcp.get_tools_from_servers(config["mcp_servers"])
                     if mcp_tools:
                         all_tools.extend(mcp_tools)
-
+                
                 # Combine with skill tools
                 if skill_tools_list:
                     all_tools.extend(skill_tools_list)
@@ -131,12 +140,12 @@ class AgentRunner:
                         else:
                             # Fallback for non-MCP tools
                             tool_descriptions.append(f"- `{getattr(tool, 'name', 'tool')}` # {getattr(tool, 'description', 'No description')}")
-
+                            
                     tools_text = "\n\n### Available Tools\n\n" + "\n".join(tool_descriptions)
 
                 # 3. Build context (Date, Preferences, Registry)
                 current_date = datetime.now().strftime("%Y-%m-%d")
-
+                
                 # 3a. Inject user preferences (compact format)
                 try:
                     from remme.preferences import get_compact_policy
@@ -149,7 +158,7 @@ class AgentRunner:
                     user_prefs_text = f"\n---\n## User Preferences\n{get_compact_policy(scope)}\n---\n"
                 except Exception:
                     user_prefs_text = ""
-
+                
                 # 3b. Inject Available Agents (for Planner abstraction)
                 if "{available_agents_enum}" in prompt_template or "{available_agents_description}" in prompt_template:
                     from core.registry import AgentRegistry
@@ -159,11 +168,8 @@ class AgentRunner:
                     for name, desc in agents_dict.items():
                         clean_desc = desc.strip()
                         if "\n" in clean_desc:
-                            lines = clean_desc.split("\n")
-                            formatted_desc = lines[0] + "\n" + "\n".join([f"  {line}" for line in lines[1:]])
-                            desc_lines.append(f"* **{name}**: {formatted_desc}")
-                        else:
-                            desc_lines.append(f"* **{name}**: {clean_desc}")
+                            clean_desc = clean_desc.split('\n')[0].strip()
+                        desc_lines.append(f"- {name}: {clean_desc}")
                     desc_str = "\n".join(desc_lines)
                     prompt_template = prompt_template.replace("{available_agents_enum}", enum_str)
                     prompt_template = prompt_template.replace("{available_agents_description}", desc_str)
@@ -173,34 +179,42 @@ class AgentRunner:
                 if agent_type == "PlannerAgent":
                     try:
                         from memory.episodic import search_episodes
+
                         # Handle different input key possibilities
                         query = input_data.get("task") or input_data.get("original_query") or ""
                         if query:
-                            log_step(f"🧠 Searching episodic memory for: '{query[:50]}...'", symbol="🔍")
-                            past_episodes = search_episodes(query, limit=2)
-                            if past_episodes:
-                                episodic_context = "\n\n## Relevant Past Experiences (Recipes)\n"
-                                episodic_context += "Use these successful past workflows as inspiration for your new plan:\n"
-                                for ep in past_episodes:
-                                    steps = " -> ".join([n.get("agent", "??") for n in ep.get("nodes", []) if n.get("agent") != "System"])
-                                    episodic_context += f"- **Task**: \"{ep['original_query']}\"\n  **Workflow**: {steps}\n"
-                                log_step(f"📈 Found {len(past_episodes)} relevant past episodes.", symbol="💡")
+                            episodes = search_episodes(query, limit=3)
+                            if episodes:
+                                episode_summaries = [f"- {ep['summary']}" for ep in episodes]
+                                episodic_context = f"\n---\n## Relevant Past Experience\n" + "\n".join(episode_summaries) + "\n---\n"
                     except Exception as e:
                         log_error(f"Episodic retrieval hook failed: {e}")
 
-                # 3d. Inject P11 Mnemo Context (Semantic + Graph)
+                # 3d. Inject Factual Memory (Semantic Injection) - Combined approach
                 factual_context = ""
                 try:
                     query = input_data.get("task") or input_data.get("original_query") or ""
                     if query:
-                        from memory.memory_retriever import retrieve
-                        import os
-                        user_id = os.environ.get("USER_ID", "default_user")  # fallback
-                        mem_context, _ = retrieve(query, session_id=session_id, user_id=user_id)
-                        if mem_context:
-                            factual_context = f"\n\n{mem_context}"
+                        # Try P11 Mnemo approach first (master)
+                        try:
+                            from memory.mnemo_retrieval import retrieve_context
+                            mnemo_results = retrieve_context(query, limit=5)
+                            if mnemo_results:
+                                fact_summaries = [f"- {result['content'][:200]}..." for result in mnemo_results if result.get('content')]
+                                if fact_summaries:
+                                    factual_context = f"\n---\n## Relevant Context\n" + "\n".join(fact_summaries) + "\n---\n"
+                        except ImportError:
+                            # Fall back to HEAD approach if mnemo_retrieval not available
+                            if agent_type in ["SummarizerAgent", "RetrieverAgent", "CoderAgent"]:
+                                from memory.mem0_store import MemoryStore
+                                store = MemoryStore()
+                                memories = store.search(query, limit=5)
+                                if memories:
+                                    memory_summaries = [f"- {mem.get('memory', '')}" for mem in memories if mem.get('memory')]
+                                    if memory_summaries:
+                                        factual_context = f"\n---\n## Relevant Facts\n" + "\n".join(memory_summaries) + "\n---\n"
                 except Exception as e:
-                    log_error(f"Mnemo retrieval hook failed: {e}")
+                    log_error(f"Factual memory hook failed: {e}")
 
                 # 3e. Inject System Profile (Cortex-R settings)
                 profile_context = ""
@@ -212,9 +226,53 @@ class AgentRunner:
                 except Exception as e:
                     log_error(f"Profile injection failed: {e}")
 
-                # 4. Final Prompt Construction
-                full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
+                # 4. Final Prompt Construction (with safety measures from HEAD)
+                system_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}"
+                tool_prompt = f"{tools_text}"
+                user_prompt = f"\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
 
+                # === Safety: Inject Canary Token into System Prompt ===
+                # Generate a unique canary token for this agent invocation to detect prompt leakage
+                try:
+                    canary_token = generate_canary()
+                    # Inject as hidden instruction that should never appear in output
+                    system_prompt += f"\n\n[INTERNAL_TOKEN: {canary_token}]"
+                    # Store canary token in input_data for later leak detection
+                    if not isinstance(input_data, dict):
+                        input_data = {}
+                    if "_canary_tokens" not in input_data:
+                        input_data["_canary_tokens"] = []
+                    input_data["_canary_tokens"].append(canary_token)
+                except Exception as e:
+                    log_error(f"Failed to inject canary token: {e}")
+
+                # === Safety: Instruction Hierarchy Enforcement ===
+                try:
+                    system_prompt, tool_prompt, user_prompt, hierarchy_validation = enforce_hierarchy(
+                        system_prompt, tool_prompt, user_prompt, strict_mode=False
+                    )
+                    if not hierarchy_validation["valid"]:
+                        log_error(f"Instruction hierarchy violations detected: {hierarchy_validation['violations']}")
+                        # Log safety event for violations
+                        try:
+                            log_safety_event(
+                                "instruction_hierarchy_violation",
+                                context={"agent_type": agent_type, "session_id": session_id},
+                                metadata={"violations": hierarchy_validation["violations"], "strict_mode": False}
+                            )
+                        except Exception:
+                            pass
+                except Exception as e:
+                    log_error(f"Instruction hierarchy enforcement failed: {e}")
+
+                # HIERARCHY ENFORCEMENT
+                # This is a simplified way to represent the hierarchy for the model.
+                full_prompt = (
+                    f"--- SYSTEM INSTRUCTIONS (HIGHEST PRIORITY) ---\n{system_prompt}\n\n"
+                    f"--- AVAILABLE TOOLS ---\n{tool_prompt}\n\n"
+                    f"--- USER REQUEST (LOWEST PRIORITY) ---\n{user_prompt}"
+                )
+                
                 print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
 
                 debug_log_dir = Path(__file__).parent.parent / "memory" / "debug_logs"
@@ -227,7 +285,7 @@ class AgentRunner:
                 from config.settings_loader import reload_settings
                 fresh_settings = reload_settings()
                 agent_settings = fresh_settings.get("agent", {})
-
+                
                 # Check for per-agent overrides
                 overrides = agent_settings.get("overrides", {})
                 if agent_type in overrides:
@@ -238,10 +296,10 @@ class AgentRunner:
                 else:
                     model_provider = agent_settings.get("model_provider", "gemini")
                     model_name = agent_settings.get("default_model", "gemini-2.5-flash")
-
+                
                 log_step(f"📡 Using {model_provider}:{model_name}", symbol="🔌")
                 model_manager = ModelManager(model_name, provider=model_provider)
-
+                
                 # 5. Generate response (System 1 vs System 2)
                 async def generate_draft():
                     if image_path and os.path.exists(image_path):
@@ -258,12 +316,12 @@ class AgentRunner:
                     response, reasoning_history = await engine.run_loop(
                         query=query_context,
                         generate_func=generate_draft,
-                        context=full_prompt[:1000]  # Truncate context to save verification tokens
+                        context=full_prompt[:1000] # Truncate context to save verification tokens
                     )
                 else:
                     response = await generate_draft()
                     reasoning_history = []
-
+                
                 # 📝 LOGGING: Save raw response
                 timestamp = datetime.now().strftime("%H%M%S")
                 (debug_log_dir / f"{timestamp}_{agent_type}_response.txt").write_text(response, encoding="utf-8")
@@ -271,33 +329,38 @@ class AgentRunner:
 
                 # 6. Parse JSON response dynamically
                 output = parse_llm_json(response)
-
+                
                 # Robustness: Some models (like gemma3) wrap JSON in a list
                 if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict):
                     output = output[0]
-
+                    
                 log_step(f"🟩 {agent_type} finished", payload={"output_keys": list(output.keys()) if isinstance(output, dict) else "raw_string"}, symbol="🟩")
 
+                # Calculate input text for costing
                 input_text = str(input_data)
+                
+                # Calculate output text for costing
                 output_text = str(output)
+                
+                # Calculate cost and tokens
                 cost_data = self.calculate_cost(
                     input_text, output_text, model_key=model_name, provider=model_provider
                 )
-
+                
                 # Add cost data and model info to result
                 if isinstance(output, dict):
                     output.update(cost_data)
                     output["executed_model"] = f"{model_provider}:{model_name}"
                     if reasoning_history:
                         output["_reasoning_trace"] = reasoning_history
-
+                
                 return {
                     "success": True,
                     "agent_type": agent_type,
                     "output": output,
-                    "agent_prompt": full_prompt  # For Episodic Memory
+                    "agent_prompt": full_prompt # For Episodic Memory
                 }
-
+                
             except Exception as e:
                 log_error(f"❌ {agent_type}: {str(e)}")
                 return {

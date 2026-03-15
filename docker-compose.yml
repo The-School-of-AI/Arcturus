@@ -1,4 +1,24 @@
 services:
+  # --- NeMo Guardrails (Aegis P12 secondary scanner) ---
+  # Runs on 8001 to avoid conflict with the Arcturus backend on 8000.
+  # Requires a rails config under ./config/nemo/ (see safety/nemo_guardrails.py).
+  # Uncomment to activate:
+  #
+  # nemo-guardrails:
+  #   image: python:3.11-slim
+  #   container_name: arcturus-nemo-guardrails
+  #   ports:
+  #     - "8001:8001"
+  #   volumes:
+  #     - ./config/nemo:/app/config
+  #   working_dir: /app
+  #   command: >
+  #     sh -c "pip install nemoguardrails --quiet &&
+  #            nemoguardrails server --config ./config --port 8001 --host 0.0.0.0"
+  #   environment:
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #   restart: unless-stopped
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: arcturus-qdrant

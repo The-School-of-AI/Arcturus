@@ -1,9 +1,7 @@
 # flow.py – 100% NetworkX Graph-First (No agentSession)
 
-import networkx as nx
 import asyncio
 import time
-from memory.context import ExecutionContextManager
 from ops.tracing import (
     agent_loop_run_span,
     agent_plan_span,
@@ -13,16 +11,27 @@ from ops.tracing import (
     attach_plan_graph_to_span,
 )
 from opentelemetry.trace import Status, StatusCode
-from agents.base_agent import AgentRunner
-from core.utils import log_step, log_error
-from core.event_bus import event_bus
-from core.model_manager import ModelManager
-from ui.visualizer import ExecutionVisualizer
-from rich.live import Live
-from rich.console import Console
 from datetime import datetime
 
+import networkx as nx
+from rich.console import Console
+from rich.live import Live
 
+from agents.base_agent import AgentRunner
+from core.event_bus import event_bus
+from core.model_manager import ModelManager
+from core.utils import log_error, log_step
+from memory.context import ExecutionContextManager
+from safety.audit import log_safety_event
+from safety.canary import attach_canary_to_context, detect_canary_leak, generate_canary
+from safety.input_scanner import scan_input
+from safety.jailbreak import detect_jailbreak
+from safety.policy_engine import PolicyEngine
+from safety.rate_limiter import SimpleRateLimiter
+from safety.tool_hardening import is_tool_allowed, sanitize_tool_args
+from ui.visualizer import ExecutionVisualizer
+
+_RATE_LIMITER = SimpleRateLimiter()
 # ===== EXPONENTIAL BACKOFF FOR TRANSIENT FAILURES =====
 
 async def retry_with_backoff(
@@ -266,53 +275,149 @@ class AgentLoop4:
                     "reads": ["original_query"],
                     "writes": ["plan_graph"]
                 }
-                ],
-                "edges": [
-                    {"source": "ROOT", "target": "Query"}
-                ]
-            }
-
+            ],
+            "edges": [
+                {"source": "ROOT", "target": "Query"}
+            ]
+        }
+        
+        try:
+            # Create Context & Save Immediately
+            self.context = ExecutionContextManager(
+                bootstrap_graph,
+                session_id=session_id,
+                original_query=query,
+                file_manifest=file_manifest
+            )
+            self.context.memory_context = memory_context # Store for retrieval
+            # Inject multi_mcp immediately
+            self.context.multi_mcp = self.multi_mcp
+            self.context.plan_graph.graph['globals_schema'].update(globals_schema)
+            self.context._save_session()
+            log_step("✅ Session initialized with Query processing", symbol="🌱")
+            if space_id is not None:
+                self.context.plan_graph.graph["space_id"] = space_id
+            
             try:
-                # Create Context & Save Immediately
-                self.context = ExecutionContextManager(
-                    bootstrap_graph,
-                    session_id=session_id,
-                    original_query=query,
-                    file_manifest=file_manifest
-                )
-                if space_id is not None:
-                    self.context.plan_graph.graph["space_id"] = space_id
-                self.context.memory_context = memory_context  # Store for retrieval
-                # Inject multi_mcp immediately
-                self.context.multi_mcp = self.multi_mcp
-                self.context.plan_graph.graph['globals_schema'].update(globals_schema)
-                self.context._save_session()
-                log_step("✅ Session initialized with Query processing", symbol="🌱")
-            except Exception as e:
-                span.set_status(Status(StatusCode.ERROR, str(e)))
-                span.record_exception(e)
-                print(f"❌ ERROR initializing context: {e}")
-                raise
-
-            # Phase 1: File Profiling (if files exist)
-            # Run DistillerAgent to profile uploaded files before planning
-            file_profiles = {}
-            if uploaded_files:
-                # Wrap with retry for transient failures
-                async def run_distiller():
-                    return await self.agent_runner.run_agent(
-                        "DistillerAgent",
-                        {
-                            "task": "profile_files",
-                            "files": uploaded_files,
-                            "instruction": "Profile and summarize each file's structure, columns, content type",
-                            "writes": ["file_profiles"]
-                        }
+                # === Safety: Inject Canary Token Context ===
+                attach_canary_to_context(self.context.plan_graph.graph)
+            except Exception:
+                pass
+            
+            # === Safety: Input scanning (prompt injection / policy pre-checks) ===
+            scan_result = scan_input(query, {"session_id": session_id, "file_manifest": file_manifest})
+            if not scan_result.get("allowed", True):
+                reason = scan_result.get("reason", "blocked by safety")
+                
+                # === Safety: Threat Tracking ===
+                try:
+                    from safety.threat_tracker import get_threat_tracker
+                    threat_tracker = get_threat_tracker()
+                    threat_assessment = threat_tracker.record_attempt(
+                        session_id or "unknown",
+                        reason,
+                        user_id=None  # TODO: Extract from context if available
                     )
-                file_result = await self._track_task(retry_with_backoff(run_distiller))
-                if file_result["success"]:
-                    file_profiles = file_result["output"]
-                    self.context.set_file_profiles(file_profiles)
+                    
+                    # If threat level requires blocking, enforce it
+                    if threat_assessment["action"] == "block":
+                        self.context.mark_failed("Query", f"blocked_by_threat_tracker:{reason}")
+                        log_step(f"Blocked by threat tracker: {threat_assessment.get('message', reason)}", symbol="⛔")
+                        log_safety_event(
+                            "threat_tracker_block",
+                            context={"session_id": session_id, "query": query},
+                            metadata={"threat_assessment": threat_assessment, "reason": reason}
+                        )
+                        return self.context
+                    elif threat_assessment["action"] == "rate_limit":
+                        log_step(f"Rate limiting due to threat level: {threat_assessment['attempt_count']} attempts", symbol="⚠️")
+                except Exception as e:
+                    log_error(f"Threat tracking failed: {e}")
+                
+                self.context.mark_failed("Query", reason)
+                log_step(f"Blocked input by safety: {scan_result.get('reason')}", symbol="⛔")
+                # Audit the block event
+                log_safety_event(
+                    "input_blocked",
+                    context={"session_id": session_id, "query": query},
+                    metadata={"reason": reason, "hits": scan_result.get("hits")}
+                )
+                return self.context
+
+            # === Safety: Jailbreak Detection ===
+            jailbreak_result = detect_jailbreak(query)
+            if jailbreak_result.get("is_jailbreak", False):
+                reason = "jailbreak_attempt"
+                self.context.mark_failed("Query", reason)
+                log_step(f"Blocked input for potential jailbreak: {jailbreak_result.get('hits')}", symbol="⛔")
+                log_safety_event(
+                    "jailbreak_detected",
+                    context={"session_id": session_id, "query": query},
+                    metadata={"hits": jailbreak_result.get("hits"), "ml_score": jailbreak_result.get("ml_score")}
+                )
+                return self.context
+
+        except Exception as e:
+            log_error(f"Aegis error or context init failure: {e}")
+            raise
+
+        if self.context.plan_graph.nodes["Query"].get("status") == "failed":
+            return self.context
+
+        # Phase 1: File Profiling (if files exist)
+        # Run DistillerAgent to profile uploaded files before planning
+        file_profiles = {}
+        if uploaded_files:
+            # Wrap with retry for transient failures
+            async def run_distiller():
+                return await self.agent_runner.run_agent(
+                    "DistillerAgent",
+                    {
+                        "task": "profile_files",
+                        "files": uploaded_files,
+                        "instruction": "Profile and summarize each file's structure, columns, content type",
+                        "writes": ["file_profiles"]
+                    }
+                )
+
+            # === Safety: Jailbreak Detection ===
+            jailbreak_result = detect_jailbreak(query)
+            if jailbreak_result.get("is_jailbreak", False):
+                reason = "jailbreak_attempt"
+                self.context.mark_failed("Query", reason)
+                log_step(f"Blocked input for potential jailbreak: {jailbreak_result.get('hits')}", symbol="⛔")
+                log_safety_event(
+                    "jailbreak_detected",
+                    context={"session_id": session_id, "query": query},
+                    metadata={"hits": jailbreak_result.get("hits"), "ml_score": jailbreak_result.get("ml_score")}
+                )
+                return self.context
+
+        except Exception as e:
+            log_error(f"Aegis error or context init failure: {e}")
+            raise
+
+        if self.context.plan_graph.nodes["Query"].get("status") == "failed":
+            return self.context
+
+        # Phase 1: File Profiling (if files exist)
+        file_profiles = {}
+        if uploaded_files:
+            # Wrap with retry for transient failures
+            async def run_distiller():
+                return await self.agent_runner.run_agent(
+                    "DistillerAgent",
+                    {
+                        "task": "profile_files",
+                        "files": uploaded_files,
+                        "instruction": "Profile and summarize each file's structure, columns, content type",
+                        "writes": ["file_profiles"]
+                    }
+                )
+            file_result = await self._track_task(retry_with_backoff(run_distiller))
+            if file_result["success"]:
+                file_profiles = file_result["output"]
+                self.context.set_file_profiles(file_profiles)
 
             # Phase 2: Planning and Execution Loop
             try:
@@ -913,8 +1018,118 @@ class AgentLoop4:
             # 📡 EMIT EVENT
             await event_bus.publish("step_start", "AgentLoop4", {"step_id": step_id})
 
-            # Get inputs from NetworkX graph
-            inputs = context.get_inputs(step_data.get("reads", []))
+        # Execute with ReAct Loop (Max 15 turns)
+        max_turns = 15
+        current_input = build_agent_input()
+        iterations_data = []
+        
+        for turn in range(1, max_turns + 1):
+            log_step(f"🔄 {agent_type} Iteration {turn}/{max_turns}", symbol="🔄")
+            
+            # Run Agent (with retry for transient failures like rate limits)
+            async def run_agent_step():
+                return await self.agent_runner.run_agent(agent_type, current_input)
+            
+            try:
+                result = await retry_with_backoff(run_agent_step)
+            except Exception as e:
+                # All retries exhausted, return failure
+                return {
+                    "success": False, 
+                    "error": f"Agent failed after retries: {str(e)}"
+                }
+            
+            if not result["success"]:
+                return result
+            
+            output = result["output"]
+            
+            # === Safety: Comprehensive Output Scanning ===
+            try:
+                from safety.output_scanner import validate_output_safety
+                
+                # Get canary tokens from context and input_data
+                session_context = context.plan_graph.graph
+                input_data_for_scan = current_input if isinstance(current_input, dict) else {}
+                
+                output_validation = validate_output_safety(
+                    output,
+                    session_context=session_context,
+                    input_data=input_data_for_scan,
+                    strict_mode=True
+                )
+                
+                if not output_validation.get("allowed", True):
+                    # Critical issue detected (canary leak, prompt leakage)
+                    reason = output_validation.get("reason", "output_validation_failed")
+                    log_safety_event(
+                        "output_blocked",
+                        context={
+                            "session_id": context.plan_graph.graph.get("session_id"),
+                            "step_id": step_id,
+                            "agent": agent_type
+                        },
+                        metadata={
+                            "reason": reason,
+                            "hits": output_validation.get("hits", [])
+                        }
+                    )
+                    return {
+                        "success": False,
+                        "error": f"Output blocked by safety: {reason}"
+                    }
+                elif output_validation.get("action") == "redact":
+                    # Redaction needed
+                    log_safety_event(
+                        "output_redacted",
+                        context={
+                            "session_id": context.plan_graph.graph.get("session_id"),
+                            "step_id": step_id,
+                            "agent": agent_type
+                        },
+                        metadata={
+                            "reason": output_validation.get("reason"),
+                            "hits": output_validation.get("hits", [])
+                        }
+                    )
+                    if "sanitized_output" in output_validation:
+                        output = output_validation["sanitized_output"]
+                    elif "redacted_output" in output_validation:
+                        output = output_validation["redacted_output"]
+            except Exception as e:
+                log_error(f"Aegis: output scanner error: {e}")
+            
+            # Output policy evaluation (PII, content policy, abstain/block) ===
+            try:
+                pe = PolicyEngine()
+                pol = pe.evaluate_output(output, {"step_id": step_id, "agent": agent_type, "session": context.plan_graph.graph})
+                action = pol.get("action")
+                if action == "block":
+                    log_safety_event(
+                        "policy_violation",
+                        context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "agent": agent_type},
+                        metadata={"reason": pol.get('reason'), "details": pol.get('details')}
+                    )
+                    return {
+                        "success": False, 
+                        "error": f"Policy blocked output: {pol.get('reason','policy_violation')}"
+                    }
+                elif action == "redact":
+                    log_safety_event(
+                        "output_redacted",
+                        context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "agent": agent_type},
+                        metadata={"reason": pol.get('reason'), "details": pol.get('details')}
+                    )
+                    output = pol.get("redacted_output", output)
+            except Exception as e:
+                log_error(f"Aegis: policy engine error: {e}")
+            # ✅ CHECK FOR CLARIFICATION REQUEST (HALT)
+            if output.get("clarificationMessage"):
+                 return {
+                    "success": True, 
+                    "status": "waiting_input", 
+                    "output": output
+                 }
 
             # 🔧 HELPER FUNCTION: Build agent input (consistent for both iterations)
             def build_agent_input(instruction=None, previous_output=None, iteration_context=None):
@@ -938,9 +1153,9 @@ class AgentLoop4:
                     payload["all_globals_schema"] = context.plan_graph.graph['globals_schema'].copy()
                 return payload
 
-            max_turns = 15
-            current_input = build_agent_input()
-            iterations_data = []
+            # Update step data with iterations so far
+            step_data = context.get_step_data(step_id)
+            step_data['iterations'] = iterations_data
 
             # ReAct loop: agent can call tools, call_self, or produce final output
             for turn in range(1, max_turns + 1):
@@ -993,6 +1208,48 @@ class AgentLoop4:
                         tool_call = output["call_tool"]
                         tool_name = tool_call.get("name")
                         tool_args = tool_call.get("arguments", {})
+
+                        # === Safety: Tool hardening ===
+                        try:
+                            if not is_tool_allowed(tool_name, {"agent": agent_type}):
+                                log_step(f"Blocked tool call by safety: {tool_name}", symbol="⛔")
+                                log_safety_event(
+                                    "tool_call_blocked",
+                                    context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id, "tool_name": tool_name},
+                                    metadata={"agent": agent_type}
+                                )
+                                result_str = f"Tool {tool_name} blocked by safety policy"
+                                iterations_data[-1]["tool_result"] = result_str
+                                current_input = build_agent_input(
+                                    instruction="The tool call was blocked by safety policy. Please explain this to the user.",
+                                    previous_output=output,
+                                    iteration_context={"tool_result": result_str}
+                                )
+                                continue
+
+                            tool_args = sanitize_tool_args(tool_args)
+                            session_key = context.plan_graph.graph.get("session_id")
+                            user_key = session_key or agent_type
+
+                            if not _RATE_LIMITER.allow(user_key, operation_type="tool_call"):
+                                log_step("Rate limit exceeded for tool calls", symbol="⛔")
+                                log_safety_event(
+                                    "rate_limit_exceeded",
+                                    context={"session_id": session_key, "step_id": step_id, "tool_name": tool_name},
+                                    metadata={"agent": agent_type, "operation_type": "tool_call"}
+                                )
+                                result_str = "Rate limit exceeded"
+                                iterations_data[-1]["tool_result"] = result_str
+                                current_input = build_agent_input(
+                                    instruction="Rate limit exceeded. Please wait or try a different approach.",
+                                    previous_output=output,
+                                    iteration_context={"tool_result": result_str}
+                                )
+                                continue
+
+                        except Exception as e_safety:
+                            log_error(f"Safety check error: {e_safety}")
+                            return {"success": False, "error": f"Internal safety check error: {e_safety}"}
 
                         log_step(f"🛠️ Executing Tool: {tool_name}", payload=tool_args, symbol="⚙️")
 
@@ -1089,9 +1346,20 @@ class AgentLoop4:
                             iterations_data[-1]["execution_result"] = execution_result
                             # Merge so mark_done skips re-execution (avoids duplicate code.execution span)
                             output = context._merge_execution_results(output, execution_result)
+                        # Check for canary leaks before returning final output
+                        final_output_text = str(output.get("output", ""))
+                        leaked = detect_canary_leak(final_output_text, context.plan_graph.graph)
+                        if leaked:
+                            log_safety_event(
+                                "canary_token_triggered",
+                                context={"session_id": context.plan_graph.graph.get("session_id"), "step_id": step_id},
+                                metadata={"leaked_tokens": leaked, "agent": agent_type}
+                            )
+                            log_error(f"Canary token leak detected from agent {agent_type}!")
                         return {"success": True, "output": output}
 
-            log_error(f"Max iterations ({max_turns}) reached for {step_id}. Returning last output (incomplete).")
+        # If loop finishes without returning (max turns reached): Return PARTIAL SUCCESS to allow graph continuation
+        log_error(f"Max iterations ({max_turns}) reached for {step_id}. Returning last output (incomplete).")
         last_output = iterations_data[-1]["output"] if iterations_data else {"error": "No output produced"}
         # Ensure it has a valid structure if possible, or just pass it through
         return {"success": True, "output": last_output}
