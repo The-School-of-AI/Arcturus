@@ -25,6 +25,7 @@ memory/remme_index/memories.json
 memory/remme_index/scanned_runs.json
 memory/remme_index/device_id.json
 memory/remme_index/user_id.json
+memory/remme_index/user_profile.md
 memory/user_model/
 memory/chronicle_checkpoints/
 memory/chronicle_events/
@@ -96,6 +97,9 @@ S15A.egg-info/
 
 # Studio runtime output (generated PPTX artifacts)
 /studio/
+
+# Auto-generated skill registry (rebuilt on every startup by SkillManager)
+core/skills/registry.json
 
 # Added by Arcturus
 .arcturus/
