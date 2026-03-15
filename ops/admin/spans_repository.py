@@ -18,10 +18,10 @@ Collection = Any
 def get_spans_collection() -> Optional[Collection]:
     """Get MongoDB spans collection from watchtower config. Returns None if unavailable."""
     try:
-        from config.settings_loader import settings
+        from config.settings_loader import load_settings
         from pymongo import MongoClient
 
-        watchtower = settings.get("watchtower", {})
+        watchtower = load_settings().get("watchtower", {})
         uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
         client = MongoClient(uri)
         return client["watchtower"]["spans"]

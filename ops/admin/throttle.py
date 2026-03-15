@@ -21,7 +21,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from config.settings_loader import settings
+from config.settings_loader import load_settings
 
 logger = logging.getLogger("watchtower.throttle")
 
@@ -62,8 +62,8 @@ class ThrottlePolicy:
 
     @staticmethod
     def _get_throttle_config() -> Dict[str, float]:
-        """Read throttle config from settings."""
-        wt = settings.get("watchtower", {})
+        """Read throttle config from settings (always fresh via load_settings)."""
+        wt = load_settings().get("watchtower", {})
         return wt.get("throttle", {})
 
     @staticmethod

@@ -11,8 +11,11 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from pymongo import MongoClient
 
+from pathlib import Path
+
 from config.settings_loader import settings, load_settings, reload_settings, save_settings
 from ops.admin.spans_repository import SpansRepository, get_spans_collection
+from shared.state import PROJECT_ROOT
 
 # ---------------------------------------------------------------------------
 # Admin API-key auth guard (P14.5)
@@ -292,7 +295,6 @@ async def delete_flag(name: str):
 async def list_caches():
     """Enumerate known caches with basic stats."""
     import os
-    from pathlib import Path
 
     caches = []
 
@@ -304,7 +306,7 @@ async def list_caches():
     })
 
     # 2. FAISS index
-    faiss_dir = Path("data/faiss_index")
+    faiss_dir = PROJECT_ROOT / "data" / "faiss_index"
     faiss_size = 0
     faiss_files = 0
     if faiss_dir.exists():
@@ -396,9 +398,8 @@ async def get_config():
 async def get_config_diff():
     """Show differences between current settings and defaults."""
     import json
-    from pathlib import Path
 
-    defaults_path = Path("config/settings.defaults.json")
+    defaults_path = PROJECT_ROOT / "config" / "settings.defaults.json"
     if not defaults_path.exists():
         raise HTTPException(status_code=404, detail="settings.defaults.json not found")
 

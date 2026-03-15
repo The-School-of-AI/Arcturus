@@ -5,7 +5,7 @@ Watchtower Health checks: service connectivity and system resource probes.
 import os
 from typing import List
 
-from config.settings_loader import settings, get_ollama_url
+from config.settings_loader import load_settings, get_ollama_url
 from memory.qdrant_config import get_qdrant_url
 from ops.health.models import HealthResult, ResourceSnapshot
 from shared.state import get_voice_status
@@ -15,7 +15,7 @@ def check_mongodb() -> HealthResult:
     """Check MongoDB connectivity via watchtower config."""
     import time
 
-    watchtower = settings.get("watchtower", {})
+    watchtower = load_settings().get("watchtower", {})
     uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
     client = None
     try:
