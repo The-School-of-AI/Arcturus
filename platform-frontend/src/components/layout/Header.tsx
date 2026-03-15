@@ -39,7 +39,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
 
 export const Header: React.FC = () => {
     const {
-        currentRun, sidebarTab, runs, savedApps, memories, spaces, fetchSpaces,
+        currentRun, sidebarTab, runs, savedApps, memories, fetchSpaces,
         isSpacesModalOpen, setIsSpacesModalOpen,
         analysisHistory, newsSources, ragFiles, mcpServers,
         isRagIndexing, setIsRagNewFolderOpen, fetchRagFiles,
@@ -206,7 +206,6 @@ export const Header: React.FC = () => {
     const getCount = () => {
         switch (sidebarTab) {
             case 'runs': return runs.length;
-            case 'spaces': return spaces.length;
             case 'apps': return savedApps.length;
             case 'remme': return memories.length;
             case 'explorer': return analysisHistory.length;

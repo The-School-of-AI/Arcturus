@@ -18,6 +18,11 @@ class RevisionManager:
         content_tree: dict,
         change_summary: str,
         parent_revision_id: Optional[str] = None,
+        *,
+        edit_instruction: Optional[str] = None,
+        patch: Optional[dict] = None,
+        diff: Optional[dict] = None,
+        restored_from_revision_id: Optional[str] = None,
     ) -> Revision:
         """Create a new revision and persist it."""
         revision = Revision(
@@ -27,6 +32,10 @@ class RevisionManager:
             change_summary=change_summary,
             content_tree_snapshot=content_tree,
             created_at=datetime.now(timezone.utc),
+            edit_instruction=edit_instruction,
+            patch=patch,
+            diff=diff,
+            restored_from_revision_id=restored_from_revision_id,
         )
         self.storage.save_revision(revision)
         return revision

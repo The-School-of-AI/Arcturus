@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Hammer, Plus, RefreshCw, CheckCircle, XCircle, ChevronRight, ChevronDown,
     History, FileText, Presentation, Table2, Loader2, AlertCircle,
-    Send, AlertTriangle, Eye, Trash2
+    Send, AlertTriangle, Eye, Trash2, RotateCcw
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ExportPanel } from './ExportPanel';
 import { SlidePreviewModal } from './preview/SlidePreviewModal';
+import { ArtifactPromptBanner } from './ArtifactPromptBanner';
 
 // --- Type helpers ---
 
@@ -244,6 +245,30 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
     const [expandedRevisionId, setExpandedRevisionId] = useState<string | null>(null);
     const [expandedRevisionData, setExpandedRevisionData] = useState<any>(null);
     const [previewOpen, setPreviewOpen] = useState(false);
+    const [restoreLoading, setRestoreLoading] = useState(false);
+    const [restoreError, setRestoreError] = useState<string | null>(null);
+
+    const handleRestore = async (revisionId: string, changeSummary: string) => {
+        if (!window.confirm(`Restore to '${changeSummary}'? This will create a new revision.`)) return;
+        setRestoreLoading(true);
+        setRestoreError(null);
+        try {
+            await api.restoreRevision(artifact.id, revisionId, artifact.revision_head_id);
+            await loadArtifact(artifact.id);
+            const data = await api.listRevisions(artifact.id);
+            setRevisions(data);
+            setExpandedRevisionId(null);
+            setExpandedRevisionData(null);
+        } catch (err: any) {
+            if (err?.response?.status === 409) {
+                setRestoreError('Conflict: the artifact was modified. Please reload and try again.');
+            } else {
+                setRestoreError(err?.response?.data?.detail || 'Restore failed');
+            }
+        } finally {
+            setRestoreLoading(false);
+        }
+    };
 
     const meta = TYPE_META[artifact.type] || TYPE_META.document;
     const Icon = meta.icon;
@@ -293,6 +318,8 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                         )}
                     </div>
                 </div>
+
+                <ArtifactPromptBanner key={artifact.id} prompt={artifact.creation_prompt} />
 
                 {/* Outline Section */}
                 {artifact.outline && (
@@ -392,7 +419,8 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                 onClick={async () => {
                                     if (!editInstruction.trim()) return;
                                     await applyEditInstruction(artifact.id, editInstruction.trim(), artifact.revision_head_id);
-                                    setEditInstruction('');
+                                    const { editError: err, editConflict: conflict } = useAppStore.getState();
+                                    if (!err && !conflict) setEditInstruction('');
                                     // Reload revisions after edit
                                     try {
                                         const data = await api.listRevisions(artifact.id);
@@ -474,6 +502,9 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-medium text-foreground truncate">
                                                 {rev.change_summary}
+                                                {rev.id === artifact.revision_head_id && (
+                                                    <span className="ml-1.5 text-[9px] text-green-400/70 font-normal">(current)</span>
+                                                )}
                                             </p>
                                             {rev.created_at && (
                                                 <span className="text-[10px] text-muted-foreground">
@@ -520,6 +551,22 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                                             ))}
                                                         </tbody>
                                                     </table>
+                                                </div>
+                                            )}
+                                            {rev.id !== artifact?.revision_head_id && (
+                                                <button
+                                                    onClick={() => handleRestore(rev.id, rev.change_summary)}
+                                                    disabled={restoreLoading}
+                                                    className="mt-2 flex items-center gap-1.5 text-xs text-primary/80 hover:text-primary disabled:opacity-50 transition-colors"
+                                                >
+                                                    <RotateCcw className="w-3 h-3" />
+                                                    {restoreLoading ? 'Restoring...' : 'Restore to this version'}
+                                                </button>
+                                            )}
+                                            {restoreError && (
+                                                <div className="mt-2 rounded-md bg-red-500/10 border border-red-500/20 p-2 text-xs text-red-400 flex items-start gap-2">
+                                                    <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                                                    <span>{restoreError}</span>
                                                 </div>
                                             )}
                                         </div>

@@ -68,7 +68,9 @@ dependencies = [
     "websocket-client>=1.9.0",
     "azure-cognitiveservices-speech>=1.48.2",
     "piper-tts>=1.2.0",
+    "pynacl>=1.6.2",
     "mongomock>=4.3.0",
+    "chardet<6",
 ]
 
 [build-system]
@@ -107,15 +109,17 @@ dev = [
 
 # ---------------------------------------------------------------------------
 # Ruff — fast Python linter (replaces flake8/isort/pyupgrade)
-# Scoped to P08 touched code paths: agents/, core/, config/, tests/
 # ---------------------------------------------------------------------------
 [tool.ruff]
 line-length = 120
 target-version = "py311"
 include = [
     "agents/**/*.py",
+    "channels/**/*.py",
     "core/**/*.py",
     "config/**/*.py",
+    "gateway/**/*.py",
+    "shared/**/*.py",
     "tests/**/*.py",
 ]
 exclude = [

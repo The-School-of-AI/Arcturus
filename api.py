@@ -1,9 +1,10 @@
-import sys
-import os
 import asyncio
+import os
 import subprocess
+import sys
 from pathlib import Path
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -13,13 +14,20 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
+# Load .env before anything else so env vars are available to all modules.
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
+
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from core.loop import AgentLoop4
-from core.scheduler import scheduler_service
-from core.persistence import persistence_manager
+from contextlib import asynccontextmanager
+
+from config.settings_loader import reload_settings, reset_settings, save_settings, settings
 from core.graph_adapter import nx_to_reactflow
+from core.loop import AgentLoop4
+from core.persistence import persistence_manager
+from core.scheduler import scheduler_service
 from memory.context import ExecutionContextManager
 from remme.utils import get_embedding
 from config.settings_loader import (
@@ -28,14 +36,15 @@ from config.settings_loader import (
     reset_settings,
     reload_settings,
 )
+from routers.remme import background_smart_scan  # Needed for lifespan startup
 
 # Import shared state
 from shared.state import (
+    PROJECT_ROOT,
     active_loops,
     get_multi_mcp,
-    get_remme_store,
     get_remme_extractor,
-    PROJECT_ROOT,
+    get_remme_store,
 )
 from routers.remme import background_smart_scan  # Needed for lifespan startup
 from routers.sync import run_sync_background  # Phase 4: startup sync when enabled
@@ -199,7 +208,8 @@ async def lifespan(app: FastAPI):
         print("⚠️ Git NOT found.")
 
     try:
-        import requests
+        import requests  # type: ignore[import-untyped]
+
         from config.settings_loader import get_ollama_url
 
         requests.get(get_ollama_url("base"), timeout=1)
@@ -208,6 +218,14 @@ async def lifespan(app: FastAPI):
         print("⚠️ Ollama NOT found.")
     # 🧠 Start Smart Sync in background
     asyncio.create_task(background_smart_scan())
+
+    # 4. Initialize Nexus gateway adapters (creates httpx clients, Telegram polling, etc.)
+    try:
+        from shared.state import initialize_message_bus
+        await initialize_message_bus()
+    except Exception as e:
+        print(f"⚠️ [Nexus] Message bus initialization failed: {e}")
+
     # Phase 4: run sync (push then pull) on startup when SYNC_ENGINE_ENABLED + SYNC_SERVER_URL
     asyncio.create_task(run_sync_background())
 
@@ -268,10 +286,12 @@ app.add_middleware(
 # active_loops, multi_mcp, remme_store, remme_extractor are imported from there
 
 # === Import and Include Routers ===
-from routers import runs as runs_router
+from routers import apps as apps_router
+from routers import explorer as explorer_router
+from routers import mcp as mcp_router
 from routers import rag as rag_router
 from routers import remme as remme_router
-from routers import apps as apps_router
+from routers import runs as runs_router
 from routers import settings as settings_router
 from routers import explorer as explorer_router
 from routers import mcp as mcp_router
@@ -285,6 +305,8 @@ app.include_router(apps_router.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
 app.include_router(explorer_router.router, prefix="/api")
 app.include_router(mcp_router.router, prefix="/api")
+from routers import git as git_router
+from routers import news as news_router
 from routers import prompts as prompts_router
 from routers import news as news_router
 from routers import git as git_router
@@ -292,6 +314,10 @@ from routers import git as git_router
 app.include_router(prompts_router.router, prefix="/api")
 app.include_router(news_router.router, prefix="/api")
 app.include_router(git_router.router, prefix="/api")
+from routers import swarm as swarm_router
+
+app.include_router(swarm_router.router, prefix="/api/swarm")
+
 
 from routers import chat as chat_router
 

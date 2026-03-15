@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, Loader2, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api, API_BASE } from '@/lib/api';
 import { SlideFilmstrip } from './SlideFilmstrip';
@@ -35,6 +35,17 @@ const DEFAULT_THEME: SlideTheme = {
 function SlidePreviewContent() {
   const activeArtifact = useAppStore(s => s.activeArtifact);
   const studioThemes = useAppStore(s => s.studioThemes);
+  const loadArtifact = useAppStore(s => s.loadArtifact);
+
+  // Re-fetch artifact on mount to ensure content_tree is fresh
+  const [refreshed, setRefreshed] = useState(false);
+  useEffect(() => {
+    if (activeArtifact?.id && !activeArtifact?.content_tree?.slides) {
+      loadArtifact(activeArtifact.id).finally(() => setRefreshed(true));
+    } else {
+      setRefreshed(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional mount-only
 
   // Extract slides from content_tree
   const slides: Slide[] = useMemo(() => {
@@ -124,7 +135,40 @@ function SlidePreviewContent() {
     ? Math.min(currentSlideIndex, slides.length - 1)
     : 0;
 
-  if (!activeArtifact || slides.length === 0) return null;
+  // Show loading/empty state instead of blank modal
+  if (!activeArtifact || slides.length === 0) {
+    return (
+      <>
+        <DialogTitle className="sr-only">Slide Preview</DialogTitle>
+        <div className="h-12 border-b border-border/30 flex items-center px-5 shrink-0">
+          <span className="text-base font-semibold text-foreground tracking-tight">
+            Slide Preview
+          </span>
+          <div className="ml-auto">
+            <DialogClose asChild>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-foreground hover:text-foreground hover:bg-muted/40">
+                <X className="w-3.5 h-3.5" />
+                Close
+              </Button>
+            </DialogClose>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+          {!refreshed ? (
+            <>
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <p className="text-sm">Loading slides...</p>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-6 h-6" />
+              <p className="text-sm">No slides available to preview</p>
+            </>
+          )}
+        </div>
+      </>
+    );
+  }
 
   const activeSlide = slides[clampedIndex] || slides[0];
 
@@ -224,6 +268,7 @@ export function SlidePreviewModal({ open, onClose }: { open: boolean; onClose: (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         hideCloseButton
+        noDefaultAnimation
         className="fixed inset-4 max-w-none translate-x-0 translate-y-0 left-0 top-0 flex flex-col bg-charcoal-900 rounded-xl border-border/30 overflow-hidden p-0 animate-modal-scale-in"
       >
         <SlidePreviewContent key={openCount} />

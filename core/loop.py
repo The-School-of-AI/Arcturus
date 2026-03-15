@@ -355,9 +355,27 @@ class AgentLoop4:
                         self.context.mark_failed("Query", plan_result['error'])
                         raise RuntimeError(f"Planning failed: {plan_result['error']}")
 
-                    if 'plan_graph' not in plan_result['output']:
+                    if not plan_result.get('output') or 'plan_graph' not in plan_result['output']:
                         self.context.mark_failed("Query", "Output missing plan_graph")
                         raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key.")
+
+                    if not isinstance(plan_result['output']['plan_graph'], dict):
+                        # LLM returned null plan_graph (e.g. for simple greetings).
+                        # Synthesise a single FormatterAgent step with a friendly reply.
+                        notes = plan_result["output"].get("ambiguity_notes", [])
+                        reason = notes[0] if notes else "No actionable plan produced."
+                        log_step(f"Planner returned null plan_graph: {reason}", symbol="💬")
+                        plan_result["output"]["plan_graph"] = {
+                            "nodes": [{
+                                "id": "T001",
+                                "agent": "FormatterAgent",
+                                "description": f"Respond to user: {query[:80]}",
+                                "agent_prompt": f"The user said: \"{query}\". Respond naturally and helpfully. If it's a greeting, greet them back warmly. Planner note: {reason}",
+                                "reads": ["original_query"],
+                                "writes": ["final_report"],
+                            }],
+                            "edges": [{"source": "Query", "target": "T001"}],
+                        }
 
                     # ===== AUTO-CLARIFICATION CHECK =====
                     AUTO_CLARYFY_THRESHOLD = 0.7

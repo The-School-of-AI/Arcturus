@@ -307,15 +307,17 @@ Then add `GET /api/admin/cost/summary` that aggregates `llm.generate` spans by `
 - [x] Sessions API (`GET /admin/sessions`).
 - [x] Throttle policy (`GET/PUT /admin/throttle`) + `ops/admin/throttle.py`.
 - [x] Frontend panels: FlagsPanel, ConfigPanel, DiagnosticsPanel.
-- [ ] Auth for admin routes.
+- [x] Auth for admin routes (`X-Admin-Key` header guard, dev mode bypass).
 - [ ] Live config write endpoint (`PUT /admin/config`).
 - [ ] Per-user/group feature flags.
 
-### Phase 7: Audit (Days 16–20)
+### Phase 7: Audit & Compliance (Days 16–20)
 
-- [ ] `ops/audit.py` — log state-changing actions.
-- [ ] `watchtower.audit_log` collection.
-- [ ] AuditLogPanel.
+- [x] `ops/audit/audit_logger.py` — `AuditLogger` with MongoDB + JSONL fallback.
+- [x] `watchtower.audit_log` collection via `AuditRepository`.
+- [x] `ops/audit/data_manager.py` — `SessionDataManager` for GDPR export/delete across 6 data stores.
+- [x] Admin endpoints: `GET /admin/audit`, `GET/DELETE /admin/data/{session_id}`.
+- [x] AuditLogPanel in admin dashboard.
 
 ---
 
@@ -330,13 +332,13 @@ Then add `GET /api/admin/cost/summary` that aggregates `llm.generate` spans by `
 | **14.2 Per-user cost** | Partial | Per-session cost via `/admin/sessions`; no per-user identity |
 | **14.2 Budget alerts** | Done | Throttle policy: hourly/daily budgets via `/admin/throttle` |
 | **14.3 Health Monitoring** | Done | `ops/health/` module, HealthScheduler, `/admin/health`, `/admin/health/history`, `/admin/health/uptime`, `/admin/health/resources`, Neo4J checks |
-| **14.4 Admin Controls** | Done (global) | Feature flags (global toggle), cache list/flush, config view/diff, diagnostics, sessions, throttle. No per-user/group flags, no ban/suspend, no admin auth |
-| **14.5 Audit & Compliance** | Not started | Days 16–20 |
+| **14.4 Admin Controls** | Done | Feature flags (global toggle), cache list/flush, config view/diff, diagnostics, sessions, throttle. Admin auth via `X-Admin-Key`. No per-user/group flags, no live config write |
+| **14.5 Audit & Compliance** | Done | `AuditLogger` (MongoDB + JSONL fallback), `SessionDataManager` (GDPR export/delete), `AuditLogPanel`, admin auth |
 | **14.6 ops/cost_tracker.py** | Done (via spans) | Option A: cost_usd in span attributes + `ops/cost/ConfigurableCostCalculator` |
 | **14.6 ops/health.py** | Done | `ops/health/`: health checks, HealthScheduler, alert evaluation, HealthRepository |
 | **14.6 ops/admin.py** | Done | `ops/admin/`: feature_flags.py, diagnostics.py, throttle.py, spans_repository.py; routers/admin.py |
-| **14.6 ops/audit.py** | Not started | |
-| **14.6 features/admin/** | Done | AdminDashboard.tsx with 7 tabs: Traces, Cost, Errors, Health, Flags, Config, Diagnostics |
+| **14.6 ops/audit.py** | Done | `ops/audit/`: audit_logger.py (AuditLogger, AuditRepository), data_manager.py (SessionDataManager) |
+| **14.6 features/admin/** | Done | AdminDashboard.tsx with 9 tabs: Traces, Cost, Errors, Health, Flags, Config, Diagnostics, Audit, Cache |
 
 ---
 
@@ -346,16 +348,20 @@ Then add `GET /api/admin/cost/summary` that aggregates `llm.generate` spans by `
 |---------|------|
 | Tracing init | `api.py` (lifespan), `ops/tracing/core.py` |
 | Span definitions | `ops/tracing/spans.py` |
+| Span context | `ops/tracing/context.py` |
+| Trace helpers | `ops/tracing/helpers.py` |
 | MongoDB exporter | `ops/tracing/core.py` (MongoDBSpanExporter) |
-| Admin API | `routers/admin.py` |
+| Admin API (all endpoints) | `routers/admin.py` |
 | Admin ops modules | `ops/admin/`: feature_flags.py, diagnostics.py, throttle.py, spans_repository.py |
-| Health monitoring | `ops/health/`: health checks, HealthScheduler, alert evaluation, HealthRepository |
-| Cost calculator | `ops/cost/` (ConfigurableCostCalculator) |
+| Health monitoring | `ops/health/`: checks.py, scheduler.py, repository.py, alerts.py |
+| Cost calculator | `ops/cost/`: calculator.py, pricing.py |
+| Audit logger | `ops/audit/audit_logger.py` (AuditLogger, AuditRepository) |
+| GDPR data manager | `ops/audit/data_manager.py` (SessionDataManager) |
 | Metrics (session files) | `core/metrics_aggregator.py`, `routers/metrics.py` |
 | Cost in loop | `core/loop.py` (accumulated_cost, warn, max) |
 | Cost in LLM | `core/model_manager.py` (llm_span) |
-| Admin Dashboard UI | `features/admin/AdminDashboard.tsx` (7 tabs) |
-| Admin UI panels | `features/admin/components/`: FlagsPanel, ConfigPanel, DiagnosticsPanel, TracesPanel, CostPanel, ErrorsPanel, HealthPanel |
+| Admin Dashboard UI | `features/admin/AdminDashboard.tsx` (9 tabs) |
+| Admin UI panels | `features/admin/components/`: TracesPanel, CostPanel, ErrorsPanel, HealthPanel, FlagsPanel, ConfigPanel, DiagnosticsPanel, AuditLogPanel, CachePanel |
 | Feature flags config | `config/feature_flags.json` |
 | Stats UI | `components/stats/StatsModal.tsx` |
 | Config | `config/settings.json` (watchtower block) |

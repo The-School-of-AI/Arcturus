@@ -64,7 +64,7 @@ Controlled by `routers/apps.py`.
   - **App Dashboard**: Renders `ui.json` files.
   - **Graph Visualizer**: Shows the Agent DAG.
   - **Terminal & Editor**: Integrated Monaco Editor and XTerm.
-  - **Admin Dashboard** (`features/admin/AdminDashboard.tsx`): 7-tab Grafana-style dashboard (Traces, Cost, Errors, Health, Flags, Config, Diagnostics).
+  - **Admin Dashboard** (`features/admin/AdminDashboard.tsx`): 9-tab Grafana-style dashboard (Traces, Cost, Errors, Health, Flags, Config, Diagnostics, Audit, Cache).
 
 ## 8. Observability & Admin — Watchtower (P14)
 - **Distributed Tracing** (`ops/tracing/`):
@@ -86,3 +86,8 @@ Controlled by `routers/apps.py`.
   - **Diagnostics** (`arcturus doctor`): Automated checks (Python version, env vars, config validity, FAISS index, disk space, service health) with actionable suggestions.
   - **Sessions**: List recent sessions from span data with cost and agent breakdown.
   - **Throttle Policy**: Global hourly/daily cost budgets with enforcement and admin override.
+  - **Admin Auth**: `X-Admin-Key` header guard; dev mode bypass when key not configured.
+- **Audit & Compliance** (`ops/audit/`):
+  - `AuditLogger`: State-change audit trail persisted to MongoDB (`watchtower.audit_log`) with JSONL fallback.
+  - `SessionDataManager`: GDPR export/delete across 6 data stores (session files, MongoDB spans, Qdrant vectors, Neo4j graph, chronicle checkpoints, audit log).
+  - Admin endpoints: `GET /admin/audit`, `GET/DELETE /admin/data/{session_id}`.

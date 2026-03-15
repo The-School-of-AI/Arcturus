@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from core.studio.editing.patch_apply import apply_patch_to_content_tree
+from core.studio.editing.patch_apply import _parse_path, apply_patch_to_content_tree
 
 
 # === Fixture data ===
@@ -338,3 +338,20 @@ class TestMultiOpAndSafety:
         apply_patch_to_content_tree("slides", tree, patch)
         # Original should be unchanged
         assert tree == original
+
+
+# === JSONPath filter detection ===
+
+class TestJsonPathFilterDetection:
+    def test_parse_path_rejects_filter_expression(self):
+        with pytest.raises(ValueError, match="JSONPath filter expressions are not supported"):
+            _parse_path("elements[?(@.id == 'e7')]")
+
+    def test_parse_path_rejects_filter_with_suffix(self):
+        with pytest.raises(ValueError, match="JSONPath filter expressions are not supported"):
+            _parse_path('elements[?(@.id == "e7")].content')
+
+    def test_parse_path_valid_paths_still_work(self):
+        # Smoke check: valid paths are unaffected
+        assert _parse_path("title") == [("title", None)]
+        assert _parse_path("elements[0].content") == [("elements", 0), ("content", None)]

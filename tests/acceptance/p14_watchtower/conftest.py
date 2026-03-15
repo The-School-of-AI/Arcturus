@@ -191,6 +191,56 @@ def admin_client(tmp_path):
     from ops.admin.feature_flags import FeatureFlagStore
     temp_flag_store = FeatureFlagStore(path=flags_path)
 
+    # P14.5: Mock audit logger
+    mock_audit_logger = MagicMock()
+    mock_audit_logger.query.return_value = [
+        {
+            "timestamp": "2026-03-14T10:00:00",
+            "actor": "admin",
+            "action": "feature_toggle",
+            "resource": "flag:voice_wake",
+            "old_value": True,
+            "new_value": False,
+            "context": {},
+        },
+        {
+            "timestamp": "2026-03-14T09:30:00",
+            "actor": "admin",
+            "action": "cache_flush",
+            "resource": "cache:settings",
+            "old_value": None,
+            "new_value": "flushed",
+            "context": {},
+        },
+    ]
+
+    # P14.5: Mock data manager
+    mock_data_manager = MagicMock()
+    mock_data_manager.export.return_value = {
+        "session_id": "test-session",
+        "exported_at": "2026-03-14T10:00:00",
+        "stores": {
+            "session_files": {"count": 1, "data": [{"path": "test.json", "content": {}}]},
+            "mongodb_spans": {"count": 5, "data": []},
+            "qdrant_vectors": {"count": 0, "data": []},
+            "neo4j_graph": {"count": 0, "data": None},
+            "chronicle_checkpoints": {"count": 0, "data": {"checkpoints": [], "events": []}},
+            "audit_log": {"count": 0, "data": []},
+        },
+    }
+    mock_data_manager.delete.side_effect = lambda sid: {
+        "session_id": sid,
+        "deleted_at": "2026-03-14T10:00:00",
+        "stores": {
+            "session_files": {"deleted": 1},
+            "mongodb_spans": {"deleted": 5},
+            "qdrant_vectors": {"deleted": 0},
+            "neo4j_graph": {"deleted": 0},
+            "chronicle_checkpoints": {"deleted": 0},
+            "audit_log": {"deleted": 0},
+        },
+    }
+
     with (
         patch.object(admin_router, "_get_spans_collection", return_value=mock_coll),
         patch.object(admin_router, "_get_health_repo", return_value=mock_health_repo),
@@ -207,7 +257,34 @@ def admin_client(tmp_path):
         # P14.4 mocks
         patch("routers.admin.flag_store" if False else "ops.admin.feature_flags.flag_store", temp_flag_store),
         patch("ops.admin.diagnostics.run_diagnostics", return_value=mock_diagnostics),
+        # P14.5 mocks
+        patch("ops.audit.audit_logger", mock_audit_logger),
+        patch.object(admin_router, "_get_data_manager", return_value=mock_data_manager),
     ):
         with TestClient(app) as client:
             yield client
 
+
+@pytest.fixture
+def admin_client_with_auth(tmp_path):
+    """TestClient with admin API key configured for auth testing."""
+    app = FastAPI()
+    app.include_router(admin_router.router, prefix="/api")
+
+    mock_coll = _make_mock_spans_collection()
+
+    # Configure admin_api_key in settings
+    test_settings = {
+        "watchtower": {
+            "enabled": False,
+            "admin_api_key": "test-secret-key-123",
+        }
+    }
+
+    with (
+        patch.object(admin_router, "_get_spans_collection", return_value=mock_coll),
+        patch("config.settings_loader.settings", test_settings),
+        patch("routers.admin.settings", test_settings),
+    ):
+        with TestClient(app) as client:
+            yield client

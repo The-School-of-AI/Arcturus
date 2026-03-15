@@ -302,6 +302,7 @@ class TestGenerateOutline:
         assert loaded.outline is not None
         assert loaded.outline.status == OutlineStatus.pending
         assert loaded.content_tree is None
+        assert loaded.creation_prompt == "Create slides"
 
     def test_with_parameters(self, orchestrator, storage, mock_llm_slides):
         result = _run(orchestrator.generate_outline(

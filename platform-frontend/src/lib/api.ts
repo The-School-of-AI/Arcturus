@@ -197,6 +197,13 @@ export const api = {
         return res.data;
     },
 
+    restoreRevision: async (artifactId: string, revisionId: string, baseRevisionId?: string): Promise<any> => {
+        const payload: { base_revision_id?: string } = {};
+        if (baseRevisionId) payload.base_revision_id = baseRevisionId;
+        const res = await axios.post(`${API_BASE}/studio/${artifactId}/revisions/${revisionId}/restore`, payload);
+        return res.data;
+    },
+
     // Studio Phase 2 — Export & Themes
     listThemes: async (params?: {
         include_variants?: boolean;

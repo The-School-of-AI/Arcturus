@@ -1,18 +1,41 @@
 """
-Watchtower Admin API — Trace queries, metrics, and P14.4 Admin Controls.
+Watchtower Admin API — Trace queries, metrics, and P14.4/P14.5 Admin Controls.
 
 P14.1-14.3 (traces, cost, errors, health) endpoints are at the top.
-P14.4 (feature flags, cache, config, diagnostics, sessions, throttle) added below.
+P14.4 (feature flags, cache, config, diagnostics, sessions, throttle) in the middle.
+P14.5 (audit log, GDPR data export/delete, admin auth) at the bottom.
 """
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Security
 from fastapi.responses import HTMLResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from pymongo import MongoClient
 
 from config.settings_loader import settings, load_settings, reload_settings, save_settings
 from ops.admin.spans_repository import SpansRepository
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+# ---------------------------------------------------------------------------
+# Admin API-key auth guard (P14.5)
+# ---------------------------------------------------------------------------
+
+_api_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+
+
+async def _verify_admin_key(api_key: str | None = Security(_api_key_header)):
+    """
+    Lightweight auth guard for admin endpoints.
+
+    - If ``watchtower.admin_api_key`` is set in settings: require matching header.
+    - If not set: allow all requests (dev mode).
+    """
+    configured_key = settings.get("watchtower", {}).get("admin_api_key")
+    if not configured_key:
+        return  # Dev mode — no auth required
+    if not api_key or api_key != configured_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin API key")
+
+
+router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(_verify_admin_key)])
 
 
 def _get_spans_collection():
@@ -179,7 +202,12 @@ async def toggle_flag(name: str, body: FlagToggleRequest, request: Request):
     """
     from ops.admin.feature_flags import flag_store, LIFECYCLE_FLAGS
 
+    old_value = flag_store.get(name)
     result = flag_store.set(name, body.enabled)
+
+    # Audit log
+    from ops.audit import audit_logger
+    audit_logger.log_action("admin", "feature_toggle", f"flag:{name}", old_value, body.enabled)
 
     # Lifecycle hooks: actually stop/start background services
     if name in LIFECYCLE_FLAGS:
@@ -220,6 +248,11 @@ async def delete_flag(name: str):
     existed = flag_store.delete(name)
     if not existed:
         raise HTTPException(status_code=404, detail=f"Flag '{name}' not found")
+
+    # Audit log
+    from ops.audit import audit_logger
+    audit_logger.log_action("admin", "feature_delete", f"flag:{name}", True, None)
+
     return {"deleted": name}
 
 
@@ -282,6 +315,11 @@ async def flush_cache(name: str):
     """Flush a specific cache by name."""
     if name == "settings":
         reload_settings()
+
+        # Audit log
+        from ops.audit import audit_logger
+        audit_logger.log_action("admin", "cache_flush", f"cache:{name}", None, "flushed")
+
         return {"flushed": "settings", "message": "Settings cache reloaded from disk"}
 
     raise HTTPException(
@@ -434,6 +472,7 @@ async def update_throttle(body: ThrottleUpdateRequest):
     current = reload_settings()
     wt = current.setdefault("watchtower", {})
     throttle = wt.setdefault("throttle", {})
+    old_throttle = throttle.copy()
 
     if body.daily_budget_usd is not None:
         throttle["daily_budget_usd"] = body.daily_budget_usd
@@ -441,5 +480,83 @@ async def update_throttle(body: ThrottleUpdateRequest):
         throttle["hourly_budget_usd"] = body.hourly_budget_usd
 
     save_settings()
+
+    # Audit log
+    from ops.audit import audit_logger
+    audit_logger.log_action("admin", "throttle_update", "throttle", old_throttle, throttle.copy())
+
     return {"message": "Throttle updated", "throttle": throttle}
+
+
+# ===================================================================
+# P14.5 — Audit & Compliance
+# ===================================================================
+
+
+# ---------------------------------------------------------------------------
+# Audit Log Query
+# ---------------------------------------------------------------------------
+
+
+@router.get("/audit")
+async def query_audit_log(
+    hours: int = Query(24, ge=1, le=720),
+    action: str | None = Query(None, description="Filter by action type"),
+    resource: str | None = Query(None, description="Filter by resource (substring match)"),
+    limit: int = Query(100, ge=1, le=1000),
+):
+    """Query the audit log. Returns recent admin actions."""
+    from ops.audit import audit_logger
+
+    entries = audit_logger.query(hours=hours, action=action, resource=resource, limit=limit)
+    return {"entries": entries, "count": len(entries), "hours": hours}
+
+
+# ---------------------------------------------------------------------------
+# GDPR Data Export & Deletion
+# ---------------------------------------------------------------------------
+
+
+def _get_data_manager():
+    """Create a SessionDataManager with current MongoDB collections."""
+    from ops.audit.data_manager import SessionDataManager
+
+    try:
+        spans_coll = _get_spans_collection()
+    except Exception:
+        spans_coll = None
+
+    try:
+        watchtower = settings.get("watchtower", {})
+        uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
+        client = MongoClient(uri)
+        audit_coll = client["watchtower"]["audit_log"]
+    except Exception:
+        audit_coll = None
+
+    return SessionDataManager(spans_collection=spans_coll, audit_collection=audit_coll)
+
+
+@router.get("/data/{session_id}")
+async def export_session_data(session_id: str):
+    """GDPR data export: collect all data for a session across all stores."""
+    manager = _get_data_manager()
+    result = manager.export(session_id)
+
+    from ops.audit import audit_logger
+    audit_logger.log_action("admin", "data_export", f"session:{session_id}", None, "exported")
+
+    return result
+
+
+@router.delete("/data/{session_id}")
+async def delete_session_data(session_id: str):
+    """GDPR data erasure: purge all data for a session across all stores."""
+    manager = _get_data_manager()
+    result = manager.delete(session_id)
+
+    from ops.audit import audit_logger
+    audit_logger.log_action("admin", "data_delete", f"session:{session_id}", None, result["stores"])
+
+    return result
 

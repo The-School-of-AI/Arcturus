@@ -12,10 +12,12 @@ channels:
     # Env-var that holds the Telegram Bot API token
     token_env: TELEGRAM_TOKEN
     # Default parse mode for outbound messages
-    parse_mode: MarkdownV2
+    parse_mode: plain
     policies:
       # "mention-only" | "always-on"
-      group_activation: mention-only
+      # DMs to the bot don't contain @mentions, so always-on is required.
+      # For group chats, mention-only can be configured separately (future).
+      group_activation: always-on
       # Allowlist of numeric Telegram user IDs that may DM the bot.
       # Empty list = open (anyone can DM).
       dm_allowlist: []
@@ -31,25 +33,138 @@ channels:
       max_retries: 2
       retry_backoff_seconds: 0.5
 
-  # Slack — not yet wired (Week 2)
+  # Slack — wired in Week 2 (SlackAdapter in channels/slack.py)
   slack:
-    enabled: false
+    enabled: true
     token_env: SLACK_BOT_TOKEN
     signing_secret_env: SLACK_SIGNING_SECRET
     parse_mode: mrkdwn
+    policies:
+      group_activation: always-on
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # Discord — wired in Week 3 (DiscordAdapter in channels/discord.py)
+  discord:
+    enabled: true
+    token_env: DISCORD_BOT_TOKEN
+    public_key_env: DISCORD_PUBLIC_KEY
+    parse_mode: markdown
+    policies:
+      group_activation: always-on
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # WhatsApp — via Baileys Node.js bridge (whatsapp_bridge/)
+  # The bridge must be started separately: cd whatsapp_bridge && npm start
+  whatsapp:
+    enabled: true
+    # URL of the local Baileys bridge HTTP server
+    bridge_url_env: WHATSAPP_BRIDGE_URL          # default: http://localhost:3001
+    # Shared HMAC-SHA256 secret for bridge ↔ FastAPI authentication
+    bridge_secret_env: WHATSAPP_BRIDGE_SECRET    # optional but strongly recommended
+    # WhatsApp renders *bold*/_italic_ natively; plain formatter is correct
+    parse_mode: plain
     policies:
       group_activation: mention-only
       dm_allowlist: []
       max_retries: 3
       retry_backoff_seconds: 1.0
 
-  # Discord — not yet wired (Week 2)
-  discord:
-    enabled: false
-    token_env: DISCORD_BOT_TOKEN
+  # Google Chat — Chat API or incoming webhook
+  # Webhook mode (simple): set GOOGLE_CHAT_WEBHOOK_URL only.
+  # Service account mode (full): set GOOGLE_CHAT_SERVICE_ACCOUNT_TOKEN.
+  # Set GOOGLE_CHAT_VERIFICATION_TOKEN to verify inbound event tokens.
+  google_chat:
+    enabled: true
+    # Incoming webhook URL (simple mode — no GCP project needed)
+    webhook_url_env: GOOGLE_CHAT_WEBHOOK_URL
+    # OAuth2 bearer token for service-account mode
+    service_account_token_env: GOOGLE_CHAT_SERVICE_ACCOUNT_TOKEN
+    # Token for verifying inbound events from Google Chat
+    verification_token_env: GOOGLE_CHAT_VERIFICATION_TOKEN
+    parse_mode: googlechat
+    policies:
+      # Google Chat always sends events when @mentioned or DM'd
+      group_activation: mention-only
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # iMessage / BlueBubbles — requires BlueBubbles server running on a Mac
+  # https://bluebubbles.app — open-source bridge from iMessage to REST API
+  imessage:
+    enabled: true
+    # Base URL of the BlueBubbles HTTP server
+    bluebubbles_url_env: BLUEBUBBLES_URL              # default: http://localhost:1234
+    # BlueBubbles server password (required for API calls)
+    password_env: BLUEBUBBLES_PASSWORD
+    # Shared HMAC-SHA256 secret for inbound webhook auth (optional but recommended)
+    webhook_secret_env: BLUEBUBBLES_WEBHOOK_SECRET
+    # iMessage renders plain text; no Markdown conversion needed
+    parse_mode: plain
+    policies:
+      group_activation: always-on
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # Microsoft Teams — requires Azure Bot Service registration
+  # Register at: https://dev.botframework.com or Azure Portal → Bot Services
+  # Set the messaging endpoint to: http://<host>:8000/api/nexus/teams/events
+  teams:
+    enabled: true
+    # Azure Bot Service app registration ID
+    app_id_env: TEAMS_APP_ID
+    # Azure Bot Service app password (shared secret for token verification)
+    # Leave empty to disable Bearer token verification (dev mode)
+    app_password_env: TEAMS_APP_PASSWORD
+    # Bot Framework service URL (set automatically by Teams; only needed for outbound)
+    service_url_env: TEAMS_SERVICE_URL
+    # Teams supports standard Markdown (headings → bold conversion applied)
     parse_mode: markdown
     policies:
       group_activation: mention-only
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # Signal — requires signal-cli (https://github.com/AsamK/signal-cli) and
+  # the signal_bridge/app.py Python sidecar running alongside it.
+  # signal-cli daemon: signal-cli -a +E164 daemon --http
+  signal:
+    enabled: true
+    # URL of the signal_bridge Python HTTP sidecar
+    bridge_url_env: SIGNAL_BRIDGE_URL
+    # Shared HMAC-SHA256 secret for bridge ↔ FastAPI auth (leave empty for dev mode)
+    bridge_secret_env: SIGNAL_BRIDGE_SECRET
+    # Signal renders plain text; no Markdown conversion needed
+    parse_mode: plain
+    policies:
+      group_activation: mention-only
+      dm_allowlist: []
+      max_retries: 3
+      retry_backoff_seconds: 1.0
+
+  # Matrix — connects to any Matrix homeserver (matrix.org, Element, self-hosted Synapse)
+  # No sidecar needed — adapter polls GET /_matrix/client/v3/sync internally every N seconds.
+  # Setup: create a bot account on any homeserver, obtain an access token via /login.
+  matrix:
+    enabled: true
+    # Homeserver base URL (e.g. https://matrix.org or https://your.homeserver.tld)
+    homeserver_url_env: MATRIX_HOMESERVER_URL
+    # Bot's full Matrix user ID (e.g. @arcturus:matrix.org)
+    user_id_env: MATRIX_USER_ID
+    # Bot's access token (Bearer auth for Matrix CS API)
+    access_token_env: MATRIX_ACCESS_TOKEN
+    # Seconds between /sync polls (0-2s inbound latency)
+    sync_interval_seconds: 2.0
+    # Matrix clients render their own Markdown; we send plain text
+    parse_mode: plain
+    policies:
+      group_activation: always-on
+      dm_allowlist: []
       max_retries: 3
       retry_backoff_seconds: 1.0
 

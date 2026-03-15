@@ -2,211 +2,410 @@
 
 ## 1. Scope Delivered
 
-**Week 1 (Sprint 1) - Architecture Lock & Contracts:**
-- ✅ **channels/ directory** with 2 adapter modules:
-  - `channels/base.py`: Abstract `ChannelAdapter` interface (send_message, initialize, shutdown)
-  - `channels/telegram.py`: TelegramAdapter with real Telegram Bot API integration (reads TELEGRAM_TOKEN from .env)
-  - `channels/webchat.py`: WebChatAdapter with per-session outbox (deque-backed, drain-on-poll model)
-- ✅ **MessageEnvelope schema** (`gateway/envelope.py`):
-  - Unified message format with fields: channel, sender, content, thread_id, conversation_id, attachments, metadata
-  - Auto-computed `message_hash` (SHA-256/16) for deduplication
-  - Inbound text normalization via `normalize_text()` method (strips whitespace, collapses multiples)
-  - Channel-specific constructors: `from_telegram()`, `from_webchat()`, `from_slack()`, `from_discord()`
-  - Serialization support via `to_dict()` for API responses
-- ✅ **gateway/router.py** - MessageRouter implementation:
-  - Routes MessageEnvelope instances to agent instances
-  - Session affinity: same conversation_id always routes to same agent
-  - Optional `formatter` arg: formats agent reply for target channel before returning
-  - Includes `create_mock_agent()` factory for testing
-  - Full async/await support
+**Week 4+ - WhatsApp, Matrix Live Verification & Channel Blockers Documented (2026-03-13/14):**
+- ✅ **WhatsApp live-verified (2026-03-13)**: Baileys bridge end-to-end — inbound message → AgentLoop4 → reply delivered to WhatsApp
+- ✅ **Matrix live-verified (2026-03-13)**: Polling sync + `_since_token` persistence fix — inbound message → AgentLoop4 → reply delivered to Matrix room
+- ✅ **channels/imessage.py**: BlueBubbles bridge + inbound handler curl-verified (2026-03-14); real-time webhooks blocked by Private API requirement (macOS SIP)
+- ✅ **channels/setup_docs/imessage.md**: Updated with Private API limitation, Full Disk Access + Accessibility permission requirements, `isFromMe: true` gotcha, curl simulation test
+- ✅ **channels/setup_docs/teams.md**: Updated with Azure tenant blocker note — personal account in Microsoft-managed tenant cannot register Azure Bot
+- ✅ **channels/channels_setup_readme.md**: Status table updated to reflect live/partial/blocked state for all 10 channels
+- ✅ **WhatsApp live fixes**: `require("dotenv").config()` in bridge (WHATSAPP_BRIDGE_SECRET was empty → 403); `fetchLatestBaileysVersion()` in bridge (bundled version caused 405); compact JSON HMAC in `channels/whatsapp.py` (Python JSON spaces ≠ Node JSON → sig mismatch)
+- ✅ **Matrix live fixes**: `_since_token` persisted to `memory/matrix_since_token.txt` (prevents history replay on restart); `_compute_hash()` uses `channel_message_id` when available (timestamp hash changed each poll → dedup never fired); skip `@server:*` and `@_*` senders (system messages)
 
-**Unified Message Bus (Sprint 2):**
-- ✅ **gateway/formatter.py** - MessageFormatter:
-  - Markdown → Telegram MarkdownV2 (special-char escaping, bold/italic/code)
-  - Markdown → Slack mrkdwn (bold, headings, links)
-  - Markdown → Discord markdown (headings → bold, italic normalization)
-  - Markdown → WebChat HTML (`<b>`, `<i>`, `<code>`, `<br>`, XSS-safe encoding)
-  - Plain-text fallback for unknown channels
-- ✅ **gateway/bus.py** - MessageBus orchestration:
-  - `ingest(envelope)` → routes to agent session
-  - `deliver(channel, recipient_id, text)` → formats + sends via adapter
-  - `roundtrip(envelope)` → ingest + auto-deliver reply to session
-  - Replies to `session_id` (not raw `sender_id`) for correct WebChat routing
-- ✅ **config/channels.yaml** - centralized channel config schema (env-var references, policies)
-- ✅ **shared/state.py** - `get_message_bus()` lazy singleton (same pattern as all other getters)
-- ✅ **routers/nexus.py** - WebChat HTTP transport:
-  - `POST /api/nexus/webchat/inbound` — receive widget message, run roundtrip
-  - `GET  /api/nexus/webchat/messages/{session_id}` — drain outbox, return replies
-- ✅ Registered in `api.py`
+**Week 4 - Discord Live Verification & Hardening (2026-03-11):**
+- ✅ **PyNaCl**: Added to dependencies — required for Discord Ed25519 signature verification (was missing, caused all inbound Discord requests to return 401)
+- ✅ **config/channels.yaml**: `discord.policies.group_activation` changed `mention-only` → `always-on` — slash commands don't contain `@arcturus` so mention-only silently dropped all messages
+- ✅ **routers/nexus.py**: Discord type=2 handler refactored — `asyncio.create_task(_run_and_reply())` fires agent async, returns `{"type": 5}` immediately to Discord (avoids 3s timeout); `_run_and_reply()` PATCHes interaction webhook with agent reply
+- ✅ **core/skills/base.py**: Added `SkillContext` dataclass + `self.context = SkillContext()` to `Skill.__init__` — fixes `AttributeError: 'MarketAnalystSkill' object has no attribute 'context'` crashing all runs
+- ✅ **core/skills/base.py**: Added `on_run_failure()` and `on_run_success()` no-op stubs to `BaseSkill` — fixes `AttributeError: 'MarketAnalystSkill' object has no attribute 'on_run_failure'`
+- ✅ **gateway/router.py**: Output extraction filter — rejects raw Python code fragments leaking from intermediate nodes into final reply (guards against `return {`, `json.loads(`, `import `, `def `, `results =` prefixes)
+- ✅ **channels/setup_docs/discord.md**: Complete Discord setup guide — Developer Portal steps, tunnel options (ngrok/localtunnel/cloudflared), slash command registration, troubleshooting table
+
+**Week 3+ - End-to-End Agent Wiring & Hardening (2026-03-01):**
+- ✅ **gateway/router.py**: Refactored `create_runs_agent` from HTTP-based (POST /api/runs + poll GET) to **in-process** — calls `process_run()` directly, avoiding self-request deadlocks in single-process uvicorn
+- ✅ **gateway/router.py**: `_fetch_run_output()` reads session summaries from disk (`memory/session_summaries_index/session_{run_id}.json`) via `nx.node_link_data()` format
+- ✅ **gateway/router.py**: `RunsAgentAdapter` maintains rolling in-memory conversation history (last 10 user+assistant turns), prepended as `CONVERSATION HISTORY` block to each query for follow-up support
+- ✅ **channels/telegram.py**: `_split_message()` — splits replies at Telegram's 4096-char limit at paragraph/sentence/word boundaries; MarkdownV2 escaping
+- ✅ **channels/telegram.py**: `TelegramAdapter._poll_loop()` + `_handle_update()` — long-polling getUpdates loop with `set_bus_callback()` wired in `shared/state.py`
+- ✅ **core/loop.py**: Null `plan_graph` guard — handles `plan_graph: null` from PlannerAgent for simple queries without crashing
+- ✅ **routers/remme.py**: Ollama embedding fixes — corrected URL construction and model name for local Ollama embeddings
+- ✅ **tests/test_runs_agent_factory.py**: Rewrote 5 tests — replaced httpx mocks with `sys.modules` injection for `routers.runs` + `patch("gateway.router._fetch_run_output")`, fixing 3 CI failures + 1 lint error (F541)
+- ✅ **channels/base.py**: Added `send_typing_indicator()` default no-op method to `ChannelAdapter` base class
+- ✅ **channels/**: Typing indicator overrides for Telegram (`sendChatAction`), Discord (`POST /channels/{id}/typing`), WebChat (SSE event push), Teams (Bot Framework typing activity), Matrix (`PUT /rooms/{roomId}/typing/{userId}`)
+- ✅ **gateway/bus.py**: `_send_typing()` helper + wired into `roundtrip()` before `ingest()` — best-effort, never blocks pipeline
+- ✅ **core/episodic_memory.py**: Fixed `'bool' object has no attribute 'get'` — added `isinstance(x, dict)` guards for `call_self` and `call_tool` in `MemorySkeletonizer.skeletonize()`
+- ✅ **tests/test_typing_indicators.py**: 11 tests (base no-op, Telegram/Discord/WebChat/Teams/Matrix typing, bus error swallow, bus roundtrip ordering)
+- ✅ **channels/**: Media attachment send support — Telegram (`sendPhoto`/`sendVideo`/`sendAudio`/`sendDocument`), Discord (embeds), Slack (Block Kit image blocks), WebChat (outbox attachments dict), Teams (Bot Framework attachments array), Matrix (`m.image`/`m.video`/`m.file` events)
+- ✅ **channels/**: Bridge adapter URL text fallback for WhatsApp, Signal, iMessage, Google Chat (attachment URLs appended to message text)
+- ✅ **gateway/bus.py**: `roundtrip()` passes `envelope.attachments` through to `deliver()` → `adapter.send_message()`
+- ✅ **tests/test_media_send.py**: 21 tests (per-adapter media send, bus attachment passthrough, payload isolation)
+
+**Week 3+ - Matrix Adapter (Channel 10/10):**
+- ✅ **channels/matrix.py**: MatrixAdapter — polling-based inbound via `GET /_matrix/client/v3/sync`; outbound via `PUT /_matrix/client/v3/rooms/{roomId}/send/m.room.message/{txnId}`; `set_bus_callback()` for inbound dispatch; skips own messages, non-m.text events, empty body; no sidecar needed
+- ✅ **gateway/envelope.py**: `from_matrix()` constructor — room_id, sender_id, homeserver extracted from sender_id, is_direct flag
+- ✅ **gateway/formatter.py**: `"matrix": "_format_plain"` in channel map (Matrix clients render Markdown client-side)
+- ✅ **config/channels.yaml**: `matrix` channel block — homeserver_url, user_id, access_token, sync_interval env-var refs
+- ✅ **shared/state.py**: `MatrixAdapter` wired into `get_message_bus()` + `set_bus_callback` wired after bus creation
+- ✅ **tests/test_matrix_roundtrip.py**: 9 tests (send/error/network, bus roundtrip, session affinity, envelope fields, sync loop dispatch/skip-own/skip-empty)
+
+**Week 3+ - Signal Adapter (Channel 9/10):**
+- ✅ **signal_bridge/app.py**: Python FastAPI sidecar — polls signal-cli `GET /v1/receive` every 2s, forwards to FastAPI; `POST /send` proxies to signal-cli; HMAC-SHA256 signing
+- ✅ **signal_bridge/README.md**: Setup guide for signal-cli install, registration, and bridge startup
+- ✅ **channels/signal.py**: SignalAdapter — `POST {bridge_url}/send` with HMAC-SHA256 `X-Signal-Secret`; `verify_signature()` static method; dev-mode (empty secret → accept all)
+- ✅ **gateway/envelope.py**: `from_signal()` — phone_number or group_id as conversation_id, group support
+- ✅ **gateway/formatter.py**: `"signal": "_format_plain"` (Signal renders plain text natively)
+- ✅ **routers/nexus.py**: `POST /api/nexus/signal/inbound` — HMAC verify, skip empty text, `from_signal()` envelope
+- ✅ **shared/state.py**: `SignalAdapter` wired into `get_message_bus()`
+- ✅ **tests/test_signal_roundtrip.py**: 11 tests (send/error/network, sig valid/invalid/dev-mode, bus roundtrip, session affinity, webhook×3)
+
+**Week 3+ - Teams Adapter (Channel 8/10):**
+- ✅ **channels/teams.py**: TeamsAdapter — Bot Framework REST API; outbound `POST {service_url}/v3/conversations/{id}/activities`; `verify_token()` static method (Bearer token compare, dev-mode)
+- ✅ **gateway/envelope.py**: `from_teams()` — composite `conversation_id = f"{team_id}:{channel_id}"`, stores `service_url` in metadata
+- ✅ **gateway/formatter.py**: `_format_teams()` — headings → `**bold**`, `_italic_` → `*italic*`
+- ✅ **routers/nexus.py**: `POST /api/nexus/teams/events` — skips `type != "message"` and `from.role == "bot"`, builds from_teams() envelope
+- ✅ **shared/state.py**: `TeamsAdapter` wired into `get_message_bus()`
+- ✅ **config/channels.yaml**: `teams` channel block — app_id, app_password, service_url env-var refs
+- ✅ **tests/test_teams_roundtrip.py**: 11 tests
+
+**Week 3+ - iMessage Adapter (Channel 7/10, via BlueBubbles):**
+- ✅ **channels/imessage.py**: iMessageAdapter — BlueBubbles REST API; outbound `POST {base_url}/api/v1/message/text`; `verify_signature()` HMAC-SHA256 static method; dev-mode
+- ✅ **gateway/envelope.py**: `from_imessage()` constructor
+- ✅ **routers/nexus.py**: `POST /api/nexus/imessage/inbound` — HMAC verify, skip empty text
+- ✅ **tests/test_imessage_roundtrip.py**: 11 tests
+
+**Week 3+ - Google Chat Adapter (Channel 6/10):**
+- ✅ **channels/googlechat.py**: GoogleChatAdapter — dual-mode delivery (incoming webhook + service-account Bearer token); token verification for inbound events
+- ✅ **gateway/envelope.py**: `from_googlechat()` constructor — space_name, sender, thread_name, message_name
+- ✅ **gateway/formatter.py**: `_format_googlechat()` — headings → bold, links → plain text
+- ✅ **config/channels.yaml**: `google_chat` channel block — env-var refs for webhook URL, service account token, verification token
+- ✅ **shared/state.py**: `GoogleChatAdapter` wired into `get_message_bus()`
+- ✅ **routers/nexus.py**: `POST /api/nexus/googlechat/events` — handles `MESSAGE`, `ADDED_TO_SPACE`, `REMOVED_FROM_SPACE`; optional token verification
+- ✅ **tests/test_googlechat_roundtrip.py**: 8 tests (send/error/network/no-creds, bus roundtrip, session affinity, webhook event, lifecycle event)
+
+**Week 3 (Sprint 4) - Real AgentLoop4 Wiring + Output Endpoint:**
+- ✅ **routers/runs.py**: `GET /api/runs/{run_id}/output` — new read-only endpoint exposing extracted text output of a completed run (`status`: `running` | `completed` | `failed` | `not_found`)
+- ✅ **routers/runs.py**: `_extract_output_str()` helper — refactored output extraction logic (FormatterAgent first, largest-string fallback, JSON/fence stripping) shared between `process_run()` and the new endpoint
+- ✅ **gateway/router.py**: `create_runs_agent()` factory — real AgentLoop4 agent backed by `/api/runs`; `RunsAgentAdapter.process_message()` POSTs to `POST /api/runs` then polls `GET /api/runs/{run_id}/output` (2 s interval, 120 s timeout)
+- ✅ **shared/state.py**: Swapped `create_mock_agent` → `create_runs_agent` — gateway now routes all channel messages through real AgentLoop4
+- ✅ **channels/discord.py**: DiscordAdapter — Ed25519 signature verification (nacl), 2000-char truncation, Discord markdown formatter
+- ✅ **channels/whatsapp.py**: WhatsAppAdapter — Baileys bridge via httpx, HMAC-SHA256 over body
+- ✅ **routers/nexus.py**: `POST /api/nexus/discord/events` (PING type1, slash type5, message relay), `GET/POST /api/nexus/whatsapp/inbound` (hub.challenge + HMAC verify)
+- ✅ **whatsapp_bridge/**: Node.js Baileys sidecar (`index.js`, `package.json`, `README.md`)
+- ✅ **gateway/envelope.py**: `from_whatsapp()` constructor
+- ✅ **Live Slack integration re-verified** with real AgentLoop4: messages route through `create_runs_agent` → `POST /api/runs` → poll output → reply delivered back to Slack channel
+
+**Week 2 (Sprint 3) - Slack Adapter + SSE Push:**
+- ✅ **channels/slack.py**: SlackAdapter — Slack Web API (`chat.postMessage`), HMAC-SHA256 signature verification, httpx async client
+- ✅ **routers/nexus.py**: `POST /api/nexus/slack/events` — Slack Events API webhook (url_verification handshake + event_callback routing)
+- ✅ **channels/webchat.py**: SSE push stream — `subscribe_sse`/`unsubscribe_sse`, `asyncio.Queue` per session
+- ✅ **routers/nexus.py**: `GET /api/nexus/webchat/stream/{session_id}` — `EventSourceResponse` SSE endpoint with keepalive ping
+- ✅ **api.py**: `load_dotenv()` added at startup so env vars (tokens, secrets) load before any adapter initialization
+
+**Week 1 (Sprint 1-2) - Architecture + Unified Bus:**
+- ✅ **channels/base.py**: ChannelAdapter ABC — `send_message`, `initialize`, `shutdown`
+- ✅ **channels/telegram.py**: TelegramAdapter, parse_mode=MarkdownV2
+- ✅ **channels/webchat.py**: WebChatAdapter, per-session deque outbox + drain-on-poll
+- ✅ **gateway/envelope.py**: MessageEnvelope — `from_telegram/webchat/slack/discord/whatsapp()`, auto `message_hash`, `normalize_text()`
+- ✅ **gateway/formatter.py**: Markdown → Telegram MarkdownV2 / Slack mrkdwn / Discord markdown / WebChat HTML / plain fallback
+- ✅ **gateway/bus.py**: `ingest()` / `deliver()` / `roundtrip()` — replies to `session_id`
+- ✅ **gateway/router.py**: MessageRouter — session affinity, `mention-only`/`always-on` group activation
+- ✅ **config/channels.yaml**: Per-channel config schema (env-var references, policies, group activation)
+- ✅ **shared/state.py**: `get_message_bus()` lazy singleton wiring all 5 adapters
+
+---
 
 ## 2. Architecture Changes
 
-- **New directories**:
-  - `channels/`: Channel adapter implementations (one per platform)
-  - `gateway/`: Unified message bus, routing, envelope normalization, outbound formatting
+**New directories:**
+- `channels/`: Channel adapter implementations — `base.py`, `telegram.py`, `webchat.py`, `slack.py`, `discord.py`, `whatsapp.py`, `googlechat.py`, `imessage.py`, `teams.py`, `signal.py`, `matrix.py`
+- `gateway/`: Unified message bus — `envelope.py`, `formatter.py`, `bus.py`, `router.py`
+- `whatsapp_bridge/`: Node.js Baileys sidecar for WhatsApp
+- `signal_bridge/`: Python FastAPI sidecar for Signal (signal-cli bridge)
 
-- **New files**:
-  - `gateway/formatter.py`: MessageFormatter (Markdown → per-channel native format)
-  - `gateway/bus.py`: MessageBus (ingest / deliver / roundtrip orchestration)
-  - `config/channels.yaml`: Centralized per-channel config schema
-  - `routers/nexus.py`: WebChat HTTP transport endpoints
+**New files (Week 3+, latest):**
+- `channels/matrix.py`: MatrixAdapter (polling sync API, no sidecar, set_bus_callback)
+- `channels/signal.py`: SignalAdapter (signal_bridge sidecar, HMAC-SHA256)
+- `channels/teams.py`: TeamsAdapter (Bot Framework REST, verify_token)
+- `channels/imessage.py`: iMessageAdapter (BlueBubbles REST, HMAC-SHA256)
+- `channels/googlechat.py`: GoogleChatAdapter (webhook + service-account)
+- `signal_bridge/app.py`, `README.md`: Python FastAPI sidecar for signal-cli
+- `tests/test_matrix_roundtrip.py`: 9 Matrix tests
+- `tests/test_signal_roundtrip.py`: 11 Signal tests
+- `tests/test_teams_roundtrip.py`: 11 Teams tests
+- `tests/test_imessage_roundtrip.py`: 11 iMessage tests
+- `tests/test_get_run_output.py`: 3 endpoint tests for GET /api/runs/{id}/output
+- `tests/test_runs_agent_factory.py`: 5 factory tests for create_runs_agent
 
-- **Modified files**:
-  - `gateway/envelope.py`: Added `message_hash`, `from_slack()`, `from_discord()`
-  - `gateway/router.py`: Added optional `formatter` wiring
-  - `gateway/__init__.py`: Exports `MessageFormatter`, `MessageBus`, `BusResult`
-  - `channels/webchat.py`: Upgraded from stub to outbox-backed adapter
-  - `channels/telegram.py`: Defaults `parse_mode=MarkdownV2`
-  - `shared/state.py`: Added `get_message_bus()` lazy singleton
-  - `api.py`: Registered `nexus_router`
+**Modified files (Week 3+):**
+- `routers/runs.py`: Added `_extract_output_str()` helper + `GET /api/runs/{run_id}/output`
+- `gateway/router.py`: Added `create_runs_agent` factory + `RunsAgentAdapter`; kept `create_mock_agent` for tests
+- `gateway/envelope.py`: Added `from_whatsapp()`, `from_googlechat()`, `from_imessage()`, `from_teams()`, `from_signal()`, `from_matrix()`
+- `gateway/formatter.py`: Added `_format_teams()`, `_format_googlechat()`; plain map entries for signal, matrix, imessage, whatsapp
+- `shared/state.py`: All 10 adapters wired; Matrix `set_bus_callback` after bus creation
+- `routers/nexus.py`: Inbound endpoints for all channels (Discord, WhatsApp, GoogleChat, iMessage, Teams, Signal)
+- `.env.example`: All channel env-var sections added
+- `config/channels.yaml`: All 10 channel blocks present
 
-- **Key architectural patterns**:
-  - **ChannelAdapter ABC** (channels/base.py): All channels implement send_message/initialize/shutdown
-  - **MessageEnvelope** (gateway/envelope.py): Single normalized format; auto-dedup hash
-  - **MessageFormatter** (gateway/formatter.py): Per-channel outbound text conversion
-  - **MessageBus** (gateway/bus.py): Central orchestrator; reply recipient = session_id
-  - **MessageRouter** (gateway/router.py): Session affinity; formatter-aware
-  - **WebChat outbox** (channels/webchat.py): Per-session deque; drained by poll endpoint
-  - **Async-first design**: All channel operations are async/await for real-time handling
+**Key architectural flow (in-process agent, 2026-03-01):**
+```
+Channel inbound → MessageEnvelope → bus.roundtrip()
+                                        ↓
+                               create_runs_agent(session_id)
+                                        ↓
+                     RunsAgentAdapter.process_message(envelope)
+                                        ↓
+          _build_contextual_query() (prepend conversation history)
+                                        ↓
+                    process_run(run_id, query)  [IN-PROCESS, no HTTP]
+                                        ↓
+                    _fetch_run_output(run_id)  [read session JSON from disk]
+                                        ↓
+                    return {"reply": output_str, ...}
+                                        ↓
+                    ChannelAdapter.send_message() → delivered to user
+```
 
-- **Integration points**:
-  - `get_message_bus()` in shared/state.py — shared singleton across all routers
-  - `routers/nexus.py` — HTTP surface for WebChat widget
-  - Envelopes serialize to dict for FastAPI response payloads
+**Known limitation:** Each message starts a fresh AgentLoop4 run, but `RunsAgentAdapter` maintains rolling in-memory conversation history (last 10 user+assistant turns). Full persistent session threading requires deeper runs-API changes (P15 scope).
+
+---
 
 ## 3. API And UI Changes
 
-**New HTTP endpoints (routers/nexus.py):**
+**New HTTP endpoints:**
 ```
 POST /api/nexus/webchat/inbound
   Body: {session_id, sender_id, sender_name, text, message_id?}
-  Returns: BusResult (success, operation, channel, session_id, agent_response, formatted_text)
+  Returns: BusResult dict
 
 GET  /api/nexus/webchat/messages/{session_id}
-  Returns: {session_id, messages: [...], count: N}
-  Side-effect: drains outbox (messages returned exactly once)
+  Returns: {session_id, messages: [...], count: N}  (drains outbox)
+
+GET  /api/nexus/webchat/stream/{session_id}
+  SSE push stream — "message" and "ping" events
+
+POST /api/nexus/slack/events
+  url_verification → {"challenge": "..."}
+  event_callback message → bus.roundtrip() → {"ok": true}
+
+POST /api/nexus/discord/events
+  PING (type 1) → {"type": 1}
+  APPLICATION_COMMAND (type 2) → bus.roundtrip() → {"type": 5}
+  message relay → bus.roundtrip() → {"ok": true}
+
+GET  /api/nexus/whatsapp/inbound
+  hub.challenge handshake → {"hub.challenge": token}
+
+POST /api/nexus/whatsapp/inbound
+  Baileys bridge inbound → HMAC verify → bus.roundtrip() → {"ok": true}
+
+GET  /api/runs/{run_id}/output           [NEW — Week 3]
+  Returns: {run_id, status: "running"|"completed"|"failed"|"not_found", output: str|null}
 ```
 
-**New/updated module APIs (public):**
-- `MessageEnvelope.from_telegram(...)`, `from_webchat(...)`, `from_slack(...)`, `from_discord(...)`
-- `MessageEnvelope.message_hash` — auto-computed SHA-256/16 dedup key
-- `MessageFormatter().format(text, channel) -> str`
-- `MessageBus(router, formatter, adapters).roundtrip(envelope) -> BusResult`
-- `WebChatAdapter.drain_outbox(session_id) -> List[Dict]`
-- `get_message_bus()` from `shared.state` — global singleton
+**New module APIs:**
+- `create_runs_agent(session_id) -> RunsAgentAdapter` — real AgentLoop4 factory (in-process, no HTTP)
+- `_fetch_run_output(run_id) -> dict` — reads session summary from disk
+- `_extract_output_str(data: dict) -> str` — shared output extraction from session graph
+- `MessageEnvelope.from_whatsapp(...)` — WhatsApp envelope constructor
 
-**curl examples:**
-```bash
-# Send a WebChat message
-curl -X POST http://localhost:8000/api/nexus/webchat/inbound \
-  -H 'Content-Type: application/json' \
-  -d '{"session_id":"s1","sender_id":"u1","sender_name":"Alice","text":"**Hello**"}'
-
-# Poll for reply (HTML-formatted)
-curl http://localhost:8000/api/nexus/webchat/messages/s1
-```
-
-**UI impact:**
-- WebChat widget can now POST inbound and GET replies via polling
-- Full WebSocket/SSE push deferred to Week 2
+---
 
 ## 4. Mandatory Test Gate Definition
-- **Acceptance file**: `tests/acceptance/p01_nexus/test_multichannel_roundtrip.py`
-- **Integration file**: `tests/integration/test_nexus_session_affinity.py`
-- **CI check**: `p01-nexus-gateway` (to be wired in .github/workflows/project-gates.yml)
+
+- **Acceptance file**: `tests/acceptance/p01_nexus/test_multichannel_roundtrip.py` — 8 tests
+- **Integration file**: `tests/integration/test_nexus_session_affinity.py` — 5 tests
+- **CI check**: `p01-nexus-gateway` (wired in `.github/workflows/project-gates.yml`)
+
+---
 
 ## 5. Test Evidence
 
-**Manual testing performed:**
-- ✅ MessageEnvelope.normalize_text() correctly strips and collapses whitespace
-- ✅ MessageEnvelope.from_telegram() creates valid envelopes with normalized content
-- ✅ MessageEnvelope.from_webchat() creates valid envelopes with session_id
-- ✅ MessageRouter routes to mock agents with session affinity (message_number increments on same session)
-- ✅ TelegramAdapter.send_message() successfully makes HTTP calls to Telegram Bot API
-  - Properly handles authentication via TELEGRAM_TOKEN from .env
-  - Returns structured response with success/error fields
-  - Error handling works (returns success:false with error message)
-- ✅ **Telegram real-time message delivery VERIFIED**
-  - Resolved @userinfobot registration and obtained numeric user ID
-  - End-to-end message delivery confirmed: MessageEnvelope → TelegramAdapter → Real Telegram bot API → Live account
-  - Verified message appears in real Telegram app within seconds
-  - Tested multiple scenarios: single messages, replies, error handling with invalid recipient IDs
+**Automated test suite: 118 tests (P01 scope), 469 total passed (2026-03-01):**
 
-**Automated test suite (260 passing):**
-- ✅ `tests/acceptance/p01_nexus/test_multichannel_roundtrip.py` — 8 contract tests
-- ✅ `tests/integration/test_nexus_session_affinity.py` — 5 integration tests
-- ✅ `tests/test_message_formatter.py` — 16 formatter unit tests (all 5 channels)
-- ✅ `tests/test_message_bus.py` — 7 bus unit tests (ingest/deliver/roundtrip/dedup)
-- ✅ `tests/test_webchat_roundtrip.py` — 5 end-to-end WebChat tests via TestClient
+| File | Tests | What it covers |
+|------|-------|----------------|
+| `tests/acceptance/p01_nexus/test_multichannel_roundtrip.py` | 8 | Contract + delivery README checks |
+| `tests/integration/test_nexus_session_affinity.py` | 5 | Session affinity across channels |
+| `tests/test_message_formatter.py` | 12 | Formatter for all 10 channels |
+| `tests/test_message_bus.py` | 11 | ingest/deliver/roundtrip/dedup/retry/media |
+| `tests/test_webchat_roundtrip.py` | 5 | WebChat end-to-end via TestClient |
+| `tests/test_webchat_sse.py` | 6 | SSE subscribe/push/route contract |
+| `tests/test_slack_roundtrip.py` | 8 | Slack send/error/network/webhook×3 |
+| `tests/test_group_activation.py` | 5 | mention-only / always-on policy |
+| `tests/test_discord_roundtrip.py` | 8 | Discord sig/PING/slash/relay/affinity |
+| `tests/test_whatsapp_roundtrip.py` | 8 | WhatsApp HMAC/roundtrip/group/bridge |
+| `tests/test_get_run_output.py` | 3 | GET /api/runs/{id}/output endpoint |
+| `tests/test_runs_agent_factory.py` | 5 | create_runs_agent factory (mocked in-process calls via sys.modules injection) |
+| `tests/test_googlechat_roundtrip.py` | 8 | Google Chat send/error/network/no-creds/bus/affinity/webhook/lifecycle |
+| `tests/test_imessage_roundtrip.py` | 11 | iMessage send/error/network/sig, roundtrip, affinity, webhook×3 |
+| `tests/test_teams_roundtrip.py` | 11 | Teams send/error/network/token, roundtrip, affinity, webhook×3 |
+| `tests/test_signal_roundtrip.py` | 11 | Signal send/error/network, sig×3, roundtrip, affinity, webhook×3 |
+| `tests/test_matrix_roundtrip.py` | 9 | Matrix send/error/network, roundtrip, affinity, envelope, sync loop×3 |
 
-**WebChat end-to-end verified:**
-- POST inbound → bus.roundtrip() → outbox enqueued ✅
-- GET messages → drain_outbox() → HTML-formatted reply returned ✅
-- Second GET → outbox empty (drain-once semantics) ✅
-- Session affinity → same session → message_number increments ✅
-- Formatter → `**bold**` → `<b>bold</b>` in WebChat replies ✅
+**Run command:**
+```bash
+uv run python -m pytest tests/acceptance/p01_nexus/ \
+  tests/integration/test_nexus_session_affinity.py \
+  tests/test_message_bus.py tests/test_message_formatter.py \
+  tests/test_webchat_roundtrip.py tests/test_webchat_sse.py \
+  tests/test_slack_roundtrip.py tests/test_group_activation.py \
+  tests/test_discord_roundtrip.py tests/test_whatsapp_roundtrip.py \
+  tests/test_get_run_output.py tests/test_runs_agent_factory.py \
+  tests/test_p01_latency.py tests/test_googlechat_roundtrip.py \
+  tests/test_imessage_roundtrip.py tests/test_teams_roundtrip.py \
+  tests/test_signal_roundtrip.py tests/test_matrix_roundtrip.py -v
+```
+
+**Live WhatsApp integration verified (2026-03-13 — real agent):**
+- Inbound message via Baileys bridge → bus.roundtrip() → AgentLoop4 → reply delivered to WhatsApp ✅
+- Root cause fixes: dotenv load in bridge, fetchLatestBaileysVersion(), compact HMAC JSON ✅
+
+**Live Matrix integration verified (2026-03-13 — real agent):**
+- Polling sync loop → bus.roundtrip() → AgentLoop4 → PUT m.room.message reply ✅
+- `_since_token` persisted to disk (prevents history replay on restart) ✅
+- Dedup hash fix: uses `channel_message_id` (stable) not timestamp (changes each poll) ✅
+
+**iMessage partial verification (2026-03-14):**
+- BlueBubbles ping: `{"status":200,"data":"pong"}` ✅
+- Arcturus inbound handler: curl POST → `{"ok":true}` ✅
+- Real-time webhook blocked: requires BlueBubbles Private API (needs SIP disabled on macOS) ⚠️
+
+**Channels blocked by external platform access (not counted against P01 — all code complete):**
+- Google Chat: requires Google Workspace — personal Gmail cannot create bots
+- Microsoft Teams: Azure Bot registration blocked by tenant access issue (Microsoft Services tenant)
+- Signal: requires Java 17+, signal-cli, dedicated phone number
+- iMessage full loop: requires Private API (macOS SIP disabled)
+
+**Live Slack integration verified (Week 3 — real agent):**
+- Messages routed via `create_runs_agent` → `process_run()` (in-process) → AgentLoop4 ✅
+- `group_activation: always-on` required (Slack sends `<@USER_ID>` not `@botname`) ✅
+- Reply read from `_fetch_run_output()` (disk) → delivered back to Slack ✅
+
+**Live Telegram integration verified (2026-03-01 — real agent):**
+- TelegramAdapter._poll_loop() → bus.roundtrip() → AgentLoop4 → reply via sendMessage ✅
+- Conversation history maintained across messages (10-turn rolling window) ✅
+- Long replies auto-chunked at 4096-char Telegram limit ✅
+
+**Live Discord integration verified (2026-03-11 — real agent):**
+- `/ask message:hello` → dino-bot replies via real AgentLoop4 ✅
+- Ed25519 signature verification working (`PyNaCl` installed) ✅
+- Deferred response flow: `{"type": 5}` returned immediately, agent reply PATCHed via webhook ✅
+- `config/channels.yaml` `group_activation: always-on` required for slash commands ✅
+- Setup guide: `channels/setup_docs/discord.md` ✅
+
+**Live Slack integration verified (Week 2 — mock agent):**
+- "hello Arcturus" → reply `[Session C04KYFS5DV2] Processed: hello Arcturus` ✅
+- Signature verification: requests without `X-Slack-Signature` rejected 403 ✅
+
+---
 
 ## 6. Existing Baseline Regression Status
 
-**Command**: `uv run python -m pytest tests/ --ignore=tests/stress_tests --ignore=tests/manual -q`
+**Command:** `uv run python -m pytest tests/ --ignore=tests/stress -q`
 
-**Status**: ✅ **PASSED** - 260 backend tests pass (255 baseline + 5 new WebChat tests)
+**Status:** ✅ **469 passed, 2 skipped** (2026-03-01)
 
-Baseline regression confirms P01 + Bus changes are additive and non-breaking:
+P01 changes are fully additive and non-breaking:
 - All new code in `channels/`, `gateway/`, `routers/nexus.py` is isolated
-- `api.py` change: 2 lines only (register nexus router)
-- `shared/state.py` change: additive (`get_message_bus()` getter)
+- `routers/runs.py`: read-only endpoint + private helper only (no existing logic changed)
+- `shared/state.py`: additive factory swap (no public API changed)
 - Zero impact on existing subsystems (loops, RAG, remme, bootstrap, config)
 
-## 7. Security And Safety Impact
+---
 
-- **No authentication vulnerabilities**: TelegramAdapter reads token from .env only (not hardcoded)
-- **Safe channel isolation**: Each channel adapter is independent; no cross-channel data leakage
-- **Input validation**: MessageEnvelope validates required fields (channel, sender_id, content)
-- **No SQL/code injection**: No database queries or code execution in adapters/router
+## 7. Security and Safety Impact
+
+- **No hardcoded secrets**: All tokens/secrets read from `.env` only; `.env.example` updated with new vars
+- **HMAC-SHA256 verification**: Slack (`v0:{ts}:{body}`), WhatsApp (raw body) — fail-closed when secret is set
+- **Ed25519 verification**: Discord sig verified with nacl; invalid sig → 401
+- **Bot loop prevention**: Slack filters `bot_id`; WhatsApp filters `fromMe` at bridge level
+- **Empty text guard**: WhatsApp endpoint skips empty text
 - **Session isolation**: Router maintains separate agent instances per session_id
+
+---
 
 ## 8. Known Gaps
 
-- **WebSocket/SSE push**: WebChat currently uses polling (`drain_outbox`); real-time push deferred to Week 2
-- **Real agent integration**: Bus uses `create_mock_agent()`; wiring to `AgentLoop4` deferred to Week 2
-- **Slack/Discord/Teams adapters**: Envelope factories (`from_slack`, `from_discord`) exist; adapters not yet wired (Week 2)
-- **Group activation policies**: mention-only vs always-on modes (Week 2)
-- **Media/attachment handling**: `MediaAttachment` in envelope; no transcoding yet (Week 2)
-- **Retry/idempotency**: `message_hash` exists for dedup; retry logic not yet enforced (Week 2)
-- **Auth/allowlist**: DM security policy (pairing code flow) not yet implemented (Week 2)
+**Resolved in Week 3+:**
+- ✅ Real AgentLoop4 wiring via `create_runs_agent`
+- ✅ Discord adapter implemented and tested
+- ✅ WhatsApp adapter + Baileys bridge implemented and tested
+- ✅ Group activation policies enforced in `MessageRouter._is_activated()`
+- ✅ `GET /api/runs/{run_id}/output` endpoint
+- ✅ Google Chat adapter (webhook + service-account modes)
+- ✅ iMessage adapter (BlueBubbles bridge)
+- ✅ Teams adapter (Bot Framework REST)
+- ✅ Signal adapter + signal_bridge sidecar (signal-cli, encrypted, group support, disappearing messages compliant)
+- ✅ Matrix adapter (polling sync, no sidecar, no AS registration needed)
+- ✅ **All 10 channel adapters complete** — P01 channel scope fully delivered
+
+**Remaining (out-of-P01-scope):**
+- **Persistent cross-session memory**: P15 (`feat-P15-gateway-week-4`) **is merged into master** — provides `gateway_api/` (rate limiting, metering, auth) and `POST /gateway/v1/chat/completions`. However P15's chat endpoint calls bare `process_run()` with no `session_id` field — conversation history not wired through. P01's 10-turn rolling history lives in `RunsAgentAdapter` (Nexus bus) and is not connected to P15's endpoint. Integration requires: (1) add `session_id` to `GatewayChatCompletionsRequest`; (2) route through `RunsAgentAdapter` instead of bare `process_run()`.
+- **HC7 / Aegis policy enforcement**: P12 branches (`students/p12/week1`, `week2`) have `safety/policy_engine.py` + `safety/prompt_injection.py` but **neither is merged into master**. HC7 remains open until P12 lands.
+- **HC8 / Cross-project failure propagation**: P12 not in master; no cross-project failure wiring in place yet.
+- **DM security policy**: Pairing-code flow blocked — P12 identity layer not yet merged into master.
+- **Media transcoding**: `MediaAttachment` in envelope; no per-channel format conversion.
+
+---
 
 ## 9. Rollback Plan
 
-- **No changes to existing systems**: P01 code is entirely in new `channels/` and `gateway/` directories
-- **Safe to revert**: Simply remove `channels/`, `gateway/` directories and their imports
-- **Zero dependencies**: No modifications to existing routers, core loop, or config files
-- **Isolation**: TelegramAdapter reads TELEGRAM_TOKEN from .env (already present, non-breaking)
+- **Safe to revert**: Remove `channels/`, `gateway/`, `whatsapp_bridge/` and their imports in `shared/state.py` / `api.py`
+- **Factory rollback**: Change `create_runs_agent` → `create_mock_agent` in `shared/state.py` line 119
+- **Runs endpoint**: `GET /api/runs/{run_id}/output` is read-only; removing it has zero downstream impact
+- **No database changes**: No schema migrations
+
+---
 
 ## 10. Demo Steps
 
-**Demo script**: `scripts/demos/p01_nexus.sh`
-
-**To run Week 1 demo locally:**
-
+**Full end-to-end Slack demo (real AgentLoop4):**
 ```bash
-# 1. Set your Telegram user ID (get from @userinfobot):
-export TELEGRAM_USER_ID="<your_numeric_id>"
+# Terminal 1 — tunnel (no account needed)
+ssh -R 80:localhost:8000 nokey@localhost.run
 
-# 2. Run demo script:
-./scripts/demos/p01_nexus.sh
+# Terminal 2 — backend
+uv run uvicorn api:app --reload --port 8000
 
-# 3. Expected output: Telegram message received in your Telegram app
+# Slack Event Subscriptions URL:
+#   https://<tunnel-url>/api/nexus/slack/events
+# Send any message in the Slack channel — bot responds via real AgentLoop4
 ```
 
-**Manual verification steps:**
-1. Create a Telegram message envelope: `MessageEnvelope.from_telegram(...)`
-2. Initialize router with mock agent: `router = MessageRouter(agent_factory=create_mock_agent)`
-3. Route message: `await router.route(envelope)`
-4. Observe session affinity: Same conversation_id routes to same agent instance
+**Output endpoint smoke test:**
+```bash
+curl http://localhost:8000/api/runs/<run_id>/output
+# {"run_id":"...","status":"completed","output":"The answer is 4."}
+```
 
-**Acceptance test**: `pytest tests/acceptance/p01_nexus/test_multichannel_roundtrip.py -v`
-- Should pass 8 test cases (contract + delivery README checks)
+**Slack inbound smoke test (no Slack app needed):**
+```bash
+curl -X POST http://localhost:8000/api/nexus/slack/events \
+  -H "Content-Type: application/json" \
+  -d '{"type":"event_callback","event":{"type":"message","channel":"C04KYFS5DV2","user":"U123","text":"What is 2+2?","ts":"1234567890.123456"}}'
+```
 
-**Integration test**: `pytest tests/integration/test_nexus_session_affinity.py -v`
-- All 5 tests pass ✅ (CI workflow wired in .github/workflows/project-gates.yml)
+**Telegram end-to-end demo (real AgentLoop4):**
+```bash
+# Ensure .env has TELEGRAM_TOKEN=<bot-token>
+# Terminal 1 — backend
+uv run uvicorn api:app --reload --port 8000
+
+# Send a message to @dinoblade_bot on Telegram
+# Bot replies via real AgentLoop4 with conversation context
+# Follow-up messages have context from previous turns (10-turn rolling window)
+```
+
+**Full P01 test suite:**
+```bash
+uv run python -m pytest tests/acceptance/p01_nexus/ \
+  tests/integration/test_nexus_session_affinity.py \
+  tests/test_message_bus.py tests/test_message_formatter.py \
+  tests/test_webchat_roundtrip.py tests/test_webchat_sse.py \
+  tests/test_slack_roundtrip.py tests/test_group_activation.py \
+  tests/test_discord_roundtrip.py tests/test_whatsapp_roundtrip.py \
+  tests/test_get_run_output.py tests/test_runs_agent_factory.py \
+  tests/test_p01_latency.py tests/test_googlechat_roundtrip.py \
+  tests/test_imessage_roundtrip.py tests/test_teams_roundtrip.py \
+  tests/test_signal_roundtrip.py tests/test_matrix_roundtrip.py -v
+```

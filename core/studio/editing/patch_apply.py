@@ -25,6 +25,11 @@ def _parse_path(path: str) -> List[Tuple[str, Optional[int]]]:
         "slides[2].title"  -> [("slides", 2), ("title", None)]
         "rows[0][1]"       -> [("rows", 0), ("__idx__", 1)]
     """
+    if "[?(" in path:
+        raise ValueError(
+            f"JSONPath filter expressions are not supported in path {path!r}. "
+            "Use numeric indices (e.g. elements[0]) or target kind 'slide_element' with 'element_id'."
+        )
     segments = []
     for part in path.split("."):
         m = _PATH_SEGMENT_RE.fullmatch(part)

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ExportButton } from '@/features/forge/components/ExportPanel';
 import { SlidePreviewModal } from '@/features/forge/components/preview/SlidePreviewModal';
+import { ArtifactPromptBanner } from '@/features/forge/components/ArtifactPromptBanner';
 
 // === Sub-viewers ===
 
@@ -49,6 +50,8 @@ function OutlineViewer({ artifact }: { artifact: any }) {
                     <p className="text-sm text-destructive">{approveError}</p>
                 </div>
             )}
+
+            <ArtifactPromptBanner key={artifact.id} prompt={artifact.creation_prompt} />
 
             <ScrollArea className="flex-1 p-4">
                 <div className="space-y-2 max-w-3xl mx-auto">
@@ -379,6 +382,7 @@ export function StudioWorkspace() {
                         )}
                     </div>
                 </div>
+                <ArtifactPromptBanner key={artifact.id} prompt={artifact.creation_prompt} />
                 <ScrollArea className="flex-1">
                     {artifact.type === 'slides' && <SlidesViewer tree={artifact.content_tree} />}
                     {artifact.type === 'document' && <DocumentViewer tree={artifact.content_tree} />}

@@ -214,3 +214,174 @@ def test_13_admin_throttle_policy_reads_cost_data() -> None:
     assert summary["hourly"]["spent_usd"] == 0.0
     assert summary["daily"]["spent_usd"] == 0.0
 
+
+# ====================================================================
+# P14.5 — Audit & Compliance integration tests
+# ====================================================================
+
+
+def test_14_audit_logger_writes_and_queries():
+    """AuditLogger round-trip: write an entry, then query it back."""
+    from unittest.mock import MagicMock, patch
+    from ops.audit.audit_logger import AuditLogger, AuditEntry
+
+    logger = AuditLogger.__new__(AuditLogger)
+    logger._lock = __import__("threading").Lock()
+    logger._repo = None
+
+    # Use JSONL fallback to a temp file
+    import tempfile
+    from pathlib import Path
+
+    tmp = Path(tempfile.mktemp(suffix=".jsonl"))
+    logger._fallback_path = tmp
+
+    try:
+        # Patch settings so _get_repo returns None (JSONL only)
+        with patch("ops.audit.audit_logger.settings", {"watchtower": {"enabled": False}}):
+            # Write an entry
+            entry = logger.log_action("test-actor", "test-action", "test-resource", "old", "new")
+            assert isinstance(entry, AuditEntry)
+            assert entry.actor == "test-actor"
+
+            # Query it back
+            results = logger.query(hours=1, action="test-action")
+            assert len(results) == 1
+            assert results[0]["actor"] == "test-actor"
+            assert results[0]["action"] == "test-action"
+            assert results[0]["resource"] == "test-resource"
+            assert results[0]["old_value"] == "old"
+            assert results[0]["new_value"] == "new"
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def test_15_audit_fallback_to_jsonl():
+    """AuditLogger falls back to JSONL when MongoDB is unavailable."""
+    from unittest.mock import patch
+    from ops.audit.audit_logger import AuditLogger
+
+    logger = AuditLogger.__new__(AuditLogger)
+    logger._lock = __import__("threading").Lock()
+    logger._repo = None
+
+    import tempfile
+    from pathlib import Path
+
+    tmp = Path(tempfile.mktemp(suffix=".jsonl"))
+    logger._fallback_path = tmp
+
+    try:
+        # Patch settings so _get_repo returns None (watchtower disabled)
+        with patch("ops.audit.audit_logger.settings", {"watchtower": {"enabled": False}}):
+            logger.log_action("admin", "cache_flush", "cache:settings")
+
+        assert tmp.exists()
+        import json
+        lines = tmp.read_text().strip().split("\n")
+        assert len(lines) == 1
+        entry = json.loads(lines[0])
+        assert entry["action"] == "cache_flush"
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def test_16_session_data_manager_export_collects_data():
+    """SessionDataManager.export aggregates data from all stores."""
+    from unittest.mock import MagicMock
+    from ops.audit.data_manager import SessionDataManager
+
+    import tempfile
+    from pathlib import Path
+    import json
+
+    # Create a temp conversation dir with a test session file
+    conv_dir = Path(tempfile.mkdtemp())
+    session_file = conv_dir / "session_test123.json"
+    session_file.write_text(json.dumps({"query": "hello", "steps": 3}))
+
+    manager = SessionDataManager(
+        spans_collection=None,
+        audit_collection=None,
+        conversation_dir=conv_dir,
+        checkpoint_dir=Path(tempfile.mkdtemp()),
+        events_dir=Path(tempfile.mkdtemp()),
+    )
+
+    result = manager.export("test123")
+
+    assert result["session_id"] == "test123"
+    assert "stores" in result
+    assert result["stores"]["session_files"]["count"] == 1
+    assert result["stores"]["mongodb_spans"]["count"] == 0  # No MongoDB
+    assert result["stores"]["qdrant_vectors"]["count"] == 0  # No Qdrant
+    assert result["stores"]["chronicle_checkpoints"]["count"] == 0  # Empty dir
+
+
+def test_17_session_data_manager_delete_purges_data():
+    """SessionDataManager.delete removes session files."""
+    from ops.audit.data_manager import SessionDataManager
+
+    import tempfile
+    from pathlib import Path
+    import json
+
+    conv_dir = Path(tempfile.mkdtemp())
+    session_file = conv_dir / "session_del123.json"
+    session_file.write_text(json.dumps({"query": "test"}))
+
+    assert session_file.exists()
+
+    manager = SessionDataManager(
+        spans_collection=None,
+        audit_collection=None,
+        conversation_dir=conv_dir,
+        checkpoint_dir=Path(tempfile.mkdtemp()),
+        events_dir=Path(tempfile.mkdtemp()),
+    )
+
+    result = manager.delete("del123")
+
+    assert result["session_id"] == "del123"
+    assert result["stores"]["session_files"]["deleted"] == 1
+    assert not session_file.exists()  # File actually removed
+
+
+def test_18_admin_auth_middleware_enforces_key():
+    """Admin auth middleware returns 401 when key is configured and missing."""
+    from unittest.mock import patch, MagicMock
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import routers.admin as admin_router
+
+    app = FastAPI()
+    app.include_router(admin_router.router, prefix="/api")
+
+    mock_coll = MagicMock()
+
+    test_settings = {
+        "watchtower": {
+            "enabled": False,
+            "admin_api_key": "secret-key-xyz",
+        }
+    }
+
+    with (
+        patch.object(admin_router, "_get_spans_collection", return_value=mock_coll),
+        patch("config.settings_loader.settings", test_settings),
+        patch("routers.admin.settings", test_settings),
+    ):
+        with TestClient(app) as client:
+            # Without key → 401
+            resp = client.get("/api/admin/audit")
+            assert resp.status_code == 401
+
+            # With wrong key → 401
+            resp = client.get("/api/admin/audit", headers={"X-Admin-Key": "wrong"})
+            assert resp.status_code == 401
+
+            # With correct key → not 401
+            resp = client.get("/api/admin/audit", headers={"X-Admin-Key": "secret-key-xyz"})
+            assert resp.status_code != 401

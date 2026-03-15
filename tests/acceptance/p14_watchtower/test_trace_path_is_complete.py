@@ -312,3 +312,90 @@ def test_27_admin_invalid_flag_delete_returns_404(admin_client) -> None:
     resp = admin_client.delete("/api/admin/flags/nonexistent_flag_xyz")
     assert resp.status_code == 404
 
+
+# ===================================================================
+# P14.5 — Audit & Compliance
+# ===================================================================
+
+
+def test_28_admin_audit_returns_log_entries(admin_client) -> None:
+    """Audit query endpoint returns a list of audit entries."""
+    resp = admin_client.get("/api/admin/audit", params={"hours": 24})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "entries" in data
+    assert isinstance(data["entries"], list)
+    assert "count" in data
+    assert data["count"] >= 0
+    # Verify entry structure when entries exist
+    if data["entries"]:
+        entry = data["entries"][0]
+        assert "timestamp" in entry
+        assert "actor" in entry
+        assert "action" in entry
+        assert "resource" in entry
+
+
+def test_29_admin_audit_filter_by_action(admin_client) -> None:
+    """Audit log supports filtering by action type."""
+    resp = admin_client.get(
+        "/api/admin/audit",
+        params={"hours": 24, "action": "feature_toggle"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "entries" in data
+    assert "count" in data
+
+
+def test_30_admin_data_export_returns_session_data(admin_client) -> None:
+    """GDPR export endpoint returns data bundle with all stores."""
+    resp = admin_client.get("/api/admin/data/test-session")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["session_id"] == "test-session"
+    assert "stores" in data
+    stores = data["stores"]
+    expected_stores = [
+        "session_files", "mongodb_spans", "qdrant_vectors",
+        "neo4j_graph", "chronicle_checkpoints", "audit_log",
+    ]
+    for store_name in expected_stores:
+        assert store_name in stores, f"Missing store: {store_name}"
+
+
+def test_31_admin_data_delete_purges_session(admin_client) -> None:
+    """GDPR delete endpoint returns deletion summary for each store."""
+    resp = admin_client.delete("/api/admin/data/test-session")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["session_id"] == "test-session"
+    assert "stores" in data
+    assert "deleted_at" in data
+    # Each store should have a "deleted" count
+    for store_name, store_data in data["stores"].items():
+        assert "deleted" in store_data, f"Store {store_name} missing 'deleted' key"
+
+
+def test_32_admin_data_delete_nonexistent_returns_empty(admin_client) -> None:
+    """Deleting a nonexistent session returns zero counts but succeeds."""
+    resp = admin_client.delete("/api/admin/data/nonexistent-session-xyz")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["session_id"] == "nonexistent-session-xyz"
+
+
+def test_33_admin_auth_rejects_without_key(admin_client_with_auth) -> None:
+    """When admin_api_key is configured, requests without key get 401."""
+    resp = admin_client_with_auth.get("/api/admin/audit")
+    assert resp.status_code == 401
+
+
+def test_34_admin_auth_allows_with_valid_key(admin_client_with_auth) -> None:
+    """When admin_api_key is configured, requests with correct key get through."""
+    resp = admin_client_with_auth.get(
+        "/api/admin/audit",
+        headers={"X-Admin-Key": "test-secret-key-123"},
+    )
+    # Should not be 401 (may be 500 if mocks not set up for full flow, but auth passes)
+    assert resp.status_code != 401

@@ -8,7 +8,7 @@ a summary each tick.
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from config.settings_loader import settings
 from ops.health.alerts import AlertEvaluator
@@ -83,7 +83,16 @@ class HealthScheduler:
         try:
             results = await asyncio.to_thread(run_all_health_checks)
             resources = await asyncio.to_thread(collect_resources)
-            self._repository.save_snapshot(results, resources=resources)
+
+            try:
+                self._repository.save_snapshot(results, resources=resources)
+                self._persist_failures = 0
+            except Exception:
+                self._persist_failures = getattr(self, "_persist_failures", 0) + 1
+                if self._persist_failures <= 1:
+                    logger.warning(
+                        "Health tick: MongoDB unavailable, snapshots will not be persisted"
+                    )
 
             if self._alert_evaluator is not None:
                 self._alert_evaluator.evaluate(results)

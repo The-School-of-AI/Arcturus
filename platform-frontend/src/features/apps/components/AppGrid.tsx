@@ -209,6 +209,8 @@ export const AppGrid: React.FC<AppGridProps> = ({ className, isFullScreen, onTog
             const adjustedDims = { ...dims, w: dims.w * 2 }; // Scale for 24 cols
 
             addAppCard(newCard, { ...layoutItem, ...adjustedDims });
+            // Auto-save so the card survives navigation
+            setTimeout(() => saveApp(), 100);
 
         } catch (e) {
             console.error("Failed to parse drop data", e);

@@ -323,6 +323,34 @@ async def get_revision(artifact_id: str, revision_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class RestoreRevisionRequest(BaseModel):
+    base_revision_id: Optional[str] = None
+
+
+@router.post("/{artifact_id}/revisions/{revision_id}/restore")
+async def restore_revision(artifact_id: str, revision_id: str, request: RestoreRevisionRequest = RestoreRevisionRequest()):
+    """Restore an artifact to a previous revision's content tree."""
+    _validate_artifact_id(artifact_id)
+    try:
+        from core.studio.orchestrator import ConflictError
+        orchestrator = _get_orchestrator()
+        result = await orchestrator.restore_revision(
+            artifact_id=artifact_id,
+            target_revision_id=revision_id,
+            base_revision_id=request.base_revision_id,
+        )
+        return result
+    except ConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        detail = str(e)
+        if "not found" in detail.lower():
+            raise HTTPException(status_code=404, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- Export endpoints ---
 
 @router.post("/{artifact_id}/export")

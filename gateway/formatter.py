@@ -5,10 +5,7 @@ required by each channel (Telegram MarkdownV2, Slack mrkdwn,
 Discord markdown, WebChat HTML, or plain text fallback).
 """
 
-import html
 import re
-from typing import Optional
-
 
 # Characters that must be escaped in Telegram MarkdownV2
 _TELEGRAM_ESCAPE_CHARS = r"\_*[]()~`>#+-=|{}.!"
@@ -35,6 +32,12 @@ class MessageFormatter:
         "slack": "_format_slack",
         "discord": "_format_discord",
         "webchat": "_format_webchat",
+        "whatsapp": "_format_plain",  # WhatsApp renders *bold*/_italic_ natively
+        "googlechat": "_format_googlechat",
+        "imessage": "_format_plain",  # iMessage renders plain text natively
+        "teams": "_format_teams",
+        "signal": "_format_plain",  # Signal renders plain text natively
+        "matrix": "_format_plain",  # Matrix clients render Markdown client-side
     }
 
     def format(self, text: str, channel: str, **kwargs) -> str:
@@ -146,43 +149,54 @@ class MessageFormatter:
         return text
 
     def _format_webchat(self, text: str) -> str:
-        """Convert Markdown to safe HTML for WebChat widget.
+        """Strip Markdown and return plain text for the WebChat widget.
 
-        Rules:
-        - ``**bold**`` → ``<b>bold</b>``
-        - ``_italic_`` → ``<i>italic</i>``
-        - `` `code` `` → ``<code>code</code>``
-        - Plain text HTML-encoded to prevent XSS.
-        - Newlines → ``<br>``
+        The React frontend renders text directly (not as HTML), so we
+        strip markup rather than converting to HTML tags.
         """
-        # HTML-encode the whole string first, then re-introduce markup tags.
-        # Strategy: process token by token.
+        return self._format_plain(text)
 
-        # Extract code spans first to avoid HTML-encoding them wrongly
-        segments: list[tuple[str, bool]] = []  # (text, is_code)
-        last = 0
-        for m in re.finditer(r"`([^`]+)`", text):
-            if m.start() > last:
-                segments.append((text[last : m.start()], False))
-            segments.append((m.group(1), True))
-            last = m.end()
-        if last < len(text):
-            segments.append((text[last:], False))
+    def _format_googlechat(self, text: str) -> str:
+        """Convert Markdown to Google Chat message text.
 
-        result_parts = []
-        for segment, is_code in segments:
-            if is_code:
-                result_parts.append(f"<code>{html.escape(segment)}</code>")
-            else:
-                encoded = html.escape(segment)
-                # Apply bold and italic after HTML-encoding
-                encoded = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", encoded)
-                encoded = re.sub(r"_(.+?)_", r"<i>\1</i>", encoded)
-                result_parts.append(encoded)
+        Google Chat supports a limited subset of formatting via its own
+        markup (not Markdown), but plain text with minimal decoration is
+        the safest universal option across all Google Chat clients.
 
-        result = "".join(result_parts)
-        result = result.replace("\n", "<br>")
-        return result
+        Rules applied:
+        - ``**bold**`` → ``*bold*``  (Google Chat bold)
+        - ``_italic_`` → ``_italic_``  (same — Google Chat italic)
+        - `` `code` `` → `` `code` ``  (same — Google Chat monospace)
+        - ``# Heading`` → ``*Heading*``  (no native headings)
+        - Links ``[label](url)`` → ``label (url)``  (plain text fallback)
+        """
+        # Headings → bold
+        text = re.sub(r"^#{1,6}\s+(.+)$", r"*\1*", text, flags=re.MULTILINE)
+        # Links [label](url) → label (url)
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
+        # **bold** → *bold*
+        text = re.sub(r"\*\*(.+?)\*\*", r"*\1*", text)
+        # Italic: _italic_ unchanged (Google Chat uses same syntax)
+        return text
+
+    def _format_teams(self, text: str) -> str:
+        """Convert Markdown to Microsoft Teams message text.
+
+        Teams supports standard Markdown in most contexts.  Headings are
+        not natively rendered, so they are converted to bold.
+
+        Rules applied:
+        - ``# Heading`` → ``**Heading**``
+        - ``**bold**`` → ``**bold**``  (unchanged — Teams supports this)
+        - ``_italic_`` → ``*italic*``  (Teams uses single asterisk for italic)
+        - `` `code` `` → `` `code` ``  (unchanged)
+        - Links ``[label](url)`` → ``[label](url)``  (Teams renders natively)
+        """
+        # Headings → **bold**
+        text = re.sub(r"^#{1,6}\s+(.+)$", r"**\1**", text, flags=re.MULTILINE)
+        # _italic_ → *italic*
+        text = re.sub(r"(?<!\*)\b_(.+?)_\b", r"*\1*", text)
+        return text
 
     def _format_plain(self, text: str) -> str:
         """Strip all Markdown markup and return plain text.
