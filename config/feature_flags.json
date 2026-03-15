@@ -2,7 +2,7 @@
   "cost_tracking": true,
   "deep_research": true,
   "health_scheduler": true,
-  "multi_agent": false,
+  "multi_agent": true,
   "semantic_cache": true,
   "voice_wake": true
 }

@@ -68,6 +68,11 @@ async def agent_search(request: SearchRequest):
     "God Mode" search: Searches web, visits top results, extracts text.
     Returns: JSON string of results with 'url', 'content', 'rank'.
     """
+    from ops.admin.feature_flags import flag_store
+
+    if not flag_store.get("deep_research"):
+        raise HTTPException(status_code=403, detail="Deep research is disabled")
+
     try:
         # Step 1: Get URLs
         urls = await smart_search(request.query, request.limit)

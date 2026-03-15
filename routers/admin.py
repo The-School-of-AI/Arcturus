@@ -11,8 +11,11 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from pymongo import MongoClient
 
+from pathlib import Path
+
 from config.settings_loader import settings, load_settings, reload_settings, save_settings
-from ops.admin.spans_repository import SpansRepository
+from ops.admin.spans_repository import SpansRepository, get_spans_collection
+from shared.state import PROJECT_ROOT
 
 # ---------------------------------------------------------------------------
 # Admin API-key auth guard (P14.5)
@@ -40,10 +43,10 @@ router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(_verif
 
 def _get_spans_collection():
     """Get MongoDB spans collection from watchtower config."""
-    watchtower = settings.get("watchtower", {})
-    uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-    client = MongoClient(uri)
-    return client["watchtower"]["spans"]
+    coll = get_spans_collection()
+    if coll is None:
+        raise RuntimeError("Spans collection unavailable")
+    return coll
 
 
 def _repo() -> SpansRepository:
@@ -88,6 +91,21 @@ tr:hover{background:#0f3460;}
     return HTMLResponse(html)
 
 
+@router.delete("/traces/orphans")
+async def delete_orphan_traces():
+    """Delete spans belonging to traces with no session_id or run_id."""
+    repo = _repo()
+    deleted = repo.delete_orphan_traces()
+
+    from ops.audit import audit_logger
+
+    audit_logger.log_action(
+        "admin", "data_delete", "orphan_traces", None, {"deleted_spans": deleted}
+    )
+
+    return {"deleted_spans": deleted}
+
+
 @router.get("/traces/{trace_id}")
 async def get_trace_detail(trace_id: str):
     """Get all spans for a trace, build tree."""
@@ -109,6 +127,18 @@ async def get_cost_summary(
     group_by: str = Query("agent", description="Group by: agent | model | trace"),
 ):
     """Aggregate cost from llm.generate spans. Requires attributes.cost_usd."""
+    from ops.admin.feature_flags import flag_store
+
+    if not flag_store.get("cost_tracking"):
+        return {
+            "disabled": True,
+            "message": "Cost tracking is disabled",
+            "total_cost_usd": 0,
+            "trace_count": 0,
+            "by_agent": {},
+            "by_model": {},
+            "hours": hours,
+        }
     return _repo().get_cost_summary(hours, group_by)
 
 
@@ -265,7 +295,6 @@ async def delete_flag(name: str):
 async def list_caches():
     """Enumerate known caches with basic stats."""
     import os
-    from pathlib import Path
 
     caches = []
 
@@ -277,7 +306,7 @@ async def list_caches():
     })
 
     # 2. FAISS index
-    faiss_dir = Path("data/faiss_index")
+    faiss_dir = PROJECT_ROOT / "data" / "faiss_index"
     faiss_size = 0
     faiss_files = 0
     if faiss_dir.exists():
@@ -307,6 +336,22 @@ async def list_caches():
     except Exception:
         pass
 
+    # 4. Semantic LLM response cache
+    try:
+        from ops.cache.semantic_cache import llm_cache
+        from ops.admin.feature_flags import flag_store as _fs
+
+        cache_stats = llm_cache.stats()
+        caches.append({
+            "name": "semantic_cache",
+            "description": "In-memory LLM response cache (prompt-keyed LRU)",
+            "enabled": _fs.get("semantic_cache"),
+            **cache_stats,
+            "flushable": True,
+        })
+    except Exception:
+        pass
+
     return {"caches": caches}
 
 
@@ -316,15 +361,24 @@ async def flush_cache(name: str):
     if name == "settings":
         reload_settings()
 
-        # Audit log
         from ops.audit import audit_logger
         audit_logger.log_action("admin", "cache_flush", f"cache:{name}", None, "flushed")
 
         return {"flushed": "settings", "message": "Settings cache reloaded from disk"}
 
+    if name == "semantic_cache":
+        from ops.cache.semantic_cache import llm_cache
+
+        removed = llm_cache.clear()
+
+        from ops.audit import audit_logger
+        audit_logger.log_action("admin", "cache_flush", f"cache:{name}", None, {"removed": removed})
+
+        return {"flushed": "semantic_cache", "message": f"Semantic cache cleared ({removed} entries)"}
+
     raise HTTPException(
         status_code=400,
-        detail=f"Cache '{name}' is not flushable or does not exist. Only 'settings' is safely flushable.",
+        detail=f"Cache '{name}' is not flushable or does not exist.",
     )
 
 
@@ -344,9 +398,8 @@ async def get_config():
 async def get_config_diff():
     """Show differences between current settings and defaults."""
     import json
-    from pathlib import Path
 
-    defaults_path = Path("config/settings.defaults.json")
+    defaults_path = PROJECT_ROOT / "config" / "settings.defaults.json"
     if not defaults_path.exists():
         raise HTTPException(status_code=404, detail="settings.defaults.json not found")
 
@@ -469,7 +522,7 @@ class ThrottleUpdateRequest(BaseModel):
 @router.put("/throttle")
 async def update_throttle(body: ThrottleUpdateRequest):
     """Update global cost budget limits."""
-    current = reload_settings()
+    current = load_settings()  # Use cached dict so ThrottlePolicy sees updates
     wt = current.setdefault("watchtower", {})
     throttle = wt.setdefault("throttle", {})
     old_throttle = throttle.copy()
@@ -489,14 +542,13 @@ async def update_throttle(body: ThrottleUpdateRequest):
 
 
 # ===================================================================
+# ===================================================================
 # P14.5 — Audit & Compliance
 # ===================================================================
-
 
 # ---------------------------------------------------------------------------
 # Audit Log Query
 # ---------------------------------------------------------------------------
-
 
 @router.get("/audit")
 async def query_audit_log(
@@ -510,7 +562,6 @@ async def query_audit_log(
 
     entries = audit_logger.query(hours=hours, action=action, resource=resource, limit=limit)
     return {"entries": entries, "count": len(entries), "hours": hours}
-
 
 # ---------------------------------------------------------------------------
 # GDPR Data Export & Deletion
@@ -544,7 +595,9 @@ async def export_session_data(session_id: str):
     result = manager.export(session_id)
 
     from ops.audit import audit_logger
-    audit_logger.log_action("admin", "data_export", f"session:{session_id}", None, "exported")
+    audit_logger.log_action(
+        "admin", "data_export", f"session:{session_id}", None, "exported"
+    )
 
     return result
 
@@ -556,7 +609,44 @@ async def delete_session_data(session_id: str):
     result = manager.delete(session_id)
 
     from ops.audit import audit_logger
-    audit_logger.log_action("admin", "data_delete", f"session:{session_id}", None, result["stores"])
+    audit_logger.log_action(
+        "admin", "data_delete", f"session:{session_id}", None, result["stores"]
+    )
 
     return result
 
+
+@router.delete("/data")
+async def delete_all_watchtower_data():
+    """Bulk-delete all watchtower data: spans, health_checks, and audit_log."""
+    from datetime import datetime
+
+    watchtower = settings.get("watchtower", {})
+    uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
+    client = MongoClient(uri)
+    db = client["watchtower"]
+
+    summary = {
+        "deleted_at": datetime.utcnow().isoformat(),
+        "collections": {},
+    }
+
+    for collection_name in ("spans", "health_checks", "audit_log"):
+        try:
+            result = db[collection_name].delete_many({})
+            summary["collections"][collection_name] = {
+                "deleted": result.deleted_count
+            }
+        except Exception as e:
+            summary["collections"][collection_name] = {
+                "deleted": 0,
+                "error": str(e),
+            }
+
+    from ops.audit import audit_logger
+
+    audit_logger.log_action(
+        "admin", "data_delete", "all_watchtower_data", None, summary["collections"]
+    )
+
+    return summary
