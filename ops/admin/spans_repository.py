@@ -7,6 +7,7 @@ Query patterns:
 - Indexes on trace_id, start_time, attributes.run_id (see ops.tracing.core) ensure fast queries.
 - For real-time updates, MongoDB Change Streams require a replica set (not standalone).
 """
+
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
@@ -68,7 +69,7 @@ def _traces_group_stage() -> dict:
 
 
 def _traces_add_fields_stage() -> dict:
-    """Aggregate session_id, cost, tokens from spans. First non-empty session_id wins."""
+    """Aggregate session_id, run_id, cost, tokens from spans. First non-empty wins."""
     return {
         "$addFields": {
             "session_id": {
@@ -84,6 +85,24 @@ def _traces_add_fields_stage() -> dict:
                             },
                             "as": "s",
                             "in": "$$s.attributes.session_id",
+                        }
+                    },
+                    0,
+                ]
+            },
+            "run_id": {
+                "$arrayElemAt": [
+                    {
+                        "$map": {
+                            "input": {
+                                "$filter": {
+                                    "input": "$spans",
+                                    "as": "s",
+                                    "cond": {"$ne": [{"$ifNull": ["$$s.attributes.run_id", ""]}, ""]},
+                                }
+                            },
+                            "as": "s",
+                            "in": "$$s.attributes.run_id",
                         }
                     },
                     0,
@@ -110,6 +129,20 @@ def _traces_add_fields_stage() -> dict:
                     "in": {"$add": ["$$value", {"$toInt": {"$ifNull": ["$$this.attributes.output_tokens", "0"]}}]},
                 }
             },
+            "has_throttled_span": {
+                "$gt": [
+                    {
+                        "$size": {
+                            "$filter": {
+                                "input": "$spans",
+                                "as": "s",
+                                "cond": {"$eq": ["$$s.name", "run.throttled"]},
+                            }
+                        }
+                    },
+                    0,
+                ]
+            },
         }
     }
 
@@ -124,6 +157,7 @@ def _traces_project_stage() -> dict:
             "has_error": {"$eq": ["$status", 1]},
             "span_count": {"$size": "$spans"},
             "session_id": 1,
+            "run_id": 1,
             "cost_usd": 1,
             "input_tokens": 1,
             "output_tokens": 1,
@@ -181,7 +215,15 @@ class SpansRepository:
             {"$sort": {"start_time": -1}},
             {"$limit": limit},
             _traces_add_fields_stage(),
-            {"$match": {"session_id": {"$ne": None}}},
+            {
+                "$match": {
+                    "$or": [
+                        {"session_id": {"$ne": None}},
+                        {"run_id": {"$exists": True, "$ne": None, "$ne": ""}},
+                        {"has_throttled_span": True},
+                    ]
+                }
+            },
             _traces_project_stage(),
         ]
         cursor = self._coll.aggregate(pipeline)
@@ -298,9 +340,7 @@ class SpansRepository:
                 {"$limit": 100},
             ]
             trace_cursor = self._coll.aggregate(trace_pipeline)
-            result["by_trace"] = [
-                {"trace_id": r["_id"], "cost_usd": round(float(r["cost"]), 6)} for r in trace_cursor
-            ]
+            result["by_trace"] = [{"trace_id": r["_id"], "cost_usd": round(float(r["cost"]), 6)} for r in trace_cursor]
         return result
 
     def get_errors_summary(self, hours: int) -> dict:

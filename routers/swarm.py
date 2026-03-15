@@ -10,6 +10,7 @@ Endpoints:
   POST /api/swarm/templates             — save a template
   DELETE /api/swarm/templates/{name}    — delete a template
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,6 +45,7 @@ if not TEMPLATES_FILE.exists():
 # Pydantic request / response models
 # ---------------------------------------------------------------------------
 
+
 class StartSwarmRequest(BaseModel):
     query: str
     token_budget: int = 8000
@@ -51,7 +53,7 @@ class StartSwarmRequest(BaseModel):
 
 
 class InterventionRequest(BaseModel):
-    action: str          # "message" | "pause" | "resume" | "reassign" | "abort"
+    action: str  # "message" | "pause" | "resume" | "reassign" | "abort"
     agent_id: str | None = None
     content: str | None = None
     task_id: str | None = None
@@ -68,6 +70,7 @@ class SaveTemplateRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_templates() -> list[dict]:
     try:
         return json.loads(TEMPLATES_FILE.read_text())
@@ -83,6 +86,7 @@ def _save_templates(templates: list[dict]) -> None:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/run")
 async def start_swarm_run(body: StartSwarmRequest, background_tasks: BackgroundTasks):
     """Start a new swarm run. Returns a run_id immediately; execution is async."""
@@ -95,11 +99,15 @@ async def start_swarm_run(body: StartSwarmRequest, background_tasks: BackgroundT
     try:
         from ops.admin.spans_repository import get_spans_collection
         from ops.admin.throttle import ThrottlePolicy
+        from ops.tracing import run_throttled_span, force_flush
 
         coll = get_spans_collection()
         policy = ThrottlePolicy(spans_collection=coll)
         allowed, reason = policy.check_budget()
         if not allowed:
+            with run_throttled_span("", reason, body.query):
+                pass
+            force_flush()
             raise HTTPException(status_code=429, detail=reason)
     except HTTPException:
         raise

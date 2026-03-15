@@ -521,7 +521,7 @@ class ThrottleUpdateRequest(BaseModel):
 @router.put("/throttle")
 async def update_throttle(body: ThrottleUpdateRequest):
     """Update global cost budget limits."""
-    current = reload_settings()
+    current = load_settings()  # Use cached dict so ThrottlePolicy sees updates
     wt = current.setdefault("watchtower", {})
     throttle = wt.setdefault("throttle", {})
     old_throttle = throttle.copy()

@@ -2,6 +2,7 @@
 WATCHTOWER: OpenTelemetry core setup.
 MongoDB exporter, tracer provider, and get_tracer.
 """
+
 from datetime import datetime
 
 from opentelemetry import trace
@@ -36,17 +37,19 @@ class MongoDBSpanExporter(SpanExporter):
         """Convert OTel spans to MongoDB documents and insert."""
         docs = []
         for span in spans:
-            docs.append({
-                "trace_id": format(span.context.trace_id, "032x"),
-                "span_id": format(span.context.span_id, "016x"),
-                "parent_span_id": format(span.parent.span_id, "016x") if span.parent else None,
-                "name": span.name,
-                "start_time": datetime.fromtimestamp(span.start_time / 1e9),
-                "end_time": datetime.fromtimestamp(span.end_time / 1e9),
-                "duration_ms": (span.end_time - span.start_time) / 1e6,
-                "attributes": {k: str(v) for k, v in span.attributes.items()},
-                "status": "error" if span.status.is_ok is False else "ok",
-            })
+            docs.append(
+                {
+                    "trace_id": format(span.context.trace_id, "032x"),
+                    "span_id": format(span.context.span_id, "016x"),
+                    "parent_span_id": format(span.parent.span_id, "016x") if span.parent else None,
+                    "name": span.name,
+                    "start_time": datetime.fromtimestamp(span.start_time / 1e9),
+                    "end_time": datetime.fromtimestamp(span.end_time / 1e9),
+                    "duration_ms": (span.end_time - span.start_time) / 1e6,
+                    "attributes": {k: str(v) for k, v in span.attributes.items()},
+                    "status": "error" if span.status.is_ok is False else "ok",
+                }
+            )
         if docs:
             self.collection.insert_many(docs)
         return SpanExportResult.SUCCESS
@@ -71,6 +74,7 @@ def init_tracing(mongodb_uri: str, jaeger_endpoint: str | None = None, service_n
     provider.add_span_processor(BatchSpanProcessor(MongoDBSpanExporter(mongodb_uri), **batch_opts))
     if jaeger_endpoint:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=jaeger_endpoint), **batch_opts))
     trace.set_tracer_provider(provider)
 
@@ -78,6 +82,20 @@ def init_tracing(mongodb_uri: str, jaeger_endpoint: str | None = None, service_n
 def get_tracer(name: str):
     """Return a tracer for the given module/component. Use this when creating spans."""
     return trace.get_tracer(name, "1.0.0")
+
+
+def force_flush(timeout_millis: int = 3000) -> bool:
+    """
+    Flush pending spans to exporters immediately.
+    Use when a span must be visible before the request ends (e.g. throttle 429).
+    """
+    try:
+        provider = trace.get_tracer_provider()
+        if hasattr(provider, "force_flush"):
+            return provider.force_flush(timeout_millis=timeout_millis)
+    except Exception:
+        pass
+    return False
 
 
 def shutdown_tracing(timeout_millis: int = 5000) -> None:

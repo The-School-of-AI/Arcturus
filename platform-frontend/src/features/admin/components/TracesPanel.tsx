@@ -21,6 +21,7 @@ function formatTokens(val: unknown): string {
 interface Trace {
     trace_id: string;
     session_id?: string | null;
+    run_id?: string | null;
     start_time: string;
     duration_ms: number;
     has_error: boolean;
@@ -323,7 +324,7 @@ export const TracesPanel: React.FC = () => {
                         <thead className="bg-muted/50">
                             <tr>
                                 <th className="text-left p-2 font-medium">Trace ID</th>
-                                <th className="text-left p-2 font-medium">Session ID</th>
+                                <th className="text-left p-2 font-medium">Session / Run ID</th>
                                 <th className="text-left p-2 font-medium">Start</th>
                                 <th className="text-right p-2 font-medium">Duration</th>
                                 {costEnabled && <th className="text-right p-2 font-medium">Cost</th>}
@@ -347,8 +348,8 @@ export const TracesPanel: React.FC = () => {
                                             <ExternalLink className="w-3 h-3 shrink-0 inline" />
                                         </a>
                                     </td>
-                                    <td className="p-2 font-mono text-xs truncate max-w-[100px] text-muted-foreground" title={t.session_id ?? ''}>
-                                        {t.session_id || '-'}
+                                    <td className="p-2 font-mono text-xs truncate max-w-[100px] text-muted-foreground" title={t.session_id ?? t.run_id ?? ''}>
+                                        {t.session_id || t.run_id || '-'}
                                     </td>
                                     <td className="p-2 text-muted-foreground text-xs">
                                         {t.start_time ? new Date(t.start_time).toLocaleString() : '-'}

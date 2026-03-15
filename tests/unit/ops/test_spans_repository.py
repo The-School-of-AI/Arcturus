@@ -32,10 +32,10 @@ def _make_span(trace_id: str, name: str, session_id: str | None = None, run_id: 
     }
 
 
-class TestGetTracesPipelineContainsOrphanFilter:
-    """get_traces() pipeline must contain a $match that rejects null session_id."""
+class TestGetTracesPipelineContainsIdentityFilter:
+    """get_traces() pipeline must contain a $match that includes traces with session_id, run_id, or run.throttled."""
 
-    def test_pipeline_includes_session_id_filter(self):
+    def test_pipeline_includes_identity_match(self):
         coll = MagicMock()
         coll.aggregate.return_value = iter([])
         repo = SpansRepository(coll)
@@ -43,10 +43,14 @@ class TestGetTracesPipelineContainsOrphanFilter:
         repo.get_traces(limit=10)
 
         pipeline = coll.aggregate.call_args[0][0]
-        session_match = {"$match": {"session_id": {"$ne": None}}}
-        assert session_match in pipeline
+        match_stage = next(s for s in pipeline if "$match" in s and "$or" in s.get("$match", {}))
+        assert match_stage is not None
+        or_conditions = match_stage["$match"]["$or"]
+        assert any("session_id" in str(c) for c in or_conditions)
+        assert any("run_id" in str(c) for c in or_conditions)
+        assert any("has_throttled_span" in str(c) for c in or_conditions)
 
-    def test_session_filter_is_after_add_fields(self):
+    def test_identity_filter_is_after_add_fields(self):
         coll = MagicMock()
         coll.aggregate.return_value = iter([])
         repo = SpansRepository(coll)
@@ -54,17 +58,13 @@ class TestGetTracesPipelineContainsOrphanFilter:
         repo.get_traces(limit=10)
 
         pipeline = coll.aggregate.call_args[0][0]
-        add_fields_idx = next(
-            i for i, stage in enumerate(pipeline) if "$addFields" in stage
+        add_fields_idx = next(i for i, stage in enumerate(pipeline) if "$addFields" in stage)
+        identity_match_idx = next(
+            i for i, stage in enumerate(pipeline) if "$match" in stage and "$or" in stage.get("$match", {})
         )
-        session_match_idx = next(
-            i
-            for i, stage in enumerate(pipeline)
-            if stage == {"$match": {"session_id": {"$ne": None}}}
-        )
-        assert session_match_idx > add_fields_idx
+        assert identity_match_idx > add_fields_idx
 
-    def test_session_filter_is_before_project(self):
+    def test_identity_filter_is_before_project(self):
         coll = MagicMock()
         coll.aggregate.return_value = iter([])
         repo = SpansRepository(coll)
@@ -72,15 +72,11 @@ class TestGetTracesPipelineContainsOrphanFilter:
         repo.get_traces(limit=10)
 
         pipeline = coll.aggregate.call_args[0][0]
-        project_idx = next(
-            i for i, stage in enumerate(pipeline) if "$project" in stage
+        project_idx = next(i for i, stage in enumerate(pipeline) if "$project" in stage)
+        identity_match_idx = next(
+            i for i, stage in enumerate(pipeline) if "$match" in stage and "$or" in stage.get("$match", {})
         )
-        session_match_idx = next(
-            i
-            for i, stage in enumerate(pipeline)
-            if stage == {"$match": {"session_id": {"$ne": None}}}
-        )
-        assert session_match_idx < project_idx
+        assert identity_match_idx < project_idx
 
 
 class TestDeleteOrphanTraces:
@@ -96,9 +92,7 @@ class TestDeleteOrphanTraces:
         deleted = repo.delete_orphan_traces()
 
         assert deleted == 5
-        coll.delete_many.assert_called_once_with(
-            {"trace_id": {"$in": ["trace_orphan_1", "trace_orphan_2"]}}
-        )
+        coll.delete_many.assert_called_once_with({"trace_id": {"$in": ["trace_orphan_1", "trace_orphan_2"]}})
 
     def test_returns_zero_when_no_orphans(self):
         coll = MagicMock()

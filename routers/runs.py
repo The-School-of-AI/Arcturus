@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
-from ops.tracing import run_span, agent_execute_node_span
+from ops.tracing import run_span, run_throttled_span, agent_execute_node_span, force_flush
 from opentelemetry.trace import Status, StatusCode
 from shared.state import (
     active_loops,
@@ -41,13 +41,16 @@ remme_extractor = get_remme_extractor()
 
 # === Pydantic Models ===
 
+
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
     source: str = "web"  # "web" or "voice"
     stream: bool = False  # Whether the caller expects a streaming response
     space_id: Optional[str] = None  # Phase 3C: optional space to scope session and retrieval
-    dry_run: Optional[bool] = None  # If True, skip agent; return synthetic run (for automation). None = use DRY_RUN_RUNS env.
+    dry_run: Optional[bool] = (
+        None  # If True, skip agent; return synthetic run (for automation). None = use DRY_RUN_RUNS env.
+    )
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -69,6 +72,7 @@ class UserInputRequest(BaseModel):
 
 class AgentTestRequest(BaseModel):
     """Optional request body for agent testing"""
+
     pass
 
 
@@ -79,11 +83,13 @@ class ExecuteNodeRequest(BaseModel):
 
 # === Background Tasks ===
 
+
 async def process_resume(run_id: str, session_path: Path):
     """Background task to resume agent loop from a file.
     WATCHTOWER: Wraps with run_span so resume runs appear in Jaeger with run_id.
     """
     from ops.tracing import run_span
+
     with run_span(run_id, "resume"):
         try:
             loop = AgentLoop4(multi_mcp=multi_mcp)
@@ -95,6 +101,7 @@ async def process_resume(run_id: str, session_path: Path):
         except Exception as e:
             print(f"Run {run_id} resume failed: {e}")
             import traceback
+
             traceback.print_exc()
         finally:
             # Clean up
@@ -176,6 +183,9 @@ async def process_run(
         policy = ThrottlePolicy(spans_collection=coll)
         allowed, reason = policy.check_budget()
         if not allowed:
+            with run_throttled_span(run_id, reason, query):
+                pass
+            force_flush()
             return  # Run aborted; no session created (client may get 404 when polling)
     except Exception:
         pass
@@ -191,7 +201,7 @@ async def process_run(
             skill = None
             if not skill_id:
                 skill_id = skill_manager.match_intent(query)
-            
+
             if skill_id:
                 skill = skill_manager.get_skill(skill_id)
                 if skill:
@@ -205,7 +215,7 @@ async def process_run(
                     skill_context.run_id = run_id
                     skill_context.agent_id = source
                     skill_context.config = {"source": source, "query": query}
-                    
+
                     # Call On Start Hook (allows prompt modification)
                     query = await skill.on_run_start(query)
                     print(f"[{run_id}] 🧠 Skill '{skill_id}' modified prompt.")
@@ -214,11 +224,13 @@ async def process_run(
             # Orchestration: memory_retriever handles semantic recall, entity recall, graph expansion, merge
             try:
                 from memory.memory_retriever import retrieve
+
                 # Phase 3C: use space_id from request, or from existing session
                 _space_id = space_id
                 if _space_id is None:
                     try:
                         from memory.knowledge_graph import get_knowledge_graph
+
                         kg = get_knowledge_graph()
                         if kg and kg.enabled:
                             _space_id = kg.get_space_for_session(run_id)
@@ -228,6 +240,7 @@ async def process_run(
                 if _space_id is not None:
                     try:
                         from memory.knowledge_graph import get_knowledge_graph
+
                         _kg = get_knowledge_graph()
                         if _kg and _kg.enabled:
                             _kg.get_or_create_session(run_id, space_id=_space_id)
@@ -250,7 +263,9 @@ async def process_run(
             print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
             try:
                 run_globals = {"user_id": user_id} if user_id else {}
-                context = await loop.run(query, [], run_globals, [], session_id=run_id, memory_context=memory_context, space_id=_space_id)
+                context = await loop.run(
+                    query, [], run_globals, [], session_id=run_id, memory_context=memory_context, space_id=_space_id
+                )
             except asyncio.CancelledError:
                 span.set_status(Status(StatusCode.ERROR, "cancelled"))
                 print(f"[{run_id}] Run cancelled.")
@@ -272,15 +287,15 @@ async def process_run(
             span.record_exception(e)
             print(f"Run {run_id} failed: {e}")
             if skill:
-                 try:
-                     await skill.on_run_failure(str(e))
-                 except Exception as fe:
-                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
+                try:
+                    await skill.on_run_failure(str(e))
+                except Exception as fe:
+                    print(f"⚠️ [Skill] Failure hook failed: {fe}")
             if skill:
-                 try:
-                     await skill.on_run_failure(str(e))
-                 except Exception as fe:
-                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
+                try:
+                    await skill.on_run_failure(str(e))
+                except Exception as fe:
+                    print(f"⚠️ [Skill] Failure hook failed: {fe}")
         finally:
             # Clean up
             if run_id in active_loops:
@@ -316,6 +331,7 @@ async def process_run(
                     if not alias_or_id or not existing:
                         return alias_or_id
                     import re
+
                     s = str(alias_or_id).strip()
                     m = re.match(r"^T(\d+)$", s, re.IGNORECASE)
                     if not m:
@@ -362,7 +378,10 @@ async def process_run(
                                 if space_id:
                                     meta["space_id"] = space_id
                                 added = remme_store.add(
-                                    text, emb, category="derived", source=f"run_{run_id}",
+                                    text,
+                                    emb,
+                                    category="derived",
+                                    source=f"run_{run_id}",
                                     metadata=meta,
                                     space_id=space_id,
                                     skip_kg_ingest=is_mnemo_enabled(),
@@ -384,12 +403,17 @@ async def process_run(
                     try:
                         from memory.knowledge_graph import get_knowledge_graph
                         from memory.user_id import get_user_id
+
                         kg = get_knowledge_graph()
                         if kg and kg.enabled:
                             user_id = get_user_id()
                             kg_result = kg.ingest_from_unified_extraction(
-                                user_id, run_id, session_memory_ids, extraction,
-                                category="derived", source="session",
+                                user_id,
+                                run_id,
+                                session_memory_ids,
+                                extraction,
+                                category="derived",
+                                source="session",
                                 space_id=space_id,
                             )
                             entity_ids = kg_result.get("entity_ids", [])
@@ -400,12 +424,15 @@ async def process_run(
                                     meta["entity_labels"] = entity_labels
                                 for mid in session_memory_ids:
                                     remme_store.update(mid, metadata=meta)
-                            print(f"✅ Remme: Ingested session extraction to Neo4j ({len(session_memory_ids)} memories, facts + evidence)")
+                            print(
+                                f"✅ Remme: Ingested session extraction to Neo4j ({len(session_memory_ids)} memories, facts + evidence)"
+                            )
                     except Exception as e:
                         print(f"⚠️ Remme Neo4j session ingestion failed: {e}")
 
                 if not is_mnemo_enabled() and preferences:
                     from remme.extractor import apply_preferences_to_hubs
+
                     apply_preferences_to_hubs(preferences)
                     print(f"✅ Remme: Processed {len(preferences)} preference updates.")
 
@@ -417,6 +444,7 @@ async def process_run(
             except Exception as e:
                 print(f"⚠️ Remme Extraction Failed: {e}")
                 import traceback
+
                 traceback.print_exc()
 
             # 3. AUTO-SAVE REPORTS TO NOTES
@@ -433,11 +461,11 @@ async def process_run(
                         return title[:60].strip()
 
                     def extract_title(content):
-                        match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
+                        match = re.search(r"^#+\s+(.+)$", content, re.MULTILINE)
                         if match:
                             return match.group(1).strip()
                         # Fallback to first non-empty line
-                        lines = [l.strip() for l in content.split('\n') if l.strip()]
+                        lines = [l.strip() for l in content.split("\n") if l.strip()]
                         if lines:
                             return lines[0]
                         return "Untitled Report"
@@ -462,10 +490,10 @@ async def process_run(
                             filename = sanitize_filename(title) + ".md"
                             target_path = notes_dir / filename
 
-                            if target_path.exists() and len(target_path.read_text(encoding='utf-8')) >= len(markdown):
+                            if target_path.exists() and len(target_path.read_text(encoding="utf-8")) >= len(markdown):
                                 continue
 
-                            with open(target_path, 'w', encoding='utf-8') as f:
+                            with open(target_path, "w", encoding="utf-8") as f:
                                 f.write(markdown)
                             print(f"✅ Auto-Saved Report to Notes: {filename}")
 
@@ -498,7 +526,9 @@ async def process_run(
                                     md = out.get("markdown_report")
                                     if not md:
                                         for k, v in out.items():
-                                            if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
+                                            if (k.startswith("formatted_report") or k == "report") and isinstance(
+                                                v, str
+                                            ):
                                                 md = v
                                                 break
 
@@ -519,6 +549,7 @@ async def process_run(
                                 out = node.get("output", {})
 
                                 if isinstance(out, dict):
+
                                     def find_largest_string(d):
                                         largest = ""
                                         for v in d.values():
@@ -543,7 +574,10 @@ async def process_run(
                         # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
                         if output_str:
                             import re
-                            if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
+
+                            if (output_str.startswith("{") and output_str.endswith("}")) or (
+                                output_str.startswith("[") and output_str.endswith("]")
+                            ):
                                 try:
                                     data = json.loads(output_str)
                                     if isinstance(data, dict):
@@ -554,8 +588,8 @@ async def process_run(
                                 except Exception:
                                     pass
 
-                            output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
-                            output_str = re.sub(r'\n```$', '', output_str)
+                            output_str = re.sub(r"^```(?:markdown)?\n", "", output_str)
+                            output_str = re.sub(r"\n```$", "", output_str)
 
                         final_result["output"] = output_str.strip() if output_str else "No substantial output found."
                         if final_result.get("status") == "failed":
@@ -574,13 +608,13 @@ async def process_run(
             #   1. Close the stream queue with finish_stream (TTS consumer: no more chunks)
             #   2. Signal the completion Event (for the Event-based / non-streamed path)
             voice_output = final_result.get("output", "I've completed your request.")
-            
+
             # --- PREVENT SPEAKING ERRORS ---
             if final_result.get("status") == "failed":
                 # Use a polite generic message instead of technical error strings
                 # (Technical errors are still visible in the UI 'error' field)
                 voice_output = "I'm sorry, I encountered an error while processing your request."
-            
+
             # If skill provided a summary, use it for voice
             if skill and final_result.get("status") == "completed":
                 try:
@@ -595,7 +629,7 @@ async def process_run(
                             final_result["skill_file_path"] = skill_result["file_path"]
                 except Exception as se:
                     print(f"⚠️ [Skill] Success hook failed for {skill_id}: {se}")
-                    
+
             output_len = len(voice_output) if voice_output else 0
             try:
                 if has_stream_queue(run_id):
@@ -606,15 +640,16 @@ async def process_run(
                         push_stream_chunk(run_id, voice_output)
                         print(f"📡 [Voice] Fallback: pushed full output for run {run_id} ({output_len} chars)")
                     else:
-                        print(f"📡 [Voice] Closing stream for run {run_id} "
-                              f"(chunks were pushed incrementally)")
+                        print(f"📡 [Voice] Closing stream for run {run_id} (chunks were pushed incrementally)")
 
                     finish_stream(run_id)
                 elif source == "voice" and stream:
                     # Only warn if it's a voice run and we EXPECTED streaming but the queue is missing
-                    print(f"⚠️ [Voice] No stream queue registered for run {run_id}! "
-                          f"Response not queued for TTS: "
-                          f"{voice_output[:100] if output_len > 100 else voice_output}")
+                    print(
+                        f"⚠️ [Voice] No stream queue registered for run {run_id}! "
+                        f"Response not queued for TTS: "
+                        f"{voice_output[:100] if output_len > 100 else voice_output}"
+                    )
 
                 # 4. SKILL SUCCESS HOOK
                 if skill:
@@ -638,12 +673,14 @@ async def process_run(
             except Exception as e:
                 print(f"❌ [Voice] Failed to signal voice pipeline: {e}")
                 import traceback
+
                 traceback.print_exc()
 
             return final_result
 
 
 # === Helpers ===
+
 
 def _extract_output_str(data: dict) -> str:
     """Extract the best human-readable output string from a saved session graph.
@@ -711,8 +748,9 @@ def _extract_output_str(data: dict) -> str:
 
     # 3. Strip JSON wrapper / markdown fences if present
     if output_str:
-        if (output_str.startswith("{") and output_str.endswith("}")) or \
-                (output_str.startswith("[") and output_str.endswith("]")):
+        if (output_str.startswith("{") and output_str.endswith("}")) or (
+            output_str.startswith("[") and output_str.endswith("]")
+        ):
             try:
                 parsed = json.loads(output_str)
                 if isinstance(parsed, dict):
@@ -723,17 +761,20 @@ def _extract_output_str(data: dict) -> str:
             except Exception:
                 pass
         import re
-        output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
-        output_str = re.sub(r'\n```$', '', output_str)
+
+        output_str = re.sub(r"^```(?:markdown)?\n", "", output_str)
+        output_str = re.sub(r"\n```$", "", output_str)
 
     return output_str.strip()
 
 
 # === Endpoints ===
 
+
 def _write_dry_run_session(run_id: str, query: str, user_id: str, space_id: Optional[str] = None) -> None:
     """Write minimal session JSON for dry-run so list_runs finds it."""
     import os
+
     base_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     today = datetime.now()
     date_dir = base_dir / str(today.year) / f"{today.month:02d}" / f"{today.day:02d}"
@@ -742,7 +783,12 @@ def _write_dry_run_session(run_id: str, query: str, user_id: str, space_id: Opti
     graph_data = {
         "nodes": [
             {"id": "ROOT", "status": "completed", "agent": "System"},
-            {"id": "DryRun", "status": "completed", "agent": "DryRunAgent", "output": {"result": "Dry-run: no LLM called"}},
+            {
+                "id": "DryRun",
+                "status": "completed",
+                "agent": "DryRunAgent",
+                "output": {"result": "Dry-run: no LLM called"},
+            },
         ],
         "links": [{"source": "ROOT", "target": "DryRun"}],
         "directed": True,
@@ -762,6 +808,7 @@ def _write_dry_run_session(run_id: str, query: str, user_id: str, space_id: Opti
 @router.post("/runs")
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     import os
+
     run_id = str(int(datetime.now().timestamp() * 1000))
     user_id = get_current_user_id()
 
@@ -769,6 +816,7 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
     if request.space_id:
         try:
             from memory.knowledge_graph import get_knowledge_graph
+
             kg = get_knowledge_graph()
             if kg and kg.enabled and not kg.can_user_access_space(user_id, request.space_id):
                 raise HTTPException(status_code=403, detail="You do not have access to this space")
@@ -784,6 +832,7 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
         if request.space_id:
             try:
                 from memory.knowledge_graph import get_knowledge_graph
+
                 kg = get_knowledge_graph()
                 if kg and kg.enabled:
                     kg.get_or_create_session(run_id, space_id=request.space_id)
@@ -805,6 +854,9 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
         policy = ThrottlePolicy(spans_collection=coll)
         allowed, reason = policy.check_budget()
         if not allowed:
+            with run_throttled_span(run_id, reason, request.query):
+                pass
+            force_flush()
             raise HTTPException(status_code=429, detail=reason)
     except HTTPException:
         raise
@@ -816,12 +868,7 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
         process_run, run_id, request.query, request.source, request.stream, None, request.space_id, user_id
     )
 
-    return {
-        "id": run_id,
-        "status": "starting",
-        "created_at": datetime.now().isoformat(),
-        "query": request.query
-    }
+    return {"id": run_id, "status": "starting", "created_at": datetime.now().isoformat(), "query": request.query}
 
 
 @router.get("/runs")
@@ -829,7 +876,7 @@ async def list_runs():
     """List runs from disk"""
     summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     runs = []
-    
+
     if summaries_dir.exists():
         # Walk through date folders
         for date_folder in summaries_dir.glob("*/*/*"):
@@ -839,7 +886,7 @@ async def list_runs():
                     graph_data = data
                     # Extract meta
                     graph_details = graph_data.get("graph", {})
-                    
+
                     # Filter by User ID
                     run_user_id = graph_details.get("globals", {}).get("user_id")
                     current_user_id = get_current_user_id()
@@ -856,40 +903,41 @@ async def list_runs():
                     if not created_at:
                         # Fallback to file creation time
                         created_at = datetime.fromtimestamp(session_file.stat().st_ctime).isoformat()
-                    
+
                     # Compute status from node statuses
                     # Check nodes for their statuses
                     nodes = data.get("nodes", [])
                     node_statuses = [n.get("status", "pending") for n in nodes if n.get("id") != "ROOT"]
-                    
+
                     if any(s == "running" for s in node_statuses):
                         computed_status = "running"
                     elif any(s == "failed" for s in node_statuses):
-                        computed_status = "failed" 
+                        computed_status = "failed"
                     elif all(s == "completed" for s in node_statuses) and node_statuses:
                         computed_status = "completed"
                     else:
                         # Fallback to graph-level status or completed
                         computed_status = graph_details.get("status", "completed")
-                    
-                    total_tokens = sum(
-                        (n.get("total_tokens", 0) or 0) for n in nodes
-                    )
-                    
+
+                    total_tokens = sum((n.get("total_tokens", 0) or 0) for n in nodes)
+
                     run_id = session_file.stem.replace("session_", "")
-                    runs.append({
-                        "id": run_id,
-                        "query": query,
-                        "created_at": created_at,
-                        "status": computed_status,
-                        "total_tokens": total_tokens,
-                    })
+                    runs.append(
+                        {
+                            "id": run_id,
+                            "query": query,
+                            "created_at": created_at,
+                            "status": computed_status,
+                            "total_tokens": total_tokens,
+                        }
+                    )
                 except Exception:
                     continue
 
     # Phase 4: Enrich with space_id from Neo4j so frontend can filter by space
     try:
         from memory.knowledge_graph import get_knowledge_graph
+
         kg = get_knowledge_graph()
         if kg is not None:
             for r in runs:
@@ -899,7 +947,7 @@ async def list_runs():
         pass
 
     # Sort by recent
-    return sorted(runs, key=lambda x: x['id'], reverse=True)
+    return sorted(runs, key=lambda x: x["id"], reverse=True)
 
 
 @router.get("/runs/{run_id}")
@@ -907,20 +955,20 @@ async def get_run(run_id: str):
     """Get graph state for a run"""
     # Check memory first (if running)
     # Then check disk
-    
+
     # Search disk
     summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     found_file = None
     current_user_id = get_current_user_id()
-    
+
     # Brute force search (should optimize path structure later)
     for path in summaries_dir.rglob(f"session_{run_id}.json"):
         found_file = path
         break
-        
+
     if found_file:
         data = json.loads(found_file.read_text())
-        
+
         # Enforce User ID filter
         run_user_id = data.get("graph", {}).get("globals", {}).get("user_id")
         if current_user_id and run_user_id and run_user_id != current_user_id:
@@ -928,6 +976,7 @@ async def get_run(run_id: str):
 
         # Reconstruct Graph to use adapter
         import networkx as nx
+
         if "edges" in data:
             G = nx.node_link_graph(data, edges="edges")
         elif "links" in data:
@@ -939,16 +988,12 @@ async def get_run(run_id: str):
             data["edges"] = []
             G = nx.node_link_graph(data, edges="edges")
         react_flow = nx_to_reactflow(G)
-        
+
         # Determine status: Running if in memory, else use file status
         status = "running" if run_id in active_loops else data.get("graph", {}).get("status", "completed")
 
-        return {
-            "id": run_id,
-            "status": status,
-            "graph": react_flow
-        }
-        
+        return {"id": run_id, "status": status, "graph": react_flow}
+
     raise HTTPException(status_code=404, detail="Run not found")
 
 
@@ -1008,26 +1053,29 @@ async def provide_input(run_id: str, request: UserInputRequest):
             try:
                 # Find the ClarificationAgent node that's awaiting input
                 for node_id, node_data in loop.context.plan_graph.nodes(data=True):
-                    if node_data.get("agent") == "ClarificationAgent" and node_data.get("status") in ["running", "waiting_input"]:
+                    if node_data.get("agent") == "ClarificationAgent" and node_data.get("status") in [
+                        "running",
+                        "waiting_input",
+                    ]:
                         # Get the writes key for this clarification
                         writes = node_data.get("writes", ["user_clarification"])
                         write_key = writes[0] if writes else "user_clarification"
-                        
+
                         # Store user input in globals_schema
                         loop.context.plan_graph.graph.setdefault("globals_schema", {})[write_key] = request.response
-                        
+
                         # Mark the clarification step as completed with user's response as output
                         loop.context.plan_graph.nodes[node_id]["output"] = {
                             "clarificationMessage": "User provided clarification",
-                            write_key: request.response
+                            write_key: request.response,
                         }
                         loop.context.plan_graph.nodes[node_id]["status"] = "completed"
-                        
+
                         # Save the session
                         loop.context._save_session()
-                        
+
                         return {"id": run_id, "status": "input_received", "stored_as": write_key}
-                
+
                 # No running ClarificationAgent found
                 raise HTTPException(status_code=400, detail="No ClarificationAgent is currently waiting for input")
             except HTTPException:
@@ -1036,7 +1084,7 @@ async def provide_input(run_id: str, request: UserInputRequest):
                 raise HTTPException(status_code=500, detail=f"Error processing input: {str(e)}")
         else:
             raise HTTPException(status_code=400, detail="Context not initialized")
-    
+
     raise HTTPException(status_code=404, detail="Active run not found")
 
 
@@ -1047,7 +1095,7 @@ async def stop_run(run_id: str):
         loop = active_loops[run_id]
         loop.stop()
         return {"id": run_id, "status": "stopping"}
-    
+
     raise HTTPException(status_code=404, detail="Active run not found")
 
 
@@ -1058,11 +1106,11 @@ async def delete_run(run_id: str):
     current_user_id = get_current_user_id()
     summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     found_file = None
-    
+
     for path in summaries_dir.rglob(f"session_{run_id}.json"):
         found_file = path
         break
-        
+
     if found_file:
         data = json.loads(found_file.read_text())
         run_user_id = data.get("graph", {}).get("globals", {}).get("user_id")
@@ -1074,10 +1122,10 @@ async def delete_run(run_id: str):
         loop = active_loops[run_id]
         loop.stop()
         del active_loops[run_id]
-        
+
     # 2. Delete file
     deleted = False
-    
+
     # Brute force search
     for path in summaries_dir.rglob(f"session_{run_id}.json"):
         try:
@@ -1086,8 +1134,8 @@ async def delete_run(run_id: str):
             break
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
-            
-    if not deleted and run_id not in active_loops: # If wasn't running and file not found
+
+    if not deleted and run_id not in active_loops:  # If wasn't running and file not found
         # Might be okay if it was just in memory? But we are memory-less persistence mostly
         # Let's return success if we stopped it at least, or warn
         pass
@@ -1097,8 +1145,10 @@ async def delete_run(run_id: str):
 
 # === AGENT TESTING ENDPOINTS ===
 
+
 class AgentTestRequest(BaseModel):
     input: Optional[str] = None
+
 
 @router.post("/runs/{run_id}/agent/{node_id}/test")
 async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body(None)):
@@ -1123,6 +1173,7 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
 
             # 2. Load session data
             import networkx as nx
+
             session_data = json.loads(found_file.read_text())
             if "edges" in session_data:
                 G = nx.node_link_graph(session_data, edges="edges")
@@ -1176,15 +1227,15 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                         "file_manifest": G.graph.get("file_manifest", []),
                     },
                     **({"previous_output": previous_output} if previous_output else {}),
-                    **({"iteration_context": iteration_context} if iteration_context else {})
+                    **({"iteration_context": iteration_context} if iteration_context else {}),
                 }
                 # Formatter-specific additions
                 if agent_type == "FormatterAgent":
-                    global_data = G.graph.get('globals_schema', {}).copy()
+                    global_data = G.graph.get("globals_schema", {}).copy()
                     print(f"🕵️‍♂️ DEBUG FORMATTER: run_id={run_id}")
                     print(f"🕵️‍♂️ DEBUG FORMATTER: file={found_file}")
                     print(f"🕵️‍♂️ DEBUG FORMATTER: globals_keys={list(global_data.keys())}")
-                    if 'formatted_report_T010' in global_data:
+                    if "formatted_report_T010" in global_data:
                         print(f"🕵️‍♂️ DEBUG FORMATTER: FOUND STALE KEY 'formatted_report_T010'!")
                     payload["all_globals_schema"] = global_data
                 return payload
@@ -1216,7 +1267,7 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                             "status": "error",
                             "error": result.get("error", "Agent execution failed"),
                             "node_id": node_id,
-                            "agent_type": agent_type
+                            "agent_type": agent_type,
                         }
 
                     output = result["output"]
@@ -1237,7 +1288,9 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
 
                             # Serialize result content
                             if isinstance(tool_result.content, list):
-                                result_str = "\n".join([str(item.text) for item in tool_result.content if hasattr(item, "text")])
+                                result_str = "\n".join(
+                                    [str(item.text) for item in tool_result.content if hasattr(item, "text")]
+                                )
                             else:
                                 result_str = str(tool_result.content)
 
@@ -1252,7 +1305,7 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                             current_input = build_agent_input(
                                 instruction=instruction,
                                 previous_output=output,
-                                iteration_context={"tool_result": result_str}
+                                iteration_context={"tool_result": result_str},
                             )
                             continue  # Loop to next turn
 
@@ -1261,7 +1314,7 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                             current_input = build_agent_input(
                                 instruction="The tool execution failed. Try a different approach or tool.",
                                 previous_output=output,
-                                iteration_context={"tool_result": f"Error: {str(e)}"}
+                                iteration_context={"tool_result": f"Error: {str(e)}"},
                             )
                             continue
 
@@ -1270,7 +1323,9 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                         # Handle code execution if needed
                         if temp_context._has_executable_code(output):
                             # Pass 'inputs' as overrides so variables from prev iterations (like ipl_urls_1A) are available
-                            execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
+                            execution_result = await temp_context._auto_execute_code(
+                                node_id, output, input_overrides=inputs
+                            )
                             final_execution_result = execution_result
 
                             # Save result to history
@@ -1284,7 +1339,7 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                         current_input = build_agent_input(
                             instruction=output.get("next_instruction", "Continue the task"),
                             previous_output=output,
-                            iteration_context=output.get("iteration_context", {})
+                            iteration_context=output.get("iteration_context", {}),
                         )
                         continue
 
@@ -1293,7 +1348,9 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                         # Execute code if present (Final Iteration)
                         if temp_context._has_executable_code(output):
                             # Pass 'inputs' as overrides here too
-                            final_execution_result = await temp_context._auto_execute_code(node_id, output, input_overrides=inputs)
+                            final_execution_result = await temp_context._auto_execute_code(
+                                node_id, output, input_overrides=inputs
+                            )
                             iterations_data[-1]["execution_result"] = final_execution_result
                             if final_execution_result:
                                 final_output = temp_context._merge_execution_results(output, final_execution_result)
@@ -1314,13 +1371,14 @@ async def test_agent(run_id: str, node_id: str, request: AgentTestRequest = Body
                 "test_output": final_output,
                 "execution_result": final_execution_result,
                 "inputs_used": inputs,
-                "iterations": iterations_data  # Optional: Pass full iterations if needed by UI
+                "iterations": iterations_data,  # Optional: Pass full iterations if needed by UI
             }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1335,22 +1393,23 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
     try:
         body = await request.json()
         new_output = body.get("output")
-        
+
         if not new_output:
             raise HTTPException(status_code=400, detail="Missing 'output' in request body")
-        
+
         # 1. Find the session file
         summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
         found_file = None
         for path in summaries_dir.rglob(f"session_{run_id}.json"):
             found_file = path
             break
-        
+
         if not found_file:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         # 2. Load and update session
         import networkx as nx
+
         session_data = json.loads(found_file.read_text())
         if "edges" in session_data:
             G = nx.node_link_graph(session_data, edges="edges")
@@ -1361,7 +1420,7 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         else:
             session_data["edges"] = []
             G = nx.node_link_graph(session_data, edges="edges")
-        
+
         if node_id not in G.nodes:
             raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
 
@@ -1370,181 +1429,175 @@ async def save_agent_test(run_id: str, node_id: str, request: Request):
         if "plan_graph" in new_output:
             print(f"🔄 Planner Update Detected for {node_id}. Rebuilding graph...")
             plan_graph = new_output["plan_graph"]
-            
+
             # 1. Keep crucial nodes (ROOT and the Planner/Query node itself)
-            # We assume node_id is the Planner node. 
-            nodes_to_keep = ["ROOT", node_id] 
-            
+            # We assume node_id is the Planner node.
+            nodes_to_keep = ["ROOT", node_id]
+
             # 2. Identify nodes to remove (all existing nodes except kept ones)
             nodes_to_remove = [n for n in G.nodes if n not in nodes_to_keep]
             for n in nodes_to_remove:
                 G.remove_node(n)
-                
+
             # 3. Add NEW nodes from plan
             # plan_graph['nodes'] is a list of dicts
             new_nodes = plan_graph.get("nodes", [])
             for n_data in new_nodes:
-                nid = n_data["id"] 
+                nid = n_data["id"]
                 # Ensure we don't overwrite the planner if it's in the list for some reason (unlikely but safe)
                 if nid not in G.nodes:
                     G.add_node(nid, **n_data)
                     # Initialize status for new nodes
                     G.nodes[nid]["status"] = "idle"
-            
+
             # 4. Add NEW edges from plan
             # plan_graph['edges'] or 'links'
             new_edges = plan_graph.get("edges", plan_graph.get("links", []))
-            
+
             # clear existing edges? We already removed nodes, so connected edges are gone.
             # But we need to ensure ROOT -> Planner connection exists if not implicitly handled.
-            # In our schema, ROOT->Query (Planner). 
+            # In our schema, ROOT->Query (Planner).
             # The plan_graph usually defines edges from "ROOT" to the first new node.
-            # We must REMAP "ROOT" in the plan to be "node_id" (The Planner Node) 
+            # We must REMAP "ROOT" in the plan to be "node_id" (The Planner Node)
             # so that the flow is ROOT -> Planner -> FirstNode
-            
+
             for edge in new_edges:
                 src = edge["source"]
                 tgt = edge["target"]
-                
+
                 # REMAP ROOT -> Current Planner Node
                 if src == "ROOT":
                     src = node_id
-                    
+
                 G.add_edge(src, tgt)
-                
+
             # Ensure ROOT is connected to Planner (node_id)
             if not G.has_edge("ROOT", node_id):
                 G.add_edge("ROOT", node_id)
-                
+
             print(f"✅ Graph Rebuilt. Nodes: {len(G.nodes)}, Edges: {len(G.edges)}")
 
         node_data = G.nodes[node_id]
         writes = node_data.get("writes", [])
-        
+
         # 3. Update node output
         node_data["output"] = new_output
         node_data["last_tested"] = datetime.now().isoformat()
         node_data["status"] = "completed"
-        
+
         # 4. Update globals_schema with execution results if available
         # 4. Update globals_schema
         # CRITICAL FIX: Prioritize the 'merged' output (new_output) which contains the actual results
         # Execution result is less reliable as it might be raw or unmerged
-        
+
         globals_schema = G.graph.get("globals_schema", {})
-        
+
         # 1. Try extracting from new_output (which is test_output from frontend = merged result)
         if isinstance(new_output, dict):
-             for key in writes:
+            for key in writes:
                 if key in new_output:
-                     # Validate it's not just an empty placeholder if possible, but trust the save
-                     val = new_output[key]
-                     # If it's a list and not empty, or dict and not empty, update
-                     if val or val == 0 or val is False: 
-                         globals_schema[key] = val
-                         
+                    # Validate it's not just an empty placeholder if possible, but trust the save
+                    val = new_output[key]
+                    # If it's a list and not empty, or dict and not empty, update
+                    if val or val == 0 or val is False:
+                        globals_schema[key] = val
+
         # 2. Fallback to execution_result only if new_output didn't have it
         exec_result = body.get("execution_result")
         if exec_result and isinstance(exec_result, dict):
-             result_data = exec_result.get("result", exec_result) # Handle {status:..., result:...} or direct
-             
-             for key in writes:
-                 if key not in globals_schema or not globals_schema[key]: # Only if missing/empty
-                     if isinstance(result_data, dict) and key in result_data:
-                         globals_schema[key] = result_data[key]
-        
+            result_data = exec_result.get("result", exec_result)  # Handle {status:..., result:...} or direct
+
+            for key in writes:
+                if key not in globals_schema or not globals_schema[key]:  # Only if missing/empty
+                    if isinstance(result_data, dict) and key in result_data:
+                        globals_schema[key] = result_data[key]
+
         G.graph["globals_schema"] = globals_schema
-        
+
         # 5. Update iterations array with execution_result if provided
         execution_result = body.get("execution_result")
         if execution_result:
             # Check if iterations exist, if not create a default one
             if not node_data.get("iterations"):
-                 node_data["iterations"] = []
-            
+                node_data["iterations"] = []
+
             iterations = node_data["iterations"]
-            
+
             if iterations:
                 # Update the last iteration with the new execution result
                 iterations[-1]["execution_result"] = execution_result
             else:
                 # Create a pseudo-iteration if none exist (e.g. single-shot agents)
-                iterations.append({
-                    "iteration": 1, 
-                    "output": new_output,
-                    "execution_result": execution_result
-                })
+                iterations.append({"iteration": 1, "output": new_output, "execution_result": execution_result})
 
         # 5.5. Cascading Invalidation: Mark downstream nodes as 'stale'
         # This gives visual feedback (muted opacity) in the frontend that these nodes need re-running
         try:
-             descendants = nx.descendants(G, node_id)
-             for desc_id in descendants:
-                 if desc_id in G.nodes:
-                     # Only mark as stale if they were previously completed or failed
-                     # If they are 'pending', they stay pending.
-                     current_status = G.nodes[desc_id].get('status')
-                     if current_status in ['completed', 'failed', 'running']:
-                        G.nodes[desc_id]['status'] = 'stale'
+            descendants = nx.descendants(G, node_id)
+            for desc_id in descendants:
+                if desc_id in G.nodes:
+                    # Only mark as stale if they were previously completed or failed
+                    # If they are 'pending', they stay pending.
+                    current_status = G.nodes[desc_id].get("status")
+                    if current_status in ["completed", "failed", "running"]:
+                        G.nodes[desc_id]["status"] = "stale"
         except Exception as e:
-             print(f"Warning: Failed to invalidate downstream nodes: {e}")
-        
+            print(f"Warning: Failed to invalidate downstream nodes: {e}")
+
         # 6. Save back to file
         # Use edges="edges" to match our expected format (not default "link")
         graph_data = nx.node_link_data(G, edges="edges")
-        with open(found_file, 'w', encoding='utf-8') as f:
+        with open(found_file, "w", encoding="utf-8") as f:
             json.dump(graph_data, f, indent=2, default=str, ensure_ascii=False)
-        
+
         # 7. AUTO-SAVE TO NOTES (for FormatterAgent "Run Again" saves)
         agent_type = G.nodes[node_id].get("agent", "")
         if agent_type == "FormatterAgent" and isinstance(new_output, dict):
             try:
                 import re
+
                 notes_dir = PROJECT_ROOT / "data" / "Notes" / "Arcturus"
                 notes_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 def sanitize_filename(title):
                     title = re.sub(r'[\\/*?:"<>|#]', "", title)
                     title = title.replace("\n", " ").strip()
                     return title[:60].strip()
 
                 def extract_title(content):
-                    match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
+                    match = re.search(r"^#+\s+(.+)$", content, re.MULTILINE)
                     if match:
                         return match.group(1).strip()
-                    lines = [l.strip() for l in content.split('\n') if l.strip()]
+                    lines = [l.strip() for l in content.split("\n") if l.strip()]
                     return lines[0] if lines else "Untitled Report"
-                
+
                 markdown = new_output.get("markdown_report")
                 if not markdown:
                     for k, v in new_output.items():
                         if k.startswith("formatted_report") and isinstance(v, str):
                             markdown = v
                             break
-                
+
                 if markdown and len(markdown) > 100:
                     title = extract_title(markdown)
                     filename = sanitize_filename(title) + ".md"
                     target_path = notes_dir / filename
-                    
+
                     # Write or overwrite (Run Again means user explicitly wants new version)
-                    with open(target_path, 'w', encoding='utf-8') as f:
+                    with open(target_path, "w", encoding="utf-8") as f:
                         f.write(markdown)
                     print(f"✅ Auto-Saved (Run Again) to Notes: {filename}")
-                    
+
             except Exception as e:
                 print(f"⚠️ Failed to auto-save to Notes: {e}")
-        
-        return {
-            "status": "success",
-            "node_id": node_id,
-            "message": "Test results saved to session"
-        }
-        
+
+        return {"status": "success", "node_id": node_id, "message": "Test results saved to session"}
+
     except HTTPException:
         raise
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1562,32 +1615,35 @@ async def execute_node(run_id: str, node_id: str, request: ExecuteNodeRequest, b
         for path in summaries_dir.rglob(f"session_{run_id}.json"):
             found_file = path
             break
-        
+
         if not found_file:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         # 2. Load session data
         import networkx as nx
+
         session_data = json.loads(found_file.read_text())
-        
+
         # Determine edge key
         edge_key = "edges"
-        if "links" in session_data: edge_key = "links"
-        elif "link" in session_data: edge_key = "link"
-        
+        if "links" in session_data:
+            edge_key = "links"
+        elif "link" in session_data:
+            edge_key = "link"
+
         if edge_key not in session_data:
             session_data[edge_key] = []
-            
+
         G = nx.node_link_graph(session_data, edges=edge_key)
-        
+
         if node_id not in G.nodes and request.mode != "remaining":
-             # If mode is remaining, node_id might just be context, but let's be strict
-             if node_id != "ROOT":
-                 raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
+            # If mode is remaining, node_id might just be context, but let's be strict
+            if node_id != "ROOT":
+                raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
 
         # 3. Determine nodes to reset
         nodes_to_reset = set()
-        
+
         if request.mode == "remaining":
             # Find all descendants of the current node (if provided) that are NOT completed?
             # actually "remaining" usually implies "pending" nodes.
@@ -1597,57 +1653,55 @@ async def execute_node(run_id: str, node_id: str, request: ExecuteNodeRequest, b
                 descendants = nx.descendants(G, node_id)
                 nodes_to_reset.update(descendants)
             else:
-                 # If no node_id, just resume (no reset)? Or reset failed/interrupted?
-                 pass
+                # If no node_id, just resume (no reset)? Or reset failed/interrupted?
+                pass
 
         elif request.mode == "all_from_here":
             # Reset this node AND all descendants
             nodes_to_reset.add(node_id)
             descendants = nx.descendants(G, node_id)
             nodes_to_reset.update(descendants)
-            
+
         elif request.mode == "single":
             # Just reset this node
             nodes_to_reset.add(node_id)
-            
+
         elif request.mode == "all":
             # Reset ALL nodes except ROOT/Query? Or just restart?
             # Better to just mark all as pending
             nodes_to_reset.update(G.nodes)
-            if "ROOT" in nodes_to_reset: nodes_to_reset.remove("ROOT")
+            if "ROOT" in nodes_to_reset:
+                nodes_to_reset.remove("ROOT")
 
         # 4. Apply Resets
         reset_count = 0
         for n_id in nodes_to_reset:
             if n_id in G.nodes:
                 G.nodes[n_id]["status"] = "pending"
-                # Clear output? Maybe not strictly required as it will be overwritten, 
+                # Clear output? Maybe not strictly required as it will be overwritten,
                 # but good to clear error states
                 if "error" in G.nodes[n_id]:
                     del G.nodes[n_id]["error"]
                 reset_count += 1
-                
+
         # 5. Save Session
         updated_data = nx.node_link_data(G, edges=edge_key)
         # Ensure top-level metadata persists
         for k, v in session_data.items():
             if k not in updated_data:
                 updated_data[k] = v
-                
+
         found_file.write_text(json.dumps(updated_data, indent=2))
-        
+
         # 6. Trigger Background Resume
         background_tasks.add_task(process_resume, run_id, found_file)
-        
-        return {
-            "status": "resuming", 
-            "reset_count": reset_count,
-            "mode": request.mode
-        }
+
+        return {"status": "resuming", "reset_count": reset_count, "mode": request.mode}
 
     except HTTPException:
         raise
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
