@@ -54,6 +54,19 @@ from memory.user_id import get_user_id
 from memory.lifecycle import initialize_payload
 
 
+def _sanitize_payload_for_qdrant(obj: Any) -> Any:
+    """Replace None/NaN in payload so Qdrant JSON serialization does not fail."""
+    if obj is None:
+        return ""
+    if isinstance(obj, float) and (obj != obj or obj == float("inf") or obj == float("-inf")):
+        return 0.0
+    if isinstance(obj, dict):
+        return {k: _sanitize_payload_for_qdrant(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_payload_for_qdrant(v) for v in obj]
+    return obj
+
+
 def _distance_from_str(s: str):
     m = {"cosine": Distance.COSINE, "euclidean": Distance.EUCLID, "dot": Distance.DOT}
     return m.get((s or "cosine").lower(), Distance.COSINE)
@@ -235,6 +248,11 @@ class QdrantVectorStore:
         space_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         embedding_list = embedding.tolist() if isinstance(embedding, np.ndarray) else list(embedding)
+        if not embedding_list or len(embedding_list) != self.dimension:
+            log_error(
+                f"Memory add: invalid embedding (len={len(embedding_list)}, expected {self.dimension}). Using zero vector."
+            )
+            embedding_list = [0.0] * self.dimension
         if deduplication_threshold > 0:
             min_similarity = 1.0 - deduplication_threshold  # e.g. 0.85 for threshold 0.15
             similar = self.search(
@@ -285,6 +303,7 @@ class QdrantVectorStore:
 
         # Initialize lifecycle-related fields (importance, access_count, archived, last_accessed_at).
         initialize_payload(payload)
+        payload = _sanitize_payload_for_qdrant(payload)
 
         # Phase C: include sparse vector when collection has text-bm25
         if self._has_sparse and text:
@@ -491,8 +510,12 @@ class QdrantVectorStore:
                 updated["text"] = text
             if metadata:
                 updated.update(metadata)
+            updated = _sanitize_payload_for_qdrant(updated)
             vec = embedding.tolist() if embedding is not None else self._get_vector_for_point(memory_id)
             if vec is None:
+                return False
+            if len(vec) != self.dimension:
+                log_error(f"Memory update: invalid embedding len={len(vec)}, expected {self.dimension}. Skipping update.")
                 return False
             point = PointStruct(id=memory_id, vector=vec, payload=updated)
             self.client.upsert(collection_name=self.collection_name, points=[point])
@@ -530,6 +553,9 @@ class QdrantVectorStore:
         """
         try:
             vec = embedding.tolist() if isinstance(embedding, np.ndarray) else list(embedding)
+            if not vec or len(vec) != self.dimension:
+                log_error(f"Sync upsert: invalid embedding len={len(vec)}, expected {self.dimension}. Using zero vector.")
+                vec = [0.0] * self.dimension
             merged = dict(payload)
             merged["text"] = text
             if "version" not in merged:
@@ -541,6 +567,7 @@ class QdrantVectorStore:
             current_user_id = get_user_id() if self._is_tenant else None
             if self._is_tenant and current_user_id and "user_id" not in merged:
                 merged[self._tenant_keyword_field] = current_user_id
+            merged = _sanitize_payload_for_qdrant(merged)
             point = PointStruct(id=memory_id, vector=vec, payload=merged)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             return True
@@ -653,6 +680,7 @@ class QdrantVectorStore:
             src = updated.get("source", "")
             if source not in src:
                 updated["source"] = f"{src}, {source}"
+            updated = _sanitize_payload_for_qdrant(updated)
             vec = self._get_vector_for_point(memory_id)
             if vec:
                 point = PointStruct(id=memory_id, vector=vec, payload=updated)
