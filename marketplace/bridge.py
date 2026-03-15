@@ -12,6 +12,8 @@ from marketplace.registry import SkillRegistry
 from marketplace.installer import SkillInstaller
 from marketplace.loader import SkillLoader
 from marketplace.skill_base import ToolDefinition
+from marketplace.trust import TrustPolicy, TrustLevel
+from marketplace.sandbox import SandboxedExecutor
 
 logger = logging.getLogger("bazaar")
 
@@ -23,10 +25,12 @@ class MarketplaceBridge:
     The agent loop and API endpoints both talk to this instead of
     managing three separate objects.
     """
-    def __init__(self, skills_dir: Optional[Path] = None):
+    def __init__(self, skills_dir: Optional[Path] = None, trust_policy: Optional[TrustPolicy] = None):
         self.registry = SkillRegistry(skills_dir=skills_dir)
         self.installer = SkillInstaller(registry=self.registry)
         self.loader = SkillLoader(registry=self.registry)
+        self.policy = trust_policy or TrustPolicy()
+        self.executor = SandboxedExecutor()
         self._initialized = False
 
     def initialize(self):
@@ -36,9 +40,19 @@ class MarketplaceBridge:
         count = self.registry.discover_skills()
         if count > 0:
             self.loader.load_all_tools()
+            # Register each skill's permissions with the executor
+            for manifest in self.registry.list_skills():
+                self.executor.register_skill_permissions(
+                    manifest.name, manifest.permissions
+                )
         self._initialized = True
         logger.info(f"Marketplace bridge initialized: {count} skills, {len(self.loader._loaded_tools)} tools")
+
+    def check_policy(self, manifest, skill_dir=None, public_key_path=None):
+        """Evaluate a skill against the trust policy before install."""
+        return self.policy.evaluate(manifest, skill_dir, public_key_path)
         
+    
     def resolve_tool(self, tool_name: str, arguments: Dict[str, Any] = None) -> Optional[Any]:
         """
         Try to resolve a tool call through marketplace skills.
@@ -70,5 +84,6 @@ class MarketplaceBridge:
     def refresh(self):
         """Refresh the marketplace."""
         self.loader.clear_cache()
+        self.executor.clear()
         self._initialized = False
         self.initialize()
