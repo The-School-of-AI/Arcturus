@@ -47,6 +47,7 @@ class RunRequest(BaseModel):
     source: str = "web"  # "web" or "voice"
     stream: bool = False  # Whether the caller expects a streaming response
     space_id: Optional[str] = None  # Phase 3C: optional space to scope session and retrieval
+    dry_run: Optional[bool] = None  # If True, skip agent; return synthetic run (for automation). None = use DRY_RUN_RUNS env.
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -629,9 +630,38 @@ async def process_run(
 
 # === Endpoints ===
 
+def _write_dry_run_session(run_id: str, query: str, user_id: str, space_id: Optional[str] = None) -> None:
+    """Write minimal session JSON for dry-run so list_runs finds it."""
+    import os
+    base_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    today = datetime.now()
+    date_dir = base_dir / str(today.year) / f"{today.month:02d}" / f"{today.day:02d}"
+    date_dir.mkdir(parents=True, exist_ok=True)
+    session_file = date_dir / f"session_{run_id}.json"
+    graph_data = {
+        "nodes": [
+            {"id": "ROOT", "status": "completed", "agent": "System"},
+            {"id": "DryRun", "status": "completed", "agent": "DryRunAgent", "output": {"result": "Dry-run: no LLM called"}},
+        ],
+        "links": [{"source": "ROOT", "target": "DryRun"}],
+        "directed": True,
+        "multigraph": False,
+        "graph": {
+            "session_id": run_id,
+            "original_query": query,
+            "created_at": datetime.now().isoformat(),
+            "status": "completed",
+            "globals": {"user_id": user_id or ""},
+        },
+    }
+    with open(session_file, "w", encoding="utf-8") as f:
+        json.dump(graph_data, f, indent=2, default=str, ensure_ascii=False)
+
+
 @router.post("/runs")
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
-    run_id = str(int(datetime.now().timestamp()))
+    import os
+    run_id = str(int(datetime.now().timestamp() * 1000))
     user_id = get_current_user_id()
 
     # Shared Space: verify user has access to the space (owner or shared-with)
@@ -646,11 +676,30 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
         except Exception:
             pass
 
+    # Dry-run: skip agent, write synthetic session, return immediately (for automation)
+    dry_run = request.dry_run if request.dry_run is not None else (os.environ.get("DRY_RUN_RUNS", "").lower() == "true")
+    if dry_run:
+        _write_dry_run_session(run_id, request.query, user_id, request.space_id)
+        if request.space_id:
+            try:
+                from memory.knowledge_graph import get_knowledge_graph
+                kg = get_knowledge_graph()
+                if kg and kg.enabled:
+                    kg.get_or_create_session(run_id, space_id=request.space_id)
+            except Exception:
+                pass
+        return {
+            "id": run_id,
+            "status": "completed",
+            "created_at": datetime.now().isoformat(),
+            "query": request.query,
+        }
+
     # Start background execution (Phase 3C: pass space_id for session scoping)
     background_tasks.add_task(
         process_run, run_id, request.query, request.source, request.stream, None, request.space_id, user_id
     )
-    
+
     return {
         "id": run_id,
         "status": "starting",
