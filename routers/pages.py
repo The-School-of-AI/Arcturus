@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Depends
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, validator
-from typing import Optional, Dict, Any, List
 import asyncio
+import json
 import time
 import uuid
-import json
-from functools import lru_cache
 from datetime import datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, validator
 
 from content import page_generator
 
@@ -18,7 +19,7 @@ from content import page_generator
 try:
     from storage.pages_repository import get_pages_repository
     from storage.pages_vector_store import get_page_sections_vector_store
-    
+
     # Initialize repositories (will be None if MongoDB/Qdrant unavailable)
     pages_repo = get_pages_repository()
     vector_store = get_page_sections_vector_store()
@@ -128,6 +129,11 @@ def get_cached_tag_stats() -> str:
     return json.dumps(tag_usage)
 
 
+class SectionUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    blocks: Optional[List[Dict[str, Any]]] = None
+
+
 class SectionRefreshRequest(BaseModel):
     action: str  # "expand", "simplify", "add_examples", "cite_more", "regenerate"
     instruction: Optional[str] = None
@@ -157,9 +163,10 @@ async def auto_detect_template(query: str) -> str:
     - topic_overview: General informational content
     """
     import os
+
     from google import genai
     from google.genai import types
-    
+
     # Check for API key
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
@@ -1322,6 +1329,37 @@ async def get_refresh_status(job_id: str):
     return job
 
 
+@router.put("/{page_id}/sections/{section_id}")
+async def update_section(page_id: str, section_id: str, req: SectionUpdateRequest):
+    """Persist inline edits to a section's title and/or block content."""
+    try:
+        page = page_generator.load_page(page_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="page not found")
+
+    found = False
+    for section in page.get("sections", []):
+        if section.get("id") == section_id:
+            if req.title is not None:
+                section["title"] = req.title
+            if req.blocks is not None:
+                section["blocks"] = req.blocks
+            section.setdefault("metadata", {})["edited"] = True
+            found = True
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail="section not found")
+
+    import json
+    from pathlib import Path
+    DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
+    path = DATA_DIR / f"{page_id}.json"
+    path.write_text(json.dumps(page, indent=2), encoding="utf-8")
+
+    return {"page_id": page_id, "section_id": section_id, "saved": True}
+
+
 @router.post("/{page_id}/widgets", status_code=201)
 async def add_widget(page_id: str, req: WidgetRequest):
     """Add an interactive widget to a page"""
@@ -1433,12 +1471,12 @@ async def _refresh_section_job(job_id: str, page_id: str, section_id: str, req: 
         JOBS[job_id]["status"] = "running"
         
         # Import section agents
-        from content.section_agents import (
-            overview_generate_section, detail_generate_section, 
-            data_generate_section, source_generate_section, 
-            comparison_generate_section
-        )
-        
+        from content.section_agents import (comparison_generate_section,
+                                            data_generate_section,
+                                            detail_generate_section,
+                                            overview_generate_section,
+                                            source_generate_section)
+
         # Get original query and create enhanced query based on action
         original_query = page.get("query", "")
         enhanced_query = original_query
@@ -1529,8 +1567,8 @@ async def get_shared_page(token: str, password: Optional[str] = None):
     
     # Get the actual page
     page_id = share_info["page_id"]
-    from pathlib import Path
     import json
+    from pathlib import Path
     
     DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
     path = DATA_DIR / f"{page_id}.json"
@@ -1562,8 +1600,8 @@ async def get_shared_page_info(token: str):
     
     # Get basic page info
     page_id = share_info["page_id"]
-    from pathlib import Path
     import json
+    from pathlib import Path
     
     DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
     path = DATA_DIR / f"{page_id}.json"
@@ -1591,8 +1629,8 @@ async def get_page_versions(page_id: str):
     """Get version history for a page"""
     
     # Check if page exists
-    from pathlib import Path
     import json
+    from pathlib import Path
     
     DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
     path = DATA_DIR / f"{page_id}.json"
@@ -1625,9 +1663,9 @@ async def get_page_versions(page_id: str):
 async def create_page_version(page_id: str, description: Optional[str] = None):
     """Create a new version snapshot of a page"""
     
-    from pathlib import Path
     import json
     from datetime import datetime
+    from pathlib import Path
     
     DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
     path = DATA_DIR / f"{page_id}.json"

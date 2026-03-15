@@ -1,20 +1,20 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Sidebar } from './Sidebar';
-import { Header } from './Header';
-import { WorkspacePanel } from '../workspace/WorkspacePanel';
-import { GraphCanvas } from '../graph/GraphCanvas';
-import { FlowWorkspace } from '../workspace/FlowWorkspace';
-import { RunTimeline } from '@/features/replay/RunTimeline';
-import { GripVertical } from 'lucide-react';
-import { DocumentViewer } from '../rag/DocumentViewer';
-import { DocumentAssistant } from '../rag/DocumentAssistant';
-import { NotesEditor } from '../notes/NotesEditor';
-import { useAppStore } from '@/store';
-import { cn } from '@/lib/utils';
-import { Meteors } from '../ui/meteors';
-import { InboxPanel } from '../inbox/InboxPanel';
 import CanvasHost from '@/features/canvas/CanvasHost';
+import { RunTimeline } from '@/features/replay/RunTimeline';
 import useVoice from '@/hooks/useVoice';
+import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
+import { GripVertical } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { GraphCanvas } from '../graph/GraphCanvas';
+import { InboxPanel } from '../inbox/InboxPanel';
+import { NotesEditor } from '../notes/NotesEditor';
+import { DocumentAssistant } from '../rag/DocumentAssistant';
+import { DocumentViewer } from '../rag/DocumentViewer';
+import { Meteors } from '../ui/meteors';
+import { FlowWorkspace } from '../workspace/FlowWorkspace';
+import { WorkspacePanel } from '../workspace/WorkspacePanel';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -31,26 +31,25 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
     </div>
 );
 
+import { AdminDashboard } from '@/features/admin/AdminDashboard';
 import { AppGrid } from '@/features/apps/components/AppGrid';
 import { AppInspector } from '@/features/apps/components/AppInspector';
-import { McpBrowser } from '../mcp/McpBrowser';
-import { McpInspector } from '../mcp/McpInspector';
-import { SettingsPage } from '../settings/SettingsPage';
-import { RemMeProfileView } from '../remme/RemmeProfileView';
-import { KnowledgeGraphExplorer } from '../graph/KnowledgeGraphExplorer';
-import { NewsList } from '@/features/news/components/NewsList';
+import { MissionControl } from '@/features/console/components/MissionControl';
+import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
+import { IdeLayout } from '@/features/ide/components/IdeLayout';
 import { ElectronBrowserView } from '@/features/news/components/ElectronBrowserView';
 import { NewsInspector } from '@/features/news/components/NewsInspector';
-import { IdeLayout } from '@/features/ide/components/IdeLayout';
-import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
-import { MissionControl } from '@/features/console/components/MissionControl';
-import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
-import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
-import { AdminDashboard } from '@/features/admin/AdminDashboard';
-import { SwarmGraphView } from '@/features/swarm/SwarmGraphView';
-import { AgentPeekPanel } from '@/features/swarm/AgentPeekPanel';
-import { useSwarmStore } from '@/features/swarm/useSwarmStore';
 import { PagesDashboard } from '@/features/pages/components/PagesDashboard';
+import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
+import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
+import { AgentPeekPanel } from '@/features/swarm/AgentPeekPanel';
+import { SwarmGraphView } from '@/features/swarm/SwarmGraphView';
+import { useSwarmStore } from '@/features/swarm/useSwarmStore';
+import { KnowledgeGraphExplorer } from '../graph/KnowledgeGraphExplorer';
+import { McpBrowser } from '../mcp/McpBrowser';
+import { McpInspector } from '../mcp/McpInspector';
+import { RemMeProfileView } from '../remme/RemmeProfileView';
+import { SettingsPage } from '../settings/SettingsPage';
 
 export const AppLayout: React.FC = () => {
     // Mount useVoice at the root so wake-word events trigger the Echo tab

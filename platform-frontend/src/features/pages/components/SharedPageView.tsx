@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, Loader2, AlertCircle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AlertCircle, Globe, Loader2, Lock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { PageRenderer } from './PageRenderer';
 
 const SharedPageView: React.FC = () => {

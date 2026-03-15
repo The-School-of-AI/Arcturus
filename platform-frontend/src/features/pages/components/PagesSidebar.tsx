@@ -1,16 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import {
-    FileText, Plus, Search, RefreshCw, Loader2, Clock
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { usePagesStore, type Page } from '../usePagesStore';
+import {
+    Clock,
+    FileText,
+    Loader2,
+    Plus,
+    RefreshCw,
+    Search
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { usePagesStore } from '../usePagesStore';
 
 export const PagesSidebar: React.FC = () => {
     const pages = usePagesStore(s => s.pages);

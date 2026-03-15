@@ -5,9 +5,9 @@ Stores page metadata, sections, and collections in watchtower.spark_pages.
 Supports CRUD operations, search, folders, tags, version history, and collaboration.
 """
 
+import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-import time
 
 Collection = Any  # pymongo collection type
 
@@ -370,6 +370,7 @@ def get_pages_repository() -> Optional[PagesRepository]:
     """
     try:
         from pymongo import MongoClient
+
         from config.settings_loader import settings
         
         wt = settings.get("watchtower", {})

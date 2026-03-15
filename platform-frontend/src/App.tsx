@@ -1,12 +1,12 @@
+import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ThemeProvider } from '@/components/theme';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { Meteors } from '@/components/ui/meteors';
-import { useState, useEffect, lazy, Suspense } from 'react';
-import axios from 'axios';
-import { ArcturusLogo } from '@/components/common/ArcturusLogo';
-import { useAppStore } from './store';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { FeatureFlagsProvider } from '@/hooks/useFeatureFlags';
+import axios from 'axios';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { useAppStore } from './store';
 
 const SharedPageView = lazy(() => import('@/features/pages/components/SharedPageView'));
 

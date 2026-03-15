@@ -1,15 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-    ChevronDown, ChevronRight, ExternalLink, Copy, Check, MessageSquare,
-    Download, Share2, History, Edit2, Send, Loader2, RefreshCw, X, ChevronLeft,
-    Plus, Globe, Lock, Zap, BarChart2, CloudSun, Calculator, Vote
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import {
+    BarChart2,
+    Calculator,
+    Check,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    CloudSun,
+    Copy,
+    Download,
+    Edit2,
+    ExternalLink,
+    Globe,
+    History,
+    Loader2,
+    Lock,
+    MessageSquare,
+    Plus,
+    Send,
+    Share2,
+    Vote,
+    X,
+    Zap
+} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface PageSection {
     id: string;
@@ -390,6 +409,12 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                                 onToggle={() => toggleSection(section.id)}
                                 onRequestCopilot={handleSendToCopilot}
                                 pageId={page.id}
+                                isEditMode={isEditMode}
+                                onSectionSaved={(updated) =>
+                                    setLocalSections(prev =>
+                                        prev.map(s => s.id === updated.id ? { ...s, ...updated } : s)
+                                    )
+                                }
                             />
                         ))}
                     </div>
@@ -672,12 +697,49 @@ const SectionBlock: React.FC<{
     onToggle: () => void;
     onRequestCopilot?: (message: string) => void;
     pageId: string;
-}> = ({ section, isExpanded, onToggle, onRequestCopilot, pageId }) => {
+    isEditMode?: boolean;
+    onSectionSaved?: (updated: PageSection) => void;
+}> = ({ section, isExpanded, onToggle, onRequestCopilot, pageId, isEditMode = false, onSectionSaved }) => {
     const [showCopilot, setShowCopilot] = useState(false);
     const [showRefineMenu, setShowRefineMenu] = useState(false);
     const [copilotQuery, setCopilotQuery] = useState('');
     const [copilotReply, setCopilotReply] = useState<string | null>(null);
     const [copilotLoading, setCopilotLoading] = useState(false);
+
+    // Edit mode state
+    const [editedTitle, setEditedTitle] = useState(section.title);
+    const [editedBlocks, setEditedBlocks] = useState<any[]>(section.blocks);
+    const [saveLoading, setSaveLoading] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    // Sync edit buffers when section prop changes
+    useEffect(() => {
+        setEditedTitle(section.title);
+        setEditedBlocks(section.blocks);
+    }, [section.id]);
+
+    const handleSave = async () => {
+        setSaveLoading(true);
+        try {
+            await fetch(`${API_BASE}/pages/${pageId}/sections/${section.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: editedTitle, blocks: editedBlocks }),
+            });
+            onSectionSaved?.({ ...section, title: editedTitle, blocks: editedBlocks } as PageSection);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+        } catch (e) {
+            console.error('Save section error:', e);
+        } finally {
+            setSaveLoading(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setEditedTitle(section.title);
+        setEditedBlocks(section.blocks);
+    };
 
     const handleSectionCopilot = async () => {
         if (!copilotQuery.trim()) return;
@@ -702,23 +764,31 @@ const SectionBlock: React.FC<{
             {/* Section Header */}
             <div
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={onToggle}
+                onClick={isEditMode ? undefined : onToggle}
             >
-                <div className="flex items-center gap-3 flex-1">
-                    {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                    ) : (
-                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {!isEditMode && (
+                        isExpanded
+                            ? <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+                            : <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
                     )}
-                    <h2 className="text-xl font-semibold">{section.title}</h2>
+                    {isEditMode ? (
+                        <input
+                            value={editedTitle}
+                            onChange={e => setEditedTitle(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            className="flex-1 text-xl font-semibold bg-muted border border-primary/40 rounded-md px-2 py-0.5 outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                    ) : (
+                        <h2 className="text-xl font-semibold">{section.title}</h2>
+                    )}
                     {section.metadata?.enhanced && (
-                        <Badge variant="secondary" className="text-xs">
-                            Enhanced
-                        </Badge>
+                        <Badge variant="secondary" className="text-xs shrink-0">Enhanced</Badge>
                     )}
                 </div>
 
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className={`flex gap-2 ${isEditMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                    ) : (<>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -767,14 +837,55 @@ const SectionBlock: React.FC<{
                             </div>
                         )}
                     </div>
+                    </>)}
                 </div>
             </div>
 
             {/* Section Content */}
-            {isExpanded && (
+            {(isExpanded || isEditMode) && (
                 <div className="p-4 pt-0 space-y-4">
-                    {section.blocks.map((block, idx) => (
-                        <ContentBlock key={idx} block={block} />
+                    {(isEditMode ? editedBlocks : section.blocks).map((block, idx) => (
+                        isEditMode && (block.kind === 'markdown' || block.type === 'text') ? (
+                            <textarea
+                                key={idx}
+                                value={block.kind === 'markdown' ? block.text : block.content}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setEditedBlocks(prev => prev.map((b, i) =>
+                                        i === idx
+                                            ? block.kind === 'markdown'
+                                                ? { ...b, text: val }
+                                                : { ...b, content: val }
+                                            : b
+                                    ));
+                                }}
+                                rows={6}
+                                className="w-full px-3 py-2 text-sm bg-muted border border-primary/30 rounded-lg resize-y outline-none focus:ring-2 focus:ring-primary/40 font-mono"
+                            />
+                        ) : isEditMode && block.kind === 'insight' ? (
+                            <div key={idx} className="space-y-1">
+                                <input
+                                    value={block.title}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setEditedBlocks(prev => prev.map((b, i) => i === idx ? { ...b, title: val } : b));
+                                    }}
+                                    placeholder="Insight title"
+                                    className="w-full px-2 py-1 text-sm font-medium bg-muted border border-primary/30 rounded outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                                <textarea
+                                    value={block.content}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setEditedBlocks(prev => prev.map((b, i) => i === idx ? { ...b, content: val } : b));
+                                    }}
+                                    rows={3}
+                                    className="w-full px-2 py-1 text-sm bg-muted border border-primary/30 rounded-lg resize-y outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                            </div>
+                        ) : (
+                            <ContentBlock key={idx} block={isEditMode ? editedBlocks[idx] : block} />
+                        )
                     ))}
 
                     {/* Chart visualizations */}

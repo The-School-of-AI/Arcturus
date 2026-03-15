@@ -1,32 +1,52 @@
-import React from 'react';
-import {
-    Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
-    LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network, FileText
-} from 'lucide-react';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { EchoPanel } from '@/components/sidebar/EchoPanel';
+import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
+import { GraphPanel } from '@/components/sidebar/GraphPanel';
+import { McpPanel } from '@/components/sidebar/McpPanel';
+import { NewsPanel } from '@/components/sidebar/NewsPanel';
+import { NotesPanel } from '@/components/sidebar/NotesPanel';
+import { RagPanel } from '@/components/sidebar/RagPanel';
+import { RemmePanel } from '@/components/sidebar/RemmePanel';
+import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAppStore } from '@/store';
-import { cn } from '@/lib/utils';
-import { API_BASE } from '@/lib/api';
-import axios from 'axios';
-import { RagPanel } from '@/components/sidebar/RagPanel';
-import { McpPanel } from '@/components/sidebar/McpPanel';
-import { RemmePanel } from '@/components/sidebar/RemmePanel';
-import { NotesPanel } from '@/components/sidebar/NotesPanel';
-import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
-import { EchoPanel } from '@/components/sidebar/EchoPanel';
 import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
-import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
-import { NewsPanel } from '@/components/sidebar/NewsPanel';
-import { GraphPanel } from '@/components/sidebar/GraphPanel';
+import { PagesSidebar } from '@/features/pages/components/PagesSidebar';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
 import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
-import { PagesSidebar } from '@/features/pages/components/PagesSidebar';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { API_BASE } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
+import axios from 'axios';
+import {
+    Box,
+    Brain,
+    CalendarClock,
+    Clock,
+    Code2,
+    Database,
+    FileText,
+    FolderOpen,
+    GraduationCap,
+    LayoutGrid,
+    Loader2,
+    Mic, Network,
+    Newspaper,
+    Notebook,
+    PlayCircle,
+    Plus,
+    Search,
+    Settings,
+    Shield,
+    Terminal,
+    Trash2,
+    Wand2,
+    Zap
+} from 'lucide-react';
+import React from 'react';
 
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,

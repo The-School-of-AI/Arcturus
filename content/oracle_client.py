@@ -13,7 +13,8 @@ import os
 import sys
 import time
 import uuid
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 
 # Detect if we're running in a test environment
 def _is_test_environment() -> bool:
@@ -231,7 +232,7 @@ def _deterministic_mock_oracle_search(query: str, k: int) -> Dict[str, Any]:
     """Deterministic mock for test environments to ensure idempotency."""
     # Generate consistent results based on query hash for test reproducibility
     import hashlib
-    
+
     # Create deterministic hash-based results
     query_hash = hashlib.md5(query.encode()).hexdigest()
     

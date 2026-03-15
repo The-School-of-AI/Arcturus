@@ -13,10 +13,14 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from content import oracle_client
-from content.section_agents import overview_generate_section, detail_generate_section, data_generate_section, source_generate_section, comparison_generate_section
+from content.section_agents import (comparison_generate_section,
+                                    data_generate_section,
+                                    detail_generate_section,
+                                    overview_generate_section,
+                                    source_generate_section)
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "pages"
 DATA_DIR.mkdir(parents=True, exist_ok=True)

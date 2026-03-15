@@ -1,6 +1,6 @@
 import axios from 'axios';
-import type { Run, Space, PlatformNode, PlatformEdge } from '../types';
 import { useAppStore } from '../store';
+import type { PlatformEdge, PlatformNode, Run, Space } from '../types';
 
 export const API_BASE = 'http://localhost:8000/api';
 // Dedicated base URL for Auth and Sync operations (Cloud Hub)

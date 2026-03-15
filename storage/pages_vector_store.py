@@ -11,19 +11,14 @@ Uses arcturus_page_sections collection with 768-dimensional embeddings.
 
 import hashlib
 from typing import Any, Dict, List, Optional
+
 import numpy as np
 
 try:
     from qdrant_client import QdrantClient
     from qdrant_client.http import models as http_models
-    from qdrant_client.models import (
-        Distance,
-        FieldCondition,
-        Filter,
-        MatchValue,
-        PointStruct,
-        VectorParams,
-    )
+    from qdrant_client.models import (Distance, FieldCondition, Filter,
+                                      MatchValue, PointStruct, VectorParams)
 except ImportError:
     raise ImportError("qdrant-client is required. Install with: pip install qdrant-client")
 

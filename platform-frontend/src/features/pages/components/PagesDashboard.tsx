@@ -1,5 +1,5 @@
-import React from 'react';
 import { FileText, Sparkles } from 'lucide-react';
+import React from 'react';
 import { usePagesStore } from '../usePagesStore';
 import { PageRenderer } from './PageRenderer';
 

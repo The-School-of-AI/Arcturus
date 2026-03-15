@@ -1,20 +1,20 @@
-import { create } from 'zustand';
 import axios from 'axios';
+import { applyEdgeChanges, applyNodeChanges, type EdgeChange, type NodeChange } from 'reactflow';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type {
-    Run,
-    Space,
-    PlatformNode,
-    PlatformEdge,
-    Snapshot,
-    RAGDocument,
-    ChatMessage,
-    Memory,
-    FileContext,
-    ContextItem,
-} from '../types';
-import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
 import { api, API_BASE, AUTH_API_BASE } from '../lib/api';
+import type {
+    ChatMessage,
+    ContextItem,
+    FileContext,
+    Memory,
+    PlatformEdge,
+    PlatformNode,
+    RAGDocument,
+    Run,
+    Snapshot,
+    Space,
+} from '../types';
 
 // --- Slices Types ---
 
@@ -262,8 +262,8 @@ interface AnalysisHistoryItem {
     flowData?: unknown;
 }
 
-import type { AppCard, SavedApp, LibraryComponent } from '../features/apps/types/app-types';
-export type { AppCard, SavedApp, LibraryComponent };
+import type { AppCard, LibraryComponent, SavedApp } from '../features/apps/types/app-types';
+export type { AppCard, LibraryComponent, SavedApp };
 
 interface LayoutItem {
     i: string;
