@@ -10,10 +10,18 @@ from typing import Any
 
 def _parse_iso(s: str) -> datetime:
     """Parse ISO8601 string; return epoch on failure."""
+    from datetime import timezone
+    if not s:
+        return datetime.min.replace(tzinfo=timezone.utc)
     try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        # Handle cases like Z or +00:00
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            # Assume UTC if naive
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
     except Exception:
-        return datetime.min.replace(tzinfo=None)
+        return datetime.min.replace(tzinfo=timezone.utc)
 
 
 def lww_wins(

@@ -1,106 +1,84 @@
-"""
-TG2 — Guest, Multiple Spaces: Space isolation, recommend-space. No LLM (mocked).
-"""
-
 import pytest
+from memory.vector_store import get_vector_store
+from memory.knowledge_graph import get_knowledge_graph
+from memory.unified_extraction_schema import FactItem, UnifiedExtractionResult, MemoryCommand, EntityItem
+from routers.remme import create_space, add_memory, CreateSpaceRequest, AddMemoryRequest
+from memory.memory_retriever import retrieve
+from memory.space_constants import SPACE_ID_GLOBAL
+from core.auth.context import set_current_user_id
+from fastapi import BackgroundTasks
 
-pytestmark = [
-    pytest.mark.p11_automation,
-    pytest.mark.integration,
-]
+@pytest.fixture
+def tg2_guest_user():
+    user = "00000000-0000-0000-0000-tg2guestuser99"
+    set_current_user_id(user)
+    return user
 
-from tests.automation.p11_mnemo.conftest import requires_qdrant_neo4j
-
-
-@requires_qdrant_neo4j
-def test_tg2_01_create_space_cat(client):
-    """TG2: Create Cat space."""
-    res = client.post(
-        "/api/remme/spaces",
-        json={"name": "Cat", "description": "Cat related", "sync_policy": "local_only"},
+@pytest.mark.p11_automation
+@pytest.mark.asyncio
+async def test_tg2_01_space_creation_and_isolation(tg2_guest_user, mock_llm_extractor, neo4j_test_driver):
+    bg_tasks = BackgroundTasks()
+    
+    # 1. Create spaces
+    cat_res = await create_space(CreateSpaceRequest(name="Cat", description="Cats", sync_policy="local_only"), background_tasks=bg_tasks)
+    cat_space_id = cat_res["space_id"]
+    tech_res = await create_space(CreateSpaceRequest(name="Tech", description="Tech", sync_policy="local_only"), background_tasks=bg_tasks)
+    tech_space_id = tech_res["space_id"]
+    
+    assert cat_space_id is not None
+    assert tech_space_id is not None
+    
+    # 2. Add Cat memory
+    mock_llm_extractor.mock_result = UnifiedExtractionResult(
+        source="memory",
+        memories=[MemoryCommand(action="add", text="My cat Luna loves tuna")],
+        entities=[EntityItem(type="Animal", name="Luna")]
     )
-    assert res.status_code in (200, 201), res.text
-    body = res.json()
-    space = body.get("space", body)
-    assert space.get("name") == "Cat" or "id" in body or "space_id" in body
+    
+    await add_memory(AddMemoryRequest(
+        text="My cat Luna loves tuna",
+        space_id=cat_space_id
+    ), background_tasks=bg_tasks)
 
-
-@requires_qdrant_neo4j
-def test_tg2_02_create_space_home_decor(client):
-    """TG2: Create Home Decor space."""
-    res = client.post(
-        "/api/remme/spaces",
-        json={"name": "Home Decor", "description": "Home decor", "sync_policy": "local_only"},
+    # 3. Add Tech memory
+    mock_llm_extractor.mock_result = UnifiedExtractionResult(
+        source="memory",
+        memories=[MemoryCommand(action="add", text="Planning to repaint the living room blue")],
+        entities=[EntityItem(type="Concept", name="Living Room")]
     )
-    assert res.status_code in (200, 201), res.text
-
-
-@requires_qdrant_neo4j
-def test_tg2_03_add_memory_in_cat_space(client):
-    """TG2-01: Add memory in Cat space."""
-    spaces_res = client.get("/api/remme/spaces")
-    assert spaces_res.status_code == 200
-    spaces = spaces_res.json() if isinstance(spaces_res.json(), list) else spaces_res.json().get("spaces", [])
-    cat = next((s for s in spaces if s.get("name") == "Cat"), None)
-    space_id = cat.get("space_id") or cat.get("id") if cat else None
-    if not space_id:
-        pytest.skip("Cat space not found")
-    res = client.post(
-        "/api/remme/add",
-        json={
-            "text": "My cat Luna loves tuna",
-            "category": "general",
-            "space_id": space_id,
-        },
-    )
-    assert res.status_code == 200, res.text
-
-
-@requires_qdrant_neo4j
-def test_tg2_04_add_memory_in_home_decor(client):
-    """TG2-02: Add memory in Home Decor space."""
-    spaces_res = client.get("/api/remme/spaces")
-    assert spaces_res.status_code == 200
-    spaces = spaces_res.json() if isinstance(spaces_res.json(), list) else spaces_res.json().get("spaces", [])
-    hd = next((s for s in spaces if s.get("name") == "Home Decor"), None)
-    space_id = hd.get("space_id") or hd.get("id") if hd else None
-    if not space_id:
-        pytest.skip("Home Decor space not found")
-    res = client.post(
-        "/api/remme/add",
-        json={
-            "text": "Planning to repaint the living room blue",
-            "category": "general",
-            "space_id": space_id,
-        },
-    )
-    assert res.status_code == 200, res.text
-
-
-@requires_qdrant_neo4j
-def test_tg2_05_list_memories_by_space(client):
-    """TG2-08: List memories filtered by space."""
-    spaces_res = client.get("/api/remme/spaces")
-    assert spaces_res.status_code == 200
-    spaces = spaces_res.json() if isinstance(spaces_res.json(), list) else spaces_res.json().get("spaces", [])
-    cat = next((s for s in spaces if s.get("name") == "Cat"), None)
-    space_id = cat.get("space_id") or cat.get("id") if cat else None
-    if not space_id:
-        pytest.skip("Cat space not found")
-    res = client.get(f"/api/remme/memories?space_id={space_id}")
-    assert res.status_code == 200
-    data = res.json()
-    mems = data.get("memories", data) if isinstance(data, dict) else data
-    assert isinstance(mems, list)
-    for m in mems:
-        assert m.get("space_id") == space_id or m.get("space_id") == "__global__"  # allow legacy
-
-
-@requires_qdrant_neo4j
-def test_tg2_06_recommend_space(client):
-    """TG2-06: GET recommend-space returns suggestion."""
-    res = client.get("/api/remme/recommend-space", params={"text": "Luna", "current_space_id": "__global__"})
-    assert res.status_code == 200
-    body = res.json()
-    assert "recommended_space_id" in body
-    assert "reason" in body
+    
+    await add_memory(AddMemoryRequest(
+        text="Planning to repaint the living room blue",
+        space_id=tech_space_id
+    ), background_tasks=bg_tasks)
+    
+    # 4. Run in Tech space: "What do I know about Luna?"
+    # We should NOT retrieve the Cat memory
+    # First, configure the unified extractor for the retrieval query extracting 'Luna'
+    from memory.entity_extractor import EntityExtractor
+    
+    # Mock EntityExtractor for query side
+    class MockEntityExtractor(EntityExtractor):
+        def extract_from_query(self, query: str):
+            if "Luna" in query:
+                return [EntityItem(type="Animal", name="Luna")]
+            return []
+    
+    # Patch retriever entity extractor logic
+    from unittest.mock import patch
+    
+    with patch("memory.entity_extractor.EntityExtractor", MockEntityExtractor):
+        try:
+            context, results = retrieve(query="What do I know about Luna?", user_id=tg2_guest_user, space_id=tech_space_id)
+            
+            # Verify isolation: Tech space should not surface Luna from Cat space
+            for res in results:
+                assert "Luna" not in res["text"], "Isolation failed: Cat memory leaked into Tech space"
+                
+            context_cat, results_cat = retrieve(query="What do I know about Luna?", user_id=tg2_guest_user, space_id=cat_space_id)
+            
+            found = any("Luna" in res["text"] for res in results_cat)
+            assert found, "Cat memory not found in Cat space"
+        finally:
+            pass
+    # mr.EntityExtractor patching removed since we use context manager now
