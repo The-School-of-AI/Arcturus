@@ -107,7 +107,7 @@ const MeteorsInner = ({
       `}</style>
 
             {meteorStyles.map((style, idx) => {
-                const isDark = style["--is-dark"] as boolean;
+                const isDark = (style as Record<string, unknown>)["--is-dark"] as boolean;
                 return (
                     <span
                         key={idx}

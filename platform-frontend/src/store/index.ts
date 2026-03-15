@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import axios from 'axios';
 import { persist } from 'zustand/middleware';
 import type {
     Run,
+    Space,
     PlatformNode,
     PlatformEdge,
     Snapshot,
@@ -12,7 +14,7 @@ import type {
     ContextItem,
 } from '../types';
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange } from 'reactflow';
-import { api, API_BASE } from '../lib/api';
+import { api, API_BASE, AUTH_API_BASE } from '../lib/api';
 
 // --- Slices Types ---
 
@@ -20,10 +22,10 @@ interface RunSlice {
     runs: Run[];
     currentRun: Run | null;
     addRun: (run: Run) => void;
-    setCurrentRun: (runId: string) => void;
+    setCurrentRun: (runId: string | null) => void;
     updateRunStatus: (input: { id: string, status: Run['status'] }) => void;
     fetchRuns: () => Promise<void>;
-    createNewRun: (query: string, model?: string) => Promise<void>;
+    createNewRun: (query: string, model?: string, space_id?: string | null) => Promise<void>;
     refreshCurrentRun: () => Promise<void>;
     pollingInterval: ReturnType<typeof setInterval> | null;
     startPolling: (runId: string) => void;
@@ -79,8 +81,8 @@ interface SettingsSlice {
 interface RagViewerSlice {
     viewMode: 'graph' | 'rag' | 'explorer';
     setViewMode: (mode: 'graph' | 'rag' | 'explorer') => void;
-    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio';
-    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio') => void;
+    sidebarTab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm';
+    setSidebarTab: (tab: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm') => void;
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
@@ -233,9 +235,22 @@ interface RemmeSlice {
     memories: Memory[];
     setMemories: (memories: Memory[]) => void;
     fetchMemories: () => Promise<void>;
-    addMemory: (text: string, category?: string) => Promise<void>;
+    addMemory: (text: string, category?: string, space_id?: string | null) => Promise<void>;
     deleteMemory: (id: string) => Promise<void>;
     cleanupDanglingMemories: () => Promise<void>;
+    /** Phase E 4.2: Suggest space for memory text (optional current space). */
+    recommendSpace: (text: string, current_space_id?: string | null) => Promise<{ recommended_space_id: string; reason?: string }>;
+}
+
+// Phase 4: Spaces (Perplexity-style project hubs)
+interface SpacesSlice {
+    spaces: Space[];
+    currentSpaceId: string | null;
+    fetchSpaces: () => Promise<void>;
+    createSpace: (name: string, description?: string, sync_policy?: 'sync' | 'local_only' | 'shared') => Promise<Space>;
+    setCurrentSpaceId: (spaceId: string | null) => void;
+    isSpacesModalOpen: boolean;
+    setIsSpacesModalOpen: (open: boolean) => void;
 }
 
 interface AnalysisHistoryItem {
@@ -427,17 +442,118 @@ interface StudioSlice {
     fetchArtifacts: () => Promise<void>;
     loadArtifact: (id: string) => Promise<void>;
     createArtifact: (type: 'slides' | 'documents' | 'sheets', prompt: string, title?: string) => Promise<void>;
+    approveError: string | null;
     approveOutline: (id: string) => Promise<void>;
     rejectOutline: (id: string) => Promise<void>;
     setActiveArtifactId: (id: string | null) => void;
     setIsStudioModalOpen: (open: boolean) => void;
+    // Phase 2: Export & Themes
+    studioThemes: any[];
+    isExporting: boolean;
+    exportJobs: any[];
+    activeExportJobId: string | null;
+    exportPollingInterval: ReturnType<typeof setInterval> | null;
+    autoDownloadJobId: { jobId: string; artifactId: string } | null;
+    fetchThemes: (params?: { include_variants?: boolean; base_id?: string; limit?: number }) => Promise<void>;
+    startExport: (artifactId: string, format?: string, themeId?: string, strictLayout?: boolean, generateImages?: boolean) => Promise<void>;
+    fetchExportJobs: (artifactId: string) => Promise<void>;
+    pollExportJob: (artifactId: string, jobId: string) => void;
+    stopExportPolling: () => void;
+    clearAutoDownload: () => void;
+    // Delete & Clear
+    deleteArtifact: (id: string) => Promise<void>;
+    clearAllArtifacts: () => Promise<void>;
+    // Phase 5: Sheet Upload Analysis
+    analyzeSheetUpload: (artifactId: string, file: File) => Promise<void>;
+    // Phase 6: Edit Loop
+    editLoading: boolean;
+    editError: string | null;
+    editConflict: boolean;
+    applyEditInstruction: (artifactId: string, instruction: string, baseRevisionId?: string) => Promise<void>;
+    clearEditState: () => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice { }
+interface AuthSlice {
+    authUserId: string | null;
+    authToken: string | null;
+    authStatus: 'guest' | 'logged_in';
+    authUserFirstName: string | null;
+    authUserEmail: string | null;
+    setAuthUserId: (id: string | null, status: 'guest' | 'logged_in', token?: string, firstName?: string | null, email?: string | null) => void;
+    initAuth: () => void;
+    logoutAuth: () => void;
+    isAuthModalOpen: boolean;
+    setIsAuthModalOpen: (open: boolean) => void;
+}
+
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, SpacesSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice, AuthSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
         (set, get) => ({
+            // Auth Slice Implementation
+            authUserId: null,
+            authToken: null,
+            authStatus: 'guest',
+            authUserFirstName: null,
+            authUserEmail: null,
+            isAuthModalOpen: false,
+            setIsAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
+            setAuthUserId: (id, status, token = undefined, firstName = undefined, email = undefined) => set({ 
+                authUserId: id, 
+                authStatus: status, 
+                authToken: token,
+                authUserFirstName: firstName,
+                authUserEmail: email
+            }),
+            initAuth: async () => {
+                const state = get();
+                if (state.authStatus === 'logged_in' && state.authUserId) return; // user is currently logged in
+                
+                const isLocalMigrationEnabled = import.meta.env.VITE_ENABLE_LOCAL_MIGRATION === 'true';
+                console.log('isLocalMigrationEnabled', isLocalMigrationEnabled);
+                // Try to fetch legacy guest ID if enabled, even if they already have a persisted random guest ID
+                if (isLocalMigrationEnabled && state.authStatus === 'guest') {
+                    try {
+                        const res = await axios.get(`${AUTH_API_BASE}/auth/legacy-guest-id`);
+                        if (res.data && res.data.guest_id) {
+                            const newGuestId = `guest_${res.data.guest_id}`;
+                            if (state.authUserId !== newGuestId) {
+                                set({ authUserId: newGuestId, authStatus: 'guest' });
+                            }
+                            return;
+                        }
+                    } catch (e) {
+                        console.log('[Auth] Could not fetch legacy guest ID, falling back to existing or random UUID', e);
+                    }
+                }
+                
+                // If we get here, either migration is disabled, or it failed to fetch.
+                // Ensure they at least have SOME guest ID if they don't already.
+                if (!state.authUserId) {
+                    const guestId = `guest_${crypto.randomUUID()}`;
+                    set({ authUserId: guestId, authStatus: 'guest' });
+                }
+            },
+            logoutAuth: async () => {
+                // Return to guest mode, try to fetch legacy ID first if local_migration is enabled
+                let guestId = `guest_${crypto.randomUUID()}`;
+                const isLocalMigrationEnabled = import.meta.env.VITE_ENABLE_LOCAL_MIGRATION === 'true';
+                console.log('isLocalMigrationEnabled', isLocalMigrationEnabled);
+                if (isLocalMigrationEnabled) {
+                    try {
+                        const res = await axios.get(`${AUTH_API_BASE}/auth/legacy-guest-id`);
+                        if (res.data && res.data.guest_id) {
+                            guestId = `guest_${res.data.guest_id}`;
+                        }
+                    } catch (e) {
+                        // silently fall back
+                    }
+                }
+                
+                set({ authUserId: guestId, authStatus: 'guest', authToken: null, authUserFirstName: null, authUserEmail: null });
+            },
+
             // Review Slice
             reviewRequest: null,
             reviewResolver: null,
@@ -546,6 +662,13 @@ export const useAppStore = create<AppState>()(
                 eventSource.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
+
+                        // --- HANDLE NAVIGATION EVENTS ---
+                        if (data.type === 'navigation' && data.data?.tab) {
+                            console.log("🚀 [EventBus] Navigation Command:", data.data.tab);
+                            get().setSidebarTab(data.data.tab);
+                        }
+
                         // Add to events list (keep last 200)
                         set(state => {
                             const newEvents = [...state.events, data];
@@ -558,9 +681,16 @@ export const useAppStore = create<AppState>()(
                 };
 
                 eventSource.onerror = (err) => {
-                    console.error("EventSource failed:", err);
+                    console.error("EventSource error — will reconnect in 3s:", err);
                     eventSource.close();
                     set({ isStreaming: false, streamConnection: null });
+                    // Auto-reconnect: clear connection so the next startEventStream call works
+                    setTimeout(() => {
+                        if (!get().streamConnection) {
+                            console.log("🔄 Reconnecting to Event Bus...");
+                            get().startEventStream();
+                        }
+                    }, 3000);
                 };
 
                 set({ streamConnection: eventSource, isStreaming: true });
@@ -642,16 +772,17 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            createNewRun: async (query, model) => {
+            createNewRun: async (query, model, space_id) => {
                 try {
-                    const res = await api.createRun(query, model);
+                    const res = await api.createRun(query, model, space_id);
                     const newRun: Run = {
                         id: res.id,
                         name: res.query,
                         createdAt: Date.now(),
                         status: 'running',
                         model: res.model || model || 'default',
-                        ragEnabled: true
+                        ragEnabled: true,
+                        space_id: res.space_id ?? space_id ?? undefined
                     };
                     get().addRun(newRun);
 
@@ -1366,7 +1497,9 @@ export const useAppStore = create<AppState>()(
             fetchRagFiles: async () => {
                 set({ isRagLoading: true });
                 try {
-                    const res = await api.get(`${API_BASE}/rag/documents`);
+                    const spaceId = get().currentSpaceId;
+                    const params = spaceId ? { space_id: spaceId } : {};
+                    const res = await api.get(`${API_BASE}/rag/documents`, { params });
                     set({ ragFiles: res.data.files });
                 } catch (e) {
                     console.error("Failed to fetch RAG docs", e);
@@ -1419,9 +1552,11 @@ export const useAppStore = create<AppState>()(
             fetchNotesFiles: async () => {
                 set({ isNotesLoading: true });
                 try {
-                    const res = await api.get(`${API_BASE}/rag/documents`);
+                    const spaceId = get().currentSpaceId;
+                    const params = spaceId ? { space_id: spaceId } : {};
+                    const res = await api.get(`${API_BASE}/rag/documents`, { params });
                     const allFiles = res.data.files as any[];
-                    const notesRoot = allFiles.find(f => f.name === 'Notes' && f.type === 'folder');
+                    const notesRoot = allFiles.find((f: any) => f.name === 'Notes' && f.type === 'folder');
                     if (notesRoot && notesRoot.children) {
                         set({ notesFiles: notesRoot.children });
                     } else {
@@ -1452,15 +1587,19 @@ export const useAppStore = create<AppState>()(
             setMemories: (memories) => set({ memories }),
             fetchMemories: async () => {
                 try {
-                    const res = await api.get(`${API_BASE}/remme/memories`);
-                    set({ memories: res.data.memories });
+                    const spaceId = get().currentSpaceId;
+                    // When Global (null), pass __global__ so backend returns only unscoped memories
+                    const filterSpaceId = spaceId ?? '__global__';
+                    const res = await api.getMemories(filterSpaceId);
+                    set({ memories: res.memories });
                 } catch (e) {
                     console.error("Failed to fetch memories", e);
                 }
             },
-            addMemory: async (text, category = "general") => {
+            addMemory: async (text, category = "general", space_id) => {
+                console.log('[store] addMemory calling API', { text: text?.slice(0, 50), category, space_id });
                 try {
-                    await api.post(`${API_BASE}/remme/add`, { text, category });
+                    await api.addMemory(text, category, space_id);
                     get().fetchMemories();
                 } catch (e) {
                     console.error("Failed to add memory", e);
@@ -1482,6 +1621,29 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to cleanup dangling memories", e);
                 }
             },
+            recommendSpace: async (text, current_space_id) => {
+                return api.recommendSpace(text, current_space_id);
+            },
+
+            // --- Spaces Slice (Phase 4) ---
+            spaces: [],
+            currentSpaceId: null,
+            fetchSpaces: async () => {
+                try {
+                    const spaces = await api.getSpaces();
+                    set({ spaces });
+                } catch (e) {
+                    console.error("Failed to fetch spaces", e);
+                }
+            },
+            createSpace: async (name, description, sync_policy) => {
+                const space = await api.createSpace(name, description, sync_policy);
+                set((s) => ({ spaces: [space, ...s.spaces] }));
+                return space;
+            },
+            setCurrentSpaceId: (spaceId) => set({ currentSpaceId: spaceId }),
+            isSpacesModalOpen: false,
+            setIsSpacesModalOpen: (open) => set({ isSpacesModalOpen: open }),
 
             // --- Explorer Slice ---
             explorerRootPath: null,
@@ -2167,10 +2329,20 @@ export const useAppStore = create<AppState>()(
             activeArtifact: null,
             isGenerating: false,
             isApproving: false,
+            approveError: null,
             isStudioModalOpen: false,
             setIsStudioModalOpen: (open) => set({ isStudioModalOpen: open }),
             setActiveArtifactId: (id) => {
-                set({ activeArtifactId: id, activeArtifact: null });
+                get().stopExportPolling();
+                set({
+                    activeArtifactId: id,
+                    activeArtifact: null,
+                    approveError: null,
+                    exportJobs: [],
+                    activeExportJobId: null,
+                    isExporting: false,
+                    autoDownloadJobId: null,
+                });
                 if (id) get().loadArtifact(id);
             },
             fetchArtifacts: async () => {
@@ -2185,6 +2357,7 @@ export const useAppStore = create<AppState>()(
                 try {
                     const data = await api.getArtifact(id);
                     set({ activeArtifact: data, activeArtifactId: id });
+                    get().fetchExportJobs(id);
                 } catch (e) {
                     console.error("Failed to load artifact", e);
                 }
@@ -2208,13 +2381,16 @@ export const useAppStore = create<AppState>()(
                 }
             },
             approveOutline: async (id) => {
-                set({ isApproving: true });
+                set({ isApproving: true, approveError: null });
                 try {
                     const data = await api.approveOutline(id, true);
                     set({ activeArtifact: data, activeArtifactId: data.id });
                     await get().fetchArtifacts();
-                } catch (e) {
+                } catch (e: any) {
+                    const detail = e?.response?.data?.detail;
+                    const msg = typeof detail === 'string' ? detail : (e?.message || 'Failed to generate document');
                     console.error("Failed to approve outline", e);
+                    set({ approveError: msg });
                 } finally {
                     set({ isApproving: false });
                 }
@@ -2228,6 +2404,142 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to reject outline", e);
                 }
             },
+
+            // Phase 2: Export & Themes
+            studioThemes: [],
+            isExporting: false,
+            exportJobs: [],
+            activeExportJobId: null,
+            exportPollingInterval: null,
+            autoDownloadJobId: null,
+
+            fetchThemes: async (params) => {
+                if (!params && get().studioThemes.length > 0) return;
+                try {
+                    const data = await api.listThemes(params);
+                    if (!params) set({ studioThemes: data });
+                } catch (e) {
+                    console.error("Failed to fetch themes", e);
+                }
+            },
+
+            startExport: async (artifactId, format, themeId, strictLayout, generateImages) => {
+                set({ isExporting: true });
+                try {
+                    const job = await api.exportArtifact(artifactId, format || 'pptx', themeId, strictLayout, generateImages);
+                    const jobId = job.job_id || job.id;
+                    set({
+                        activeExportJobId: jobId,
+                        exportJobs: [job, ...get().exportJobs],
+                    });
+                    get().pollExportJob(artifactId, jobId);
+                } catch (e) {
+                    console.error("Failed to start export", e);
+                    set({ isExporting: false });
+                }
+            },
+
+            fetchExportJobs: async (artifactId) => {
+                try {
+                    const data = await api.listExportJobs(artifactId);
+                    if (get().activeArtifactId === artifactId) {
+                        set({ exportJobs: data });
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch export jobs", e);
+                }
+            },
+
+            pollExportJob: (artifactId, jobId) => {
+                get().stopExportPolling();
+                const interval = setInterval(async () => {
+                    try {
+                        const job = await api.getExportJob(artifactId, jobId);
+                        const status = job.status;
+                        if (status === 'completed' || status === 'failed') {
+                            get().stopExportPolling();
+                            set({ isExporting: false });
+                            if (status === 'completed') {
+                                set({ autoDownloadJobId: { jobId, artifactId } });
+                            }
+                            if (get().activeArtifactId === artifactId) {
+                                get().fetchExportJobs(artifactId);
+                            }
+                        }
+                    } catch {
+                        get().stopExportPolling();
+                        set({ isExporting: false });
+                    }
+                }, 1500);
+                set({ exportPollingInterval: interval });
+            },
+
+            clearAutoDownload: () => set({ autoDownloadJobId: null }),
+
+            stopExportPolling: () => {
+                const interval = get().exportPollingInterval;
+                if (interval) {
+                    clearInterval(interval);
+                    set({ exportPollingInterval: null });
+                }
+            },
+
+            // Phase 5: Sheet Upload Analysis
+            analyzeSheetUpload: async (artifactId: string, file: File) => {
+                const result = await api.analyzeSheetUpload(artifactId, file);
+                set({ activeArtifact: result });
+                get().fetchArtifacts?.();
+            },
+
+            // Delete & Clear
+            deleteArtifact: async (id: string) => {
+                await api.deleteArtifact(id);
+                const wasActive = get().activeArtifactId === id;
+                set({
+                    studioArtifacts: get().studioArtifacts.filter((a: any) => a.id !== id),
+                    ...(wasActive ? { activeArtifactId: null, activeArtifact: null } : {}),
+                });
+            },
+            clearAllArtifacts: async () => {
+                await api.clearAllArtifacts();
+                set({ studioArtifacts: [], activeArtifactId: null, activeArtifact: null });
+            },
+
+            // Phase 6: Edit Loop
+            editLoading: false,
+            editError: null,
+            editConflict: false,
+            applyEditInstruction: async (artifactId: string, instruction: string, baseRevisionId?: string) => {
+                set({ editLoading: true, editError: null, editConflict: false });
+                try {
+                    const result = await api.editArtifact(artifactId, {
+                        instruction,
+                        base_revision_id: baseRevisionId,
+                    });
+                    // Surface "no_changes" status as a warning so the user knows the edit had no effect
+                    const editStatus = result?.edit_result?.status;
+                    if (editStatus === 'no_changes') {
+                        const warnings = result?.edit_result?.warnings ?? [];
+                        const msg = warnings.length > 0
+                            ? warnings.join('; ')
+                            : 'No changes were made by this edit. Try a more specific instruction.';
+                        set({ activeArtifact: result, editLoading: false, editError: msg });
+                    } else {
+                        set({ activeArtifact: result, editLoading: false });
+                    }
+                    get().fetchArtifacts?.();
+                } catch (e: any) {
+                    const status = e?.response?.status;
+                    if (status === 409) {
+                        set({ editConflict: true, editLoading: false });
+                    } else {
+                        const detail = e?.response?.data?.detail;
+                        const msg = typeof detail === 'string' ? detail : (e?.message || 'Edit failed');
+                        set({ editError: msg, editLoading: false });
+                    }
+                }
+            },
+            clearEditState: () => set({ editError: null, editConflict: false }),
         }),
         {
             name: 'agent-platform-storage',
@@ -2259,6 +2571,13 @@ export const useAppStore = create<AppState>()(
                 // Persistence for IDE features
                 explorerRootPath: state.explorerRootPath,
                 recentProjects: state.recentProjects,
+                currentSpaceId: state.currentSpaceId, // Phase 4: remember selected space
+                // Auth
+                authUserId: state.authUserId,
+                authStatus: state.authStatus,
+                authToken: state.authToken,
+                authUserFirstName: state.authUserFirstName,
+                authUserEmail: state.authUserEmail,
             }),
         }
     )

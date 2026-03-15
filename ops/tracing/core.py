@@ -18,9 +18,12 @@ class MongoDBSpanExporter(SpanExporter):
     """
 
     def __init__(self, mongodb_uri: str, database: str = "watchtower", collection: str = "spans"):
-        self.client = MongoClient(mongodb_uri)
+        self.client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
         self.collection = self.client[database][collection]
-        self._ensure_indexes()
+        try:
+            self._ensure_indexes()
+        except Exception:
+            pass  # Indexes will be created on first successful export
 
     def _ensure_indexes(self):
         """Create indexes for trace_id, run_id, session_id, and time-range queries."""

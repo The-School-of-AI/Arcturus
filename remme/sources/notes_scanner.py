@@ -3,6 +3,9 @@ Notes Scanner - Extracts preferences from user's Notes folder.
 
 Scans markdown files in data/Notes/ for personal preferences and
 adds them to the staging queue for normalization.
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Notes would need a Mnemo-native
+ingestion path; currently feeds staging which is not used on the Mnemo path.
 """
 
 import json

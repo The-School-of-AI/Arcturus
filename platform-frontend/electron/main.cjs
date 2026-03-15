@@ -6,9 +6,10 @@ process.title = "Arcturus";
 
 const path = require('path');
 const isDev = !app.isPackaged;
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const os = require('os');
 const fs = require('fs');
+const treeKill = require('tree-kill');
 
 // Try to load node-pty
 let pty;
@@ -694,6 +695,56 @@ function setupDialogHandlers() {
         });
     });
 
+    // Save file via native dialog and auto-open in default app
+    ipcMain.handle('dialog:saveAndOpen', async (event, { url, defaultName }) => {
+        try {
+            // Dynamic file filters based on file extension
+            const ext = (defaultName || '').split('.').pop()?.toLowerCase();
+            const filterMap = {
+                pptx: { name: 'PowerPoint', extensions: ['pptx'] },
+                docx: { name: 'Word Document', extensions: ['docx'] },
+                pdf: { name: 'PDF Document', extensions: ['pdf'] },
+            };
+            const primaryFilter = filterMap[ext] || { name: 'All Files', extensions: ['*'] };
+            const result = await dialog.showSaveDialog(mainWindow, {
+                defaultPath: defaultName || 'download',
+                filters: [
+                    primaryFilter,
+                    { name: 'All Files', extensions: ['*'] }
+                ]
+            });
+            if (result.canceled || !result.filePath) {
+                return { success: true, canceled: true };
+            }
+            // Fetch the file in the main process to avoid binary corruption
+            const http = require('http');
+            const https = require('https');
+            const fetchBuffer = (fetchUrl) => new Promise((resolve, reject) => {
+                const mod = fetchUrl.startsWith('https') ? https : http;
+                mod.get(fetchUrl, (res) => {
+                    if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+                        const status = res.statusCode || 'unknown';
+                        res.resume();
+                        reject(new Error(`Download failed with HTTP ${status}`));
+                        return;
+                    }
+                    const chunks = [];
+                    res.on('data', (chunk) => chunks.push(chunk));
+                    res.on('end', () => resolve(Buffer.concat(chunks)));
+                    res.on('error', reject);
+                }).on('error', reject);
+            });
+            const buffer = await fetchBuffer(url);
+            fs.writeFileSync(result.filePath, buffer);
+            // Open in default application (Keynote/PowerPoint/etc.)
+            const openError = await shell.openPath(result.filePath);
+            return { success: true, canceled: false, filePath: result.filePath, openError: openError || null };
+        } catch (error) {
+            console.error('[Arcturus] dialog:saveAndOpen failed', error);
+            return { success: false, error: error.message };
+        }
+    });
+
     ipcMain.on('dialog:confirmSync', (event, { message, title, type = 'question' }) => {
         const { nativeImage } = require('electron');
         const icon = nativeImage.createFromPath(iconPath);
@@ -1091,9 +1142,16 @@ app.on('ready', () => {
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
 
-    // Start backends
-    startBackend('uv', ['run', 'api.py'], 'API');
-    startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
+    // Start backends (skip if ARCTURUS_SKIP_BACKEND=1 for pdb/IDE debugging)
+    const skipBackend = process.env.ARCTURUS_SKIP_BACKEND === '1';
+    if (skipBackend) {
+        console.log('[Arcturus] ARCTURUS_SKIP_BACKEND=1: not spawning API/RAG. Run manually in another terminal for pdb debugging:');
+        console.log('[Arcturus]   cd <repo-root> && uv run api.py');
+        console.log('[Arcturus]   cd <repo-root> && uv run python mcp_servers/server_rag.py');
+    } else {
+        startBackend('uv', ['run', 'api.py'], 'API');
+        startBackend('uv', ['run', 'python', 'mcp_servers/server_rag.py'], 'RAG');
+    }
 
     setupTerminalHandlers();
     setupFSHandlers();
@@ -1113,7 +1171,13 @@ app.on('activate', () => {
     }
 });
 
-const treeKill = require('tree-kill');
+function killProcessTree(pid) {
+    const numericPid = Number(pid);
+    if (!Number.isInteger(numericPid) || numericPid <= 0) return;
+    treeKill(numericPid, 'SIGKILL', (err) => {
+        if (err) console.warn(`[Arcturus] Failed to kill process tree ${numericPid}:`, err.message);
+    });
+}
 
 app.on('will-quit', () => {
     console.log('[Arcturus] Shutting down backends and terminal sessions...');
@@ -1121,30 +1185,22 @@ app.on('will-quit', () => {
     // Kill backend services
     backendProcesses.forEach(proc => {
         if (proc && proc.pid) {
-            console.log(`[Arcturus] Killing backend process ${proc.pid}`);
-            treeKill(proc.pid, 'SIGKILL', (err) => {
-                if (err) console.error(`[Arcturus] Failed to kill process ${proc.pid}`, err);
-            });
+            console.log(`[Arcturus] Killing backend process tree ${proc.pid}`);
+            killProcessTree(proc.pid);
         }
     });
 
     // Kill background shell tasks
     backgroundProcesses.forEach((proc, pidKey) => {
         if (proc && proc.pid && proc.status === 'running') {
-            console.log(`[Arcturus] Killing background task ${proc.pid}`);
-            treeKill(proc.pid, 'SIGKILL');
+            console.log(`[Arcturus] Killing background task tree ${proc.pid}`);
+            killProcessTree(proc.pid);
         }
     });
 
     // Kill PTY
     if (ptyProcess && ptyProcess.pid) {
         console.log(`[Arcturus] Killing PTY ${ptyProcess.pid}`);
-        try {
-            // ptyProcess from node-pty might need standard kill or tree-kill
-            // tree-kill is safer
-            treeKill(ptyProcess.pid, 'SIGKILL');
-        } catch (e) {
-            console.error('[Arcturus] Failed to kill PTY', e);
-        }
+        killProcessTree(ptyProcess.pid);
     }
 });

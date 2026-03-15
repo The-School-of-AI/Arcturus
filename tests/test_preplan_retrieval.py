@@ -9,6 +9,9 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(os.getcwd())
 
+# Use legacy episodic store so search_episodes reads from local skeleton_*.json
+os.environ["EPISODIC_STORE_PROVIDER"] = "legacy"
+
 from agents.base_agent import AgentRunner
 from core.registry import registry
 from core.bootstrap import bootstrap_agents

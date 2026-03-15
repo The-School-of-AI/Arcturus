@@ -3,7 +3,7 @@ import asyncio
 import json
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Path as PathParam
 from pydantic import BaseModel
 import requests
 import pdb
@@ -13,6 +13,7 @@ from shared.state import (
     get_remme_extractor,
     PROJECT_ROOT,
 )
+from memory.space_constants import SPACE_ID_GLOBAL, VISIBILITY_PRIVATE, VISIBILITY_SPACE, VISIBILITY_PUBLIC
 from remme.utils import get_embedding
 from core.model_manager import ModelManager
 
@@ -28,6 +29,40 @@ remme_extractor = get_remme_extractor()
 class AddMemoryRequest(BaseModel):
     text: str
     category: str = "general"
+    space_id: str | None = None
+    visibility: str | None = None  # Phase 5: privacy controls (e.g. "private", "space")
+
+
+class CreateSpaceRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    sync_policy: str | None = None  # Phase 4: "sync" | "local_only" | "shared" (Shared Space step)
+
+
+class UpdateFactRequest(BaseModel):
+    """Request body for UI-driven fact edit (step 7). All fields except namespace, key, value_type are optional."""
+    namespace: str
+    key: str
+    value_type: str = "text"  # text | number | bool | json
+    value: str | float | bool | list | dict | None = None
+    value_text: str | None = None
+    value_number: float | None = None
+    value_bool: bool | None = None
+    value_json: list | dict | None = None
+    entity_ref: str | None = None
+    space_id: str | None = None
+
+
+class LifecycleOverrideRequest(BaseModel):
+    """Request body for overriding lifecycle fields on a memory."""
+    importance: float | None = None
+    archived: bool | None = None
+    access_count: int | None = None
+
+
+class MoveMemorySpaceRequest(BaseModel):
+    """Request body for moving a memory to another space. Enhances space recommendation UX."""
+    space_id: str | None = None  # null or __global__ = move to global
 
 
 # === Background Tasks ===
@@ -88,7 +123,6 @@ async def background_smart_scan():
                     remme_store.mark_run_scanned(run_id)
                     continue
 
-                pdb.set_trace()
                 hist = [{"role": "user", "content": query}]
                 if output:
                     hist.append({"role": "assistant", "content": output})
@@ -106,28 +140,42 @@ async def background_smart_scan():
                 except Exception:
                     pass
                 
-                # Extract memories AND preferences using new format
-                result = await asyncio.to_thread(extractor.extract, query, hist, existing)
-                
-                # Handle both new tuple format and legacy list format
-                if isinstance(result, tuple):
-                    commands, preferences = result
+                # Extract memories (and preferences when legacy path)
+                from memory.mnemo_config import is_mnemo_enabled
+                extraction = None
+                if is_mnemo_enabled():
+                    from shared.state import get_unified_extractor
+                    unified = get_unified_extractor()
+                    extraction = await asyncio.to_thread(
+                        unified.extract_from_session, query, hist, existing
+                    )
+                    print(f"🧠 RemMe: Extracted MEM from scanned Run {run_id}---->{extraction}")
+                    commands = [{"action": m.action, "text": m.text, "id": m.id} for m in extraction.memories]
+                    preferences = None
                 else:
-                    commands = result
-                    preferences = {}
+                    result = await asyncio.to_thread(extractor.extract, query, hist, existing)
+                    if isinstance(result, tuple):
+                        commands, preferences = result
+                    else:
+                        commands = result
+                        preferences = {}
                 
-                # Apply memory commands to store
+                session_memory_ids = []
                 if commands:
                     for cmd in commands:
                         action = cmd.get("action")
                         text = cmd.get("text")
                         tid = cmd.get("id")
-                        
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                # Mark source as the run_id so we don't scan again
-                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                added = remme_store.add(
+                                    text, emb, category="derived", source=f"run_{run_id}",
+                                    metadata={"session_id": run_id},
+                                    skip_kg_ingest=is_mnemo_enabled(),
+                                )
+                                if added and isinstance(added, dict) and added.get("id"):
+                                    session_memory_ids.append(added["id"])
                                 processed_count += 1
                             elif action == "update" and tid and text:
                                 emb = get_embedding(text, task_type="search_document")
@@ -136,8 +184,29 @@ async def background_smart_scan():
                         except Exception as e:
                             print(f"❌ RemMe Action Failed: {e}")
                 
-                # Write preferences to staging queue (will be normalized later)
-                if preferences:
+                if is_mnemo_enabled() and extraction and session_memory_ids:
+                    try:
+                        from memory.knowledge_graph import get_knowledge_graph
+                        from memory.user_id import get_user_id
+                        kg = get_knowledge_graph()
+                        if kg and kg.enabled:
+                            user_id = get_user_id()
+                            kg_result = kg.ingest_from_unified_extraction(
+                                user_id, run_id, session_memory_ids, extraction,
+                                category="derived", source="session",
+                            )
+                            entity_ids = kg_result.get("entity_ids", [])
+                            entity_labels = kg_result.get("entity_labels", [])
+                            if entity_ids or entity_labels:
+                                meta = {"entity_ids": entity_ids}
+                                if entity_labels:
+                                    meta["entity_labels"] = entity_labels
+                                for mid in session_memory_ids:
+                                    remme_store.update(mid, metadata=meta)
+                    except Exception as e:
+                        print(f"⚠️ RemMe Neo4j session ingestion failed: {e}")
+                
+                if not is_mnemo_enabled() and preferences:
                     try:
                         from remme.staging import get_staging_store
                         staging = get_staging_store()
@@ -167,10 +236,11 @@ async def background_smart_scan():
 # === Endpoints ===
 
 @router.get("/memories")
-async def get_memories():
-    """Get all stored memories with source existence check"""
+async def get_memories(space_id: str | None = Query(None, description="Filter memories by space; omit for all")):
+    """Get all stored memories with source existence check. Phase 4: optional space_id filter."""
     try:
-        memories = remme_store.get_all()
+        filter_meta = {"space_id": space_id} if space_id else None
+        memories = remme_store.get_all(filter_metadata=filter_meta)
         summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
         
         # Add source_exists flag
@@ -209,6 +279,76 @@ async def get_memories():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/memories/{memory_id}/lifecycle")
+async def get_memory_lifecycle(
+    memory_id: str = PathParam(..., description="Memory id to inspect lifecycle state"),
+):
+    """
+    Inspect lifecycle-related fields for a single memory.
+    Returns a thin view (id + lifecycle fields) for debugging Phase 5 behavior.
+    """
+    try:
+        m = remme_store.get(memory_id)
+        if not m:
+            raise HTTPException(status_code=404, detail="Memory not found")
+        lifecycle = {
+            "id": m.get("id") or memory_id,
+            "importance": m.get("importance"),
+            "archived": m.get("archived"),
+            "access_count": m.get("access_count"),
+            "last_accessed_at": m.get("last_accessed_at"),
+            "created_at": m.get("created_at"),
+        }
+        return {"status": "success", "lifecycle": lifecycle}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/memories/{memory_id}/lifecycle")
+async def override_memory_lifecycle(
+    memory_id: str = PathParam(..., description="Memory id to override lifecycle state"),
+    body: LifecycleOverrideRequest | None = None,
+):
+    """
+    Override lifecycle-related fields for a single memory (admin/debug only).
+    Allows manual tweaks to `importance`, `archived`, and `access_count`.
+    """
+    if body is None:
+        body = LifecycleOverrideRequest()
+    try:
+        m = remme_store.get(memory_id)
+        if not m:
+            raise HTTPException(status_code=404, detail="Memory not found")
+        updates: dict = {}
+        if body.importance is not None:
+            updates["importance"] = float(body.importance)
+        if body.archived is not None:
+            updates["archived"] = bool(body.archived)
+        if body.access_count is not None:
+            updates["access_count"] = int(body.access_count)
+        if not updates:
+            return {"status": "noop", "message": "No lifecycle fields provided"}
+        ok = remme_store.update(memory_id, metadata=updates)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to update lifecycle fields")
+        m_after = remme_store.get(memory_id) or {}
+        lifecycle = {
+            "id": m_after.get("id") or memory_id,
+            "importance": m_after.get("importance"),
+            "archived": m_after.get("archived"),
+            "access_count": m_after.get("access_count"),
+            "last_accessed_at": m_after.get("last_accessed_at"),
+            "created_at": m_after.get("created_at"),
+        }
+        return {"status": "success", "lifecycle": lifecycle}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/cleanup_dangling")
 async def cleanup_dangling_memories():
     """Delete all memories where the source session no longer exists"""
@@ -242,30 +382,122 @@ async def cleanup_dangling_memories():
 
 
 @router.post("/add")
-async def add_memory(request: AddMemoryRequest):
-    """Manually add a memory and auto-extract to UserModel hubs."""
+async def add_memory(request: AddMemoryRequest, background_tasks: BackgroundTasks):
+    """Manually add a memory. Optional space_id for Phase 3 Spaces. Shared Space: must have access (owner or shared-with). When MNEMO_ENABLED=false, auto-extract to UserModel hubs; when true, ingestion uses unified extractor. Phase 4: triggers background sync when sync engine enabled."""
     try:
+        if request.space_id:
+            try:
+                from memory.knowledge_graph import get_knowledge_graph
+                from memory.user_id import get_user_id
+                kg = get_knowledge_graph()
+                if kg and kg.enabled and not kg.can_user_access_space(get_user_id(), request.space_id):
+                    raise HTTPException(status_code=403, detail="You do not have access to this space")
+            except HTTPException:
+                raise
+            except Exception:
+                pass
         emb = get_embedding(request.text, task_type="search_query")
-        memory = remme_store.add(request.text, emb, category=request.category, source="manual")
-        
-        # Auto-extract preferences from this single memory
-        try:
-            from remme.bootstrap import extract_from_memories, apply_extraction_to_hubs
-            
-            print(f"🔄 Auto-extracting preferences from: '{request.text[:50]}...'")
-            extraction = await extract_from_memories([{"text": request.text, "category": request.category}])
-            
-            if extraction:
-                changes = apply_extraction_to_hubs(extraction)
-                print(f"✅ Auto-extracted {len(changes)} preferences from new memory")
-                memory["extracted_preferences"] = changes
+
+        # Validate / normalize visibility
+        effective_visibility: str | None = request.visibility
+        if effective_visibility is not None:
+            if effective_visibility not in {VISIBILITY_PRIVATE, VISIBILITY_SPACE, VISIBILITY_PUBLIC}:
+                raise HTTPException(status_code=400, detail="Invalid visibility value")
+
+        # Prevent semantically invalid combinations
+        if (not request.space_id or request.space_id == SPACE_ID_GLOBAL) and effective_visibility == VISIBILITY_SPACE:
+            raise HTTPException(status_code=400, detail="visibility='space' requires a non-global space_id")
+
+        # Defaults: in a concrete space → shared with space; global/default → private
+        if effective_visibility is None:
+            if request.space_id and request.space_id != SPACE_ID_GLOBAL:
+                effective_visibility = VISIBILITY_SPACE
             else:
+                effective_visibility = VISIBILITY_PRIVATE
+
+        add_kwargs: dict = {"category": request.category, "source": "manual"}
+        if request.space_id:
+            add_kwargs["space_id"] = request.space_id
+        if effective_visibility:
+            add_kwargs["metadata"] = {"visibility": effective_visibility}
+        memory = remme_store.add(request.text, emb, **add_kwargs)
+
+        from memory.mnemo_config import is_mnemo_enabled
+        if not is_mnemo_enabled():
+            try:
+                from remme.bootstrap import extract_from_memories, apply_extraction_to_hubs
+                print(f"🔄 Auto-extracting preferences from: '{request.text[:50]}...'")
+                extraction = await extract_from_memories([{"text": request.text, "category": request.category}])
+                if extraction:
+                    changes = apply_extraction_to_hubs(extraction)
+                    print(f"✅ Auto-extracted {len(changes)} preferences from new memory")
+                    memory["extracted_preferences"] = changes
+                else:
+                    memory["extracted_preferences"] = []
+            except Exception as e:
+                print(f"⚠️ Auto-extraction failed (memory still saved): {e}")
                 memory["extracted_preferences"] = []
-        except Exception as e:
-            print(f"⚠️ Auto-extraction failed (memory still saved): {e}")
-            memory["extracted_preferences"] = []
-        
+        else:
+            memory["extracted_preferences"] = []  # step 3 will ingest via unified extractor in qdrant_store
+
+        # Phase 4: enqueue background sync when sync engine enabled
+        try:
+            from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
+            if is_sync_engine_enabled() and get_sync_server_url():
+                from routers.sync import run_sync_background
+                background_tasks.add_task(run_sync_background)
+        except Exception:
+            pass
+
         return {"status": "success", "memory": memory}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/recommend-space")
+async def recommend_space(
+    text: str | None = Query(None, description="Memory text to base recommendation on"),
+    current_space_id: str | None = Query(None, description="Current space context (e.g. selected space); can be used as fallback"),
+):
+    """
+    Phase E 4.2: Auto-recommend space for adding a memory. Improves UX without auto-organization.
+    Returns a suggested space_id based on semantic similarity of the text to existing memories per space.
+    User can always override in the UI.
+    """
+    try:
+        from memory.space_constants import SPACE_ID_GLOBAL
+
+        # pdb.set_trace()
+        # No text or very short: suggest current context or global
+        if not (text and text.strip()):
+            out = current_space_id if current_space_id and current_space_id != SPACE_ID_GLOBAL else SPACE_ID_GLOBAL
+            return {"recommended_space_id": out, "reason": "current_or_global"}
+
+        # Search user's memories (no space filter) by semantic similarity to the draft text
+        emb = get_embedding(text.strip(), task_type="search_query")
+        results = remme_store.search(
+            query_vector=emb,
+            query_text=text.strip(),
+            k=15,
+            filter_metadata=None,
+        )
+        if not results:
+            out = current_space_id if current_space_id and current_space_id != SPACE_ID_GLOBAL else SPACE_ID_GLOBAL
+            return {"recommended_space_id": out, "reason": "no_memories"}
+
+        # Recommend the space that appears most often in top results (or top result's space)
+        from collections import Counter
+        space_counts: Counter = Counter()
+        for r in results:
+            sid = r.get("space_id") or SPACE_ID_GLOBAL
+            space_counts[sid] += 1
+        if space_counts:
+            recommended = space_counts.most_common(1)[0][0]
+            return {"recommended_space_id": recommended, "reason": "similar_memories"}
+        out = current_space_id if current_space_id and current_space_id != SPACE_ID_GLOBAL else SPACE_ID_GLOBAL
+        return {"recommended_space_id": out, "reason": "current_or_global"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -276,6 +508,163 @@ async def delete_memory(memory_id: str):
     try:
         remme_store.delete(memory_id)
         return {"status": "success", "id": memory_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/memories/{memory_id}/space")
+async def move_memory_to_space(
+    memory_id: str = PathParam(..., description="Memory id to move"),
+    background_tasks: BackgroundTasks = ...,  # Required for sync trigger
+    body: MoveMemorySpaceRequest = MoveMemorySpaceRequest(),
+):
+    """
+    Move a memory to another space. Enhances space recommendation: user can accept a
+    suggestion and move an existing memory to the recommended space.
+    - space_id: target space id; omit or __global__ to move to global.
+    - Target space must exist and user must have access (owner or shared-with).
+    """
+    target_space_id = body.space_id if body.space_id and body.space_id != SPACE_ID_GLOBAL else None
+    try:
+        m = remme_store.get(memory_id)
+        if not m:
+            raise HTTPException(status_code=404, detail="Memory not found")
+
+        # Validate target space exists and user has access (can_user_access_space requires Space to exist)
+        if target_space_id:
+            try:
+                from memory.knowledge_graph import get_knowledge_graph
+                from memory.user_id import get_user_id
+                kg = get_knowledge_graph()
+                if kg and kg.enabled:
+                    if not kg.can_user_access_space(get_user_id(), target_space_id):
+                        raise HTTPException(
+                            status_code=403,
+                            detail="You do not have access to the target space",
+                        )
+            except HTTPException:
+                raise
+            except Exception:
+                pass
+
+        # Update Qdrant payload
+        space_value = target_space_id if target_space_id else SPACE_ID_GLOBAL
+        ok = remme_store.update(memory_id, metadata={"space_id": space_value})
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to update memory")
+
+        # Update Neo4j (Memory)-[:IN_SPACE]->(Space)
+        try:
+            from memory.knowledge_graph import get_knowledge_graph
+            kg = get_knowledge_graph()
+            if kg and kg.enabled:
+                kg.move_memory_to_space(memory_id, target_space_id)
+        except Exception as e:
+            # Log but don't fail; Qdrant is source of truth
+            print(f"⚠️ Neo4j move_memory_to_space failed (memory moved in Qdrant): {e}")
+
+        # Trigger background sync when sync engine enabled
+        try:
+            from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
+            if is_sync_engine_enabled() and get_sync_server_url():
+                from routers.sync import run_sync_background
+                background_tasks.add_task(run_sync_background)
+        except Exception:
+            pass
+
+        return {"status": "success", "memory_id": memory_id, "space_id": space_value}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/spaces")
+async def create_space(request: CreateSpaceRequest, background_tasks: BackgroundTasks):
+    """Create a new space for the user. Returns {space_id, name, description}. Phase 3 Spaces. Phase 4: triggers background sync when sync engine enabled."""
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        from memory.user_id import get_user_id
+        from core.auth.context import get_is_guest
+
+        get_user_id()  # ensure identity present (middleware already enforced for protected routes)
+        # Enforce Space Rules: Guests can only create local_only (Computer Only) spaces
+        if get_is_guest():
+            request.sync_policy = "local_only"
+        # Normalize: allow sync | local_only | shared
+        if request.sync_policy and request.sync_policy not in ("sync", "local_only", "shared"):
+            request.sync_policy = "sync"
+
+        kg = get_knowledge_graph()
+        if not kg or not kg.enabled:
+            raise HTTPException(status_code=503, detail="Neo4j not enabled")
+        space_id = kg.create_space(
+            name=request.name,
+            description=request.description,
+            sync_policy=request.sync_policy,
+        )
+        if not space_id:
+            raise HTTPException(status_code=500, detail="Failed to create space")
+
+        # Phase 4: enqueue background sync when sync engine enabled
+        try:
+            from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
+            if is_sync_engine_enabled() and get_sync_server_url() and request.sync_policy not in ("local_only",):
+                from routers.sync import run_sync_background
+                background_tasks.add_task(run_sync_background)
+        except Exception:
+            pass
+
+        return {"status": "success", "space_id": space_id, "name": request.name or "", "description": request.description or ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/spaces")
+async def list_spaces():
+    """List spaces owned by the user plus spaces shared with them. Phase 3 Spaces; Shared Space: includes shared."""
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        from memory.user_id import get_user_id
+        kg = get_knowledge_graph()
+        if not kg or not kg.enabled:
+            return {"status": "success", "spaces": []}
+        spaces = kg.get_all_spaces_for_user()
+        return {"status": "success", "spaces": spaces}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ShareSpaceRequest(BaseModel):
+    """Share a space with other users by user_id. Email/username resolution can be added when auth supports it."""
+    user_ids: list[str] = []
+
+
+@router.post("/spaces/{space_id}/share")
+async def share_space(space_id: str, body: ShareSpaceRequest):
+    """Share a space with the given user_ids. Caller must own the space. Shared Space step."""
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        from memory.user_id import get_user_id
+        kg = get_knowledge_graph()
+        if not kg or not kg.enabled:
+            raise HTTPException(status_code=503, detail="Neo4j not enabled")
+        uid = get_user_id()
+        if not uid:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        owned_ids = [s["space_id"] for s in kg.get_spaces_for_user(user_id=uid)]
+        if space_id not in owned_ids:
+            raise HTTPException(status_code=403, detail="You do not own this space")
+        added = 0
+        for u in body.user_ids:
+            if u and u.strip():
+                if kg.share_space_with(space_id, u.strip(), owner_user_id=uid):
+                    added += 1
+        return {"status": "success", "space_id": space_id, "shared_count": added}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -318,45 +707,85 @@ async def get_remme_profile():
         
         # 3. Load Preferences for styling and content
         try:
-            from remme.hubs.preferences_hub import get_preferences_hub
-            from remme.hubs.operating_context_hub import get_operating_context_hub
-            from remme.hubs.soft_identity_hub import get_soft_identity_hub
-            
-            prefs_hub = get_preferences_hub()
-            context_hub = get_operating_context_hub()
-            soft_hub = get_soft_identity_hub()
-            
-            # Gather relevant bits for the prompt
-            context_data = {
-                "tech_stack": {
-                    "os": context_hub.get_os(),
-                    "shell": context_hub.get_shell(),
-                    "languages": context_hub.get_primary_languages(),
-                    "location": context_hub.data.environment.location_region.value
-                },
-                "output_contract": {
-                    "verbosity": prefs_hub.get_verbosity(),
-                    "tones": prefs_hub.get_tone_constraints(),
-                    "avoid": prefs_hub.get_avoid_patterns()
-                },
-                "traits": soft_hub.data.meta.get("traits", {}),
-                "interests": {
-                    "professional": soft_hub.data.interests_and_hobbies.professional_interests,
-                    "hobbies": soft_hub.data.interests_and_hobbies.personal_hobbies
-                },
-                "meta": {
-                    "total_evidence": (
-                        prefs_hub.data.meta.evidence_count + 
-                        context_hub.data.meta.evidence_count + 
-                        soft_hub.data.meta.evidence_count
-                    ),
-                    "overall_confidence": max(
-                        prefs_hub.data.meta.confidence,
-                        context_hub.data.meta.confidence,
-                        soft_hub.data.meta.confidence
-                    )
+            from memory.mnemo_config import is_mnemo_enabled
+            if is_mnemo_enabled():
+                from memory.neo4j_preferences_adapter import build_preferences_from_neo4j
+                from memory.user_id import get_user_id
+                prefs_data = build_preferences_from_neo4j(get_user_id())
+                if prefs_data:
+                    prefs = prefs_data.get("preferences", {})
+                    oc = prefs_data.get("operating_context", {})
+                    soft = prefs_data.get("soft_identity", {})
+                    meta = prefs_data.get("meta", {})
+                    oc_out = prefs.get("output_contract", {})
+                    interests = soft.get("interests_and_hobbies", {})
+                    context_data = {
+                        "tech_stack": {
+                            "os": oc.get("os", "unknown"),
+                            "shell": oc.get("shell", "unknown"),
+                            "languages": oc.get("primary_languages", []),
+                            "location": oc.get("location")
+                        },
+                        "output_contract": {
+                            "verbosity": oc_out.get("verbosity", "detailed"),
+                            "tones": oc_out.get("tone_constraints", []),
+                            "avoid": prefs.get("anti_preferences", {})
+                        },
+                        "traits": soft.get("extras", {}),
+                        "interests": {
+                            "professional": interests.get("professional_interests", []),
+                            "hobbies": interests.get("personal_hobbies", [])
+                        },
+                        "meta": {
+                            "total_evidence": meta.get("total_evidence", 0),
+                            "overall_confidence": meta.get("overall_confidence", 0.5)
+                        }
+                    }
+                else:
+                    context_data = {
+                        "meta": {"overall_confidence": 0.5, "total_evidence": 0},
+                        "output_contract": {"verbosity": "detailed", "tones": []},
+                        "tech_stack": {"os": "unknown", "shell": "unknown", "languages": [], "location": None},
+                        "traits": {},
+                        "interests": {"professional": [], "hobbies": []}
+                    }
+            else:
+                from remme.hubs.preferences_hub import get_preferences_hub
+                from remme.hubs.operating_context_hub import get_operating_context_hub
+                from remme.hubs.soft_identity_hub import get_soft_identity_hub
+                prefs_hub = get_preferences_hub()
+                context_hub = get_operating_context_hub()
+                soft_hub = get_soft_identity_hub()
+                context_data = {
+                    "tech_stack": {
+                        "os": context_hub.get_os(),
+                        "shell": context_hub.get_shell(),
+                        "languages": context_hub.get_primary_languages(),
+                        "location": context_hub.data.environment.location_region.value
+                    },
+                    "output_contract": {
+                        "verbosity": prefs_hub.get_verbosity(),
+                        "tones": prefs_hub.get_tone_constraints(),
+                        "avoid": prefs_hub.get_avoid_patterns()
+                    },
+                    "traits": getattr(soft_hub.data.meta, "traits", {}) if hasattr(soft_hub.data, "meta") else {},
+                    "interests": {
+                        "professional": soft_hub.data.interests_and_hobbies.professional_interests,
+                        "hobbies": soft_hub.data.interests_and_hobbies.personal_hobbies
+                    },
+                    "meta": {
+                        "total_evidence": (
+                            prefs_hub.data.meta.evidence_count +
+                            context_hub.data.meta.evidence_count +
+                            soft_hub.data.meta.evidence_count
+                        ),
+                        "overall_confidence": max(
+                            prefs_hub.data.meta.confidence,
+                            context_hub.data.meta.confidence,
+                            soft_hub.data.meta.confidence
+                        )
+                    }
                 }
-            }
             
             # Format as readable block
             pref_block = f"""
@@ -455,15 +884,71 @@ A high-level overview of who the user appears to be, their primary drivers, and 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/preferences")
-async def get_user_preferences():
-    """Get all UserModel preferences for frontend display."""
+@router.put("/preferences/facts")
+async def update_fact(request: UpdateFactRequest):
+    """Update or create a fact from UI (step 7). Requires MNEMO_ENABLED. Backend-ready; no UI changes yet."""
     try:
+        from memory.mnemo_config import is_mnemo_enabled
+        if not is_mnemo_enabled():
+            raise HTTPException(
+                status_code=501,
+                detail="UI fact edits require MNEMO_ENABLED=true. Use legacy JSON hubs when disabled.",
+            )
+        from memory.user_id import get_user_id
+        from memory.knowledge_graph import get_knowledge_graph
+        kg = get_knowledge_graph()
+        if not kg or not getattr(kg, "enabled", False):
+            raise HTTPException(status_code=503, detail="Neo4j knowledge graph not available.")
+        user_id = get_user_id()
+        fid = kg.upsert_fact_from_ui(
+            user_id=user_id,
+            namespace=request.namespace,
+            key=request.key,
+            value_type=request.value_type,
+            value=request.value,
+            value_text=request.value_text,
+            value_number=request.value_number,
+            value_bool=request.value_bool,
+            value_json=request.value_json,
+            entity_ref=request.entity_ref,
+            space_id=request.space_id,
+        )
+        if not fid:
+            raise HTTPException(status_code=400, detail="Failed to upsert fact.")
+        return {"status": "success", "fact_id": fid}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/preferences")
+async def get_user_preferences(
+    space_id: str | None = Query(None, description="Filter preferences to global + this space"),
+    space_ids: str | None = Query(None, description="Comma-separated space IDs to include (alternative to space_id)"),
+):
+    """Get all UserModel preferences for frontend display. When MNEMO_ENABLED, reads from Neo4j via adapter; else from JSON hubs. Phase 3B: optional space_id/space_ids filter."""
+    try:
+        from memory.mnemo_config import is_mnemo_enabled
+        if is_mnemo_enabled():
+            from memory.neo4j_preferences_adapter import build_preferences_from_neo4j
+            from memory.user_id import get_user_id
+            space_ids_list = [s.strip() for s in (space_ids or "").split(",") if s.strip()] or None
+            result = build_preferences_from_neo4j(
+                get_user_id(),
+                space_id=space_id,
+                space_ids=space_ids_list,
+            )
+            if result:
+                return result
+
         from remme.hubs.preferences_hub import get_preferences_hub
         from remme.hubs.operating_context_hub import get_operating_context_hub
         from remme.hubs.soft_identity_hub import get_soft_identity_hub
         from remme.engines.evidence_log import get_evidence_log
-        
+
         prefs_hub = get_preferences_hub()
         context_hub = get_operating_context_hub()
         soft_hub = get_soft_identity_hub()

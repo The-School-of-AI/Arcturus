@@ -1230,8 +1230,14 @@ export const ProjectTableCard: React.FC<ProjectTableCardProps> = ({ title, data 
 
 
 // ============================================================================
-// AI CHAT CARD (from ai-03)
+// AI CHAT CARD (from ai-03) — live webchat via /api/nexus/webchat
 // ============================================================================
+
+const _WEBCHAT_BASE = 'http://localhost:8000';
+const _POLL_MS = 500;
+const _TIMEOUT_MS = 120_000;
+
+interface _ChatMsg { role: 'user' | 'bot'; content: string; }
 
 interface AiChatCardProps {
     title?: string;
@@ -1239,23 +1245,126 @@ interface AiChatCardProps {
     config?: { showTitle?: boolean };
     style?: any;
     isInteractive?: boolean;
+    cardId?: string;
 }
 
-export const AiChatCard: React.FC<AiChatCardProps> = ({ title, data = {}, config = {}, style = {}, isInteractive = false }) => {
-    const history = data.history || [];
+export const AiChatCard: React.FC<AiChatCardProps> = ({ title, data = {}, config = {}, style = {}, isInteractive = false, cardId }) => {
     const accentColor = style.accentColor || '#F5C542';
+    const placeholder = data?.placeholder || 'Ask me anything...';
+
+    const storageKey = cardId ? `webchat_session_id_${cardId}` : 'webchat_session_id';
+    const historyKey = cardId ? `webchat_history_${cardId}` : 'webchat_history';
+
+    const sessionIdRef = React.useRef<string>(
+        (() => {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) return stored;
+            const id = crypto.randomUUID();
+            localStorage.setItem(storageKey, id);
+            return id;
+        })()
+    );
+    const [messages, setMessages] = React.useState<_ChatMsg[]>(() => {
+        try {
+            const stored = localStorage.getItem(historyKey);
+            return stored ? JSON.parse(stored) : [];
+        } catch { return []; }
+    });
+    const [inputVal, setInputVal] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+    const bottomRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, loading]);
+
+    React.useEffect(() => {
+        localStorage.setItem(historyKey, JSON.stringify(messages));
+    }, [messages, historyKey]);
+
+    const send = async () => {
+        const text = inputVal.trim();
+        if (!text || loading) return;
+        setMessages(prev => [...prev, { role: 'user', content: text }]);
+        setInputVal('');
+        setLoading(true);
+        const sessionId = sessionIdRef.current;
+        try {
+            const postResp = await fetch(`${_WEBCHAT_BASE}/api/nexus/webchat/inbound`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, sender_id: sessionId, sender_name: 'WebChat User', text }),
+            });
+            if (!postResp.ok) throw new Error(`POST failed: ${postResp.status}`);
+
+            const deadline = Date.now() + _TIMEOUT_MS;
+            let reply: string | null = null;
+            while (Date.now() < deadline) {
+                await new Promise(r => setTimeout(r, _POLL_MS));
+                try {
+                    const getResp = await fetch(`${_WEBCHAT_BASE}/api/nexus/webchat/messages/${sessionId}`);
+                    if (getResp.ok) {
+                        const d = await getResp.json();
+                        const msgs: { text: string }[] = d.messages ?? [];
+                        if (msgs.length > 0) { reply = msgs.map(m => m.text).join('\n\n'); break; }
+                    }
+                } catch { /* keep polling */ }
+            }
+            setMessages(prev => [...prev, { role: 'bot', content: reply ?? 'No response — check that the backend is running.' }]);
+        } catch (err) {
+            setMessages(prev => [...prev, { role: 'bot', content: `Error: ${String(err)}` }]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <div className="h-full p-4 flex flex-col">
-            <div className="flex-1 flex flex-col gap-3 overflow-auto">
-                {history.map((msg, i) => (
-                    <div key={i} className={`max-w-[80%] rounded-lg px-3 py-2 ${msg.role === 'user' ? 'self-end bg-primary/20 text-primary' : 'self-start bg-muted text-muted-foreground'}`}>
-                        {msg.content}
+        <div className="h-full p-4 flex flex-col gap-2">
+            {/* message history */}
+            <div className="flex-1 flex flex-col gap-2 overflow-y-auto min-h-0">
+                {messages.length === 0 && !loading && (
+                    <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground">
+                        Send a message to start chatting with the agent
+                    </div>
+                )}
+                {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                            msg.role === 'user'
+                                ? 'bg-primary/20 text-primary'
+                                : 'bg-muted text-foreground'
+                        }`}>
+                            {msg.content}
+                        </div>
                     </div>
                 ))}
+                {loading && (
+                    <div className="flex justify-start">
+                        <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-xs animate-pulse">
+                            Thinking…
+                        </div>
+                    </div>
+                )}
+                <div ref={bottomRef} />
             </div>
-            <div className="mt-3 flex gap-2">
-                <input className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm" placeholder={data.placeholder || 'Ask me anything...'} disabled={!isInteractive} />
-                <button className="px-4 py-2 rounded font-medium text-sm" style={{ backgroundColor: accentColor, color: '#000' }}>Send</button>
+            {/* input */}
+            <div className="flex gap-2 shrink-0">
+                <input
+                    className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
+                    placeholder={placeholder}
+                    value={inputVal}
+                    onChange={e => setInputVal(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+                    disabled={loading}
+                />
+                <button
+                    className="px-4 py-2 rounded font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: accentColor, color: '#000' }}
+                    onClick={send}
+                    disabled={!inputVal.trim() || loading}
+                >
+                    {loading ? '…' : 'Send'}
+                </button>
             </div>
         </div>
     );

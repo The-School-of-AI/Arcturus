@@ -1,10 +1,13 @@
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from core.schemas.studio_schema import Artifact, Revision
+from core.schemas.studio_schema import Artifact, ExportJob, Revision
+
+_SAFE_ID = re.compile(r"^[\w-]+$")
 
 
 class StudioStorage:
@@ -114,3 +117,90 @@ class StudioStorage:
                 continue
 
         return sorted(revisions, key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # === Export Job Methods ===
+
+    def save_export_job(self, export_job: ExportJob) -> None:
+        """Save an export job to {artifact_id}/exports/{job_id}.json."""
+        exports_dir = self.base_dir / export_job.artifact_id / "exports"
+        exports_dir.mkdir(parents=True, exist_ok=True)
+        job_file = exports_dir / f"{export_job.id}.json"
+        job_file.write_text(json.dumps(export_job.model_dump(mode="json"), indent=2))
+
+    def load_export_job(self, artifact_id: str, export_job_id: str) -> Optional[ExportJob]:
+        """Load a specific export job. Returns None if not found."""
+        job_file = self.base_dir / artifact_id / "exports" / f"{export_job_id}.json"
+        if not job_file.exists():
+            return None
+        data = json.loads(job_file.read_text())
+        return ExportJob(**data)
+
+    def list_export_jobs(self, artifact_id: str) -> List[Dict]:
+        """List all export jobs for an artifact sorted by created_at desc."""
+        exports_dir = self.base_dir / artifact_id / "exports"
+        if not exports_dir.exists():
+            return []
+        jobs = []
+        for job_file in exports_dir.glob("*.json"):
+            try:
+                data = json.loads(job_file.read_text())
+                jobs.append({
+                    "id": data.get("id", job_file.stem),
+                    "format": data.get("format"),
+                    "status": data.get("status"),
+                    "created_at": data.get("created_at"),
+                    "completed_at": data.get("completed_at"),
+                    "file_size_bytes": data.get("file_size_bytes"),
+                })
+            except (json.JSONDecodeError, KeyError):
+                continue
+        return sorted(jobs, key=lambda x: x.get("created_at", ""), reverse=True)
+
+    def get_export_file_path(self, artifact_id: str, export_job_id: str, fmt: str) -> Path:
+        """Return the file path for an exported artifact."""
+        return self.base_dir / artifact_id / "exports" / f"{export_job_id}.{fmt}"
+
+    # === Slide Image Cache Methods ===
+
+    def save_slide_image(self, artifact_id: str, slide_id: str, jpeg_bytes: bytes) -> Path:
+        """Save a generated slide image to {artifact_id}/images/{slide_id}.jpg."""
+        if not _SAFE_ID.match(slide_id):
+            raise ValueError(f"Invalid slide_id: {slide_id!r}")
+        images_dir = self.base_dir / artifact_id / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        image_path = images_dir / f"{slide_id}.jpg"
+        image_path.write_bytes(jpeg_bytes)
+        return image_path
+
+    def load_slide_image_path(self, artifact_id: str, slide_id: str) -> Optional[Path]:
+        """Return the path to a cached slide image, or None if not found."""
+        if not _SAFE_ID.match(slide_id):
+            return None
+        image_path = self.base_dir / artifact_id / "images" / f"{slide_id}.jpg"
+        return image_path if image_path.exists() else None
+
+    def list_slide_images(self, artifact_id: str) -> List[str]:
+        """Return slide IDs that have cached images."""
+        images_dir = self.base_dir / artifact_id / "images"
+        if not images_dir.exists():
+            return []
+        return [p.stem for p in images_dir.glob("*.jpg")]
+
+    def find_export_job(self, export_job_id: str) -> Optional[tuple]:
+        """Scan all artifact directories for an export job by ID.
+
+        Returns (artifact_id, ExportJob) or None if not found.
+        """
+        if not self.base_dir.exists():
+            return None
+        for artifact_dir in self.base_dir.iterdir():
+            if not artifact_dir.is_dir():
+                continue
+            job_file = artifact_dir / "exports" / f"{export_job_id}.json"
+            if job_file.exists():
+                try:
+                    data = json.loads(job_file.read_text())
+                    return (artifact_dir.name, ExportJob(**data))
+                except (json.JSONDecodeError, Exception):
+                    continue
+        return None

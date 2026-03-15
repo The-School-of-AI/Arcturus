@@ -1,4 +1,7 @@
 import asyncio
+import hashlib
+import hmac
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -6,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import gateway_api.integration_tracing as integration_tracing_module
+import gateway_api.idempotency as idempotency_module
 import gateway_api.key_store as key_store_module
 import gateway_api.metering as metering_module
 import gateway_api.v1.agents as agents_routes
@@ -19,6 +23,7 @@ import gateway_api.v1.studio as studio_routes
 import gateway_api.webhooks as webhooks_module
 from core.scheduler import JobDefinition
 from gateway_api.integration_tracing import IntegrationTracer
+from gateway_api.idempotency import IdempotencyStore
 from gateway_api.key_store import GatewayKeyStore
 from gateway_api.metering import GatewayMeteringStore
 from gateway_api.v1.router import router as gateway_router
@@ -28,28 +33,55 @@ from gateway_api.webhooks import WebhookService
 class _FakeScheduler:
     def __init__(self):
         self.jobs = {}
+        self.history = {}
 
     def list_jobs(self):
         return list(self.jobs.values())
 
-    def add_job(self, name: str, cron_expression: str, agent_type: str, query: str):
+    def add_job(
+        self,
+        name: str,
+        cron_expression: str,
+        agent_type: str,
+        query: str,
+        timezone: str = "UTC",
+    ):
         job = JobDefinition(
             id=f"job_{len(self.jobs) + 1}",
             name=name,
             cron_expression=cron_expression,
             agent_type=agent_type,
             query=query,
+            timezone=timezone,
         )
         self.jobs[job.id] = job
+        self.history.setdefault(job.id, [])
         return job
 
     def trigger_job(self, job_id: str):
         if job_id not in self.jobs:
             raise KeyError(job_id)
-        self.jobs[job.id].last_run = datetime.now(timezone.utc).isoformat()
+        self.jobs[job_id].last_run = datetime.now(timezone.utc).isoformat()
+        self.history.setdefault(job_id, []).append(
+            {
+                "job_id": job_id,
+                "run_id": f"manual_{job_id}",
+                "status": "success",
+                "started_at": self.jobs[job_id].last_run,
+                "finished_at": self.jobs[job_id].last_run,
+                "error": None,
+                "output_summary": "manual trigger",
+            }
+        )
 
     def delete_job(self, job_id: str):
         self.jobs.pop(job_id, None)
+
+    def get_job_history(self, job_id: str, limit: int = 50):
+        rows = list(self.history.get(job_id, []))
+        rows = rows[-max(1, limit) :]
+        rows.reverse()
+        return rows
 
 
 class _FakeOracleAdapter:
@@ -113,12 +145,15 @@ def gateway_test_client(tmp_path, monkeypatch):
     audit_file = tmp_path / "key_audit.jsonl"
     events_file = tmp_path / "metering_events.jsonl"
     integration_events = tmp_path / "integration_events.jsonl"
+    idempotency_records = tmp_path / "idempotency_records.json"
 
     key_store = GatewayKeyStore(keys_file=keys_file, audit_file=audit_file)
     metering_store = GatewayMeteringStore(events_file=events_file, data_dir=tmp_path)
+    idempotency_store = IdempotencyStore(records_file=idempotency_records)
 
     monkeypatch.setattr(key_store_module, "_gateway_key_store", key_store)
     monkeypatch.setattr(metering_module, "_metering_store", metering_store)
+    monkeypatch.setattr(idempotency_module, "_idempotency_store", idempotency_store)
     monkeypatch.setattr(
         integration_tracing_module,
         "_integration_tracer",
@@ -224,20 +259,60 @@ def gateway_test_client(tmp_path, monkeypatch):
         dlq_file=dlq_file,
     )
     monkeypatch.setattr(webhooks_module, "_webhook_service", webhook_service)
+    monkeypatch.setenv("ARCTURUS_GATEWAY_GITHUB_WEBHOOK_SECRET", "contract-github-secret")
+    monkeypatch.setenv("ARCTURUS_GATEWAY_JIRA_WEBHOOK_TOKEN", "contract-jira-token")
+    monkeypatch.setenv("ARCTURUS_GATEWAY_GMAIL_CHANNEL_TOKEN", "contract-gmail-token")
 
     app = FastAPI()
     app.include_router(gateway_router)
     client = TestClient(app)
 
-    def create_api_key(scopes):
+    def create_api_key(
+        scopes,
+        rpm_limit=120,
+        burst_limit=60,
+        monthly_request_quota=100_000,
+        monthly_unit_quota=500_000,
+    ):
         _, plaintext = asyncio.run(
             key_store.create_key(
                 name="test",
                 scopes=scopes,
-                rpm_limit=120,
-                burst_limit=60,
+                rpm_limit=rpm_limit,
+                burst_limit=burst_limit,
+                monthly_request_quota=monthly_request_quota,
+                monthly_unit_quota=monthly_unit_quota,
             )
         )
         return plaintext
 
-    return client, create_api_key, webhook_service, integration_events
+    def connector_headers(source: str, payload: dict, *, event_name: str | None = None) -> dict:
+        source_key = source.strip().lower()
+        body = json.dumps(payload)
+        delivery_id = f"contract-{hashlib.sha256(body.encode('utf-8')).hexdigest()[:12]}"
+        if source_key == "github":
+            signature = "sha256=" + hmac.new(
+                b"contract-github-secret",
+                body.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            return {
+                "content-type": "application/json",
+                "x-github-event": event_name or "push",
+                "x-github-delivery": delivery_id,
+                "x-hub-signature-256": signature,
+            }
+        if source_key == "jira":
+            return {
+                "content-type": "application/json",
+                "x-atlassian-webhook-token": "contract-jira-token",
+            }
+        if source_key == "gmail":
+            return {
+                "content-type": "application/json",
+                "x-goog-channel-token": "contract-gmail-token",
+                "x-goog-message-number": "3001",
+            }
+        raise ValueError(f"Unsupported connector source: {source_key}")
+
+    return client, create_api_key, webhook_service, integration_events, connector_headers

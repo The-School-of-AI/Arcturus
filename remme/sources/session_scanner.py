@@ -3,6 +3,10 @@ Session Scanner - Extracts preferences from session summaries.
 
 Scans memory/session_summaries_index/ for user preferences expressed
 during conversations and adds them to staging queue.
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Session extraction uses unified
+extractor and Neo4j ingestion; staging is not used. background_smart_scan uses
+unified extractor directly.
 """
 
 import json
@@ -194,7 +198,7 @@ class SessionScanner:
         
         for session_path in files:
             preferences = self.extract_from_session(session_path)
-            
+            print(f"SessionScanner: Extracted preferences from {session_path}---->{preferences}")
             # Mark as scanned
             tracker.mark_scanned("sessions", session_path)
             

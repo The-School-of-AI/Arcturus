@@ -1,10 +1,27 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useAppStore } from '@/store';
-import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe, PawPrint, ListTree, GitPullRequest } from 'lucide-react';
+import { Search, Brain, Trash2, Plus, AlertCircle, TriangleAlert, Settings2, Monitor, Shield, Code2, Terminal, Heart, Zap, Utensils, Music, Film, BookOpen, Briefcase, Sparkles, RefreshCw, Coffee, Dog, Palette, MessageSquare, Globe, PawPrint, ListTree, GitPullRequest, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+
+/** Safe timestamp for sort (invalid/missing → 0 so they sort to end). */
+function getSortTime(created_at: string | undefined | null): number {
+    if (created_at == null || created_at === '') return 0;
+    const t = new Date(created_at).getTime();
+    return Number.isFinite(t) ? t : 0;
+}
+
+/** Safe relative date for display; returns "—" when invalid or missing. */
+function formatMemoryDate(created_at: string | undefined | null): string {
+    if (created_at == null || created_at === '') return '—';
+    const d = new Date(created_at);
+    if (!Number.isFinite(d.getTime())) return '—';
+    return `${formatDistanceToNow(d)} ago`;
+}
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 
@@ -60,16 +77,71 @@ export const RemmePanel: React.FC = () => {
 // SNIPPETS VIEW (Original RemmePanel content)
 // ============================================================================
 
+const BANNER_AUTO_DISMISS_MS = 5000;
+
 const SnippetsView: React.FC = () => {
-    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen } = useAppStore();
+    const { memories, fetchMemories, addMemory, deleteMemory, cleanupDanglingMemories, isRemmeAddOpen: isAddOpen, setIsRemmeAddOpen: setIsAddOpen, spaces, currentSpaceId, setCurrentSpaceId, fetchSpaces, setIsSpacesModalOpen, recommendSpace } = useAppStore();
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedMemoryId, setExpandedMemoryId] = useState<string | null>(null);
     const [newMemoryText, setNewMemoryText] = useState("");
+    const [memorySpaceId, setMemorySpaceId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
+    const [recommendedSpaceId, setRecommendedSpaceId] = useState<string | null>(null);
+    const [showRecommendBanner, setShowRecommendBanner] = useState(false);
+    const recommendDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const bannerDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const memorySpaceIdRef = useRef<string | null>(null);
+    memorySpaceIdRef.current = memorySpaceId;
 
     useEffect(() => {
         fetchMemories();
-    }, []);
+    }, [currentSpaceId, fetchMemories]);
+
+    useEffect(() => {
+        if (isAddOpen) {
+            setMemorySpaceId(currentSpaceId);
+            setRecommendedSpaceId(null);
+            setShowRecommendBanner(false);
+            if (bannerDismissRef.current) {
+                clearTimeout(bannerDismissRef.current);
+                bannerDismissRef.current = null;
+            }
+            fetchSpaces();
+        }
+    }, [isAddOpen, currentSpaceId, fetchSpaces]);
+
+    // Phase E 4.2: Non-invasive space recommendation — no automatic changes; show banner only.
+    useEffect(() => {
+        if (!isAddOpen || !newMemoryText.trim()) return;
+        if (recommendDebounceRef.current) clearTimeout(recommendDebounceRef.current);
+        recommendDebounceRef.current = setTimeout(() => {
+            recommendDebounceRef.current = null;
+            recommendSpace(newMemoryText.trim(), currentSpaceId)
+                .then(({ recommended_space_id }) => {
+                    const recId = recommended_space_id === '__global__' ? null : recommended_space_id;
+                    const current = memorySpaceIdRef.current ?? '__global__';
+                    const recNorm = recId ?? '__global__';
+                    if (current !== recNorm) {
+                        setRecommendedSpaceId(recId);
+                        setShowRecommendBanner(true);
+                        if (bannerDismissRef.current) clearTimeout(bannerDismissRef.current);
+                        bannerDismissRef.current = setTimeout(() => {
+                            bannerDismissRef.current = null;
+                            setShowRecommendBanner(false);
+                        }, BANNER_AUTO_DISMISS_MS);
+                    }
+                })
+                .catch(() => {});
+        }, 500);
+        return () => {
+            if (recommendDebounceRef.current) clearTimeout(recommendDebounceRef.current);
+            if (bannerDismissRef.current) clearTimeout(bannerDismissRef.current);
+        };
+    }, [isAddOpen, newMemoryText, currentSpaceId, recommendSpace]);
+
+    const currentSpaceName = currentSpaceId
+        ? spaces.find((s) => s.space_id === currentSpaceId)?.name || 'Space'
+        : 'Global';
 
     const filteredMemories = useMemo(() => {
         let items = [...memories];
@@ -79,38 +151,66 @@ const SnippetsView: React.FC = () => {
                 m.category.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
-        return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return items.sort((a, b) => getSortTime(b.created_at) - getSortTime(a.created_at));
     }, [memories, searchQuery]);
 
     const danglingCount = useMemo(() => memories.filter(m => m.source_exists === false).length, [memories]);
 
     const handleAdd = async () => {
         if (!newMemoryText.trim()) return;
+        console.log('[RemmePanel] handleAdd called', { text: newMemoryText.slice(0, 50), space_id: memorySpaceId });
         setIsAdding(true);
         try {
-            await addMemory(newMemoryText);
+            await addMemory(newMemoryText, "general", memorySpaceId);
             setNewMemoryText("");
+            setRecommendedSpaceId(null);
+            setShowRecommendBanner(false);
             setIsAddOpen(false);
         } finally {
             setIsAdding(false);
         }
     };
 
+    const handleAddToRecommended = async () => {
+        if (!newMemoryText.trim()) return;
+        console.log('[RemmePanel] handleAddToRecommended called', { text: newMemoryText.slice(0, 50), recommended_space_id: recommendedSpaceId });
+        setIsAdding(true);
+        try {
+            await addMemory(newMemoryText, "general", recommendedSpaceId);
+            setCurrentSpaceId(recommendedSpaceId);
+            setNewMemoryText("");
+            setRecommendedSpaceId(null);
+            setShowRecommendBanner(false);
+            setIsAddOpen(false);
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    const dismissRecommendBanner = () => {
+        setShowRecommendBanner(false);
+        if (bannerDismissRef.current) {
+            clearTimeout(bannerDismissRef.current);
+            bannerDismissRef.current = null;
+        }
+    };
+
     return (
         <div className="flex flex-col h-full">
             {/* Header & Search */}
-            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    <Input
-                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
-                        placeholder="Search your memories..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+            <div className="p-2 border-b border-border/50 bg-muted/20 space-y-2 shrink-0">
+                <div className="flex items-center gap-1.5">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <Input
+                            className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                            placeholder="Search your memories..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
 
-                <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                     <Button
                         variant="ghost"
                         size="icon"
@@ -141,11 +241,34 @@ const SnippetsView: React.FC = () => {
                         <TriangleAlert className="w-4 h-4" />
                     </Button>
                 </div>
+                </div>
+                <button
+                    onClick={() => setIsSpacesModalOpen(true)}
+                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    title="Manage Spaces"
+                >
+                    <FolderOpen className="w-3 h-3" />
+                    Space: {currentSpaceName}
+                </button>
             </div>
 
             {/* Add Memory Form */}
             {isAddOpen && (
                 <div className="p-3 border-b border-border/50 bg-primary/5 space-y-2">
+                    <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Space</Label>
+                        <Select value={memorySpaceId ?? "__global__"} onValueChange={(v) => setMemorySpaceId(v === "__global__" ? null : v)}>
+                            <SelectTrigger className="h-8 bg-background border-border text-xs">
+                                <SelectValue placeholder="Global" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__global__">Global</SelectItem>
+                                {spaces.map((s) => (
+                                    <SelectItem key={s.space_id} value={s.space_id}>{s.name || 'Unnamed Space'}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <Input
                         className="w-full bg-background border-border rounded-md text-xs h-9"
                         placeholder="Enter a memory... (e.g. 'I love horoscopes and astrology')"
@@ -158,6 +281,33 @@ const SnippetsView: React.FC = () => {
                         }}
                         autoFocus
                     />
+                    {showRecommendBanner && (
+                        <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md bg-muted/60 border border-border/50 text-[10px]">
+                            <span className="text-muted-foreground truncate">
+                                Suggested: Add to {recommendedSpaceId ? (spaces.find((s) => s.space_id === recommendedSpaceId)?.name || 'space') : 'Global'}?
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[10px]"
+                                    onClick={handleAddToRecommended}
+                                    disabled={isAdding}
+                                >
+                                    Add to {recommendedSpaceId ? (spaces.find((s) => s.space_id === recommendedSpaceId)?.name || 'space') : 'Global'}
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                    onClick={dismissRecommendBanner}
+                                    title="Dismiss"
+                                >
+                                    ×
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2">
                         <Button
                             size="sm"
@@ -238,7 +388,7 @@ const SnippetsView: React.FC = () => {
                                             {memory.category}
                                         </div>
                                         <span className="text-[9px] text-muted-foreground/50 font-mono">
-                                            {formatDistanceToNow(new Date(memory.created_at))} ago
+                                            {formatMemoryDate(memory.created_at)}
                                         </span>
                                     </div>
                                 </div>

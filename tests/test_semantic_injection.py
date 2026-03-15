@@ -36,7 +36,13 @@ class TestSemanticInjection(unittest.IsolatedAsyncioTestCase):
         
         try:
             # Query about Arcturus
-            await runner.run_agent("SummarizerAgent", {"task": "What is the status of Arcturus?"})
+            with unittest.mock.patch("memory.memory_retriever.retrieve") as mock_retrieve:
+                # Mock the memory backend since our new architecture requires a real DB/Ollama
+                mock_retrieve.return_value = (
+                    "Memories of User Preferences & Facts:\n- The project name is Arcturus.",
+                    []
+                )
+                await runner.run_agent("SummarizerAgent", {"task": "What is the status of Arcturus?"})
         except:
             pass
             

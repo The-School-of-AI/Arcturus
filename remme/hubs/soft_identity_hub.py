@@ -6,6 +6,9 @@ Manages soft personalization for examples and analogies:
 - Pet affinity
 - Media tastes
 - Communication style
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Soft identity becomes Neo4j Fact
+nodes + Entities. Adapter reads from Neo4j; JSON hub is no longer the source of truth.
 """
 
 from datetime import datetime

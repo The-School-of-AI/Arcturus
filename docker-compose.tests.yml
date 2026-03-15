@@ -1,0 +1,35 @@
+# Isolated Qdrant and Neo4j for P11 automation tests (ports 6335, 7688).
+# Used by scripts/run_p11_automation_tests.sh
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: arcturus-qdrant-tests
+    ports:
+      - "6335:6333"
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    tmpfs:
+      - /qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  neo4j:
+    image: neo4j:5
+    container_name: arcturus-neo4j-tests
+    ports:
+      - "7688:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/test-password
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s

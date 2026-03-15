@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ doc_title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>{{ css_inline | safe }}</style>
+    {% if has_mermaid %}
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        const style = getComputedStyle(document.documentElement);
+        const get = (prop) => style.getPropertyValue(prop).trim();
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral',
+            themeVariables: {
+                primaryColor: get('--accent-dim') || '#fff5ee',
+                primaryTextColor: get('--text') || '#1a1a1a',
+                primaryBorderColor: get('--accent') || '#c2410c',
+                lineColor: get('--text-dim') || '#6b6b6b',
+                secondaryColor: get('--surface-elevated') || '#fff9f5',
+                tertiaryColor: get('--surface') || '#ffffff',
+            },
+        });
+    </script>
+    {% endif %}
+    <script>
+        (function(){
+            var t = localStorage.getItem('forge-doc-theme');
+            if (!t) t = window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+</head>
+<body>
+    <div class="theme-switcher" role="radiogroup" aria-label="Color theme">
+        <button class="theme-btn" data-set-theme="light" title="Light" aria-label="Light theme"></button>
+        <button class="theme-btn" data-set-theme="sepia" title="Sepia" aria-label="Sepia theme"></button>
+        <button class="theme-btn" data-set-theme="dark" title="Dark" aria-label="Dark theme"></button>
+    </div>
+    {% if hero_image %}
+    <div class="hero-banner">
+        <img src="{{ hero_image }}" alt="{{ doc_title }}">
+    </div>
+    {% endif %}
+
+    {# ── Recursive macros ─────────────────────────────────────────── #}
+    {# TOC: renders links for all sections + nested subsections      #}
+    {% macro render_toc(sections) %}
+    {% for section in sections %}
+        <a href="#section-{{ section.id }}" class="toc-link level-{{ section.level }}">
+            {{ section.heading }}
+        </a>
+        {% if section.subsections %}
+        {{ render_toc(section.subsections) }}
+        {% endif %}
+    {% endfor %}
+    {% endmacro %}
+
+    {# Sections: mirrors the existing PDF template pattern           #}
+    {% macro render_sections(sections) %}
+    {% for section in sections %}
+    <section id="section-{{ section.id }}" class="doc-section level-{{ section.level }}" style="--i: {{ loop.index0 }}">
+        <h{{ section.level + 1 }}>{{ section.heading }}</h{{ section.level + 1 }}>
+        {% if section.content %}
+        <div class="section-content">{{ section.content | safe }}</div>
+        {% endif %}
+        {% if section.subsections %}
+        {{ render_sections(section.subsections) }}
+        {% endif %}
+    </section>
+    {% endfor %}
+    {% endmacro %}
+
+    <div class="page-layout">
+        {# Conditional TOC: only show for documents with 3+ sections #}
+        {% if sections|length >= 3 %}
+        <nav class="toc-sidebar">
+            <div class="toc-title">Contents</div>
+            {{ render_toc(sections) }}
+        </nav>
+        {% endif %}
+        <main class="content">
+            <header>
+                <h1>{{ doc_title }}</h1>
+                {% if doc_type %}<p class="doc-type">{{ doc_type | replace('_', ' ') | title }}</p>{% endif %}
+            </header>
+            {% if abstract %}
+            <section class="abstract">{{ abstract | safe }}</section>
+            {% endif %}
+            {{ render_sections(sections) }}
+            {% if bibliography %}
+            <section class="bibliography">
+                <h2>Bibliography</h2>
+                <ol class="bib-list">
+                    {% for entry in bibliography %}
+                    <li id="bib-{{ entry.key }}">
+                        <span class="bib-key">[{{ entry.key }}]</span>
+                        <span class="bib-author">{{ entry.get('author', 'Unknown') }}.</span>
+                        <span class="bib-title">{{ entry.get('title', '') }}.</span>
+                        {% if entry.get('year') %}
+                        <span class="bib-year">({{ entry.year }})</span>
+                        {% endif %}
+                        {% if entry.get('url') %}
+                        <a class="bib-url" href="{{ entry.url }}">{{ entry.url }}</a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ol>
+            </section>
+            {% endif %}
+        </main>
+    </div>
+
+    {% if has_mermaid %}
+    <noscript>
+        <style>.mermaid { white-space: pre; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; }</style>
+    </noscript>
+    {% endif %}
+
+    <script>
+        (function(){
+            var btns = document.querySelectorAll('.theme-btn');
+            function setTheme(t) {
+                document.documentElement.setAttribute('data-theme', t);
+                localStorage.setItem('forge-doc-theme', t);
+                btns.forEach(function(b) { b.classList.toggle('active', b.dataset.setTheme === t); });
+            }
+            setTheme(document.documentElement.getAttribute('data-theme') || 'light');
+            btns.forEach(function(b) {
+                b.addEventListener('click', function() { setTheme(b.dataset.setTheme); });
+            });
+        })();
+    </script>
+</body>
+</html>

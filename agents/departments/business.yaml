@@ -1,0 +1,12 @@
+name: Content Department
+description: Handles writing, editing, and visual content creation tasks.
+agents:
+  - role: writer
+    description: Writes articles, blog posts, reports, and structured documents.
+    skills: [researcher]
+  - role: editor
+    description: Edits and refines content for clarity, tone, and style.
+    skills: [analyst]
+  - role: designer
+    description: Produces design briefs, visual concepts, and layout specifications.
+    skills: [analyst]

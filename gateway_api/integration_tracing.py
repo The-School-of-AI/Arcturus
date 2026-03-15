@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from gateway_api.storage_utils import append_jsonl, read_jsonl_file
 from shared.state import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data" / "gateway"
@@ -33,8 +33,7 @@ def _ensure_parent(path: Path) -> None:
 
 def _append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
     _ensure_parent(path)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload) + "\n")
+    append_jsonl(path, payload)
 
 
 class IntegrationTracer:
@@ -73,14 +72,7 @@ class IntegrationTracer:
             return []
 
         rows: list[dict[str, Any]] = []
-        for raw_line in self.events_file.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
-            try:
-                item = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+        for item in read_jsonl_file(self.events_file):
 
             if trace_id and item.get("trace_id") != trace_id:
                 continue

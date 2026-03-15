@@ -2,16 +2,23 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi.encoders import jsonable_encoder
 
+from gateway_api.connectors import (
+    ConnectorNormalizationError,
+    list_supported_connectors,
+    normalize_event,
+    parse_json_payload,
+)
 from gateway_api.auth import AuthContext, require_scope
 from gateway_api.contracts import (
+    GatewayWebhookConnectorOut,
     GatewayWebhookDeliveryOut,
     GatewayWebhookDispatchRequest,
     GatewayWebhookDispatchResponse,
-    GatewayWebhookInboundRequest,
     GatewayWebhookInboundResponse,
     GatewayWebhookReplayResponse,
     GatewayWebhookSubscriptionCreateRequest,
@@ -19,9 +26,16 @@ from gateway_api.contracts import (
     GatewayWebhookTriggerRequest,
     GatewayWebhookTriggerResponse,
 )
+from gateway_api.idempotency import (
+    begin_idempotent_request,
+    derive_inbound_idempotency_key,
+    finalize_idempotent_failure,
+    finalize_idempotent_success,
+)
 from gateway_api.integration_tracing import record_integration_event
 from gateway_api.metering import record_request
-from gateway_api.rate_limiter import apply_rate_limit_headers, enforce_rate_limit
+from gateway_api.rate_limiter import enforce_rate_limit_and_usage_governance
+from gateway_api.usage_governance import is_usage_quota_exception
 from gateway_api.webhooks import (
     InvalidWebhookSignature,
     StaleWebhookTimestamp,
@@ -31,6 +45,52 @@ from gateway_api.webhooks import (
 )
 
 router = APIRouter(prefix="/webhooks", tags=["Gateway V1"])
+IDEMPOTENCY_HEADER = "Idempotency-Key"
+
+
+def _normalized_headers(request: Request) -> Dict[str, str]:
+    return {str(key).lower(): str(value) for key, value in request.headers.items()}
+
+
+def _normalize_inbound_payload(
+    *,
+    source: str,
+    raw_payload: Dict[str, Any],
+    headers: Dict[str, str],
+) -> tuple[str, Dict[str, Any], str | None, Dict[str, Any]]:
+    event_type = raw_payload.get("event_type")
+    payload = raw_payload.get("payload")
+
+    if isinstance(event_type, str) and isinstance(payload, dict):
+        event_id = raw_payload.get("event_id")
+        if event_id is not None:
+            event_id = str(event_id)
+        return event_type, payload, event_id, {"mode": "canonical"}
+
+    source_key = source.strip().lower()
+    supported = {item["source"] for item in list_supported_connectors()}
+    if source_key not in supported:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "code": "unsupported_connector_source",
+                    "message": f"Unsupported connector source: {source_key}",
+                }
+            },
+        )
+
+    normalized = normalize_event(
+        source=source_key,
+        raw_payload=raw_payload,
+        headers=headers,
+    )
+    return (
+        normalized.event_type,
+        normalized.payload,
+        normalized.external_event_id,
+        normalized.metadata,
+    )
 
 
 def _to_public(subscription: dict) -> GatewayWebhookSubscriptionOut:
@@ -69,17 +129,68 @@ async def list_subscriptions(
 ) -> List[GatewayWebhookSubscriptionOut]:
     start = time.perf_counter()
     status_code = 200
+    usage_units = 1
+    governance_denied = False
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+        )
+        usage_units = usage_decision.estimated_units
 
         subscriptions = await get_webhook_service().list_subscriptions()
         return [_to_public(item) for item in subscriptions]
     except HTTPException as exc:
         status_code = exc.status_code
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=not governance_denied,
+        )
+
+
+@router.get("/connectors", response_model=List[GatewayWebhookConnectorOut])
+async def list_connectors(
+    request: Request,
+    response: Response,
+    auth_context: AuthContext = Depends(require_scope("webhooks:read")),
+) -> List[GatewayWebhookConnectorOut]:
+    start = time.perf_counter()
+    status_code = 200
+    usage_units = 1
+    governance_denied = False
+    try:
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+        )
+        usage_units = usage_decision.estimated_units
+        return [GatewayWebhookConnectorOut(**item) for item in list_supported_connectors()]
+    except HTTPException as exc:
+        status_code = exc.status_code
+        if is_usage_quota_exception(exc):
+            governance_denied = True
+        raise
+    finally:
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=not governance_denied,
+        )
 
 
 @router.post("", response_model=GatewayWebhookSubscriptionOut)
@@ -88,12 +199,34 @@ async def create_subscription(
     payload: GatewayWebhookSubscriptionCreateRequest,
     response: Response,
     auth_context: AuthContext = Depends(require_scope("webhooks:write")),
+    idempotency_key: Optional[str] = Header(default=None, alias=IDEMPOTENCY_HEADER),
 ) -> GatewayWebhookSubscriptionOut:
     start = time.perf_counter()
     status_code = 200
+    usage_units = 2
+    governance_denied = False
+    billable_request = True
+    idempotency_context = None
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        idempotency_context, replay = await begin_idempotent_request(
+            request=request,
+            actor=auth_context.key_id,
+            idempotency_key=idempotency_key,
+            payload=payload.model_dump(mode="json"),
+            response=response,
+        )
+        if replay is not None:
+            billable_request = False
+            status_code = replay.status_code
+            return replay
+
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+            estimated_units=2,
+        )
+        usage_units = usage_decision.estimated_units
 
         if not payload.event_types:
             raise HTTPException(
@@ -112,12 +245,40 @@ async def create_subscription(
             payload.secret,
             payload.active,
         )
-        return _to_public(subscription)
+        result = _to_public(subscription)
+
+        if idempotency_context is not None:
+            await finalize_idempotent_success(
+                idempotency_context,
+                status_code=200,
+                response_body=jsonable_encoder(result),
+                response_headers={
+                    "X-Idempotency-Status": "created",
+                    "X-Idempotency-Key": idempotency_context.idempotency_key,
+                },
+            )
+        return result
     except HTTPException as exc:
         status_code = exc.status_code
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=billable_request and not governance_denied,
+        )
 
 
 @router.delete("/{subscription_id}", response_model=dict)
@@ -126,12 +287,34 @@ async def delete_subscription(
     request: Request,
     response: Response,
     auth_context: AuthContext = Depends(require_scope("webhooks:write")),
+    idempotency_key: Optional[str] = Header(default=None, alias=IDEMPOTENCY_HEADER),
 ) -> dict:
     start = time.perf_counter()
     status_code = 200
+    usage_units = 2
+    governance_denied = False
+    billable_request = True
+    idempotency_context = None
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        idempotency_context, replay = await begin_idempotent_request(
+            request=request,
+            actor=auth_context.key_id,
+            idempotency_key=idempotency_key,
+            payload={"subscription_id": subscription_id},
+            response=response,
+        )
+        if replay is not None:
+            billable_request = False
+            status_code = replay.status_code
+            return replay
+
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+            estimated_units=2,
+        )
+        usage_units = usage_decision.estimated_units
 
         deleted = await get_webhook_service().delete_subscription(subscription_id)
         if not deleted:
@@ -144,12 +327,41 @@ async def delete_subscription(
                     }
                 },
             )
-        return {"status": "deleted", "id": subscription_id}
+
+        result = {"status": "deleted", "id": subscription_id}
+        if idempotency_context is not None:
+            await finalize_idempotent_success(
+                idempotency_context,
+                status_code=200,
+                response_body=result,
+                response_headers={
+                    "X-Idempotency-Status": "created",
+                    "X-Idempotency-Key": idempotency_context.idempotency_key,
+                },
+            )
+
+        return result
     except HTTPException as exc:
         status_code = exc.status_code
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=billable_request and not governance_denied,
+        )
 
 
 @router.post("/trigger", response_model=GatewayWebhookTriggerResponse)
@@ -158,23 +370,76 @@ async def trigger_webhook_event(
     payload: GatewayWebhookTriggerRequest,
     response: Response,
     auth_context: AuthContext = Depends(require_scope("webhooks:write")),
+    idempotency_key: Optional[str] = Header(default=None, alias=IDEMPOTENCY_HEADER),
 ) -> GatewayWebhookTriggerResponse:
     start = time.perf_counter()
     status_code = 200
+    usage_units = 2
+    governance_denied = False
+    billable_request = True
+    idempotency_context = None
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        idempotency_context, replay = await begin_idempotent_request(
+            request=request,
+            actor=auth_context.key_id,
+            idempotency_key=idempotency_key,
+            payload=payload.model_dump(mode="json"),
+            response=response,
+        )
+        if replay is not None:
+            billable_request = False
+            status_code = replay.status_code
+            return replay
+
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+            estimated_units=2,
+        )
+        usage_units = usage_decision.estimated_units
+
         result = await get_webhook_service().trigger_event(
             payload.event_type,
             payload.payload,
             source="api_trigger",
         )
-        return GatewayWebhookTriggerResponse(queued_deliveries=result["queued_deliveries"])
+        response_payload = GatewayWebhookTriggerResponse(
+            queued_deliveries=result["queued_deliveries"]
+        )
+
+        if idempotency_context is not None:
+            await finalize_idempotent_success(
+                idempotency_context,
+                status_code=200,
+                response_body=jsonable_encoder(response_payload),
+                response_headers={
+                    "X-Idempotency-Status": "created",
+                    "X-Idempotency-Key": idempotency_context.idempotency_key,
+                },
+            )
+        return response_payload
     except HTTPException as exc:
         status_code = exc.status_code
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=billable_request and not governance_denied,
+        )
 
 
 @router.post(
@@ -182,46 +447,137 @@ async def trigger_webhook_event(
     response_model=GatewayWebhookInboundResponse,
     responses={
         401: {"description": "invalid signature"},
+        400: {"description": "normalization/source errors"},
         503: {"description": "signing not configured"},
     },
 )
 async def inbound_webhook(
     source: str,
     request: Request,
-    payload: GatewayWebhookInboundRequest,
+    response: Response,
     x_gateway_signature: Optional[str] = Header(default=None, alias="x-gateway-signature"),
     x_gateway_timestamp: Optional[str] = Header(default=None, alias="x-gateway-timestamp"),
 ) -> GatewayWebhookInboundResponse:
     start = time.perf_counter()
     status_code = 200
     trace_id = f"trc_{uuid.uuid4().hex[:14]}"
+    billable_request = True
+    idempotency_context = None
+
+    raw_body = (await request.body()).decode("utf-8")
+    headers = _normalized_headers(request)
+    connector_event_id: str | None = None
+    normalized_event_type = ""
+    normalized_payload: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = {}
+    auth_mode = "gateway_signature"
 
     try:
-        raw_body = (await request.body()).decode("utf-8")
-        get_webhook_service().validate_inbound_signature(
-            signature_header=x_gateway_signature,
-            timestamp_header=x_gateway_timestamp,
+        raw_payload = parse_json_payload(raw_body)
+        (
+            normalized_event_type,
+            normalized_payload,
+            connector_event_id,
+            metadata,
+        ) = _normalize_inbound_payload(
+            source=source,
+            raw_payload=raw_payload,
+            headers=headers,
+        )
+
+        auth_mode = get_webhook_service().validate_inbound_auth(
+            source=source,
+            headers=headers,
             raw_body=raw_body,
         )
+
+        derived_key = derive_inbound_idempotency_key(
+            source=source,
+            signature_header=x_gateway_signature or headers.get("x-hub-signature-256"),
+            timestamp_header=x_gateway_timestamp or headers.get("x-goog-message-number"),
+            raw_body=raw_body,
+            external_event_id=connector_event_id,
+        )
+        idempotency_context, replay = await begin_idempotent_request(
+            request=request,
+            actor="webhook_inbound",
+            idempotency_key=derived_key,
+            payload={
+                "event_type": normalized_event_type,
+                "payload": normalized_payload,
+                "source": source,
+                "connector_event_id": connector_event_id,
+            },
+            response=response,
+        )
+        if replay is not None:
+            billable_request = False
+            status_code = replay.status_code
+            return replay
+
         await record_integration_event(
             trace_id=trace_id,
             flow="webhook_inbound_validation",
             stage="validate",
             status="success",
-            context={"source": source, "event_type": payload.event_type},
+            context={
+                "source": source,
+                "event_type": normalized_event_type,
+                "auth_mode": auth_mode,
+                "connector_event_id": connector_event_id,
+                "metadata": metadata,
+            },
         )
 
         queued = await get_webhook_service().trigger_event(
-            event_type=payload.event_type,
-            payload=payload.payload,
+            event_type=normalized_event_type,
+            payload=normalized_payload,
             source=f"inbound:{source}",
             trace_id=trace_id,
         )
-        return GatewayWebhookInboundResponse(
+        response_payload = GatewayWebhookInboundResponse(
             source=source,
             trace_id=trace_id,
+            normalized_event_type=normalized_event_type,
+            auth_mode=auth_mode,
+            connector_event_id=connector_event_id,
             queued_deliveries=queued["queued_deliveries"],
         )
+
+        if idempotency_context is not None:
+            await finalize_idempotent_success(
+                idempotency_context,
+                status_code=200,
+                response_body=jsonable_encoder(response_payload),
+                response_headers={
+                    "X-Idempotency-Status": "created",
+                    "X-Idempotency-Key": derived_key,
+                },
+            )
+
+        return response_payload
+    except ConnectorNormalizationError as exc:
+        status_code = 400
+        await record_integration_event(
+            trace_id=trace_id,
+            flow="webhook_inbound_validation",
+            stage="normalize",
+            status="failed",
+            context={"reason": str(exc), "source": source},
+        )
+        detail = {
+            "error": {
+                "code": "webhook_event_normalization_failed",
+                "message": str(exc),
+            }
+        }
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=400,
+                detail=detail,
+            )
+        raise HTTPException(status_code=400, detail=detail) from exc
     except WebhookSigningNotConfigured as exc:
         status_code = 503
         await record_integration_event(
@@ -231,15 +587,19 @@ async def inbound_webhook(
             status="failed",
             context={"reason": str(exc)},
         )
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": {
-                    "code": "webhook_signing_not_configured",
-                    "message": str(exc),
-                }
-            },
-        ) from exc
+        detail = {
+            "error": {
+                "code": "webhook_signing_not_configured",
+                "message": str(exc),
+            }
+        }
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=503,
+                detail=detail,
+            )
+        raise HTTPException(status_code=503, detail=detail) from exc
     except (InvalidWebhookSignature, StaleWebhookTimestamp) as exc:
         status_code = 401
         await record_integration_event(
@@ -249,10 +609,23 @@ async def inbound_webhook(
             status="failed",
             context={"reason": str(exc)},
         )
-        raise HTTPException(
-            status_code=401,
-            detail={"error": {"code": "invalid_webhook_signature", "message": str(exc)}},
-        ) from exc
+        detail = {"error": {"code": "invalid_webhook_signature", "message": str(exc)}}
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=401,
+                detail=detail,
+            )
+        raise HTTPException(status_code=401, detail=detail) from exc
+    except HTTPException as exc:
+        status_code = exc.status_code
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+        raise
     except Exception as exc:  # noqa: BLE001
         status_code = 500
         await record_integration_event(
@@ -262,12 +635,23 @@ async def inbound_webhook(
             status="failed",
             context={"reason": str(exc)},
         )
-        raise HTTPException(
-            status_code=500,
-            detail={"error": {"code": "webhook_inbound_failed", "message": str(exc)}},
-        ) from exc
+        detail = {"error": {"code": "webhook_inbound_failed", "message": str(exc)}}
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=500,
+                detail=detail,
+            )
+        raise HTTPException(status_code=500, detail=detail) from exc
     finally:
-        await record_request(request, "webhook_inbound", status_code, start)
+        await record_request(
+            request,
+            "webhook_inbound",
+            status_code,
+            start,
+            units=2,
+            billable=billable_request,
+        )
 
 
 @router.post("/dispatch", response_model=GatewayWebhookDispatchResponse)
@@ -276,14 +660,36 @@ async def dispatch_webhook_deliveries(
     payload: GatewayWebhookDispatchRequest,
     response: Response,
     auth_context: AuthContext = Depends(require_scope("webhooks:write")),
+    idempotency_key: Optional[str] = Header(default=None, alias=IDEMPOTENCY_HEADER),
 ) -> GatewayWebhookDispatchResponse:
     start = time.perf_counter()
     status_code = 200
     trace_id = f"trc_{uuid.uuid4().hex[:14]}"
+    usage_units = 2
+    governance_denied = False
+    billable_request = True
+    idempotency_context = None
 
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        idempotency_context, replay = await begin_idempotent_request(
+            request=request,
+            actor=auth_context.key_id,
+            idempotency_key=idempotency_key,
+            payload=payload.model_dump(mode="json"),
+            response=response,
+        )
+        if replay is not None:
+            billable_request = False
+            status_code = replay.status_code
+            return replay
+
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+            estimated_units=2,
+        )
+        usage_units = usage_decision.estimated_units
 
         result = await get_webhook_service().dispatch_pending(
             limit=payload.limit,
@@ -299,15 +705,36 @@ async def dispatch_webhook_deliveries(
             context=result,
         )
 
-        return GatewayWebhookDispatchResponse(
+        response_payload = GatewayWebhookDispatchResponse(
             trace_id=trace_id,
             scanned=result["scanned"],
             delivered=result["delivered"],
             retried=result["retried"],
             dead_lettered=result["dead_lettered"],
         )
+
+        if idempotency_context is not None:
+            await finalize_idempotent_success(
+                idempotency_context,
+                status_code=200,
+                response_body=jsonable_encoder(response_payload),
+                response_headers={
+                    "X-Idempotency-Status": "created",
+                    "X-Idempotency-Key": idempotency_context.idempotency_key,
+                },
+            )
+
+        return response_payload
     except HTTPException as exc:
         status_code = exc.status_code
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     except Exception as exc:  # noqa: BLE001
         status_code = 500
@@ -318,12 +745,24 @@ async def dispatch_webhook_deliveries(
             status="failed",
             context={"reason": str(exc)},
         )
-        raise HTTPException(
-            status_code=500,
-            detail={"error": {"code": "webhook_dispatch_failed", "message": str(exc)}},
-        ) from exc
+        detail = {"error": {"code": "webhook_dispatch_failed", "message": str(exc)}}
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=500,
+                detail=detail,
+            )
+        raise HTTPException(status_code=500, detail=detail) from exc
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=billable_request and not governance_denied,
+        )
 
 
 @router.get("/deliveries", response_model=List[GatewayWebhookDeliveryOut])
@@ -336,17 +775,33 @@ async def list_webhook_deliveries(
 ) -> List[GatewayWebhookDeliveryOut]:
     start = time.perf_counter()
     status_code = 200
+    usage_units = 1
+    governance_denied = False
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+        )
+        usage_units = usage_decision.estimated_units
 
         rows = await get_webhook_service().list_deliveries(status=status, limit=limit)
         return [_to_delivery_public(item) for item in rows]
     except HTTPException as exc:
         status_code = exc.status_code
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=not governance_denied,
+        )
 
 
 @router.post("/dlq/{delivery_id}/replay", response_model=GatewayWebhookReplayResponse)
@@ -355,13 +810,35 @@ async def replay_dead_letter(
     request: Request,
     response: Response,
     auth_context: AuthContext = Depends(require_scope("webhooks:write")),
+    idempotency_key: Optional[str] = Header(default=None, alias=IDEMPOTENCY_HEADER),
 ) -> GatewayWebhookReplayResponse:
     start = time.perf_counter()
     status_code = 200
     trace_id = f"trc_{uuid.uuid4().hex[:14]}"
+    usage_units = 2
+    governance_denied = False
+    billable_request = True
+    idempotency_context = None
     try:
-        decision = await enforce_rate_limit(auth_context)
-        apply_rate_limit_headers(response, decision)
+        idempotency_context, replay = await begin_idempotent_request(
+            request=request,
+            actor=auth_context.key_id,
+            idempotency_key=idempotency_key,
+            payload={"delivery_id": delivery_id},
+            response=response,
+        )
+        if replay is not None:
+            billable_request = False
+            status_code = replay.status_code
+            return replay
+
+        _, usage_decision = await enforce_rate_limit_and_usage_governance(
+            request=request,
+            response=response,
+            auth_context=auth_context,
+            estimated_units=2,
+        )
+        usage_units = usage_decision.estimated_units
 
         await get_webhook_service().replay_dead_letter(delivery_id)
         await record_integration_event(
@@ -372,7 +849,19 @@ async def replay_dead_letter(
             context={"delivery_id": delivery_id},
         )
 
-        return GatewayWebhookReplayResponse(trace_id=trace_id, delivery_id=delivery_id)
+        response_payload = GatewayWebhookReplayResponse(trace_id=trace_id, delivery_id=delivery_id)
+        if idempotency_context is not None:
+            await finalize_idempotent_success(
+                idempotency_context,
+                status_code=200,
+                response_body=jsonable_encoder(response_payload),
+                response_headers={
+                    "X-Idempotency-Status": "created",
+                    "X-Idempotency-Key": idempotency_context.idempotency_key,
+                },
+            )
+
+        return response_payload
     except WebhookDeliveryError as exc:
         status_code = 404
         await record_integration_event(
@@ -382,12 +871,32 @@ async def replay_dead_letter(
             status="failed",
             context={"reason": str(exc)},
         )
-        raise HTTPException(
-            status_code=404,
-            detail={"error": {"code": "webhook_delivery_not_found", "message": str(exc)}},
-        ) from exc
+        detail = {"error": {"code": "webhook_delivery_not_found", "message": str(exc)}}
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=404,
+                detail=detail,
+            )
+        raise HTTPException(status_code=404, detail=detail) from exc
     except HTTPException as exc:
         status_code = exc.status_code
+        if idempotency_context is not None:
+            await finalize_idempotent_failure(
+                idempotency_context,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+        if is_usage_quota_exception(exc):
+            governance_denied = True
         raise
     finally:
-        await record_request(request, auth_context.key_id, status_code, start)
+        await record_request(
+            request,
+            auth_context.key_id,
+            status_code,
+            start,
+            units=usage_units,
+            governance_denied=governance_denied,
+            billable=billable_request and not governance_denied,
+        )

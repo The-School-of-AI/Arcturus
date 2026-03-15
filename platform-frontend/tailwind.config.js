@@ -67,7 +67,9 @@ export default {
                 'accordion-down': 'accordion-down 0.2s ease-out',
                 'accordion-up': 'accordion-up 0.2s ease-out',
                 'ticker': 'ticker 10s linear infinite',
-                'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                'slide-fade-in': 'slide-fade-in 0.2s ease-out',
+                'modal-scale-in': 'modal-scale-in 0.25s ease-out'
             },
             keyframes: {
                 'accordion-down': {
@@ -85,6 +87,14 @@ export default {
                 'pulse-subtle': {
                     '0%, 100%': { opacity: '1' },
                     '50%': { opacity: '0.8' }
+                },
+                'slide-fade-in': {
+                    '0%': { opacity: '0', transform: 'scale(0.98)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' }
+                },
+                'modal-scale-in': {
+                    '0%': { opacity: '0', transform: 'scale(0.96)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' }
                 }
             }
         }

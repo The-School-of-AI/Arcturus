@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +8,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import Request
 
+from gateway_api.storage_utils import append_jsonl, read_json_file, write_json_atomic
 from shared.state import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data" / "gateway"
@@ -32,25 +32,16 @@ def _ensure_parent(path: Path) -> None:
 
 
 def _read_json(path: Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return default
+    return read_json_file(path, default)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     _ensure_parent(path)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    temp_path.replace(path)
+    write_json_atomic(path, payload)
 
 
 def _append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
-    _ensure_parent(path)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload) + "\n")
+    append_jsonl(path, payload)
 
 
 class GatewayMeteringStore:
@@ -70,6 +61,8 @@ class GatewayMeteringStore:
         status_code: int,
         latency_ms: float,
         units: int = 1,
+        governance_denied: bool = False,
+        billable: bool = True,
     ) -> None:
         timestamp = _utc_now_iso()
         event = {
@@ -79,7 +72,9 @@ class GatewayMeteringStore:
             "path": path,
             "status_code": status_code,
             "latency_ms": round(latency_ms, 3),
-            "units": units,
+            "units": int(units),
+            "governance_denied": bool(governance_denied),
+            "billable": bool(billable),
         }
 
         month = _month_from_iso(timestamp)
@@ -100,15 +95,27 @@ class GatewayMeteringStore:
                     "status_counts": {},
                     "endpoints": {},
                     "units": 0,
+                    "governance_denied_requests": 0,
+                    "non_billable_requests": 0,
                 },
             )
 
-            key_section["requests"] += 1
-            key_section["latency_ms_total"] += float(latency_ms)
-            key_section["latency_ms_avg"] = round(
-                key_section["latency_ms_total"] / max(key_section["requests"], 1), 3
-            )
-            key_section["units"] += int(units)
+            if governance_denied:
+                key_section["governance_denied_requests"] = int(
+                    key_section.get("governance_denied_requests", 0)
+                ) + 1
+
+            if not billable:
+                key_section["non_billable_requests"] = int(
+                    key_section.get("non_billable_requests", 0)
+                ) + 1
+            else:
+                key_section["requests"] += 1
+                key_section["units"] += int(units)
+                key_section["latency_ms_total"] += float(latency_ms)
+                key_section["latency_ms_avg"] = round(
+                    key_section["latency_ms_total"] / max(key_section["requests"], 1), 3
+                )
 
             status_key = str(status_code)
             key_section.setdefault("status_counts", {})[status_key] = (
@@ -138,8 +145,12 @@ class GatewayMeteringStore:
                 "status_counts": {},
                 "endpoints": {},
                 "units": 0,
+                "governance_denied_requests": 0,
+                "non_billable_requests": 0,
             },
         )
+        key_data.setdefault("governance_denied_requests", 0)
+        key_data.setdefault("non_billable_requests", 0)
         return key_data
 
     async def get_usage_all(self, month: Optional[str] = None) -> Dict[str, Any]:
@@ -166,6 +177,8 @@ async def record_request(
     status_code: int,
     started_at: float,
     units: int = 1,
+    governance_denied: bool = False,
+    billable: bool = True,
 ) -> None:
     latency_ms = (time.perf_counter() - started_at) * 1000.0
     await get_metering_store().record(
@@ -175,4 +188,6 @@ async def record_request(
         status_code=status_code,
         latency_ms=latency_ms,
         units=units,
+        governance_denied=governance_denied,
+        billable=billable,
     )

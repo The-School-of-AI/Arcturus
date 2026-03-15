@@ -2,6 +2,9 @@
 Memory Bootstrap Extractor - Populates UserModel hubs from existing REMME memories.
 
 Uses LLM to extract structured preferences from unstructured memory snippets.
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Direct memory add uses unified extractor
+and Neo4j Fact/Evidence ingestion. Bootstrap and apply_extraction_to_hubs are not used.
 """
 
 import json

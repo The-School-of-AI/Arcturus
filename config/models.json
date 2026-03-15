@@ -1,7 +1,8 @@
 {
   "defaults": {
     "text_generation": "gemini",
-    "embedding": "nomic"
+    "embedding": "nomic",
+    "image_generation": "gemini-image"
   },
   "models": {
     "gemini": {
@@ -62,9 +63,14 @@
         "embed": "http://localhost:11434/api/embeddings"
       }
     },
+    "gemini-image": {
+      "type": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "api_key_env": "GEMINI_API_KEY"
+    },
     "nomic": {
       "type": "huggingface",
-      "model": "nomic-ai/nomic-embed-text-v1",
+      "model": "nomic-embed-text:v1.5",
       "embedding_dimension": 768
     }
   }

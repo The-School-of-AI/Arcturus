@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld(
     "electronAPI", {
     invoke: (channel, ...args) => {
         let validChannels = [
-            "dialog:openDirectory", "dialog:confirm", "dialog:alert",
+            "dialog:openDirectory", "dialog:confirm", "dialog:alert", "dialog:saveAndOpen",
             "fs:create", "fs:rename", "fs:delete", "fs:readFile", "fs:writeFile",
             "fs:copy", "fs:move", "fs:readDir", "fs:find", "fs:grep", "fs:viewOutline",
             "fs:isGitignored", "fs:clearGitignoreCache",

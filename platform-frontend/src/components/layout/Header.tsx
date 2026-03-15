@@ -4,7 +4,7 @@ import {
     LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
     RefreshCw, Zap, Sparkles, X, FolderPlus, UploadCloud, Search,
     Loader2, ChevronLeft, Notebook, LayoutDashboard, Bell,
-    CalendarClock, Terminal
+    CalendarClock, Terminal, FolderOpen, User, Mic, Wand2, ShieldCheck, ShieldOff, Volume2, ChevronDown, Cloud
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,12 @@ import { api, API_BASE } from '@/lib/api';
 import { ThemeToggle, useTheme } from '@/components/theme';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 import { StatsModal } from '@/components/stats/StatsModal';
+import { SpacesModal } from '@/components/sidebar/SpacesModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subtitleSuffix: string }> = {
     runs: { label: 'Agent Runs', icon: PlayCircle, color: 'text-neon-yellow', subtitleSuffix: 'SESSIONS' },
+    spaces: { label: 'Spaces', icon: FolderOpen, color: 'text-neon-yellow', subtitleSuffix: 'PROJECT HUBS' },
     rag: { label: 'RAG Documents', icon: Database, color: 'text-neon-yellow', subtitleSuffix: 'SOURCES' },
     mcp: { label: 'MCP Servers', icon: Box, color: 'text-neon-yellow', subtitleSuffix: 'CONNECTED' },
     remme: { label: 'Memory Vault', icon: Brain, color: 'text-neon-yellow', subtitleSuffix: 'PERSISTENT FACTS' },
@@ -29,12 +32,16 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
     skills: { label: 'Skill Store', icon: Zap, color: 'text-neon-cyan', subtitleSuffix: 'INSTALLED' },
     ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' },
     scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-neon-cyan', subtitleSuffix: 'JOBS' },
-    console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' }
+    console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' },
+    echo: { label: 'Echo', icon: Mic, color: 'text-indigo-400', subtitleSuffix: 'VOICE' },
+    studio: { label: 'Forge', icon: Wand2, color: 'text-amber-400', subtitleSuffix: 'ARTIFACTS' },
+    canvas: { label: 'Canvas', icon: LayoutGrid, color: 'text-neon-cyan', subtitleSuffix: '' },
 };
 
 export const Header: React.FC = () => {
     const {
-        currentRun, sidebarTab, runs, savedApps, memories,
+        currentRun, sidebarTab, runs, savedApps, memories, fetchSpaces,
+        isSpacesModalOpen, setIsSpacesModalOpen,
         analysisHistory, newsSources, ragFiles, mcpServers,
         isRagIndexing, setIsRagNewFolderOpen, fetchRagFiles,
         setIsNewRunOpen, setIsMcpAddOpen, setIsRemmeAddOpen,
@@ -42,8 +49,10 @@ export const Header: React.FC = () => {
         fetchApps, fetchMemories, fetchRuns, fetchMcpServers,
         newsViewMode, setNewsViewMode, setNewsSearchQuery, setSearchResults,
         notesFiles, fetchNotesFiles, isNotesLoading,
+        currentSpaceId,
         gitSummary, fetchGitSummary,
-        unreadCount, isInboxOpen, setIsInboxOpen
+        unreadCount, isInboxOpen, setIsInboxOpen,
+        authStatus, authUserId, authUserFirstName, authUserEmail, isAuthModalOpen, setIsAuthModalOpen
     } = useAppStore();
     const { theme } = useTheme();
 
@@ -51,6 +60,79 @@ export const Header: React.FC = () => {
     const [isStatsOpen, setIsStatsOpen] = useState(false);
     const [skillsCount, setSkillsCount] = useState(0);
     const [isSkillsLoading, setIsSkillsLoading] = useState(false);
+
+    // ── Privacy Mode ─────────────────────────────────────────────────────────
+    const [privacyMode, setPrivacyMode] = useState<boolean | null>(null);
+    const [privacyLoading, setPrivacyLoading] = useState(false);
+
+    const fetchPrivacy = useCallback(async () => {
+        try {
+            const res = await fetch('http://localhost:8000/api/voice/privacy');
+            if (res.ok) {
+                const data = await res.json();
+                setPrivacyMode(data.privacy_mode ?? false);
+            }
+        } catch { /* backend not ready */ }
+    }, []);
+
+    const togglePrivacy = async () => {
+        if (privacyLoading || privacyMode === null) return;
+        setPrivacyLoading(true);
+        try {
+            const res = await fetch('http://localhost:8000/api/voice/privacy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: !privacyMode }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setPrivacyMode(data.privacy_mode);
+            }
+        } catch (e) {
+            console.error('Privacy toggle failed', e);
+        } finally {
+            setPrivacyLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchPrivacy(); }, [fetchPrivacy]);
+
+    // ── Persona Selection (configurable via voice/config.py) ─────────────────
+    const [personas, setPersonas] = useState<Record<string, { voice_name: string; rate: string; pitch: string; volume: string; description: string }> | null>(null);
+    const [activePersona, setActivePersona] = useState<string | null>(null);
+    const [personaChanging, setPersonaChanging] = useState(false);
+
+    const fetchPersonas = useCallback(async () => {
+        try {
+            const res = await fetch('http://localhost:8000/api/voice/personas');
+            if (res.ok) {
+                const data = await res.json();
+                setPersonas(data.personas ?? null);
+                setActivePersona(data.active ?? null);
+            }
+        } catch { /* backend not ready */ }
+    }, []);
+
+    const changePersona = async (name: string) => {
+        if (personaChanging || !personas || name === activePersona) return;
+        setPersonaChanging(true);
+        try {
+            const res = await fetch('http://localhost:8000/api/voice/persona', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ persona: name }),
+            });
+            if (res.ok) {
+                setActivePersona(name);
+            }
+        } catch (e) {
+            console.error('Persona change failed', e);
+        } finally {
+            setPersonaChanging(false);
+        }
+    };
+
+    useEffect(() => { fetchPersonas(); }, [fetchPersonas]);
 
     const fetchSkillsCount = useCallback(async () => {
         setIsSkillsLoading(true);
@@ -306,6 +388,115 @@ export const Header: React.FC = () => {
 
                     <div className="h-6 w-px bg-border/50 mx-2" />
 
+                    {/* Spaces (Phase 4) — show current space when non-global */}
+                    <button
+                        onClick={() => setIsSpacesModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50 hover:bg-muted/60 hover:border-primary/30 transition-colors no-drag"
+                        title="Manage Spaces"
+                    >
+                        <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest max-w-[120px] truncate">
+                            Space:{' '}
+                            {currentSpaceId
+                                ? (spaces.find(s => s.space_id === currentSpaceId)?.name || 'Space')
+                                : 'Global'}
+                        </span>
+                    </button>
+
+                    <div className="h-6 w-px bg-border/50 mx-2" />
+
+                    {/* Auth Status & Modal Toggle */}
+                    <button
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50 hover:bg-muted/60 hover:border-primary/30 transition-colors no-drag"
+                        title={authStatus === 'logged_in' ? 'Account Settings / Logout' : 'Login / Register'}
+                    >
+                        <User className={cn("w-3.5 h-3.5", authStatus === 'logged_in' ? "text-neon-cyan" : "text-neon-yellow")} />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest max-w-[80px] truncate">
+                            {authStatus === 'logged_in' 
+                                ? (authUserFirstName ? authUserFirstName.trim().substring(0, 4) : (authUserEmail ? authUserEmail.split('@')[0].substring(0, 8) : 'User')) 
+                                : 'Guest'}
+                        </span>
+                    </button>
+
+                    <div className="h-6 w-px bg-border/50 mx-2" />
+
+                    {/* Privacy Mode Toggle */}
+                    <button
+                        onClick={togglePrivacy}
+                        disabled={privacyLoading || privacyMode === null}
+                        title={
+                            privacyMode === null
+                                ? 'Loading voice mode...'
+                                : privacyMode
+                                    ? 'Privacy Mode ON — currently local (Whisper + Piper)'
+                                    : 'Cloud Mode ON — currently cloud (Deepgram + Azure)'
+                        }
+                        className={cn(
+                            'flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-200 no-drag',
+                            privacyMode === false
+                                ? 'bg-sky-500/15 border-sky-500/40 text-sky-400 hover:bg-sky-500/25'
+                                : privacyMode === true
+                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
+                                    : 'bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60',
+                            (privacyLoading || privacyMode === null) && 'opacity-50 cursor-not-allowed'
+                        )}
+                    >
+                        {privacyLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : privacyMode === false ? (
+                            <Cloud className="w-3 h-3" />
+                        ) : (
+                            <ShieldCheck className="w-3 h-3" />
+                        )}
+                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                            {privacyMode === null ? 'Voice' : privacyMode ? 'Private' : 'Cloud'}
+                        </span>
+                    </button>
+
+                    {/* Persona Selector (configured in voice/config.py) */}
+                    {personas && Object.keys(personas).length > 0 && (
+                        <div
+                            className={cn(
+                                'relative flex items-center gap-1.5 rounded-full border transition-all duration-200 no-drag',
+                                privacyMode
+                                    ? 'opacity-40 pointer-events-none bg-muted/30 border-border/30'
+                                    : 'bg-muted/40 border-border/50 hover:border-primary/30'
+                            )}
+                            title={
+                                privacyMode
+                                    ? 'Persona selection unavailable in Privacy Mode (Piper TTS)'
+                                    : `Voice persona: ${activePersona ?? 'unknown'} — configured in voice/config.py`
+                            }
+                        >
+                            <Volume2 className="w-3 h-3 ml-2.5 text-muted-foreground shrink-0" />
+                            <select
+                                value={activePersona ?? ''}
+                                onChange={e => changePersona(e.target.value)}
+                                disabled={personaChanging || privacyMode === true}
+                                className={cn(
+                                    'appearance-none bg-transparent border-none outline-none',
+                                    'text-[10px] font-bold uppercase tracking-widest',
+                                    'pl-0.5 pr-5 py-1.5 cursor-pointer',
+                                    'text-muted-foreground hover:text-foreground transition-colors',
+                                    (personaChanging || privacyMode) && 'cursor-not-allowed'
+                                )}
+                            >
+                                {Object.entries(personas).map(([key, cfg]) => (
+                                    <option key={key} value={key} title={cfg.description}>
+                                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                {personaChanging
+                                    ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                    : <ChevronDown className="w-2.5 h-2.5" />
+                                }
+                            </div>
+                        </div>
+                    )}
+
                     {/* Ollama Status Indicator */}
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50">
                         <Circle
@@ -343,6 +534,12 @@ export const Header: React.FC = () => {
 
             {/* Stats Modal */}
             <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} />
+
+            {/* Spaces Modal — manage spaces from any panel */}
+            <SpacesModal isOpen={isSpacesModalOpen} onClose={() => setIsSpacesModalOpen(false)} />
+
+            {/* Auth Modal */}
+            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
         </>
     );
 };

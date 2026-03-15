@@ -1,10 +1,9 @@
 import json
-import asyncio
-from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from core.utils import log_step, log_error
 
 from memory.episodic import MEMORY_DIR, search_episodes, get_recent_episodes
+from memory.space_constants import SPACE_ID_GLOBAL
 
 class MemorySkeletonizer:
     """
@@ -87,25 +86,28 @@ class MemorySkeletonizer:
             if "iterations" in node:
                 for iter_data in node["iterations"]:
                     output = iter_data.get("output", {})
+                    if not isinstance(output, dict):
+                        continue
                     
                     # Capture Tool Calls
                     if output.get("call_tool"):
                         tool_call = output["call_tool"]
                         actions.append({
                             "type": "tool",
-                            "name": tool_call.get("name"),
-                            # We might strip arguments if they are huge text blocks, 
+                            "name": tool_call.get("name") if isinstance(tool_call, dict) else str(tool_call),
+                            # We might strip arguments if they are huge text blocks,
                             # but short args like search queries are valuable.
-                            "args": str(tool_call.get("arguments", ""))[:200] 
+                            "args": str(tool_call.get("arguments", ""))[:200] if isinstance(tool_call, dict) else ""
                         })
-                    
+
                     # Capture Code Execution
                     if output.get("call_self"):
+                        call_self = output.get("call_self", {})
                         actions.append({
                             "type": "code",
                             "lang": "python",
                             # Code is the recipe! Keep it.
-                            "snippet": output.get("call_self", {}).get("code", "")[:500] 
+                            "snippet": call_self.get("code", "")[:500] if isinstance(call_self, dict) else str(call_self)[:500]
                         })
                         
             s_node["actions"] = actions
@@ -125,30 +127,72 @@ class MemoryMiner:
         return events
 
 
+def _build_searchable_text(skeleton: Dict) -> str:
+    """Build text for embedding: original_query + condensed node descriptions."""
+    parts = [str(skeleton.get("original_query", ""))]
+    for node in skeleton.get("nodes", []):
+        task_goal = node.get("task_goal") or node.get("description")
+        if task_goal:
+            parts.append(str(task_goal)[:300])
+        inst = node.get("instruction")
+        if inst:
+            parts.append(str(inst)[:300])
+    return "\n".join(p for p in parts if p.strip())
+
+
 class EpisodicMemory:
     def __init__(self):
         self.directory = MEMORY_DIR
-        
-    async def save_episode(self, session_data: Dict):
-        """Save a skeletonized version of the episode"""
+
+    async def save_episode(
+        self,
+        session_data: Dict,
+        space_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> None:
+        """Save episode skeleton. Uses Qdrant when EPISODIC_STORE_PROVIDER=qdrant; local JSON when legacy."""
         try:
             skeleton = MemorySkeletonizer.skeletonize(session_data)
-            
             session_id = skeleton.get("id")
             if not session_id:
                 return
-                
-            file_path = self.directory / f"skeleton_{session_id}.json"
-            file_path.write_text(json.dumps(skeleton, indent=2))
-            
-            log_step(f"🧠 Saved Episode Skeleton: {file_path.name} ({len(json.dumps(skeleton))} bytes)", symbol="💾")
-            
+            space_id = space_id or SPACE_ID_GLOBAL
+
+            from memory.episodic import get_episodic_store_provider, MEMORY_DIR
+
+            if get_episodic_store_provider() == "legacy":
+                path = MEMORY_DIR / f"skeleton_{session_id}.json"
+                path.write_text(json.dumps(skeleton, indent=2))
+                return
+
+            searchable_text = _build_searchable_text(skeleton)
+            if not searchable_text.strip():
+                searchable_text = str(skeleton.get("original_query", ""))
+
+            from memory.backends.episodic_qdrant_store import EpisodicQdrantStore
+            from remme.utils import get_embedding
+
+            store = EpisodicQdrantStore()
+            emb = get_embedding(searchable_text, task_type="search_document")
+            store.upsert(
+                session_id=str(session_id),
+                searchable_text=searchable_text,
+                embedding=emb,
+                skeleton_json=json.dumps(skeleton),
+                original_query=str(skeleton.get("original_query", "")),
+                outcome=str(skeleton.get("outcome", "completed")),
+                user_id=user_id,
+                space_id=space_id,
+            )
         except Exception as e:
             log_error(f"Failed to save episodic memory: {e}")
-            
-    def search(self, query: str, limit=3) -> List[Dict]:
-        """
-        Find relevant past skeletons based on query similarity.
-        Delegates to memory.episodic.search_episodes.
-        """
-        return search_episodes(query, limit)
+
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        user_id: Optional[str] = None,
+        space_id: Optional[str] = None,
+    ) -> List[Dict]:
+        """Find relevant past skeletons. Delegates to memory.episodic.search_episodes."""
+        return search_episodes(query, limit=limit, user_id=user_id, space_id=space_id)

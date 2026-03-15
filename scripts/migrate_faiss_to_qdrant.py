@@ -7,8 +7,16 @@ ensures user_id exists in memory/remme_index/user_id.json (creates if missing),
 and adds each memory to the Qdrant collection with the user_id.
 
 Usage:
+    # For Qdrant Cloud, ensure .env has:
+    #   QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
+    #   QDRANT_API_KEY=your-api-key
+    #   VECTOR_STORE_PROVIDER=qdrant
+    uv run python scripts/migrate_faiss_to_qdrant.py
+
+    # Or export before running:
+    export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
+    export QDRANT_API_KEY=your-api-key
     export VECTOR_STORE_PROVIDER=qdrant
-    docker-compose up -d   # ensure Qdrant is running
     uv run python scripts/migrate_faiss_to_qdrant.py
 """
 
@@ -23,8 +31,16 @@ import numpy as np
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
+# Load .env so QDRANT_URL and QDRANT_API_KEY are available
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
 from memory.user_id import get_user_id
 from memory.vector_store import get_vector_store
+from memory.space_constants import SPACE_ID_GLOBAL
 from core.utils import log_step, log_error
 
 
@@ -133,6 +149,7 @@ def migrate():
                 source=source,
                 metadata={"migrated_from": "faiss", "original_id": m.get("id", "")},
                 deduplication_threshold=0,
+                space_id=SPACE_ID_GLOBAL,
             )
             migrated += 1
             if (i + 1) % 10 == 0:

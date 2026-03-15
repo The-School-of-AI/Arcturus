@@ -1,6 +1,7 @@
 {
+  "id": "app-1770718543283",
   "name": "Abhi Kumar's Potential Interests & Tracking Priorities (Redesigned)",
-  "description": "Generated from report - Visualized",
+  "description": "",
   "cards": [
     {
       "id": "header_card",
@@ -161,6 +162,37 @@
         "content": "### Data Gaps and Next Steps\n\nTo provide a truly comprehensive report, further input is critically needed regarding:\n\n*   **Horizon5 Capital's Investment Thesis:** Specific focus areas (e.g., early-stage, growth-stage, industries).\n*   **Abhi Kumar's Past Investments & Public Statements:** Review of previous ventures and commentary.\n*   **Detailed Sector Research:** Explicit identification of target investment sectors.\n\nWithout this granular information, this report remains a high-level, generalized overview based on common venture capital practices."
       },
       "style": {}
+    },
+    {
+      "id": "ai_chat-1772340216096",
+      "type": "ai_chat",
+      "label": "AI Chat",
+      "config": {},
+      "data": {
+        "title": "AI Assistant",
+        "placeholder": "Ask me anything...",
+        "welcomeMessage": "Hello! How can I help you today?",
+        "model": "gpt-4",
+        "history": [
+          {
+            "role": "assistant",
+            "content": "Hello! How can I help you today?"
+          }
+        ]
+      },
+      "style": {
+        "showBorder": true,
+        "borderWidth": 1,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#ef4444",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      },
+      "context": "General chat"
     }
   ],
   "layout": [
@@ -169,52 +201,74 @@
       "x": 0,
       "y": 0,
       "w": 24,
-      "h": 2
+      "h": 2,
+      "moved": false,
+      "static": false
     },
     {
       "i": "executive_summary_card",
       "x": 0,
       "y": 2,
       "w": 18,
-      "h": 3
+      "h": 2,
+      "moved": false,
+      "static": false
     },
     {
       "i": "data_completeness_metric",
       "x": 18,
       "y": 2,
       "w": 6,
-      "h": 3
+      "h": 3,
+      "moved": false,
+      "static": false
     },
     {
       "i": "founder_interests_card",
       "x": 0,
       "y": 5,
       "w": 24,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     },
     {
       "i": "tracking_priorities_card",
       "x": 0,
       "y": 11,
       "w": 24,
-      "h": 6
+      "h": 6,
+      "moved": false,
+      "static": false
     },
     {
       "i": "emerging_sectors_chart",
       "x": 0,
       "y": 17,
       "w": 24,
-      "h": 8
+      "h": 8,
+      "moved": false,
+      "static": false
     },
     {
       "i": "data_gaps_card",
       "x": 0,
-      "y": 25,
+      "y": 33,
       "w": 24,
-      "h": 4
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "ai_chat-1772340216096",
+      "x": 0,
+      "y": 25,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
     }
   ],
-  "id": "app-1770718543283",
-  "lastModified": 1771235106551,
-  "lastHydrated": 1771235106551
+  "lastModified": 1772340356000,
+  "lastHydrated": null
 }

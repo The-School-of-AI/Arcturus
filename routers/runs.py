@@ -6,22 +6,30 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
 from pydantic import BaseModel
 from typing import Optional
-
 from ops.tracing import run_span, agent_execute_node_span
 from opentelemetry.trace import Status, StatusCode
-
 from shared.state import (
     active_loops,
     get_multi_mcp,
     get_remme_store,
     get_remme_extractor,
+    get_unified_extractor,
     signal_run_complete,
+    push_stream_chunk,
+    finish_stream,
+    has_stream_queue,
+    get_stream_chunk_count,
     PROJECT_ROOT,
 )
+from core.auth.context import get_current_user_id, set_current_user_id
 from core.loop import AgentLoop4
 from core.graph_adapter import nx_to_reactflow
 from remme.utils import get_embedding
 from config.settings_loader import settings
+from core.skills.manager import skill_manager
+
+from core.skills.manager import skill_manager
+
 
 router = APIRouter(tags=["Runs"])
 
@@ -36,7 +44,11 @@ remme_extractor = get_remme_extractor()
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
-    
+    source: str = "web"  # "web" or "voice"
+    stream: bool = False  # Whether the caller expects a streaming response
+    space_id: Optional[str] = None  # Phase 3C: optional space to scope session and retrieval
+    dry_run: Optional[bool] = None  # If True, skip agent; return synthetic run (for automation). None = use DRY_RUN_RUNS env.
+
     def __init__(self, **data):
         super().__init__(**data)
         if self.model is None:
@@ -139,31 +151,83 @@ def _extract_voice_output(context) -> str:
     return "I've completed your request."
 
 
-async def process_run(run_id: str, query: str):
+async def process_run(
+    run_id: str,
+    query: str,
+    source: str = "web",
+    stream: bool = False,
+    skill_id: str = None,
+    space_id: Optional[str] = None,
+    user_id: str = None,
+):
     """
     Background task: retrieve Remme memories, run agent loop, extract new memories.
     WATCHTOWER: Root span for the entire agent run.
-    - Span name: run.execute
-    - Wraps: remme retrieval, agent loop, memory extraction
-    - Child spans (agent_loop.run, llm.generate) inherit trace_id automatically
     """
+    if user_id:
+        set_current_user_id(user_id)
+        
     with run_span(run_id, query or "") as span:
+        skill = None
+        context = None
+        memory_context = ""
+        results = []
         try:
+            # 0. SKILL MATCHING & START HOOK
+            context = None  # Initialize early for safe access in finally block
+            skill = None
+            if not skill_id:
+                skill_id = skill_manager.match_intent(query)
+            
+            if skill_id:
+                skill = skill_manager.get_skill(skill_id)
+                if skill:
+                    print(f"[{run_id}] 🧠 Skill Detected: {skill_id}")
+                    skill_context = getattr(skill, "context", None)
+                    if skill_context is None:
+                        from types import SimpleNamespace
+
+                        skill_context = SimpleNamespace(run_id=None, agent_id=None, config={})
+                        setattr(skill, "context", skill_context)
+                    skill_context.run_id = run_id
+                    skill_context.agent_id = source
+                    skill_context.config = {"source": source, "query": query}
+                    
+                    # Call On Start Hook (allows prompt modification)
+                    query = await skill.on_run_start(query)
+                    print(f"[{run_id}] 🧠 Skill '{skill_id}' modified prompt.")
+
             # 1. RETRIEVE MEMORIES (Remme)
-            # Search for past relevant facts to inject into this run
-            memory_context = ""
-            context = None  # Initialize for safe access in finally block
-            results = []
+            # Orchestration: memory_retriever handles semantic recall, entity recall, graph expansion, merge
             try:
-                emb = get_embedding(query, task_type="search_query")
-                results = remme_store.search(emb, query_text=query, k=3)
-                if results:
-                    memory_str = "\n".join([f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in results])
-                    memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
-                    print(f" Remme: Injected {len(results)} memories into run {run_id}")
+                from memory.memory_retriever import retrieve
+                # Phase 3C: use space_id from request, or from existing session
+                _space_id = space_id
+                if _space_id is None:
+                    try:
+                        from memory.knowledge_graph import get_knowledge_graph
+                        kg = get_knowledge_graph()
+                        if kg and kg.enabled:
+                            _space_id = kg.get_space_for_session(run_id)
+                    except Exception:
+                        pass
+                # Link session to space at run start so the run appears under the space even if no memories are extracted
+                if _space_id is not None:
+                    try:
+                        from memory.knowledge_graph import get_knowledge_graph
+                        _kg = get_knowledge_graph()
+                        if _kg and _kg.enabled:
+                            _kg.get_or_create_session(run_id, space_id=_space_id)
+                    except Exception:
+                        pass
+                memory_context, results = retrieve(
+                    query,
+                    space_id=_space_id,
+                )
+                if memory_context:
+                    print(f" Remme: Injected memory context into run {run_id}")
             except Exception as e:
                 print(f"⚠️ Remme Retrieval Failed: {e}")
-
             loop = AgentLoop4(multi_mcp=multi_mcp)
             # Register the LOOP instance immediately so we can stop it
             active_loops[run_id] = loop
@@ -172,7 +236,8 @@ async def process_run(run_id: str, query: str):
             # The loop maintains its own internal context and session
             print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
             try:
-                context = await loop.run(query, [], {}, [], session_id=run_id, memory_context=memory_context)
+                run_globals = {"user_id": user_id} if user_id else {}
+                context = await loop.run(query, [], run_globals, [], session_id=run_id, memory_context=memory_context, space_id=_space_id)
             except asyncio.CancelledError:
                 span.set_status(Status(StatusCode.ERROR, "cancelled"))
                 print(f"[{run_id}] Run cancelled.")
@@ -193,6 +258,16 @@ async def process_run(run_id: str, query: str):
             span.set_status(Status(StatusCode.ERROR, str(e)))
             span.record_exception(e)
             print(f"Run {run_id} failed: {e}")
+            if skill:
+                 try:
+                     await skill.on_run_failure(str(e))
+                 except Exception as fe:
+                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
+            if skill:
+                 try:
+                     await skill.on_run_failure(str(e))
+                 except Exception as fe:
+                     print(f"⚠️ [Skill] Failure hook failed: {fe}")
         finally:
             # Clean up
             if run_id in active_loops:
@@ -221,15 +296,41 @@ async def process_run(run_id: str, query: str):
                 history = [{"role": "assistant", "content": final_output}]
 
                 print(f" Remme: Extracting facts from run {run_id}...")
-                # Pass existing memories from earlier search to context-aware extractor
-                # ⚡ RUN IN THREAD TO AVOID BLOCKING EVENT LOOP
-                commands, preferences = await asyncio.to_thread(
-                    remme_extractor.extract,
-                    query,
-                    history,
-                    existing_memories=results
-                )
+                from memory.mnemo_config import is_mnemo_enabled
 
+                def _resolve_memory_id(alias_or_id: str, existing: list) -> Optional[str]:
+                    """Resolve T001-style alias (or slug_T002) to real Qdrant point ID; pass-through UUIDs/integers."""
+                    if not alias_or_id or not existing:
+                        return alias_or_id
+                    import re
+                    s = str(alias_or_id).strip()
+                    m = re.match(r"^T(\d+)$", s, re.IGNORECASE)
+                    if not m:
+                        m = re.search(r"T(\d+)$", s, re.IGNORECASE)
+                    if m:
+                        idx = int(m.group(1)) - 1
+                        if 0 <= idx < len(existing) and existing[idx].get("id"):
+                            return existing[idx]["id"]
+                    return alias_or_id
+
+                extraction = None
+                if is_mnemo_enabled():
+                    unified = get_unified_extractor()
+                    extraction = await asyncio.to_thread(
+                        unified.extract_from_session, query, history, existing_memories=results
+                    )
+                    print(f" Remme: Extracted MEM from run {run_id}---->{extraction}")
+                    commands = [{"action": m.action, "text": m.text, "id": m.id} for m in extraction.memories]
+                    preferences = None  # do not write to hubs; step 3 ingests facts to Neo4j
+                else:
+                    commands, preferences = await asyncio.to_thread(
+                        remme_extractor.extract,
+                        query,
+                        history,
+                        existing_memories=results,
+                    )
+
+                session_memory_ids = []
                 if commands:
                     for cmd in commands:
                         if not isinstance(cmd, dict):
@@ -238,29 +339,64 @@ async def process_run(run_id: str, query: str):
 
                         action = cmd.get("action")
                         text = cmd.get("text")
-                        target_id = cmd.get("id")
+                        target_id_raw = cmd.get("id")
+                        target_id = _resolve_memory_id(target_id_raw, results) if target_id_raw else None
 
                         try:
                             if action == "add" and text:
                                 emb = get_embedding(text, task_type="search_document")
-                                remme_store.add(text, emb, category="derived", source=f"run_{run_id}")
+                                meta = {"session_id": run_id}
+                                if space_id:
+                                    meta["space_id"] = space_id
+                                added = remme_store.add(
+                                    text, emb, category="derived", source=f"run_{run_id}",
+                                    metadata=meta,
+                                    space_id=space_id,
+                                    skip_kg_ingest=is_mnemo_enabled(),
+                                )
+                                if added and isinstance(added, dict) and added.get("id"):
+                                    session_memory_ids.append(added["id"])
                                 print(f"✅ Remme: Added new fact: {text}")
                             elif action == "update" and target_id and text:
                                 emb = get_embedding(text, task_type="search_document")
                                 remme_store.update(target_id, text=text, embedding=emb)
-                                print(f"🔄 Remme: Updated fact {target_id}: {text}")
+                                print(f"🔄 Remme: Updated fact {target_id_raw or target_id}: {text}")
                             elif action == "delete" and target_id:
                                 remme_store.delete(target_id)
-                                print(f"🗑️ Remme: Deleted fact {target_id}")
+                                print(f"🗑️ Remme: Deleted fact {target_id_raw or target_id}")
                         except Exception as e:
                             print(f"❌ Remme Action Failed: {e}")
 
-                # Apply preferences to hubs
-                if preferences:
+                if is_mnemo_enabled() and extraction and session_memory_ids:
+                    try:
+                        from memory.knowledge_graph import get_knowledge_graph
+                        from memory.user_id import get_user_id
+                        kg = get_knowledge_graph()
+                        if kg and kg.enabled:
+                            user_id = get_user_id()
+                            kg_result = kg.ingest_from_unified_extraction(
+                                user_id, run_id, session_memory_ids, extraction,
+                                category="derived", source="session",
+                                space_id=space_id,
+                            )
+                            entity_ids = kg_result.get("entity_ids", [])
+                            entity_labels = kg_result.get("entity_labels", [])
+                            if entity_ids or entity_labels:
+                                meta = {"entity_ids": entity_ids}
+                                if entity_labels:
+                                    meta["entity_labels"] = entity_labels
+                                for mid in session_memory_ids:
+                                    remme_store.update(mid, metadata=meta)
+                            print(f"✅ Remme: Ingested session extraction to Neo4j ({len(session_memory_ids)} memories, facts + evidence)")
+                    except Exception as e:
+                        print(f"⚠️ Remme Neo4j session ingestion failed: {e}")
+
+                if not is_mnemo_enabled() and preferences:
                     from remme.extractor import apply_preferences_to_hubs
                     apply_preferences_to_hubs(preferences)
                     print(f"✅ Remme: Processed {len(preferences)} preference updates.")
 
+                if commands:
                     print(f"✅ Remme: Processed {len(commands)} memory updates.")
                 else:
                     print(f"ℹ️ Remme: No new facts extracted from run {run_id}.")
@@ -415,19 +551,243 @@ async def process_run(run_id: str, query: str):
                             final_result["summary"] = output_str.strip() if output_str else "Completed."
                 except Exception as e:
                     print(f"⚠️ Extraction Error: {e}")
+                    # Ensure output is always set, even if extraction failed
+                    if "output" not in final_result:
+                        final_result["output"] = "I've processed your request."
+
+            # ── Voice pipeline: signal completion ──────────────────────────────
+            # NOTE: Text chunks are pushed incrementally per-node by _execute_dag
+            # (via push_stream_chunk). Here we only need to:
+            #   1. Close the stream queue with finish_stream (TTS consumer: no more chunks)
+            #   2. Signal the completion Event (for the Event-based / non-streamed path)
+            voice_output = final_result.get("output", "I've completed your request.")
+            
+            # --- PREVENT SPEAKING ERRORS ---
+            if final_result.get("status") == "failed":
+                # Use a polite generic message instead of technical error strings
+                # (Technical errors are still visible in the UI 'error' field)
+                voice_output = "I'm sorry, I encountered an error while processing your request."
+            
+            # If skill provided a summary, use it for voice
+            if skill and final_result.get("status") == "completed":
+                try:
+                    print(f"[{run_id}] 🧠 Executing Success Hook for skill: {skill_id}")
+                    skill_result = await skill.on_run_success(final_result)
+                    if skill_result and isinstance(skill_result, dict):
+                        if "summary" in skill_result:
+                            final_result["skill_summary"] = skill_result["summary"]
+                            if source == "voice":
+                                voice_output = skill_result["summary"]
+                        if "file_path" in skill_result:
+                            final_result["skill_file_path"] = skill_result["file_path"]
+                except Exception as se:
+                    print(f"⚠️ [Skill] Success hook failed for {skill_id}: {se}")
+                    
+            output_len = len(voice_output) if voice_output else 0
+            try:
+                if has_stream_queue(run_id):
+                    # Chunks were already pushed incrementally — just close the stream.
+                    if get_stream_chunk_count(run_id) == 0:
+                        if not voice_output or not voice_output.strip():
+                            voice_output = "I've completed your request."
+                        push_stream_chunk(run_id, voice_output)
+                        print(f"📡 [Voice] Fallback: pushed full output for run {run_id} ({output_len} chars)")
+                    else:
+                        print(f"📡 [Voice] Closing stream for run {run_id} "
+                              f"(chunks were pushed incrementally)")
+
+                    finish_stream(run_id)
+                elif source == "voice" and stream:
+                    # Only warn if it's a voice run and we EXPECTED streaming but the queue is missing
+                    print(f"⚠️ [Voice] No stream queue registered for run {run_id}! "
+                          f"Response not queued for TTS: "
+                          f"{voice_output[:100] if output_len > 100 else voice_output}")
+
+                # 4. SKILL SUCCESS HOOK
+                if skill:
+                    try:
+                        print(f"[{run_id}] 🧠 Executing Success Hook for skill: {skill_id}")
+                        skill_result = await skill.on_run_success(final_result)
+                        if skill_result and isinstance(skill_result, dict):
+                            if "summary" in skill_result:
+                                final_result["skill_summary"] = skill_result["summary"]
+                                # Update voice output if skill provided a specific summary
+                                # (e.g. for "check my email", the skill summary is better than the agent's raw output)
+                                if source == "voice":
+                                    voice_output = skill_result["summary"]
+                            if "file_path" in skill_result:
+                                final_result["skill_file_path"] = skill_result["file_path"]
+                    except Exception as se:
+                        print(f"⚠️ [Skill] Success hook failed for {skill_id}: {se}")
+
+                # Signal run complete (for the Event-based / non-streaming path)
+                signal_run_complete(run_id, voice_output)
+            except Exception as e:
+                print(f"❌ [Voice] Failed to signal voice pipeline: {e}")
+                import traceback
+                traceback.print_exc()
 
             return final_result
 
 
+# === Helpers ===
+
+def _extract_output_str(data: dict) -> str:
+    """Extract the best human-readable output string from a saved session graph.
+
+    Priority:
+    1. FormatterAgent node output (markdown_report / formatted_report)
+    2. Any node with a substantial string output (largest wins)
+    3. Falls back to empty string if nothing found.
+
+    Args:
+        data: Parsed session JSON (node-link format from NetworkX).
+
+    Returns:
+        Cleaned output string, or empty string if nothing substantial found.
+    """
+    output_str = ""
+    nodes = data.get("nodes", [])
+
+    # 1. FormatterAgent output first (The Final Report)
+    for node in nodes:
+        node_agent = node.get("agent", "")
+        out = node.get("output", {})
+        if node_agent == "FormatterAgent" or "Format" in node_agent:
+            if isinstance(out, dict):
+                md = out.get("markdown_report")
+                if not md:
+                    for k, v in out.items():
+                        if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
+                            md = v
+                            break
+                if md:
+                    output_str = md
+                    break
+                if isinstance(out.get("output"), str) and len(out["output"]) > 100:
+                    output_str = out["output"]
+                    break
+
+    # 2. Fallback: largest string output across all non-ROOT nodes
+    if not output_str:
+        for node in reversed(nodes):
+            if node.get("id") == "ROOT":
+                continue
+            out = node.get("output", {})
+
+            def _find_largest_string(d):
+                largest = ""
+                for v in d.values():
+                    if isinstance(v, str):
+                        if len(v) > len(largest):
+                            largest = v
+                    elif isinstance(v, dict):
+                        sub = _find_largest_string(v)
+                        if len(sub) > len(largest):
+                            largest = sub
+                return largest
+
+            if isinstance(out, dict):
+                largest_str = _find_largest_string(out)
+                if len(largest_str) > 50:
+                    output_str = largest_str
+                    break
+            elif isinstance(out, str) and len(out) > 50:
+                output_str = out
+                break
+
+    # 3. Strip JSON wrapper / markdown fences if present
+    if output_str:
+        if (output_str.startswith("{") and output_str.endswith("}")) or \
+                (output_str.startswith("[") and output_str.endswith("]")):
+            try:
+                parsed = json.loads(output_str)
+                if isinstance(parsed, dict):
+                    for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
+                        if parsed.get(k) and isinstance(parsed[k], str) and len(parsed[k]) > 50:
+                            output_str = parsed[k]
+                            break
+            except Exception:
+                pass
+        import re
+        output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
+        output_str = re.sub(r'\n```$', '', output_str)
+
+    return output_str.strip()
+
+
 # === Endpoints ===
+
+def _write_dry_run_session(run_id: str, query: str, user_id: str, space_id: Optional[str] = None) -> None:
+    """Write minimal session JSON for dry-run so list_runs finds it."""
+    import os
+    base_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    today = datetime.now()
+    date_dir = base_dir / str(today.year) / f"{today.month:02d}" / f"{today.day:02d}"
+    date_dir.mkdir(parents=True, exist_ok=True)
+    session_file = date_dir / f"session_{run_id}.json"
+    graph_data = {
+        "nodes": [
+            {"id": "ROOT", "status": "completed", "agent": "System"},
+            {"id": "DryRun", "status": "completed", "agent": "DryRunAgent", "output": {"result": "Dry-run: no LLM called"}},
+        ],
+        "links": [{"source": "ROOT", "target": "DryRun"}],
+        "directed": True,
+        "multigraph": False,
+        "graph": {
+            "session_id": run_id,
+            "original_query": query,
+            "created_at": datetime.now().isoformat(),
+            "status": "completed",
+            "globals": {"user_id": user_id or ""},
+        },
+    }
+    with open(session_file, "w", encoding="utf-8") as f:
+        json.dump(graph_data, f, indent=2, default=str, ensure_ascii=False)
+
 
 @router.post("/runs")
 async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
-    run_id = str(int(datetime.now().timestamp()))
-    
-    # Start background execution
-    background_tasks.add_task(process_run, run_id, request.query)
-    
+    import os
+    run_id = str(int(datetime.now().timestamp() * 1000))
+    user_id = get_current_user_id()
+
+    # Shared Space: verify user has access to the space (owner or shared-with)
+    if request.space_id:
+        try:
+            from memory.knowledge_graph import get_knowledge_graph
+            kg = get_knowledge_graph()
+            if kg and kg.enabled and not kg.can_user_access_space(user_id, request.space_id):
+                raise HTTPException(status_code=403, detail="You do not have access to this space")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    # Dry-run: skip agent, write synthetic session, return immediately (for automation)
+    dry_run = request.dry_run if request.dry_run is not None else (os.environ.get("DRY_RUN_RUNS", "").lower() == "true")
+    if dry_run:
+        _write_dry_run_session(run_id, request.query, user_id, request.space_id)
+        if request.space_id:
+            try:
+                from memory.knowledge_graph import get_knowledge_graph
+                kg = get_knowledge_graph()
+                if kg and kg.enabled:
+                    kg.get_or_create_session(run_id, space_id=request.space_id)
+            except Exception:
+                pass
+        return {
+            "id": run_id,
+            "status": "completed",
+            "created_at": datetime.now().isoformat(),
+            "query": request.query,
+        }
+
+    # Start background execution (Phase 3C: pass space_id for session scoping)
+    background_tasks.add_task(
+        process_run, run_id, request.query, request.source, request.stream, None, request.space_id, user_id
+    )
+
     return {
         "id": run_id,
         "status": "starting",
@@ -452,6 +812,12 @@ async def list_runs():
                     # Extract meta
                     graph_details = graph_data.get("graph", {})
                     
+                    # Filter by User ID
+                    run_user_id = graph_details.get("globals", {}).get("user_id")
+                    current_user_id = get_current_user_id()
+                    if current_user_id and run_user_id and run_user_id != current_user_id:
+                        continue
+
                     # Robust Query Extraction
                     query = graph_details.get("original_query")
                     if not query:
@@ -482,16 +848,28 @@ async def list_runs():
                         (n.get("total_tokens", 0) or 0) for n in nodes
                     )
                     
+                    run_id = session_file.stem.replace("session_", "")
                     runs.append({
-                        "id": session_file.stem.replace("session_", ""),
-                        "query": query, 
-                        "created_at": created_at, 
+                        "id": run_id,
+                        "query": query,
+                        "created_at": created_at,
                         "status": computed_status,
-                        "total_tokens": total_tokens
+                        "total_tokens": total_tokens,
                     })
-                except:
+                except Exception:
                     continue
-    
+
+    # Phase 4: Enrich with space_id from Neo4j so frontend can filter by space
+    try:
+        from memory.knowledge_graph import get_knowledge_graph
+        kg = get_knowledge_graph()
+        if kg is not None:
+            for r in runs:
+                space_id = kg.get_space_for_session(r["id"])
+                r["space_id"] = space_id
+    except Exception:
+        pass
+
     # Sort by recent
     return sorted(runs, key=lambda x: x['id'], reverse=True)
 
@@ -505,6 +883,7 @@ async def get_run(run_id: str):
     # Search disk
     summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     found_file = None
+    current_user_id = get_current_user_id()
     
     # Brute force search (should optimize path structure later)
     for path in summaries_dir.rglob(f"session_{run_id}.json"):
@@ -513,6 +892,12 @@ async def get_run(run_id: str):
         
     if found_file:
         data = json.loads(found_file.read_text())
+        
+        # Enforce User ID filter
+        run_user_id = data.get("graph", {}).get("globals", {}).get("user_id")
+        if current_user_id and run_user_id and run_user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this run")
+
         # Reconstruct Graph to use adapter
         import networkx as nx
         if "edges" in data:
@@ -537,6 +922,53 @@ async def get_run(run_id: str):
         }
         
     raise HTTPException(status_code=404, detail="Run not found")
+
+
+@router.get("/runs/{run_id}/output")
+async def get_run_output(run_id: str):
+    """Return the extracted text output of a completed run.
+
+    Designed for programmatic consumers (e.g. the Nexus channel gateway) that
+    need the final agent reply as plain text rather than the ReactFlow graph.
+
+    Returns:
+        {
+            "run_id": str,
+            "status": "running" | "completed" | "failed" | "not_found",
+            "output": str | None
+        }
+    """
+    # Still running — no output yet
+    if run_id in active_loops:
+        return {"run_id": run_id, "status": "running", "output": None}
+
+    # Search disk for the saved session
+    summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    found_file = None
+    for path in summaries_dir.rglob(f"session_{run_id}.json"):
+        found_file = path
+        break
+
+    if not found_file:
+        return {"run_id": run_id, "status": "not_found", "output": None}
+
+    data = json.loads(found_file.read_text())
+
+    # Determine overall run status from node statuses
+    nodes = data.get("nodes", [])
+    node_statuses = [n.get("status", "pending") for n in nodes if n.get("id") != "ROOT"]
+    if any(s == "failed" for s in node_statuses):
+        run_status = "failed"
+    else:
+        run_status = data.get("graph", {}).get("status", "completed")
+
+    output_str = _extract_output_str(data)
+
+    return {
+        "run_id": run_id,
+        "status": run_status,
+        "output": output_str if output_str else None,
+    }
 
 
 @router.post("/runs/{run_id}/input")
@@ -594,6 +1026,21 @@ async def stop_run(run_id: str):
 @router.delete("/runs/{run_id}")
 async def delete_run(run_id: str):
     """Delete a run from disk and memory"""
+    # Verify ownership before deleting
+    current_user_id = get_current_user_id()
+    summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    found_file = None
+    
+    for path in summaries_dir.rglob(f"session_{run_id}.json"):
+        found_file = path
+        break
+        
+    if found_file:
+        data = json.loads(found_file.read_text())
+        run_user_id = data.get("graph", {}).get("globals", {}).get("user_id")
+        if current_user_id and run_user_id and run_user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this run")
+
     # 1. Stop if running
     if run_id in active_loops:
         loop = active_loops[run_id]
@@ -601,7 +1048,6 @@ async def delete_run(run_id: str):
         del active_loops[run_id]
         
     # 2. Delete file
-    summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     deleted = False
     
     # Brute force search

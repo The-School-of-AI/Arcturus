@@ -11,10 +11,11 @@ Outbox model (Week 1):
     so the widget can poll for replies.
 """
 
+import asyncio
 import uuid
 from collections import deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from channels.base import ChannelAdapter
 
@@ -29,9 +30,14 @@ class WebChatAdapter(ChannelAdapter):
     # Class-level outbox: session_id → bounded deque of message dicts.
     # Using a class-level dict ensures all references to any WebChatAdapter
     # instance share the same outbox store (singleton-like within a process).
-    _outboxes: Dict[str, deque] = {}
+    _outboxes: dict[str, deque] = {}
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    # Class-level SSE subscriber registry: session_id → list of asyncio.Queue.
+    # send_message() pushes to these queues so live SSE connections receive
+    # replies immediately without polling.
+    _sse_queues: dict[str, list[asyncio.Queue]] = {}
+
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize WebChat adapter."""
         super().__init__("webchat", config)
 
@@ -48,7 +54,15 @@ class WebChatAdapter(ChannelAdapter):
             WebChatAdapter._outboxes[session_id] = deque(maxlen=200)
         return WebChatAdapter._outboxes[session_id]
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_typing_indicator(self, recipient_id: str, **kwargs) -> None:
+        """Push a typing event to all SSE subscribers for this session."""
+        for q in list(WebChatAdapter._sse_queues.get(recipient_id, [])):
+            try:
+                q.put_nowait({"type": "typing", "session_id": recipient_id})
+            except asyncio.QueueFull:
+                pass
+
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Enqueue an outbound message to a WebChat session.
 
         In production this would push via WebSocket. For now, messages are
@@ -62,17 +76,60 @@ class WebChatAdapter(ChannelAdapter):
         Returns:
             Dict with message_id and success flag.
         """
-        msg: Dict[str, Any] = {
+        media_attachments = kwargs.get("attachments", [])
+        msg: dict[str, Any] = {
             "message_id": str(uuid.uuid4()),
             "timestamp": datetime.utcnow().isoformat(),
             "channel": "webchat",
             "recipient_id": recipient_id,
             "content": content,
         }
+        if media_attachments:
+            msg["attachments"] = [
+                {"media_type": a.media_type, "url": a.url,
+                 "filename": a.filename, "mime_type": a.mime_type}
+                for a in media_attachments
+            ]
         self.get_outbox(recipient_id).append(msg)
+        # Push to any live SSE subscriber queues for this session.
+        for q in list(WebChatAdapter._sse_queues.get(recipient_id, [])):
+            try:
+                q.put_nowait(msg)
+            except asyncio.QueueFull:
+                pass
         return {"message_id": msg["message_id"], "success": True}
 
-    def drain_outbox(self, session_id: str) -> List[Dict[str, Any]]:
+    def subscribe_sse(self, session_id: str) -> asyncio.Queue:
+        """Register a new SSE subscriber queue for *session_id*.
+
+        The returned queue receives a copy of every message delivered to the
+        session via send_message().  The caller is responsible for calling
+        unsubscribe_sse() when the SSE connection closes.
+
+        Args:
+            session_id: WebChat session identifier.
+
+        Returns:
+            asyncio.Queue that will receive outbound message dicts.
+        """
+        q: asyncio.Queue = asyncio.Queue(maxsize=200)
+        if session_id not in WebChatAdapter._sse_queues:
+            WebChatAdapter._sse_queues[session_id] = []
+        WebChatAdapter._sse_queues[session_id].append(q)
+        return q
+
+    def unsubscribe_sse(self, session_id: str, q: asyncio.Queue) -> None:
+        """Remove a previously registered SSE subscriber queue.
+
+        Args:
+            session_id: WebChat session identifier.
+            q: The queue returned by subscribe_sse().
+        """
+        queues = WebChatAdapter._sse_queues.get(session_id, [])
+        if q in queues:
+            queues.remove(q)
+
+    def drain_outbox(self, session_id: str) -> list[dict[str, Any]]:
         """Return all pending outbound messages for *session_id* and clear the queue.
 
         Called by the polling endpoint so the widget can consume replies.
@@ -98,3 +155,4 @@ class WebChatAdapter(ChannelAdapter):
     async def shutdown(self) -> None:
         """Gracefully shutdown the WebChat adapter."""
         WebChatAdapter._outboxes.clear()
+        WebChatAdapter._sse_queues.clear()

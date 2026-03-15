@@ -167,3 +167,116 @@ def test_12_create_checkpoint_persists_and_loads() -> None:
         assert loaded.session_id == "sess1"
         assert loaded.trigger == "manual"
         assert len(loaded.graph_snapshot.get("nodes", [])) == 2
+
+
+# === Week 2: Rewind engine and state restoration invariants ===
+
+
+def _make_graph_snapshot(nodes: list[dict], edges: list[dict] | None = None) -> dict:
+    """Build a minimal node_link_data style graph dict for tests."""
+    return {
+        "directed": True,
+        "multigraph": False,
+        "graph": {
+            "session_id": "test-session",
+            "original_query": "test",
+            "status": "completed",
+            "created_at": "2025-01-15T12:00:00Z",
+            "file_manifest": [],
+            "globals_schema": {},
+        },
+        "nodes": nodes,
+        "edges": edges or [],
+    }
+
+
+def test_13_restore_from_checkpoint_returns_correct_node_count() -> None:
+    """Restored context has same number of nodes as the checkpoint snapshot."""
+    from session.checkpoint import create_checkpoint, load_checkpoint
+    from session.rewind import restore_from_checkpoint
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cp_dir = Path(tmp) / "cp"
+        ev_dir = Path(tmp) / "ev"
+        ev_dir.mkdir()
+        graph_snap = _make_graph_snapshot([
+            {"id": "ROOT", "agent": "System", "status": "completed", "output": None, "error": None, "cost": 0.0, "start_time": None, "end_time": "2025-01-15T12:00:01Z"},
+            {"id": "Step1", "agent": "CoderAgent", "status": "completed", "output": {}, "error": None, "cost": 0.01, "start_time": "2025-01-15T12:00:01Z", "end_time": "2025-01-15T12:00:05Z"},
+            {"id": "Step2", "agent": "FormatterAgent", "status": "pending", "output": None, "error": None, "cost": 0.0, "start_time": None, "end_time": None},
+        ])
+        snap = create_checkpoint(
+            session_id="s-restore",
+            trigger="step_complete",
+            graph=graph_snap,
+            event_log_path=ev_dir / "events_s-restore.ndjson",
+            checkpoint_dir=cp_dir,
+        )
+        loaded = load_checkpoint("s-restore", snap.checkpoint_id, checkpoint_dir=cp_dir)
+        context, result = restore_from_checkpoint(loaded, raise_on_violation=False)
+        assert len(list(context.plan_graph.nodes)) == 3
+
+
+def test_14_restore_resets_running_nodes_to_pending() -> None:
+    """Nodes with status 'running' are reset to 'pending' after restoration."""
+    from session.checkpoint import create_checkpoint, load_checkpoint
+    from session.rewind import restore_from_checkpoint
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cp_dir = Path(tmp) / "cp"
+        ev_dir = Path(tmp) / "ev"
+        ev_dir.mkdir()
+        graph_snap = _make_graph_snapshot([
+            {"id": "ROOT", "agent": "System", "status": "completed", "output": None, "error": None, "cost": 0.0, "start_time": None, "end_time": "2025-01-15T12:00:01Z"},
+            {"id": "StepA", "agent": "CoderAgent", "status": "running", "output": None, "error": None, "cost": 0.0, "start_time": "2025-01-15T12:00:05Z", "end_time": None},
+        ])
+        snap = create_checkpoint(
+            session_id="s-reset",
+            trigger="step_complete",
+            graph=graph_snap,
+            event_log_path=ev_dir / "events_s-reset.ndjson",
+            checkpoint_dir=cp_dir,
+        )
+        loaded = load_checkpoint("s-reset", snap.checkpoint_id, checkpoint_dir=cp_dir)
+        context, result = restore_from_checkpoint(loaded, raise_on_violation=False)
+        assert context.plan_graph.nodes["StepA"]["status"] == "pending"
+        assert "StepA" in result.reset_node_ids
+
+
+def test_15_verify_restoration_invariants_no_running_nodes() -> None:
+    """verify_restoration_invariants catches running nodes as a violation."""
+    import networkx as nx
+    from session.rewind import verify_restoration_invariants
+
+    graph_snap = _make_graph_snapshot([
+        {"id": "ROOT", "agent": "System", "status": "completed"},
+        {"id": "StepX", "agent": "CoderAgent", "status": "running"},
+    ])
+    g = nx.DiGraph()
+    g.add_node("ROOT", agent="System", status="completed")
+    g.add_node("StepX", agent="CoderAgent", status="running")
+
+    violations = verify_restoration_invariants(graph_snap, g)
+    assert any("running" in v for v in violations)
+
+
+def test_16_list_available_checkpoints_returns_nonempty_after_create() -> None:
+    """list_available_checkpoints returns entries after a checkpoint is created."""
+    from session.checkpoint import create_checkpoint
+    from session.rewind import list_available_checkpoints
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cp_dir = Path(tmp) / "cp"
+        ev_dir = Path(tmp) / "ev"
+        ev_dir.mkdir()
+        graph_snap = _make_graph_snapshot([{"id": "ROOT", "agent": "System", "status": "completed"}])
+        create_checkpoint(
+            session_id="s-list",
+            trigger="manual",
+            graph=graph_snap,
+            event_log_path=ev_dir / "events_s-list.ndjson",
+            checkpoint_dir=cp_dir,
+        )
+        checkpoints = list_available_checkpoints("s-list", checkpoint_dir=cp_dir)
+        assert len(checkpoints) >= 1
+        assert "checkpoint_id" in checkpoints[0]
+        assert "trigger" in checkpoints[0]

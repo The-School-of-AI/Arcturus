@@ -5,6 +5,9 @@ Manages how beliefs change over time:
 - Confidence updates based on evidence
 - Recency-based decay
 - Conflict resolution between beliefs
+
+DEPRECATED when MNEMO_ENABLED=true (permanently): Confidence is managed at ingestion
+time on Neo4j Fact nodes; belief engine is not used on the Mnemo path.
 """
 
 import math

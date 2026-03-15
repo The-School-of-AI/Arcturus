@@ -13,6 +13,12 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from gateway_api.storage_utils import (
+    append_jsonl,
+    read_json_file,
+    read_jsonl_file,
+    write_json_atomic,
+)
 from shared.state import PROJECT_ROOT
 
 DATA_DIR = PROJECT_ROOT / "data" / "gateway"
@@ -20,7 +26,11 @@ WEBHOOK_SUBSCRIPTIONS_FILE = DATA_DIR / "webhook_subscriptions.json"
 WEBHOOK_DELIVERIES_FILE = DATA_DIR / "webhook_deliveries.jsonl"
 WEBHOOK_DLQ_FILE = DATA_DIR / "webhook_dlq.jsonl"
 WEBHOOK_SIGNING_SECRET_ENV = "ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET"
+GITHUB_WEBHOOK_SECRET_ENV = "ARCTURUS_GATEWAY_GITHUB_WEBHOOK_SECRET"
+JIRA_WEBHOOK_TOKEN_ENV = "ARCTURUS_GATEWAY_JIRA_WEBHOOK_TOKEN"
+GMAIL_CHANNEL_TOKEN_ENV = "ARCTURUS_GATEWAY_GMAIL_CHANNEL_TOKEN"
 DEFAULT_TIMESTAMP_TOLERANCE_SECONDS = 300
+DEFAULT_DISPATCH_LEASE_SECONDS = 30
 
 
 class WebhookSigningNotConfigured(RuntimeError):
@@ -48,41 +58,20 @@ def _ensure_parent(path: Path) -> None:
 
 
 def _read_json(path: Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return default
+    return read_json_file(path, default)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     _ensure_parent(path)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    temp_path.replace(path)
+    write_json_atomic(path, payload)
 
 
 def _append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
-    _ensure_parent(path)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload) + "\n")
+    append_jsonl(path, payload)
 
 
 def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
-    if not path.exists():
-        return []
-
-    rows: List[Dict[str, Any]] = []
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        try:
-            rows.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    return rows
+    return read_jsonl_file(path)
 
 
 def _make_signature(secret: str, timestamp: str, body: str) -> str:
@@ -104,6 +93,31 @@ def _signing_secret() -> str | None:
     return cleaned
 
 
+def _env_secret(env_name: str) -> str | None:
+    value = os.getenv(env_name)
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    return cleaned
+
+
+def _required_env_secret(env_name: str) -> str:
+    value = _env_secret(env_name)
+    if not value:
+        raise WebhookSigningNotConfigured(f"{env_name} is not configured")
+    return value
+
+
+def _header_value(headers: Dict[str, str], name: str) -> str | None:
+    target = name.lower()
+    for key, value in headers.items():
+        if key.lower() == target:
+            return value
+    return None
+
+
 def _latest_delivery_states(events: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     state: Dict[str, Dict[str, Any]] = {}
     for event in events:
@@ -112,6 +126,18 @@ def _latest_delivery_states(events: List[Dict[str, Any]]) -> Dict[str, Dict[str,
             continue
         state[delivery_id] = event
     return state
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 class WebhookService:
@@ -198,6 +224,76 @@ class WebhookService:
         if not hmac.compare_digest(signature_header.strip(), expected):
             raise InvalidWebhookSignature("Signature verification failed")
 
+    def _validate_github_signature(self, headers: Dict[str, str], raw_body: str) -> str:
+        secret = _required_env_secret(GITHUB_WEBHOOK_SECRET_ENV)
+        signature_header = _header_value(headers, "x-hub-signature-256")
+        if not signature_header:
+            raise InvalidWebhookSignature("Missing x-hub-signature-256 header")
+        expected = "sha256=" + hmac.new(
+            secret.encode("utf-8"),
+            raw_body.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(signature_header.strip(), expected):
+            raise InvalidWebhookSignature("GitHub signature verification failed")
+        return "github_signature"
+
+    def _validate_jira_token(self, headers: Dict[str, str]) -> str:
+        token = _required_env_secret(JIRA_WEBHOOK_TOKEN_ENV)
+        provided = _header_value(headers, "x-atlassian-webhook-token")
+        if not provided:
+            raise InvalidWebhookSignature("Missing x-atlassian-webhook-token header")
+        if not hmac.compare_digest(provided.strip(), token):
+            raise InvalidWebhookSignature("Jira webhook token verification failed")
+        return "jira_token"
+
+    def _validate_gmail_token(self, headers: Dict[str, str]) -> str:
+        token = _required_env_secret(GMAIL_CHANNEL_TOKEN_ENV)
+        provided = _header_value(headers, "x-goog-channel-token")
+        if not provided:
+            raise InvalidWebhookSignature("Missing x-goog-channel-token header")
+        if not hmac.compare_digest(provided.strip(), token):
+            raise InvalidWebhookSignature("Gmail channel token verification failed")
+        return "gmail_token"
+
+    def validate_inbound_connector_auth(
+        self,
+        *,
+        source: str,
+        headers: Dict[str, str],
+        raw_body: str,
+    ) -> str:
+        source_key = source.strip().lower()
+        if source_key == "github":
+            return self._validate_github_signature(headers=headers, raw_body=raw_body)
+        if source_key == "jira":
+            return self._validate_jira_token(headers=headers)
+        if source_key == "gmail":
+            return self._validate_gmail_token(headers=headers)
+        raise InvalidWebhookSignature(f"Unsupported connector source: {source_key}")
+
+    def validate_inbound_auth(
+        self,
+        *,
+        source: str,
+        headers: Dict[str, str],
+        raw_body: str,
+    ) -> str:
+        gateway_signature = _header_value(headers, "x-gateway-signature")
+        gateway_timestamp = _header_value(headers, "x-gateway-timestamp")
+        if gateway_signature or gateway_timestamp:
+            self.validate_inbound_signature(
+                signature_header=gateway_signature,
+                timestamp_header=gateway_timestamp,
+                raw_body=raw_body,
+            )
+            return "gateway_signature"
+        return self.validate_inbound_connector_auth(
+            source=source,
+            headers=headers,
+            raw_body=raw_body,
+        )
+
     async def trigger_event(
         self,
         event_type: str,
@@ -255,34 +351,50 @@ class WebhookService:
         delivered = 0
         retried = 0
         dead_lettered = 0
+        selected: List[Dict[str, Any]] = []
+        dispatch_owner = f"dispatch_{secrets.token_hex(6)}"
+        now = datetime.now(timezone.utc)
+        lease_expires_at = now + timedelta(seconds=DEFAULT_DISPATCH_LEASE_SECONDS)
+        lease_expires_at_iso = lease_expires_at.isoformat()
 
         async with self._lock:
             rows = _read_jsonl(self.deliveries_file)
             latest_map = _latest_delivery_states(rows)
 
-        now = datetime.now(timezone.utc)
-        pending: List[Dict[str, Any]] = []
-        for item in latest_map.values():
-            status = item.get("status")
-            if status not in {"queued", "retry_pending"}:
-                continue
+            candidates: List[Dict[str, Any]] = []
+            for item in latest_map.values():
+                status = item.get("status")
+                if status not in {"queued", "retry_pending", "in_progress"}:
+                    continue
 
-            next_attempt_at = item.get("next_attempt_at")
-            if next_attempt_at:
-                try:
-                    retry_at = datetime.fromisoformat(next_attempt_at)
-                    if retry_at.tzinfo is None:
-                        retry_at = retry_at.replace(tzinfo=timezone.utc)
-                    if retry_at > now:
+                if status == "in_progress":
+                    lease_until = _parse_datetime(item.get("lease_expires_at"))
+                    if lease_until is not None and lease_until > now:
                         continue
-                except ValueError:
-                    pass
 
-            pending.append(item)
+                next_attempt_at = item.get("next_attempt_at")
+                retry_at = _parse_datetime(next_attempt_at)
+                if retry_at is not None and retry_at > now:
+                    continue
 
-        pending.sort(key=lambda item: item.get("updated_at", item.get("timestamp", "")))
+                candidates.append(item)
 
-        for delivery in pending[: max(1, limit)]:
+            candidates.sort(
+                key=lambda item: item.get("updated_at", item.get("timestamp", ""))
+            )
+
+            for delivery in candidates[: max(1, limit)]:
+                leased = {
+                    **delivery,
+                    "status": "in_progress",
+                    "lease_owner": dispatch_owner,
+                    "lease_expires_at": lease_expires_at_iso,
+                    "updated_at": _utc_now_iso(),
+                }
+                _append_jsonl(self.deliveries_file, leased)
+                selected.append(leased)
+
+        for delivery in selected:
             scanned += 1
             attempt = int(delivery.get("attempt", 0)) + 1
             ok, error_message = await self._deliver_once(delivery)
@@ -297,6 +409,8 @@ class WebhookService:
                     "updated_at": update_time,
                     "last_error": None,
                     "next_attempt_at": None,
+                    "lease_owner": None,
+                    "lease_expires_at": None,
                 }
                 async with self._lock:
                     _append_jsonl(self.deliveries_file, event)
@@ -311,6 +425,8 @@ class WebhookService:
                     "updated_at": update_time,
                     "last_error": error_message,
                     "next_attempt_at": None,
+                    "lease_owner": None,
+                    "lease_expires_at": None,
                 }
                 async with self._lock:
                     _append_jsonl(self.deliveries_file, event)
@@ -327,6 +443,8 @@ class WebhookService:
                 "updated_at": update_time,
                 "last_error": error_message,
                 "next_attempt_at": retry_at.isoformat(),
+                "lease_owner": None,
+                "lease_expires_at": None,
             }
             async with self._lock:
                 _append_jsonl(self.deliveries_file, event)
@@ -359,6 +477,8 @@ class WebhookService:
             "last_error": None,
             "next_attempt_at": _utc_now_iso(),
             "updated_at": _utc_now_iso(),
+            "lease_owner": None,
+            "lease_expires_at": None,
             "replayed": True,
         }
 
@@ -391,6 +511,8 @@ class WebhookService:
             "attempt": 0,
             "next_attempt_at": now,
             "last_error": None,
+            "lease_owner": None,
+            "lease_expires_at": None,
         }
 
     async def _deliver_once(self, delivery: Dict[str, Any]) -> tuple[bool, str | None]:

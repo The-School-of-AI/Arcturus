@@ -1,8 +1,24 @@
 # voice/config.py
+#
+# API keys are read from the PROJECT ROOT .env (the same file used by all
+# other Arcturus modules).  Do NOT place a separate voice/.env file —
+# keys defined there would shadow the global ones and cause confusion.
+# Keys needed by voice modules:
+#   PICOVOICE_ACCESS_KEY  — wake word detection (Porcupine)
+#   DEEPGRAM_API_KEY      — cloud STT (Deepgram Nova-2)
+#   AZURE_SPEECH_KEY      — TTS (Azure Neural Speech)
+#   AZURE_SPEECH_REGION   — TTS region (e.g. "eastus")
 
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 
 _VOICE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = Path(_VOICE_DIR).parent
+
+# Load the project root .env once for the entire voice package.
+# override=False means already-set env vars (e.g. from a shell export) win.
+load_dotenv(_PROJECT_ROOT / ".env", override=False)
 
 VOICE_CONFIG = {
     # Master switch
@@ -18,12 +34,12 @@ VOICE_CONFIG = {
     # -----------------------------
     "porcupine": {
         # Path to custom .ppn file (recommended)
-        "keyword_path": os.path.join(_VOICE_DIR, "keywords", "hey_arcturus.ppn"),
+        "keyword_path": os.path.join(_VOICE_DIR, "keywords", "Hey-Arcturus_en_windows_v4_0_0.ppn"),
 
         # Sensitivity: 0.0 (least sensitive) → 1.0 (most sensitive)
         # Higher = fewer missed detections, but more false positives.
         # 0.75 is a good balance for real-world noisy environments.
-        "sensitivity": 0.75,
+        "sensitivity": 0.6,
     },
 
     # -----------------------------
@@ -77,6 +93,32 @@ VOICE_CONFIG = {
     },
 
     # -----------------------------
+    # Barge-in configuration (mic→TTS interruption)
+    # -----------------------------
+    # These thresholds intentionally bias toward *near-field* speech to avoid
+    # distant talkers, background TV, or speaker echo triggering interruption.
+    # Stricter values reduce self-interrupt when TTS is picked up by the mic.
+    "barge_in": {
+        # Suppress barge-in detection for this long after TTS starts.
+        # Azure TTS has 200-600ms of synthesis latency before audio reaches the speaker,
+        # so 1000ms was only ~400-800ms of real echo suppression. 1500ms is safer.
+        "grace_ms": 1500,
+
+        # Continuous speech required before interrupt.
+        # 120ms = lower bound of the 120-200ms design band → fastest reliable detection.
+        "min_speech_ms": 120,
+
+        # Energy must be at least this multiple of ambient noise floor.
+        "energy_ratio": 2.7,
+
+        # Near-field gates (int16 RMS units).
+        # 1100 provides a harder gate against speaker echo in quiet rooms where the
+        # noise floor is very low (making the ratio gate easier to trip).
+        "min_absolute_rms": 1100,
+        "min_rms_above_noise": 250,
+    },
+
+    # -----------------------------
     # STT configuration
     # -----------------------------
     # Provider: "whisper" (local, private) or "deepgram" (cloud, faster)
@@ -102,12 +144,16 @@ VOICE_CONFIG = {
     },
 
     # -----------------------------
-    # TTS configuration (Azure Speech)
+    # TTS configuration
     # -----------------------------
-    # Credentials loaded from env: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
-    "tts": {
-        "voice_name": "en-US-JennyNeural",   # default (overridden by active persona)
+    # Provider selection: "azure" (cloud, premium) or "piper" (local, offline, streaming)
+    "tts_provider": "azure",
 
+    # Azure Speech credentials loaded from env: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
+    "tts": {
+        "voice_name": "en-US-JennyNeural",  
+         # default (overridden by active persona)
+        "streaming_enabled": True,
         # Active persona — must match a key in "personas" below
         "active_persona": "professional",
 
@@ -139,4 +185,36 @@ VOICE_CONFIG = {
             },
         },
     },
+
+    # -----------------------------
+    # Piper TTS configuration (local, offline)
+    # -----------------------------
+    # Download models from: https://huggingface.co/rhasspy/piper-voices
+    # Place .onnx + .onnx.json under voice/piper_models/
+    "piper_tts": {
+        # Path to the .onnx model file (relative paths resolved from voice/ dir)
+        "model_path": os.path.join(_VOICE_DIR, "piper_models", "en_US-lessac-medium.onnx"),
+
+        # Speech speed: 1.0 = normal, < 1.0 = faster, > 1.0 = slower
+        "length_scale": 1.0,
+
+        # Pause between sentences in seconds
+        "sentence_silence": 0.15,
+
+        # Speaker ID (for multi-speaker models, None for single-speaker)
+        "speaker_id": None,
+
+        # Enable streaming mode: start speaking as Nexus chunks arrive
+        # instead of waiting for the full response
+        "streaming_enabled": True,
+    },
+    # -----------------------------
+    # Intent Gate configuration
+    # -----------------------------
+    "intent_gate": {
+        "use_llm": True,  # When True, uses ModelManager to classify intents
+        "fallback_to_rules": True, # If LLM fails, use regex-based classification
+        "model": "gemini", # Model key from models.json
+    },
 }
+

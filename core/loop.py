@@ -77,6 +77,86 @@ async def retry_with_backoff(
     raise last_exception
 
 
+import re
+
+# ── Voice streaming helper ─────────────────────────────────────────────────
+# Nodes to skip for voice streaming (they produce metadata, not user-facing text)
+_VOICE_SKIP_AGENTS = {
+    "PlannerAgent", "DistillerAgent", "QueryAgent",
+}
+_VOICE_MIN_CHARS = 40  # Don't speak very short outputs
+
+# Patterns for catching technical leakage
+_VOICE_ERROR_KEYWORDS = (
+    r'NameError|TypeError|ValueError|AttributeError|KeyError|IndexError|'
+    r'RuntimeError|ImportError|ModuleNotFoundError|ZeroDivisionError|'
+    r'SyntaxError|IndentationError|UnboundLocalError|RecursionError|'
+    r'AssertionError|OSError|FileNotFoundError|Exception|Traceback'
+)
+_VOICE_ERROR_RE = re.compile(rf'\b({_VOICE_ERROR_KEYWORDS})\b', re.IGNORECASE)
+
+
+def _extract_node_chunk(step_id: str, agent_type: str, output) -> str | None:
+    """
+    Extract a speakable text chunk from a completed node's output.
+
+    Returns a clean string suitable for TTS, or None if the node
+    shouldn't be spoken (e.g., planner, clarification, trivial output).
+    """
+    if agent_type in _VOICE_SKIP_AGENTS:
+        return None
+
+    if not output:
+        return None
+
+    text = None
+
+    # FormatterAgent: prefer the markdown report
+    if isinstance(output, dict):
+        # SKIP IF ERROR PRESENT
+        if output.get("error") or output.get("status") == "failed":
+             return None
+
+        if "Format" in agent_type or agent_type == "FormatterAgent":
+            text = output.get("markdown_report") or output.get("formatted_report")
+            if not text:
+                for k, v in output.items():
+                    if ("report" in k.lower() or "formatted" in k.lower()) and isinstance(v, str):
+                        text = v
+                        break
+
+        # Generic fallback: find the largest string value
+        if not text:
+            best = ""
+            for k, v in output.items():
+                # Skip tech labels
+                if k in ("error", "traceback", "status", "cost"):
+                    continue
+                if isinstance(v, str) and len(v) > len(best):
+                    best = v
+            text = best or None
+
+    elif isinstance(output, str):
+        text = output
+
+    if not text:
+        return None
+
+    # ── Guard: never speak raw Python exception strings ─────────────────────
+    # If the text (especially a short summary) contains technical error words
+    # replace it with None so voice skips this chunk.
+    normalized = text.strip()
+    if (len(normalized) < 400 and _VOICE_ERROR_RE.search(normalized)) or "traceback (most" in normalized.lower():
+        print(f"⚠️ [Voice] Skip chunk: detected technical error in {step_id} output.")
+        return None
+
+    if len(normalized) < _VOICE_MIN_CHARS:
+        return None
+
+    return normalized
+# ──────────────────────────────────────────────────────────────────────────
+
+
 class AgentLoop4:
     def __init__(self, multi_mcp, strategy="conservative"):
         self.multi_mcp = multi_mcp
@@ -160,7 +240,7 @@ class AgentLoop4:
             log_error(f"Failed to resume session: {e}")
             raise
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, space_id=None):
         """
         Main agent loop: bootstrap context with Query node, optionally run file distiller,
         then planning loop (PlannerAgent) -> merge plan -> execute DAG. Handles replanning when
@@ -200,6 +280,8 @@ class AgentLoop4:
                     original_query=query,
                     file_manifest=file_manifest
                 )
+                if space_id is not None:
+                    self.context.plan_graph.graph["space_id"] = space_id
                 self.context.memory_context = memory_context  # Store for retrieval
                 # Inject multi_mcp immediately
                 self.context.multi_mcp = self.multi_mcp
@@ -275,9 +357,27 @@ class AgentLoop4:
                         self.context.mark_failed("Query", plan_result['error'])
                         raise RuntimeError(f"Planning failed: {plan_result['error']}")
 
-                    if 'plan_graph' not in plan_result['output']:
+                    if not plan_result.get('output') or 'plan_graph' not in plan_result['output']:
                         self.context.mark_failed("Query", "Output missing plan_graph")
                         raise RuntimeError(f"PlannerAgent output missing 'plan_graph' key.")
+
+                    if not isinstance(plan_result['output']['plan_graph'], dict):
+                        # LLM returned null plan_graph (e.g. for simple greetings).
+                        # Synthesise a single FormatterAgent step with a friendly reply.
+                        notes = plan_result["output"].get("ambiguity_notes", [])
+                        reason = notes[0] if notes else "No actionable plan produced."
+                        log_step(f"Planner returned null plan_graph: {reason}", symbol="💬")
+                        plan_result["output"]["plan_graph"] = {
+                            "nodes": [{
+                                "id": "T001",
+                                "agent": "FormatterAgent",
+                                "description": f"Respond to user: {query[:80]}",
+                                "agent_prompt": f"The user said: \"{query}\". Respond naturally and helpfully. If it's a greeting, greet them back warmly. Planner note: {reason}",
+                                "reads": ["original_query"],
+                                "writes": ["final_report"],
+                            }],
+                            "edges": [{"source": "Query", "target": "T001"}],
+                        }
 
                     # ===== AUTO-CLARIFICATION CHECK =====
                     AUTO_CLARYFY_THRESHOLD = 0.7
@@ -624,10 +724,63 @@ class AgentLoop4:
                         visualizer.mark_failed(step_id, result)
                         context.mark_failed(step_id, str(result))
                         log_error(f"❌ Failed {step_id} after {MAX_STEP_RETRIES} retries: {str(result)}")
+                        # 📼 Chronicle: emit STEP_FAILED + create checkpoint
+                        try:
+                            from session.capture import get_capture
+                            from session.schema import EventType
+                            from session.checkpoint import create_checkpoint
+                            _chronicle = get_capture()
+                            _sid = context.plan_graph.graph.get("session_id", "unknown")
+                            await _chronicle.emit(
+                                EventType.STEP_FAILED,
+                                {"step_id": step_id, "agent": step_data.get("agent", ""), "error": str(result)},
+                                session_id=_sid,
+                            )
+                            create_checkpoint(_sid, "step_failed", context.plan_graph, last_sequence=_chronicle.get_last_sequence(_sid))
+                        except Exception:
+                            pass
                 elif result["success"]:
                     visualizer.mark_completed(step_id)
                     await context.mark_done(step_id, result["output"])
                     log_step(f"✅ Completed {step_id} ({step_data['agent']})", symbol="✅")
+                    # 📼 Chronicle: emit STEP_COMPLETE + create checkpoint
+                    try:
+                        from session.capture import get_capture
+                        from session.schema import EventType
+                        from session.checkpoint import create_checkpoint
+                        _chronicle = get_capture()
+                        _sid = context.plan_graph.graph.get("session_id", "unknown")
+                        _node = context.plan_graph.nodes[step_id]
+                        await _chronicle.emit(
+                            EventType.STEP_COMPLETE,
+                            {
+                                "step_id": step_id,
+                                "agent": step_data.get("agent", ""),
+                                "cost": _node.get("cost", 0.0),
+                                "input_tokens": _node.get("input_tokens", 0),
+                                "output_tokens": _node.get("output_tokens", 0),
+                                "execution_time_sec": _node.get("execution_time", 0.0),
+                                "status": "completed",
+                            },
+                            session_id=_sid,
+                        )
+                        create_checkpoint(_sid, "step_complete", context.plan_graph, last_sequence=_chronicle.get_last_sequence(_sid))
+                    except Exception:
+                        pass
+
+                    # ── Voice streaming: push this node's output immediately ──
+                    # If a stream queue is registered (voice pipeline is listening),
+                    # push speakable text so TTS can start speaking before the full
+                    # run completes — true incremental streaming.
+                    try:
+                        from shared.state import has_stream_queue, push_stream_chunk
+                        session_id_for_stream = context.plan_graph.graph.get("session_id", "")
+                        if session_id_for_stream and has_stream_queue(session_id_for_stream):
+                            _chunk = _extract_node_chunk(step_id, step_data["agent"], result["output"])
+                            if _chunk:
+                                push_stream_chunk(session_id_for_stream, _chunk)
+                    except Exception as _ve:
+                        print(f"⚠️ [Voice] Failed to push stream chunk for {step_id}: {_ve}")
                 else:
                     # Agent returned failure - also retry
                     if retry_count < MAX_STEP_RETRIES:
@@ -638,6 +791,21 @@ class AgentLoop4:
                         visualizer.mark_failed(step_id, result["error"])
                         context.mark_failed(step_id, result["error"])
                         log_error(f"❌ Failed {step_id} after {MAX_STEP_RETRIES} retries: {result['error']}")
+                        # 📼 Chronicle: emit STEP_FAILED + create checkpoint
+                        try:
+                            from session.capture import get_capture
+                            from session.schema import EventType
+                            from session.checkpoint import create_checkpoint
+                            _chronicle = get_capture()
+                            _sid = context.plan_graph.graph.get("session_id", "unknown")
+                            await _chronicle.emit(
+                                EventType.STEP_FAILED,
+                                {"step_id": step_id, "agent": step_data.get("agent", ""), "error": result.get("error", "")},
+                                session_id=_sid,
+                            )
+                            create_checkpoint(_sid, "step_failed", context.plan_graph, last_sequence=_chronicle.get_last_sequence(_sid))
+                        except Exception:
+                            pass
 
             # ===== COST THRESHOLD CHECK =====
             accumulated_cost = sum(
@@ -659,6 +827,19 @@ class AgentLoop4:
                 break
                 
             iteration += 1
+            # Only trigger max-iteration guard when there's no forward progress
+            # (prevents false alarm when tasks are completing normally)
+            completed_now = sum(
+                1 for n in context.plan_graph.nodes
+                if context.plan_graph.nodes[n].get('status') in ('completed', 'skipped', 'cost_exceeded')
+                and n != "ROOT"
+            )
+            if not hasattr(context, '_last_completed_count'):
+                context._last_completed_count = 0
+            if completed_now > context._last_completed_count:
+                # Forward progress — reset the stall counter
+                context._last_completed_count = completed_now
+                iteration = 0
             if iteration >= max_iterations:
                 log_error(f"🛑 Max Iterations Reached: {iteration}/{max_iterations}")
                 context.plan_graph.graph['status'] = 'failed'
@@ -685,10 +866,12 @@ class AgentLoop4:
             try:
                 from core.episodic_memory import EpisodicMemory
                 import networkx as nx
+                from memory.user_id import get_user_id
                 mem = EpisodicMemory()
                 graph_data = nx.node_link_data(context.plan_graph)
                 session_data = {"graph": graph_data}
-                await mem.save_episode(session_data)
+                space_id_val = context.plan_graph.graph.get("space_id")
+                await mem.save_episode(session_data, space_id=space_id_val, user_id=get_user_id())
             except Exception as e:
                 print(f"⚠️ Failed to save episodic memory: {e}")
 
@@ -705,6 +888,24 @@ class AgentLoop4:
         - LLM calls inside the agent become children of this span
         """
         step_data = context.get_step_data(step_id)
+
+        # 📼 Chronicle: emit STEP_START
+        try:
+            from session.capture import get_capture
+            from session.schema import EventType
+            _chronicle = get_capture()
+            session_id = context.plan_graph.graph.get("session_id", "unknown")
+            await _chronicle.emit(
+                EventType.STEP_START,
+                {
+                    "step_id": step_id,
+                    "agent": step_data.get("agent", ""),
+                    "description": step_data.get("description", ""),
+                },
+                session_id=session_id,
+            )
+        except Exception:
+            pass
         agent_type = step_data["agent"]
         session_id_val = context.plan_graph.graph.get("session_id", "")
         retry_attempt = step_data.get("_retry_count", 0)

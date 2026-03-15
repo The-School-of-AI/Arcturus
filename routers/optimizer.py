@@ -1,14 +1,22 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from core.query_optimizer import QueryOptimizer
-from core.episodic_memory import MEMORY_DIR
 import json
-import asyncio
 
 router = APIRouter(prefix="/optimizer", tags=["optimizer"])
 
 class OptimizeRequest(BaseModel):
     query: str
+
+
+def _get_user_id():
+    """Current user for episodic scope. None if unavailable."""
+    try:
+        from memory.user_id import get_user_id
+        return get_user_id()
+    except Exception:
+        return None
+
 
 @router.post("/preview")
 async def preview_optimization(req: OptimizeRequest):
@@ -18,26 +26,27 @@ async def preview_optimization(req: OptimizeRequest):
     opt = QueryOptimizer()
     return await opt.optimize_query(req.query)
 
+
 @router.get("/skeletons")
 async def get_skeletons(limit: int = 10):
     """
     Retrieve recent session skeletons (recipes).
+    Uses EPISODIC_STORE_PROVIDER: qdrant → Qdrant; legacy → memory/episodic_skeletons/skeleton_*.json.
     """
-    if not MEMORY_DIR.exists():
+    try:
+        from memory.episodic import get_recent_episodes
+
+        user_id = _get_user_id()
+        episodes = get_recent_episodes(limit=limit, user_id=user_id, space_id=None)
+        skeletons = []
+        for ep in episodes:
+            sk_json = ep.get("skeleton_json") or "{}"
+            try:
+                sk = json.loads(sk_json) if isinstance(sk_json, str) else sk_json
+            except Exception:
+                sk = {}
+            sk.setdefault("id", ep.get("id") or ep.get("session_id"))
+            skeletons.append(sk)
+        return skeletons
+    except Exception:
         return []
-        
-    # List and sort by time
-    files = sorted(MEMORY_DIR.glob("skeleton_*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
-    
-    skeletons = []
-    for f in files[:limit]:
-        try:
-            # Run file reading in thread to avoid blocking loop
-            content = await asyncio.to_thread(f.read_text)
-            data = json.loads(content)
-            skeletons.append(data)
-        except Exception as e:
-            print(f"Failed to load skeleton {f.name}: {e}")
-            pass
-            
-    return skeletons
