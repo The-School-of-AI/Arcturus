@@ -40,7 +40,7 @@ async def generate_page(query: str, template: str = "topic_overview", created_by
         raise ValueError("query is required")
 
     start = time.time()
-    # call oracle (mock)
+    # call oracle to get real web search data
     oracle_resp = oracle_client.search_oracle(query, k=5)
     results = oracle_resp.get("results", [])
 
