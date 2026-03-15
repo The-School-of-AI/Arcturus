@@ -88,6 +88,21 @@ tr:hover{background:#0f3460;}
     return HTMLResponse(html)
 
 
+@router.delete("/traces/orphans")
+async def delete_orphan_traces():
+    """Delete spans belonging to traces with no session_id or run_id."""
+    repo = _repo()
+    deleted = repo.delete_orphan_traces()
+
+    from ops.audit import audit_logger
+
+    audit_logger.log_action(
+        "admin", "data_delete", "orphan_traces", None, {"deleted_spans": deleted}
+    )
+
+    return {"deleted_spans": deleted}
+
+
 @router.get("/traces/{trace_id}")
 async def get_trace_detail(trace_id: str):
     """Get all spans for a trace, build tree."""
@@ -109,6 +124,18 @@ async def get_cost_summary(
     group_by: str = Query("agent", description="Group by: agent | model | trace"),
 ):
     """Aggregate cost from llm.generate spans. Requires attributes.cost_usd."""
+    from ops.admin.feature_flags import flag_store
+
+    if not flag_store.get("cost_tracking"):
+        return {
+            "disabled": True,
+            "message": "Cost tracking is disabled",
+            "total_cost_usd": 0,
+            "trace_count": 0,
+            "by_agent": {},
+            "by_model": {},
+            "hours": hours,
+        }
     return _repo().get_cost_summary(hours, group_by)
 
 
@@ -307,6 +334,22 @@ async def list_caches():
     except Exception:
         pass
 
+    # 4. Semantic LLM response cache
+    try:
+        from ops.cache.semantic_cache import llm_cache
+        from ops.admin.feature_flags import flag_store as _fs
+
+        cache_stats = llm_cache.stats()
+        caches.append({
+            "name": "semantic_cache",
+            "description": "In-memory LLM response cache (prompt-keyed LRU)",
+            "enabled": _fs.get("semantic_cache"),
+            **cache_stats,
+            "flushable": True,
+        })
+    except Exception:
+        pass
+
     return {"caches": caches}
 
 
@@ -316,15 +359,24 @@ async def flush_cache(name: str):
     if name == "settings":
         reload_settings()
 
-        # Audit log
         from ops.audit import audit_logger
         audit_logger.log_action("admin", "cache_flush", f"cache:{name}", None, "flushed")
 
         return {"flushed": "settings", "message": "Settings cache reloaded from disk"}
 
+    if name == "semantic_cache":
+        from ops.cache.semantic_cache import llm_cache
+
+        removed = llm_cache.clear()
+
+        from ops.audit import audit_logger
+        audit_logger.log_action("admin", "cache_flush", f"cache:{name}", None, {"removed": removed})
+
+        return {"flushed": "semantic_cache", "message": f"Semantic cache cleared ({removed} entries)"}
+
     raise HTTPException(
         status_code=400,
-        detail=f"Cache '{name}' is not flushable or does not exist. Only 'settings' is safely flushable.",
+        detail=f"Cache '{name}' is not flushable or does not exist.",
     )
 
 

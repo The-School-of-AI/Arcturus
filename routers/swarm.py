@@ -86,6 +86,11 @@ def _save_templates(templates: list[dict]) -> None:
 @router.post("/run")
 async def start_swarm_run(body: StartSwarmRequest, background_tasks: BackgroundTasks):
     """Start a new swarm run. Returns a run_id immediately; execution is async."""
+    from ops.admin.feature_flags import flag_store
+
+    if not flag_store.get("multi_agent"):
+        raise HTTPException(status_code=403, detail="Multi-agent swarm is disabled")
+
     run_id = str(uuid.uuid4())
     runner = SwarmRunner(
         swarm_token_budget=body.token_budget,

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { ToggleLeft, ToggleRight, Plus, Trash2, RefreshCw, Zap, Activity } from 'lucide-react';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 interface FeatureFlag {
     name: string;
@@ -9,12 +10,22 @@ interface FeatureFlag {
     lifecycle: boolean;
 }
 
+const FLAG_DESCRIPTIONS: Record<string, string> = {
+    cost_tracking: 'Controls cost computation on LLM calls and the Cost tab in admin',
+    multi_agent: 'Controls the Swarm multi-agent orchestration system',
+    deep_research: 'Controls web search and URL reading capabilities for agents',
+    semantic_cache: 'Controls in-memory LLM response caching for repeated prompts',
+    health_scheduler: 'Controls background health monitoring and the Health tab in admin',
+    voice_wake: 'Controls the wake-word voice activation listener',
+};
+
 export const FlagsPanel: React.FC = () => {
     const [flags, setFlags] = useState<FeatureFlag[]>([]);
     const [loading, setLoading] = useState(true);
     const [toggling, setToggling] = useState<string | null>(null);
     const [newFlagName, setNewFlagName] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
+    const { refetch: refetchGlobalFlags } = useFeatureFlags();
 
     const fetchFlags = useCallback(async () => {
         try {
@@ -31,11 +42,16 @@ export const FlagsPanel: React.FC = () => {
         fetchFlags();
     }, [fetchFlags]);
 
+    const syncFlags = useCallback(async () => {
+        await fetchFlags();
+        await refetchGlobalFlags();
+    }, [fetchFlags, refetchGlobalFlags]);
+
     const toggleFlag = async (name: string, enabled: boolean) => {
         setToggling(name);
         try {
             await axios.put(`${API_BASE}/admin/flags/${name}`, { enabled });
-            await fetchFlags();
+            await syncFlags();
         } catch (e) {
             console.error('Failed to toggle flag', e);
         } finally {
@@ -46,7 +62,7 @@ export const FlagsPanel: React.FC = () => {
     const deleteFlag = async (name: string) => {
         try {
             await axios.delete(`${API_BASE}/admin/flags/${name}`);
-            await fetchFlags();
+            await syncFlags();
         } catch (e) {
             console.error('Failed to delete flag', e);
         }
@@ -58,7 +74,7 @@ export const FlagsPanel: React.FC = () => {
             await axios.put(`${API_BASE}/admin/flags/${newFlagName.trim()}`, { enabled: true });
             setNewFlagName('');
             setShowAddForm(false);
-            await fetchFlags();
+            await syncFlags();
         } catch (e) {
             console.error('Failed to add flag', e);
         }
@@ -140,12 +156,19 @@ export const FlagsPanel: React.FC = () => {
                                 )}
                             </button>
                             <div>
-                                <span className="text-sm font-mono font-medium">{flag.name}</span>
-                                {flag.lifecycle && (
-                                    <span className="ml-2 inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30">
-                                        <Zap className="w-3 h-3" />
-                                        lifecycle
-                                    </span>
+                                <div className="flex items-center">
+                                    <span className="text-sm font-mono font-medium">{flag.name}</span>
+                                    {flag.lifecycle && (
+                                        <span className="ml-2 inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                                            <Zap className="w-3 h-3" />
+                                            lifecycle
+                                        </span>
+                                    )}
+                                </div>
+                                {FLAG_DESCRIPTIONS[flag.name] && (
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                        {FLAG_DESCRIPTIONS[flag.name]}
+                                    </p>
                                 )}
                             </div>
                         </div>

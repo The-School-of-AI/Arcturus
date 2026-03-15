@@ -167,10 +167,42 @@ class SpansRepository:
             {"$sort": {"start_time": -1}},
             {"$limit": limit},
             _traces_add_fields_stage(),
+            {"$match": {"session_id": {"$ne": None}}},
             _traces_project_stage(),
         ]
         cursor = self._coll.aggregate(pipeline)
         return [_serialize_trace(t) for t in cursor]
+
+    def delete_orphan_traces(self) -> int:
+        """Delete spans belonging to traces where no span has session_id or run_id."""
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$trace_id",
+                    "has_identity": {
+                        "$max": {
+                            "$cond": [
+                                {
+                                    "$or": [
+                                        {"$ne": [{"$ifNull": ["$attributes.session_id", ""]}, ""]},
+                                        {"$ne": [{"$ifNull": ["$attributes.run_id", ""]}, ""]},
+                                    ]
+                                },
+                                1,
+                                0,
+                            ]
+                        }
+                    },
+                }
+            },
+            {"$match": {"has_identity": 0}},
+            {"$project": {"_id": 1}},
+        ]
+        orphan_trace_ids = [doc["_id"] for doc in self._coll.aggregate(pipeline)]
+        if not orphan_trace_ids:
+            return 0
+        result = self._coll.delete_many({"trace_id": {"$in": orphan_trace_ids}})
+        return result.deleted_count
 
     def get_trace_detail(self, trace_id: str) -> list[dict]:
         """Return all spans for a trace, sorted by start_time."""

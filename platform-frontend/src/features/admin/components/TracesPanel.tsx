@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { API_BASE } from '@/lib/api';
 import axios from 'axios';
 import { Activity, ExternalLink, AlertCircle, RefreshCw, Trash2, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 const JAEGER_UI_BASE = 'http://localhost:16686';
 
@@ -45,6 +46,8 @@ const SessionsSection: React.FC = () => {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [deletingAll, setDeletingAll] = useState(false);
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+    const { flags } = useFeatureFlags();
+    const costEnabled = flags.cost_tracking !== false;
 
     const fetchSessions = useCallback(async () => {
         setLoading(true);
@@ -175,7 +178,7 @@ const SessionsSection: React.FC = () => {
                                             <th className="text-left px-3 py-2 font-medium">Session ID</th>
                                             <th className="text-left px-3 py-2 font-medium">Start</th>
                                             <th className="text-right px-3 py-2 font-medium">Spans</th>
-                                            <th className="text-right px-3 py-2 font-medium">Cost</th>
+                                            {costEnabled && <th className="text-right px-3 py-2 font-medium">Cost</th>}
                                             <th className="text-left px-3 py-2 font-medium">Agents</th>
                                             <th className="text-center px-3 py-2 font-medium">Actions</th>
                                         </tr>
@@ -190,7 +193,7 @@ const SessionsSection: React.FC = () => {
                                                     {formatTimestamp(s.start_time)}
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-mono">{s.span_count}</td>
-                                                <td className="px-3 py-2 text-right font-mono">{formatCost(s.total_cost_usd)}</td>
+                                                {costEnabled && <td className="px-3 py-2 text-right font-mono">{formatCost(s.total_cost_usd)}</td>}
                                                 <td className="px-3 py-2 text-muted-foreground max-w-[200px] truncate" title={s.agents.join(', ')}>
                                                     {s.agents.length > 0 ? s.agents.join(', ') : '-'}
                                                 </td>
@@ -232,20 +235,43 @@ const SessionsSection: React.FC = () => {
 export const TracesPanel: React.FC = () => {
     const [traces, setTraces] = useState<Trace[]>([]);
     const [loading, setLoading] = useState(true);
+    const [purging, setPurging] = useState(false);
+    const [confirmPurge, setConfirmPurge] = useState(false);
+    const { flags } = useFeatureFlags();
+    const costEnabled = flags.cost_tracking !== false;
+
+    const fetchTraces = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/admin/traces`, { params: { limit: 50 } });
+            setTraces(res.data.traces || []);
+        } catch (e) {
+            console.error('Failed to fetch traces', e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchTraces = async () => {
-            try {
-                const res = await axios.get(`${API_BASE}/admin/traces`, { params: { limit: 50 } });
-                setTraces(res.data.traces || []);
-            } catch (e) {
-                console.error('Failed to fetch traces', e);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchTraces();
-    }, []);
+    }, [fetchTraces]);
+
+    const handlePurgeOrphans = async () => {
+        if (!confirmPurge) {
+            setConfirmPurge(true);
+            return;
+        }
+        setPurging(true);
+        setConfirmPurge(false);
+        try {
+            await axios.delete(`${API_BASE}/admin/traces/orphans`);
+            await fetchTraces();
+        } catch (e) {
+            console.error('Failed to purge orphan traces', e);
+        } finally {
+            setPurging(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -262,14 +288,35 @@ export const TracesPanel: React.FC = () => {
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">Recent Traces</h3>
-                    <a
-                        href="http://localhost:16686"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                    >
-                        Open Jaeger <ExternalLink className="w-3 h-3" />
-                    </a>
+                    <div className="flex items-center gap-2">
+                        {confirmPurge && (
+                            <span className="text-xs text-red-400 mr-1">Click again to confirm</span>
+                        )}
+                        <button
+                            onClick={handlePurgeOrphans}
+                            disabled={purging}
+                            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded border border-red-500/30 hover:border-red-400/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            onBlur={() => setConfirmPurge(false)}
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {purging ? 'Purging...' : 'Purge Orphan Traces'}
+                        </button>
+                        <button
+                            onClick={fetchTraces}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded border border-border hover:border-foreground/20 transition-colors"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <a
+                            href="http://localhost:16686"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                            Open Jaeger <ExternalLink className="w-3 h-3" />
+                        </a>
+                    </div>
                 </div>
                 <div className="rounded-lg border border-border overflow-x-auto">
                     <table className="w-full text-sm min-w-[800px]">
@@ -279,9 +326,9 @@ export const TracesPanel: React.FC = () => {
                                 <th className="text-left p-2 font-medium">Session ID</th>
                                 <th className="text-left p-2 font-medium">Start</th>
                                 <th className="text-right p-2 font-medium">Duration</th>
-                                <th className="text-right p-2 font-medium">Cost</th>
-                                <th className="text-right p-2 font-medium">Input Tokens</th>
-                                <th className="text-right p-2 font-medium">Output Tokens</th>
+                                {costEnabled && <th className="text-right p-2 font-medium">Cost</th>}
+                                {costEnabled && <th className="text-right p-2 font-medium">Input Tokens</th>}
+                                {costEnabled && <th className="text-right p-2 font-medium">Output Tokens</th>}
                                 <th className="text-center p-2 font-medium">Spans</th>
                                 <th className="text-center p-2 font-medium">Error</th>
                             </tr>
@@ -307,15 +354,21 @@ export const TracesPanel: React.FC = () => {
                                         {t.start_time ? new Date(t.start_time).toLocaleString() : '-'}
                                     </td>
                                     <td className="p-2 text-right font-mono text-xs">{Math.round(t.duration_ms)}ms</td>
-                                    <td className="p-2 text-right font-mono text-xs">
-                                        {formatCost(t.cost_usd)}
-                                    </td>
-                                    <td className="p-2 text-right font-mono text-xs">
-                                        {formatTokens(t.input_tokens)}
-                                    </td>
-                                    <td className="p-2 text-right font-mono text-xs">
-                                        {formatTokens(t.output_tokens)}
-                                    </td>
+                                    {costEnabled && (
+                                        <td className="p-2 text-right font-mono text-xs">
+                                            {formatCost(t.cost_usd)}
+                                        </td>
+                                    )}
+                                    {costEnabled && (
+                                        <td className="p-2 text-right font-mono text-xs">
+                                            {formatTokens(t.input_tokens)}
+                                        </td>
+                                    )}
+                                    {costEnabled && (
+                                        <td className="p-2 text-right font-mono text-xs">
+                                            {formatTokens(t.output_tokens)}
+                                        </td>
+                                    )}
                                     <td className="p-2 text-center">{t.span_count}</td>
                                     <td className="p-2 text-center">
                                         {t.has_error ? (
