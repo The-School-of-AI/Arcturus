@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class RemmeExtractionSkill(Skill):
     name = "remme_extraction"
     description = "Skill derived from remme_extraction.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """You are a Contextual Memory Management AI with two responsibilities:

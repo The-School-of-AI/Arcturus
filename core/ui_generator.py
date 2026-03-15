@@ -1,15 +1,17 @@
 
+import json
 import os
 import shutil
-import json
 import subprocess
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from core.schemas.ui_schema import AppSchema, Component
+
 
 class ViteAppGenerator:
     """Generates a React/Vite project from an AppSchema."""
-    
+
     def __init__(self, output_dir: str = "generated_app"):
         self.output_dir = Path(output_dir)
         # Clean start
@@ -22,7 +24,7 @@ class ViteAppGenerator:
         self.generate_vite_config()
         self.generate_index_html(app_config.name)
         self.generate_src(app_config)
-        
+
         # public dir
         (self.output_dir / "public").mkdir(exist_ok=True)
 
@@ -79,7 +81,7 @@ export default defineConfig({
     def generate_src(self, app_config: AppSchema):
         src_dir = self.output_dir / "src"
         src_dir.mkdir(exist_ok=True)
-        
+
         # main.jsx
         (src_dir / "main.jsx").write_text("""
 import React from 'react'
@@ -91,7 +93,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <App />,
 )
 """)
-        
+
         # index.css
         theme = app_config.theme
         (src_dir / "index.css").write_text(f"""

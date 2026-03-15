@@ -486,7 +486,19 @@ interface AuthSlice {
     setIsAuthModalOpen: (open: boolean) => void;
 }
 
-interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, SpacesSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice, AuthSlice { }
+// --- Canvas Slice ---
+interface CanvasSlice {
+    canvasSurfaces: { id: string, title: string, componentCount: number }[];
+    activeSurfaceId: string;
+    selectedCanvasWidgetId: string | null;
+    fetchCanvasSurfaces: () => Promise<void>;
+    setActiveSurfaceId: (id: string) => void;
+    selectCanvasWidget: (id: string | null) => void;
+    deleteCanvasWidget: (surfaceId: string, componentId: string) => Promise<void>;
+    renameCanvasWidget: (surfaceId: string, componentId: string, newTitle: string) => Promise<void>;
+}
+
+interface AppState extends RunSlice, GraphSlice, WorkspaceSlice, ReplaySlice, SettingsSlice, RagViewerSlice, NotesSlice, IdeSlice, RemmeSlice, SpacesSlice, ExplorerSlice, AppsSlice, AgentTestSlice, NewsSlice, ChatSlice, ReviewSlice, InboxSlice, SchedulerSlice, EventBusSlice, StudioSlice, AuthSlice, CanvasSlice { }
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -704,6 +716,39 @@ export const useAppStore = create<AppState>()(
                 set({ streamConnection: null, isStreaming: false });
             },
             clearEvents: () => set({ events: [] }),
+
+            // --- Canvas Slice Implementation ---
+            canvasSurfaces: [],
+            activeSurfaceId: 'ops-command-v1',
+            selectedCanvasWidgetId: null,
+            fetchCanvasSurfaces: async () => {
+                try {
+                    const surfaces = await api.getCanvasSurfaces();
+                    set({ canvasSurfaces: surfaces });
+                } catch (e) {
+                    console.error("Failed to fetch canvas surfaces", e);
+                }
+            },
+            setActiveSurfaceId: (id: string) => set({
+                activeSurfaceId: id,
+                selectedCanvasWidgetId: null // Clear selection when switching surfaces
+            }),
+            selectCanvasWidget: (id: string | null) => set({ selectedCanvasWidgetId: id }),
+            deleteCanvasWidget: async (surfaceId: string, componentId: string) => {
+                try {
+                    await api.deleteCanvasWidget(surfaceId, componentId);
+                    set({ selectedCanvasWidgetId: null });
+                } catch (e) {
+                    console.error("Failed to delete canvas widget", e);
+                }
+            },
+            renameCanvasWidget: async (surfaceId: string, componentId: string, newTitle: string) => {
+                try {
+                    await api.renameCanvasWidget(surfaceId, componentId, newTitle);
+                } catch (e) {
+                    console.error("Failed to rename canvas widget", e);
+                }
+            },
 
             // Runs
             runs: [],
@@ -2274,6 +2319,7 @@ export const useAppStore = create<AppState>()(
                 selectedLibraryComponent: null,
                 showRagInsights: false,
                 selectedRagFile: null,
+                selectedCanvasWidgetId: null,
             }),
 
             deleteNewsSource: async (id) => {

@@ -1,10 +1,9 @@
 """Tests for SkillManifest, ToolDefinition, and MarketplaceSkill base class."""
-import pytest
 from pathlib import Path
-from marketplace.skill_base import (
-    load_manifest, SkillManifest, ToolDefinition, MarketplaceSkill
-)
 
+import pytest
+
+from marketplace.skill_base import MarketplaceSkill, SkillManifest, ToolDefinition, load_manifest
 
 # --- ToolDefinition Tests ---
 
@@ -90,7 +89,7 @@ def test_concrete_skill_must_implement_prompt_text():
     """A subclass that doesn't implement prompt_text should fail to instantiate."""
     class IncompleteSkill(MarketplaceSkill):
         pass  # forgot to implement prompt_text!
-    
+
     with pytest.raises(TypeError):
         IncompleteSkill()
 
@@ -101,7 +100,7 @@ def test_concrete_skill_with_prompt_text_works():
         @property
         def prompt_text(self) -> str:
             return "You can say hello!"
-    
+
     skill = HelloSkill()
     assert skill.prompt_text == "You can say hello!"
     assert skill.get_callable_tools() == {}  # default empty

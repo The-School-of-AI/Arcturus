@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class ThinkerSkill(Skill):
     name = "thinker"
     description = "Skill derived from thinker.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# ThinkerAgent v2 Prompt

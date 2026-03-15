@@ -64,7 +64,7 @@ class NotesScanner:
     def extract_from_note(self, note_path: Path) -> Dict:
         """Extract preferences from a single note file."""
         try:
-            content = note_path.read_text()[:3000]  # Limit content size
+            content = note_path.read_text(encoding='utf-8')[:3000]  # Limit content size
             
             prompt = NOTES_EXTRACTION_PROMPT.format(content=content)
             

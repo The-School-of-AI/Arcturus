@@ -20,7 +20,7 @@ def _read(path: Path) -> str:
 
 
 def test_01_integration_file_is_declared_in_charter() -> None:
-    assert f"Integration: " in _read(CHARTER)
+    assert "Integration: " in _read(CHARTER)
 
 
 def test_02_acceptance_and_integration_files_exist() -> None:
@@ -52,9 +52,9 @@ def test_06_rewind_module_importable() -> None:
     from session.rewind import (  # noqa: F401
         RewindError,
         RewindResult,
+        list_available_checkpoints,
         restore_from_checkpoint,
         rewind_to_latest,
-        list_available_checkpoints,
         verify_restoration_invariants,
     )
 
@@ -130,6 +130,7 @@ def test_08_rewind_to_latest_selects_newest_checkpoint() -> None:
 def test_09_restoration_invariants_pass_for_clean_graph() -> None:
     """verify_restoration_invariants reports no violations for a valid completed graph."""
     import networkx as nx
+
     from session.rewind import verify_restoration_invariants
 
     graph_snap = {
@@ -148,6 +149,7 @@ def test_09_restoration_invariants_pass_for_clean_graph() -> None:
 def test_10_restoration_invariants_detect_missing_end_time() -> None:
     """verify_restoration_invariants flags completed nodes missing end_time."""
     import networkx as nx
+
     from session.rewind import verify_restoration_invariants
 
     graph_snap = {"nodes": [{"id": "StepB"}]}
@@ -162,8 +164,8 @@ def test_10_restoration_invariants_detect_missing_end_time() -> None:
 
 def test_11_checkpoint_includes_git_commit_when_in_repo() -> None:
     """Checkpoint includes git_commit_sha when created from a git repo."""
-    from session.checkpoint import create_checkpoint
     from session.alignment import get_git_head_info
+    from session.checkpoint import create_checkpoint
 
     # Use project root (this repo is a git repo)
     repo = Path(__file__).resolve().parent.parent.parent
@@ -200,8 +202,8 @@ def test_12_checkpoint_includes_trace_id_when_under_span() -> None:
     """Checkpoint includes trace_id when created under run_span (Watchtower cross-module linking)."""
     import pytest
 
-    from session.checkpoint import create_checkpoint
     from ops.tracing.spans import run_span
+    from session.checkpoint import create_checkpoint
 
     graph_snap = {
         "directed": True,

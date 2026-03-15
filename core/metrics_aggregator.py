@@ -4,28 +4,28 @@ Provides observatory-level insights across 400+ runs.
 """
 import json
 import statistics
-from pathlib import Path
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-from collections import defaultdict, Counter
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class MetricsAggregator:
     """Aggregate session data into fleet-level telemetry metrics"""
-    
+
     def __init__(self, base_dir: Path = None):
         self.base_dir = base_dir or Path(__file__).parent.parent
         self.sessions_dir = self.base_dir / "data" / "conversation_history"
         self.cache_dir = self.base_dir / "memory" / "metrics"
         self.cache_file = self.cache_dir / "dashboard_cache.json"
-    
-    def scan_sessions(self) -> List[Dict[str, Any]]:
+
+    def scan_sessions(self) -> list[dict[str, Any]]:
         """Walk all session files and extract data"""
         sessions = []
-        
+
         if not self.sessions_dir.exists():
             return sessions
-        
+
         for session_file in self.sessions_dir.rglob("session_*.json"):
             try:
                 data = json.loads(session_file.read_text(encoding="utf-8"))
@@ -35,39 +35,39 @@ class MetricsAggregator:
                 })
             except Exception as e:
                 print(f"⚠️ Error reading {session_file}: {e}")
-        
+
         return sessions
 
     # =========================================================================
     # SECTION 1: FLEET OVERVIEW
     # =========================================================================
-    
-    def aggregate_fleet_overview(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_fleet_overview(self, sessions: list[dict]) -> dict[str, Any]:
         """Core volume, outcome, cost, and efficiency metrics"""
         total_runs = len(sessions)
         costs = []
         tokens = []
         durations = []
         queries = set()
-        
+
         # Outcome counts
         outcomes = {"success": 0, "partial": 0, "failed": 0, "aborted": 0, "running": 0}
-        
+
         for session in sessions:
             data = session.get("data", {})
             nodes = data.get("nodes", [])
-            
+
             # Unique queries
             query = data.get("original_query", "")
             if query:
                 queries.add(query.strip().lower()[:100])
-            
+
             # Per-run aggregates
             run_cost = sum(n.get("cost", 0) or 0 for n in nodes)
             run_tokens = sum(n.get("total_tokens", 0) or 0 for n in nodes)
             costs.append(run_cost)
             tokens.append(run_tokens)
-            
+
             # Duration
             created = data.get("created_at")
             updated = data.get("updated_at")
@@ -78,7 +78,7 @@ class MetricsAggregator:
                     durations.append((end - start).total_seconds())
                 except:
                     pass
-            
+
             # Determine run outcome from nodes
             statuses = [n.get("status") for n in nodes]
             if "failed" in statuses:
@@ -91,15 +91,15 @@ class MetricsAggregator:
                 outcomes["success"] += 1
             else:
                 outcomes["partial"] += 1
-        
+
         # Calculate percentiles
-        def safe_percentile(data: List[float], p: int) -> float:
+        def safe_percentile(data: list[float], p: int) -> float:
             if not data:
                 return 0.0
             sorted_data = sorted(data)
             idx = int(len(sorted_data) * p / 100)
             return round(sorted_data[min(idx, len(sorted_data) - 1)], 4)
-        
+
         return {
             "total_runs": total_runs,
             "unique_queries": len(queries),
@@ -117,8 +117,8 @@ class MetricsAggregator:
     # =========================================================================
     # SECTION 2: AGENT PERFORMANCE MATRIX
     # =========================================================================
-    
-    def aggregate_agent_matrix(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_agent_matrix(self, sessions: list[dict]) -> dict[str, Any]:
         """Per-agent breakdown with reliability scores"""
         agent_stats = defaultdict(lambda: {
             "calls": 0,
@@ -131,16 +131,16 @@ class MetricsAggregator:
             "retries": 0,
             "durations": []
         })
-        
+
         for session in sessions:
             data = session.get("data", {})
             nodes = data.get("nodes", [])
-            
+
             for node in nodes:
                 agent = node.get("agent")
                 if not agent:
                     continue
-                
+
                 stats = agent_stats[agent]
                 stats["calls"] += 1
                 stats["total_tokens"] += node.get("total_tokens", 0) or 0
@@ -148,13 +148,13 @@ class MetricsAggregator:
                 stats["output_tokens"] += node.get("output_tokens", 0) or 0
                 stats["total_cost"] += node.get("cost", 0) or 0
                 stats["retries"] += node.get("retries", 0) or 0
-                
+
                 status = node.get("status")
                 if status == "completed":
                     stats["successes"] += 1
                 elif status == "failed":
                     stats["failures"] += 1
-        
+
         # Build matrix with derived metrics
         matrix = {}
         for agent, stats in agent_stats.items():
@@ -162,10 +162,10 @@ class MetricsAggregator:
             success_rate = stats["successes"] / max(calls, 1)
             retry_rate = stats["retries"] / max(calls, 1)
             error_rate = stats["failures"] / max(calls, 1)
-            
+
             # Reliability Score: (1 - error_rate) × (1 - retry_rate) × 100
             reliability = (1 - error_rate) * (1 - min(retry_rate, 1)) * 100
-            
+
             matrix[agent] = {
                 "calls": calls,
                 "avg_tokens": round(stats["total_tokens"] / max(calls, 1)),
@@ -175,35 +175,35 @@ class MetricsAggregator:
                 "retry_rate": round(retry_rate * 100, 1),
                 "reliability_score": round(reliability, 1)
             }
-        
+
         return matrix
 
     # =========================================================================
     # SECTION 3: TEMPORAL TRENDS
     # =========================================================================
-    
-    def aggregate_temporal(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_temporal(self, sessions: list[dict]) -> dict[str, Any]:
         """Time-series data for trend analysis"""
         by_day = defaultdict(lambda: {
             "runs": 0, "cost": 0.0, "tokens": 0, "successes": 0, "failures": 0
         })
-        
+
         for session in sessions:
             data = session.get("data", {})
             created = data.get("created_at", "")
             nodes = data.get("nodes", [])
-            
+
             if not created:
                 continue
-                
+
             try:
                 date_str = created[:10]
                 by_day[date_str]["runs"] += 1
-                
+
                 for node in nodes:
                     by_day[date_str]["cost"] += node.get("cost", 0) or 0
                     by_day[date_str]["tokens"] += node.get("total_tokens", 0) or 0
-                    
+
                     status = node.get("status")
                     if status == "completed":
                         by_day[date_str]["successes"] += 1
@@ -211,7 +211,7 @@ class MetricsAggregator:
                         by_day[date_str]["failures"] += 1
             except:
                 pass
-        
+
         # Build sorted time series
         daily = []
         for date, stats in sorted(by_day.items(), reverse=True):
@@ -223,7 +223,7 @@ class MetricsAggregator:
                 "tokens": stats["tokens"],
                 "success_rate": round(stats["successes"] / max(total_nodes, 1) * 100, 1)
             })
-        
+
         return {
             "daily": daily[:30],
             "total_days": len(daily)
@@ -232,31 +232,31 @@ class MetricsAggregator:
     # =========================================================================
     # SECTION 4: RETRY & FAILURE ANALYTICS
     # =========================================================================
-    
-    def aggregate_retry_analytics(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_retry_analytics(self, sessions: list[dict]) -> dict[str, Any]:
         """Retry distribution and failure patterns"""
         retry_counts = []
         retry_costs = 0.0
         failure_agents = Counter()
-        
+
         for session in sessions:
             data = session.get("data", {})
             nodes = data.get("nodes", [])
-            
+
             run_retries = 0
             for node in nodes:
                 retries = node.get("retries", 0) or 0
                 run_retries += retries
-                
+
                 if retries > 0:
                     retry_costs += node.get("cost", 0) or 0
-                
+
                 if node.get("status") == "failed":
                     agent = node.get("agent", "Unknown")
                     failure_agents[agent] += 1
-            
+
             retry_counts.append(run_retries)
-        
+
         # Retry distribution
         distribution = {"0": 0, "1": 0, "2": 0, "3+": 0}
         for count in retry_counts:
@@ -268,7 +268,7 @@ class MetricsAggregator:
                 distribution["2"] += 1
             else:
                 distribution["3+"] += 1
-        
+
         return {
             "avg_retries_per_run": round(statistics.mean(retry_counts), 2) if retry_counts else 0,
             "total_retry_cost": round(retry_costs, 4),
@@ -279,30 +279,30 @@ class MetricsAggregator:
     # =========================================================================
     # SECTION 5: TOOL & MCP ANALYTICS
     # =========================================================================
-    
-    def aggregate_tool_usage(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_tool_usage(self, sessions: list[dict]) -> dict[str, Any]:
         """Extract MCP tool call statistics from iterations"""
         import re
         tool_stats = Counter()
         tool_successes = Counter()
         tool_failures = Counter()
-        
+
         for session in sessions:
             data = session.get("data", {})
             nodes = data.get("nodes", [])
-            
+
             for node in nodes:
                 iterations = node.get("iterations", [])
-                
+
                 for iteration in iterations:
                     output = iteration.get("output", {})
-                    
+
                     # Look for tool calls in output
                     if isinstance(output, dict):
                         tool_name = output.get("call_tool") or output.get("tool_name")
                         if tool_name:
                             tool_stats[tool_name] += 1
-                            
+
                             # Check if tool succeeded
                             tool_result = iteration.get("tool_result", "")
                             if isinstance(tool_result, str):
@@ -312,7 +312,7 @@ class MetricsAggregator:
                                     tool_successes[tool_name] += 1
                             else:
                                 tool_successes[tool_name] += 1
-                    
+
                     # Also check for tool calls in execution_result
                     exec_result = iteration.get("execution_result", "")
                     if isinstance(exec_result, str):
@@ -321,7 +321,7 @@ class MetricsAggregator:
                         for match in matches:
                             if match not in tool_stats:
                                 tool_stats[match] += 1
-        
+
         # Build results
         tools = []
         for tool, count in tool_stats.most_common(15):
@@ -334,59 +334,59 @@ class MetricsAggregator:
                 "failures": fail,
                 "success_rate": round(success / max(count, 1) * 100, 1)
             })
-        
+
         return {
             "tools": tools,
             "total_calls": sum(tool_stats.values()),
             "unique_tools": len(tool_stats)
         }
-    
+
     # =========================================================================
     # SECTION 6: URL/SOURCE ANALYTICS
     # =========================================================================
-    
-    def aggregate_url_sources(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_url_sources(self, sessions: list[dict]) -> dict[str, Any]:
         """Extract internet sources and URLs accessed"""
         import re
         url_pattern = re.compile(r'https?://([a-zA-Z0-9.-]+)')
-        
+
         domain_counts = Counter()
         domain_success = Counter()
         domain_failure = Counter()
-        
+
         for session in sessions:
             data = session.get("data", {})
             nodes = data.get("nodes", [])
-            
+
             for node in nodes:
                 status = node.get("status", "")
                 iterations = node.get("iterations", [])
-                
+
                 for iteration in iterations:
                     # Search for URLs in various fields
                     texts_to_search = []
-                    
+
                     tool_result = iteration.get("tool_result", "")
                     if isinstance(tool_result, str):
                         texts_to_search.append(tool_result)
                     elif isinstance(tool_result, dict):
                         texts_to_search.append(json.dumps(tool_result))
-                    
+
                     exec_result = iteration.get("execution_result", "")
                     if isinstance(exec_result, str):
                         texts_to_search.append(exec_result)
-                    
+
                     for text in texts_to_search:
                         domains = url_pattern.findall(text)
                         for domain in domains:
                             domain = domain.lower()
                             domain_counts[domain] += 1
-                            
+
                             if status == "completed":
                                 domain_success[domain] += 1
                             elif status == "failed":
                                 domain_failure[domain] += 1
-        
+
         # Build results
         sources = []
         for domain, count in domain_counts.most_common(10):
@@ -396,49 +396,49 @@ class MetricsAggregator:
                 "success_context": domain_success.get(domain, 0),
                 "failure_context": domain_failure.get(domain, 0)
             })
-        
+
         return {
             "top_sources": sources,
             "total_urls": sum(domain_counts.values()),
             "unique_domains": len(domain_counts)
         }
-    
+
     # =========================================================================
     # SECTION 7: TOKEN QUALITY ANALYSIS
     # =========================================================================
-    
-    def aggregate_token_quality(self, sessions: List[Dict]) -> Dict[str, Any]:
+
+    def aggregate_token_quality(self, sessions: list[dict]) -> dict[str, Any]:
         """Analyze token efficiency - good tokens vs wasted tokens"""
         successful_tokens = 0
         failed_tokens = 0
         retry_tokens = 0
-        
+
         input_tokens = 0
         output_tokens = 0
-        
+
         for session in sessions:
             data = session.get("data", {})
             nodes = data.get("nodes", [])
-            
+
             for node in nodes:
                 tokens = node.get("total_tokens", 0) or 0
                 status = node.get("status", "")
                 retries = node.get("retries", 0) or 0
-                
+
                 input_tokens += node.get("input_tokens", 0) or 0
                 output_tokens += node.get("output_tokens", 0) or 0
-                
+
                 if status == "completed":
                     successful_tokens += tokens
                 elif status == "failed":
                     failed_tokens += tokens
-                
+
                 if retries > 0:
                     # Estimate tokens used in retries (rough approximation)
                     retry_tokens += tokens * (retries / (retries + 1))
-        
+
         total = successful_tokens + failed_tokens
-        
+
         return {
             "successful_tokens": successful_tokens,
             "failed_tokens": failed_tokens,
@@ -453,17 +453,17 @@ class MetricsAggregator:
     # =========================================================================
     # SECTION 8: AUTO-GENERATED INSIGHTS
     # =========================================================================
-    
-    def generate_insights(self, metrics: Dict[str, Any]) -> List[str]:
+
+    def generate_insights(self, metrics: dict[str, Any]) -> list[str]:
         """Generate human-readable insight sentences"""
         insights = []
-        
+
         totals = metrics.get("totals", {})
         agents = metrics.get("agents", {})
         retries = metrics.get("retries", {})
         tools = metrics.get("tools", {})
         token_quality = metrics.get("token_quality", {})
-        
+
         # Cost insight
         total_cost = totals.get("total_cost", 0)
         retry_cost = retries.get("total_retry_cost", 0)
@@ -471,7 +471,7 @@ class MetricsAggregator:
             retry_pct = round(retry_cost / total_cost * 100, 1)
             if retry_pct > 10:
                 insights.append(f"⚠️ {retry_pct}% of your total cost comes from retries.")
-        
+
         # Agent reliability insight
         if agents:
             worst_agent = min(agents.items(), key=lambda x: x[1].get("reliability_score", 100))
@@ -479,13 +479,13 @@ class MetricsAggregator:
                 insights.append(
                     f"🔧 {worst_agent[0]} has the lowest reliability score ({worst_agent[1]['reliability_score']}%)."
                 )
-            
+
             # Most expensive agent
             most_expensive = max(agents.items(), key=lambda x: x[1].get("total_cost", 0))
             if most_expensive[1].get("total_cost", 0) > total_cost * 0.3:
                 pct = round(most_expensive[1]["total_cost"] / max(total_cost, 0.001) * 100, 1)
                 insights.append(f"💰 {most_expensive[0]} accounts for {pct}% of total cost.")
-        
+
         # Tool failure insight
         tool_list = tools.get("tools", [])
         if tool_list:
@@ -493,21 +493,21 @@ class MetricsAggregator:
             if high_fail_tools:
                 worst = max(high_fail_tools, key=lambda x: x["failures"])
                 insights.append(f"🛠️ Tool '{worst['name']}' has failed {worst['failures']} times.")
-        
+
         # Token efficiency insight
         waste_pct = token_quality.get("waste_pct", 0)
         if waste_pct > 15:
             insights.append(f"🔴 {waste_pct}% of tokens were wasted on failed runs.")
-        
+
         io_ratio = token_quality.get("io_ratio", 1)
         if io_ratio < 0.3:
             insights.append(f"📊 Low output/input ratio ({io_ratio}x) - prompts may be too verbose.")
-        
+
         # Success rate insight
         success_rate = totals.get("success_rate", 100)
         if success_rate < 90:
             insights.append(f"📉 Overall success rate is {success_rate}% - consider investigating failures.")
-        
+
         # Top failure agents
         top_failures = retries.get("top_failure_agents", {})
         if top_failures:
@@ -515,14 +515,14 @@ class MetricsAggregator:
             count = top_failures[top_agent]
             if count > 3:
                 insights.append(f"🚨 {top_agent} has failed {count} times across sessions.")
-        
+
         return insights if insights else ["✅ Fleet is running healthy with no major issues detected."]
 
     # =========================================================================
     # MAIN API
     # =========================================================================
-    
-    def get_dashboard_metrics(self, force_refresh: bool = False) -> Dict[str, Any]:
+
+    def get_dashboard_metrics(self, force_refresh: bool = False) -> dict[str, Any]:
         """Get comprehensive fleet telemetry (cached for 5 min)"""
         # Check cache
         if not force_refresh and self.cache_file.exists():
@@ -533,10 +533,10 @@ class MetricsAggregator:
                     return cached
             except:
                 pass
-        
+
         # Regenerate full telemetry
         sessions = self.scan_sessions()
-        
+
         metrics = {
             "last_updated": datetime.now().isoformat(),
             "totals": self.aggregate_fleet_overview(sessions),
@@ -547,18 +547,18 @@ class MetricsAggregator:
             "sources": self.aggregate_url_sources(sessions),
             "token_quality": self.aggregate_token_quality(sessions),
         }
-        
+
         # Generate insights based on computed metrics
         metrics["insights"] = self.generate_insights(metrics)
-        
+
         # Legacy compatibility
         metrics["by_agent"] = metrics["agents"]
         metrics["by_day"] = metrics["temporal"].get("daily", [])
-        
+
         self.save_to_cache(metrics)
         return metrics
-    
-    def save_to_cache(self, metrics: Dict[str, Any]):
+
+    def save_to_cache(self, metrics: dict[str, Any]):
         """Write metrics to cache file"""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_file.write_text(json.dumps(metrics, indent=2))

@@ -1,7 +1,9 @@
-from typing import List, Any, Dict
-from core.skills.base import BaseSkill, SkillMetadata
-from pathlib import Path
 import json
+from pathlib import Path
+from typing import Any, Dict, List
+
+from core.skills.base import BaseSkill, SkillMetadata
+
 
 class MarketAnalystSkill(BaseSkill):
     def get_metadata(self) -> SkillMetadata:
@@ -13,11 +15,11 @@ class MarketAnalystSkill(BaseSkill):
             intent_triggers=["stock price", "market analysis", "news briefing", "finance update", "price", "news", "value", "funding", "market"]
         )
 
-    def get_tools(self) -> List[Any]:
+    def get_tools(self) -> list[Any]:
         # Ideally, we return specific tool definitions here.
         # For now, we rely on the generic agent having access to global MCP servers.
         # In v2, we would return specific function pointers.
-        return [] 
+        return []
 
     async def on_run_start(self, initial_prompt: str) -> str:
         """Inject specific guidance for market analysis"""
@@ -32,13 +34,13 @@ class MarketAnalystSkill(BaseSkill):
         4. Always include a final 'FormatterAgent' step to produce a cohesive Markdown report.
         """.strip()
 
-    async def on_run_success(self, artifact: Dict[str, Any]):
+    async def on_run_success(self, artifact: dict[str, Any]):
         """
         Save the output to a structured Briefing note or user-specified path.
         """
         import re
         content = artifact.get("summary") or artifact.get("output")
-        
+
         # Robust logic: if summary is just "Completed." but we have structured output,
         # don't overwrite the work done by the agent (which might have already saved the file).
         if content == "Completed." or not content:
@@ -47,26 +49,26 @@ class MarketAnalystSkill(BaseSkill):
                  if isinstance(v, str) and len(v) > 100:
                      content = v
                      break
-        
+
         if not content or content == "Completed.":
-             # Special case: if it was a success but we only have "Completed.", 
+             # Special case: if it was a success but we only have "Completed.",
              # and the target file already exists, maybe the agent saved it.
              # We should avoid overwriting it with a generic message.
              content = "Completed."
-        
+
         # Check for failure
         if artifact.get("status") == "failed":
             content = f"❌ Analysis Failed: {artifact.get('error', 'Unknown error')}"
 
         # ... rest of the method logic for path determination ...
-        
+
         user_path = None
         if self.context.config and "query" in self.context.config:
             q = self.context.config["query"]
             match = re.search(r"(?:store|save|write).+?(?:in|to)\s+([a-zA-Z0-9_/.]+\.md)", q, re.IGNORECASE)
             if match:
                 user_path = match.group(1).strip()
-        
+
         if user_path:
             clean_path = user_path.lstrip("/")
             if clean_path.startswith("data/"):
@@ -85,7 +87,7 @@ class MarketAnalystSkill(BaseSkill):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(f"# 📈 Market Briefing\n\n{content}")
             print(f"✅ Market Analyst saved briefing to {target}")
-        
+
         return {
             "file_path": str(target),
             "type": "briefing",

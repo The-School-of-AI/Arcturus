@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class RagSemanticChunkingSkill(Skill):
     name = "rag_semantic_chunking"
     description = "Skill derived from rag_semantic_chunking.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """You are a document segmentation assistant.

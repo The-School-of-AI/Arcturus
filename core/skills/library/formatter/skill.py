@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class FormatterSkill(Skill):
     name = "formatter"
     description = "Skill derived from formatter.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """############################################################

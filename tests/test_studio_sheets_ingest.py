@@ -7,7 +7,6 @@ import pytest
 from core.studio.sheets.ingest import ingest_upload
 from core.studio.sheets.types import MAX_UPLOAD_COLUMNS, MAX_UPLOAD_ROWS, MAX_UPLOAD_SIZE_BYTES
 
-
 # === CSV ingestion ===
 
 
@@ -31,8 +30,9 @@ def test_ingest_csv_delimiter_detection():
 
 
 def test_ingest_xlsx_basic():
-    import openpyxl
     import io
+
+    import openpyxl
 
     wb = openpyxl.Workbook()
     ws = wb.active

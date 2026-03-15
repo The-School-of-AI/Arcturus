@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import UTC
 
 import pytest
 from fastapi import HTTPException
@@ -71,7 +72,8 @@ def test_list_exports_success(monkeypatch, tmp_path):
 
 def test_get_export_job_success(monkeypatch, tmp_path):
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -80,7 +82,7 @@ def test_get_export_job_success(monkeypatch, tmp_path):
         artifact_id=_UUID_1,
         format=ExportFormat.pptx,
         status=ExportStatus.completed,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
@@ -102,7 +104,8 @@ def test_get_export_job_not_found(monkeypatch, tmp_path):
 
 def test_download_export_success(monkeypatch, tmp_path):
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -116,7 +119,7 @@ def test_download_export_success(monkeypatch, tmp_path):
         format=ExportFormat.pptx,
         status=ExportStatus.completed,
         output_uri=str(output_path),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
@@ -148,7 +151,8 @@ def test_get_artifact_invalid_id_format():
 
 def test_get_export_job_global(monkeypatch, tmp_path):
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -157,7 +161,7 @@ def test_get_export_job_global(monkeypatch, tmp_path):
         artifact_id=_UUID_1,
         format=ExportFormat.pptx,
         status=ExportStatus.completed,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
@@ -233,7 +237,8 @@ def test_export_artifact_pdf_format(monkeypatch):
 
 def test_download_docx_media_type(monkeypatch, tmp_path):
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -247,7 +252,7 @@ def test_download_docx_media_type(monkeypatch, tmp_path):
         format=ExportFormat.docx,
         status=ExportStatus.completed,
         output_uri=str(output_path),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
@@ -260,7 +265,8 @@ def test_download_docx_media_type(monkeypatch, tmp_path):
 
 def test_download_pdf_media_type(monkeypatch, tmp_path):
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -274,7 +280,7 @@ def test_download_pdf_media_type(monkeypatch, tmp_path):
         format=ExportFormat.pdf,
         status=ExportStatus.completed,
         output_uri=str(output_path),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
@@ -298,7 +304,8 @@ def test_export_format_enum_accepts_pdf():
 def test_download_pptx_still_uses_presentation_media_type(monkeypatch, tmp_path):
     """Existing PPTX downloads should continue to work with the correct media type."""
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -312,7 +319,7 @@ def test_download_pptx_still_uses_presentation_media_type(monkeypatch, tmp_path)
         format=ExportFormat.pptx,
         status=ExportStatus.completed,
         output_uri=str(output_path),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)
@@ -386,7 +393,8 @@ def test_export_format_enum_accepts_csv():
 def test_download_csv_zip_media_type(monkeypatch, tmp_path):
     """CSV format job with .zip file on disk returns application/zip media type."""
     from datetime import datetime, timezone
-    from core.schemas.studio_schema import ExportJob, ExportFormat, ExportStatus
+
+    from core.schemas.studio_schema import ExportFormat, ExportJob, ExportStatus
     from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
@@ -401,7 +409,7 @@ def test_download_csv_zip_media_type(monkeypatch, tmp_path):
         format=ExportFormat.csv,
         status=ExportStatus.completed,
         output_uri=str(output_path),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     storage.save_export_job(job)
     monkeypatch.setattr(studio_router, "get_studio_storage", lambda: storage)

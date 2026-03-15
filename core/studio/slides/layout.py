@@ -78,7 +78,7 @@ def _repair_element(el: SlideElement) -> SlideElement:
 
     # Bullet list: truncate individual items + trim list total
     if el.type == "bullet_list" and isinstance(content, list):
-        cleaned: List[str] = []
+        cleaned: list[str] = []
         running = 0
         for item in content:
             item_str = str(item)
@@ -145,7 +145,7 @@ def _trim_longest_element(elements: list[SlideElement], slide_limit: int) -> lis
             content=_truncate_at_sentence(el.content, target_len),
         )
     elif el.type == "bullet_list" and isinstance(el.content, list):
-        trimmed: List[str] = []
+        trimmed: list[str] = []
         running = 0
         for item in el.content:
             s = str(item)

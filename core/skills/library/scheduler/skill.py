@@ -1,11 +1,13 @@
 
-from typing import List, Any, Dict
-from core.skills.base import Skill
-from core.scheduler import scheduler_service
 import json
+from typing import Any, Dict, List
+
+from core.scheduler import scheduler_service
+from core.skills.base import Skill
+
 
 class SimpleTool:
-    def __init__(self, name: str, description: str, func: Any, parameters: Dict[str, Any]):
+    def __init__(self, name: str, description: str, func: Any, parameters: dict[str, Any]):
         self.name = name
         self.description = description
         self.func = func
@@ -50,7 +52,7 @@ You are the **Scheduler Agent**. Your job is to manage time-based tasks.
     def get_system_prompt_additions(self) -> str:
         return self.prompt_text
 
-    def get_tools(self) -> List[Any]:
+    def get_tools(self) -> list[Any]:
         return [
             SimpleTool(
                 name="schedule_task",
@@ -95,7 +97,7 @@ You are the **Scheduler Agent**. Your job is to manage time-based tasks.
             jobs = scheduler_service.list_jobs()
             if not jobs:
                 return "No scheduled tasks found."
-            
+
             output = "📅 Scheduled Tasks:\n"
             for job in jobs:
                 output += f"- [{job.id}] {job.name} ({job.cron_expression}) -> Next: {job.next_run}\n"

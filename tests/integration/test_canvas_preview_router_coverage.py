@@ -3,8 +3,8 @@
 These tests enforce contract-level integration gates across repo structure and CI wiring.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 PROJECT_ID = "P06"
 PROJECT_KEY = "p06_canvas"
@@ -21,7 +21,7 @@ def _read(path: Path) -> str:
 
 
 def test_01_integration_file_is_declared_in_charter() -> None:
-    assert f"Integration: " in _read(CHARTER)
+    assert "Integration: " in _read(CHARTER)
 
 
 def test_02_acceptance_and_integration_files_exist() -> None:

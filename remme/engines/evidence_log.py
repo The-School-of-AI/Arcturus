@@ -48,7 +48,7 @@ class EvidenceLog:
         """Load evidence log from disk."""
         if self.path.exists():
             try:
-                raw = json.loads(self.path.read_text())
+                raw = json.loads(self.path.read_text(encoding='utf-8'))
                 return EvidenceLogSchema(**raw)
             except Exception as e:
                 print(f"⚠️ Failed to load EvidenceLog: {e}")
@@ -105,7 +105,7 @@ class EvidenceLog:
     def save(self):
         """Save evidence log to disk."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(self.data.model_dump_json(indent=2))
+        self.path.write_text(self.data.model_dump_json(indent=2), encoding='utf-8')
         print(f"💾 Saved EvidenceLog ({len(self.data.events)} events)")
     
     def add_event(

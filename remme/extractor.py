@@ -75,7 +75,7 @@ class RemmeExtractor:
         if not base_prompt:
             try:
                 prompt_path = Path(__file__).parent.parent / "prompts" / "remme_extraction.md"
-                base_prompt = prompt_path.read_text().strip()
+                base_prompt = prompt_path.read_text(encoding='utf-8').strip()
             except Exception:
                 base_prompt = settings.get("remme", {}).get("extraction_prompt", "Extract facts from conversation.")
 

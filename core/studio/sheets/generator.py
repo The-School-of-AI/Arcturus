@@ -18,9 +18,9 @@ _VALID_VISUAL_PROFILES = {"balanced", "conservative", "max"}
 _VALID_CHART_TYPES = {"bar", "line", "pie", "scatter"}
 
 
-def _deduplicate_ids(tabs: List[SheetTab]) -> None:
+def _deduplicate_ids(tabs: list[SheetTab]) -> None:
     """Ensure unique tab ids by appending _2, _3, etc. for duplicates."""
-    seen: Set[str] = set()
+    seen: set[str] = set()
     for tab in tabs:
         original = tab.id
         counter = 2
@@ -30,9 +30,9 @@ def _deduplicate_ids(tabs: List[SheetTab]) -> None:
         seen.add(tab.id)
 
 
-def _deduplicate_names(tabs: List[SheetTab]) -> None:
+def _deduplicate_names(tabs: list[SheetTab]) -> None:
     """Ensure unique tab names by appending (2), (3), etc. for duplicates."""
-    seen: Set[str] = set()
+    seen: set[str] = set()
     for tab in tabs:
         original = tab.name
         counter = 2
@@ -112,11 +112,11 @@ def has_chartable_numeric_data(content_tree: SheetContentTree) -> bool:
     return False
 
 
-def _sanitize_chart_plan(chart_plan: Any) -> List[Dict[str, Any]]:
+def _sanitize_chart_plan(chart_plan: Any) -> list[dict[str, Any]]:
     if not isinstance(chart_plan, list):
         return []
 
-    sanitized: List[Dict[str, Any]] = []
+    sanitized: list[dict[str, Any]] = []
     for entry in chart_plan:
         if not isinstance(entry, dict):
             continue
@@ -127,7 +127,7 @@ def _sanitize_chart_plan(chart_plan: Any) -> List[Dict[str, Any]]:
         if chart_type not in _VALID_CHART_TYPES:
             continue
 
-        cleaned: Dict[str, Any] = {"chart_type": chart_type}
+        cleaned: dict[str, Any] = {"chart_type": chart_type}
         if isinstance(entry.get("tab_name"), str) and entry["tab_name"].strip():
             cleaned["tab_name"] = entry["tab_name"].strip()
         if isinstance(entry.get("title"), str) and entry["title"].strip():
@@ -247,7 +247,7 @@ def normalize_sheet_content_tree(
     _deduplicate_ids(content_tree.tabs)
     _deduplicate_names(content_tree.tabs)
 
-    all_warnings: List[str] = []
+    all_warnings: list[str] = []
 
     for tab in content_tree.tabs:
         _align_row_widths(tab)

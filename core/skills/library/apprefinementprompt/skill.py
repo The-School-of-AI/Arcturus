@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class ApprefinementpromptSkill(Skill):
     name = "apprefinementprompt"
     description = "Skill for refining existing app UI based on user input"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# App Refinement Prompt for Agentic Platform

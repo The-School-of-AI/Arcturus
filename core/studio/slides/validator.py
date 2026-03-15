@@ -18,8 +18,8 @@ _PLACEHOLDER_PATTERNS = [
 def validate_pptx(
     file_path: Path,
     expected_slide_count: int | None = None,
-    content_tree: Optional[Any] = None,
-) -> Dict[str, Any]:
+    content_tree: Any | None = None,
+) -> dict[str, Any]:
     """Validate a PPTX file with structural, layout, chart, notes, and content checks.
 
     Returns a dict with valid, slide_count, has_notes, errors,
@@ -64,7 +64,7 @@ def validate_pptx(
         )
 
     # === Layer 2: Layout (blocking) ===
-    from core.studio.slides.exporter import SLIDE_WIDTH, SLIDE_HEIGHT
+    from core.studio.slides.exporter import SLIDE_HEIGHT, SLIDE_WIDTH
     BLOCK_CHAR_LIMIT = 800
     SLIDE_CHAR_LIMIT = 1600
     TABLE_SLIDE_CHAR_LIMIT = 2400
@@ -243,7 +243,7 @@ def _build_result(
     layout_errors: list,
     notes_quality_valid: bool,
     chart_quality_valid: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build the standardized validator result dict."""
     layout_valid = len(layout_errors) == 0
 

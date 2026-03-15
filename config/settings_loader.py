@@ -34,33 +34,33 @@ def load_settings() -> dict:
     global _settings_cache
     if _settings_cache is None:
         if SETTINGS_FILE.exists():
-            _settings_cache = json.loads(SETTINGS_FILE.read_text())
+            _settings_cache = json.loads(SETTINGS_FILE.read_text(encoding='utf-8'))
         elif DEFAULTS_FILE.exists():
             # Fall back to defaults if settings.json doesn't exist
-            _settings_cache = json.loads(DEFAULTS_FILE.read_text())
+            _settings_cache = json.loads(DEFAULTS_FILE.read_text(encoding='utf-8'))
             save_settings()  # Create settings.json from defaults
         else:
             raise FileNotFoundError(f"No settings files found in {CONFIG_DIR}")
-        
+
         # ✅ Validation Step
         required_keys = ["models", "ollama", "rag"]
         missing = [k for k in required_keys if k not in _settings_cache]
         if missing:
             raise KeyError(f"Missing required settings keys: {missing}")
-            
+
     return _settings_cache
 
 def save_settings() -> None:
     """Save current settings to file."""
     global _settings_cache
     if _settings_cache is not None:
-        SETTINGS_FILE.write_text(json.dumps(_settings_cache, indent=2))
+        SETTINGS_FILE.write_text(json.dumps(_settings_cache, indent=2), encoding='utf-8')
 
 def reset_settings() -> dict:
     """Reset settings to defaults."""
     global _settings_cache
     if DEFAULTS_FILE.exists():
-        _settings_cache = json.loads(DEFAULTS_FILE.read_text())
+        _settings_cache = json.loads(DEFAULTS_FILE.read_text(encoding='utf-8'))
         save_settings()
     return _settings_cache
 
@@ -81,8 +81,8 @@ def get_ollama_url(endpoint: str = "generate") -> str:
     endpoints = {
         "generate": "/api/generate",
         "chat": "/api/chat",
-        "embed": "/api/embeddings",
-        "embeddings": "/api/embeddings"
+        "embed": "/api/embed",
+        "embeddings": "/api/embed"
     }
     return f"{base}{endpoints.get(endpoint, '/api/' + endpoint)}"
 

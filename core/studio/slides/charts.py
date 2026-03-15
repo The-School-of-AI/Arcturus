@@ -3,10 +3,10 @@
 import json
 from typing import Any, Optional
 
-from core.schemas.studio_schema import ChartSpec, ChartSeries, ChartType, ScatterPoint
+from core.schemas.studio_schema import ChartSeries, ChartSpec, ChartType, ScatterPoint
 
 
-def parse_chart_spec(content: Any) -> Optional[ChartSpec]:
+def parse_chart_spec(content: Any) -> ChartSpec | None:
     """Parse a SlideElement.content value into a ChartSpec.
 
     Accepts dict with categories/series or points, or a JSON string.
@@ -116,7 +116,7 @@ def normalize_chart_spec(spec: ChartSpec) -> ChartSpec:
     )
 
 
-def infer_chart_type(spec: ChartSpec) -> Optional[ChartType]:
+def infer_chart_type(spec: ChartSpec) -> ChartType | None:
     """Infer the best chart type when chart_type is ambiguous.
 
     Heuristic rules:

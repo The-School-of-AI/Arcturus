@@ -20,6 +20,10 @@ const ContainerWidget = ({ children, className }: { children: React.ReactNode; c
     <div className={className}>{children}</div>
 );
 
+import WhiteboardWidget from './widgets/WhiteboardWidget';
+import MapWidget from './widgets/MapWidget';
+import KanbanWidget from './widgets/KanbanWidget';
+
 // Map of component discriminator to React component
 export const WidgetRegistry: Record<string, React.FC<any>> = {
     "Button": ButtonWidget,
@@ -27,6 +31,9 @@ export const WidgetRegistry: Record<string, React.FC<any>> = {
     "Container": ContainerWidget,
     "LineChart": LineChartWidget,
     "MonacoEditor": MonacoWidget,
+    "Whiteboard": WhiteboardWidget,
+    "Map": MapWidget,
+    "Kanban": KanbanWidget,
     "Sandbox": SandboxFrame,
 };
 

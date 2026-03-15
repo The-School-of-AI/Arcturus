@@ -1,6 +1,6 @@
 
-from typing import Dict, Type, Any, Optional
 import logging
+from typing import Any, Dict, Optional, Type
 
 logger = logging.getLogger(__name__)
 
@@ -10,18 +10,18 @@ class AgentRegistry:
     Allows for runtime injection of new agent types without code changes.
     """
     _instance = None
-    _agents: Dict[str, Type] = {}
-    _descriptions: Dict[str, str] = {}
+    _agents: dict[str, type] = {}
+    _descriptions: dict[str, str] = {}
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(AgentRegistry, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._agents = {}
             cls._instance._descriptions = {}
         return cls._instance
 
     @classmethod
-    def register(cls, name: str, agent_class: Type, description: str = ""):
+    def register(cls, name: str, agent_class: type, description: str = ""):
         """
         Register a new agent class.
         
@@ -32,18 +32,18 @@ class AgentRegistry:
         """
         if name in cls._agents:
             logger.warning(f"Overwriting existing agent registration: {name}")
-        
+
         cls._agents[name] = agent_class
         cls._descriptions[name] = description
         logger.info(f"Registered agent: {name}")
 
     @classmethod
-    def get(cls, name: str) -> Optional[Any]:
+    def get(cls, name: str) -> Any | None:
         """Retrieve an agent class or config by name."""
         return cls._agents.get(name)
 
     @classmethod
-    def get_config(cls, name: str) -> Optional[dict]:
+    def get_config(cls, name: str) -> dict | None:
         """Retrieve an agent config. If it's a class, returns its default config (if any)."""
         item = cls._agents.get(name)
         if isinstance(item, dict):
@@ -53,7 +53,7 @@ class AgentRegistry:
         return None
 
     @classmethod
-    def list_agents(cls) -> Dict[str, str]:
+    def list_agents(cls) -> dict[str, str]:
         """Return a dict of {name: description} for all registered agents."""
         return cls._descriptions.copy()
 

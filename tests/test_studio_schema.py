@@ -1,7 +1,8 @@
 """Tests for core/schemas/studio_schema.py — unit + contract tests."""
 
+from datetime import UTC, datetime, timezone
+
 import pytest
-from datetime import datetime, timezone
 from pydantic import ValidationError
 
 from core.schemas.studio_schema import (
@@ -26,7 +27,6 @@ from core.schemas.studio_schema import (
     validate_artifact,
     validate_content_tree,
 )
-
 
 # === Fixtures ===
 
@@ -128,7 +128,7 @@ def sample_outline():
 
 @pytest.fixture
 def sample_artifact(sample_outline):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return Artifact(
         id="art-001",
         type=ArtifactType.slides,
@@ -148,7 +148,7 @@ def sample_revision():
         parent_revision_id=None,
         change_summary="Initial draft",
         content_tree_snapshot={"deck_title": "Test", "slides": []},
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -245,7 +245,7 @@ class TestArtifactModel:
         assert sample_artifact.content_tree is None
 
     def test_defaults(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         a = Artifact(
             id="a1",
             type=ArtifactType.document,
@@ -320,7 +320,7 @@ class TestValidateContentTree:
 
 class TestValidateArtifact:
     def test_valid(self):
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         data = {
             "id": "a1",
             "type": "slides",
@@ -406,7 +406,7 @@ class TestExportFormatEnum:
             artifact_id="a1",
             format=ExportFormat.docx,
             status=ExportStatus.pending,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         assert job.format == ExportFormat.docx
 
@@ -416,7 +416,7 @@ class TestExportFormatEnum:
             artifact_id="a1",
             format=ExportFormat.pdf,
             status=ExportStatus.pending,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         assert job.format == ExportFormat.pdf
 
@@ -481,8 +481,8 @@ class TestHtmlSanitization:
     def test_abstract_mermaid_triggers_has_mermaid(self):
         """Mermaid code fence in abstract should set has_mermaid=True."""
         from core.studio.documents.exporter_html import (
-            _collect_all_content,
             _MERMAID_MARKER,
+            _collect_all_content,
         )
         from core.studio.documents.markdown_render import markdown_to_html_web
 
@@ -499,8 +499,8 @@ class TestHtmlSanitization:
     def test_section_only_mermaid_still_detected(self):
         """Mermaid in sections (but not abstract) should still be detected."""
         from core.studio.documents.exporter_html import (
-            _collect_all_content,
             _MERMAID_MARKER,
+            _collect_all_content,
         )
         from core.studio.documents.markdown_render import markdown_to_html_web
 
@@ -534,8 +534,8 @@ class TestSheetAnalysisReport:
     def test_sheet_analysis_report_serialization(self):
         from core.schemas.studio_schema import (
             SheetAnalysisReport,
-            SheetNumericSummary,
             SheetCorrelation,
+            SheetNumericSummary,
         )
 
         report = SheetAnalysisReport(

@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class BackendgenerationpromptSkill(Skill):
     name = "backendgenerationprompt"
     description = "Skill derived from BackendGenerationPrompt.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """

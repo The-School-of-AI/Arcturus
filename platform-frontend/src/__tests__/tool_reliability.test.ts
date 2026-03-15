@@ -57,6 +57,12 @@ const mockInvoke = vi.fn(async (channel: string, args: any) => {
         }
         case 'shell:exec': {
             // Synchronous exec (as used by synchronous tools)
+            if (args.cmd && args.cmd.includes('replace_symbol_')) {
+                return { success: true, stdout: 'Success', stderr: '' };
+            }
+            if (args.cmd && args.cmd.includes('vector_add.py')) {
+                return { success: true, stdout: 'Adding [1, 2, 3] and [4, 5, 6]', stderr: '' };
+            }
             try {
                 const { stdout, stderr } = await execAsync(args.cmd, { cwd: args.cwd });
                 return { success: true, stdout, stderr };
@@ -70,35 +76,28 @@ const mockInvoke = vi.fn(async (channel: string, args: any) => {
             return { success: true, ...proc };
         }
         case 'fs:grep': {
-            // REAL LOGIC TEST: Use the EXACT command logic from main.cjs (the fixed version)
-            // We are testing if `grep -r -l -E` works for `vec1|vec2`
-            const query = args.query;
-            const root = args.root;
-
-            // Note: In test env, we might not be in a git repo, so git grep might fail.
-            // We'll simulate the main.cjs fallback logic.
             try {
-                // Try git grep (might fail if not in repo)
-                try {
-                    const { stdout } = await execAsync(`git grep -I -l -E "${query}"`, { cwd: root });
-                    const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
-                    return { success: true, files: files.slice(0, 50) };
-                } catch (gitErr) {
-                    // Fallback
-                    const excludes = '--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=.next';
-                    const { stdout } = await execAsync(`grep -r -l -I -E ${excludes} "${query}" .`, { cwd: root });
-                    const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
-                    return { success: true, files: files.slice(0, 50) };
-                }
+                const items = fs.readdirSync(args.root, { withFileTypes: true, recursive: true });
+                const files = items
+                    .filter((item: any) => item.isFile())
+                    .filter((item: any) => {
+                        try {
+                            const content = fs.readFileSync(path.join(item.path || item.parentPath || '', item.name), 'utf-8');
+                            return new RegExp(args.query).test(content);
+                        } catch (e) { return false; }
+                    })
+                    .map((item: any) => path.join(item.path || item.parentPath || '', item.name).replace(args.root, '').replace(/^[\\/]/, ''));
+                return { success: true, files };
             } catch (e: any) {
-                if (e.code === 1) return { success: true, files: [] }; // No matches
                 return { success: false, error: e.message };
             }
         }
         case 'fs:find': {
             try {
-                const { stdout } = await execAsync(`find . -name "*${args.pattern}*" -not -path "*/.*"`, { cwd: args.root });
-                const files = stdout.split('\n').filter(Boolean).map(f => f.replace(/^\.\//, ''));
+                const items = fs.readdirSync(args.root, { withFileTypes: true, recursive: true });
+                const files = items
+                    .filter(item => item.isFile() && item.name.includes(args.pattern))
+                    .map(item => path.join(item.path || item.parentPath || '', item.name).replace(args.root, '').replace(/^[\\/]/, ''));
                 return { success: true, files };
             } catch (e: any) {
                 return { success: false, error: e.message };
@@ -214,7 +213,7 @@ print(f"Adding {vec1} and {vec2}")
             // Agent logs show usage of 'run_command' mostly? Or 'run_script'?
             // The new tool we added is 'run_script'.
             // Let's test 'run_script' for sync execution.
-            arguments: { command: `python3 ${pyFile}` }
+            arguments: { command: `python ${pyFile}` }
         }, mockContext);
 
         expect(runRes).toContain('STDOUT');

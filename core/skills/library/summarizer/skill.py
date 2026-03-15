@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class SummarizerSkill(Skill):
     name = "summarizer"
     description = "Skill derived from summarizer.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# SummarizerAgent Prompt

@@ -40,7 +40,7 @@ class StudioStorage:
         artifact_file = artifact_dir / "artifact.json"
         artifact_file.write_text(json.dumps(artifact.model_dump(mode="json"), indent=2))
 
-    def load_artifact(self, artifact_id: str) -> Optional[Artifact]:
+    def load_artifact(self, artifact_id: str) -> Artifact | None:
         """Load artifact from disk. Returns None if not found."""
         artifact_file = self.base_dir / artifact_id / "artifact.json"
         if not artifact_file.exists():
@@ -48,7 +48,7 @@ class StudioStorage:
         data = json.loads(artifact_file.read_text())
         return Artifact(**data)
 
-    def list_artifacts(self) -> List[Dict]:
+    def list_artifacts(self) -> list[dict]:
         """List all artifacts sorted by updated_at descending."""
         if not self.base_dir.exists():
             return []
@@ -89,7 +89,7 @@ class StudioStorage:
         revision_file = revisions_dir / f"{revision.id}.json"
         revision_file.write_text(json.dumps(revision.model_dump(mode="json"), indent=2))
 
-    def load_revision(self, artifact_id: str, revision_id: str) -> Optional[Revision]:
+    def load_revision(self, artifact_id: str, revision_id: str) -> Revision | None:
         """Load a specific revision. Returns None if not found."""
         revision_file = self.base_dir / artifact_id / "revisions" / f"{revision_id}.json"
         if not revision_file.exists():
@@ -97,7 +97,7 @@ class StudioStorage:
         data = json.loads(revision_file.read_text())
         return Revision(**data)
 
-    def list_revisions(self, artifact_id: str) -> List[Dict]:
+    def list_revisions(self, artifact_id: str) -> list[dict]:
         """List all revisions for an artifact sorted by created_at descending."""
         revisions_dir = self.base_dir / artifact_id / "revisions"
         if not revisions_dir.exists():
@@ -127,7 +127,7 @@ class StudioStorage:
         job_file = exports_dir / f"{export_job.id}.json"
         job_file.write_text(json.dumps(export_job.model_dump(mode="json"), indent=2))
 
-    def load_export_job(self, artifact_id: str, export_job_id: str) -> Optional[ExportJob]:
+    def load_export_job(self, artifact_id: str, export_job_id: str) -> ExportJob | None:
         """Load a specific export job. Returns None if not found."""
         job_file = self.base_dir / artifact_id / "exports" / f"{export_job_id}.json"
         if not job_file.exists():
@@ -135,7 +135,7 @@ class StudioStorage:
         data = json.loads(job_file.read_text())
         return ExportJob(**data)
 
-    def list_export_jobs(self, artifact_id: str) -> List[Dict]:
+    def list_export_jobs(self, artifact_id: str) -> list[dict]:
         """List all export jobs for an artifact sorted by created_at desc."""
         exports_dir = self.base_dir / artifact_id / "exports"
         if not exports_dir.exists():
@@ -172,21 +172,21 @@ class StudioStorage:
         image_path.write_bytes(jpeg_bytes)
         return image_path
 
-    def load_slide_image_path(self, artifact_id: str, slide_id: str) -> Optional[Path]:
+    def load_slide_image_path(self, artifact_id: str, slide_id: str) -> Path | None:
         """Return the path to a cached slide image, or None if not found."""
         if not _SAFE_ID.match(slide_id):
             return None
         image_path = self.base_dir / artifact_id / "images" / f"{slide_id}.jpg"
         return image_path if image_path.exists() else None
 
-    def list_slide_images(self, artifact_id: str) -> List[str]:
+    def list_slide_images(self, artifact_id: str) -> list[str]:
         """Return slide IDs that have cached images."""
         images_dir = self.base_dir / artifact_id / "images"
         if not images_dir.exists():
             return []
         return [p.stem for p in images_dir.glob("*.jpg")]
 
-    def find_export_job(self, export_job_id: str) -> Optional[tuple]:
+    def find_export_job(self, export_job_id: str) -> tuple | None:
         """Scan all artifact directories for an export job by ID.
 
         Returns (artifact_id, ExportJob) or None if not found.

@@ -3,9 +3,9 @@
 Replace these contract tests with feature-level assertions as implementation matures.
 """
 
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
 
 PROJECT_ID = "P06"
 PROJECT_KEY = "p06_canvas"
@@ -29,7 +29,7 @@ def test_02_expanded_gate_contract_present() -> None:
 
 
 def test_03_acceptance_path_declared_in_charter() -> None:
-    assert f"Acceptance: " in _charter_text()
+    assert "Acceptance: " in _charter_text()
 
 
 def test_04_demo_script_exists() -> None:
@@ -63,4 +63,4 @@ def test_07_delivery_readme_has_required_sections() -> None:
 
 
 def test_08_ci_check_declared_in_charter() -> None:
-    assert f"CI required check: " in _charter_text()
+    assert "CI required check: " in _charter_text()

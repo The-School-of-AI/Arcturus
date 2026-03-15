@@ -7,12 +7,13 @@
 - **Secure Sandbox**: Isolated iframe rendering with CSP and permission management in `canvas/sandbox.py` and `SandboxFrame.tsx`.
 - **Widget Library**: Integrated `LineChartWidget`, `MonacoWidget`, and basic UI components (Button, Text, Container).
 - **Persistence**: Server-side state snapshots and restoration in `storage/canvas/`.
-- **Agent Simulation**: Test scripts for verifying live updates and sandbox isolation.
+- **PR Stabilization (Mar 15)**: Pruned unrelated P14 scope, restored master infrastructure, and fixed Windows Unicode/Dependency errors.
 
 ## 2. Architecture Changes
 - **Backend**: Created `canvas/` module to encapsulate all A2UI logic.
 - **Frontend**: Created `features/canvas/` directory for React host and widgets.
 - **Data Flow**: `Agent Script -> REST API -> CanvasRuntime -> WebSocket -> CanvasHost -> WidgetRegistry -> Render`.
+- **Cross-App Triggering**: `CanvasRuntime` is registered as a global singleton in `shared/state.py` (via `get_canvas_runtime()`). This fulfills the architectural requirement that **Canvas must be triggerable from all other applications (Voice, Run, Presentation)** directly in Python without HTTP loopbacks.
 - **Persistence**: Snapshots are saved/loaded on API lifespan events in `api.py`.
 
 ## 3. API And UI Changes
@@ -62,16 +63,20 @@ Server response: 200
 **UI Mockup:**
 [Placeholder for Canvas UI Mockup - See Demo Steps 10.1 for live verification]
 
-### 5.3 State Persistence (Snapshot Recovery)
+### 5.4 State Persistence (Snapshot Recovery)
 **Evidence:**
 1. Seed cleaned state: `uv run scripts/seed_canvas_clean.py` -> `✅ Clean state written to storage\canvas\main-canvas.json`.
 2. Kill API and restart.
 3. Fetch state: `curl http://localhost:8000/api/canvas/state/main-canvas`.
 **Result:** JSON response matched the seeded snapshot exactly, confirming stable restoration.
 
-## 6. Existing Baseline Regression Status
-- **Regression**: No impact on existing Oracle or Nexus flows. 
-- **Side Effects**: Added `canvas` tab to Sidebar, ensuring no interference with existing `ide` or `runs` tabs.
+## 6. Charter Dependencies
+
+| Project Area | Charters | Dependency Type |
+| :--- | :--- | :--- |
+| **Content Sources** | Spark (P03), Forge (P04), Phantom (P10) | **Consumer**: Use Canvas as their primary rendering/preview router. |
+| **Infrastructure** | Chronicle (P05), Watchtower (P14), Gateway (P15) | **Backbone**: Provide state capture (P05), monitoring (P14), and API mediation (P15). |
+| **Interaction** | Echo (P07), Legion (P08), Orbit (P13) | **Command**: Trigger navigation (P07), visualize swarms (P08), and mobile UI (P13). |
 
 ## 7. Security And Safety Impact
 - **Sandboxing**: iframes use `sandbox="allow-scripts allow-forms allow-popups allow-modals"`.
@@ -82,7 +87,6 @@ Server response: 200
 - **Concurrency**: Basic support for multiple surfaces, but locking mechanisms for simultaneous agent edits are not yet implemented.
 
 ## 9. Rollback Plan
-- **Backend**: Remove `canvas/` folder and revert `api.py` router inclusion.
 - **Frontend**: Revert `AppLayout.tsx` and `Sidebar.tsx` changes.
 
 ## 10. Demo Steps
@@ -91,3 +95,36 @@ Server response: 200
 3. Open `http://localhost:5173/` and click **Canvas icon**.
 4. Run: `uv run scripts/test_sandbox_visual.py`
 5. Verify: Blue card appears, turns green on click.
+
+## 11. Existing Baseline Regression Status
+- **Regression**: No impact on existing Oracle or Nexus flows. 
+- **Side Effects**: Added `canvas` tab to Sidebar, ensuring no interference with existing `ide` or `runs` tabs.
+
+## 12. Extended Scope: Phase 3 Infrastructure
+### [Day 2 Update] Infrastructure Hardening & Windows Compatibility
+We have successfully sanitized the codebase for Windows compatibility (resolving `UnicodeEncodeError`) and verified core infrastructure stability.
+
+**Test Evidence (scripts/verify_phase3.py --all):**
+```text
+[TEST] Verifying EpisodicMemory Integration...
+SUCCESS: Episodic skeleton saved at [PROJECT_ROOT]\memory\episodes\skeleton_test_verify_...
+
+[TEST] Verifying FileReaderSkill...
+SUCCESS: Agent Execution Success!
+Agent Output: summary...
+```
+
+**Key Fixes:**
+- Unified `UnicodeEncodeError` resolution: Replaced emojis with text markers across all core logging (`utils`, `loop`, `agent`, `memory`, `mcp`).
+- RAG Stability: Implemented timeouts and error handling for Ollama/Embedding failures.
+- Import Fixes: Resolved `ImportError` in `FileReaderSkill`.
+- **Task 46: Episodic Memory**: Automatic skeleton generation for session persistence (`memory/episodes/`). Verified via IDE Agent chat simulation (new skeletons present in storage).
+- **Task 47: FileReader Skill**: Extracted robust file access tool. Verified via General Agent (Phase3Tester) successfully reading `README.md`.
+- **Task 48: Snake Game E2E**: Verified "Plan-to-Code" pipeline with a functional game at `output/snake.html` (Preview link generated).
+
+### [Final Stabilization Pass] PR Cleanliness
+Successfully executed the stabilization and pruning protocol:
+- **Pruned Unrelated Scope**: Removed Project 14 (Watchtower) leakage from backend and frontend.
+- **Restored Infrastructure**: Synchronized `ops/admin/`, `routers/admin.py`, and root `__init__.py` with `master`.
+- **Verified Stability**: Final run of `verify_phase3.py --all` and P06 acceptance tests passed in a clean environment.
+- **Environment**: Reset virtual environment and resolved metadata corruption (`greenlet` warnings).

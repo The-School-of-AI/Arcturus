@@ -364,11 +364,7 @@ def _hex_to_hls(hex_color: str) -> tuple[float, float, float]:
 def _hls_to_hex(h: float, l: float, s: float) -> str:
     """Convert HLS to hex color string."""
     r, g, b = colorsys.hls_to_rgb(h, l, s)
-    return "#{:02X}{:02X}{:02X}".format(
-        max(0, min(255, int(r * 255 + 0.5))),
-        max(0, min(255, int(g * 255 + 0.5))),
-        max(0, min(255, int(b * 255 + 0.5))),
-    )
+    return f"#{max(0, min(255, int(r * 255 + 0.5))):02X}{max(0, min(255, int(g * 255 + 0.5))):02X}{max(0, min(255, int(b * 255 + 0.5))):02X}"
 
 
 def _hue_rotate(hex_color: str, degrees: float) -> str:
@@ -425,9 +421,7 @@ def _blend_color(color_hex: str, bg_hex: str, ratio: float) -> str:
     r = int(cr * ratio + br * (1 - ratio) + 0.5)
     g = int(cg * ratio + bg_r * (1 - ratio) + 0.5)
     bl = int(cb * ratio + bb * (1 - ratio) + 0.5)
-    return "#{:02X}{:02X}{:02X}".format(
-        max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, bl))
-    )
+    return f"#{max(0, min(255, r)):02X}{max(0, min(255, g)):02X}{max(0, min(255, bl)):02X}"
 
 
 def _lightness_shift(hex_color: str, delta: float) -> str:

@@ -1,9 +1,10 @@
 import asyncio
-import logging
-from typing import Dict, List, Any, Callable, Awaitable
-from datetime import datetime
 import json
+import logging
 from collections import deque
+from collections.abc import Awaitable, Callable
+from datetime import datetime
+from typing import Any, Dict, List
 
 logger = logging.getLogger("event_bus")
 
@@ -12,12 +13,12 @@ class EventBus:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(EventBus, cls).__new__(cls)
-            cls._instance._subscribers: List[asyncio.Queue] = []
+            cls._instance = super().__new__(cls)
+            cls._instance._subscribers: list[asyncio.Queue] = []
             cls._instance._history = deque(maxlen=100) # Keep last 100 events
         return cls._instance
 
-    async def publish(self, event_type: str, source: str, data: Dict[str, Any]):
+    async def publish(self, event_type: str, source: str, data: dict[str, Any]):
         """Publish an event to all subscribers."""
         event = {
             "timestamp": datetime.now().isoformat(),
@@ -25,10 +26,10 @@ class EventBus:
             "source": source,
             "data": data
         }
-        
+
         # Add to history
         self._history.append(event)
-        
+
         # Log to console
         logger.debug(f"Event: {event_type} from {source}")
 
@@ -44,12 +45,12 @@ class EventBus:
         """Subscribe to the event stream."""
         q = asyncio.Queue()
         self._subscribers.append(q)
-        
+
         # Replay history? Configurable.
         # For now, let's replay the last 5 events to give context
         for event in list(self._history)[-5:]:
             await q.put(event)
-            
+
         return q
 
     def unsubscribe(self, q: asyncio.Queue):

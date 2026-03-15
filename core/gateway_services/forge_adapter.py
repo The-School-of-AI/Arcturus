@@ -8,7 +8,6 @@ from core.schemas.studio_schema import ArtifactType
 from core.studio.orchestrator import ForgeOrchestrator
 from shared.state import get_studio_storage
 
-
 _ARTIFACT_TYPE_MAP = {
     "slides": ArtifactType.slides,
     "document": ArtifactType.document,

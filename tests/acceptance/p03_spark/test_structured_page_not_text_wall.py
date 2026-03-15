@@ -86,7 +86,6 @@ def test_concurrent_generation_requests():
 Replace these contract tests with feature-level assertions as implementation matures.
 """
 
-from pathlib import Path
 
 PROJECT_ID = "P03"
 PROJECT_KEY = "p03_spark"

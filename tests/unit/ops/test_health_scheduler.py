@@ -1,6 +1,7 @@
 """Unit tests for ops.health.scheduler.HealthScheduler."""
 
 import asyncio
+from unittest.mock import MagicMock, patch
 
 import mongomock
 import pytest
@@ -8,7 +9,6 @@ import pytest
 from ops.health.models import HealthResult, ResourceSnapshot
 from ops.health.repository import HealthRepository
 from ops.health.scheduler import HealthScheduler
-from unittest.mock import patch, MagicMock
 
 
 @pytest.fixture()

@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class FormatterOldWithHtmlSkill(Skill):
     name = "formatter_old_with_html"
     description = "Skill derived from formatter_old_with_html.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# FormatterAgent Prompt

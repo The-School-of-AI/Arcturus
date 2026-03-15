@@ -46,6 +46,7 @@ from shared.state import (
     get_remme_extractor,
     get_remme_store,
 )
+
 from routers.remme import background_smart_scan  # Needed for lifespan startup
 from routers.sync import run_sync_background  # Phase 4: startup sync when enabled
 
@@ -161,7 +162,9 @@ async def lifespan(app: FastAPI):
     # FastAPIInstrumentor auto-creates an HTTP span for every request.
     # =========================================================
     watchtower = settings.get("watchtower", {})
-    if watchtower.get("enabled", True):
+    watchtower_enabled = os.getenv("WATCHTOWER_ENABLED", str(watchtower.get("enabled", True))).lower() == "true"
+
+    if watchtower_enabled:
         try:
             from ops.tracing import init_tracing
 
@@ -180,7 +183,7 @@ async def lifespan(app: FastAPI):
     # ========== WATCHTOWER: Periodic Health Checks ==========
     health_scheduler = None
     health_mongo_client = None
-    if watchtower.get("enabled", True):
+    if watchtower_enabled:
         try:
             from pymongo import MongoClient
             from ops.health.repository import HealthRepository
@@ -197,6 +200,10 @@ async def lifespan(app: FastAPI):
             print("✅ [Watchtower] Health scheduler started")
         except Exception as e:
             print(f"⚠️ [Watchtower] Health scheduler unavailable: {e}")
+
+    # 🎨 Restore Canvas snaps
+    from shared.state import get_canvas_runtime
+    get_canvas_runtime().load_snapshots()
 
     await multi_mcp.start()
 

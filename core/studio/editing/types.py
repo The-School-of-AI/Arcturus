@@ -21,33 +21,33 @@ class PatchOp(BaseModel):
     path: str = Field(..., description="Dot-notation path with numeric indices (e.g. 'title', 'elements[1].content')")
     value: Any = Field(default=None, description="New value for SET operations")
     item: Any = Field(default=None, description="Item to insert for INSERT_AFTER operations")
-    id_key: Optional[str] = Field(default=None, description="Key used for idempotency checks on INSERT_AFTER")
+    id_key: str | None = Field(default=None, description="Key used for idempotency checks on INSERT_AFTER")
 
 
 class SlideTarget(BaseModel):
     """Target specifier for slide-based patches."""
 
     kind: Literal["deck", "slide_index", "slide_id", "slide_element"]
-    index: Optional[int] = Field(default=None, description="1-based slide index")
-    id: Optional[str] = Field(default=None, description="Slide id (e.g. 's3')")
-    element_id: Optional[str] = Field(default=None, description="Element id within a slide")
+    index: int | None = Field(default=None, description="1-based slide index")
+    id: str | None = Field(default=None, description="Slide id (e.g. 's3')")
+    element_id: str | None = Field(default=None, description="Element id within a slide")
 
 
 class SectionTarget(BaseModel):
     """Target specifier for document section patches."""
 
     kind: Literal["section_id", "heading_contains"]
-    id: Optional[str] = Field(default=None, description="Section id (e.g. 'sec1')")
-    text: Optional[str] = Field(default=None, description="Heading text substring to match")
+    id: str | None = Field(default=None, description="Section id (e.g. 'sec1')")
+    text: str | None = Field(default=None, description="Heading text substring to match")
 
 
 class TabTarget(BaseModel):
     """Target specifier for sheet tab patches."""
 
     kind: Literal["tab_name", "cell_range"]
-    name: Optional[str] = Field(default=None, description="Tab name to target")
-    tab_name: Optional[str] = Field(default=None, description="Tab name (alias for name)")
-    a1: Optional[str] = Field(default=None, description="A1-style cell range (e.g. 'B2:D10')")
+    name: str | None = Field(default=None, description="Tab name to target")
+    tab_name: str | None = Field(default=None, description="Tab name (alias for name)")
+    a1: str | None = Field(default=None, description="A1-style cell range (e.g. 'B2:D10')")
 
 
 Target = Union[SlideTarget, SectionTarget, TabTarget]
@@ -57,6 +57,6 @@ class Patch(BaseModel):
     """A complete patch envelope describing one edit operation."""
 
     artifact_type: Literal["slides", "document", "sheet"]
-    target: Dict[str, Any] = Field(..., description="Target specifier dict (parsed into SlideTarget/SectionTarget/TabTarget)")
-    ops: List[PatchOp] = Field(..., min_length=1, description="List of operations to apply")
+    target: dict[str, Any] = Field(..., description="Target specifier dict (parsed into SlideTarget/SectionTarget/TabTarget)")
+    ops: list[PatchOp] = Field(..., min_length=1, description="List of operations to apply")
     summary: str = Field(..., description="Human-readable summary of what this patch does")

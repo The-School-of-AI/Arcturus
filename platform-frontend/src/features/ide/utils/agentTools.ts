@@ -43,7 +43,7 @@ export const executeAgentTool = async (
     const validatePath = (path: string) => {
         if (!projectRoot) return { valid: true, path };
         let fullPath = path;
-        if (!path.startsWith('/') && !path.startsWith('C:') && !path.startsWith('file://')) {
+        if (!path.startsWith('/') && !path.match(/^[a-zA-Z]:[\\/]/) && !path.startsWith('file://')) {
             fullPath = `${projectRoot}/${path}`.replace(/\/+/g, '/');
         }
         // Security checks
@@ -258,7 +258,7 @@ def replace_symbol_in_file(file_path, symbol_name, new_content_file):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print("Usage: python3 replace_symbol.py <file_path> <symbol_name> <new_content_file>")
+        print("Usage: python replace_symbol.py <file_path> <symbol_name> <new_content_file>")
         sys.exit(1)
     
     replace_symbol_in_file(sys.argv[1], sys.argv[2], sys.argv[3])
@@ -277,7 +277,7 @@ if __name__ == "__main__":
                     }
 
                     const res = await window.electronAPI.invoke('shell:exec', {
-                        cmd: `python3 ${tempScriptFile} "${validation.path}" "${symbol}" "${tempContentFile}"`,
+                        cmd: `python ${tempScriptFile} "${validation.path}" "${symbol}" "${tempContentFile}"`,
                         cwd: projectRoot || '',
                         projectRoot: projectRoot || ''
                     });

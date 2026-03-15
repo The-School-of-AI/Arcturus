@@ -15,7 +15,7 @@ except ImportError:
     from mcp_servers.tools.web_tools_async import smart_web_extract
 
 
-async def web_search(query: str, limit: int = 5) -> Dict[str, Any]:
+async def web_search(query: str, limit: int = 5) -> dict[str, Any]:
     """Internal-first web search contract used by agent router and gateway adapters."""
     urls = await smart_search(query, limit)
     if not urls:
@@ -53,7 +53,7 @@ async def web_search(query: str, limit: int = 5) -> Dict[str, Any]:
     }
 
 
-async def read_url(url: str, timeout_seconds: int = 45) -> Dict[str, Any]:
+async def read_url(url: str, timeout_seconds: int = 45) -> dict[str, Any]:
     """Internal-first single URL reader contract used by agent router."""
     result = await asyncio.wait_for(smart_web_extract(url), timeout=timeout_seconds)
     text = result.get("best_text", "")[:15000]

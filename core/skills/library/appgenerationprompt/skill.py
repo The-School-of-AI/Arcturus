@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class AppgenerationpromptSkill(Skill):
     name = "appgenerationprompt"
     description = "Skill derived from AppGenerationPrompt.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# App Generation Prompt for Agentic Platform

@@ -82,7 +82,7 @@ def export_to_csv(content_tree: SheetContentTree, output_path: Path) -> str:
     return selected.name
 
 
-def export_to_csv_zip(content_tree: SheetContentTree, output_path: Path) -> List[str]:
+def export_to_csv_zip(content_tree: SheetContentTree, output_path: Path) -> list[str]:
     """Export all tabs as individual CSVs inside a ZIP archive.
 
     Returns the list of exported tab names (in order).
@@ -94,7 +94,7 @@ def export_to_csv_zip(content_tree: SheetContentTree, output_path: Path) -> List
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     used_names: dict[str, int] = {}
-    exported_tab_names: List[str] = []
+    exported_tab_names: list[str] = []
 
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for tab in content_tree.tabs:

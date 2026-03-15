@@ -108,6 +108,7 @@ class TestSyncTwoDevicesConverge:
     @pytest.fixture
     def client(self):
         from fastapi.testclient import TestClient
+
         from api import app
         # Auth required for /api/remme and /api/sync
         AUTH_HEADERS = {"X-User-Id": "00000000-0000-0000-0000-000000000001"}

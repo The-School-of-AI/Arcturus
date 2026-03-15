@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 _PATH_SEGMENT_RE = re.compile(r"([a-zA-Z_][a-zA-Z0-9_]*)((?:\[\d+\])*)")
 
 
-def _parse_path(path: str) -> List[Tuple[str, Optional[int]]]:
+def _parse_path(path: str) -> list[tuple[str, int | None]]:
     """Parse a JSONPath-like string into traversal steps.
 
     Examples:
@@ -49,7 +49,7 @@ def _parse_path(path: str) -> List[Tuple[str, Optional[int]]]:
     return segments
 
 
-def _navigate(tree: Any, segments: List[Tuple[str, Optional[int]]], create: bool = False) -> Tuple[Any, str | int]:
+def _navigate(tree: Any, segments: list[tuple[str, int | None]], create: bool = False) -> tuple[Any, str | int]:
     """Navigate a tree to the parent of the final path segment.
 
     Returns (parent_container, final_key_or_index) so the caller can
@@ -97,7 +97,7 @@ def _navigate(tree: Any, segments: List[Tuple[str, Optional[int]]], create: bool
 
 # --- Target resolution ---
 
-def _resolve_target(artifact_type: str, tree: Dict[str, Any], target: Dict[str, Any]) -> Any:
+def _resolve_target(artifact_type: str, tree: dict[str, Any], target: dict[str, Any]) -> Any:
     """Resolve a target dict to the subtree anchor node."""
     kind = target.get("kind")
     if not kind:
@@ -179,7 +179,7 @@ def _resolve_target(artifact_type: str, tree: Dict[str, Any], target: Dict[str, 
         raise ValueError(f"Unknown artifact type: {artifact_type!r}")
 
 
-def _find_section_by_id(sections: List[Dict], section_id: str) -> Optional[Dict]:
+def _find_section_by_id(sections: list[dict], section_id: str) -> dict | None:
     for s in sections:
         if s.get("id") == section_id:
             return s
@@ -189,7 +189,7 @@ def _find_section_by_id(sections: List[Dict], section_id: str) -> Optional[Dict]
     return None
 
 
-def _find_section_by_heading(sections: List[Dict], text: str) -> Optional[Dict]:
+def _find_section_by_heading(sections: list[dict], text: str) -> dict | None:
     text_lower = text.lower()
     for s in sections:
         if text_lower in (s.get("heading", "")).lower():
@@ -200,7 +200,7 @@ def _find_section_by_heading(sections: List[Dict], text: str) -> Optional[Dict]:
     return None
 
 
-def _collect_section_ids(sections: List[Dict]) -> List[str]:
+def _collect_section_ids(sections: list[dict]) -> list[str]:
     ids = []
     for s in sections:
         if s.get("id"):
@@ -209,7 +209,7 @@ def _collect_section_ids(sections: List[Dict]) -> List[str]:
     return ids
 
 
-def _collect_section_headings(sections: List[Dict]) -> List[str]:
+def _collect_section_headings(sections: list[dict]) -> list[str]:
     headings = []
     for s in sections:
         if s.get("heading"):
@@ -220,7 +220,7 @@ def _collect_section_headings(sections: List[Dict]) -> List[str]:
 
 # --- Op execution ---
 
-def _apply_set(subtree: Any, segments: List[Tuple[str, Optional[int]]], value: Any) -> Optional[str]:
+def _apply_set(subtree: Any, segments: list[tuple[str, int | None]], value: Any) -> str | None:
     """Apply a SET operation. Returns a warning string if no-op."""
     parent, key = _navigate(subtree, segments)
     if isinstance(parent, dict):
@@ -240,7 +240,7 @@ def _apply_set(subtree: Any, segments: List[Tuple[str, Optional[int]]], value: A
     return None
 
 
-def _apply_insert_after(subtree: Any, segments: List[Tuple[str, Optional[int]]], item: Any, id_key: Optional[str]) -> Optional[str]:
+def _apply_insert_after(subtree: Any, segments: list[tuple[str, int | None]], item: Any, id_key: str | None) -> str | None:
     """Apply an INSERT_AFTER operation. Returns a warning string if no-op."""
     parent, key = _navigate(subtree, segments)
     if isinstance(parent, dict):
@@ -263,7 +263,7 @@ def _apply_insert_after(subtree: Any, segments: List[Tuple[str, Optional[int]]],
     return None
 
 
-def _apply_delete(subtree: Any, segments: List[Tuple[str, Optional[int]]]) -> Optional[str]:
+def _apply_delete(subtree: Any, segments: list[tuple[str, int | None]]) -> str | None:
     """Apply a DELETE operation. Returns a warning string if no-op."""
     try:
         parent, key = _navigate(subtree, segments)
@@ -295,7 +295,7 @@ _STRING_CONTENT_ELEMENT_TYPES = frozenset({
     "image", "quote", "code", "source_citation", "tag_badge",
 })
 
-def _extract_string_from_dict(value: Any) -> Optional[str]:
+def _extract_string_from_dict(value: Any) -> str | None:
     """Try to extract a string from a dict the LLM produced for a string field.
 
     Common LLM patterns:
@@ -311,7 +311,7 @@ def _extract_string_from_dict(value: Any) -> Optional[str]:
     return None
 
 
-def _coerce_llm_value_types(artifact_type: str, tree: Dict[str, Any]) -> List[str]:
+def _coerce_llm_value_types(artifact_type: str, tree: dict[str, Any]) -> list[str]:
     """Fix common LLM type mistakes in-place: dict-for-string, etc.
 
     The LLM sometimes "enriches" plain string fields into dicts like
@@ -320,7 +320,7 @@ def _coerce_llm_value_types(artifact_type: str, tree: Dict[str, Any]) -> List[st
 
     Returns a list of warnings for every field that was coerced.
     """
-    coerce_warnings: List[str] = []
+    coerce_warnings: list[str] = []
 
     if artifact_type == "slides":
         # Top-level string fields
@@ -385,7 +385,7 @@ def _coerce_llm_value_types(artifact_type: str, tree: Dict[str, Any]) -> List[st
     return coerce_warnings
 
 
-def _coerce_document_sections(sections: List[Any], warnings: List[str]) -> None:
+def _coerce_document_sections(sections: list[Any], warnings: list[str]) -> None:
     """Recursively coerce string fields in document sections."""
     for sec in sections:
         if not isinstance(sec, dict):
@@ -401,7 +401,7 @@ def _coerce_document_sections(sections: List[Any], warnings: List[str]) -> None:
 
 # --- Post-apply normalization ---
 
-def _normalize_after_patch(artifact_type: str, tree_dict: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_after_patch(artifact_type: str, tree_dict: dict[str, Any]) -> dict[str, Any]:
     """Apply type-specific normalization after patching."""
     if artifact_type == "slides":
         from core.schemas.studio_schema import SlidesContentTree
@@ -433,9 +433,9 @@ def _normalize_after_patch(artifact_type: str, tree_dict: Dict[str, Any]) -> Dic
 
 def apply_patch_to_content_tree(
     artifact_type: str,
-    content_tree_dict: Dict[str, Any],
-    patch: Dict[str, Any],
-) -> Tuple[Dict[str, Any], List[str]]:
+    content_tree_dict: dict[str, Any],
+    patch: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
     """Apply a patch to a content tree dict.
 
     Args:
@@ -451,7 +451,7 @@ def apply_patch_to_content_tree(
     """
     # 1. Deep copy — never mutate the original
     new_tree = copy.deepcopy(content_tree_dict)
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     # 2. Resolve target
     target = patch.get("target", {})

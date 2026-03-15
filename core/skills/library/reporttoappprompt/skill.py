@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class ReporttoapppromptSkill(Skill):
     name = "reporttoappprompt"
     description = "Skill derived from ReportToAppPrompt.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# Report-to-App Generation Prompt

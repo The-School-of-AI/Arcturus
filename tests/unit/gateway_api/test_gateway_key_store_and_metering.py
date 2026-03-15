@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from gateway_api.key_store import GatewayKeyStore
 from gateway_api.metering import GatewayMeteringStore
@@ -58,7 +58,7 @@ def test_metering_writes_event_and_rollup(tmp_path):
         )
     )
 
-    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    month = datetime.now(UTC).strftime("%Y-%m")
     rollup_file = tmp_path / f"metering_rollup_{month}.json"
 
     assert events_file.exists()
@@ -87,7 +87,7 @@ def test_metering_tracks_governance_denied_without_incrementing_billable_usage(t
         )
     )
 
-    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    month = datetime.now(UTC).strftime("%Y-%m")
     usage = asyncio.run(metering.get_usage_for_key("gwk_test", month))
     assert usage["requests"] == 0
     assert usage["units"] == 0

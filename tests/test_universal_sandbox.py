@@ -1,16 +1,17 @@
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add project root to path
 sys.path.append(os.getcwd())
 
 from core.sandbox.executor import UniversalSandbox
 
+
 async def _run_sandbox():
     sandbox = UniversalSandbox()
-    
+
     # 1. Simple math
     result = await sandbox.run("print(1+1); 2+2")
     return result

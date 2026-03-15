@@ -1,7 +1,8 @@
 """Tests for core/studio/documents/validator.py — DOCX and PDF validation."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from core.schemas.studio_schema import DocumentContentTree, DocumentSection
 from core.studio.documents.exporter_docx import export_to_docx

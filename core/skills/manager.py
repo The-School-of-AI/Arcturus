@@ -1,23 +1,24 @@
-import os
-import json
 import importlib.util
 import inspect
+import json
 import logging
+import os
 from pathlib import Path
-from typing import Dict, List, Optional, Type, Any
+from typing import Any, Dict, List, Optional, Type
+
 from .base import Skill, SkillMetadata
 
 logger = logging.getLogger("skill_manager")
 
 class SkillManager:
     _instance = None
-    
+
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(SkillManager, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance.skills_dir = Path("core/skills/library")
             cls._instance.registry_file = Path("core/skills/registry.json")
-            cls._instance.skill_classes: Dict[str, Type[Skill]] = {}
+            cls._instance.skill_classes: dict[str, type[Skill]] = {}
         return cls._instance
 
     def initialize(self):
@@ -38,7 +39,7 @@ class SkillManager:
         3. Register metadata
         """
         registry = {}
-        
+
         # Walk through skill directories
         if not self.skills_dir.exists():
             return
@@ -46,7 +47,7 @@ class SkillManager:
         for item in self.skills_dir.iterdir():
             if item.is_dir():
                 skill_file = item / "skill.py"
-                
+
                 try:
                     if skill_file.exists():
                         skill_class = self._load_skill_class(skill_file)
@@ -54,7 +55,7 @@ class SkillManager:
                             # Instantiate just to get metadata
                             temp_instance = skill_class()
                             meta = temp_instance.get_metadata()
-                            
+
                             registry[meta.name] = {
                                 "path": str(item),
                                 "version": meta.version,
@@ -64,7 +65,7 @@ class SkillManager:
                                 "type": "python"
                             }
                             logger.info(f"✅ Discovered Python Skill: {meta.name} (v{meta.version})")
-                    
+
                 except Exception as e:
                     logger.error(f"Failed to load skill at {item}: {e}")
 
@@ -72,33 +73,33 @@ class SkillManager:
         self.registry_file.write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n")
         logger.info(f"Skill Registry Updated. {len(registry)} skills available.")
 
-    def _load_skill_class(self, file_path: Path) -> Optional[Type[Skill]]:
+    def _load_skill_class(self, file_path: Path) -> type[Skill] | None:
         """Dynamically import a Python file and find the Skill class"""
         spec = importlib.util.spec_from_file_location("dynamic_skill", file_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        
+
         for name, obj in inspect.getmembers(module):
             if inspect.isclass(obj) and issubclass(obj, Skill) and obj is not Skill:
                 return obj
         return None
 
-    def get_skill(self, skill_name: str) -> Optional[Skill]:
+    def get_skill(self, skill_name: str) -> Skill | None:
         """Get a fresh instance of a skill, loading its class if necessary"""
         if skill_name in self.skill_classes:
             return self.skill_classes[skill_name]()
-        
+
         # Load from registry
         if not self.registry_file.exists():
             return None
-            
+
         registry = json.loads(self.registry_file.read_text())
         if skill_name not in registry:
             return None
-            
+
         info = registry[skill_name]
         path = Path(info["path"]) / "skill.py"
-        
+
         klass = self._load_skill_class(path)
         if klass:
             self.skill_classes[skill_name] = klass
@@ -107,9 +108,10 @@ class SkillManager:
 
 
 
-    def match_intent(self, user_query: str) -> Optional[str]:
+    def match_intent(self, user_query: str) -> str | None:
         """Simple keyword matching with word boundaries. Respects skills.disabled in config."""
         import re
+
         from config.settings_loader import load_settings
         if not self.registry_file.exists():
             return None

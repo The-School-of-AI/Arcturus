@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class QaSkill(Skill):
     name = "qa"
     description = "Skill derived from qa.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# QAAgent Prompt

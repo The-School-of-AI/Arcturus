@@ -1,9 +1,10 @@
-from rich.console import Console
+import sys
 from datetime import datetime
+
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-import sys
 
 # MCP Protocol Safety: Redirect all rich output to stderr
 console = Console(stderr=True)
@@ -11,19 +12,18 @@ def print(*args, **kwargs):
     console.print(*args, **kwargs)
 
 
-def log_step(title: str, payload=None, symbol: str = "🟢"):
+def log_step(title: str, payload=None, symbol: str = "[STEP]"):
     print(f"\n[b]{symbol} {title}[/b]")
     if payload:
         from pprint import pprint
         pprint(payload)
 
 def log_error(message: str, err: Exception = None):
-    print(f"\n[red]❌ {message}[/red]")
+    print(f"\n[red][ERROR] {message}[/red]")
     if err:
         print(f"[dim]{str(err)}[/dim]")
 
 def log_json_block(title: str, block):
-    from rich.panel import Panel
     # Use global console
 
     def truncate(value, max_length=150):
@@ -57,21 +57,18 @@ def log_json_block(title: str, block):
         return "\n".join(lines)
 
     content = format_block(block)
-    panel = Panel(content, title=f"📌 {title}", title_align="left", border_style="cyan", expand=False)
+    panel = Panel(content, title=f"[INFO] {title}", title_align="left", border_style="cyan", expand=False)
     console.print(panel)
 
 
 def render_graph(graph, depth=1):
-    from rich.panel import Panel
-    from rich.table import Table
-    from rich.text import Text
     # Use global console
 
     def truncate(text, limit=200):
         text = str(text)
         return text if len(text) <= limit else text[:limit] + "..."
 
-    print("\n[bold yellow] Agent Step Graph (Depth {})[/bold yellow]".format(depth))
+    print(f"\n[bold yellow] Agent Step Graph (Depth {depth})[/bold yellow]")
 
     table = Table(show_header=True, header_style="bold magenta", box=None)
     table.add_column("Step ID", style="cyan", no_wrap=True)
@@ -129,7 +126,7 @@ def render_graph(graph, depth=1):
 
 import json
 from pathlib import Path
-from datetime import datetime
+
 # Use global print/console
 
 def get_log_folder(session_id: str, base_dir: str = None) -> Path:
@@ -150,7 +147,7 @@ def append_step_log(session_id: str, step_data: dict, base_dir: str = None):
     folder = get_log_folder(session_id, base_dir)
     step_path = folder / f"{session_id}_steps.json"
     if step_path.exists():
-        with open(step_path, "r", encoding="utf-8") as f:
+        with open(step_path, encoding="utf-8") as f:
             logs = json.load(f)
     else:
         logs = []

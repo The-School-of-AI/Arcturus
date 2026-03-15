@@ -13,13 +13,13 @@ from core.studio.editing.types import Patch
 logger = logging.getLogger(__name__)
 
 
-def build_target_map(artifact_type: str, content_tree: Dict[str, Any]) -> str:
+def build_target_map(artifact_type: str, content_tree: dict[str, Any]) -> str:
     """Build a compact target summary for LLM context.
 
     Gives the LLM a quick reference of available targets (slide ids, section ids, tab names)
     so it can construct valid patches.
     """
-    lines: List[str] = []
+    lines: list[str] = []
 
     if artifact_type == "slides":
         slides = content_tree.get("slides", [])
@@ -47,7 +47,7 @@ def build_target_map(artifact_type: str, content_tree: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _build_section_map(sections: List[Dict], lines: List[str], indent: int = 2) -> None:
+def _build_section_map(sections: list[dict], lines: list[str], indent: int = 2) -> None:
     """Recursively build section map lines."""
     for section in sections:
         sec_id = section.get("id", "?")
@@ -184,10 +184,10 @@ async def plan_patch_repair(
 async def plan_patch(
     artifact_type: str,
     instruction: str,
-    content_tree: Dict[str, Any],
-    outline: Optional[Dict[str, Any]] = None,
-    parameters: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    content_tree: dict[str, Any],
+    outline: dict[str, Any] | None = None,
+    parameters: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Call LLM to plan a patch from a user instruction.
 
     Returns a parsed Patch dict. Retries once on parse/validation failure.

@@ -1,10 +1,13 @@
 
-import unittest
-import sys
 import os
+import sys
+import unittest
+
 sys.path.append(os.getcwd())
 from pydantic import ValidationError
-from core.tool_schema import validate_tool_definition, InvalidToolDefinition, ToolDefinition
+
+from core.tool_schema import InvalidToolDefinition, ToolDefinition, validate_tool_definition
+
 
 class TestToolSchema(unittest.TestCase):
     def test_valid_tool(self):

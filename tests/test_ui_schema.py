@@ -1,14 +1,15 @@
 
-import unittest
-import sys
-import os
 import json
+import os
+import sys
+import unittest
 from pathlib import Path
 
 # Add project root to path
 sys.path.append(os.getcwd())
 
 from core.schemas.ui_schema import validate_ui_json
+
 
 class TestUISchema(unittest.TestCase):
     def test_ui_validation(self):
@@ -43,11 +44,11 @@ class TestUISchema(unittest.TestCase):
                 }
             ]
         }
-        
+
         # Save to ui.json for verification
         with open("ui.json", "w") as f:
             json.dump(ui_data, f, indent=2)
-            
+
         try:
             schema = validate_ui_json(ui_data)
             self.assertEqual(schema.name, "Arcturus Portfolio")

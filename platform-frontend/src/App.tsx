@@ -7,7 +7,7 @@ import axios from 'axios';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 import { useAppStore } from './store';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'http://127.0.0.1:8000';
 
 function SplashScreen() {
   return (

@@ -1,23 +1,24 @@
 import ast
 import asyncio
-import time
 import builtins
-import textwrap
-import re
-import os
-import json
-import io
 import contextlib
+import io
+import json
+import os
+import re
+import textwrap
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
-from ops.tracing import sandbox_run_span
 from opentelemetry.trace import Status, StatusCode
 
 # Core Logging Utility
-from core.utils import log_step, log_error, log_json_block
+from core.utils import log_error, log_json_block, log_step
+from ops.tracing import sandbox_run_span
+
 
 class SandboxResult(dict):
     """Container for sandbox execution results."""
@@ -35,7 +36,7 @@ class UniversalSandbox:
     Standardized Sandbox for executing AI-generated code.
     Features AST transformation for MCP tool integration, safety checks, and session persistence.
     """
-    
+
     ALLOWED_MODULES = {
         "math", "random", "re", "datetime", "time", "collections", "itertools",
         "statistics", "string", "functools", "operator", "json", "pprint", "copy",
@@ -59,14 +60,14 @@ class UniversalSandbox:
         self.state_dir = Path("action/sandbox_state")
         self.state_dir.mkdir(parents=True, exist_ok=True)
 
-    async def run(self, code: str) -> Dict[str, Any]:
+    async def run(self, code: str) -> dict[str, Any]:
         """Runs the provided Python code securely."""
         start_time = time.perf_counter()
         start_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
+
         # 1. Cleaning & Prep
         code = textwrap.dedent(code.strip())
-        
+
         # 2. Safety Check
         is_safe, violations = self._check_safety(code)
         if not is_safe:
@@ -74,7 +75,7 @@ class UniversalSandbox:
                 blocked_span.set_attribute("status", "blocked")
                 blocked_span.set_attribute("error", f"Security violation: {violations[0]['description']}"[:500])
             return SandboxResult(
-                "blocked", 
+                "blocked",
                 error=f"Security violation: {violations[0]['description']}",
                 execution_time=start_ts,
                 total_time=round(time.perf_counter() - start_time, 3)
@@ -83,7 +84,7 @@ class UniversalSandbox:
         with sandbox_run_span(self.session_id, code) as span:
             try:
                 tree = ast.parse(code)
-                
+
                 # 3. Analyze complexity
                 func_count = sum(isinstance(node, ast.Call) for node in ast.walk(tree))
                 if func_count > self.max_functions:
@@ -98,11 +99,11 @@ class UniversalSandbox:
 
                 # 5. Transform AST
                 tree = self._transform_ast(tree, set(tool_funcs))
-                
+
                 # Auto-return last expression if it's meaningful
                 if tree.body and isinstance(tree.body[-1], ast.Expr):
                     tree.body[-1] = ast.Return(value=tree.body[-1].value)
-                
+
                 # 6. Compile & Wrap
                 func_def = ast.AsyncFunctionDef(
                     name="__main",
@@ -112,15 +113,15 @@ class UniversalSandbox:
                 )
                 module = ast.Module(body=[func_def], type_ignores=[])
                 ast.fix_missing_locations(module)
-                
+
                 compiled = compile(module, filename="<sandbox>", mode="exec")
                 exec(compiled, safe_globals, local_vars)
 
                 # 7. Execute with Monitoring
                 log_capture = io.StringIO()
                 # Use timeout_per_func (MCP tool calls can take 30+ seconds)
-                timeout = max(30, func_count * self.timeout_per_func) 
-                
+                timeout = max(30, func_count * self.timeout_per_func)
+
                 # Custom logging hook to safely capture without recursion
                 class RealTimeLogger(io.StringIO):
                     def write(self, s):
@@ -132,14 +133,14 @@ class UniversalSandbox:
                         super().flush()
 
                 rt_logger = RealTimeLogger()
-                
+
                 with contextlib.redirect_stdout(rt_logger), contextlib.redirect_stderr(rt_logger):
                     returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
 
                 # 8. Extract & Serialize Results
                 result_data = self._serialize(returned)
                 self._save_state(result_data)
-                
+
                 final_logs = rt_logger.getvalue()
                 total_time = round(time.perf_counter() - start_time, 3)
                 span.set_attribute("status", "success")

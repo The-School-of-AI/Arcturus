@@ -13,7 +13,6 @@ from gateway.envelope import MessageEnvelope
 from gateway.formatter import MessageFormatter
 from gateway.router import MessageRouter, create_mock_agent
 
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------

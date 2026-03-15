@@ -1,11 +1,12 @@
 
-import os
 import asyncio
+import os
+
 import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from .conftest import require_stress_opt_in, require_integration_opt_in
 
+from .conftest import require_integration_opt_in, require_stress_opt_in
 
 pytestmark = [pytest.mark.stress, pytest.mark.integration]
 
@@ -16,7 +17,7 @@ async def _sandbox_direct():
         args=["run", "mcp_servers/server_sandbox.py"],
         env=os.environ.copy()
     )
-    
+
     print("Connecting to sandbox...")
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:

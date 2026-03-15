@@ -302,6 +302,14 @@ async def get_memory_lifecycle(
         return {"status": "success", "lifecycle": lifecycle}
     except HTTPException:
         raise
+
+@router.get("/search")
+async def search_memories(query: str, limit: int = 10):
+    """Semantic search for memories based on a query."""
+    try:
+        emb = get_embedding(query, task_type="search_query")
+        results = remme_store.search(emb, query_text=query, k=limit)
+        return {"status": "success", "memories": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -347,7 +355,6 @@ async def override_memory_lifecycle(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/cleanup_dangling")
 async def cleanup_dangling_memories():
@@ -693,7 +700,7 @@ async def get_remme_profile():
             # 7 days in seconds = 604800
             if (current_time - modified_time) < 604800:
                 print(f"🧠 RemMe Profile: Loading cached profile (Age: {(current_time - modified_time) / 86400:.1f} days)")
-                return {"content": profile_path.read_text()}
+                return {"content": profile_path.read_text(encoding='utf-8')}
                 
         # 2. Generate New Profile
         print("🧠 RemMe Profile: Generating NEW profile via Gemini...")
@@ -870,7 +877,7 @@ A high-level overview of who the user appears to be, their primary drivers, and 
         profile_content = await model_manager.generate_text(prompt)
         
         # Save to Cache
-        profile_path.write_text(profile_content)
+        profile_path.write_text(profile_content, encoding='utf-8')
         
         return {
             "content": profile_content,

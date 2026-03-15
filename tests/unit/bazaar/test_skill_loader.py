@@ -1,19 +1,20 @@
 """Tests for Day 4: SkillLoader — dynamic tool loading and execution."""
-import pytest
 from pathlib import Path
+
+import pytest
+
 from marketplace.loader import SkillLoader
 from marketplace.registry import SkillRegistry
 
-
 # --- Helpers ---
 
-def create_skill_with_tool(base_path: Path, skill_name: str, 
+def create_skill_with_tool(base_path: Path, skill_name: str,
                            tool_name: str, function_code: str) -> Path:
     """Create a skill directory with a working tool module."""
     skill_dir = base_path / skill_name
     tools_dir = skill_dir / "tools"
     tools_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Write manifest
     (skill_dir / "manifest.yaml").write_text(f"""
 name: {skill_name}
@@ -25,10 +26,10 @@ tools:
     module: tools.{skill_name}_tools
     function: {tool_name}
 """)
-    
+
     # Write tool module
     (tools_dir / f"{skill_name}_tools.py").write_text(function_code)
-    
+
     return skill_dir
 
 
@@ -38,12 +39,12 @@ tools:
 def loaded_registry(tmp_path):
     """Registry with a skill that has a real callable tool."""
     registry = SkillRegistry(skills_dir=tmp_path)
-    
+
     create_skill_with_tool(
         tmp_path, "greeter", "say_hello",
         'def say_hello(name="World"):\n    return f"Hello, {name}!"'
     )
-    
+
     registry.discover_skills()
     return registry
 
@@ -102,7 +103,7 @@ def test_load_skill_tools_returns_empty_for_unknown_skill(loader):
 def test_load_skill_tools_skips_missing_module_file(tmp_path):
     """If a declared module file doesn't exist, skip that tool (don't crash)."""
     registry = SkillRegistry(skills_dir=tmp_path)
-    
+
     # Skill with a tool pointing to a non-existent module
     skill_dir = tmp_path / "broken_skill"
     skill_dir.mkdir()
@@ -115,7 +116,7 @@ tools:
     function: nope
 """)
     registry.discover_skills()
-    
+
     loader = SkillLoader(registry=registry)
     tools = loader.load_skill_tools("broken_skill")
     assert tools == {}
@@ -126,7 +127,7 @@ tools:
 def test_load_all_tools_loads_from_all_skills(tmp_path):
     """load_all_tools should load tools from every registered skill."""
     registry = SkillRegistry(skills_dir=tmp_path)
-    
+
     create_skill_with_tool(
         tmp_path, "skill_a", "tool_a",
         'def tool_a():\n    return "A"'
@@ -135,10 +136,10 @@ def test_load_all_tools_loads_from_all_skills(tmp_path):
         tmp_path, "skill_b", "tool_b",
         'def tool_b():\n    return "B"'
     )
-    
+
     registry.discover_skills()
     loader = SkillLoader(registry=registry)
-    
+
     all_tools = loader.load_all_tools()
     assert "tool_a" in all_tools
     assert "tool_b" in all_tools
@@ -179,7 +180,7 @@ def test_clear_cache_forces_reload(loader):
     """clear_cache should remove all cached tools and modules."""
     loader.load_all_tools()
     assert len(loader._loaded_tools) > 0
-    
+
     loader.clear_cache()
     assert len(loader._loaded_tools) == 0
     assert len(loader._loaded_modules) == 0

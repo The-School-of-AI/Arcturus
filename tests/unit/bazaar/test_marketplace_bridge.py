@@ -1,8 +1,9 @@
 """Tests for MarketplaceBridge integration of registry + installer + loader."""
-import pytest
 from pathlib import Path
-from marketplace.bridge import MarketplaceBridge
 
+import pytest
+
+from marketplace.bridge import MarketplaceBridge
 
 # --- Helpers ---
 
@@ -11,7 +12,7 @@ def create_skill_with_tool(base_path: Path, name: str, tool_name: str) -> Path:
     skill_dir = base_path / name
     tools_dir = skill_dir / "tools"
     tools_dir.mkdir(parents=True, exist_ok=True)
-    
+
     (skill_dir / "manifest.yaml").write_text(f"""
 name: {name}
 version: 1.0.0
@@ -22,7 +23,7 @@ tools:
     module: tools.{name}_tools
     function: {tool_name}
 """)
-    
+
     (tools_dir / f"{name}_tools.py").write_text(
         f'def {tool_name}(name="World"):\n    return f"Hello from {name}, {{name}}!"'
     )
@@ -85,21 +86,21 @@ def test_install_and_refresh_makes_tool_available(tmp_path):
     install_dir.mkdir()
     source_dir = tmp_path / "source"
     source_dir.mkdir()
-    
+
     bridge = MarketplaceBridge(skills_dir=install_dir)
     bridge.initialize()
-    
+
     # No tools initially
     assert bridge.resolve_tool("say_hi") is None
-    
+
     # Create and install a skill
     skill_dir = create_skill_with_tool(source_dir, "hello_skill", "say_hi")
     result = bridge.installer.install_skill(skill_dir)
     assert result.success is True
-    
+
     # Refresh to pick up the new skill
     bridge.refresh()
-    
+
     # Now the tool should work
     result = bridge.resolve_tool("say_hi", {"name": "Test"})
     assert result == "Hello from hello_skill, Test!"
@@ -108,16 +109,16 @@ def test_install_and_refresh_makes_tool_available(tmp_path):
 def test_uninstall_and_refresh_removes_tool(tmp_path):
     """Uninstalling and refreshing should remove the tool."""
     create_skill_with_tool(tmp_path, "temp_skill", "temp_tool")
-    
+
     bridge = MarketplaceBridge(skills_dir=tmp_path)
     bridge.initialize()
-    
+
     # Tool works initially
     assert bridge.resolve_tool("temp_tool") is not None
-    
+
     # Uninstall
     bridge.installer.uninstall_skill("temp_skill")
     bridge.refresh()
-    
+
     # Tool should be gone
     assert bridge.resolve_tool("temp_tool") is None

@@ -1,10 +1,12 @@
 
-import unittest
 import ast
-import sys
 import os
+import sys
+import unittest
+
 sys.path.append(os.getcwd())
 from core.mcp_inspector import MCPInspector
+
 
 class TestMCPInspector(unittest.TestCase):
     def test_inspect_source_basic(self):
@@ -51,7 +53,7 @@ def complex_tool(
         tools = MCPInspector.inspect_source(source)
         self.assertEqual(len(tools), 1)
         props = tools[0]["inputSchema"]["properties"]
-        
+
         self.assertEqual(props["items"]["type"], "array")
         # Dict is mapped to object
         self.assertEqual(props["options"]["type"], "object")

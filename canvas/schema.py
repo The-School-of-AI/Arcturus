@@ -39,6 +39,15 @@ class UserEventMessage(BaseModel):
     component_id: str
     data: Dict[str, Any] = Field(default_factory=dict)
 
+class CaptureSnapshotMessage(BaseModel):
+    type: str = "captureSnapshot"
+    surfaceId: str
+
+class SnapshotResultMessage(BaseModel):
+    type: str = "snapshotResult"
+    surfaceId: str
+    snapshot: str  # Base64 encoded image
+
 class CanvasMessage(BaseModel):
     """Union type for all canvas-related messages."""
     msg: Union[
@@ -47,5 +56,7 @@ class CanvasMessage(BaseModel):
         UpdateDataModelMessage, 
         DeleteSurfaceMessage,
         EvalJSMessage,
-        UserEventMessage
+        UserEventMessage,
+        CaptureSnapshotMessage,
+        SnapshotResultMessage
     ]

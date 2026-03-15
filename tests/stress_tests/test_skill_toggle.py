@@ -1,8 +1,9 @@
-import requests
 import time
-import pytest
-from .conftest import require_stress_opt_in, require_integration_opt_in
 
+import pytest
+import requests
+
+from .conftest import require_integration_opt_in, require_stress_opt_in
 
 pytestmark = [pytest.mark.stress, pytest.mark.integration, pytest.mark.external]
 
@@ -16,7 +17,7 @@ def test_toggle_stress():
         "skill_name": "python_coding",
         "enabled": True
     }
-    
+
     print("Starting Skill Toggle Stress Test (50 iterations)...")
     successes = 0
     for i in range(50):
@@ -33,7 +34,7 @@ def test_toggle_stress():
             pytest.fail(f"Iteration {i+1}: Error - {e}")
         # Small sleep
         time.sleep(0.05)
-    
+
     assert successes == 50
     print("✅ Stress test completed.")
 

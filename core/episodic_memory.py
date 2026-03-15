@@ -1,8 +1,10 @@
+import asyncio
 import json
-from typing import Dict, List, Any, Optional
-from core.utils import log_step, log_error
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from memory.episodic import MEMORY_DIR, search_episodes, get_recent_episodes
+from core.utils import log_error, log_step
+from memory.episodic import MEMORY_DIR, get_recent_episodes, search_episodes
 from memory.space_constants import SPACE_ID_GLOBAL
 
 class MemorySkeletonizer:
@@ -11,10 +13,10 @@ class MemorySkeletonizer:
     Removes heavy payloads (HTML, huge text) but preserves Logic (Prompts, Tool Calls).
     """
     @staticmethod
-    def skeletonize(session_data: Dict) -> Dict:
+    def skeletonize(session_data: dict) -> dict:
         # Robust extraction: 'nodes' might be at root or inside 'graph' wrapper
         graph_data = session_data.get("graph", session_data)
-        
+
         # If 'graph' points to attributes (like in the file 1770375024), we might need to look at root
         if "nodes" in session_data:
             nodes = session_data["nodes"]
@@ -26,16 +28,16 @@ class MemorySkeletonizer:
             nodes = graph_data.get("nodes", [])
             edges = graph_data.get("edges", graph_data.get("links", []))
             metadata = graph_data
-            
+
         skeleton = {
             "id": metadata.get("session_id"),
             "original_query": metadata.get("original_query"),
             "outcome": metadata.get("status"),
             "final_cost": metadata.get("final_cost"),
             "nodes": [],
-            "edges": edges 
+            "edges": edges
         }
-        
+
         for node in nodes:
             # 1. Base lightweight info
             s_node = {
@@ -49,11 +51,11 @@ class MemorySkeletonizer:
                     "writes": node.get("writes", [])
                 }
             }
-            
+
             # 2. Extract Logic (Agent Prompt & Thought) - The "Recipe"
             if "agent_prompt" in node:
                 s_node["instruction"] = node["agent_prompt"]
-            
+
             # Capture Planner Logic (Ambiguity & Confidence)
             if node.get("agent") == "PlannerAgent":
                 output = node.get("output", {})
@@ -79,8 +81,8 @@ class MemorySkeletonizer:
                              # Taking the last critique -> refinement interaction as the "thought"
                              last_step = trace[-1]
                              s_node["system2_summary"] = f"Critique: {last_step.get('critique')}\nRefinement: {last_step.get('draft')[:200]}..."
-                             s_node["full_reasoning_trace"] = trace 
-            
+                             s_node["full_reasoning_trace"] = trace
+
             # 3. Extract Actions (Tools/Calls) without payloads
             actions = []
             if "iterations" in node:
@@ -88,7 +90,8 @@ class MemorySkeletonizer:
                     output = iter_data.get("output", {})
                     if not isinstance(output, dict):
                         continue
-                    
+
+
                     # Capture Tool Calls
                     if output.get("call_tool"):
                         tool_call = output["call_tool"]
@@ -109,10 +112,10 @@ class MemorySkeletonizer:
                             # Code is the recipe! Keep it.
                             "snippet": call_self.get("code", "")[:500] if isinstance(call_self, dict) else str(call_self)[:500]
                         })
-                        
+
             s_node["actions"] = actions
             skeleton["nodes"].append(s_node)
-            
+
         return skeleton
 
 class MemoryMiner:
@@ -120,7 +123,7 @@ class MemoryMiner:
     Extracts analytics and patterns from sessions.
     """
     @staticmethod
-    def extract_tool_usage(session_data: Dict) -> List[Dict]:
+    def extract_tool_usage(session_data: dict) -> list[dict]:
         """Return list of {tool, success, latency} events"""
         events = []
         # ... logic to mine specific tool successes ...
@@ -163,6 +166,7 @@ class EpisodicMemory:
             if get_episodic_store_provider() == "legacy":
                 path = MEMORY_DIR / f"skeleton_{session_id}.json"
                 path.write_text(json.dumps(skeleton, indent=2))
+                log_step(f"[MEMORY] Saved Episode Skeleton: {path.name} ({len(json.dumps(skeleton))} bytes)", symbol="[MEMORY]")
                 return
 
             searchable_text = _build_searchable_text(skeleton)
@@ -184,6 +188,7 @@ class EpisodicMemory:
                 user_id=user_id,
                 space_id=space_id,
             )
+            log_step(f"[MEMORY] Saved Episode Skeleton to Qdrant: {session_id} ({len(json.dumps(skeleton))} bytes)", symbol="[MEMORY]")
         except Exception as e:
             log_error(f"Failed to save episodic memory: {e}")
 

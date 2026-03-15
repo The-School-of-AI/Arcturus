@@ -1,8 +1,10 @@
 import asyncio
 from typing import Dict, List, Optional
-from core.model_manager import ModelManager
+
 from core.metrics_aggregator import MetricsAggregator
+from core.model_manager import ModelManager
 from core.utils import log_step
+
 
 class QueryOptimizer:
     """
@@ -15,8 +17,8 @@ class QueryOptimizer:
         self.metrics = MetricsAggregator()
         from core.episodic_memory import EpisodicMemory
         self.memory = EpisodicMemory()
-        
-    async def optimize_query(self, query: str) -> Dict[str, str]:
+
+    async def optimize_query(self, query: str) -> dict[str, str]:
         """
         Rewrite query to be more precise, decomposed, and agent-friendly.
         Returns: { "original": ..., "optimized": ..., "reasoning": ... }
@@ -58,11 +60,12 @@ class QueryOptimizer:
             # Naive parsing (ModelManager usually returns raw text)
             # We trust the model to output JSON or we parse it
             import json
+
             from core.json_parser import parse_llm_json
-            
+
             data = parse_llm_json(response)
             if isinstance(data, list): data = data[0]
-            
+
             return {
                 "original": query,
                 "optimized": data.get("optimized_query", query),
@@ -81,12 +84,12 @@ class QueryOptimizer:
         # 1. Get Reliability Matrix
         # In a real system, this would load from disk/DB
         # stats = self.metrics.aggregate_agent_matrix(load_past_sessions())
-        
+
         # Placeholder for now until we connect full session history loading
         rules = []
-        
+
         # Example Logic (Conceptual)
         # if stats['CoderAgent']['error_rate'] > 0.3:
         #     rules.append("CoderAgent: Be extra careful with syntax, verify code before execution.")
-            
+
         return "\n".join(rules)

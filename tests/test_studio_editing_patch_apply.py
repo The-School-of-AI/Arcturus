@@ -6,7 +6,6 @@ import pytest
 
 from core.studio.editing.patch_apply import _parse_path, apply_patch_to_content_tree
 
-
 # === Fixture data ===
 
 def _slides_tree():

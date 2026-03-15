@@ -7,7 +7,7 @@ from remme.utils import get_embedding
 from shared.state import get_remme_store
 
 
-async def read_memories(category: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
+async def read_memories(category: str | None = None, limit: int = 10) -> dict[str, Any]:
     """Read memories using internal-first contract."""
     store = get_remme_store()
     items = store.get_all()
@@ -17,7 +17,7 @@ async def read_memories(category: Optional[str] = None, limit: int = 10) -> Dict
     return {"status": "success", "count": len(items), "memories": items}
 
 
-async def write_memory(text: str, source: str = "api_v1", category: str = "general") -> Dict[str, Any]:
+async def write_memory(text: str, source: str = "api_v1", category: str = "general") -> dict[str, Any]:
     """Write memory using existing Remme behavior."""
     embedding = await asyncio.to_thread(get_embedding, text, "search_document")
     store = get_remme_store()
@@ -25,7 +25,7 @@ async def write_memory(text: str, source: str = "api_v1", category: str = "gener
     return {"status": "success", "memory": memory}
 
 
-async def search_memories(query: str, limit: int = 5) -> Dict[str, Any]:
+async def search_memories(query: str, limit: int = 5) -> dict[str, Any]:
     """Semantic memory search using existing Remme store behavior."""
     query_embedding = await asyncio.to_thread(get_embedding, query, "search_query")
     store = get_remme_store()

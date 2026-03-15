@@ -1,17 +1,22 @@
 """Tests for core/studio/slides/exporter.py — PPTX rendering."""
 
-import pytest
 from pathlib import Path
 
+import pytest
 from pptx import Presentation
 from pptx.util import Inches
 
 from core.schemas.studio_schema import Slide, SlideElement, SlidesContentTree
 from core.studio.slides.exporter import (
-    SLIDE_HEIGHT, SLIDE_WIDTH, _DESIGN_TOKENS, _blend_color, _build_chart_palette,
-    _parse_markdown_runs, export_to_pptx,
+    _DESIGN_TOKENS,
+    SLIDE_HEIGHT,
+    SLIDE_WIDTH,
+    _blend_color,
+    _build_chart_palette,
+    _parse_markdown_runs,
+    export_to_pptx,
 )
-from core.studio.slides.themes import get_theme, generate_theme_variant
+from core.studio.slides.themes import generate_theme_variant, get_theme
 
 
 @pytest.fixture
@@ -1255,15 +1260,15 @@ class TestBackgroundGraphics:
 
 class TestPromptUpdates:
     def test_outline_prompt_includes_agenda_table(self):
-        from core.studio.prompts import get_outline_prompt
         from core.schemas.studio_schema import ArtifactType
+        from core.studio.prompts import get_outline_prompt
         prompt = get_outline_prompt(ArtifactType.slides, "test", {})
         assert "agenda" in prompt
         assert "table" in prompt
 
     def test_draft_prompt_includes_table_data_schema(self):
-        from core.studio.prompts import get_draft_prompt
         from core.schemas.studio_schema import ArtifactType, Outline, OutlineItem
+        from core.studio.prompts import get_draft_prompt
         outline = Outline(artifact_type=ArtifactType.slides, title="Test", items=[
             OutlineItem(id="1", title="Slide 1", description="Test slide"),
         ])

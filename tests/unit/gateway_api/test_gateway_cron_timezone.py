@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import pytest
 
@@ -7,7 +7,7 @@ from core.scheduler import JobDefinition, SchedulerService
 
 class _DummyApsJob:
     def __init__(self):
-        self.next_run_time = datetime.now(timezone.utc)
+        self.next_run_time = datetime.now(UTC)
 
 
 class _DummyScheduler:

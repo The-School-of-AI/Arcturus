@@ -1,5 +1,6 @@
 """PPTX renderer for Forge slides — programmatic shapes, no templates."""
 
+import hashlib
 import io
 import re
 from pathlib import Path
@@ -11,9 +12,7 @@ from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-import hashlib
-
-from core.schemas.studio_schema import SlideTheme, SlidesContentTree
+from core.schemas.studio_schema import SlidesContentTree, SlideTheme
 from core.studio.slides.themes import _blend_color
 
 # 16:9 widescreen dimensions
@@ -1635,7 +1634,7 @@ def _render_timeline(slide, slide_data, theme, **kwargs):
 
 def _render_chart(slide, slide_data, theme, **kwargs):
     """Chart slide: title + native chart or text fallback."""
-    from core.studio.slides.charts import parse_chart_spec, normalize_chart_spec
+    from core.studio.slides.charts import normalize_chart_spec, parse_chart_spec
 
     _render_kicker(slide, slide_data, theme)
 

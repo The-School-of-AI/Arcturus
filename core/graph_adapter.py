@@ -1,5 +1,7 @@
-import networkx as nx
 import json
+
+import networkx as nx
+
 
 def _extract_output(output):
     """
@@ -8,17 +10,17 @@ def _extract_output(output):
     """
     if output is None:
         return ""
-    
+
     if isinstance(output, str):
         return output
-    
+
     if isinstance(output, dict):
         # Convert dict to JSON string for proper parsing on frontend
         return json.dumps(output)
-    
+
     if isinstance(output, (list, tuple)):
         return json.dumps(output)
-    
+
     # Fallback to string representation
     return str(output)
 
@@ -32,18 +34,18 @@ def nx_to_reactflow(graph: nx.DiGraph):
     # Calculate layout: Simple hierarchical (DAG) layout
     # Reset positions
     pos = {}
-    
+
     # Simple Topological-like generation for Y-axis, spread for X-axis
     try:
         # Get generations/layers
         layers = list(nx.topological_generations(graph))
-        
+
         # Calculate X,Y
         # X spacing: 300, Y spacing: 150
         for y_idx, layer in enumerate(layers):
             layer_width = len(layer) * 300
             start_x = -(layer_width / 2)
-            
+
             for x_idx, node_id in enumerate(layer):
                 pos[node_id] = {
                     "x": start_x + (x_idx * 300),
@@ -63,15 +65,15 @@ def nx_to_reactflow(graph: nx.DiGraph):
         agent_type = data.get("agent", data.get("agent_type", "Generic"))
         if node_id == "ROOT" or agent_type == "System":
             agent_type = "PlannerAgent"
-        
+
         # Use calculated pos or default
         p = pos.get(node_id, {"x": 0, "y": 0})
-        
+
         # Build node object
         nodes.append({
             "id": str(node_id),
             "type": "agentNode", # Matches AgentNode.tsx (case sensitive!)
-            "position": p, 
+            "position": p,
             "data": {
                 "label": agent_type or str(node_id),
                 "type": agent_type,

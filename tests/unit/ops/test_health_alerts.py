@@ -1,10 +1,11 @@
 """Unit tests for ops.health.alerts.AlertEvaluator."""
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
+from ops.health.alerts import AlertEvaluator, AlertRule, LogNotifier
 from ops.health.models import HealthResult
-from ops.health.alerts import AlertRule, AlertEvaluator, LogNotifier
 
 
 def _results(**overrides):

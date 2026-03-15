@@ -5,7 +5,6 @@ from typing import Optional
 
 from core.schemas.studio_schema import Slide, SlidesContentTree
 
-
 # Quality thresholds
 _MIN_WORDS = 15
 _MIN_WORDS_TITLE = 8

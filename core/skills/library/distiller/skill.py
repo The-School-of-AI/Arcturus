@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class DistillerSkill(Skill):
     name = "distiller"
     description = "Skill derived from distiller.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# DistillerAgent Prompt

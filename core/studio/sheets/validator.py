@@ -9,15 +9,15 @@ from typing import Any, Dict, List, Optional
 
 def validate_xlsx(
     path: Path,
-    expected_sheet_names: Optional[List[str]] = None,
-    expected_formula_cells: Optional[int] = None,
-) -> Dict[str, Any]:
+    expected_sheet_names: list[str] | None = None,
+    expected_formula_cells: int | None = None,
+) -> dict[str, Any]:
     """Validate an exported XLSX file. Never throws on malformed input.
 
     Returns a structured result with valid, errors, warnings, sheet_count,
     sheet_names, and formula_cell_count.
     """
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "valid": True,
         "format": "xlsx",
         "errors": [],
@@ -137,13 +137,13 @@ def validate_xlsx(
 def validate_csv(
     path: Path,
     min_rows: int = 1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate an exported CSV file. Never throws on malformed input.
 
     Returns a structured result with valid, errors, warnings, row_count,
     and column_count.
     """
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "valid": True,
         "format": "csv",
         "errors": [],
@@ -153,7 +153,7 @@ def validate_csv(
     }
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
     except Exception as e:
@@ -182,15 +182,15 @@ def validate_csv(
 
 def validate_csv_zip(
     path: Path,
-    expected_tab_names: Optional[List[str]] = None,
+    expected_tab_names: list[str] | None = None,
     min_rows: int = 0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate a ZIP archive containing one CSV per tab. Never throws.
 
     Returns a structured result with valid, format, errors, warnings,
     tab_count, csv_filenames, and per_tab validation details.
     """
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "valid": True,
         "format": "csv_zip",
         "errors": [],

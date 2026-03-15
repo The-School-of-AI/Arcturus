@@ -31,6 +31,10 @@ class MultiMCP:
         
         self.server_configs = self._load_config()
         
+        # Background task for lifecycle management (to avoid anyio task mismatch)
+        self._command_queue = asyncio.Queue()
+        self._manager_task = None
+        
         # Disabled tools cache
         self.disabled_tools = set() # { "server:tool" }
         self.disabled_tools_path = self.base_dir.parent / "config" / "disabled_tools.json"
@@ -73,16 +77,22 @@ class MultiMCP:
             self._save_disabled_tools()
 
     async def add_server(self, name: str, config: dict):
-        """Dynamically add a new server"""
+        """Dynamically add a new server via the lifecycle manager"""
         if name in self.sessions:
             raise ValueError(f"Server '{name}' already exists")
         
         self.server_configs[name] = config
         self._save_config()
         
-        # Start immediately
-        await self._start_server(name, config)
-        return True
+        # Send command to background task and wait for result
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        await self._command_queue.put(("ADD_SERVER", (name, config), future))
+        
+        result = await future
+        if isinstance(result, Exception):
+            raise result
+        return result
 
     async def remove_server(self, name: str):
         """Remove a server"""
@@ -215,7 +225,7 @@ class MultiMCP:
                                  args[script_arg_idx] = new_script
                                  print(f"  ✅ Auto-detected entry point: {new_script}")
                              else:
-                                 print(f"  ❌ Could not auto-detect entry point for {name}")
+                                 print(f"  [ERROR] Could not auto-detect entry point for {name}")
 
                      except ValueError:
                          pass
@@ -286,30 +296,77 @@ class MultiMCP:
                     result = await session.list_tools()
                     self.tools[name] = result.tools
                     self._save_to_cache(name, result.tools)
-                    print(f"  ✅ [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
+                    print(f"  [DONE] [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
                 
                 self.sessions[name] = session
 
-        except TimeoutError:
-             print(f"  ⏳ [yellow]{name}[/yellow] timed out during startup.")
+        except asyncio.TimeoutError:
+             print(f"  [TIMEOUT] [yellow]{name}[/yellow] timed out during startup.")
         except Exception as e:
-            print(f"  ❌ [red]{name}[/red] failed to start: {e}")
+            print(f"  [ERROR] [red]{name}[/red] failed to start: {e}")
         except BaseException as e:
-            print(f"  ❌ [red]{name}[/red] CRITICAL FAILURE: {e}")
+            print(f"  [CRITICAL] [red]{name}[/red]: {e}")
 
     async def start(self):
-        """Start all configured servers"""
-        print("[bold green]🚀 Starting MCP Servers...[/bold green]")
-        for name, config in self.server_configs.items():
-            if config.get("enabled", True):
-                await self._start_server(name, config)
-            else:
-                print(f"  ⏭️ [dim]Skipping disabled server: {name}[/dim]")
+        """Start the lifecycle manager task"""
+        if self._manager_task and not self._manager_task.done():
+            return
+            
+        print("[bold green][START] Starting MCP Lifecycle Manager...[/bold green]")
+        self._manager_task = asyncio.create_task(self._lifecycle_manager())
+        # Give it a moment to enter the context
+        await asyncio.sleep(0.1)
+
+    async def _lifecycle_manager(self):
+        """Background task that owns the AsyncExitStack to ensure task consistency"""
+        try:
+            async with self.exit_stack:
+                print("  ⚙️ MCP Manager task entered Stack context.")
+                
+                # Start initial servers
+                for name, config in self.server_configs.items():
+                    if config.get("enabled", True):
+                        await self._start_server(name, config)
+                    else:
+                        print(f"  ⏭️ [dim]Skipping disabled server: {name}[/dim]")
+                
+                # Command loop
+                while True:
+                    cmd, data, future = await self._command_queue.get()
+                    try:
+                        if cmd == "STOP":
+                            print("  🛑 MCP Manager received STOP command.")
+                            if not future.done(): future.set_result(True)
+                            self._command_queue.task_done()
+                            break
+                        elif cmd == "ADD_SERVER":
+                            name, config = data
+                            success = await self._start_server(name, config)
+                            if not future.done(): future.set_result(success)
+                    except Exception as e:
+                        print(f"  ⚠️ Error in MCP Manager loop: {e}")
+                        if not future.done(): future.set_result(e)
+                    finally:
+                        self._command_queue.task_done()
+                        
+        except Exception as e:
+            print(f"  ❌ CRITICAL: MCP Lifecycle Manager failed: {e}")
+        finally:
+            print("  ✅ MCP Manager task exited Stack context.")
 
     async def stop(self):
-        """Stop all servers"""
-        print("[bold yellow]🛑 Stopping MCP Servers...[/bold yellow]")
-        await self.exit_stack.aclose()
+        """Stop the manager task (triggering aclose on all sessions)"""
+        if self._manager_task and not self._manager_task.done():
+            print("[bold yellow]🛑 Stopping MCP Lifecycle Manager...[/bold yellow]")
+            loop = asyncio.get_running_loop()
+            future = loop.create_future()
+            await self._command_queue.put(("STOP", None, future))
+            await future
+            await self._manager_task
+            self._manager_task = None
+        elif self._manager_task is None:
+            # Fallback for manual stop if task never started
+            await self.exit_stack.aclose()
 
     def get_all_tools(self) -> list:
         """Get all tools from all connected servers"""
@@ -392,7 +449,7 @@ class MultiMCP:
                 return False
             await asyncio.sleep(0.5)
             
-        print(f"  ✅ Drained '{name}'")
+        print(f"  [DONE] Drained '{name}'")
         return True
 
     # Helper to route tool call by finding which server has it
@@ -544,7 +601,7 @@ class MultiMCP:
             if name in self.server_pids: del self.server_pids[name]
             return True
         except Exception as e:
-            print(f"  ❌ Failed to kill '{name}': {e}")
+            print(f"  [ERROR] Failed to kill '{name}': {e}")
             return False
 
 

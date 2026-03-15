@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class TestAgentSkill(Skill):
     name = "test_agent"
     description = "Skill derived from test_agent.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """You are an expert Python Test Engineer at Arcturus. Your goal is to generate robust, maintainable, and high-coverage tests for Python code using `pytest`.

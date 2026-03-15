@@ -1,13 +1,14 @@
-import requests
-import time
-import sys
 import json
+import sys
+import time
+
+import requests
 
 BASE_URL = "http://127.0.0.1:8000"
 
 def test_location_query():
     print(f"🚀 Testing API at {BASE_URL}...")
-    
+
     # 1. Start a new run
     query = "where is the user located?"
     print(f"📡 Sending query: '{query}'")
@@ -26,7 +27,7 @@ def test_location_query():
     # 2. Poll for completion
     max_retries = 30
     status = "starting"
-    
+
     print("⏳ Polling for completion...")
     for i in range(max_retries):
         try:
@@ -34,9 +35,9 @@ def test_location_query():
             resp.raise_for_status()
             data = resp.json()
             status = data["status"]
-            
+
             print(f"   [{i}] Status: {status}")
-            
+
             if status == "completed":
                 print("✅ Run Completed!")
                 verify_output(data)
@@ -45,10 +46,10 @@ def test_location_query():
                 print("❌ Run Failed!")
                 print(json.dumps(data, indent=2))
                 return
-                
+
         except Exception as e:
             print(f"   ⚠️ Polling error: {e}")
-            
+
         time.sleep(3)
 
     print("🛑 Timeout waiting for completion.")
@@ -57,7 +58,7 @@ def verify_output(data):
     print("🔍 Verifying Output Graph...")
     graph = data.get("graph", {})
     nodes = graph.get("nodes", [])
-    
+
     found_bangalore = False
     for node in nodes:
         node_data = node.get("data", {})
@@ -68,7 +69,7 @@ def verify_output(data):
                 print(f"✅ SUCCESS: Found location reference in node {node.get('id')}")
                 found_bangalore = True
                 break
-    
+
     if not found_bangalore:
         print("❌ FAILURE: 'Bangalore' not found in any node output.")
         # print(json.dumps(nodes, indent=2))

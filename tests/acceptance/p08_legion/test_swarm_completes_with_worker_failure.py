@@ -10,18 +10,22 @@ Hard conditions (per charter §73-80):
 5. DAG with ≥ 3 worker roles must complete, including retry/reassign when one worker fails.
 """
 
-import pytest
-import ray
 import asyncio
 import uuid
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
+import pytest
+import ray
+
 from agents.protocol import (
-    Task, TaskStatus, TaskPriority,
-    AgentMessage, Artifact,
+    AgentMessage,
+    Artifact,
+    Task,
+    TaskPriority,
+    TaskStatus,
 )
 from agents.swarm_runner import SwarmRunner
 from agents.worker import WorkerAgent
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

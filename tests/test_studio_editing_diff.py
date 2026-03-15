@@ -4,7 +4,6 @@ import copy
 
 from core.studio.editing.diff import compute_revision_diff, summarize_diff_highlights
 
-
 # === Fixture data ===
 
 def _slides_tree():

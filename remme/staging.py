@@ -36,7 +36,7 @@ class StagingStore:
         """Load staging data from disk."""
         if self.path.exists():
             try:
-                return json.loads(self.path.read_text())
+                return json.loads(self.path.read_text(encoding='utf-8'))
             except Exception as e:
                 print(f"⚠️ Failed to load staging store: {e}")
         return {
@@ -47,7 +47,7 @@ class StagingStore:
     def save(self):
         """Save staging data to disk."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(self.data, indent=2, default=str))
+        self.path.write_text(json.dumps(self.data, indent=2, default=str), encoding='utf-8')
     
     def add(self, raw_preferences: Dict, source: str = "unknown"):
         """

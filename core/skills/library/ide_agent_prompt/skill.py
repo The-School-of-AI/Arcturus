@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class IdeAgentPromptSkill(Skill):
     name = "ide_agent_prompt"
     description = "Skill derived from ide_agent_prompt.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """You are an expert software engineer and coding assistant working within the "Arcturus" IDE.

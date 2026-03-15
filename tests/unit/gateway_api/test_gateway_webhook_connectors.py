@@ -106,7 +106,7 @@ def test_dual_mode_gateway_signature_auth_passes(monkeypatch, tmp_path):
     timestamp = str(int(time.time()))
     signature = "sha256=" + hmac.new(
         b"gateway-secret",
-        f"{timestamp}.{body}".encode("utf-8"),
+        f"{timestamp}.{body}".encode(),
         hashlib.sha256,
     ).hexdigest()
 

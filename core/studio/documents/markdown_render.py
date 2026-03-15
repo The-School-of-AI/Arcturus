@@ -7,7 +7,6 @@ import re
 
 import markdown
 
-
 _EXTENSIONS = [
     "fenced_code",
     "tables",

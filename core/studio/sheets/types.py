@@ -8,8 +8,8 @@ from typing import Any, List
 class TabularDataset:
     """Normalized representation of any uploaded file after ingestion."""
 
-    columns: List[str]
-    rows: List[List[Any]]
+    columns: list[str]
+    rows: list[list[Any]]
     source_format: str  # "csv", "xlsx", "json"
     source_name: str  # original filename
 

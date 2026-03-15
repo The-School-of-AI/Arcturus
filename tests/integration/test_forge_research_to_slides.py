@@ -25,7 +25,6 @@ from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
 from core.studio.orchestrator import ForgeOrchestrator
 from core.studio.storage import StudioStorage
 
-
 # Canned LLM responses (duplicated from test_studio_orchestrator to avoid cross-test import)
 OUTLINE_RESPONSE = json.dumps({
     "title": "AI Startup Pitch Deck",
@@ -107,7 +106,7 @@ def _run(coro):
 # === Contract-level scaffold tests ===
 
 def test_01_integration_file_is_declared_in_charter() -> None:
-    assert f"Integration: " in _read(CHARTER)
+    assert "Integration: " in _read(CHARTER)
 
 
 def test_02_acceptance_and_integration_files_exist() -> None:

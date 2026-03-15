@@ -3,9 +3,11 @@
 Replace these contract tests with feature-level assertions as implementation matures.
 """
 
+from datetime import UTC
 from pathlib import Path
 
 import pytest
+
 
 def _xhtml2pdf_available():
     try:
@@ -80,7 +82,7 @@ def test_02_expanded_gate_contract_present() -> None:
 
 
 def test_03_acceptance_path_declared_in_charter() -> None:
-    assert f"Acceptance: " in _charter_text()
+    assert "Acceptance: " in _charter_text()
 
 
 def test_04_demo_script_exists() -> None:
@@ -111,7 +113,7 @@ def test_07_delivery_readme_has_required_sections() -> None:
 
 
 def test_08_ci_check_declared_in_charter() -> None:
-    assert f"CI required check: " in _charter_text()
+    assert "CI required check: " in _charter_text()
 
 
 # === Phase 2: Export + Render Functional Tests ===
@@ -185,7 +187,7 @@ def test_11_pptx_open_validation_passes(tmp_path) -> None:
 
 def test_12_slide_count_in_range() -> None:
     """clamp_slide_count enforces [MIN_SLIDES, MAX_SLIDES] range."""
-    from core.studio.slides.generator import clamp_slide_count, MIN_SLIDES, MAX_SLIDES
+    from core.studio.slides.generator import MAX_SLIDES, MIN_SLIDES, clamp_slide_count
 
     assert clamp_slide_count(1) == MIN_SLIDES
     assert clamp_slide_count(50) == MAX_SLIDES
@@ -195,6 +197,7 @@ def test_12_slide_count_in_range() -> None:
 def test_13_speaker_notes_present_in_export(tmp_path) -> None:
     """At least one slide has speaker notes in the PPTX."""
     from pptx import Presentation as PptxPresentation
+
     from core.schemas.studio_schema import Slide, SlideElement, SlidesContentTree
     from core.studio.slides.exporter import export_to_pptx
     from core.studio.slides.themes import get_theme
@@ -223,6 +226,7 @@ def test_13_speaker_notes_present_in_export(tmp_path) -> None:
 def test_14_export_job_status_completed(tmp_path) -> None:
     """Export job ends with status=completed for valid input."""
     import asyncio
+
     from core.schemas.studio_schema import ExportFormat
     from core.studio.orchestrator import ForgeOrchestrator
     from core.studio.storage import StudioStorage
@@ -232,6 +236,7 @@ def test_14_export_job_status_completed(tmp_path) -> None:
     import json
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType
 
     art_id = str(uuid4())
@@ -240,8 +245,8 @@ def test_14_export_job_status_completed(tmp_path) -> None:
         id=art_id,
         type=ArtifactType.slides,
         title="Test",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
         content_tree=ct,
     )
     storage.save_artifact(artifact)
@@ -270,6 +275,7 @@ def test_16_export_job_has_validator_results(tmp_path) -> None:
     import json
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
     from core.studio.orchestrator import ForgeOrchestrator
     from core.studio.storage import StudioStorage
@@ -282,8 +288,8 @@ def test_16_export_job_has_validator_results(tmp_path) -> None:
         id=art_id,
         type=ArtifactType.slides,
         title="Test",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
         content_tree=ct,
     )
     storage.save_artifact(artifact)
@@ -341,6 +347,7 @@ def test_18_theme_catalog_reaches_100_plus() -> None:
 def test_19_chart_slide_renders_native_chart(tmp_path) -> None:
     """Export a deck with bar chart spec produces PPTX with chart shape."""
     from pptx import Presentation as PptxPresentation
+
     from core.schemas.studio_schema import Slide, SlideElement, SlidesContentTree
     from core.studio.slides.exporter import export_to_pptx
     from core.studio.slides.themes import get_theme
@@ -387,6 +394,7 @@ def test_21_layout_quality_repaired_on_strict_export(tmp_path) -> None:
     import asyncio
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
     from core.studio.orchestrator import ForgeOrchestrator
     from core.studio.storage import StudioStorage
@@ -400,7 +408,7 @@ def test_21_layout_quality_repaired_on_strict_export(tmp_path) -> None:
     ct["slides"][1]["elements"][0]["content"] = "X" * 2500
     artifact = Artifact(
         id=art_id, type=ArtifactType.slides, title="Overflow",
-        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
         content_tree=ct,
     )
     storage.save_artifact(artifact)
@@ -506,6 +514,7 @@ def test_24_document_export_job_lifecycle(tmp_path):
     import asyncio
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
     from core.studio.orchestrator import ForgeOrchestrator
     from core.studio.storage import StudioStorage
@@ -517,7 +526,7 @@ def test_24_document_export_job_lifecycle(tmp_path):
     ct_dict = _sample_document_content_tree_dict()
     artifact = Artifact(
         id=art_id, type=ArtifactType.document, title="Tech Spec",
-        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
         content_tree=ct_dict,
     )
     storage.save_artifact(artifact)
@@ -545,6 +554,7 @@ def test_25_document_pdf_export_job_lifecycle(tmp_path):
     import asyncio
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
     from core.studio.orchestrator import ForgeOrchestrator
     from core.studio.storage import StudioStorage
@@ -556,7 +566,7 @@ def test_25_document_pdf_export_job_lifecycle(tmp_path):
     ct_dict = _sample_document_content_tree_dict()
     artifact = Artifact(
         id=art_id, type=ArtifactType.document, title="Tech Spec",
-        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
         content_tree=ct_dict,
     )
     storage.save_artifact(artifact)
@@ -646,8 +656,9 @@ def test_27_csv_export_creates_valid_file(tmp_path) -> None:
 def test_28_upload_analysis_generates_summary_tabs(tmp_path) -> None:
     """Phase 5: CSV upload analysis generates analysis tabs and report."""
     import csv
-    from core.studio.sheets.ingest import ingest_upload
+
     from core.studio.sheets.analysis import analyze_dataset, build_analysis_tabs
+    from core.studio.sheets.ingest import ingest_upload
 
     csv_path = tmp_path / "data.csv"
     with open(csv_path, "w", newline="") as f:
@@ -687,6 +698,7 @@ def test_30_sheet_export_job_lifecycle_completed(tmp_path) -> None:
     import asyncio
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType, ExportFormat
     from core.studio.orchestrator import ForgeOrchestrator
     from core.studio.storage import StudioStorage
@@ -698,7 +710,7 @@ def test_30_sheet_export_job_lifecycle_completed(tmp_path) -> None:
     ct_dict = _sample_sheet_content_tree_dict()
     artifact = Artifact(
         id=art_id, type=ArtifactType.sheet, title="Sales Report",
-        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
         content_tree=ct_dict,
     )
     storage.save_artifact(artifact)
@@ -726,10 +738,11 @@ def _make_slides_artifact(tmp_path):
     import asyncio
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType
     from core.studio.orchestrator import ForgeOrchestrator
-    from core.studio.storage import StudioStorage
     from core.studio.revision import RevisionManager
+    from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
     orch = ForgeOrchestrator(storage)
@@ -741,8 +754,8 @@ def _make_slides_artifact(tmp_path):
         id=art_id,
         type=ArtifactType.slides,
         title="Edit Test",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
         content_tree=ct,
     )
     rev = rm.create_revision(art_id, ct, "Initial draft")
@@ -755,10 +768,11 @@ def _make_doc_artifact(tmp_path):
     """Create a document artifact with content tree for edit testing."""
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType
     from core.studio.orchestrator import ForgeOrchestrator
-    from core.studio.storage import StudioStorage
     from core.studio.revision import RevisionManager
+    from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
     orch = ForgeOrchestrator(storage)
@@ -777,7 +791,7 @@ def _make_doc_artifact(tmp_path):
     }
     artifact = Artifact(
         id=art_id, type=ArtifactType.document, title="Edit Doc Test",
-        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
         content_tree=ct,
     )
     rev = rm.create_revision(art_id, ct, "Initial draft")
@@ -790,10 +804,11 @@ def _make_sheet_artifact(tmp_path):
     """Create a sheet artifact with content tree for edit testing."""
     from datetime import datetime, timezone
     from uuid import uuid4
+
     from core.schemas.studio_schema import Artifact, ArtifactType
     from core.studio.orchestrator import ForgeOrchestrator
-    from core.studio.storage import StudioStorage
     from core.studio.revision import RevisionManager
+    from core.studio.storage import StudioStorage
 
     storage = StudioStorage(base_dir=tmp_path / "studio")
     orch = ForgeOrchestrator(storage)
@@ -809,7 +824,7 @@ def _make_sheet_artifact(tmp_path):
     }
     artifact = Artifact(
         id=art_id, type=ArtifactType.sheet, title="Edit Sheet Test",
-        created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
         content_tree=ct,
     )
     rev = rm.create_revision(art_id, ct, "Initial draft")
@@ -845,6 +860,7 @@ def test_31_slides_edit_creates_valid_revision(tmp_path) -> None:
 def test_32_slides_edit_then_export_valid_pptx(tmp_path) -> None:
     """Edit then export produces a valid PPTX."""
     import asyncio
+
     from core.schemas.studio_schema import ExportFormat
     orch, storage, art_id = _make_slides_artifact(tmp_path)
 
@@ -911,6 +927,7 @@ def test_34_sheet_edit_creates_valid_revision(tmp_path) -> None:
 def test_35_edit_then_export_all_types(tmp_path) -> None:
     """Edit + export works for slides, documents, and sheets."""
     import asyncio
+
     from core.schemas.studio_schema import ExportFormat
 
     # Slides

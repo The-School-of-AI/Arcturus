@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import SandboxFrame from './SandboxFrame';
 import { getWidget } from './WidgetRegistry';
+import { useAppStore } from '@/store';
+import { cn } from '@/lib/utils';
 
 interface CanvasHostProps {
     surfaceId: string;
@@ -21,32 +23,74 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         reconnectInterval: 3000,
     });
 
+    // PERSISTENCE: Stop clearing local storage on mount. 
+    // This allows the whiteboard to keep its local state during internal sidebar navigation
+    // while the sync from server handles eventual consistency.
+    /*
+    useEffect(() => {
+        console.log('[Canvas] Cleaning up stale storage for surface:', surfaceId);
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('excalidraw') || key.includes('arcturus')) {
+                localStorage.removeItem(key);
+            }
+        });
+        sessionStorage.clear();
+    }, [surfaceId]);
+    */
+
     // Handle incoming messages
     useEffect(() => {
         if (lastJsonMessage) {
             const msg = lastJsonMessage as any;
-            console.log('[Canvas] Received:', msg);
+            console.log('[Canvas] Received message:', msg.type, msg.surfaceId);
 
-            switch (msg.type) {
-                case 'updateComponents':
-                    setComponents(msg.components);
-                    setIsSandbox(false); // Switch to widget mode if components are sent
-                    break;
-                case 'updateDataModel':
-                    setDataModel((prev: any) => ({ ...prev, ...msg.data }));
-                    break;
-                case 'createSurface':
-                    // Initialization if needed
-                    break;
-                case 'evalJS':
-                    // If we are in sandbox mode, we'd forward this. 
-                    // For widget mode, we might handle it differently.
-                    break;
-                default:
-                    console.warn('Unknown message type:', msg.type);
-            }
+            (async () => {
+                switch (msg.type) {
+                    case 'updateComponents':
+                        console.log('[Canvas] Components update count:', msg.components?.length);
+                        setComponents(msg.components);
+                        setIsSandbox(false);
+                        break;
+                    case 'updateDataModel':
+                        setDataModel((prev: any) => ({ ...prev, ...msg.data }));
+                        break;
+                    case 'captureSnapshot':
+                        await handleCaptureSnapshot();
+                        break;
+                }
+            })();
         }
     }, [lastJsonMessage]);
+
+    const handleCaptureSnapshot = async () => {
+        try {
+            const { toPng } = await import('html-to-image');
+            const node = document.getElementById(`canvas-surface-${surfaceId}`);
+            if (node) {
+                const dataUrl = await toPng(node, {
+                    backgroundColor: '#111827',
+                    style: { transform: 'scale(1)' } // Ensure no scaling distortion
+                });
+                sendJsonMessage({
+                    type: 'snapshotResult',
+                    surfaceId,
+                    snapshot: dataUrl
+                });
+            }
+        } catch (error) {
+            console.error('[Canvas] Snapshot failed:', error);
+        }
+    };
+
+    // Listen for manual save triggers to capture image snapshots
+    useEffect(() => {
+        const handleTrigger = async (e: any) => {
+            console.log('[Canvas] Snapshot trigger received');
+            await handleCaptureSnapshot();
+        };
+        window.addEventListener('arcturus:capture-snapshot', handleTrigger);
+        return () => window.removeEventListener('arcturus:capture-snapshot', handleTrigger);
+    }, [handleCaptureSnapshot]);
 
     const handleUserEvent = useCallback((componentId: string, eventType: string, data: any = {}) => {
         sendJsonMessage({
@@ -58,8 +102,20 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         });
     }, [surfaceId, sendJsonMessage]);
 
+    const handleLocalComponentUpdate = useCallback((componentId: string, updates: Partial<any>) => {
+        setComponents(prev => prev.map(c =>
+            c.id === componentId
+                ? { ...c, props: { ...c.props, ...updates } }
+                : c
+        ));
+    }, []);
+
+    const selectCanvasWidget = useAppStore((state: any) => state.selectCanvasWidget);
+    const selectedCanvasWidgetId = useAppStore((state: any) => state.selectedCanvasWidgetId);
+
     const renderComponent = (comp: any) => {
         const Widget = getWidget(comp.component);
+        const isSelected = selectedCanvasWidgetId === comp.id;
 
         // Resolve props if they reference the data model (e.g., "$ref:path.to.data")
         const resolvedProps = { ...comp.props };
@@ -72,26 +128,59 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         });
 
         return (
-            <Widget
+            <div
                 key={comp.id}
-                {...resolvedProps}
-                onClick={() => handleUserEvent(comp.id, 'click')}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    selectCanvasWidget(comp.id);
+                }}
+                className={cn(
+                    "relative rounded-xl transition-all duration-300",
+                    isSelected ? "ring-2 ring-primary ring-offset-4 ring-offset-gray-900 bg-primary/5" : "hover:bg-white/5"
+                )}
             >
-                {comp.children?.map((childId: string) => {
-                    const child = components.find(c => c.id === childId);
-                    return child ? renderComponent(child) : null;
-                })}
-            </Widget>
+                <Widget
+                    {...resolvedProps}
+                    onClick={() => handleUserEvent(comp.id, 'click')}
+                    onCodeChange={(code: string) => {
+                        handleLocalComponentUpdate(comp.id, { code });
+                        handleUserEvent(comp.id, 'change', { code });
+                    }}
+                    onDrawingChange={(elements: any, appState: any) => {
+                        // Update locally immediately to prevent "revert" during re-render
+                        handleLocalComponentUpdate(comp.id, { elements, appState });
+                        handleUserEvent(comp.id, 'drawing_change', { elements, appState });
+                    }}
+                    onTaskUpdate={(tasks: any[]) => {
+                        handleLocalComponentUpdate(comp.id, { initialTasks: tasks });
+                        handleUserEvent(comp.id, 'kanban_update', { initialTasks: tasks });
+                    }}
+                >
+                    {comp.children?.map((childId: string) => {
+                        const child = components.find(c => c.id === childId);
+                        return child ? renderComponent(child) : null;
+                    })}
+                </Widget>
+            </div>
         );
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-2xl border border-gray-700">
+        <div
+            className="flex flex-col h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-2xl border border-gray-700"
+            onClick={(e) => {
+                // Only clear if we click the actual container, not a child widget (which should have stopPropagation)
+                if (e.target === e.currentTarget) {
+                    console.log('[Canvas] Clearing selection via background click');
+                    selectCanvasWidget(null);
+                }
+            }}
+        >
             <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
                 <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-xs font-mono uppercase tracking-wider text-gray-400">
-                        Surface: {surfaceId}
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        Live Surface: {surfaceId === 'ops-command-v1' ? 'Operations Command' : surfaceId}
                     </span>
                 </div>
                 <div className="flex space-x-1">
@@ -101,7 +190,10 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                 </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-auto">
+            <div
+                id={`canvas-surface-${surfaceId}`}
+                className="flex-1 p-4 overflow-auto bg-gray-900"
+            >
                 {isSandbox ? (
                     <SandboxFrame
                         html={htmlContent}

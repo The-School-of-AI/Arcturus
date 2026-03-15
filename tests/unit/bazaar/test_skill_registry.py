@@ -1,9 +1,10 @@
 """Tests for SkillRegistry — discovery, lookup, search, and dependency management."""
-import pytest
 from pathlib import Path
+
+import pytest
+
 from marketplace.registry import SkillRegistry
 from marketplace.skill_base import SkillManifest
-
 
 # --- Fixtures ---
 
@@ -39,7 +40,7 @@ tools:
     module: tools.gmail_reader
     function: read_inbox
 """)
-    
+
     # Create code_review skill (depends on nothing)
     code_dir = tmp_path / "code_review"
     code_dir.mkdir()
@@ -58,7 +59,7 @@ tools:
     module: tools.reviewer
     function: review_pr
 """)
-    
+
     registry = SkillRegistry(skills_dir=tmp_path)
     registry.discover_skills()
     return registry
@@ -81,7 +82,7 @@ def test_discover_skills_skips_dirs_without_manifest(tmp_path):
     """Directories without manifest.yaml should be silently skipped."""
     (tmp_path / "not_a_skill").mkdir()
     (tmp_path / "random_file.txt").write_text("hello")
-    
+
     registry = SkillRegistry(skills_dir=tmp_path)
     count = registry.discover_skills()
     assert count == 0
@@ -93,12 +94,12 @@ def test_discover_skills_continues_on_invalid_manifest(tmp_path):
     valid_dir = tmp_path / "valid_skill"
     valid_dir.mkdir()
     (valid_dir / "manifest.yaml").write_text("name: valid_skill")
-    
+
     # Broken skill (empty manifest)
     broken_dir = tmp_path / "broken_skill"
     broken_dir.mkdir()
     (broken_dir / "manifest.yaml").write_text("")
-    
+
     registry = SkillRegistry(skills_dir=tmp_path)
     count = registry.discover_skills()
     assert count == 1  # only the valid one
@@ -191,7 +192,7 @@ def test_get_dependents_finds_reverse_dependencies(tmp_path):
     base_dir = tmp_path / "gmail_reader"
     base_dir.mkdir()
     (base_dir / "manifest.yaml").write_text("name: gmail_reader")
-    
+
     # Create skill that depends on gmail_reader
     smart_dir = tmp_path / "smart_email"
     smart_dir.mkdir()
@@ -200,10 +201,10 @@ name: smart_email
 skill_dependencies:
   - gmail_reader
 """)
-    
+
     registry = SkillRegistry(skills_dir=tmp_path)
     registry.discover_skills()
-    
+
     dependents = registry.get_dependents("gmail_reader")
     assert "smart_email" in dependents
 

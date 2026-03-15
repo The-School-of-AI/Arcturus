@@ -1,9 +1,12 @@
 import asyncio
 import re
-from typing import Callable, Any, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any, Dict, List, Optional
+
 from core.model_manager import ModelManager
-from core.utils import log_step, log_error
+from core.utils import log_error, log_step
 from ops.tracing import set_span_context
+
 
 class Verifier:
     """
@@ -22,7 +25,7 @@ class Verifier:
             except Exception as e2:
                  log_error(f"⚠️ Fallback Verifier failed: {e2}. Verification will be skipped.")
                  self.model_manager = None
-        
+
     async def verify(self, query: str, draft: str, context: str = "") -> tuple[int, str]:
         """
         Analyze a draft response and return a score (0-100) and critique.
@@ -49,7 +52,7 @@ class Verifier:
         2. Provide specific, constructive critique on what is wrong or missing.
         3. Output strict format: "SCORE: <number>\nCRITIQUE: <text>"
         """
-        
+
         try:
             with set_span_context({"agent": "Verifier", "node_id": "verification"}):
                 response = await self.model_manager.generate_text(prompt)
@@ -57,12 +60,12 @@ class Verifier:
             # Parse output
             score_match = re.search(r"SCORE:\s*(\d+)", response, re.IGNORECASE)
             critique_match = re.search(r"CRITIQUE:\s*(.*)", response, re.IGNORECASE | re.DOTALL)
-            
+
             score = int(score_match.group(1)) if score_match else 0
             critique = critique_match.group(1).strip() if critique_match else response
-            
+
             return score, critique
-            
+
         except Exception as e:
             log_error(f"Verification failed: {e}")
             return 50, f"Verification failed: {e}"
@@ -74,14 +77,14 @@ class ReasoningEngine:
     def __init__(self, model_manager: ModelManager):
         self.verifier = Verifier()
         self.generator_mm = model_manager # The main agent's model manager
-        
+
     async def run_loop(
-        self, 
-        query: str, 
-        generate_func: Callable[..., Any], 
+        self,
+        query: str,
+        generate_func: Callable[..., Any],
         context: str = "",
         max_refinements: int = 2
-    ) -> tuple[str, List[Dict]]:
+    ) -> tuple[str, list[dict]]:
         """
         Execute the reasoning loop.
         
@@ -91,37 +94,37 @@ class ReasoningEngine:
             context: Additional context for verification.
             max_refinements: Max attempts to improve.
         """
-        
+
         # 1. GENERATE DRAFT
-        log_step("🤔 System 2: Generating Initial Draft...", symbol="💭")
+        log_step("[REASONING] System 2: Generating Initial Draft...", symbol="[THINK]")
         current_draft = await generate_func()
-        
-        # Fast Path Check? (Optional, maybe for simple queries we skip reasoning entirely, 
+
+        # Fast Path Check? (Optional, maybe for simple queries we skip reasoning entirely,
         # but here we assume we are already in 'Reasoning Mode')
-        
+
         history = []
-        
+
         for i in range(max_refinements + 1):
             # 2. VERIFY
             score, critique = await self.verifier.verify(query, current_draft, context)
             history.append({"draft": current_draft, "score": score, "critique": critique})
-            
-            log_step(f"🧐 Verification Round {i+1}: Score {score}/100", symbol="🛡️")
-            
+
+            log_step(f"[VERIFY] Verification Round {i+1}: Score {score}/100", symbol="[VERIFY]")
+
             # 3. DECIDE
             if score >= 85:
-                log_step("✅ Draft Accepted via Fast Path", symbol="🚀")
+                log_step("[SUCCESS] Draft Accepted via Fast Path", symbol="[RUN]")
                 return current_draft, history
-            
+
             if i == max_refinements:
-                log_step("⚠️ Max refinements reached. Returning best available draft.", symbol="🛑")
+                log_step("[WARN] Max refinements reached. Returning best available draft.", symbol="[STOP]")
                 # Return best draft seen so far
                 best_attempt = max(history, key=lambda x: x['score'])
                 return best_attempt['draft'], history
-            
+
             # 4. REFINE
             log_step(f"🔧 Refining Draft (Critique: {critique[:50]}...)", symbol="🔧")
-            
+
             refinement_prompt = f"""
             [ORIGINAL QUERY]
             {query}
@@ -136,7 +139,7 @@ class ReasoningEngine:
             Rewrite the draft to address the critique and improve quality.
             Return ONLY the improved draft.
             """
-            
+
             # We use the generator model (Main Agent) to refine its own work
             current_draft = await self.generator_mm.generate_text(refinement_prompt)
 

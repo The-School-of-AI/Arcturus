@@ -130,8 +130,8 @@ def _normalize_section_raw(section: dict) -> dict:
 
 def normalize_document_outline(
     outline: Any,
-    parameters: Optional[Dict[str, Any]] = None,
-    user_prompt: Optional[str] = None,
+    parameters: dict[str, Any] | None = None,
+    user_prompt: str | None = None,
 ) -> Any:
     """Normalize a document outline after LLM generation.
 
@@ -180,8 +180,8 @@ def normalize_document_outline(
 
 def normalize_document_content_tree(
     content_tree: DocumentContentTree,
-    outline: Optional[Any] = None,
-    artifact_id: Optional[str] = None,
+    outline: Any | None = None,
+    artifact_id: str | None = None,
 ) -> DocumentContentTree:
     """Normalize a document content tree after LLM generation.
 
@@ -227,7 +227,7 @@ def normalize_document_content_tree(
     return content_tree
 
 
-def _find_first_content(sections: List[DocumentSection]) -> Optional[str]:
+def _find_first_content(sections: list[DocumentSection]) -> str | None:
     """Find the first non-empty content in a section tree."""
     for section in sections:
         if section.content and section.content.strip():
@@ -240,7 +240,7 @@ def _find_first_content(sections: List[DocumentSection]) -> Optional[str]:
 
 
 def _normalize_sections(
-    sections: List[DocumentSection],
+    sections: list[DocumentSection],
     prefix: str,
     level: int,
     depth: int,
@@ -262,7 +262,7 @@ def _normalize_sections(
             )
 
 
-def _strip_placeholders(sections: List[DocumentSection]) -> None:
+def _strip_placeholders(sections: list[DocumentSection]) -> None:
     """Remove placeholder text patterns from section content."""
     for section in sections:
         if section.content:

@@ -110,7 +110,9 @@ HOWTOGETSLACKBOT.md
 P01-Delivery-Status.md
 
 # Project 13: Orbit - Local State & Private Drafts
-Canvas_Pic_Current.json
+storage/canvas/*_Current.json
+storage/canvas/*_Current.png
+storage/canvas_backup/
 memory/remme_staging.json
 memory/episodes/
 

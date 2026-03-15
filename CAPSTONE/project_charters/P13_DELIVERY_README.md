@@ -19,8 +19,8 @@
   - `GET /api/nexus/mobile/messages/{session_id}`: Allows mobile app to poll for agent replies.
 
 ## 4. Mandatory Test Gate Definition
-- Acceptance file: [test_mobile_sync_and_action.py](file:///d:/A1_School_ai_25/001_My_proj_AI/Arcturus/tests/acceptance/p13_orbit/test_mobile_sync_and_action.py)
-- Integration file: [test_orbit_with_nexus_echo_mnemo.py](file:///d:/A1_School_ai_25/001_My_proj_AI/Arcturus/tests/integration/test_orbit_with_nexus_echo_mnemo.py)
+- Acceptance file: [test_mobile_sync_and_action.py](file:///tests/acceptance/p13_orbit/test_mobile_sync_and_action.py)
+- Integration file: [test_orbit_with_nexus_echo_mnemo.py](file:///tests/integration/test_orbit_with_nexus_echo_mnemo.py)
 - CI check: `p13-orbit-mobile`
 
 ## 5. Test Evidence
@@ -51,7 +51,7 @@
 - Revert changes to `gateway/`, `routers/nexus.py`, and `shared/state.py`.
 
 ## 10. Demo Steps
-- Script: [p13_orbit.sh](file:///d:/A1_School_ai_25/001_My_proj_AI/Arcturus/scripts/demos/p13_orbit.sh)
+- Script: [p13_orbit.sh](file:///scripts/demos/p13_orbit.sh)
 - 1. Run the demo script to simulate a mobile node registration.
 - 2. Verify inbound message routing through the Nexus bus.
 - 3. Verify polling returns the synchronized agent response.

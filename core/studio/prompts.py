@@ -4,7 +4,7 @@ from typing import Any, Dict
 from core.schemas.studio_schema import ArtifactType, Outline
 
 
-def get_outline_prompt(artifact_type: ArtifactType, user_prompt: str, parameters: Dict[str, Any]) -> str:
+def get_outline_prompt(artifact_type: ArtifactType, user_prompt: str, parameters: dict[str, Any]) -> str:
     """Build a system prompt requesting structured outline JSON from the LLM."""
 
     type_guidance = _get_type_specific_outline_guidance(artifact_type)
@@ -337,7 +337,7 @@ def get_draft_prompt_with_sequence(
     return base_prompt
 
 
-def get_sheet_visual_repair_prompt(outline: Outline, content_tree: Dict[str, Any]) -> str:
+def get_sheet_visual_repair_prompt(outline: Outline, content_tree: dict[str, Any]) -> str:
     """Build a focused prompt to enrich ONLY sheet visual metadata."""
     outline_json = json.dumps(outline.model_dump(mode="json"), indent=2)
     content_json = json.dumps(content_tree, indent=2)

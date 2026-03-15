@@ -1,13 +1,15 @@
 """Tests for episodic memory retrieval. Phase B: Uses Qdrant backend."""
 
-import unittest
+import json
+import os
 import sys
+import unittest
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, ".")
 
-from memory.episodic import search_episodes, get_recent_episodes
-
+from memory.episodic import MEMORY_DIR, search_episodes, get_recent_episodes
 
 class TestEpisodicRetrieval(unittest.TestCase):
     def test_search_episodes_mock(self):

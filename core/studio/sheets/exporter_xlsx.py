@@ -74,7 +74,7 @@ class SheetPalette:
     header_contrast: str  # "light-on-dark" or "dark-on-light"
 
 
-_PALETTES: List[SheetPalette] = [
+_PALETTES: list[SheetPalette] = [
     SheetPalette(
         id="slate-executive",
         name="Slate Executive",
@@ -137,7 +137,7 @@ def _is_numeric(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
-def _normalize_visual_profile(metadata: Optional[Dict[str, Any]]) -> str:
+def _normalize_visual_profile(metadata: dict[str, Any] | None) -> str:
     if not isinstance(metadata, dict):
         return "balanced"
     profile = metadata.get("visual_profile")
@@ -160,7 +160,7 @@ def _select_palette(content_tree: SheetContentTree) -> SheetPalette:
     return _PALETTES[idx]
 
 
-def _header_index(tab: SheetTab, header_name: str) -> Optional[int]:
+def _header_index(tab: SheetTab, header_name: str) -> int | None:
     needle = header_name.strip().lower()
     for i, header in enumerate(tab.headers):
         if header.strip().lower() == needle:
@@ -168,16 +168,16 @@ def _header_index(tab: SheetTab, header_name: str) -> Optional[int]:
     return None
 
 
-def _numeric_columns(tab: SheetTab) -> List[int]:
-    cols: List[int] = []
+def _numeric_columns(tab: SheetTab) -> list[int]:
+    cols: list[int] = []
     for col_idx in range(len(tab.headers)):
         if any(col_idx < len(row) and _is_numeric(row[col_idx]) for row in tab.rows):
             cols.append(col_idx)
     return cols
 
 
-def _categorical_columns(tab: SheetTab) -> List[int]:
-    cols: List[int] = []
+def _categorical_columns(tab: SheetTab) -> list[int]:
+    cols: list[int] = []
     for col_idx in range(len(tab.headers)):
         values = [row[col_idx] for row in tab.rows if col_idx < len(row)]
         string_values = [v for v in values if isinstance(v, str) and v.strip()]
@@ -186,7 +186,7 @@ def _categorical_columns(tab: SheetTab) -> List[int]:
     return cols
 
 
-def _looks_temporal(values: List[Any], header: str) -> bool:
+def _looks_temporal(values: list[Any], header: str) -> bool:
     h = header.strip().lower()
     if "date" in h or "month" in h or "year" in h or "week" in h or "quarter" in h:
         return True
@@ -204,7 +204,7 @@ def _preferred_tab_score(name: str) -> int:
     return score
 
 
-def _infer_number_format(header: str, values: List[Any]) -> Optional[str]:
+def _infer_number_format(header: str, values: list[Any]) -> str | None:
     numeric_vals = [v for v in values if _is_numeric(v)]
     if not numeric_vals:
         return None
@@ -325,8 +325,8 @@ def _apply_conditional_formatting(ws: Worksheet, tab: SheetTab, palette: SheetPa
     )
 
 
-def _numeric_column_metrics(tab: SheetTab) -> List[Dict[str, Any]]:
-    metrics: List[Dict[str, Any]] = []
+def _numeric_column_metrics(tab: SheetTab) -> list[dict[str, Any]]:
+    metrics: list[dict[str, Any]] = []
     for col_idx, header in enumerate(tab.headers):
         values = [
             float(row[col_idx])
@@ -345,7 +345,7 @@ def _numeric_column_metrics(tab: SheetTab) -> List[Dict[str, Any]]:
     return metrics
 
 
-def _add_kpi_tiles(ws: Worksheet, tab: SheetTab, palette: SheetPalette, report: Optional[SheetAnalysisReport]) -> None:
+def _add_kpi_tiles(ws: Worksheet, tab: SheetTab, palette: SheetPalette, report: SheetAnalysisReport | None) -> None:
     from openpyxl.styles import Alignment, Font, PatternFill
 
     if not tab.headers:
@@ -402,12 +402,12 @@ def _add_kpi_tiles(ws: Worksheet, tab: SheetTab, palette: SheetPalette, report: 
         cell.font = Font(color=palette.text, bold=True, size=9)
 
 
-def _chart_spec_from_plan(tab: SheetTab, entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _chart_spec_from_plan(tab: SheetTab, entry: dict[str, Any]) -> dict[str, Any] | None:
     chart_type = str(entry.get("chart_type", "")).strip().lower()
     if chart_type not in {"bar", "line", "pie", "scatter"}:
         return None
 
-    spec: Dict[str, Any] = {
+    spec: dict[str, Any] = {
         "chart_type": chart_type,
         "title": entry.get("title") or f"{tab.name} Chart",
     }
@@ -426,7 +426,7 @@ def _chart_spec_from_plan(tab: SheetTab, entry: Dict[str, Any]) -> Optional[Dict
         return spec
 
     category_idx = _header_index(tab, str(entry.get("category_column", "")))
-    value_cols: List[int] = []
+    value_cols: list[int] = []
     raw_value_cols = entry.get("value_columns")
     if isinstance(raw_value_cols, list):
         for value_col in raw_value_cols:
@@ -448,7 +448,7 @@ def _chart_spec_from_plan(tab: SheetTab, entry: Dict[str, Any]) -> Optional[Dict
     return spec
 
 
-def _infer_chart_spec(tab: SheetTab) -> Optional[Dict[str, Any]]:
+def _infer_chart_spec(tab: SheetTab) -> dict[str, Any] | None:
     if len(tab.rows) < 2 or not tab.headers:
         return None
 
@@ -490,7 +490,7 @@ def _infer_chart_spec(tab: SheetTab) -> Optional[Dict[str, Any]]:
     }
 
 
-def _add_chart(ws: Worksheet, tab: SheetTab, spec: Dict[str, Any], anchor: str) -> bool:
+def _add_chart(ws: Worksheet, tab: SheetTab, spec: dict[str, Any], anchor: str) -> bool:
     from openpyxl.chart import BarChart, LineChart, PieChart, Reference, ScatterChart, Series
 
     if len(tab.rows) < 2:
@@ -544,13 +544,13 @@ def _add_chart(ws: Worksheet, tab: SheetTab, spec: Dict[str, Any], anchor: str) 
     return True
 
 
-def _collect_plan_entries(content_tree: SheetContentTree) -> List[Dict[str, Any]]:
+def _collect_plan_entries(content_tree: SheetContentTree) -> list[dict[str, Any]]:
     metadata = content_tree.metadata if isinstance(content_tree.metadata, dict) else {}
     chart_plan = metadata.get("chart_plan") if metadata else None
     if not isinstance(chart_plan, list):
         return []
 
-    plan_entries: List[Dict[str, Any]] = []
+    plan_entries: list[dict[str, Any]] = []
     for entry in chart_plan:
         if isinstance(entry, dict):
             plan_entries.append(entry)
@@ -559,14 +559,14 @@ def _collect_plan_entries(content_tree: SheetContentTree) -> List[Dict[str, Any]
 
 def _add_workbook_charts(
     content_tree: SheetContentTree,
-    sheet_refs: List[Dict[str, Any]],
+    sheet_refs: list[dict[str, Any]],
     max_charts: int,
 ) -> int:
     from openpyxl.utils import get_column_letter
 
     chart_count = 0
     chartable_exists = False
-    anchors_by_sheet: Dict[str, int] = {}
+    anchors_by_sheet: dict[str, int] = {}
 
     for ref in sheet_refs:
         tab = ref["tab"]
@@ -655,7 +655,7 @@ def export_to_xlsx(content_tree: SheetContentTree, output_path: Path) -> None:
     wb.remove(wb.active)
 
     used_names = set()
-    sheet_refs: List[Dict[str, Any]] = []
+    sheet_refs: list[dict[str, Any]] = []
 
     for tab in content_tree.tabs:
         name = sanitize_sheet_name(tab.name)

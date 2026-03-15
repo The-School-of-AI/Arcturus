@@ -1,6 +1,7 @@
 """Unit tests for ops.cost.CostCalculator."""
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from ops.cost import ConfigurableCostCalculator, CostResult
 

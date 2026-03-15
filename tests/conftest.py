@@ -1,6 +1,6 @@
 """Root conftest for pytest configuration."""
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Ensure project root is in Python path for all tests

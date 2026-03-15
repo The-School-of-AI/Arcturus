@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Optional
 
 def compute_revision_diff(
     artifact_type: str,
-    before_tree: Dict[str, Any],
-    after_tree: Dict[str, Any],
+    before_tree: dict[str, Any],
+    after_tree: dict[str, Any],
     max_paths: int = 50,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute a structured diff between two content trees.
 
     Returns:
@@ -22,14 +22,14 @@ def compute_revision_diff(
             "paths": [{"path": "slides[2].title", "before": "old", "after": "new"}],
         }
     """
-    paths: List[Dict[str, Any]] = []
+    paths: list[dict[str, Any]] = []
     _collect_changed_paths(before_tree, after_tree, "", paths, max_paths)
 
     # Group by container
     slides_changed: set = set()
     sections_changed: set = set()
     tabs_changed: set = set()
-    highlights: List[Dict[str, Any]] = []
+    highlights: list[dict[str, Any]] = []
 
     for p in paths:
         path_str = p["path"]
@@ -68,7 +68,7 @@ def compute_revision_diff(
     return {"stats": stats, "highlights": highlights, "paths": paths}
 
 
-def summarize_diff_highlights(highlights: List[Dict[str, Any]]) -> str:
+def summarize_diff_highlights(highlights: list[dict[str, Any]]) -> str:
     """Generate human-readable change_summary text from diff highlights."""
     if not highlights:
         return "No changes detected"
@@ -95,7 +95,7 @@ def _collect_changed_paths(
     before: Any,
     after: Any,
     prefix: str,
-    paths: List[Dict[str, Any]],
+    paths: list[dict[str, Any]],
     max_paths: int,
 ) -> None:
     """Recursively walk two trees, collecting changed leaf paths."""
@@ -148,7 +148,7 @@ def _summarize(value: Any) -> Any:
     return value
 
 
-def _extract_slide_index(path: str) -> Optional[int]:
+def _extract_slide_index(path: str) -> int | None:
     """Extract 0-based slide index from a path like 'slides[2].title'."""
     if path.startswith("slides["):
         try:
@@ -159,7 +159,7 @@ def _extract_slide_index(path: str) -> Optional[int]:
     return None
 
 
-def _extract_section_id(path: str, before: Dict, after: Dict) -> Optional[str]:
+def _extract_section_id(path: str, before: dict, after: dict) -> str | None:
     """Extract section id from a path like 'sections[0].content'."""
     if path.startswith("sections["):
         try:
@@ -175,7 +175,7 @@ def _extract_section_id(path: str, before: Dict, after: Dict) -> Optional[str]:
     return None
 
 
-def _extract_tab_name(path: str, before: Dict, after: Dict) -> Optional[str]:
+def _extract_tab_name(path: str, before: dict, after: dict) -> str | None:
     """Extract tab name from a path like 'tabs[0].headers'."""
     if path.startswith("tabs["):
         try:
@@ -191,7 +191,7 @@ def _extract_tab_name(path: str, before: Dict, after: Dict) -> Optional[str]:
     return None
 
 
-def _describe_slide_change(before: Dict, after: Dict, idx: int) -> str:
+def _describe_slide_change(before: dict, after: dict, idx: int) -> str:
     """Describe what changed in a slide."""
     before_slides = before.get("slides", [])
     after_slides = after.get("slides", [])
@@ -217,4 +217,4 @@ def _describe_slide_change(before: Dict, after: Dict, idx: int) -> str:
 
 def _describe_section_change(section_id: str) -> str:
     """Describe what changed in a section."""
-    return f"Updated section content"
+    return "Updated section content"

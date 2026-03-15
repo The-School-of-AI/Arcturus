@@ -1,6 +1,8 @@
-import pytest
 from pathlib import Path
-from nodes.protocol import DeviceNode, Capability, NodeStatus, NodeInvocation
+
+import pytest
+
+from nodes.protocol import Capability, DeviceNode, NodeInvocation, NodeStatus
 
 PROJECT_ID = "P13"
 PROJECT_KEY = "p13_orbit"
@@ -28,7 +30,7 @@ def test_03_node_registration_protocol() -> None:
     data = node.to_dict()
     assert data["node_id"] == "test-phone-001"
     assert "camera" in data["capabilities"]
-    
+
     node2 = DeviceNode.from_dict(data)
     assert node2.name == "iPhone 15"
     assert node2.capabilities == node.capabilities
@@ -111,16 +113,16 @@ async def test_11_mobile_adapter_outbox() -> None:
     from channels.mobile import MobileAdapter
     adapter = MobileAdapter()
     session_id = "test-session-456"
-    
+
     # Send a message
     await adapter.send_message(session_id, "Hello Mobile")
-    
+
     # Drain outbox
     messages = adapter.drain_outbox(session_id)
     assert len(messages) == 1
     assert messages[0]["content"] == "Hello Mobile"
     assert messages[0]["channel"] == "mobile"
-    
+
     # Ensure it's empty now
     messages_after = adapter.drain_outbox(session_id)
     assert len(messages_after) == 0

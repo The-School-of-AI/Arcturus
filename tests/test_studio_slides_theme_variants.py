@@ -103,7 +103,6 @@ def test_variant_fonts_in_flat_allowlist():
 
 def test_all_themes_have_font_group():
     """Every registered theme has a mood group assignment."""
-    from core.studio.slides.themes import get_theme_ids
     base_ids = get_theme_ids(include_variants=False)
     for base_id in base_ids:
         assert base_id in _THEME_FONT_GROUP, f"{base_id} missing from _THEME_FONT_GROUP"

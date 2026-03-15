@@ -50,6 +50,7 @@ import { AdminDashboard } from '@/features/admin/AdminDashboard';
 import { SwarmGraphView } from '@/features/swarm/SwarmGraphView';
 import { AgentPeekPanel } from '@/features/swarm/AgentPeekPanel';
 import { useSwarmStore } from '@/features/swarm/useSwarmStore';
+import { CanvasInspector } from '../sidebar/CanvasInspector';
 
 export const AppLayout: React.FC = () => {
     // Mount useVoice at the root so wake-word events trigger the Echo tab
@@ -64,7 +65,9 @@ export const AppLayout: React.FC = () => {
         selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode, isInboxOpen, setIsInboxOpen,
         isSidebarSubPanelOpen,
-        startEventStream, stopEventStream, currentRun
+        startEventStream, stopEventStream, currentRun,
+        activeSurfaceId, selectedCanvasWidgetId
+
     } = useAppStore();
 
     // ── Always-on SSE connection ──────────────────────────────────────────────
@@ -88,15 +91,16 @@ export const AppLayout: React.FC = () => {
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
         if (sidebarTab === 'swarm' && !!selectedAgentId) return true;
+        if (sidebarTab === 'canvas' && selectedCanvasWidgetId) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId, selectedCanvasWidgetId]);
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
     // Echo should NOT be hidden when inspector is open, because the conversation is the primary surface.
     const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
-    const [rightWidth, setRightWidth] = useState(450); // original was 450px
+    const [rightWidth, setRightWidth] = useState(250); // total 45% reduction from original 450px
     const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef<'left' | 'right' | null>(null);
@@ -264,7 +268,7 @@ export const AppLayout: React.FC = () => {
                                         <RunTimeline />
                                     </>
                                 ) : sidebarTab === 'canvas' ? (
-                                    <CanvasHost surfaceId="main-canvas" />
+                                    <CanvasHost surfaceId={activeSurfaceId} />
                                 ) : sidebarTab === 'swarm' ? (
                                     <SwarmGraphView />
                                 ) : (
@@ -301,6 +305,7 @@ export const AppLayout: React.FC = () => {
                                 sidebarTab === 'mcp' ? <McpInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
                                         sidebarTab === 'swarm' ? <AgentPeekPanel /> :
+                                        sidebarTab === 'canvas' ? <CanvasInspector /> :
                                             (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
                                                 <WorkspacePanel />}
                         </div>

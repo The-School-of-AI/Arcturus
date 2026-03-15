@@ -37,7 +37,7 @@ def validate_formula_syntax(formula: str) -> bool:
     return depth == 0
 
 
-def extract_cell_refs(formula: str) -> List[str]:
+def extract_cell_refs(formula: str) -> list[str]:
     """Extract all cell references (e.g., 'A1', 'B2', 'C10') from a formula.
 
     For ranges like A1:B10, both endpoints are extracted.
@@ -45,7 +45,7 @@ def extract_cell_refs(formula: str) -> List[str]:
     return _CELL_REF_PATTERN.findall(formula)
 
 
-def _parse_cell_ref(ref: str) -> Tuple[int, int]:
+def _parse_cell_ref(ref: str) -> tuple[int, int]:
     """Parse a cell reference into (row, col) 1-based indices.
 
     Returns (0, 0) if the reference cannot be parsed.
@@ -75,7 +75,7 @@ def validate_formula_refs(formula: str, max_row: int, max_col: int) -> bool:
     return True
 
 
-def detect_circular_refs(formulas: Dict[str, str]) -> List[str]:
+def detect_circular_refs(formulas: dict[str, str]) -> list[str]:
     """Detect cells participating in circular references.
 
     Builds a directed dependency graph (formula cell → referenced formula cells)
@@ -87,10 +87,10 @@ def detect_circular_refs(formulas: Dict[str, str]) -> List[str]:
     if not formulas:
         return []
 
-    formula_cells: Set[str] = set(formulas.keys())
+    formula_cells: set[str] = set(formulas.keys())
 
     # Build adjacency list: cell -> set of formula cells it references
-    graph: Dict[str, Set[str]] = {}
+    graph: dict[str, set[str]] = {}
     for cell, formula in formulas.items():
         refs = extract_cell_refs(formula)
         # Only include edges to other formula cells (data cells can't create cycles)
@@ -98,10 +98,10 @@ def detect_circular_refs(formulas: Dict[str, str]) -> List[str]:
 
     # DFS cycle detection: find all cells on cycles
     WHITE, GRAY, BLACK = 0, 1, 2
-    color: Dict[str, int] = {cell: WHITE for cell in formula_cells}
-    on_cycle: Set[str] = set()
+    color: dict[str, int] = {cell: WHITE for cell in formula_cells}
+    on_cycle: set[str] = set()
 
-    def dfs(node: str, path: List[str]) -> bool:
+    def dfs(node: str, path: list[str]) -> bool:
         """Returns True if node leads to (or is on) a cycle."""
         color[node] = GRAY
         path.append(node)
@@ -126,7 +126,7 @@ def detect_circular_refs(formulas: Dict[str, str]) -> List[str]:
     return sorted(on_cycle)
 
 
-def validate_tab_formulas(tab: SheetTab) -> List[str]:
+def validate_tab_formulas(tab: SheetTab) -> list[str]:
     """Validate all formulas in a tab. Returns list of warning messages for invalid formulas.
 
     - Formula references must point to cells within data bounds

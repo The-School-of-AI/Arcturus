@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class BrowserSkill(Skill):
     name = "browser"
     description = "Skill derived from browser.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# BrowserAgent Prompt

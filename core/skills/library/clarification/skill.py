@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class ClarificationSkill(Skill):
     name = "clarification"
     description = "Skill derived from clarification.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# ClarificationAgent Prompt

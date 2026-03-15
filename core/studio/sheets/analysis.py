@@ -26,8 +26,8 @@ def _is_numeric(value: Any) -> bool:
 
 
 def _get_numeric_values(
-    rows: List[List[Any]], col_idx: int
-) -> Tuple[List[float], int]:
+    rows: list[list[Any]], col_idx: int
+) -> tuple[list[float], int]:
     """Extract numeric values from a column. Returns (values, null_count)."""
     values = []
     null_count = 0
@@ -46,7 +46,7 @@ def _get_numeric_values(
 
 def _compute_summary_stats(
     dataset: TabularDataset,
-) -> List[SheetNumericSummary]:
+) -> list[SheetNumericSummary]:
     """Compute summary statistics for each numeric column."""
     summaries = []
     for col_idx, col_name in enumerate(dataset.columns):
@@ -78,10 +78,10 @@ def _compute_summary_stats(
 
 def _compute_correlations(
     dataset: TabularDataset,
-) -> List[SheetCorrelation]:
+) -> list[SheetCorrelation]:
     """Compute Pearson correlation pairs for numeric columns."""
     # Find numeric columns with sufficient data
-    numeric_cols: List[Tuple[int, str, List[float]]] = []
+    numeric_cols: list[tuple[int, str, list[float]]] = []
     for col_idx, col_name in enumerate(dataset.columns):
         values, _ = _get_numeric_values(dataset.rows, col_idx)
         if len(values) >= MIN_OBSERVATIONS_FOR_CORRELATION:
@@ -123,7 +123,7 @@ def _compute_correlations(
     return correlations
 
 
-def _compute_trends(dataset: TabularDataset) -> List[SheetTrend]:
+def _compute_trends(dataset: TabularDataset) -> list[SheetTrend]:
     """Compute slope-based trend classification for numeric columns."""
     trends = []
     for col_idx, col_name in enumerate(dataset.columns):
@@ -157,7 +157,7 @@ def _compute_trends(dataset: TabularDataset) -> List[SheetTrend]:
     return trends
 
 
-def _detect_anomalies(dataset: TabularDataset) -> List[SheetAnomaly]:
+def _detect_anomalies(dataset: TabularDataset) -> list[SheetAnomaly]:
     """Detect z-score based anomalies for numeric columns."""
     anomalies = []
     for col_idx, col_name in enumerate(dataset.columns):
@@ -192,7 +192,7 @@ def _detect_anomalies(dataset: TabularDataset) -> List[SheetAnomaly]:
 
 def _build_pivot_preview(
     dataset: TabularDataset,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Build a single pivot/crosstab from first suitable categorical + numeric pair."""
     categorical_cols = []
     numeric_cols = []
@@ -220,7 +220,7 @@ def _build_pivot_preview(
     num_idx, num_name = numeric_cols[0]
 
     # Build pivot: group by categorical, aggregate numeric
-    pivot: Dict[str, List[float]] = defaultdict(list)
+    pivot: dict[str, list[float]] = defaultdict(list)
     for row in dataset.rows:
         if cat_idx < len(row) and num_idx < len(row):
             cat_val = row[cat_idx]
@@ -253,7 +253,7 @@ def analyze_dataset(dataset: TabularDataset) -> SheetAnalysisReport:
 def build_analysis_tabs(
     dataset: TabularDataset,
     report: SheetAnalysisReport,
-) -> List[SheetTab]:
+) -> list[SheetTab]:
     """Generate SheetTab instances from analysis results for embedding in the content tree."""
     tabs = []
 

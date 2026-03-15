@@ -5,8 +5,10 @@ Tests 01-05: Structural scaffold (no runtime).
 Tests 06-10: Runtime integration for hard conditions 6-8.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from agents.protocol import TaskStatus
 
 PROJECT_ID = "P08"
@@ -181,8 +183,9 @@ async def test_10_cross_project_failure_propagation_logged_in_results():
     Hard condition 8: Upstream failure must propagate to downstream tasks with
     clear status and reason — enabling cross-project observability and metrics.
     """
+    from agents.protocol import Task
+    from agents.protocol import TaskStatus as TS
     from agents.swarm_runner import SwarmRunner
-    from agents.protocol import Task, TaskStatus as TS
 
     # Step 1: Run upstream task and let it fail
     runner = SwarmRunner()

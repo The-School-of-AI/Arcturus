@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from core.gateway_services.search_service import web_search
 from core.gateway_services.exceptions import UpstreamIntegrationError
+from core.gateway_services.search_service import web_search
 
 
 class OracleAdapter:
-    async def search(self, query: str, limit: int = 5) -> Dict[str, Any]:
+    async def search(self, query: str, limit: int = 5) -> dict[str, Any]:
         try:
             result = await web_search(query=query, limit=limit)
         except Exception as exc:  # noqa: BLE001

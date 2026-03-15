@@ -5,10 +5,9 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
 
-
 # === Document type templates ===
 
-DOC_TYPE_TEMPLATES: Dict[str, Dict[str, Any]] = {
+DOC_TYPE_TEMPLATES: dict[str, dict[str, Any]] = {
     "technical_spec": {
         "label": "Technical Specification",
         "required_sections": ["Introduction", "Requirements", "Architecture", "Implementation"],
@@ -35,7 +34,7 @@ DOC_TYPE_TEMPLATES: Dict[str, Dict[str, Any]] = {
 DEFAULT_DOC_TYPE = "report"
 
 # Keywords mapped to doc types for auto-detection from prompts
-_KEYWORD_MAP: Dict[str, str] = {
+_KEYWORD_MAP: dict[str, str] = {
     "technical_spec": "technical_spec",
     "tech spec": "technical_spec",
     "specification": "technical_spec",
@@ -50,8 +49,8 @@ _KEYWORD_MAP: Dict[str, str] = {
 
 
 def resolve_document_type(
-    parameters: Optional[Dict[str, Any]] = None,
-    user_prompt: Optional[str] = None,
+    parameters: dict[str, Any] | None = None,
+    user_prompt: str | None = None,
 ) -> str:
     """Resolve document type with priority: parameters → prompt keywords → default."""
     # 1. Explicit parameter
@@ -70,6 +69,6 @@ def resolve_document_type(
     return DEFAULT_DOC_TYPE
 
 
-def get_doc_type_template(doc_type: str) -> Dict[str, Any]:
+def get_doc_type_template(doc_type: str) -> dict[str, Any]:
     """Return template for a doc type, falling back to report."""
     return DOC_TYPE_TEMPLATES.get(doc_type, DOC_TYPE_TEMPLATES[DEFAULT_DOC_TYPE])

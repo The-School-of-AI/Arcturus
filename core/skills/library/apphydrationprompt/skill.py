@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class ApphydrationpromptSkill(Skill):
     name = "apphydrationprompt"
     description = "Skill derived from AppHydrationPrompt.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# App Data Hydration Prompt

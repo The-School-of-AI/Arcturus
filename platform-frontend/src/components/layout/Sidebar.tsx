@@ -25,6 +25,7 @@ import { NewsPanel } from '@/components/sidebar/NewsPanel';
 import { GraphPanel } from '@/components/sidebar/GraphPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
 import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
+import { CanvasPanel } from '@/components/sidebar/CanvasPanel';
 
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
@@ -43,6 +44,8 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     const selectedRagFile = useAppStore(state => state.selectedRagFile);
     const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
     const currentRun = useAppStore(state => state.currentRun);
+    const selectedCanvasWidgetId = useAppStore(state => state.selectedCanvasWidgetId);
+
 
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
@@ -52,8 +55,10 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
+        if (sidebarTab === 'canvas' && selectedCanvasWidgetId) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel, currentRun]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel, currentRun, selectedCanvasWidgetId]);
+
 
     const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
 
@@ -109,7 +114,12 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         fetchRuns();
     }, [fetchRuns]);
 
-    // Spaces moved to header modal; 'spaces' tab no longer exists in the type union
+    // Spaces moved to header modal; redirect if persisted tab was 'spaces'
+    React.useEffect(() => {
+        if ((sidebarTab as any) === 'spaces') {
+            setSidebarTab('runs');
+        }
+    }, [sidebarTab, setSidebarTab]);
 
     const isNewRunOpen = useAppStore(state => state.isNewRunOpen);
     const setIsNewRunOpen = useAppStore(state => state.setIsNewRunOpen);
@@ -411,6 +421,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'echo' && <EchoPanel />}
                     {sidebarTab === 'studio' && <StudioSidebar />}
                     {sidebarTab === 'swarm' && <SwarmSidebar />}
+                    {sidebarTab === 'canvas' && <CanvasPanel />}
                     {/* Persist AppsSidebar to prevent reloading app components */}
                     <div style={{ display: sidebarTab === 'apps' ? 'block' : 'none', height: '100%' }}>
                         <AppsSidebar />

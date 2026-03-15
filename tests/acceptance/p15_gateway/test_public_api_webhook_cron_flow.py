@@ -18,7 +18,7 @@ def runtime_ctx(tmp_path, monkeypatch):
 def _signed_headers(secret: str, body: str, timestamp: str):
     signature = "sha256=" + hmac.new(
         secret.encode("utf-8"),
-        f"{timestamp}.{body}".encode("utf-8"),
+        f"{timestamp}.{body}".encode(),
         hashlib.sha256,
     ).hexdigest()
     return {

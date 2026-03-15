@@ -1,11 +1,13 @@
 
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, field_validator, ValidationError
+
+from pydantic import BaseModel, Field, ValidationError, field_validator
+
 
 class ToolInputSchema(BaseModel):
     type: str = "object"
-    properties: Dict[str, Any]
-    required: Optional[List[str]] = None
+    properties: dict[str, Any]
+    required: list[str] | None = None
 
 class ToolDefinition(BaseModel):
     name: str # The function name
@@ -17,7 +19,7 @@ class ToolDefinition(BaseModel):
         if not v or not v.strip():
             raise ValueError('Tool description (docstring) cannot be empty')
         return v
-    
+
     @field_validator('name')
     def name_must_be_snake_case(cls, v):
         if not v.islower() or ' ' in v:

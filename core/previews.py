@@ -1,20 +1,22 @@
 
-import os
 import json
+import os
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
+
 
 class PreviewResponse(BaseModel):
     viewer: str  # 'pdf', 'markdown', 'code', 'image', 'web', 'json', 'dag', 'docx'
-    url: Optional[str] = None
-    content: Optional[str] = None
-    title: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    url: str | None = None
+    content: str | None = None
+    title: str | None = None
+    metadata: dict[str, Any] = {}
 
 class PreviewManager:
     """Central logic for determining how to preview any content (local file or remote URL)."""
-    
+
     EXTENSION_MAP = {
         '.pdf': 'pdf',
         '.md': 'markdown',
@@ -40,11 +42,11 @@ class PreviewManager:
     }
 
     @classmethod
-    def get_preview_for_file(cls, file_path: str, title: Optional[str] = None) -> PreviewResponse:
+    def get_preview_for_file(cls, file_path: str, title: str | None = None) -> PreviewResponse:
         path = Path(file_path)
         if not path.exists():
             return PreviewResponse(viewer='markdown', content=f"### ❌ File Not Found\n`{file_path}`")
-        
+
         ext = path.suffix.lower()
         if ext and ext not in cls.EXTENSION_MAP:
             import logging
@@ -52,7 +54,7 @@ class PreviewManager:
             viewer = 'code'
         else:
             viewer = cls.EXTENSION_MAP.get(ext, 'code')
-        
+
         # Binary special handling (return URLs instead of content)
         if viewer in ['pdf', 'image', 'docx']:
             # These usually require a dedicated binary endpoint to serve the stream
@@ -63,11 +65,11 @@ class PreviewManager:
                 title=title or path.name,
                 metadata={"size": path.stat().st_size}
             )
-        
+
         # Text based handling
         try:
             content = path.read_text(errors='replace')
-            
+
             # Refine JSON
             if viewer == 'json':
                 try:
@@ -94,18 +96,18 @@ class PreviewManager:
     def get_preview_for_url(cls, url: str) -> PreviewResponse:
         """Determines best viewer for a remote URL."""
         lower_url = url.lower()
-        
+
         if lower_url.endswith('.pdf') or 'arxiv.org/pdf/' in lower_url:
             return PreviewResponse(viewer='pdf', url=url)
-        
+
         if any(lower_url.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
             return PreviewResponse(viewer='image', url=url)
-            
+
         # Default to web viewer (iframe)
         return PreviewResponse(viewer='web', url=url)
 
 # Helper for singleton usage
-def get_preview(path_or_url: str, title: Optional[str] = None) -> PreviewResponse:
+def get_preview(path_or_url: str, title: str | None = None) -> PreviewResponse:
     if path_or_url.startswith(('http://', 'https://')):
         return PreviewManager.get_preview_for_url(path_or_url)
     return PreviewManager.get_preview_for_file(path_or_url, title)

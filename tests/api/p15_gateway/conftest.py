@@ -2,14 +2,14 @@ import asyncio
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import gateway_api.integration_tracing as integration_tracing_module
 import gateway_api.idempotency as idempotency_module
+import gateway_api.integration_tracing as integration_tracing_module
 import gateway_api.key_store as key_store_module
 import gateway_api.metering as metering_module
 import gateway_api.v1.agents as agents_routes
@@ -22,8 +22,8 @@ import gateway_api.v1.search as search_routes
 import gateway_api.v1.studio as studio_routes
 import gateway_api.webhooks as webhooks_module
 from core.scheduler import JobDefinition
-from gateway_api.integration_tracing import IntegrationTracer
 from gateway_api.idempotency import IdempotencyStore
+from gateway_api.integration_tracing import IntegrationTracer
 from gateway_api.key_store import GatewayKeyStore
 from gateway_api.metering import GatewayMeteringStore
 from gateway_api.v1.router import router as gateway_router
@@ -61,7 +61,7 @@ class _FakeScheduler:
     def trigger_job(self, job_id: str):
         if job_id not in self.jobs:
             raise KeyError(job_id)
-        self.jobs[job_id].last_run = datetime.now(timezone.utc).isoformat()
+        self.jobs[job_id].last_run = datetime.now(UTC).isoformat()
         self.history.setdefault(job_id, []).append(
             {
                 "job_id": job_id,

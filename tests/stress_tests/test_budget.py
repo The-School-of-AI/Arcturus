@@ -1,7 +1,8 @@
 import pytest
-from core.loop import AgentLoop4
-from .conftest import require_stress_opt_in
 
+from core.loop import AgentLoop4
+
+from .conftest import require_stress_opt_in
 
 pytestmark = [pytest.mark.stress]
 

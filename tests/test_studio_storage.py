@@ -1,8 +1,9 @@
 """Tests for core/studio/storage.py — file-based persistence."""
 
-import pytest
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta, timezone
+
+import pytest
 
 from core.schemas.studio_schema import (
     Artifact,
@@ -14,7 +15,6 @@ from core.schemas.studio_schema import (
 )
 from core.studio.storage import StudioStorage
 
-
 # === Fixtures ===
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def storage(tmp_path):
 
 @pytest.fixture
 def sample_artifact():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return Artifact(
         id="art-test-001",
         type=ArtifactType.slides,
@@ -48,7 +48,7 @@ def sample_revision():
         parent_revision_id=None,
         change_summary="Initial draft",
         content_tree_snapshot={"deck_title": "Test", "slides": []},
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -72,7 +72,7 @@ class TestArtifactStorage:
         assert result == []
 
     def test_list_artifacts_sorted(self, storage):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         older = Artifact(
             id="art-older",
             type=ArtifactType.document,
@@ -144,7 +144,7 @@ class TestRevisionStorage:
 
     def test_list_revisions(self, storage):
         artifact_id = "art-test-001"
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         rev1 = Revision(
             id="rev-1",

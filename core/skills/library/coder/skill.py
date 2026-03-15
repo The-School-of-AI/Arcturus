@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class CoderSkill(Skill):
     name = "coder"
     description = "Skill derived from coder.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# CoderAgent Prompt

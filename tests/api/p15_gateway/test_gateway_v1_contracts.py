@@ -284,7 +284,7 @@ def test_webhook_inbound_signature_and_dispatch_lifecycle(gateway_test_client, m
     timestamp = str(int(time.time()))
     signature = "sha256=" + hmac.new(
         b"super-secret",
-        f"{timestamp}.{body}".encode("utf-8"),
+        f"{timestamp}.{body}".encode(),
         hashlib.sha256,
     ).hexdigest()
 

@@ -1,12 +1,12 @@
 """Tests for core/studio/revision.py — RevisionManager + compute_change_summary."""
 
+from datetime import UTC, datetime, timezone
+
 import pytest
-from datetime import datetime, timezone
 
 from core.schemas.studio_schema import Artifact, ArtifactType
 from core.studio.revision import RevisionManager, compute_change_summary
 from core.studio.storage import StudioStorage
-
 
 # === Fixtures ===
 
@@ -23,7 +23,7 @@ def revision_manager(storage):
 @pytest.fixture
 def sample_artifact(storage):
     """Create and persist a sample artifact for revision tests."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     artifact = Artifact(
         id="art-rev-test",
         type=ArtifactType.slides,

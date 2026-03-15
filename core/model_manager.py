@@ -1,16 +1,60 @@
-import os
-import time
 import asyncio
+import functools
 import json
-import yaml
+import os
+import random
+import time
 from pathlib import Path
-from google import genai
-from ops.tracing import llm_span
-from opentelemetry.trace import Status, StatusCode
-from google.genai.errors import ServerError
+
+import yaml
 from dotenv import load_dotenv
+from google import genai
+from google.genai.errors import ClientError, ServerError
+from opentelemetry.trace import Status, StatusCode
 
 from ops.cost import ConfigurableCostCalculator, CostCalculator
+from ops.tracing import llm_span
+
+
+def backoff_retry(max_retries=5, base_delay=2.0, max_delay=32.0):
+    """Decorator to retry async functions with exponential backoff and jitter."""
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return await func(*args, **kwargs)
+                except (ServerError, ClientError) as e:
+                    # 503 Service Unavailable or 429 Too Many Requests
+                    error_msg = str(e).lower()
+                    status_code = getattr(e, 'status_code', None)
+
+                    is_rate_limit = (
+                        status_code in [429, 503] or
+                        "503" in error_msg or
+                        "429" in error_msg or
+                        "rate limit" in error_msg or
+                        "service unavailable" in error_msg
+                    )
+
+                    if not is_rate_limit:
+                        raise e
+
+                    retries += 1
+                    if retries >= max_retries:
+                        print(f"[ERROR] Max retries reached for {func.__name__}. Error: {e}")
+                        raise e
+
+                    delay = min(base_delay * (2 ** (retries - 1)) + random.uniform(0, 1), max_delay)
+                    print(f"[WARN] Rate limit hit in {func.__name__} (Attempt {retries}/{max_retries}). Retrying in {delay:.2f}s...")
+                    await asyncio.sleep(delay)
+                except Exception as e:
+                    # Non-retriable error
+                    raise e
+        return wrapper
+    return decorator
+
 
 load_dotenv()
 
@@ -64,7 +108,7 @@ class ModelManager:
         try:
             from config.settings_loader import settings
             self.ollama_base_url = settings.get("ollama", {}).get("base_url", "http://127.0.0.1:11434")
-        except:
+        except Exception:
             self.ollama_base_url = "http://127.0.0.1:11434"
 
         # 🎯 NEW: Support explicit provider specification (from settings)
@@ -194,6 +238,7 @@ class ModelManager:
         """Generate content with Ollama, supporting multimodal models like gemma3, llava, etc."""
         import base64
         import io
+
         from PIL import Image as PILImage
 
         text_parts = []
@@ -275,8 +320,10 @@ class ModelManager:
             ModelManager._last_call = time.time()
 
 
+    @backoff_retry()
     async def _gemini_generate(self, prompt: str) -> tuple[str, int, int]:
         """Returns (text, input_tokens, output_tokens)."""
+
         await self._wait_for_rate_limit()
         try:
             response = await asyncio.to_thread(
@@ -298,8 +345,10 @@ class ModelManager:
         except Exception as e:
             raise RuntimeError(f"Gemini generation failed: {str(e)}")
 
+    @backoff_retry()
     async def _gemini_generate_content(self, contents: list) -> tuple[str, int, int]:
         """Returns (text, input_tokens, output_tokens)."""
+
         try:
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

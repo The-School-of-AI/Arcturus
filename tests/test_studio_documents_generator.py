@@ -3,12 +3,12 @@
 import pytest
 
 from core.schemas.studio_schema import (
+    ArtifactType,
     DocumentContentTree,
     DocumentSection,
     Outline,
     OutlineItem,
     OutlineStatus,
-    ArtifactType,
 )
 from core.studio.documents.generator import (
     MAX_DEPTH,

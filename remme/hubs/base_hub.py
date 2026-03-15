@@ -48,7 +48,7 @@ class BaseHub(ABC):
         """Load hub data from JSON file."""
         if self.path.exists():
             try:
-                raw = json.loads(self.path.read_text())
+                raw = json.loads(self.path.read_text(encoding='utf-8'))
                 return self.SCHEMA_CLASS(**raw)
             except Exception as e:
                 print(f"⚠️ Failed to load {self.__class__.__name__}: {e}")
@@ -74,7 +74,7 @@ class BaseHub(ABC):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         
         # Write JSON with datetime serialization
-        self.path.write_text(self.data.model_dump_json(indent=2))
+        self.path.write_text(self.data.model_dump_json(indent=2), encoding='utf-8')
         print(f"💾 Saved {self.__class__.__name__} to {self.path}")
     
     def get(self, key: str, default: Any = None) -> Any:

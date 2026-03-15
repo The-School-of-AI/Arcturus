@@ -52,7 +52,7 @@ def test_csv_selects_first_nonempty_tab(tmp_path):
 def test_csv_headers_first_row(tmp_path):
     path = tmp_path / "output.csv"
     export_to_csv(_make_tree(), path)
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         reader = csv.reader(f)
         headers = next(reader)
     assert headers == ["Month", "Amount"]
@@ -61,7 +61,7 @@ def test_csv_headers_first_row(tmp_path):
 def test_csv_data_rows_present(tmp_path):
     path = tmp_path / "output.csv"
     export_to_csv(_make_tree(), path)
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         reader = csv.reader(f)
         next(reader)  # skip header
         rows = list(reader)
@@ -113,7 +113,7 @@ def test_csv_formulas_not_written(tmp_path):
     )
     path = tmp_path / "output.csv"
     export_to_csv(tree, path)
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         reader = csv.reader(f)
         next(reader)  # skip header
         rows = list(reader)

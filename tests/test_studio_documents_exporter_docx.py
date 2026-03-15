@@ -1,8 +1,8 @@
 """Tests for core/studio/documents/exporter_docx.py — DOCX rendering."""
 
-import pytest
 from pathlib import Path
 
+import pytest
 from docx import Document
 from docx.shared import Pt
 
@@ -333,7 +333,7 @@ class TestExportToDocx:
 
         # All bullet paragraphs should have content (no empty orphans)
         for bp in bullet_paras:
-            assert bp.text.strip(), f"Found empty List Bullet paragraph"
+            assert bp.text.strip(), "Found empty List Bullet paragraph"
 
         # Verify the content is correct
         bullet_texts = [p.text.strip() for p in bullet_paras]

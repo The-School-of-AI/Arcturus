@@ -1,8 +1,9 @@
 """Tests for core/studio/documents/exporter_pdf.py — PDF rendering."""
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from core.schemas.studio_schema import DocumentContentTree, DocumentSection
 
@@ -144,6 +145,7 @@ class TestExportToPdf:
             with pytest.raises(RuntimeError, match="xhtml2pdf is required"):
                 # Need to reimport to trigger the import failure
                 import importlib
+
                 import core.studio.documents.exporter_pdf as mod
                 importlib.reload(mod)
                 mod.export_to_pdf(sample_content_tree, output_path)

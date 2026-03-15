@@ -35,7 +35,7 @@ class RemmeStore:
 
         if self.metadata_path.exists():
             try:
-                self.memories = json.loads(self.metadata_path.read_text())
+                self.memories = json.loads(self.metadata_path.read_text(encoding='utf-8'))
             except Exception as e:
                 print(f"Failed to load memories JSON: {e}", file=sys.stderr)
                 self.memories = []
@@ -44,7 +44,7 @@ class RemmeStore:
 
         if self.scanned_runs_path.exists():
             try:
-                self.scanned_run_ids = set(json.loads(self.scanned_runs_path.read_text()))
+                self.scanned_run_ids = set(json.loads(self.scanned_runs_path.read_text(encoding='utf-8')))
             except Exception as e:
                 print(f"Failed to load scanned runs JSON: {e}", file=sys.stderr)
                 self.scanned_run_ids = set()
@@ -56,8 +56,8 @@ class RemmeStore:
         if self.index:
             faiss.write_index(self.index, str(self.index_path))
         
-        self.metadata_path.write_text(json.dumps(self.memories, indent=2))
-        self.scanned_runs_path.write_text(json.dumps(list(self.scanned_run_ids), indent=2))
+        self.metadata_path.write_text(json.dumps(self.memories, indent=2), encoding='utf-8')
+        self.scanned_runs_path.write_text(json.dumps(list(self.scanned_run_ids), indent=2), encoding='utf-8')
 
     def add(self, text: str, embedding: np.ndarray, category: str = "general", source: str = "manual"):
         """Add a new memory with deduplication."""

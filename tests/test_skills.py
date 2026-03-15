@@ -1,9 +1,11 @@
 
-import unittest
-import sys
 import os
+import sys
+import unittest
+
 sys.path.append(os.getcwd())
 from core.skills.base import Skill, SkillConfig
+
 
 class MockSkill(Skill):
     name = "mock"

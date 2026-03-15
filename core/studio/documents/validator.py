@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 def validate_docx(
     output_path: Path,
-    content_tree: Optional[DocumentContentTree] = None,
-) -> Dict[str, Any]:
+    content_tree: DocumentContentTree | None = None,
+) -> dict[str, Any]:
     """Validate an exported DOCX file.
 
     Returns dict with: valid, format, errors, warnings, paragraph_count,
@@ -85,8 +85,8 @@ def validate_docx(
 
 def validate_pdf(
     output_path: Path,
-    content_tree: Optional[DocumentContentTree] = None,
-) -> Dict[str, Any]:
+    content_tree: DocumentContentTree | None = None,
+) -> dict[str, Any]:
     """Validate an exported PDF file.
 
     Uses pymupdf (fitz) for PDF inspection.
@@ -144,8 +144,8 @@ def validate_pdf(
 
 def validate_html(
     output_path: Path,
-    content_tree: Optional[DocumentContentTree] = None,
-) -> Dict[str, Any]:
+    content_tree: DocumentContentTree | None = None,
+) -> dict[str, Any]:
     """Validate an exported HTML document.
 
     Returns dict with: valid, format, errors, warnings.

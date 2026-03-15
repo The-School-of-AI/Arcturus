@@ -2,19 +2,19 @@
 
 import os
 import sys
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
 
 from ops.health import (
     HealthResult,
     ResourceSnapshot,
-    check_mongodb,
-    check_qdrant,
-    check_ollama,
-    check_mcp,
-    check_neo4j,
     check_agent_core,
+    check_mcp,
+    check_mongodb,
+    check_neo4j,
+    check_ollama,
+    check_qdrant,
     collect_resources,
     run_all_health_checks,
 )

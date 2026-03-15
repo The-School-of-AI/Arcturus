@@ -8,12 +8,11 @@ from pathlib import Path
 from typing import List
 
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.shared import Inches, Pt, RGBColor
 
 from core.schemas.studio_schema import DocumentContentTree, DocumentSection
 from core.studio.documents.markdown_render import markdown_to_html
-
 
 # XML-invalid control characters (except tab, newline, carriage return)
 _CTRL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -342,7 +341,7 @@ def export_to_docx(
     return output_path
 
 
-def _render_sections(doc: Document, sections: List[DocumentSection]) -> None:
+def _render_sections(doc: Document, sections: list[DocumentSection]) -> None:
     """Recursively render sections as headings + rich content."""
     for section in sections:
         # Heading level: 1-3 (Word supports up to heading 9, but we cap at 3)

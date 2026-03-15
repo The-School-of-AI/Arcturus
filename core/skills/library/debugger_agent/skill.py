@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class DebuggerAgentSkill(Skill):
     name = "debugger_agent"
     description = "Skill derived from debugger_agent.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """# IDENTITY

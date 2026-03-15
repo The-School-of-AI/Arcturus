@@ -1,9 +1,10 @@
 
-import requests
-import time
-import sys
 import json
+import sys
+import time
 from pathlib import Path
+
+import requests
 
 API_BASE = "http://localhost:8000/api"
 
@@ -65,24 +66,24 @@ def test_skills_lifecycle():
 
     # 4. Verify Execution (Directly via Skill Manager for robustness in test)
     # We want to prove the code exists and runs.
-    print(f"\n4. Verifying Skill Execution...")
+    print("\n4. Verifying Skill Execution...")
     try:
         # Import core logic directly to test execution without needing full LLM run
         sys.path.append(str(Path.cwd()))
         from core.skills.manager import skill_manager
-        
+
         # Initialize to load new skills
         skill_manager.initialize()
-        
+
         skill = skill_manager.get_skill(skill_name)
         if not skill:
             print(f"❌ Skill {skill_name} NOT found in manager after install!")
             sys.exit(1)
-            
+
         meta = skill.get_metadata()
         print(f"✅ Skill loaded: {meta.name} v{meta.version}")
         print(f"   Triggers: {meta.intent_triggers}")
-        
+
         if not skill.get_metadata().intent_triggers:
             print("⚠️ Skill has no intent triggers defined. Skipping match verification.")
         else:

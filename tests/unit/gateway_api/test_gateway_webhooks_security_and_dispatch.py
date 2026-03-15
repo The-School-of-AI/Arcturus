@@ -25,7 +25,7 @@ def test_inbound_webhook_signature_validates_hmac_and_timestamp(monkeypatch, tmp
     timestamp = str(int(time.time()))
     signature = "sha256=" + hmac.new(
         b"secret-123",
-        f"{timestamp}.{body}".encode("utf-8"),
+        f"{timestamp}.{body}".encode(),
         hashlib.sha256,
     ).hexdigest()
 

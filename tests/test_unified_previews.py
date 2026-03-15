@@ -1,14 +1,15 @@
 
-import unittest
-import sys
-import os
 import json
+import os
+import sys
+import unittest
 from pathlib import Path
 
 # Add project root to path
 sys.path.append(os.getcwd())
 
 from core.previews import get_preview
+
 
 class TestPreviews(unittest.TestCase):
     def test_file_previews(self):
@@ -19,7 +20,7 @@ class TestPreviews(unittest.TestCase):
         self.assertEqual(resp.viewer, "markdown")
         self.assertEqual(resp.content, "# Hello World")
         os.remove(md_file)
-        
+
         # 2. Test JSON (DAG)
         dag_file = "test_dag.json"
         dag_data = {"nodes": [], "links": []}
@@ -27,7 +28,7 @@ class TestPreviews(unittest.TestCase):
         resp = get_preview(dag_file)
         self.assertEqual(resp.viewer, "dag")
         os.remove(dag_file)
-        
+
         # 3. Test Binary (PDF)
         pdf_file = "test.pdf"
         Path(pdf_file).write_bytes(b"%PDF-1.4")
@@ -50,7 +51,7 @@ class TestPreviews(unittest.TestCase):
         # 1. Test Web
         resp = get_preview("https://google.com")
         self.assertEqual(resp.viewer, "web")
-        
+
         # 2. Test PDF URL
         resp = get_preview("https://arxiv.org/pdf/2301.12345.pdf")
         self.assertEqual(resp.viewer, "pdf")

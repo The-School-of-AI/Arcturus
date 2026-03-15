@@ -6,10 +6,10 @@ import re
 from typing import Any, Dict, List, Optional, Set
 
 
-def normalize_bibliography(entries: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def normalize_bibliography(entries: list[dict[str, str]]) -> list[dict[str, str]]:
     """Deduplicate bibliography entries by key and ensure required fields."""
-    seen: Dict[str, int] = {}
-    result: List[Dict[str, str]] = []
+    seen: dict[str, int] = {}
+    result: list[dict[str, str]] = []
     for entry in entries:
         key = entry.get("key", "").strip()
         if not key:
@@ -36,9 +36,9 @@ def normalize_bibliography(entries: List[Dict[str, str]]) -> List[Dict[str, str]
     return result
 
 
-def extract_citation_keys_from_sections(sections: List[Any]) -> Set[str]:
+def extract_citation_keys_from_sections(sections: list[Any]) -> set[str]:
     """Recursively extract all citation keys from section trees."""
-    keys: Set[str] = set()
+    keys: set[str] = set()
     for section in sections:
         # Direct citations list
         citations = getattr(section, "citations", None) or []
@@ -53,9 +53,9 @@ def extract_citation_keys_from_sections(sections: List[Any]) -> Set[str]:
 
 
 def reconcile_citations_and_bibliography(
-    sections: List[Any],
-    bibliography: List[Dict[str, str]],
-) -> List[Dict[str, str]]:
+    sections: list[Any],
+    bibliography: list[dict[str, str]],
+) -> list[dict[str, str]]:
     """Add placeholder bibliography entries for orphan citation keys."""
     used_keys = extract_citation_keys_from_sections(sections)
     bib_keys = {entry["key"] for entry in bibliography}
@@ -72,9 +72,9 @@ def reconcile_citations_and_bibliography(
 
 
 def build_provenance_slots(
-    bibliography: List[Dict[str, str]],
-    existing_slots: Optional[List[Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
+    bibliography: list[dict[str, str]],
+    existing_slots: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Generate placeholder provenance slots for bibliography entries."""
     existing_keys = set()
     if existing_slots:

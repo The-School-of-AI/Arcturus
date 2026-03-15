@@ -1,9 +1,12 @@
 
-import sys
 import os
+import sys
+
 sys.path.append(os.getcwd())
 import unittest
+
 from core.registry import AgentRegistry
+
 
 class MockAgent:
     def __init__(self):
@@ -16,14 +19,14 @@ class TestAgentRegistry(unittest.TestCase):
     def test_register_and_get(self):
         AgentRegistry.register("MockAgent", MockAgent, "A mock agent")
         retrieved_class = AgentRegistry.get("MockAgent")
-        
+
         self.assertEqual(retrieved_class, MockAgent)
         self.assertEqual(retrieved_class().name, "Mock")
 
     def test_list_agents(self):
         AgentRegistry.register("AgentA", MockAgent, "Desc A")
         AgentRegistry.register("AgentB", MockAgent, "Desc B")
-        
+
         agents = AgentRegistry.list_agents()
         self.assertEqual(len(agents), 2)
         self.assertEqual(agents["AgentA"], "Desc A")
@@ -33,7 +36,7 @@ class TestAgentRegistry(unittest.TestCase):
         # This test just ensures no exception is raised on overwrite
         AgentRegistry.register("AgentA", MockAgent, "Desc A")
         AgentRegistry.register("AgentA", MockAgent, "New Desc")
-        
+
         agents = AgentRegistry.list_agents()
         self.assertEqual(agents["AgentA"], "New Desc")
 

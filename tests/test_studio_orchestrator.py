@@ -2,8 +2,9 @@
 
 import asyncio
 import json
+from datetime import UTC, datetime, timezone
+
 import pytest
-from datetime import datetime, timezone
 
 from core.json_parser import JsonParsingError
 from core.schemas.studio_schema import (
@@ -381,7 +382,7 @@ class TestApproveAndGenerateDraft:
             _run(orchestrator.approve_and_generate_draft("nonexistent-id"))
 
     def test_no_outline_raises(self, orchestrator, storage, mock_llm_slides):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         artifact = Artifact(
             id="no-outline",
             type=ArtifactType.slides,

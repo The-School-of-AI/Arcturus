@@ -29,7 +29,7 @@ def test_02_expanded_gate_contract_present() -> None:
 
 
 def test_03_acceptance_path_declared_in_charter() -> None:
-    assert f"Acceptance: " in _charter_text()
+    assert "Acceptance: " in _charter_text()
 
 
 def test_04_demo_script_exists() -> None:
@@ -60,7 +60,7 @@ def test_07_delivery_readme_has_required_sections() -> None:
 
 
 def test_08_ci_check_declared_in_charter() -> None:
-    assert f"CI required check: " in _charter_text()
+    assert "CI required check: " in _charter_text()
 
 
 # === Week 1: Event log schema + checkpoint flow ===
@@ -245,6 +245,7 @@ def test_14_restore_resets_running_nodes_to_pending() -> None:
 def test_15_verify_restoration_invariants_no_running_nodes() -> None:
     """verify_restoration_invariants catches running nodes as a violation."""
     import networkx as nx
+
     from session.rewind import verify_restoration_invariants
 
     graph_snap = _make_graph_snapshot([

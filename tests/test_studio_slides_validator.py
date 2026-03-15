@@ -1,8 +1,8 @@
 """Tests for core/studio/slides/validator.py — v2 quality checks."""
 
-import pytest
 from pathlib import Path
 
+import pytest
 from pptx import Presentation
 
 from core.schemas.studio_schema import Slide, SlideElement, SlidesContentTree

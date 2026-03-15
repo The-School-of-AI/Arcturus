@@ -1,6 +1,8 @@
-from typing import List, Any, Dict
-from core.skills.base import BaseSkill, SkillMetadata
+from typing import Any, Dict, List
+
 from core.event_bus import event_bus
+from core.skills.base import BaseSkill, SkillMetadata
+
 
 class NavigationSkill(BaseSkill):
     def get_metadata(self) -> SkillMetadata:
@@ -23,14 +25,14 @@ class NavigationSkill(BaseSkill):
             ]
         )
 
-    def get_tools(self) -> List[Any]:
+    def get_tools(self) -> list[Any]:
         return []
 
     async def on_run_start(self, initial_prompt: str) -> str:
         # Map query to tab
         query = initial_prompt.lower()
         tab = "runs" # default
-        
+
         if "dashboard" in query or "runs" in query:
             tab = "runs"
         elif "notes" in query:
@@ -62,10 +64,10 @@ class NavigationSkill(BaseSkill):
 
         # Publish navigation event
         await event_bus.publish("navigation", "navigation_skill", {"tab": tab})
-        
+
         return f"Navigating to {tab}..."
 
-    async def on_run_success(self, artifact: Dict[str, Any]):
+    async def on_run_success(self, artifact: dict[str, Any]):
         return {
             "summary": "Navigation successful."
         }

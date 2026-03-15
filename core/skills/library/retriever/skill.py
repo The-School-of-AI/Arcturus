@@ -1,10 +1,11 @@
 
 from core.skills.base import Skill
 
+
 class RetrieverSkill(Skill):
     name = "retriever"
     description = "Skill derived from retriever.md"
-    
+
     @property
     def prompt_text(self) -> str:
         return """################################################################################################

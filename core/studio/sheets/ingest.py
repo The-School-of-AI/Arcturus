@@ -59,7 +59,7 @@ def _ingest_csv(content_bytes: bytes, filename: str) -> TabularDataset:
         raise ValueError("CSV file contains no data")
 
     columns = all_rows[0]
-    rows: List[List[Any]] = []
+    rows: list[list[Any]] = []
     for row in all_rows[1:]:
         # Coerce numeric values
         coerced = []
@@ -98,7 +98,7 @@ def _ingest_xlsx(content_bytes: bytes, filename: str) -> TabularDataset:
         raise ValueError("XLSX file contains no data")
 
     columns = [str(c) if c is not None else f"Column_{i+1}" for i, c in enumerate(all_rows[0])]
-    rows: List[List[Any]] = []
+    rows: list[list[Any]] = []
     for row in all_rows[1:]:
         rows.append(list(row))
 

@@ -4,8 +4,8 @@ import os
 import secrets
 from typing import Any, Dict
 
-from core.generator import AppGenerator
 from core.gateway_services.exceptions import IntegrationDependencyUnavailable, UpstreamIntegrationError
+from core.generator import AppGenerator
 from shared.state import PROJECT_ROOT
 
 
@@ -15,7 +15,7 @@ class SparkAdapter:
         query: str,
         template: str | None,
         oracle_context: dict[str, Any] | None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if not os.getenv("GEMINI_API_KEY", "").strip():
             raise IntegrationDependencyUnavailable(
                 "GEMINI_API_KEY is required for Spark page generation"

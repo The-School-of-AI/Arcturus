@@ -1,21 +1,23 @@
 
-import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import yaml
+
 
 class ProfileLoader:
     """
     Loads and parses the Cortex-R profile configuration from yaml.
     Provides easy access to biases and strategies.
     """
-    def __init__(self, profile_path: Optional[str] = None):
+    def __init__(self, profile_path: str | None = None):
         if profile_path:
             self.path = Path(profile_path)
         else:
             # Default path
             self.path = Path(__file__).parent.parent / "config" / "profiles.yaml"
-            
-        self.data: Dict[str, Any] = {}
+
+        self.data: dict[str, Any] = {}
         self._load()
 
     def _load(self):
@@ -28,21 +30,21 @@ class ProfileLoader:
             return
 
         try:
-            with open(self.path, "r") as f:
+            with open(self.path) as f:
                 self.data = yaml.safe_load(f) or {}
         except Exception:
             self.data = {}
 
     @property
-    def persona(self) -> Dict[str, Any]:
+    def persona(self) -> dict[str, Any]:
         return self.data.get("persona", {})
 
     @property
-    def strategy(self) -> Dict[str, Any]:
+    def strategy(self) -> dict[str, Any]:
         return self.data.get("strategy", {})
 
     @property
-    def biases(self) -> Dict[str, Any]:
+    def biases(self) -> dict[str, Any]:
         """
         Aliasing persona attributes to 'biases' as per requirements.
         Maps 'tone' to 'conciseness' if matches.

@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pydantic import BaseModel
+
 from shared.state import PROJECT_ROOT
 
 # Setup logging
@@ -60,11 +61,11 @@ class JobDefinition(BaseModel):
     agent_type: str
     query: str
     timezone: str = "UTC"
-    skill_id: Optional[str] = None  # Link to a specific skill
+    skill_id: str | None = None  # Link to a specific skill
     enabled: bool = True
-    last_run: Optional[str] = None
-    next_run: Optional[str] = None
-    last_output: Optional[str] = None
+    last_run: str | None = None
+    next_run: str | None = None
+    last_output: str | None = None
 
 
 class SchedulerService:
@@ -72,9 +73,9 @@ class SchedulerService:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(SchedulerService, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance.scheduler = AsyncIOScheduler()
-            cls._instance.jobs: Dict[str, JobDefinition] = {}
+            cls._instance.jobs: dict[str, JobDefinition] = {}
             cls._instance.initialized = False
         return cls._instance
 
@@ -119,7 +120,7 @@ class SchedulerService:
         data = [job.model_dump() for job in self.jobs.values()]
         _write_json_atomic(JOBS_FILE, data)
 
-    def _append_job_history(self, entry: Dict[str, Any]) -> None:
+    def _append_job_history(self, entry: dict[str, Any]) -> None:
         if not JOB_HISTORY_FILE.parent.exists():
             JOB_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         with JOB_HISTORY_FILE.open("a", encoding="utf-8") as handle:
@@ -133,8 +134,8 @@ class SchedulerService:
         status: str,
         started_at: str,
         finished_at: str,
-        error: Optional[str] = None,
-        output_summary: Optional[str] = None,
+        error: str | None = None,
+        output_summary: str | None = None,
     ) -> None:
         self._append_job_history(
             {
@@ -148,11 +149,11 @@ class SchedulerService:
             }
         )
 
-    def get_job_history(self, job_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_job_history(self, job_id: str, limit: int = 50) -> list[dict[str, Any]]:
         if not JOB_HISTORY_FILE.exists():
             return []
 
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         try:
             lines = JOB_HISTORY_FILE.read_text(encoding="utf-8").splitlines()
         except (UnicodeDecodeError, OSError):
@@ -242,7 +243,7 @@ class SchedulerService:
                     )
                 # 3. Execution (The standard run, now skill-aware)
                 result = await process_run(run_id, job.query, skill_id=job.skill_id)
-                
+
                 # Update job output using skill summary if available
                 skill_summary = result.get("skill_summary") if result else None
                 skill_file_path = result.get("skill_file_path") if result else None
@@ -262,7 +263,7 @@ class SchedulerService:
                     if skill_result
                     else (result.get("summary") if result else "Success")
                 )
-                
+
                 # Update job with result
                 job.last_output = skill_summary if skill_summary else (result.get("summary") if result else "Success")
                 self.save_jobs()
@@ -403,7 +404,7 @@ class SchedulerService:
             del self.jobs[job_id]
             self.save_jobs()
 
-    def list_jobs(self) -> List[JobDefinition]:
+    def list_jobs(self) -> list[JobDefinition]:
         """List all jobs with updated next-run times."""
         for job_id, job in self.jobs.items():
             aps_job = self.scheduler.get_job(job_id)
