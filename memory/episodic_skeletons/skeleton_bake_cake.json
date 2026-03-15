@@ -1,0 +1,1 @@
+{"id": "bake_cake", "original_query": "How to bake a cake", "status": "completed", "nodes": [{"agent": "PlannerAgent"}, {"agent": "CoderAgent"}, {"agent": "FormatterAgent"}]}

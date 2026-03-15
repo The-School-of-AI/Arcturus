@@ -1,7 +1,29 @@
 import axios from 'axios';
-import type { Run, PlatformNode, PlatformEdge } from '../types';
+import type { Run, Space, PlatformNode, PlatformEdge } from '../types';
+import { useAppStore } from '../store';
 
 export const API_BASE = 'http://localhost:8000/api';
+// Dedicated base URL for Auth and Sync operations (Cloud Hub)
+export const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_BASE || API_BASE;
+
+// --- Axios Interceptors for Auth ---
+axios.interceptors.request.use(
+    (config) => {
+        // Skip auth store access if it's not initialized yet or if it's a completely external URL
+        if (config.url && (config.url.startsWith(API_BASE) || config.url.startsWith(AUTH_API_BASE))) {
+            const state = useAppStore.getState();
+            if (state.authStatus === 'logged_in' && state.authToken) {
+                config.headers['Authorization'] = `Bearer ${state.authToken}`;
+            } else if (state.authUserId) {
+                config.headers['X-User-Id'] = state.authUserId;
+            }
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 export interface API_Run {
     id: string;
@@ -11,6 +33,7 @@ export interface API_Run {
     model?: string;  // Model used for this run
     total_tokens?: number;
     mode?: string;  // "standard" or "deep_research"
+    space_id?: string | null;  // Phase 4: optional space for run
 }
 
 export interface API_RunDetail {
@@ -34,7 +57,8 @@ export const api = {
             model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true,
             total_tokens: r.total_tokens,
-            mode: (r.mode as Run['mode']) || 'standard'
+            mode: (r.mode as Run['mode']) || 'standard',
+            space_id: r.space_id ?? undefined
         }));
     },
 
@@ -48,7 +72,7 @@ export const api = {
         return res.data;
     },
 
-    // Trigger new run (model optional - backend uses settings default if not provided)
+    // Trigger new run (model optional - backend uses settings default if not provided). Phase 4: optional space_id.
     createRun: async (query: string, model?: string, mode?: string, focusMode?: string, filePaths?: string[], spaceId?: string): Promise<API_Run> => {
         const payload: { query: string; model?: string; mode?: string; focus_mode?: string; file_paths?: string[]; space_id?: string } = { query };
         if (model) payload.model = model;
@@ -60,18 +84,66 @@ export const api = {
         return res.data;
     },
 
-    // Get spaces for the user
-    getSpaces: async (): Promise<{ id: string; name: string; description?: string }[]> => {
+    // Phase 4: Spaces (Perplexity-style project hubs)
+    getSpaces: async (): Promise<Space[]> => {
         try {
-            const res = await axios.get(`${API_BASE}/remme/spaces`);
-            return (res.data.spaces || []).map((s: any) => ({
-                id: s.space_id || s.id,
-                name: s.name || 'Unnamed Space',
-                description: s.description || ''
-            }));
-        } catch {
+            const res = await axios.get<{ status: string; spaces: Space[] }>(`${API_BASE}/remme/spaces`);
+            return res.data?.spaces ?? [];
+        } catch (e) {
+            console.error('Failed to fetch spaces', e);
             return [];
         }
+    },
+
+    createSpace: async (name: string, description?: string, sync_policy?: 'sync' | 'local_only' | 'shared'): Promise<Space> => {
+        const payload: { name: string; description?: string; sync_policy?: string } = { name, description: description ?? '' };
+        if (sync_policy) payload.sync_policy = sync_policy;
+        const res = await axios.post<{ status: string; space_id: string; name: string; description: string }>(
+            `${API_BASE}/remme/spaces`,
+            payload
+        );
+        return { space_id: res.data.space_id, name: res.data.name, description: res.data.description ?? '', sync_policy };
+    },
+
+    shareSpace: async (space_id: string, user_ids: string[]): Promise<{ shared_count: number }> => {
+        const res = await axios.post<{ status: string; space_id: string; shared_count: number }>(
+            `${API_BASE}/remme/spaces/${space_id}/share`,
+            { user_ids }
+        );
+        return { shared_count: res.data.shared_count };
+    },
+
+    addMemory: async (text: string, category?: string, space_id?: string | null): Promise<void> => {
+        const payload: { text: string; category?: string; space_id?: string } = { text, category: category ?? 'general' };
+        if (space_id) payload.space_id = space_id;
+        await axios.post(`${API_BASE}/remme/add`, payload);
+    },
+
+    getMemories: async (space_id?: string | null): Promise<{ memories: any[] }> => {
+        const params = space_id ? { space_id } : {};
+        const res = await axios.get(`${API_BASE}/remme/memories`, { params });
+        return res.data;
+    },
+
+    /** P11 §11.2: Knowledge graph explorer — fetch subgraph (entities + relationships) for visualization. */
+    getGraphExplore: async (space_id?: string | null, limit?: number): Promise<{ nodes: { id: string; label: string; type: string; nodeKind?: 'entity' | 'user' | 'memory' }[]; edges: { source: string; target: string; type: string }[] }> => {
+        const params: Record<string, string | number> = {};
+        if (space_id) params.space_id = space_id;
+        if (limit) params.limit = limit;
+        const res = await axios.get<{ nodes: { id: string; label: string; type: string }[]; edges: { source: string; target: string; type: string }[] }>(
+            `${API_BASE}/graph/explore`,
+            { params }
+        );
+        return res.data;
+    },
+
+    /** Phase E 4.2: Suggest a space for the given memory text (optional current space). User can override. */
+    recommendSpace: async (text: string, current_space_id?: string | null): Promise<{ recommended_space_id: string; reason?: string }> => {
+        const params: Record<string, string> = {};
+        if (text.trim()) params.text = text.trim();
+        if (current_space_id) params.current_space_id = current_space_id;
+        const res = await axios.get<{ recommended_space_id: string; reason?: string }>(`${API_BASE}/remme/recommend-space`, { params });
+        return res.data;
     },
 
     // Get specific run graph
@@ -190,6 +262,13 @@ export const api = {
         return res.data;
     },
 
+    restoreRevision: async (artifactId: string, revisionId: string, baseRevisionId?: string): Promise<any> => {
+        const payload: { base_revision_id?: string } = {};
+        if (baseRevisionId) payload.base_revision_id = baseRevisionId;
+        const res = await axios.post(`${API_BASE}/studio/${artifactId}/revisions/${revisionId}/restore`, payload);
+        return res.data;
+    },
+
     // Studio Phase 2 — Export & Themes
     listThemes: async (params?: {
         include_variants?: boolean;
@@ -226,6 +305,20 @@ export const api = {
 
     getExportDownloadUrl: (artifactId: string, jobId: string): string => {
         return `${API_BASE}/studio/${artifactId}/exports/${jobId}/download`;
+    },
+
+    // Slide image preview
+    listSlideImages: async (artifactId: string): Promise<string[]> => {
+        const res = await axios.get(`${API_BASE}/studio/${artifactId}/images`);
+        return res.data.slide_ids;
+    },
+
+    getSlideImageUrl: (artifactId: string, slideId: string): string => {
+        return `${API_BASE}/studio/${artifactId}/images/${slideId}`;
+    },
+
+    generateSlideImages: async (artifactId: string): Promise<void> => {
+        await axios.post(`${API_BASE}/studio/${artifactId}/generate-images`);
     },
 
     deleteArtifact: async (id: string): Promise<void> => {

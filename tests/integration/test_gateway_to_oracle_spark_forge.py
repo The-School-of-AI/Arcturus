@@ -136,3 +136,72 @@ def test_06_forge_failure_propagates_with_traceable_failure_record(monkeypatch, 
         row["flow"] == "forge_outline_generation" and row["status"] == "failed"
         for row in rows
     )
+
+
+def test_07_connector_replay_does_not_duplicate_oracle_spark_forge_side_effects(monkeypatch, tmp_path):
+    ctx = build_gateway_runtime_context(tmp_path, monkeypatch)
+    client = ctx["client"]
+    api_key = ctx["create_api_key"](["webhooks:write", "webhooks:read"])
+    connector_headers = ctx["connector_headers"]
+
+    client.post(
+        "/api/v1/webhooks",
+        json={
+            "target_url": "https://example.com/inbound",
+            "event_types": ["memory.updated"],
+        },
+        headers=_auth_headers(api_key, "idem-connector-sub"),
+    )
+
+    payload = {"ref": "refs/heads/main", "after": "abc123"}
+    headers = connector_headers("github", payload, event_name="push")
+
+    first = client.post("/api/v1/webhooks/inbound/github", content=json.dumps(payload), headers=headers)
+    second = client.post("/api/v1/webhooks/inbound/github", content=json.dumps(payload), headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.headers["X-Idempotency-Status"] == "replayed"
+    assert ctx["state"]["oracle_calls"] == 0
+    assert ctx["state"]["spark_calls"] == 0
+    assert ctx["state"]["forge_calls"] == 0
+
+
+def test_08_connector_inbound_records_traceable_validation_lifecycle(monkeypatch, tmp_path):
+    ctx = build_gateway_runtime_context(tmp_path, monkeypatch)
+    client = ctx["client"]
+    api_key = ctx["create_api_key"](["webhooks:write", "webhooks:read"])
+    connector_headers = ctx["connector_headers"]
+
+    client.post(
+        "/api/v1/webhooks",
+        json={
+            "target_url": "https://example.com/inbound",
+            "event_types": ["task.complete"],
+        },
+        headers=_auth_headers(api_key, "idem-connector-trace-sub"),
+    )
+
+    jira_payload = {
+        "webhookEvent": "jira:issue_created",
+        "issue": {"id": "ISSUE-1", "key": "ISSUE-1"},
+    }
+    response = client.post(
+        "/api/v1/webhooks/inbound/jira",
+        content=json.dumps(jira_payload),
+        headers=connector_headers("jira", jira_payload),
+    )
+    assert response.status_code == 200
+    assert response.json()["normalized_event_type"] == "task.complete"
+
+    rows = [
+        json.loads(line)
+        for line in ctx["integration_events"].read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert any(
+        row["flow"] == "webhook_inbound_validation"
+        and row["status"] == "success"
+        and row.get("context", {}).get("auth_mode") == "jira_token"
+        for row in rows
+    )

@@ -225,3 +225,88 @@ def test_12_checkpoint_includes_trace_id_when_under_span() -> None:
         if not snap.trace_id:
             pytest.skip("Tracing not initialized (init_tracing not called)")
         assert len(snap.trace_id) == 32
+
+
+# === Phase 7: Concurrent edit hardening ===
+
+
+def test_13_concurrent_checkpoint_creation_same_session() -> None:
+    """Multiple checkpoints for same session complete without corruption (lock-protected)."""
+    import concurrent.futures
+
+    from session.checkpoint import create_checkpoint, load_checkpoint
+
+    graph_snap = {
+        "directed": True,
+        "multigraph": False,
+        "graph": {"session_id": "integ-concurrent", "status": "completed", "created_at": "2025-01-15T12:00:00Z"},
+        "nodes": [{"id": "ROOT", "agent": "System", "status": "completed"}],
+        "edges": [],
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        cp_dir = Path(tmp) / "cp"
+        ev_dir = Path(tmp) / "ev"
+        ev_dir.mkdir()
+
+        def create_one(i: int):
+            g = {**graph_snap, "graph": {**graph_snap["graph"], "seq": i}}
+            return create_checkpoint(
+                "integ-concurrent",
+                "manual",
+                g,
+                event_log_path=ev_dir / "events_integ-concurrent.ndjson",
+                checkpoint_dir=cp_dir,
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+            futures = [ex.submit(create_one, i) for i in range(8)]
+            snaps = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+        assert len(snaps) == 8
+        ids = {s.checkpoint_id for s in snaps}
+        assert len(ids) == 8
+        for s in snaps:
+            loaded = load_checkpoint("integ-concurrent", s.checkpoint_id, checkpoint_dir=cp_dir)
+            assert loaded is not None
+
+
+def test_14_capture_per_session_sequence() -> None:
+    """SessionCapture emits events with correct per-session sequence under concurrent sessions."""
+    import asyncio
+
+    from session.capture import SessionCapture
+    from session.schema import EventType
+
+    async def run():
+        with tempfile.TemporaryDirectory() as tmp:
+            ev_dir = Path(tmp) / "ev"
+            ev_dir.mkdir()
+            cap = SessionCapture(event_log_dir=ev_dir)
+            cap.start_writer()
+
+            async def emit_session(sid: str, count: int):
+                cap.start_session(sid)
+                for _ in range(count):
+                    await cap.emit(EventType.STEP_START, {"step": "x"}, session_id=sid)
+
+            await asyncio.gather(
+                emit_session("s1", 3),
+                emit_session("s2", 2),
+            )
+            await cap.stop_writer()
+
+            def read_sequences(path: Path):
+                seqs = []
+                if path.exists():
+                    for line in path.read_text().strip().split("\n"):
+                        if line:
+                            obj = __import__("json").loads(line)
+                            seqs.append(obj.get("sequence", 0))
+                return seqs
+
+            s1_seqs = sorted(read_sequences(ev_dir / "events_s1.ndjson"))
+            s2_seqs = sorted(read_sequences(ev_dir / "events_s2.ndjson"))
+            assert s1_seqs == [1, 2, 3]
+            assert s2_seqs == [1, 2]
+
+    asyncio.run(run())

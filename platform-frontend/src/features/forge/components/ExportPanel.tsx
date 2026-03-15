@@ -491,13 +491,15 @@ export function ExportPanel({ artifact }: { artifact: any }) {
         }
     };
 
-    // Auto-trigger save dialog when export completes
+    // Auto-trigger save dialog when export completes.
+    // Uses getState() to avoid double-fire when SlideBottomBar also handles this.
     useEffect(() => {
         if (!autoDownloadJobId) return;
         // Only auto-download if this panel is showing the artifact that started the export
         if (autoDownloadJobId.artifactId !== artifact.id) return;
         const job = exportJobs.find((j: any) => j.id === autoDownloadJobId.jobId && j.status === 'completed');
         if (job) {
+            if (!useAppStore.getState().autoDownloadJobId) return;
             clearAutoDownload();
             handleDownload(job);
         }

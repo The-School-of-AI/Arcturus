@@ -245,6 +245,7 @@ class Artifact(BaseModel):
     updated_at: datetime
     schema_version: str = "1.0"
     model: Optional[str] = None
+    creation_prompt: Optional[str] = None
     content_tree: Optional[Dict[str, Any]] = None
     theme_id: Optional[str] = None
     revision_head_id: Optional[str] = None
@@ -262,6 +263,7 @@ class Revision(BaseModel):
     edit_instruction: Optional[str] = Field(default=None, description="User instruction that triggered this edit")
     patch: Optional[Dict[str, Any]] = Field(default=None, description="Patch that was applied to produce this revision")
     diff: Optional[Dict[str, Any]] = Field(default=None, description="Computed diff between previous and current content trees")
+    restored_from_revision_id: Optional[str] = Field(default=None, description="If this revision was created by a restore, the source revision ID")
 
 
 class Asset(BaseModel):

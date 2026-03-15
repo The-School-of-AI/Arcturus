@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FileText, File, Folder, ChevronRight, ChevronDown, FolderPlus, Plus, Trash2, Search, Loader2, RefreshCw } from 'lucide-react';
+import { FileText, File, Folder, ChevronRight, ChevronDown, FolderPlus, Plus, Trash2, Search, Loader2, RefreshCw, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
@@ -227,7 +227,10 @@ export const NotesPanel: React.FC = () => {
         expandedNotesFolders,
         toggleNoteFolder,
         clipboard,
-        setClipboard
+        setClipboard,
+        currentSpaceId,
+        spaces,
+        setIsSpacesModalOpen,
     } = useAppStore();
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -244,7 +247,7 @@ export const NotesPanel: React.FC = () => {
 
     useEffect(() => {
         fetchNotesFiles();
-    }, []);
+    }, [currentSpaceId, fetchNotesFiles]);
 
     const handleCreateFolder = async () => {
         if (!newFolderName.trim()) return;
@@ -421,9 +424,10 @@ export const NotesPanel: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-transparent text-foreground">
             {/* Header */}
-            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
+            <div className="p-2 border-b border-border/50 bg-muted/20 flex flex-col gap-2 shrink-0">
+                <div className="flex items-center gap-1.5">
                 {/* Search */}
-                <div className="relative flex-1 group">
+                <div className="relative flex-1 group min-w-0">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                     <Input
                         className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
@@ -433,7 +437,16 @@ export const NotesPanel: React.FC = () => {
                     />
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsSpacesModalOpen(true)}
+                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
+                        title="Select Space"
+                    >
+                        <FolderOpen className="w-3 h-3" />
+                        Space: {currentSpaceId ? (spaces.find(s => s.space_id === currentSpaceId)?.name || 'Space') : 'Global'}
+                    </button>
+                    <div className="w-px h-4 bg-border/50" />
                     <Dialog open={isNewNoteOpen} onOpenChange={setIsNewNoteOpen}>
                         <DialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Note">
@@ -459,6 +472,7 @@ export const NotesPanel: React.FC = () => {
                             <DialogFooter><Button onClick={handleCreateFolder}>Create</Button></DialogFooter>
                         </DialogContent>
                     </Dialog>
+                </div>
                 </div>
             </div>
 

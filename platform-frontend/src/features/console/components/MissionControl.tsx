@@ -10,16 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export const MissionControl: React.FC = () => {
-    const { events, startEventStream, stopEventStream, isStreaming, clearEvents } = useAppStore();
+    // NOTE: SSE stream lifecycle is managed by AppLayout (always-on).
+    // MissionControl only reads events — it must NOT stop the stream on unmount.
+    const { events, isStreaming, clearEvents } = useAppStore();
     const scrollRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
     const [filter, setFilter] = useState<string | null>(null);
-
-    // Start stream on mount
-    useEffect(() => {
-        startEventStream();
-        return () => stopEventStream();
-    }, [startEventStream, stopEventStream]);
 
     // Auto-scroll logic
     useEffect(() => {

@@ -3,6 +3,7 @@ P05 Chronicle: Async event capture engine.
 
 Low-overhead, async event streaming to immutable event log.
 Subscribes to event_bus and writes events to session event log.
+Hardened for concurrent edits: per-session sequence, lock-protected appends.
 """
 
 from __future__ import annotations
@@ -18,11 +19,22 @@ from session.schema import EventLogEntry, EventType
 # Default storage under project
 DEFAULT_EVENT_LOG_DIR = Path(__file__).parent.parent / "memory" / "chronicle_events"
 
+# Per-session write locks for concurrent-edit safety
+_session_locks: dict[str, asyncio.Lock] = {}
+
+
+def _get_session_lock(session_id: str) -> asyncio.Lock:
+    """Get or create lock for a session (concurrent sessions = different files, same session = serialized)."""
+    if session_id not in _session_locks:
+        _session_locks[session_id] = asyncio.Lock()
+    return _session_locks[session_id]
+
 
 class SessionCapture:
     """
     Async event capture: appends events to an immutable event log per session.
     Non-blocking: uses queue + background writer to avoid impacting agent latency.
+    Hardened: per-session sequence, lock-protected file appends for concurrent edits.
     """
 
     def __init__(self, event_log_dir: Optional[Path] = None):
@@ -30,7 +42,8 @@ class SessionCapture:
         self._queue: asyncio.Queue[EventLogEntry] = asyncio.Queue()
         self._writer_task: Optional[asyncio.Task] = None
         self._session_id: Optional[str] = None
-        self._sequence = 0
+        self._sequence_lock = asyncio.Lock()
+        self._session_sequences: dict[str, int] = {}
 
     def _session_log_path(self, session_id: str) -> Path:
         """Path to session event log file."""
@@ -40,11 +53,18 @@ class SessionCapture:
     def start_session(self, session_id: str) -> None:
         """Start capturing for a session."""
         self._session_id = session_id
-        self._sequence = 0
+        if session_id not in self._session_sequences:
+            self._session_sequences[session_id] = 0
 
-    def _next_sequence(self) -> int:
-        self._sequence += 1
-        return self._sequence
+    async def _next_sequence(self, session_id: str) -> int:
+        """Thread-safe per-session sequence increment."""
+        async with self._sequence_lock:
+            self._session_sequences[session_id] = self._session_sequences.get(session_id, 0) + 1
+            return self._session_sequences[session_id]
+
+    def get_last_sequence(self, session_id: str) -> int:
+        """Return current sequence for session (for checkpoint last_sequence)."""
+        return self._session_sequences.get(session_id, 0)
 
     async def emit(
         self,
@@ -56,10 +76,11 @@ class SessionCapture:
         Emit an event (non-blocking). Queued for async write.
         """
         sid = session_id or self._session_id or "unknown"
+        seq = await self._next_sequence(sid)
         entry = EventLogEntry(
             type=event_type,
             timestamp=datetime.utcnow().isoformat() + "Z",
-            sequence=self._next_sequence(),
+            sequence=seq,
             session_id=sid,
             payload=payload,
         )
@@ -98,9 +119,11 @@ class SessionCapture:
             sid = entry.session_id
             path = self._session_log_path(sid)
             line = entry.to_canonical_json() + "\n"
+            lock = _get_session_lock(sid)
             try:
-                with open(path, "a", encoding="utf-8") as f:
-                    f.write(line)
+                async with lock:
+                    with open(path, "a", encoding="utf-8") as f:
+                        f.write(line)
             except Exception as e:
                 print(f"⚠️ Chronicle capture write failed: {e}")
 

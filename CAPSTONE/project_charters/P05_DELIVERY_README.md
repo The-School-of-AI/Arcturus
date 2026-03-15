@@ -17,6 +17,11 @@
 - **create_checkpoint**: Integrates alignment; checkpoints now include git state and trace IDs when available.
 - **Cross-module trace linking**: Chronicle checkpoints link to Watchtower (P14) spans via trace_id/span_id for end-to-end observability.
 
+### Phase 7 (Days 16-20): Hardening, Docs, Replay Reliability Demo ✅
+- **Concurrent edit hardening**: SessionCapture uses per-session sequence (`_session_sequences`), asyncio lock for sequence, per-session file locks for NDJSON appends. Checkpoint creation uses per-session `threading.Lock` for safe concurrent writes.
+- **Docs**: `session/README.md` — overview, API, usage, storage paths, concurrent hardening.
+- **Replay reliability demo**: `scripts/demos/p05_chronicle.sh` — end-to-end demo: checkpoint create/load, restore, rewind roundtrip, rewind_to_latest. Runs key acceptance and integration tests.
+
 ### Pending (Week 3)
 - Git-integrated checkpoints (branch arcturus/sessions/v1)
 - Rewind/resume CLI
@@ -29,7 +34,8 @@
   - `schema.py`: Pydantic models for events and checkpoints (incl. git_commit_sha, trace_id, span_id)
   - `alignment.py`: get_git_head_info, get_current_trace_ids for git/checkpoint and trace linking
   - `capture.py`: SessionCapture class, get_capture() singleton
-  - `checkpoint.py`: create_checkpoint, list_checkpoints, load_checkpoint (integrates alignment)
+  - `checkpoint.py`: create_checkpoint, list_checkpoints, load_checkpoint (integrates alignment, lock-protected)
+  - `README.md`: Module docs, API, concurrent hardening
   - `rewind.py`: RewindError, RewindResult, restore_from_checkpoint, rewind_to_latest, list_available_checkpoints, verify_restoration_invariants
 - `core/loop.py`: Chronicle hooks added to `_execute_step` and result processing (STEP_START, STEP_COMPLETE, STEP_FAILED events + checkpoint creation)
 - Storage paths:
@@ -75,8 +81,12 @@
 | test_10_restoration_invariants_detect_missing_end_time | Invariants flag completed nodes missing end_time |
 | test_11_checkpoint_includes_git_commit_when_in_repo | Git alignment: checkpoint has git_commit_sha when in repo |
 | test_12_checkpoint_includes_trace_id_when_under_span | Trace linking: checkpoint has trace_id under run_span |
+| test_13_concurrent_checkpoint_creation_same_session | Concurrent hardening: 8 checkpoints via ThreadPool, all loadable |
+| test_14_capture_per_session_sequence | Concurrent hardening: per-session sequence under parallel emits |
 
 Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py tests/integration/test_chronicle_git_checkpoint_alignment.py -v`
+
+Demo: `./scripts/demos/p05_chronicle.sh`
 
 ## 6. Existing Baseline Regression Status
 - Command: scripts/test_all.sh quick
@@ -97,7 +107,7 @@ Run: `pytest tests/acceptance/p05_chronicle/test_rewind_restores_exact_state.py 
 - No other code depends on session module in Week 1
 
 ## 10. Demo Steps
-- Script: scripts/demos/p05_chronicle.sh
+- Script: `scripts/demos/p05_chronicle.sh` (replay reliability: checkpoint → load → restore → rewind)
 - Week 1 demo (manual):
   ```python
   from session.schema import EventLogEntry, EventType

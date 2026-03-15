@@ -85,6 +85,7 @@ def append_env_vars_for_docker() -> None:
         "# --- Added by migrate_all_memories.py (docker mode) ---",
         "VECTOR_STORE_PROVIDER=qdrant",
         "RAG_VECTOR_STORE_PROVIDER=qdrant",
+        "EPISODIC_STORE_PROVIDER=qdrant",
         "QDRANT_URL=http://localhost:6333",
         "# QDRANT_API_KEY=your-local-or-cloud-api-key-if-needed",
         "NEO4J_ENABLED=true",
@@ -92,6 +93,7 @@ def append_env_vars_for_docker() -> None:
         "NEO4J_USER=neo4j",
         "NEO4J_PASSWORD=arcturus-neo4j",
         "MNEMO_ENABLED=true",
+        "VITE_ENABLE_LOCAL_MIGRATION=true",
         "# --- End migrate_all_memories.py section ---",
         "",
     ]
@@ -130,6 +132,7 @@ def prompt_cloud_setup() -> None:
         "       QDRANT_API_KEY=your-qdrant-api-key\n"
         "       VECTOR_STORE_PROVIDER=qdrant\n"
         "       RAG_VECTOR_STORE_PROVIDER=qdrant\n"
+        "       EPISODIC_STORE_PROVIDER=qdrant\n"
     )
     print(
         "2) Create / configure a Neo4j Aura (or self-hosted reachable) instance:\n"
@@ -143,6 +146,11 @@ def prompt_cloud_setup() -> None:
         "3) Enable Mnemo (unified extraction + Fact/Evidence):\n"
         "   - Set in your .env:\n"
         "       MNEMO_ENABLED=true\n"
+    )
+    print(
+        "4) Enable Local Migration:\n"
+        "   - Set in your .env:\n"
+        "       VITE_ENABLE_LOCAL_MIGRATION=true\n"
     )
 
     input(
@@ -167,6 +175,7 @@ def run_migrations_in_order() -> int:
     scripts = [
         "migrate_faiss_to_qdrant.py",
         "migrate_rag_faiss_to_qdrant.py",
+        "migrate_episodic_to_qdrant.py",
         "migrate_memories_to_neo4j.py",
         "migrate_hubs_to_neo4j.py",
     ]

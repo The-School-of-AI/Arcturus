@@ -108,15 +108,18 @@ class SkillManager:
 
 
     def match_intent(self, user_query: str) -> Optional[str]:
-        """Simple keyword matching with word boundaries"""
+        """Simple keyword matching with word boundaries. Respects skills.disabled in config."""
         import re
+        from config.settings_loader import load_settings
         if not self.registry_file.exists():
             return None
-            
+        disabled = load_settings().get("skills", {}).get("disabled", [])
         registry = json.loads(self.registry_file.read_text())
         user_query = user_query.lower()
-        
+
         for name, info in registry.items():
+            if name in disabled:
+                continue
             for trigger in info.get("intent_triggers", []):
                 # Escape trigger for regex safety, then wrap in \b
                 pattern = r"\b" + re.escape(trigger.lower()) + r"\b"

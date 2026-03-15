@@ -1,10 +1,14 @@
 import asyncio
+import hashlib
+import hmac
+import json
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import gateway_api.integration_tracing as integration_tracing_module
+import gateway_api.idempotency as idempotency_module
 import gateway_api.key_store as key_store_module
 import gateway_api.metering as metering_module
 import gateway_api.v1.agents as agents_routes
@@ -19,6 +23,7 @@ import gateway_api.webhooks as webhooks_module
 from core.gateway_services.exceptions import UpstreamIntegrationError
 from core.scheduler import JobDefinition
 from gateway_api.integration_tracing import IntegrationTracer
+from gateway_api.idempotency import IdempotencyStore
 from gateway_api.key_store import GatewayKeyStore
 from gateway_api.metering import GatewayMeteringStore
 from gateway_api.rate_limiter import InMemoryTokenBucketLimiter
@@ -177,12 +182,15 @@ def build_gateway_runtime_context(
     audit_file = tmp_path / "key_audit.jsonl"
     events_file = tmp_path / "metering_events.jsonl"
     integration_events = tmp_path / "integration_events.jsonl"
+    idempotency_records = tmp_path / "idempotency_records.json"
 
     key_store = GatewayKeyStore(keys_file=keys_file, audit_file=audit_file)
     metering_store = GatewayMeteringStore(events_file=events_file, data_dir=tmp_path)
+    idempotency_store = IdempotencyStore(records_file=idempotency_records)
 
     monkeypatch.setattr(key_store_module, "_gateway_key_store", key_store)
     monkeypatch.setattr(metering_module, "_metering_store", metering_store)
+    monkeypatch.setattr(idempotency_module, "_idempotency_store", idempotency_store)
     monkeypatch.setattr(
         integration_tracing_module,
         "_integration_tracer",
@@ -288,6 +296,9 @@ def build_gateway_runtime_context(
         dlq_file=tmp_path / "webhook_dlq.jsonl",
     )
     monkeypatch.setattr(webhooks_module, "_webhook_service", webhook_service)
+    monkeypatch.setenv("ARCTURUS_GATEWAY_GITHUB_WEBHOOK_SECRET", "runtime-github-secret")
+    monkeypatch.setenv("ARCTURUS_GATEWAY_JIRA_WEBHOOK_TOKEN", "runtime-jira-token")
+    monkeypatch.setenv("ARCTURUS_GATEWAY_GMAIL_CHANNEL_TOKEN", "runtime-gmail-token")
 
     app = FastAPI()
     app.include_router(gateway_router)
@@ -312,10 +323,40 @@ def build_gateway_runtime_context(
         )
         return plaintext
 
+    def connector_headers(source: str, payload: dict, *, event_name: str | None = None) -> dict:
+        source_key = source.strip().lower()
+        body = json.dumps(payload)
+        delivery_id = f"runtime-{hashlib.sha256(body.encode('utf-8')).hexdigest()[:12]}"
+        if source_key == "github":
+            signature = "sha256=" + hmac.new(
+                b"runtime-github-secret",
+                body.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            return {
+                "content-type": "application/json",
+                "x-github-event": event_name or "push",
+                "x-github-delivery": delivery_id,
+                "x-hub-signature-256": signature,
+            }
+        if source_key == "jira":
+            return {
+                "content-type": "application/json",
+                "x-atlassian-webhook-token": "runtime-jira-token",
+            }
+        if source_key == "gmail":
+            return {
+                "content-type": "application/json",
+                "x-goog-channel-token": "runtime-gmail-token",
+                "x-goog-message-number": "1001",
+            }
+        raise ValueError(f"Unsupported connector source: {source_key}")
+
     return {
         "client": client,
         "create_api_key": create_api_key,
         "webhook_service": webhook_service,
         "integration_events": integration_events,
+        "connector_headers": connector_headers,
         "state": state,
     }

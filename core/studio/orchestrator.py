@@ -1,4 +1,5 @@
 import asyncio
+import io
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -33,6 +34,10 @@ from core.studio.storage import StudioStorage
 
 class ForgeOrchestrator:
     """Outline-first generation pipeline for Forge artifacts."""
+
+    # Monotonic counter per artifact to detect stale background image tasks.
+    # Class-level so the version survives across per-request instances.
+    _image_gen_version: dict[str, int] = {}
 
     def __init__(self, storage: StudioStorage):
         self.storage = storage
@@ -75,6 +80,11 @@ class ForgeOrchestrator:
             parameters=parameters,
         )
 
+        # Slides-specific outline normalization
+        if artifact_type == ArtifactType.slides:
+            from core.studio.slides.generator import normalize_slide_outline
+            outline = normalize_slide_outline(outline, parameters, prompt)
+
         # Document-specific outline normalization
         if artifact_type == ArtifactType.document:
             from core.studio.documents.generator import normalize_document_outline
@@ -90,6 +100,7 @@ class ForgeOrchestrator:
             created_at=now,
             updated_at=now,
             model=model,
+            creation_prompt=prompt.strip() or None,
             outline=outline,
             content_tree=None,
         )
@@ -121,6 +132,13 @@ class ForgeOrchestrator:
         # Apply optional modifications
         if modifications:
             _apply_outline_modifications(artifact, modifications)
+            # If items were modified, recompute slide_count from the new outline
+            if "items" in modifications and artifact.type == ArtifactType.slides:
+                from core.studio.slides.generator import clamp_slide_count
+                new_count = len(artifact.outline.items)
+                if artifact.outline.parameters is None:
+                    artifact.outline.parameters = {}
+                artifact.outline.parameters["slide_count"] = clamp_slide_count(new_count)
 
         # Mark outline as approved
         artifact.outline.status = OutlineStatus.approved
@@ -163,10 +181,10 @@ class ForgeOrchestrator:
             )
             raise
 
-        # Slides-specific: enforce slide count range [8, 15]
+        # Slides-specific: enforce target slide count
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.generator import enforce_slide_count
-            content_tree_model = enforce_slide_count(content_tree_model)
+            content_tree_model = enforce_slide_count(content_tree_model, target_count=target_count)
 
             # Phase 3: notes quality repair pass
             from core.studio.slides.notes import repair_speaker_notes
@@ -208,20 +226,9 @@ class ForgeOrchestrator:
 
         content_tree = content_tree_model.model_dump(mode="json")
 
-        # Create revision
+        # Create revision and update artifact
         change_summary = compute_change_summary(artifact.content_tree, content_tree)
-        revision = self.revision_manager.create_revision(
-            artifact_id=artifact_id,
-            content_tree=content_tree,
-            change_summary=change_summary,
-            parent_revision_id=artifact.revision_head_id,
-        )
-
-        # Update artifact
-        artifact.content_tree = content_tree
-        artifact.revision_head_id = revision.id
-        artifact.updated_at = datetime.now(timezone.utc)
-        self.storage.save_artifact(artifact)
+        self._commit_revision_update(artifact, content_tree, change_summary)
 
         return artifact.model_dump(mode="json")
 
@@ -373,6 +380,42 @@ class ForgeOrchestrator:
             )
         return export_job.model_dump(mode="json")
 
+    async def _generate_and_cache_images(
+        self,
+        artifact_id: str,
+        content_tree_dict: dict,
+        version: int,
+    ) -> None:
+        """Background task: generate slide images via Gemini and cache to disk."""
+        try:
+            from core.schemas.studio_schema import SlidesContentTree
+            from core.studio.slides.images import generate_slide_images
+
+            content_tree = SlidesContentTree(**content_tree_dict)
+            images = await generate_slide_images(content_tree)
+
+            # Skip writes if a newer generation was started (edit during generation)
+            if self._image_gen_version.get(artifact_id, 0) != version:
+                logger.info("Skipping stale image generation (v%d) for %s", version, artifact_id)
+                return
+
+            for slide_id, buf in images.items():
+                buf.seek(0)
+                self.storage.save_slide_image(artifact_id, slide_id, buf.read())
+
+            logger.info("Cached %d slide images for artifact %s", len(images), artifact_id)
+        except Exception as e:
+            logger.warning("Background image generation failed for %s: %s", artifact_id, e)
+
+    def _load_cached_images(self, artifact_id: str) -> dict[str, io.BytesIO]:
+        """Load cached slide images from disk into BytesIO buffers."""
+        images: dict[str, io.BytesIO] = {}
+        for slide_id in self.storage.list_slide_images(artifact_id):
+            path = self.storage.load_slide_image_path(artifact_id, slide_id)
+            if path:
+                images[slide_id] = io.BytesIO(path.read_bytes())
+        return images
+
     async def _run_export(
         self,
         artifact_id: str,
@@ -397,16 +440,46 @@ class ForgeOrchestrator:
             from core.studio.slides.notes import repair_speaker_notes
             export_content_tree = repair_speaker_notes(content_tree_model)
 
-            # Generate images if requested
+            if strict_layout:
+                from core.studio.slides.layout import repair_layout
+                export_content_tree = repair_layout(export_content_tree)
+
+            # Load images: use cache + generate any missing ones
             slide_images = None
             if generate_images:
-                try:
-                    from core.studio.slides.images import generate_slide_images
-                    slide_images = await generate_slide_images(export_content_tree)
-                except Exception as img_err:
-                    logger.warning(
-                        "Image generation failed, exporting without images: %s", img_err
-                    )
+                cached = self._load_cached_images(artifact_id)
+
+                # Determine which image slides still need generation
+                required_ids = {
+                    s.id for s in export_content_tree.slides
+                    if s.slide_type in ("image_text", "image_full")
+                    and any(el.type == "image" and el.content for el in s.elements)
+                }
+                missing_ids = required_ids - set(cached.keys())
+
+                if missing_ids:
+                    try:
+                        from core.studio.slides.images import generate_slide_images
+                        # Only generate for missing slides to avoid redundant API calls
+                        missing_tree = SlidesContentTree(
+                            deck_title=export_content_tree.deck_title,
+                            slides=[s for s in export_content_tree.slides if s.id in missing_ids],
+                        )
+                        new_images = await generate_slide_images(missing_tree)
+                        for sid, buf in new_images.items():
+                            buf.seek(0)
+                            self.storage.save_slide_image(artifact_id, sid, buf.read())
+                            buf.seek(0)
+                            cached[sid] = buf
+                    except Exception as img_err:
+                        logger.warning(
+                            "Image generation failed, exporting with %d cached images: %s",
+                            len(cached), img_err,
+                        )
+
+                if cached:
+                    slide_images = cached
+                    logger.info("Using %d images for export (%d from cache)", len(cached), len(cached) - len(missing_ids))
 
             output_path = self.storage.get_export_file_path(
                 artifact_id, export_job.id, export_job.format.value
@@ -419,19 +492,17 @@ class ForgeOrchestrator:
                 content_tree=export_content_tree,
             )
 
-            layout_ok = validation.get("layout_valid", True) or not strict_layout
-            if validation["valid"] and layout_ok:
+            validation["strict_layout"] = strict_layout
+
+            if validation["valid"]:
                 export_job.status = ExportStatus.completed
                 export_job.output_uri = str(output_path)
                 export_job.file_size_bytes = output_path.stat().st_size
-                validation["strict_layout"] = strict_layout
                 export_job.validator_results = validation
                 export_job.completed_at = datetime.now(timezone.utc)
             else:
                 export_job.status = ExportStatus.failed
-                all_errors = validation.get("errors", []) + validation.get("layout_errors", [])
-                export_job.error = "; ".join(all_errors) if all_errors else "Quality validation failed"
-                validation["strict_layout"] = strict_layout
+                export_job.error = "; ".join(validation.get("errors", [])) or "Quality validation failed"
                 export_job.validator_results = validation
                 export_job.completed_at = datetime.now(timezone.utc)
 
@@ -648,22 +719,50 @@ class ForgeOrchestrator:
 
         content_tree = content_tree_model.model_dump(mode="json")
 
-        # Create revision
-        change_summary = f"Added upload analysis from {filename}"
-        revision = self.revision_manager.create_revision(
-            artifact_id=artifact_id,
-            content_tree=content_tree,
-            change_summary=change_summary,
-            parent_revision_id=artifact.revision_head_id,
+        # Create revision and update artifact
+        self._commit_revision_update(
+            artifact, content_tree, f"Added upload analysis from {filename}"
         )
 
-        # Update artifact
-        artifact.content_tree = content_tree
+        return artifact.model_dump(mode="json")
+
+    def _commit_revision_update(
+        self,
+        artifact: "Artifact",
+        new_tree: Dict[str, Any],
+        change_summary: str,
+        *,
+        edit_instruction: Optional[str] = None,
+        patch: Optional[Dict[str, Any]] = None,
+        diff: Optional[Dict[str, Any]] = None,
+        restored_from_revision_id: Optional[str] = None,
+    ) -> "Revision":
+        """Create a revision, update the artifact, and trigger image regeneration for slides."""
+        revision = self.revision_manager.create_revision(
+            artifact_id=artifact.id,
+            content_tree=new_tree,
+            change_summary=change_summary,
+            parent_revision_id=artifact.revision_head_id,
+            edit_instruction=edit_instruction,
+            patch=patch,
+            diff=diff,
+            restored_from_revision_id=restored_from_revision_id,
+        )
+
+        artifact.content_tree = new_tree
         artifact.revision_head_id = revision.id
         artifact.updated_at = datetime.now(timezone.utc)
         self.storage.save_artifact(artifact)
 
-        return artifact.model_dump(mode="json")
+        if artifact.type == ArtifactType.slides:
+            images_dir = self.storage.base_dir / artifact.id / "images"
+            if images_dir.exists():
+                import shutil
+                shutil.rmtree(images_dir)
+            version = self._image_gen_version[artifact.id] = self._image_gen_version.get(artifact.id, 0) + 1
+            asyncio.create_task(self._generate_and_cache_images(artifact.id, new_tree, version))
+
+        return revision
 
     async def edit_artifact(
         self,
@@ -722,10 +821,26 @@ class ForgeOrchestrator:
                 outline=artifact.outline.model_dump(mode="json") if artifact.outline else None,
             )
 
-        # 4. Apply patch
-        new_tree, warnings = apply_patch_to_content_tree(
-            artifact.type.value, artifact.content_tree, patch_dict
-        )
+        # 4. Apply patch (retry once on apply failure by re-planning with error context)
+        try:
+            new_tree, warnings = apply_patch_to_content_tree(
+                artifact.type.value, artifact.content_tree, patch_dict
+            )
+        except ValueError as apply_err:
+            if _patch_override is not None:
+                raise  # Don't retry test overrides
+            logger.warning("Patch apply failed: %s — retrying with repair prompt", apply_err)
+            from core.studio.editing.planner import plan_patch_repair
+            patch_dict = await plan_patch_repair(
+                artifact_type=artifact.type.value,
+                instruction=instruction,
+                content_tree=artifact.content_tree,
+                failed_patch=patch_dict,
+                error_message=str(apply_err),
+            )
+            new_tree, warnings = apply_patch_to_content_tree(
+                artifact.type.value, artifact.content_tree, patch_dict
+            )
 
         # 5. Compute diff
         diff = compute_revision_diff(
@@ -755,26 +870,12 @@ class ForgeOrchestrator:
 
         # 8. Persist — create revision with diff/patch/edit_instruction
         change_summary = summarize_diff_highlights(diff.get("highlights", []))
-        revision = self.revision_manager.create_revision(
-            artifact_id=artifact_id,
-            content_tree=new_tree,
-            change_summary=change_summary,
-            parent_revision_id=artifact.revision_head_id,
+        revision = self._commit_revision_update(
+            artifact, new_tree, change_summary,
+            edit_instruction=instruction,
+            patch=patch_dict,
+            diff=diff,
         )
-
-        # Store edit metadata on the revision
-        rev_loaded = self.storage.load_revision(artifact_id, revision.id)
-        if rev_loaded:
-            rev_loaded.edit_instruction = instruction
-            rev_loaded.patch = patch_dict
-            rev_loaded.diff = diff
-            self.storage.save_revision(rev_loaded)
-
-        # Update artifact
-        artifact.content_tree = new_tree
-        artifact.revision_head_id = revision.id
-        artifact.updated_at = datetime.now(timezone.utc)
-        self.storage.save_artifact(artifact)
 
         return {
             **artifact.model_dump(mode="json"),
@@ -785,6 +886,74 @@ class ForgeOrchestrator:
                 "diff": diff,
                 "warnings": warnings,
                 "change_summary": change_summary,
+            },
+        }
+
+    async def restore_revision(
+        self,
+        artifact_id: str,
+        target_revision_id: str,
+        base_revision_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Restore an artifact to a previous revision's content tree.
+
+        Creates a new revision (never rewrites history) with the snapshot
+        from the target revision. Returns artifact-shaped payload consistent
+        with edit_artifact responses.
+
+        Raises:
+            ValueError: On invalid artifact or missing revision
+            ConflictError: When base_revision_id doesn't match current head
+        """
+        from core.studio.editing.diff import compute_revision_diff
+
+        # 1. Load artifact
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is None:
+            raise ValueError(f"Artifact not found: {artifact_id}")
+        if artifact.content_tree is None:
+            raise ValueError(f"Artifact {artifact_id} has no content tree")
+
+        # 2. Optimistic concurrency check
+        if base_revision_id is not None and artifact.revision_head_id != base_revision_id:
+            raise ConflictError(
+                f"Conflict: expected revision {base_revision_id}, "
+                f"but current is {artifact.revision_head_id}"
+            )
+
+        # 3. Already-current early return
+        if target_revision_id == artifact.revision_head_id:
+            return {
+                **artifact.model_dump(mode="json"),
+                "restore_result": {"status": "already_current"},
+            }
+
+        # 4. Load target revision
+        target_revision = self.revision_manager.get_revision(artifact_id, target_revision_id)
+        if target_revision is None:
+            raise ValueError(f"Revision not found: {target_revision_id}")
+
+        # 5. Restore tree and compute diff
+        restored_tree = target_revision.content_tree_snapshot
+        diff = compute_revision_diff(
+            artifact.type.value, artifact.content_tree, restored_tree
+        )
+
+        # 6. Commit via shared helper
+        new_rev = self._commit_revision_update(
+            artifact,
+            restored_tree,
+            f"Restored to: {target_revision.change_summary}",
+            diff=diff,
+            restored_from_revision_id=target_revision_id,
+        )
+
+        return {
+            **artifact.model_dump(mode="json"),
+            "restore_result": {
+                "status": "restored",
+                "revision_id": new_rev.id,
+                "restored_from": target_revision_id,
             },
         }
 

@@ -10,12 +10,20 @@ from opentelemetry.trace import Status, StatusCode
 from google.genai.errors import ServerError
 from dotenv import load_dotenv
 
+from ops.cost import ConfigurableCostCalculator, CostCalculator
+
 load_dotenv()
 
 ROOT = Path(__file__).parent.parent
 MODELS_JSON = ROOT / "config" / "models.json"
 MODELS_YAML = ROOT / "config" / "models.yaml"
 PROFILE_YAML = ROOT / "config" / "profiles.yaml"
+
+
+def _estimate_tokens(text: str) -> int:
+    """Fallback token estimate: ~4 chars per token."""
+    return max(0, len(text or "") // 4)
+
 
 # OpenRouter config
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -38,7 +46,13 @@ def _resolve_openrouter_model(model_name: str) -> str:
     return GEMINI_TO_OPENROUTER.get(model_name, OPENROUTER_DEFAULT_MODEL)
 
 class ModelManager:
-    def __init__(self, model_name: str = None, provider: str = None, role: str = None):
+    def __init__(
+        self,
+        model_name: str = None,
+        provider: str = None,
+        role: str = None,
+        cost_calculator: CostCalculator = None,
+    ):
         """
         Initialize ModelManager with flexible model specification.
 
@@ -137,6 +151,8 @@ class ModelManager:
                 self.client = None
             # Ollama doesn't need a persistent client
 
+        self.cost_calculator = cost_calculator or ConfigurableCostCalculator()
+
         # STRICT MODE ENFORCEMENT
         if role == "verifier":
             enforce_local = self.role_config.get("settings", {}).get("enforce_local_verifier", False)
@@ -149,27 +165,31 @@ class ModelManager:
 
     async def generate_text(self, prompt: str) -> str:
         """
-        Generate text via Gemini or Ollama API.
-        WATCHTOWER: Span for each LLM API call (Gemini, Ollama).
+        Generate text via Gemini, OpenRouter, or Ollama API.
+        WATCHTOWER: Span for each LLM API call.
         - Span name: llm.generate
-        - Attributes: model, provider, prompt_length, output_length
-        - Used for latency breakdown and cost tracking (Days 6-10)
+        - Attributes: model, provider, prompt_length, output_length, cost_usd, input_tokens, output_tokens
         """
         with llm_span(self.text_model_key, self.model_type, len(prompt)) as span:
             try:
-                # Route to provider-specific implementation
                 if self.model_type == "gemini":
-                    result = await self._gemini_generate(prompt)
+                    result, input_tokens, output_tokens = await self._gemini_generate(prompt)
                 elif self.model_type == "openrouter":
-                    result = await self._openrouter_generate(prompt)
+                    result, input_tokens, output_tokens = await self._openrouter_generate(prompt)
                 elif self.model_type == "ollama":
-                    result = await self._ollama_generate(prompt)
+                    result, input_tokens, output_tokens = await self._ollama_generate(prompt)
                 else:
                     raise NotImplementedError(f"Unsupported model type: {self.model_type}")
-                
+
                 span.set_attribute("prompt", prompt)
                 span.set_attribute("output_length", len(result))
                 span.set_attribute("output_preview", (result[:1000] if result else ""))
+                span.set_attribute("input_tokens", input_tokens)
+                span.set_attribute("output_tokens", output_tokens)
+                cost_result = self.cost_calculator.compute(
+                    input_tokens, output_tokens, self.text_model_key, self.model_type
+                )
+                span.set_attribute("cost_usd", cost_result.cost_usd)
                 return result
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -178,45 +198,38 @@ class ModelManager:
 
     async def generate_content(self, contents: list) -> str:
         """
-        Generate content with multimodal input (text + images) via Gemini or Ollama.
+        Generate content with multimodal input (text + images) via Gemini, OpenRouter, or Ollama.
         WATCHTOWER: Span for each LLM API call with multimodal content.
         - Span name: llm.generate
-        - Attributes: model, provider, prompt_length, output_length
+        - Attributes: model, provider, prompt_length, output_length, cost_usd, input_tokens, output_tokens
         """
         prompt_len = sum(len(c) if isinstance(c, str) else 0 for c in contents)
         with llm_span(self.text_model_key, self.model_type, prompt_len) as span:
             try:
-                # Route to provider-specific implementation (multimodal)
                 if self.model_type == "gemini":
                     await self._wait_for_rate_limit()
-                    result = await self._gemini_generate_content(contents)
+                    result, input_tokens, output_tokens = await self._gemini_generate_content(contents)
+                elif self.model_type == "openrouter":
+                    result, input_tokens, output_tokens = await self._openrouter_generate_content(contents)
                 elif self.model_type == "ollama":
-                    result = await self._ollama_generate_content(contents)
+                    result, input_tokens, output_tokens = await self._ollama_generate_content(contents)
                 else:
                     raise NotImplementedError(f"Unsupported model type: {self.model_type}")
                 span.set_attribute("output_length", len(result))
                 span.set_attribute("output_preview", (result[:500] if result else ""))
+                span.set_attribute("input_tokens", input_tokens)
+                span.set_attribute("output_tokens", output_tokens)
+                cost_result = self.cost_calculator.compute(
+                    input_tokens, output_tokens, self.text_model_key, self.model_type
+                )
+                span.set_attribute("cost_usd", cost_result.cost_usd)
                 return result
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 raise
-        """Generate content with support for text and images.
 
-        Contents can contain:
-        - str: Text content
-        - PIL.Image: Image to process (will be base64-encoded for Ollama)
-        """
-        if self.model_type == "gemini":
-            return await self._gemini_generate_content(contents)
-        elif self.model_type == "openrouter":
-            return await self._openrouter_generate_content(contents)
-        elif self.model_type == "ollama":
-            return await self._ollama_generate_content(contents)
-
-        raise NotImplementedError(f"Unsupported model type: {self.model_type}")
-
-    async def _ollama_generate_content(self, contents: list) -> str:
+    async def _ollama_generate_content(self, contents: list) -> tuple[str, int, int]:
         """Generate content with Ollama, supporting multimodal models like gemma3, llava, etc."""
         import base64
         import io
@@ -247,17 +260,15 @@ class ModelManager:
                 except Exception as e:
                     print(f"⚠️ Failed to encode image for Ollama: {e}")
 
-
         prompt = "\n".join(text_parts)
-
 
         if images_base64:
             return await self._ollama_generate_with_images(prompt, images_base64)
         else:
             return await self._ollama_generate(prompt)
 
-    async def _ollama_generate_with_images(self, prompt: str, images: list) -> str:
-        """Generate with Ollama using images (for multimodal models)."""
+    async def _ollama_generate_with_images(self, prompt: str, images: list) -> tuple[str, int, int]:
+        """Generate with Ollama using images (for multimodal models). Returns (text, input_tokens, output_tokens)."""
         try:
             import aiohttp
             async with aiohttp.ClientSession() as session:
@@ -272,7 +283,12 @@ class ModelManager:
                 ) as response:
                     response.raise_for_status()
                     result = await response.json()
-                    return result["response"].strip()
+                    text = result["response"].strip()
+                    inp = result.get("prompt_eval_count")
+                    out = result.get("eval_count")
+                    input_tokens = inp if inp is not None else _estimate_tokens(prompt)
+                    output_tokens = out if out is not None else _estimate_tokens(text)
+                    return (text, input_tokens, output_tokens)
         except Exception as e:
             raise RuntimeError(f"Ollama multimodal generation failed: {str(e)}")
 
@@ -296,95 +312,10 @@ class ModelManager:
                 await asyncio.sleep(sleep_time)
             ModelManager._last_call = time.time()
 
-
-    async def _gemini_generate(self, prompt: str) -> str:
+    async def _gemini_generate(self, prompt: str) -> tuple[str, int, int]:
+        """Generate text using the native Google Gemini API. Returns (text, input_tokens, output_tokens)."""
         await self._wait_for_rate_limit()
         try:
-            # ✅ CORRECT: Use synchronous SDK client in thread to bypass aiohttp/DNS issues common on macOS
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model_info["model"],
-                contents=prompt
-            )
-            return response.text.strip()
-
-        except ServerError as e:
-            # ✅ FIXED: Raise the exception instead of returning it
-            raise e
-        except Exception as e:
-            # ✅ Handle other potential errors
-            raise RuntimeError(f"Gemini generation failed: {str(e)}")
-
-    async def _gemini_generate_content(self, contents: list) -> str:
-        """Generate content with support for text and images using Gemini SDK"""
-        try:
-            # ✅ Use synchronous SDK client in thread (text + images)
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model_info["model"],
-                contents=contents
-            )
-            return response.text.strip()
-
-        except ServerError as e:
-            # ✅ FIXED: Raise the exception instead of returning it
-            raise e
-        except Exception as e:
-            # ✅ Handle other potential errors
-            raise RuntimeError(f"Gemini content generation failed: {str(e)}")
-
-    async def _ollama_generate(self, prompt: str) -> str:
-        try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.model_info["url"]["generate"],
-                    json = {"model": self.model_info["model"], "prompt": prompt, "stream": False}
-                ) as response:
-                    response.raise_for_status()
-                    result = await response.json()
-                    return result["response"].strip()
-        except Exception as e:
-            raise RuntimeError(f"Ollama generation failed: {str(e)}")
-
-    async def _openrouter_generate(self, prompt: str) -> str:
-        """Generate text using OpenRouter's OpenAI-compatible API."""
-        try:
-            import aiohttp
-            api_key = os.getenv(self.model_info.get("api_key_env", "OPENROUTER_API_KEY"))
-            base_url = self.model_info.get("base_url", OPENROUTER_BASE_URL)
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{base_url}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": self.model_info["model"],
-                        "messages": [{"role": "user", "content": prompt}],
-                    }
-                ) as response:
-                    response.raise_for_status()
-                    result = await response.json()
-                    return result["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            raise RuntimeError(f"OpenRouter generation failed: {str(e)}")
-
-    async def _openrouter_generate_content(self, contents: list) -> str:
-        """Generate content with OpenRouter, extracting text from multimodal inputs."""
-        text_parts = []
-        for content in contents:
-            if isinstance(content, str):
-                text_parts.append(content)
-        prompt = "\n".join(text_parts)
-        return await self._openrouter_generate(prompt)
-
-    async def _gemini_generate(self, prompt: str) -> str:
-        """Generate text using the native Google Gemini API."""
-        try:
-            from google import genai
             api_key = os.getenv(self.model_info.get("api_key_env", "GEMINI_API_KEY"))
             if not api_key:
                 raise RuntimeError("GEMINI_API_KEY not set in environment")
@@ -393,16 +324,24 @@ class ModelManager:
                 model=self.model_info["model"],
                 contents=prompt
             )
-            return response.text.strip()
+            text = response.text.strip()
+            usage = getattr(response, "usage_metadata", None)
+            if usage:
+                inp = getattr(usage, "prompt_token_count", None) or 0
+                out = getattr(usage, "candidates_token_count", None) or 0
+            else:
+                inp = _estimate_tokens(prompt)
+                out = _estimate_tokens(text)
+            return (text, inp, out)
+        except ServerError as e:
+            raise e
         except Exception as e:
             raise RuntimeError(f"Gemini generation failed: {str(e)}")
 
-    async def _gemini_generate_content(self, contents: list) -> str:
-        """Generate content with native Gemini API, supporting text and images."""
+    async def _gemini_generate_content(self, contents: list) -> tuple[str, int, int]:
+        """Generate content with native Gemini API, supporting text and images. Returns (text, input_tokens, output_tokens)."""
         try:
-            import base64
             import io
-            from google import genai
             from google.genai import types
 
             api_key = os.getenv(self.model_info.get("api_key_env", "GEMINI_API_KEY"))
@@ -427,6 +366,74 @@ class ModelManager:
                 model=self.model_info["model"],
                 contents=parts
             )
-            return response.text.strip()
+            text = response.text.strip()
+            usage = getattr(response, "usage_metadata", None)
+            if usage:
+                inp = getattr(usage, "prompt_token_count", None) or 0
+                out = getattr(usage, "candidates_token_count", None) or 0
+            else:
+                inp = _estimate_tokens("".join(str(c) for c in contents) if contents else "")
+                out = _estimate_tokens(text)
+            return (text, inp, out)
+        except ServerError as e:
+            raise e
         except Exception as e:
             raise RuntimeError(f"Gemini multimodal generation failed: {str(e)}")
+
+    async def _ollama_generate(self, prompt: str) -> tuple[str, int, int]:
+        """Returns (text, input_tokens, output_tokens)."""
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.model_info["url"]["generate"],
+                    json={"model": self.model_info["model"], "prompt": prompt, "stream": False},
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    text = result["response"].strip()
+                    inp = result.get("prompt_eval_count")
+                    out = result.get("eval_count")
+                    input_tokens = inp if inp is not None else _estimate_tokens(prompt)
+                    output_tokens = out if out is not None else _estimate_tokens(text)
+                    return (text, input_tokens, output_tokens)
+        except Exception as e:
+            raise RuntimeError(f"Ollama generation failed: {str(e)}")
+
+    async def _openrouter_generate(self, prompt: str) -> tuple[str, int, int]:
+        """Generate text using OpenRouter's OpenAI-compatible API. Returns (text, input_tokens, output_tokens)."""
+        try:
+            import aiohttp
+            api_key = os.getenv(self.model_info.get("api_key_env", "OPENROUTER_API_KEY"))
+            base_url = self.model_info.get("base_url", OPENROUTER_BASE_URL)
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self.model_info["model"],
+                        "messages": [{"role": "user", "content": prompt}],
+                    }
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    text = result["choices"][0]["message"]["content"].strip()
+                    usage = result.get("usage", {})
+                    input_tokens = usage.get("prompt_tokens", _estimate_tokens(prompt))
+                    output_tokens = usage.get("completion_tokens", _estimate_tokens(text))
+                    return (text, input_tokens, output_tokens)
+        except Exception as e:
+            raise RuntimeError(f"OpenRouter generation failed: {str(e)}")
+
+    async def _openrouter_generate_content(self, contents: list) -> tuple[str, int, int]:
+        """Generate content with OpenRouter, extracting text from multimodal inputs. Returns (text, input_tokens, output_tokens)."""
+        text_parts = []
+        for content in contents:
+            if isinstance(content, str):
+                text_parts.append(content)
+        prompt = "\n".join(text_parts)
+        return await self._openrouter_generate(prompt)

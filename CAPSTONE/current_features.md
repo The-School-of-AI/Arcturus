@@ -64,3 +64,30 @@ Controlled by `routers/apps.py`.
   - **App Dashboard**: Renders `ui.json` files.
   - **Graph Visualizer**: Shows the Agent DAG.
   - **Terminal & Editor**: Integrated Monaco Editor and XTerm.
+  - **Admin Dashboard** (`features/admin/AdminDashboard.tsx`): 9-tab Grafana-style dashboard (Traces, Cost, Errors, Health, Flags, Config, Diagnostics, Audit, Cache).
+
+## 8. Observability & Admin — Watchtower (P14)
+- **Distributed Tracing** (`ops/tracing/`):
+  - OpenTelemetry integration with MongoDB and Jaeger (OTLP HTTP) exporters.
+  - End-to-end span hierarchy: `run_span` → `agent_loop_run` → planner → DAG → node → iteration → `llm_span` / `code_execution_span` / `sandbox_run_span`.
+  - Resume-aware tracing linked by `run_id` and `session_id`.
+- **Cost Analytics** (`ops/cost/`):
+  - `ConfigurableCostCalculator` with per-model pricing.
+  - Cost summary API aggregates from spans by agent, model, or trace.
+- **Health Monitoring** (`ops/health/`):
+  - Service health checks: MongoDB, Qdrant, Ollama, MCP gateway, Neo4J.
+  - `HealthScheduler` for periodic background checks.
+  - Health history, uptime tracking, resource monitoring (CPU/memory/disk).
+  - Alert evaluation system for threshold-based anomaly detection.
+- **Admin Controls** (`ops/admin/`, `routers/admin.py`):
+  - **Feature Flags**: JSON-file-backed `FeatureFlagStore` with global toggles. Lifecycle-managed flags (voice_wake, health_scheduler) stop/start background services.
+  - **Cache Management**: List known caches (settings, FAISS, MCP sessions); flush settings cache.
+  - **Config Management**: View current config and diff against defaults.
+  - **Diagnostics** (`arcturus doctor`): Automated checks (Python version, env vars, config validity, FAISS index, disk space, service health) with actionable suggestions.
+  - **Sessions**: List recent sessions from span data with cost and agent breakdown.
+  - **Throttle Policy**: Global hourly/daily cost budgets with enforcement and admin override.
+  - **Admin Auth**: `X-Admin-Key` header guard; dev mode bypass when key not configured.
+- **Audit & Compliance** (`ops/audit/`):
+  - `AuditLogger`: State-change audit trail persisted to MongoDB (`watchtower.audit_log`) with JSONL fallback.
+  - `SessionDataManager`: GDPR export/delete across 6 data stores (session files, MongoDB spans, Qdrant vectors, Neo4j graph, chronicle checkpoints, audit log).
+  - Admin endpoints: `GET /admin/audit`, `GET/DELETE /admin/data/{session_id}`.

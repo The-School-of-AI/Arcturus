@@ -135,6 +135,7 @@ def sample_artifact(sample_outline):
         title="Test Deck",
         created_at=now,
         updated_at=now,
+        creation_prompt="Test prompt",
         outline=sample_outline,
     )
 
@@ -257,6 +258,7 @@ class TestArtifactModel:
         assert a.revision_head_id is None
         assert a.outline is None
         assert a.content_tree is None
+        assert a.creation_prompt is None
 
 
 class TestRevisionModel:

@@ -33,11 +33,16 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from core.utils import log_error, log_step
-from memory.space_constants import SPACE_ID_GLOBAL
+from memory.space_constants import SPACE_ID_GLOBAL, SYNC_POLICY_SYNC, SYNC_POLICY_SHARED
+from memory.user_id import get_user_id
 
 # Optional Neo4j dependency
 try:
+    import logging
     from neo4j import GraphDatabase
+
+    # Suppress "Received notification from DBMS server" logs (Neo4j 5+ status notifications)
+    logging.getLogger("neo4j.notifications").setLevel(logging.CRITICAL)
     _NEO4J_AVAILABLE = True
 except ImportError:
     _NEO4J_AVAILABLE = False
@@ -112,7 +117,13 @@ class KnowledgeGraph:
         self._enabled = _is_neo4j_enabled() and _NEO4J_AVAILABLE
         if self._enabled and self.password:
             try:
-                self._driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
+                kwargs = {"uri": self.uri, "auth": (self.user, self.password)}
+                try:
+                    from neo4j import NotificationMinimumSeverity
+                    kwargs["warn_notification_severity"] = NotificationMinimumSeverity.OFF
+                except (ImportError, AttributeError):
+                    pass
+                self._driver = GraphDatabase.driver(**kwargs)
                 self._driver.verify_connectivity()
                 self._ensure_schema()
                 log_step("✅ KnowledgeGraph (Neo4j) initialized", symbol="🔧")
@@ -168,6 +179,23 @@ class KnowledgeGraph:
             session.run(
                 "CREATE INDEX entity_name_type IF NOT EXISTS FOR (e:Entity) ON (e.name, e.type)"
             )
+            # Ensure IN_SPACE relationship type exists so Neo4j 5+ does not emit
+            # "relationship type does not exist" warnings on every query that references it.
+            try:
+                session.run(
+                    """
+                    MERGE (s:Session {session_id: $sid})
+                    ON CREATE SET s.id = $sid, s.original_query = '', s.created_at = datetime()
+                    WITH s
+                    MERGE (sp:Space {space_id: $sid})
+                    ON CREATE SET sp.name = '', sp.description = '', sp.created_at = datetime()
+                    WITH s, sp
+                    MERGE (s)-[:IN_SPACE]->(sp)
+                    """,
+                    {"sid": "__schema_init__"},
+                )
+            except Exception:
+                pass
 
     def _run_query(self, query: str, parameters: Optional[Dict] = None) -> List[Dict]:
         """Execute a read query and return records as list of dicts."""
@@ -191,17 +219,20 @@ class KnowledgeGraph:
         except Exception as e:
             log_error(f"Neo4j write failed: {e}")
 
-    def get_or_create_user(self, user_id: str) -> str:
+    def get_or_create_user(self, user_id: Optional[str] = None) -> str:
         """Get or create User node. Returns Neo4j internal id (we use user_id as identifier)."""
+        uid = user_id or get_user_id()
+        if not uid:
+            return ""
         self._run_write(
             """
             MERGE (u:User {user_id: $user_id})
             ON CREATE SET u.id = $user_id, u.created_at = datetime()
             RETURN u.user_id
             """,
-            {"user_id": user_id},
+            {"user_id": uid},
         )
-        return user_id
+        return uid
 
     def get_or_create_session(
         self,
@@ -242,13 +273,15 @@ class KnowledgeGraph:
     def get_space_for_session(self, session_id: str) -> Optional[str]:
         """
         Return space_id for session if it has (Session)-[:IN_SPACE]->(Space). Else None.
-        Phase 3C.
+        Phase 3C. Uses OPTIONAL MATCH to avoid Neo4j "relationship type does not exist"
+        warnings when no IN_SPACE relationships exist in the graph yet.
         """
         if not self._enabled or not session_id:
             return None
         records = self._run_query(
             """
-            MATCH (s:Session {session_id: $session_id})-[:IN_SPACE]->(sp:Space)
+            MATCH (s:Session {session_id: $session_id})
+            OPTIONAL MATCH (s)-[:IN_SPACE]->(sp:Space)
             RETURN sp.space_id AS space_id
             LIMIT 1
             """,
@@ -260,56 +293,324 @@ class KnowledgeGraph:
 
     def create_space(
         self,
-        user_id: str,
+        user_id: Optional[str] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
+        sync_policy: Optional[str] = None,
     ) -> str:
         """
         Create a Space node for a user. Returns system-generated space_id (UUID).
         Spaces are first-class; must be created explicitly (no implicit creation).
         Creates (User)-[:OWNS_SPACE]->(Space).
+        Phase 4: sync_policy (sync|local_only), version, device_id, updated_at.
         """
-        if not self._enabled or not user_id:
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid:
             return ""
         space_id = str(uuid.uuid4())
-        self.get_or_create_user(user_id)
+        raw = (sync_policy or SYNC_POLICY_SYNC).strip() or SYNC_POLICY_SYNC
+        policy = raw if raw in ("sync", "local_only", "shared") else SYNC_POLICY_SYNC
+        now_ts = datetime.now().isoformat()
+        device_id = ""
+        try:
+            from memory.sync_config import get_device_id
+            device_id = get_device_id()
+        except Exception:
+            pass
+        self.get_or_create_user(uid)
         self._run_write(
             """
             MATCH (u:User {user_id: $user_id})
-            CREATE (sp:Space {space_id: $space_id, name: $name, description: $description, created_at: datetime()})
+            CREATE (sp:Space {
+                space_id: $space_id, name: $name, description: $description,
+                sync_policy: $sync_policy, version: 1, device_id: $device_id,
+                updated_at: $updated_at, created_at: datetime()
+            })
             CREATE (u)-[:OWNS_SPACE]->(sp)
             """,
             {
-                "user_id": user_id,
+                "user_id": uid,
                 "space_id": space_id,
                 "name": (name or "").strip() or "",
                 "description": (description or "").strip() or "",
+                "sync_policy": policy,
+                "device_id": device_id,
+                "updated_at": now_ts,
             },
         )
         return space_id
 
-    def get_spaces_for_user(self, user_id: str) -> List[Dict[str, Any]]:
-        """List spaces owned by user. Returns [{space_id, name, description}, ...]."""
-        if not self._enabled or not user_id:
+    def get_spaces_for_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List spaces owned by user. Returns [{space_id, name, description, sync_policy, version, ...}]."""
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid:
             return []
         records = self._run_query(
             """
             MATCH (u:User {user_id: $user_id})-[:OWNS_SPACE]->(sp:Space)
-            RETURN sp.space_id AS space_id, sp.name AS name, sp.description AS description
+            RETURN sp.space_id AS space_id, sp.name AS name, sp.description AS description,
+                   sp.sync_policy AS sync_policy, sp.version AS version,
+                   sp.device_id AS device_id, sp.updated_at AS updated_at
             ORDER BY sp.created_at ASC
             """,
-            {"user_id": user_id},
+            {"user_id": uid},
         )
-        return [
-            {"space_id": r["space_id"], "name": r.get("name") or "", "description": r.get("description") or ""}
-            for r in records if r.get("space_id")
-        ]
+        out = []
+        for r in records:
+            if not r.get("space_id"):
+                continue
+            rec = {
+                "space_id": r["space_id"],
+                "name": r.get("name") or "",
+                "description": r.get("description") or "",
+                "sync_policy": r.get("sync_policy") or SYNC_POLICY_SYNC,
+                "version": r.get("version") or 1,
+                "device_id": r.get("device_id") or "",
+                "updated_at": str(r.get("updated_at", "")) if r.get("updated_at") else "",
+            }
+            out.append(rec)
+        return out
+
+    def get_spaces_shared_with_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List spaces shared with this user (not owned). Returns same shape as get_spaces_for_user, with is_shared=True."""
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid:
+            return []
+        records = self._run_query(
+            """
+            MATCH (sp:Space)-[:SHARED_WITH]->(u:User {user_id: $user_id})
+            RETURN sp.space_id AS space_id, sp.name AS name, sp.description AS description,
+                   sp.sync_policy AS sync_policy, sp.version AS version,
+                   sp.device_id AS device_id, sp.updated_at AS updated_at
+            ORDER BY sp.name ASC
+            """,
+            {"user_id": uid},
+        )
+        out = []
+        for r in records:
+            if not r.get("space_id"):
+                continue
+            rec = {
+                "space_id": r["space_id"],
+                "name": r.get("name") or "",
+                "description": r.get("description") or "",
+                "sync_policy": r.get("sync_policy") or SYNC_POLICY_SYNC,
+                "version": r.get("version") or 1,
+                "device_id": r.get("device_id") or "",
+                "updated_at": str(r.get("updated_at", "")) if r.get("updated_at") else "",
+                "is_shared": True,
+            }
+            out.append(rec)
+        return out
+
+    def get_all_spaces_for_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List spaces owned by user plus spaces shared with user. Owned first, then shared; each has is_shared True only if shared."""
+        owned = self.get_spaces_for_user(user_id=user_id)
+        shared = self.get_spaces_shared_with_user(user_id=user_id)
+        seen = {s["space_id"] for s in owned}
+        for s in shared:
+            if s["space_id"] not in seen:
+                seen.add(s["space_id"])
+                owned.append(s)
+        return owned
+
+    def share_space_with(
+        self,
+        space_id: str,
+        shared_with_user_id: str,
+        owner_user_id: Optional[str] = None,
+    ) -> bool:
+        """Share a space with another user. Caller must own the space. Creates (Space)-[:SHARED_WITH]->(User)."""
+        uid = owner_user_id or get_user_id()
+        if not self._enabled or not space_id or not shared_with_user_id or not uid:
+            return False
+        if uid == shared_with_user_id:
+            return True  # no-op: owner already has access
+        # Verify owner
+        check = self._run_query(
+            "MATCH (u:User {user_id: $owner})-[:OWNS_SPACE]->(sp:Space {space_id: $space_id}) RETURN 1 AS x LIMIT 1",
+            {"owner": uid, "space_id": space_id},
+        )
+        if not check:
+            return False
+        self.get_or_create_user(shared_with_user_id)
+        self._run_write(
+            """
+            MATCH (sp:Space {space_id: $space_id})
+            MATCH (u:User {user_id: $user_id})
+            MERGE (sp)-[:SHARED_WITH]->(u)
+            """,
+            {"space_id": space_id, "user_id": shared_with_user_id},
+        )
+        return True
+
+    def unshare_space(self, space_id: str, user_id_to_remove: str, owner_user_id: Optional[str] = None) -> bool:
+        """Remove a user from a space's shared list. Caller must own the space."""
+        uid = owner_user_id or get_user_id()
+        if not self._enabled or not space_id or not user_id_to_remove or not uid:
+            return False
+        check = self._run_query(
+            "MATCH (u:User {user_id: $owner})-[:OWNS_SPACE]->(sp:Space {space_id: $space_id}) RETURN 1 AS x LIMIT 1",
+            {"owner": uid, "space_id": space_id},
+        )
+        if not check:
+            return False
+        self._run_write(
+            """
+            MATCH (sp:Space {space_id: $space_id})-[r:SHARED_WITH]->(u:User {user_id: $user_id})
+            DELETE r
+            """,
+            {"space_id": space_id, "user_id": user_id_to_remove},
+        )
+        return True
+
+    def can_user_access_space(self, user_id: Optional[str], space_id: Optional[str]) -> bool:
+        """Return True if user is owner of the space or space is shared with them. Global space always allowed."""
+        if not space_id or space_id == SPACE_ID_GLOBAL:
+            return True
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid:
+            return False
+        r = self._run_query(
+            """
+            MATCH (sp:Space {space_id: $space_id})
+            OPTIONAL MATCH (u:User {user_id: $user_id})-[:OWNS_SPACE]->(sp)
+            OPTIONAL MATCH (sp)-[:SHARED_WITH]->(u2:User {user_id: $user_id})
+            RETURN (u IS NOT NULL OR u2 IS NOT NULL) AS can_access
+            """,
+            {"space_id": space_id, "user_id": uid},
+        )
+        return bool(r and r[0].get("can_access"))
+
+    def upsert_space(
+        self,
+        space_id: str,
+        user_id: Optional[str] = None,
+        name: str = "",
+        description: str = "",
+        sync_policy: str = SYNC_POLICY_SYNC,
+        version: int = 1,
+        device_id: str = "",
+        updated_at: str = "",
+    ) -> bool:
+        """
+        Phase 4 Sync: create or update Space node (for applying pulled space changes).
+        If space exists: update name, description, sync_policy, version, device_id, updated_at.
+        If not: create with user_id (required for create).
+        """
+        if not self._enabled or not space_id:
+            return False
+        now_ts = updated_at or datetime.now().isoformat()
+        exists = self._run_query(
+            "MATCH (sp:Space {space_id: $space_id}) RETURN 1 AS x LIMIT 1",
+            {"space_id": space_id},
+        )
+        if exists:
+            self._run_write(
+                """
+                MATCH (sp:Space {space_id: $space_id})
+                SET sp.name = $name, sp.description = $description,
+                    sp.sync_policy = $sync_policy, sp.version = $version,
+                    sp.device_id = $device_id, sp.updated_at = $updated_at
+                """,
+                {
+                    "space_id": space_id,
+                    "name": (name or "").strip(),
+                    "description": (description or "").strip(),
+                    "sync_policy": (sync_policy or SYNC_POLICY_SYNC).strip(),
+                    "version": version,
+                    "device_id": device_id or "",
+                    "updated_at": now_ts,
+                },
+            )
+            return True
+        uid = user_id or get_user_id()
+        if uid:
+            self.get_or_create_user(uid)
+            self._run_write(
+                """
+                MATCH (u:User {user_id: $user_id})
+                CREATE (sp:Space {
+                    space_id: $space_id, name: $name, description: $description,
+                    sync_policy: $sync_policy, version: $version, device_id: $device_id,
+                    updated_at: $updated_at, created_at: datetime()
+                })
+                CREATE (u)-[:OWNS_SPACE]->(sp)
+                """,
+                {
+                    "user_id": uid,
+                    "space_id": space_id,
+                    "name": (name or "").strip(),
+                    "description": (description or "").strip(),
+                    "sync_policy": (sync_policy or SYNC_POLICY_SYNC).strip(),
+                    "version": version,
+                    "device_id": device_id or "",
+                    "updated_at": now_ts,
+                },
+            )
+            return True
+        return False
+
+    def delete_space(self, space_id: str) -> None:
+        """Phase 4 Sync: delete Space node (for pulled deleted space). DETACH DELETE."""
+        if not self._enabled or not space_id:
+            return
+        self._run_write(
+            "MATCH (sp:Space {space_id: $space_id}) DETACH DELETE sp",
+            {"space_id": space_id},
+        )
+
+    def move_memory_to_space(
+        self,
+        memory_id: str,
+        target_space_id: Optional[str],
+        user_id: Optional[str] = None,
+    ) -> bool:
+        """
+        Move a memory to a different space. Updates (Memory)-[:IN_SPACE]->(Space).
+        - target_space_id None or __global__: remove IN_SPACE (memory becomes global).
+        - target_space_id: link to that Space. Space must exist; use can_user_access_space first.
+        Returns True if the graph was updated (Memory existed); False if Memory not in graph.
+        """
+        if not self._enabled or not memory_id:
+            return False
+        use_space = target_space_id and target_space_id != SPACE_ID_GLOBAL
+
+        # Remove any existing IN_SPACE relationship
+        self._run_write(
+            """
+            MATCH (m:Memory {id: $memory_id})
+            OPTIONAL MATCH (m)-[r:IN_SPACE]->()
+            DELETE r
+            RETURN m AS m
+            """,
+            {"memory_id": memory_id},
+        )
+        # _run_write returns result of last statement; we need to check if m was matched
+        check = self._run_query(
+            "MATCH (m:Memory {id: $memory_id}) RETURN 1 AS x LIMIT 1",
+            {"memory_id": memory_id},
+        )
+        if not check:
+            return False
+
+        if use_space:
+            # Add IN_SPACE to target space (Space must exist)
+            self._run_write(
+                """
+                MATCH (m:Memory {id: $memory_id})
+                MATCH (sp:Space {space_id: $space_id})
+                MERGE (m)-[:IN_SPACE]->(sp)
+                """,
+                {"memory_id": memory_id, "space_id": target_space_id},
+            )
+        return True
 
     def create_memory(
         self,
         memory_id: str,
-        user_id: str,
-        session_id: str,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
         category: str = "general",
         source: str = "manual",
         space_id: Optional[str] = None,
@@ -319,8 +620,11 @@ class KnowledgeGraph:
         Optional space_id: when provided (and not __global__), link (Memory)-[:IN_SPACE]->(Space).
         When None or __global__, memory is global (no IN_SPACE edge). Space must exist (create_space).
         """
-        self.get_or_create_user(user_id)
-        self.get_or_create_session(session_id)
+        uid = user_id or get_user_id()
+        if not uid or not session_id:
+            return
+        self.get_or_create_user(uid)
+        self.get_or_create_session(session_id, space_id=space_id)
         use_space = space_id and space_id != SPACE_ID_GLOBAL
         self._run_write(
             """
@@ -345,7 +649,7 @@ class KnowledgeGraph:
             ),
             {
                 "mid": memory_id,
-                "user_id": user_id,
+                "user_id": uid,
                 "session_id": session_id,
                 "category": category,
                 "source": source,
@@ -488,9 +792,9 @@ class KnowledgeGraph:
 
     def upsert_fact(
         self,
-        user_id: str,
         namespace: str,
         key: str,
+        user_id: Optional[str] = None,
         value_type: str = "text",
         value_text: Optional[str] = None,
         value_number: Optional[float] = None,
@@ -507,7 +811,8 @@ class KnowledgeGraph:
         Returns fact id (Neo4j node id or internal id) or None.
         For source_mode=ui_edit, sets last_confirmed_at.
         """
-        if not self._enabled or not namespace or not key:
+        uid = user_id or get_user_id()
+        if not self._enabled or not namespace or not key or not uid:
             return None
         fact_id = str(uuid.uuid4())
         now = datetime.utcnow().isoformat() + "Z"
@@ -539,7 +844,7 @@ class KnowledgeGraph:
             elif value_json is not None:
                 preview = (json.dumps(value_json) if isinstance(value_json, (list, dict)) else str(value_json))[:200]
         params: Dict[str, Any] = {
-            "user_id": user_id,
+            "user_id": uid,
             "namespace": namespace,
             "key": key,
             "fact_id": fact_id,
@@ -553,7 +858,7 @@ class KnowledgeGraph:
             "confidence": confidence,
             "source_mode": source_mode or "extraction",
             "now": now,
-            "space_id": space_id if use_space else None,
+            "space_id": space_id if use_space else SPACE_ID_GLOBAL,
         }
         self._run_write(
             """
@@ -594,18 +899,59 @@ class KnowledgeGraph:
             """ if use_space else ""),
             params,
         )
+        # Phase 5: update CONTRADICTS relationships between Facts that disagree on value
+        try:
+            self._update_fact_contradictions(uid, namespace, key)
+        except Exception as e:
+            log_error(f"KnowledgeGraph: failed to update fact contradictions for {namespace}.{key}: {e}")
         if entity_ref:
             # Resolve entity_ref (composite_key "Type::name" or entity id) and create Fact-REFERS_TO-Entity
-            eid = self._resolve_entity_ref_for_fact(entity_ref, user_id)
+            eid = self._resolve_entity_ref_for_fact(entity_ref, uid)
             if eid:
                 self._run_write(
                     """
                     MATCH (f:Fact {user_id: $user_id, namespace: $namespace, key: $key}), (e:Entity {id: $entity_id})
                     MERGE (f)-[:REFERS_TO]->(e)
                     """,
-                    {"user_id": user_id, "namespace": namespace, "key": key, "entity_id": eid},
+                    {"user_id": uid, "namespace": namespace, "key": key, "entity_id": eid},
                 )
         return fact_id
+
+    def _update_fact_contradictions(self, user_id: str, namespace: str, key: str) -> None:
+        """
+        Phase 5: Detect conflicting Facts for the same (user, namespace, key) across spaces and
+        link them with CONTRADICTS relationships.
+
+        We consider two Facts contradictory when:
+        - They share user_id, namespace, key.
+        - They have the same value_type.
+        - Their concrete value fields differ.
+
+        This is conservative and only compares simple value equality; more nuanced
+        semantic contradiction remains future work.
+        """
+        if not self._enabled or not user_id or not namespace or not key:
+            return
+        self._run_write(
+            """
+            MATCH (f:Fact {user_id: $user_id, namespace: $namespace, key: $key})
+            WITH collect(f) AS facts
+            UNWIND facts AS a
+            UNWIND facts AS b
+            WITH a, b
+            WHERE id(a) < id(b)
+              AND a.value_type = b.value_type
+              AND (
+                (a.value_type = 'bool'   AND a.value_bool   IS NOT NULL AND b.value_bool   IS NOT NULL AND a.value_bool   <> b.value_bool) OR
+                (a.value_type = 'number' AND a.value_number IS NOT NULL AND b.value_number IS NOT NULL AND a.value_number <> b.value_number) OR
+                (a.value_type = 'text'   AND a.value_text   IS NOT NULL AND b.value_text   IS NOT NULL AND a.value_text   <> b.value_text) OR
+                (a.value_type = 'json'   AND a.value_json   IS NOT NULL AND b.value_json   IS NOT NULL AND a.value_json   <> b.value_json)
+              )
+            MERGE (a)-[:CONTRADICTS]->(b)
+            MERGE (b)-[:CONTRADICTS]->(a)
+            """,
+            {"user_id": user_id, "namespace": namespace, "key": key},
+        )
 
     def _resolve_entity_ref_for_fact(self, entity_ref: str, user_id: str) -> Optional[str]:
         """Resolve entity_ref (composite_key 'Type::name' or entity id) to entity id. Create entity if composite key."""
@@ -626,10 +972,10 @@ class KnowledgeGraph:
 
     def merge_list_fact(
         self,
-        user_id: str,
         namespace: str,
         key: str,
         values: List[Any],
+        user_id: Optional[str] = None,
         confidence: float = 0.8,
         space_id: Optional[str] = None,
     ) -> bool:
@@ -637,7 +983,8 @@ class KnowledgeGraph:
         Merge values into an existing list-valued Fact, or create it if missing.
         Phase 3B: optional space_id for space-scoped facts.
         """
-        if not self._enabled or not user_id or not namespace or not key:
+        uid = user_id or get_user_id()
+        if not self._enabled or not uid or not namespace or not key:
             return False
         valid: List[Any] = []
         for v in values or []:
@@ -647,7 +994,7 @@ class KnowledgeGraph:
         if not valid:
             return False
         use_space = space_id and space_id != SPACE_ID_GLOBAL
-        params: Dict[str, Any] = {"user_id": user_id, "ns": namespace, "key": key, "space_id": space_id if use_space else None}
+        params: Dict[str, Any] = {"user_id": uid, "ns": namespace, "key": key, "space_id": space_id if use_space else SPACE_ID_GLOBAL}
         records = self._run_query(
             """
             MATCH (u:User {user_id: $user_id})-[:HAS_FACT]->(f:Fact {namespace: $ns, key: $key, space_id: $space_id})
@@ -667,7 +1014,7 @@ class KnowledgeGraph:
         else:
             current = list(valid)
         self.upsert_fact(
-            user_id=user_id,
+            user_id=uid,
             namespace=namespace,
             key=key,
             value_type="json",
@@ -683,9 +1030,9 @@ class KnowledgeGraph:
         evidence_id: str,
         source_type: str,
         source_ref: str,
-        user_id: str,
         namespace: str,
         key: str,
+        user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         memory_id: Optional[str] = None,
         timestamp: Optional[str] = None,
@@ -695,7 +1042,8 @@ class KnowledgeGraph:
         Create Evidence node and link to Fact (SUPPORTED_BY) by (user_id, namespace, key, space_id).
         Phase 3B: space_id null = global Fact. Evidence is append-only.
         """
-        if not self._enabled or not evidence_id or not user_id or not namespace or not key:
+        uid = user_id or get_user_id()
+        if not self._enabled or not evidence_id or not uid or not namespace or not key:
             return
         ts = timestamp or (datetime.utcnow().isoformat() + "Z")
         use_space = space_id and space_id != SPACE_ID_GLOBAL
@@ -704,10 +1052,10 @@ class KnowledgeGraph:
             "source_type": source_type or "extraction",
             "source_ref": source_ref,
             "timestamp": ts,
-            "user_id": user_id,
+            "user_id": uid,
             "namespace": namespace,
             "key": key,
-            "space_id": space_id if use_space else None,
+            "space_id": space_id if use_space else SPACE_ID_GLOBAL,
         }
         self._run_write(
             """
@@ -738,9 +1086,9 @@ class KnowledgeGraph:
 
     def upsert_fact_from_ui(
         self,
-        user_id: str,
         namespace: str,
         key: str,
+        user_id: Optional[str] = None,
         value_type: str = "text",
         value: Optional[Any] = None,
         value_text: Optional[str] = None,
@@ -756,7 +1104,8 @@ class KnowledgeGraph:
         Value can be provided as `value` (single field) or as value_text/value_number/value_bool/value_json.
         Returns fact id or None.
         """
-        if not self._enabled or not namespace or not key:
+        uid = user_id or get_user_id()
+        if not self._enabled or not namespace or not key or not uid:
             return None
         vt = (value_type or "text").lower()
         v = value
@@ -774,7 +1123,7 @@ class KnowledgeGraph:
             elif vt == "json":
                 vt_json = v if isinstance(v, (dict, list)) else None
         fid = self.upsert_fact(
-            user_id=user_id,
+            user_id=uid,
             namespace=namespace,
             key=key,
             value_type=vt or "text",
@@ -795,17 +1144,18 @@ class KnowledgeGraph:
             evidence_id=ev_id,
             source_type="ui_edit",
             source_ref="ui_edit",
-            user_id=user_id,
+            user_id=uid,
             namespace=namespace,
             key=key,
             timestamp=now,
+            space_id=space_id,
         )
         fact_dict = {
             "namespace": namespace,
             "key": key,
             "entity_ref": entity_ref,
         }
-        self._derive_user_entity_from_facts(user_id, [fact_dict], {})
+        self._derive_user_entity_from_facts(uid, [fact_dict], {})
         return fid
 
     def _derive_user_entity_from_facts(
@@ -858,8 +1208,8 @@ class KnowledgeGraph:
         self,
         memory_id: str,
         text: str,
-        user_id: str,
         session_id: str,
+        user_id: Optional[str] = None,
         category: str = "general",
         source: str = "manual",
         space_id: Optional[str] = None,
@@ -876,10 +1226,11 @@ class KnowledgeGraph:
         create Evidence, and derive User–Entity edges.
         Returns dict with entity_ids (for Neo4j link) and entity_labels (type, name for Qdrant payload).
         """
+        uid = user_id or get_user_id()
         empty_result: Dict[str, Any] = {"entity_ids": [], "entity_labels": []}
-        if not self._enabled:
+        if not self._enabled or not uid:
             return empty_result
-        self.create_memory(memory_id, user_id, session_id, category, source, space_id=space_id)
+        self.create_memory(memory_id, uid, session_id, category, source, space_id=space_id)
         entity_ids: List[str] = []
         entity_labels: List[Dict[str, str]] = []  # [{type, name}] same order as entity_ids
         entity_map: Dict[Tuple[str, str], str] = {}  # (type_normalized, canonical_name) -> entity_id
@@ -933,7 +1284,7 @@ class KnowledgeGraph:
             if key not in entity_map:
                 entity_map[key] = self.get_or_create_entity(etype, name)
             self.create_user_entity_relationship(
-                user_id,
+                uid,
                 entity_map[key],
                 rel_type,
                 source_memory_ids=[memory_id],
@@ -972,7 +1323,7 @@ class KnowledgeGraph:
                 # List-valued facts: merge into existing, create evidence
                 if append:
                     vals = f.get("value_json") or (f.get("value") if isinstance(f.get("value"), list) else [f.get("value")] if f.get("value") is not None else [])
-                    if vals and self.merge_list_fact(user_id, ns, k, vals, confidence=0.8, space_id=fact_space_id):
+                    if vals and self.merge_list_fact(uid, ns, k, vals, confidence=0.8, space_id=fact_space_id):
                         ev_id = str(uuid.uuid4())
                         ev_source_ref = memory_id
                         ev_source_type = "extraction"
@@ -982,14 +1333,14 @@ class KnowledgeGraph:
                             ev_source_type = first_ev.get("source_type", "extraction") if isinstance(first_ev, dict) else getattr(first_ev, "source_type", "extraction")
                         self.create_evidence(
                             evidence_id=ev_id, source_type=ev_source_type, source_ref=ev_source_ref or memory_id,
-                            user_id=user_id, namespace=ns, key=k,
+                            user_id=uid, namespace=ns, key=k,
                             session_id=session_id, memory_id=memory_id,
                             space_id=fact_space_id,
                         )
                     continue
 
                 self.upsert_fact(
-                    user_id=user_id,
+                    user_id=uid,
                     namespace=ns,
                     key=k,
                     value_type=vt,
@@ -1017,7 +1368,7 @@ class KnowledgeGraph:
                     evidence_id=ev_id,
                     source_type=ev_source_type,
                     source_ref=ev_source_ref or memory_id,
-                    user_id=user_id,
+                    user_id=uid,
                     namespace=ns,
                     key=k,
                     session_id=session_id,
@@ -1025,7 +1376,7 @@ class KnowledgeGraph:
                     space_id=fact_space_id,
                 )
             self._derive_user_entity_from_facts(
-                user_id,
+                uid,
                 facts,
                 entity_map,
                 source_memory_ids=[memory_id],
@@ -1367,14 +1718,16 @@ class KnowledgeGraph:
         params: Dict[str, Any] = {"user_id": user_id}
         if space_ids:
             params["space_ids"] = [s for s in space_ids if s and s != SPACE_ID_GLOBAL]
+            params["global_sentinel"] = SPACE_ID_GLOBAL
             if params["space_ids"]:
                 space_filter = """
-                WHERE f.space_id IS NULL OR f.space_id IN $space_ids
+                WHERE (f.space_id IS NULL OR f.space_id = $global_sentinel OR f.space_id IN $space_ids)
                 """
         elif space_id and space_id != SPACE_ID_GLOBAL:
             params["space_ids"] = [space_id]
+            params["global_sentinel"] = SPACE_ID_GLOBAL
             space_filter = """
-            WHERE f.space_id IS NULL OR f.space_id IN $space_ids
+            WHERE (f.space_id IS NULL OR f.space_id = $global_sentinel OR f.space_id IN $space_ids)
             """
         records = self._run_query(
             """
@@ -1611,6 +1964,136 @@ class KnowledgeGraph:
                 {"user_id": user_id, "names_lower": names_lower},
             )
         return [r["memory_id"] for r in records if r.get("memory_id")]
+
+    def get_subgraph_for_explore(
+        self,
+        user_id: str,
+        space_id: Optional[str] = None,
+        limit: int = 150,
+    ) -> Dict[str, Any]:
+        """
+        Return nodes and edges for the knowledge graph explorer UI.
+        Includes: Entity nodes, User node, Memory nodes;
+        Entity-Entity (no self-loops), User-Entity, Memory-Entity edges.
+        Scoped by user's memories; optionally filtered by space_id.
+        Returns { "nodes": [ { id, label, type, nodeKind } ], "edges": [ { source, target, type } ] }.
+        """
+        if not self._enabled or not user_id:
+            return {"nodes": [], "edges": []}
+
+        # Build space filter: when space_id is set and not global, restrict to that space
+        space_filter = ""
+        params: Dict[str, Any] = {"user_id": user_id, "limit": limit}
+        if space_id and space_id != SPACE_ID_GLOBAL:
+            params["space_id"] = space_id
+            space_filter = """
+            MATCH (m)-[:IN_SPACE]->(sp:Space {space_id: $space_id})
+            """
+
+        rel_types = "|".join(sorted(ENTITY_REL_TYPES) + ["RELATED_TO"])
+
+        entity_query = f"""
+            MATCH (u:User {{user_id: $user_id}})-[:HAS_MEMORY]->(m:Memory)
+            {space_filter}
+            MATCH (m)-[:CONTAINS_ENTITY]->(e:Entity)
+            WITH DISTINCT e
+            LIMIT $limit
+            RETURN e.id AS id, e.type AS type, e.name AS name
+            """
+        entities = self._run_query(entity_query, params)
+        entity_ids = [e["id"] for e in entities if e.get("id")]
+
+        nodes: List[Dict[str, Any]] = []
+        edges: List[Dict[str, Any]] = []
+
+        # 1. Entity nodes
+        for e in entities:
+            nodes.append({
+                "id": e["id"],
+                "label": e.get("name") or e["id"],
+                "type": e.get("type") or "Entity",
+                "nodeKind": "entity",
+            })
+
+        if not entity_ids:
+            # Still add User node for empty graph
+            nodes.append({"id": "__user__", "label": "You", "type": "User", "nodeKind": "user"})
+            return {"nodes": nodes, "edges": []}
+
+        placeholders = ", ".join([f"$id{i}" for i in range(len(entity_ids))])
+        params2 = {f"id{i}": eid for i, eid in enumerate(entity_ids)}
+        params2["user_id"] = user_id
+        params2["rel_list"] = rel_types.split("|")
+        params2["user_rel_list"] = list(USER_ENTITY_REL_TYPES)
+
+        # 2. Entity-Entity edges (exclude self-loops)
+        ee_query = f"""
+            MATCH (a:Entity)-[r]->(b:Entity)
+            WHERE a.id IN [{placeholders}] AND b.id IN [{placeholders}]
+              AND a.id <> b.id
+              AND type(r) IN $rel_list
+            RETURN a.id AS source, b.id AS target, type(r) AS type
+            """
+        for r in self._run_query(ee_query, params2):
+            if r.get("source") and r.get("target"):
+                edges.append({"source": r["source"], "target": r["target"], "type": r.get("type") or "RELATED_TO"})
+
+        # 3. User node + User-Entity edges
+        nodes.append({"id": "__user__", "label": "You", "type": "User", "nodeKind": "user"})
+        ue_query = f"""
+            MATCH (u:User {{user_id: $user_id}})-[r]->(e:Entity)
+            WHERE e.id IN [{placeholders}] AND type(r) IN $user_rel_list
+            RETURN e.id AS target, type(r) AS type
+            """
+        for r in self._run_query(ue_query, params2):
+            if r.get("target"):
+                edges.append({"source": "__user__", "target": r["target"], "type": r.get("type") or "KNOWS"})
+
+        # 4. Memory nodes + Memory-Entity (CONTAINS_ENTITY) edges
+        params3: Dict[str, Any] = {"user_id": user_id, "mem_limit": min(80, limit)}
+        mem_space_filter = ""
+        if space_id and space_id != SPACE_ID_GLOBAL:
+            params3["space_id"] = space_id
+            mem_space_filter = "\n            MATCH (m)-[:IN_SPACE]->(sp:Space {space_id: $space_id})"
+        mem_query = f"""
+            MATCH (u:User {{user_id: $user_id}})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e:Entity)
+            {mem_space_filter}
+            WITH m, e
+            ORDER BY m.created_at DESC
+            WITH m, collect(DISTINCT e.id) AS entity_ids
+            WITH DISTINCT m
+            LIMIT $mem_limit
+            RETURN m.id AS id
+            """
+        memories = self._run_query(mem_query, params3)
+        mem_ids = [r["id"] for r in memories if r.get("id")]
+        seen_mem: Set[str] = set()
+        for m in memories:
+            mid = m.get("id")
+            if mid and mid not in seen_mem:
+                seen_mem.add(mid)
+                short_id = str(mid)[:8] + "…" if len(str(mid)) > 8 else str(mid)
+                nodes.append({
+                    "id": mid,
+                    "label": f"Mem {short_id}",
+                    "type": "Memory",
+                    "nodeKind": "memory",
+                })
+
+        if mem_ids:
+            mem_ph = ", ".join([f"$mid{i}" for i in range(len(mem_ids))])
+            params4 = {f"mid{i}": mid for i, mid in enumerate(mem_ids)}
+            params4["eids"] = entity_ids
+            me_query = f"""
+                MATCH (m:Memory)-[:CONTAINS_ENTITY]->(e:Entity)
+                WHERE m.id IN [{mem_ph}] AND e.id IN $eids
+                RETURN m.id AS source, e.id AS target
+                """
+            for r in self._run_query(me_query, params4):
+                if r.get("source") and r.get("target"):
+                    edges.append({"source": r["source"], "target": r["target"], "type": "CONTAINS_ENTITY"})
+
+        return {"nodes": nodes, "edges": edges}
 
 
 # Singleton for app use

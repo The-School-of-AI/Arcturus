@@ -4,25 +4,32 @@ Migrate RAG FAISS index to Qdrant arcturus_rag_chunks collection.
 
 Reads chunks from mcp_servers/faiss_index (metadata.json + index.bin)
 and adds each to the Qdrant arcturus_rag_chunks collection.
-Keeps metadata.json for BM25 (unchanged).
+Phase A: Populates user_id and space_id for tenant/space scope.
+Phase C: QdrantRAGStore.add_chunks() generates sparse vectors (FastEmbed SPLADE) when collection has sparse_vectors config.
 
 Usage:
     # For Qdrant Cloud, ensure .env has:
     #   QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
     #   QDRANT_API_KEY=your-api-key
     #   RAG_VECTOR_STORE_PROVIDER=qdrant
+    #   VITE_ENABLE_LOCAL_MIGRATION=true  # allows user_id from memory/remme_index/user_id.json
     uv run python scripts/migrate_rag_faiss_to_qdrant.py
 
-    # Or export before running:
-    export QDRANT_URL=https://your-cluster.region.cloud.qdrant.io
-    export QDRANT_API_KEY=your-api-key
-    export RAG_VECTOR_STORE_PROVIDER=qdrant
+    # With explicit user_id and space_id:
+    uv run python scripts/migrate_rag_faiss_to_qdrant.py --user-id YOUR_USER_ID --space-id __global__
+
+    # Or via env:
+    export MIGRATION_USER_ID=your-user-id
+    export MIGRATION_SPACE_ID=__global__
     uv run python scripts/migrate_rag_faiss_to_qdrant.py
 """
 
+import argparse
 import json
+import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 # Add project root
 ROOT = Path(__file__).parent.parent
@@ -52,11 +59,36 @@ def get_embedding(text: str):
     return np.array(emb, dtype=np.float32)
 
 
-def migrate():
+def _resolve_user_id(user_id_arg: Optional[str]) -> str:
+    """Resolve user_id from arg, env, or memory.user_id (when VITE_ENABLE_LOCAL_MIGRATION=true)."""
+    if user_id_arg:
+        return user_id_arg
+    env_uid = os.environ.get("MIGRATION_USER_ID")
+    if env_uid:
+        return env_uid.strip()
+    try:
+        from memory.user_id import get_user_id
+        return get_user_id()
+    except Exception as e:
+        print(
+            "\n❌ user_id required for RAG migration (tenant-scoped collection). "
+            "Provide via: --user-id ID, or MIGRATION_USER_ID env, "
+            "or set VITE_ENABLE_LOCAL_MIGRATION=true to use memory/remme_index/user_id.json"
+        )
+        print(f"   Error: {e}")
+        sys.exit(1)
+
+
+def migrate(user_id: Optional[str], space_id: Optional[str]):
     """Run the migration."""
+    uid = _resolve_user_id(user_id)
+    sid = (space_id or os.environ.get("MIGRATION_SPACE_ID") or "__global__").strip()
+
     print("=" * 60)
     print("RAG FAISS → Qdrant Migration")
     print("=" * 60)
+    print(f"  user_id: {uid}")
+    print(f"  space_id: {sid}")
 
     index_path = RAG_INDEX_DIR / "index.bin"
     meta_path = RAG_INDEX_DIR / "metadata.json"
@@ -133,7 +165,12 @@ def migrate():
 
         if len(entries_batch) >= batch_size:
             try:
-                store.add_chunks(entries=entries_batch, embeddings=embeddings_batch)
+                store.add_chunks(
+                    entries=entries_batch,
+                    embeddings=embeddings_batch,
+                    user_id=uid,
+                    space_id=sid,
+                )
                 migrated += len(entries_batch)
                 print(f"  Migrated {migrated}/{len(metadata)}...")
             except Exception as e:
@@ -144,7 +181,12 @@ def migrate():
 
     if entries_batch:
         try:
-            store.add_chunks(entries=entries_batch, embeddings=embeddings_batch)
+            store.add_chunks(
+                entries=entries_batch,
+                embeddings=embeddings_batch,
+                user_id=uid,
+                space_id=sid,
+            )
             migrated += len(entries_batch)
         except Exception as e:
             print(f"  Final batch failed: {e}")
@@ -157,4 +199,20 @@ def migrate():
 
 
 if __name__ == "__main__":
-    migrate()
+    parser = argparse.ArgumentParser(
+        description="Migrate RAG FAISS index to Qdrant arcturus_rag_chunks (Phase A: user_id + space_id)"
+    )
+    parser.add_argument(
+        "--user-id",
+        type=str,
+        default=None,
+        help="User ID for tenant scope. Else MIGRATION_USER_ID env or memory.user_id when VITE_ENABLE_LOCAL_MIGRATION=true",
+    )
+    parser.add_argument(
+        "--space-id",
+        type=str,
+        default=None,
+        help="Space ID for scope (default: __global__). Else MIGRATION_SPACE_ID env.",
+    )
+    args = parser.parse_args()
+    migrate(user_id=args.user_id, space_id=args.space_id)

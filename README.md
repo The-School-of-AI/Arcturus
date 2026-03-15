@@ -24,6 +24,7 @@ The capstone program is designed to:
 - [tests/](tests/) - baseline, acceptance, integration, stress/manual suites.
 - [scripts/](scripts/) - test runners, diagnostics, devtools, GitHub ops scripts.
 - [CAPSTONE/](CAPSTONE/) - project governance, charters, runbooks, and audit docs.
+- `api/sdks/` - in-repo Python and TypeScript client examples for Gateway `/api/v1`.
 
 ## Engineering Workflow
 1. Create feature branch from `master`.
@@ -71,5 +72,10 @@ scripts/test_all.sh quick
 - Never commit real API keys.
 - Gateway admin endpoints (`/api/v1/keys*`) require `ARCTURUS_GATEWAY_ADMIN_KEY` to be explicitly configured; when unset, admin auth fails closed (`503` `admin_key_not_configured`).
 - Gateway inbound signed webhook endpoint (`/api/v1/webhooks/inbound/*`) requires `ARCTURUS_GATEWAY_WEBHOOK_SIGNING_SECRET`; when unset, signature validation fails closed (`503` `webhook_signing_not_configured`).
+- Connector-specific inbound webhook auth is supported for `github`, `jira`, and `gmail`:
+  - `ARCTURUS_GATEWAY_GITHUB_WEBHOOK_SECRET` (`x-hub-signature-256`)
+  - `ARCTURUS_GATEWAY_JIRA_WEBHOOK_TOKEN` (`x-atlassian-webhook-token`)
+  - `ARCTURUS_GATEWAY_GMAIL_CHANNEL_TOKEN` (`x-goog-channel-token`)
+  When connector secrets/tokens are unset, inbound validation fails closed.
 - Gateway mutating endpoints enforce `Idempotency-Key` and replay duplicate requests safely via persisted idempotency records.
 - Gateway usage governance enforces per-key monthly request and unit quotas (`429` `usage_quota_exceeded`) in addition to per-minute rate limits.

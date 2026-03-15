@@ -12,24 +12,41 @@ collections:
   arcturus_memories:
     dimension: 768          # matches nomic-embed-text
     distance: cosine        # cosine | euclidean | dot
-    is_tenant: true              # multi-tenant; scope by tenant field
-    tenant_keyword_field: user_id # payload field for tenant isolation (keyword index)
-    indexed_payload_fields: [category, source, session_id, entity_labels, space_id]  # space_id for Phase 3 filtering
+    is_tenant: true                  # multi-tenant; scope by tenant field
+    tenant_keyword_field: user_id    # payload field for tenant isolation (keyword index)
+    # indexed_payload_fields are used for filtered search. Include lifecycle/privacy fields we want to filter on.
+    indexed_payload_fields: [category, source, session_id, entity_labels, space_id, archived, visibility]  # space_id for Phase 3 filtering; archived/visibility for lifecycle/privacy
+    # Phase C: sparse vector for hybrid search (client-side FastEmbed SPLADE)
+    sparse_vectors:
+      text-bm25:
+        modifier: idf
 
   test_memories:            # Test collection; mirrors arcturus_memories index setup
     dimension: 768
     distance: cosine
     is_tenant: false
-    indexed_payload_fields: [category, source]
+    indexed_payload_fields: [category, source, archived, visibility]
 
   arcturus_rag_chunks:      # RAG document chunks + conversation history
     dimension: 768         # same embedding model as memories (nomic-embed-text)
     distance: cosine
-    is_tenant: false       # RAG can add user_id/space_id filter later
-    indexed_payload_fields: [doc, doc_type, session_id]
+    is_tenant: true                  # Phase A: multi-tenant; scope by user_id
+    tenant_keyword_field: user_id
+    indexed_payload_fields: [doc, doc_type, session_id, space_id]
+    # Phase C: sparse vector for hybrid search (client-side FastEmbed SPLADE)
+    sparse_vectors:
+      chunk-bm25:
+        modifier: idf
 
   test_rag_chunks:         # Test collection; mirrors arcturus_rag_chunks
     dimension: 768
     distance: cosine
     is_tenant: false
     indexed_payload_fields: [doc]
+
+  arcturus_episodic:       # Phase B: episodic skeletons (session recipes)
+    dimension: 768         # same as nomic-embed-text
+    distance: cosine
+    is_tenant: true
+    tenant_keyword_field: user_id
+    indexed_payload_fields: [session_id, space_id, original_query]

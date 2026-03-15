@@ -10,13 +10,47 @@ from zoneinfo import ZoneInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pydantic import BaseModel
+from shared.state import PROJECT_ROOT
 
 # Setup logging
 logger = logging.getLogger("scheduler")
 
 # Path to persist jobs
-JOBS_FILE = Path("data/system/jobs.json")
-JOB_HISTORY_FILE = Path("data/system/job_history.jsonl")
+JOBS_FILE = PROJECT_ROOT / "data" / "system" / "jobs.json"
+JOB_HISTORY_FILE = PROJECT_ROOT / "data" / "system" / "job_history.jsonl"
+
+
+def _corrupt_path(path: Path) -> Path:
+    stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    suffix = f"{path.suffix}.corrupt.{stamp}" if path.suffix else f".corrupt.{stamp}"
+    return path.with_suffix(suffix)
+
+
+def _preserve_corrupt_file(path: Path) -> None:
+    if not path.exists():
+        return
+    try:
+        path.replace(_corrupt_path(path))
+    except OSError:
+        logger.warning(f"Failed to preserve corrupt scheduler file: {path}")
+
+
+def _read_json_file(path: Path, default: Any) -> Any:
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+        _preserve_corrupt_file(path)
+        return default
+
+
+def _write_json_atomic(path: Path, payload: Any) -> None:
+    if not path.parent.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    temp_path.replace(path)
 
 
 class JobDefinition(BaseModel):
@@ -65,7 +99,9 @@ class SchedulerService:
             return
 
         try:
-            data = json.loads(JOBS_FILE.read_text())
+            data = _read_json_file(JOBS_FILE, [])
+            if not isinstance(data, list):
+                data = []
             for job_data in data:
                 job_def = JobDefinition(**job_data)
                 self.jobs[job_def.id] = job_def
@@ -81,7 +117,7 @@ class SchedulerService:
     def save_jobs(self):
         """Persist jobs to JSON."""
         data = [job.model_dump() for job in self.jobs.values()]
-        JOBS_FILE.write_text(json.dumps(data, indent=2))
+        _write_json_atomic(JOBS_FILE, data)
 
     def _append_job_history(self, entry: Dict[str, Any]) -> None:
         if not JOB_HISTORY_FILE.parent.exists():
@@ -117,18 +153,29 @@ class SchedulerService:
             return []
 
         rows: List[Dict[str, Any]] = []
-        for raw_line in JOB_HISTORY_FILE.read_text(encoding="utf-8").splitlines():
+        try:
+            lines = JOB_HISTORY_FILE.read_text(encoding="utf-8").splitlines()
+        except (UnicodeDecodeError, OSError):
+            _preserve_corrupt_file(JOB_HISTORY_FILE)
+            return []
+
+        has_corruption = False
+        for raw_line in lines:
             line = raw_line.strip()
             if not line:
                 continue
             try:
                 payload = json.loads(line)
             except json.JSONDecodeError:
+                has_corruption = True
                 continue
 
             if payload.get("job_id") != job_id:
                 continue
             rows.append(payload)
+
+        if has_corruption:
+            logger.warning("Detected corrupt scheduler history lines; invalid rows were ignored.")
 
         rows = rows[-max(1, limit) :]
         rows.reverse()
@@ -193,6 +240,12 @@ class SchedulerService:
                     skill_result = await skill.on_run_success(
                         result if isinstance(result, dict) else {"output": str(result)}
                     )
+                # 3. Execution (The standard run, now skill-aware)
+                result = await process_run(run_id, job.query, skill_id=job.skill_id)
+                
+                # Update job output using skill summary if available
+                skill_summary = result.get("skill_summary") if result else None
+                skill_file_path = result.get("skill_file_path") if result else None
 
                 success_msg = f"✅ Job '{job.name}' completed successfully."
                 await event_bus.publish(
@@ -209,11 +262,14 @@ class SchedulerService:
                     if skill_result
                     else (result.get("summary") if result else "Success")
                 )
+                
+                # Update job with result
+                job.last_output = skill_summary if skill_summary else (result.get("summary") if result else "Success")
                 self.save_jobs()
 
                 notif_body = f"Job '{job.name}' finished.\n\n"
-                if skill_result and skill_result.get("summary"):
-                    notif_body += f"**Summary**: {skill_result['summary']}\n\n"
+                if skill_summary:
+                    notif_body += f"**Summary**: {skill_summary}\n\n"
                 elif result and result.get("summary"):
                     notif_body += f"**Summary**: {result['summary'][:200]}...\n\n"
 
@@ -227,8 +283,8 @@ class SchedulerService:
                     metadata={
                         "job_id": job.id,
                         "run_id": run_id,
-                        "file_path": skill_result.get("file_path") if skill_result else None,
-                    },
+                        "file_path": skill_file_path
+                    }
                 )
 
                 finished_at = datetime.now().isoformat()
@@ -272,6 +328,7 @@ class SchedulerService:
                     error=str(e),
                 )
 
+        # Parse cron expression (simple space-separated 5 fields)
         try:
             self.scheduler.add_job(
                 job_wrapper,

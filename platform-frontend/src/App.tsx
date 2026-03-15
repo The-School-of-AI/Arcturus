@@ -5,6 +5,7 @@ import { Meteors } from '@/components/ui/meteors';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
+import { useAppStore } from './store';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -59,6 +60,13 @@ function App() {
 
     checkBackend();
   }, []);
+
+  // Initialize Auth after backend is ready
+  useEffect(() => {
+    if (isBackendReady) {
+      useAppStore.getState().initAuth();
+    }
+  }, [isBackendReady]);
 
   return (
     <ThemeProvider defaultTheme="dark">

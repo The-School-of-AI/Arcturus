@@ -198,7 +198,7 @@ class SessionScanner:
         
         for session_path in files:
             preferences = self.extract_from_session(session_path)
-            
+            print(f"SessionScanner: Extracted preferences from {session_path}---->{preferences}")
             # Mark as scanned
             tracker.mark_scanned("sessions", session_path)
             

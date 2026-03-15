@@ -1,6 +1,10 @@
 # Shared State Module
 # This module holds global state that is shared across all routers
 
+import logging as _logging
+import queue as _queue_mod
+import threading
+import time
 from pathlib import Path
 
 # Project root for path resolution in routers
@@ -21,8 +25,6 @@ active_loops = {}
 # - This is intentionally thread-based (voice pipeline uses threads today).
 # - We keep cancellation separate from orchestrator.state (IDLE/LISTENING/...)
 #   so both can be used safely across modules without circular dependencies.
-import time
-import threading
 
 _tts_state_lock = threading.Lock()
 
@@ -78,7 +80,6 @@ def tts_is_speaking() -> bool:
 # the Event so the voice orchestrator wakes up immediately.
 # Thread-safe: both the orchestrator thread and the async event loop
 # can access this concurrently.
-import threading
 
 _run_results_lock = threading.Lock()
 run_results: dict = {}           # run_id → {"output": str, "event": Event}
@@ -86,7 +87,7 @@ run_results: dict = {}           # run_id → {"output": str, "event": Event}
 def register_run_waiter(run_id: str):
     """
     Create an Event the orchestrator can wait on.
-    
+
     Race-safe: if signal_run_complete already fired for this run_id
     (the run finished before we registered), we return a pre-set Event
     so the orchestrator unblocks immediately.
@@ -134,7 +135,6 @@ def pop_run_result(run_id: str) -> str | None:
 # Instead of waiting for the full output, the orchestrator can
 # receive text chunk-by-chunk via a queue and start speaking
 # immediately (sentence-level streaming).
-import queue as _queue_mod
 
 _stream_queues_lock = threading.Lock()
 _stream_queues: dict = {}         # run_id → queue.Queue
@@ -210,7 +210,6 @@ def get_remme_store():
     """Get the vector store instance via abstraction layer. Uses get_vector_store()."""
     global _remme_store
     if _remme_store is None:
-        import os
         from memory.vector_store import get_vector_store
         _remme_store = get_vector_store()
     return _remme_store
@@ -289,32 +288,100 @@ settings = {}
 # Nexus MessageBus instance — shared across all routers
 _message_bus = None
 
+
+def _load_group_activation() -> dict:
+    """Read per-channel group_activation policies from config/channels.yaml."""
+    from pathlib import Path
+
+    import yaml
+    cfg_path = Path(__file__).parent.parent / "config" / "channels.yaml"
+    if not cfg_path.exists():
+        return {}
+    try:
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        channels = cfg.get("channels", {})
+        return {
+            ch: (channels[ch].get("policies", {}).get("group_activation", "always-on"))
+            for ch in channels
+        }
+    except Exception:
+        return {}
+
+
 def get_message_bus():
     """Get the Nexus MessageBus instance, creating it if needed.
 
-    Wires together: MessageFormatter + MessageRouter (mock agent) +
-    TelegramAdapter + WebChatAdapter.
+    Wires together: MessageFormatter + MessageRouter (real AgentLoop4 via runs API) +
+    TelegramAdapter + WebChatAdapter + SlackAdapter + DiscordAdapter + WhatsAppAdapter +
+    GoogleChatAdapter.
+    Group activation policies are loaded from config/channels.yaml.
     """
     global _message_bus
     if _message_bus is None:
-        from gateway.bus import MessageBus
-        from gateway.formatter import MessageFormatter
-        from gateway.router import MessageRouter, create_mock_agent
+        from channels.discord import DiscordAdapter
+        from channels.googlechat import GoogleChatAdapter
+        from channels.imessage import iMessageAdapter
+        from channels.matrix import MatrixAdapter
+        from channels.mobile import MobileAdapter
+        from channels.signal import SignalAdapter
+        from channels.slack import SlackAdapter
+        from channels.teams import TeamsAdapter
         from channels.telegram import TelegramAdapter
         from channels.webchat import WebChatAdapter
-        from channels.mobile import MobileAdapter
+        from channels.whatsapp import WhatsAppAdapter
+        from gateway.bus import MessageBus
+        from gateway.formatter import MessageFormatter
+        from gateway.router import MessageRouter, create_runs_agent
         formatter = MessageFormatter()
-        router = MessageRouter(agent_factory=create_mock_agent, formatter=formatter)
+        group_activation = _load_group_activation()
+        router = MessageRouter(
+            agent_factory=create_runs_agent,
+            formatter=formatter,
+            group_activation=group_activation,
+        )
+        telegram_adapter = TelegramAdapter()
+        matrix_adapter = MatrixAdapter()
         _message_bus = MessageBus(
             router=router,
             formatter=formatter,
             adapters={
-                "telegram": TelegramAdapter(),
+                "telegram": telegram_adapter,
                 "webchat": WebChatAdapter(),
+                "slack": SlackAdapter(),
+                "discord": DiscordAdapter(),
+                "whatsapp": WhatsAppAdapter(),
+                "googlechat": GoogleChatAdapter(),
+                "imessage": iMessageAdapter(),
+                "teams": TeamsAdapter(),
+                "signal": SignalAdapter(),
+                "matrix": matrix_adapter,
                 "mobile": MobileAdapter(),
             },
         )
+        # Wire inbound polling loops into the bus for message delivery
+        telegram_adapter.set_bus_callback(_message_bus.roundtrip)
+        matrix_adapter.set_bus_callback(_message_bus.roundtrip)
     return _message_bus
+
+
+_bus_logger = _logging.getLogger(__name__)
+
+
+async def initialize_message_bus() -> None:
+    """Initialize all channel adapters (creates httpx clients, starts polling loops).
+
+    Must be called from an async context (e.g. FastAPI lifespan startup) after
+    get_message_bus() has constructed the bus.  Safe to call multiple times —
+    adapters that are already initialized are skipped gracefully.
+    """
+    bus = get_message_bus()
+    for name, adapter in bus.adapters.items():
+        try:
+            await adapter.initialize()
+            _bus_logger.info("Nexus adapter '%s' initialized", name)
+        except Exception as exc:
+            _bus_logger.warning("Nexus adapter '%s' failed to initialize: %s", name, exc)
 
 # Canvas components
 _canvas_ws = None

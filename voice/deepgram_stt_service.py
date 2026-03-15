@@ -73,7 +73,7 @@ class DeepgramSTTService:
         self._frame_counter = 0
 
         if not self.api_key:
-            print("⚠️ [DeepgramSTT] No API key found. Set DEEPGRAM_API_KEY in your .env")
+            print("⚠️ [DeepgramSTT] No API key found. Add DEEPGRAM_API_KEY to the project root .env")
 
         if self.noise_reduce:
             print("✅ [DeepgramSTT] Noise reduction enabled")

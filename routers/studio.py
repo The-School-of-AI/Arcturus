@@ -1,3 +1,4 @@
+import asyncio
 import re
 from pathlib import Path
 
@@ -185,6 +186,52 @@ async def list_themes_endpoint(
     return [t.model_dump() for t in themes]
 
 
+@router.get("/{artifact_id}/images")
+async def list_slide_images(artifact_id: str):
+    """List slide IDs that have cached preview images."""
+    _validate_artifact_id(artifact_id)
+    storage = get_studio_storage()
+    return {"slide_ids": storage.list_slide_images(artifact_id)}
+
+
+@router.get("/{artifact_id}/images/{slide_id}")
+async def get_slide_image(artifact_id: str, slide_id: str):
+    """Serve a cached slide image as JPEG."""
+    _validate_artifact_id(artifact_id)
+    storage = get_studio_storage()
+    image_path = storage.load_slide_image_path(artifact_id, slide_id)
+    if image_path is None:
+        raise HTTPException(status_code=404, detail="Image not yet generated")
+
+    # Path traversal guard
+    expected_base = storage.base_dir / artifact_id / "images"
+    if not image_path.resolve().is_relative_to(expected_base.resolve()):
+        raise HTTPException(status_code=400, detail="Invalid image path")
+
+    return FileResponse(path=str(image_path), media_type="image/jpeg")
+
+
+@router.post("/{artifact_id}/generate-images")
+async def trigger_image_generation(artifact_id: str):
+    """Manually trigger (or re-trigger) image generation for a slides artifact."""
+    _validate_artifact_id(artifact_id)
+    storage = get_studio_storage()
+    artifact = storage.load_artifact(artifact_id)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail=f"Artifact not found: {artifact_id}")
+    if artifact.type != ArtifactType.slides:
+        raise HTTPException(status_code=400, detail="Image generation only supported for slides")
+    if artifact.content_tree is None:
+        raise HTTPException(status_code=400, detail="No content tree (approve outline first)")
+
+    orchestrator = _get_orchestrator()
+    version = ForgeOrchestrator._image_gen_version[artifact_id] = ForgeOrchestrator._image_gen_version.get(artifact_id, 0) + 1
+    asyncio.create_task(
+        orchestrator._generate_and_cache_images(artifact_id, artifact.content_tree, version)
+    )
+    return {"status": "generating"}
+
+
 @router.get("/exports/{export_job_id}")
 async def get_export_job_global(export_job_id: str):
     """Get an export job by ID without requiring artifact_id."""
@@ -272,6 +319,34 @@ async def get_revision(artifact_id: str, revision_id: str):
         return revision.model_dump(mode="json")
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RestoreRevisionRequest(BaseModel):
+    base_revision_id: Optional[str] = None
+
+
+@router.post("/{artifact_id}/revisions/{revision_id}/restore")
+async def restore_revision(artifact_id: str, revision_id: str, request: RestoreRevisionRequest = RestoreRevisionRequest()):
+    """Restore an artifact to a previous revision's content tree."""
+    _validate_artifact_id(artifact_id)
+    try:
+        from core.studio.orchestrator import ConflictError
+        orchestrator = _get_orchestrator()
+        result = await orchestrator.restore_revision(
+            artifact_id=artifact_id,
+            target_revision_id=revision_id,
+            base_revision_id=request.base_revision_id,
+        )
+        return result
+    except ConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        detail = str(e)
+        if "not found" in detail.lower():
+            raise HTTPException(status_code=404, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

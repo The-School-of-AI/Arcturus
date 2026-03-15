@@ -3,11 +3,13 @@ P05 Chronicle: Deterministic checkpoint snapshot flow.
 
 Creates content-addressable checkpoints from session state.
 Flow: capture events -> snapshot graph -> compute hash -> persist.
+Hardened for concurrent edits: lock-protected writes per session.
 """
 
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -18,6 +20,18 @@ from session.alignment import get_git_head_info, get_current_trace_ids
 # Checkpoint storage
 DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "memory" / "chronicle_checkpoints"
 DEFAULT_EVENT_LOG_DIR = Path(__file__).parent.parent / "memory" / "chronicle_events"
+
+# Per-session locks for concurrent checkpoint creation
+_checkpoint_locks: dict[str, threading.Lock] = {}
+_checkpoint_locks_mu = threading.Lock()
+
+
+def _checkpoint_lock(session_id: str) -> threading.Lock:
+    """Get or create lock for checkpoint creation (concurrent-edit safety)."""
+    with _checkpoint_locks_mu:
+        if session_id not in _checkpoint_locks:
+            _checkpoint_locks[session_id] = threading.Lock()
+        return _checkpoint_locks[session_id]
 
 
 def _load_events_until_sequence(log_path: Path, last_sequence: int) -> list[dict]:
@@ -74,12 +88,37 @@ def create_checkpoint(
     5. Persist to checkpoint dir
 
     Returns the snapshot (also written to disk).
+    Serialized per-session for concurrent-edit safety.
     """
     cp_dir = checkpoint_dir or DEFAULT_CHECKPOINT_DIR
     events_file = event_log_path or (DEFAULT_EVENT_LOG_DIR / f"events_{session_id}.ndjson")
 
+    with _checkpoint_lock(session_id):
+        return _create_checkpoint_impl(
+            session_id=session_id,
+            trigger=trigger,
+            graph=graph,
+            event_log_path=events_file,
+            last_sequence=last_sequence,
+            checkpoint_dir=cp_dir,
+            created_at=created_at,
+            repo_path=repo_path,
+        )
+
+
+def _create_checkpoint_impl(
+    session_id: str,
+    trigger: str,
+    graph: Any,
+    event_log_path: Path,
+    last_sequence: Optional[int],
+    checkpoint_dir: Path,
+    created_at: Optional[str],
+    repo_path: Optional[Path],
+) -> CheckpointSnapshot:
+    """Internal implementation (called with lock held)."""
     graph_snap = _graph_to_serializable(graph)
-    events = _load_events_until_sequence(events_file, last_sequence or 0)
+    events = _load_events_until_sequence(event_log_path, last_sequence or 0)
     event_count = len(events)
 
     # Git/checkpoint alignment and cross-module trace linking
@@ -106,8 +145,8 @@ def create_checkpoint(
     snapshot.checkpoint_id = cid
 
     # Persist
-    cp_dir.mkdir(parents=True, exist_ok=True)
-    session_cp_dir = cp_dir / session_id
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    session_cp_dir = checkpoint_dir / session_id
     session_cp_dir.mkdir(parents=True, exist_ok=True)
     cp_file = session_cp_dir / f"checkpoint_{cid}.json"
     with open(cp_file, "w", encoding="utf-8") as f:

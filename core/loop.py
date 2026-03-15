@@ -77,12 +77,23 @@ async def retry_with_backoff(
     raise last_exception
 
 
+import re
+
 # ── Voice streaming helper ─────────────────────────────────────────────────
 # Nodes to skip for voice streaming (they produce metadata, not user-facing text)
 _VOICE_SKIP_AGENTS = {
-    "PlannerAgent", "ClarificationAgent", "DistillerAgent", "QueryAgent",
+    "PlannerAgent", "DistillerAgent", "QueryAgent",
 }
 _VOICE_MIN_CHARS = 40  # Don't speak very short outputs
+
+# Patterns for catching technical leakage
+_VOICE_ERROR_KEYWORDS = (
+    r'NameError|TypeError|ValueError|AttributeError|KeyError|IndexError|'
+    r'RuntimeError|ImportError|ModuleNotFoundError|ZeroDivisionError|'
+    r'SyntaxError|IndentationError|UnboundLocalError|RecursionError|'
+    r'AssertionError|OSError|FileNotFoundError|Exception|Traceback'
+)
+_VOICE_ERROR_RE = re.compile(rf'\b({_VOICE_ERROR_KEYWORDS})\b', re.IGNORECASE)
 
 
 def _extract_node_chunk(step_id: str, agent_type: str, output) -> str | None:
@@ -118,22 +129,31 @@ def _extract_node_chunk(step_id: str, agent_type: str, output) -> str | None:
         if not text:
             best = ""
             for k, v in output.items():
-                if k == "error" or k == "traceback":
+                # Skip tech labels
+                if k in ("error", "traceback", "status", "cost"):
                     continue
                 if isinstance(v, str) and len(v) > len(best):
                     best = v
             text = best or None
 
     elif isinstance(output, str):
-        # Basic heuristic for avoiding speaking technical errors directly
-        if output.lower().startswith("error:") or "traceback (most recent call last):" in output.lower():
-            return None
         text = output
 
-    if not text or len(text.strip()) < _VOICE_MIN_CHARS:
+    if not text:
         return None
 
-    return text.strip()
+    # ── Guard: never speak raw Python exception strings ─────────────────────
+    # If the text (especially a short summary) contains technical error words
+    # replace it with None so voice skips this chunk.
+    normalized = text.strip()
+    if (len(normalized) < 400 and _VOICE_ERROR_RE.search(normalized)) or "traceback (most" in normalized.lower():
+        print(f"⚠️ [Voice] Skip chunk: detected technical error in {step_id} output.")
+        return None
+
+    if len(normalized) < _VOICE_MIN_CHARS:
+        return None
+
+    return normalized
 # ──────────────────────────────────────────────────────────────────────────
 
 
@@ -230,7 +250,7 @@ class AgentLoop4:
             log_error(f"Failed to resume session: {e}")
             raise
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, research_mode="standard", focus_mode=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, research_mode="standard", focus_mode=None, space_id=None):
         """
         Main agent loop: bootstrap context with Query node, optionally run file distiller,
         then planning loop (PlannerAgent) -> merge plan -> execute DAG. Handles replanning when
@@ -270,6 +290,8 @@ class AgentLoop4:
                     original_query=query,
                     file_manifest=file_manifest
                 )
+                if space_id is not None:
+                    self.context.plan_graph.graph["space_id"] = space_id
                 self.context.memory_context = memory_context  # Store for retrieval
                 # Inject multi_mcp immediately
                 self.context.multi_mcp = self.multi_mcp
@@ -550,6 +572,24 @@ class AgentLoop4:
 
                     if self.context.stop_requested:
                         break
+
+                    if not isinstance(plan_result['output']['plan_graph'], dict):
+                        # LLM returned null plan_graph (e.g. for simple greetings).
+                        # Synthesise a single FormatterAgent step with a friendly reply.
+                        notes = plan_result["output"].get("ambiguity_notes", [])
+                        reason = notes[0] if notes else "No actionable plan produced."
+                        log_step(f"Planner returned null plan_graph: {reason}", symbol="💬")
+                        plan_result["output"]["plan_graph"] = {
+                            "nodes": [{
+                                "id": "T001",
+                                "agent": "FormatterAgent",
+                                "description": f"Respond to user: {query[:80]}",
+                                "agent_prompt": f"The user said: \"{query}\". Respond naturally and helpfully. If it's a greeting, greet them back warmly. Planner note: {reason}",
+                                "reads": ["original_query"],
+                                "writes": ["final_report"],
+                            }],
+                            "edges": [{"source": "Query", "target": "T001"}],
+                        }
 
                     # ===== AUTO-CLARIFICATION CHECK =====
                     AUTO_CLARYFY_THRESHOLD = 0.7
@@ -1685,7 +1725,7 @@ class AgentLoop4:
                                 {"step_id": step_id, "agent": step_data.get("agent", ""), "error": str(result)},
                                 session_id=_sid,
                             )
-                            create_checkpoint(_sid, "step_failed", context.plan_graph, last_sequence=_chronicle._sequence)
+                            create_checkpoint(_sid, "step_failed", context.plan_graph, last_sequence=_chronicle.get_last_sequence(_sid))
                         except Exception:
                             pass
                 elif result["success"]:
@@ -1726,7 +1766,7 @@ class AgentLoop4:
                             },
                             session_id=_sid,
                         )
-                        create_checkpoint(_sid, "step_complete", context.plan_graph, last_sequence=_chronicle._sequence)
+                        create_checkpoint(_sid, "step_complete", context.plan_graph, last_sequence=_chronicle.get_last_sequence(_sid))
                     except Exception:
                         pass
 
@@ -1765,7 +1805,7 @@ class AgentLoop4:
                                 {"step_id": step_id, "agent": step_data.get("agent", ""), "error": result.get("error", "")},
                                 session_id=_sid,
                             )
-                            create_checkpoint(_sid, "step_failed", context.plan_graph, last_sequence=_chronicle._sequence)
+                            create_checkpoint(_sid, "step_failed", context.plan_graph, last_sequence=_chronicle.get_last_sequence(_sid))
                         except Exception:
                             pass
 
@@ -1835,10 +1875,12 @@ class AgentLoop4:
             try:
                 from core.episodic_memory import EpisodicMemory
                 import networkx as nx
+                from memory.user_id import get_user_id
                 mem = EpisodicMemory()
                 graph_data = nx.node_link_data(context.plan_graph)
                 session_data = {"graph": graph_data}
-                await mem.save_episode(session_data)
+                space_id_val = context.plan_graph.graph.get("space_id")
+                await mem.save_episode(session_data, space_id=space_id_val, user_id=get_user_id())
             except Exception as e:
                 print(f"⚠️ Failed to save episodic memory: {e}")
 

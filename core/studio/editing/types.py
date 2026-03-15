@@ -18,7 +18,7 @@ class PatchOp(BaseModel):
     """A single mutation operation within a patch."""
 
     op: PatchOpType
-    path: str = Field(..., description="JSONPath-like path to the target field (e.g. 'title', 'elements[1].content')")
+    path: str = Field(..., description="Dot-notation path with numeric indices (e.g. 'title', 'elements[1].content')")
     value: Any = Field(default=None, description="New value for SET operations")
     item: Any = Field(default=None, description="Item to insert for INSERT_AFTER operations")
     id_key: Optional[str] = Field(default=None, description="Key used for idempotency checks on INSERT_AFTER")

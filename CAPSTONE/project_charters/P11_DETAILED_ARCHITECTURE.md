@@ -1,260 +1,138 @@
-## 🎓 Technical Breakdown
+# P11 Mnemo — Detailed Architecture
 
-### **1. Vector Store (`memory/vector_store.py`)**
-
-**Purpose:** Store and search memories using vector similarity
-
-**Current:** FAISS (local file, single device)
-
-**New:** Qdrant or Weaviate (cloud-hosted, multi-device)
-
-**Why?**
-- FAISS is like a local hard drive - fast but only on one computer
-- Qdrant/Weaviate is like Google Drive - accessible from anywhere, scales better
-
-**Original Requirements (from Rohan)**
-- **Migration from FAISS to Qdrant/Weaviate:** Cloud-hosted vector DB with multi-tenancy
-- **Hybrid search:** Combined vector similarity + keyword search + metadata filtering
-- **Real-time indexing:** New memories indexed within 100ms of creation
-- **Sharding strategy:** Per-user shards with cross-user federated search (for shared spaces)
-
-**Key Functions/Features:**
-- `memory/vector_store.py` - New adapter that talks to Qdrant/Weaviate
-    ```python
-    class VectorStore:
-        def add(memory_text, embedding, metadata)
-        def search(query, k=10)  # Returns top-k similar memories
-        def update(memory_id, new_text, new_embedding)
-        def delete(memory_id)
-    ```
-
-**Migration Path:**
-1. Read all existing FAISS memories
-2. Convert to Qdrant/Weaviate format
-3. Keep backward compatibility layer (Keep the same API so existing code doesn't break)
-
-**Tech Selection**
-1. Planning to go with Qdrant initially, but we may built Weaviate as well to compare performance (if time permits)
-
-**Provider Abstraction**
-- `VectorStoreProtocol` in `memory/backends/base.py` defines the standard interface
-- Use `get_vector_store(provider="qdrant")` in application code — switch providers via config
-- Implementations: `QdrantVectorStore`, `FaissVectorStore` (wraps RemmeStore)
-- To add Weaviate: create `memory/backends/weaviate_store.py` implementing the protocol, then add a branch in `get_vector_store()`
-
-**Collection Config** (`config/qdrant_config.yaml`)
-- Collection name, dimension, distance, and future fields (e.g. indexed fields) are defined per collection
-- `memory/qdrant_config.py` loads and exposes `get_collection_config(name)`, `get_default_collection()`
-- `QdrantVectorStore` takes `collection_name` as argument and uses config for dimension/distance
-
+High-level architecture and key features of the Mnemo (Real-Time Memory & Knowledge Graph) system for Arcturus. Intended for professors and team members who need a concise, readable overview.
 
 ---
 
-### **2. Knowledge Graph (`memory/knowledge_graph.py`)**
+## 1. What Mnemo Is
 
-**Purpose:** Extract and connect entities from conversations
+Mnemo turns Arcturus memory from local, file-based storage into a **smart, interconnected system** that:
 
-**Current:** Memories are isolated - like index cards in a box
+- **Finds things quickly** — Vector search (Qdrant) plus keyword (sparse/BM25) and entity-based recall
+- **Shows how concepts connect** — Knowledge graph (Neo4j) with entities and relationships
+- **Organizes by Spaces** — Perplexity-style project hubs; memories and runs scoped by space
+- **Syncs across devices** — CRDT-style (LWW) sync with selective per-space policy
+- **Supports auth and lifecycle** — Login/register, guest flow, importance scoring, archival, contradiction detection
 
-**New:** Memories are connected - like Wikipedia with hyperlinks
+---
 
-**Original Requirements (from Rohan)**
-- **Entity extraction:** Auto-extract entities (people, companies, concepts, dates) from conversations
-- **Relationship mapping:** Build and maintain entity-relationship graph as agent learns
-- **Temporal awareness:** Track when facts were learned and whether they've been superseded
-- **Graph queries:** Agent can reason over the knowledge graph: "What do I know about X and how does it relate to Y?"
-- **Visualization:** Interactive knowledge graph explorer in the frontend
+## 2. High-Level Architecture
 
-**Key Functions/Features:**
-- `memory/knowledge_graph.py` - Extracts entities (people, places, concepts) and relationships
-    ```python
-    class KnowledgeGraph:
-        def extract_entities(text)  # Returns: [Person, Company, Date, ...]
-        def add_relationship(entity1, relation, entity2)
-        def query(pattern)  # GraphQL or Cypher queries
-        def visualize()  # For frontend display
-    ```
-
-**Example:**
-```python
-# From conversation: "I met John at Google last week"
-entities = extract_entities(text)
-# Returns: [Person("John"), Company("Google"), Date("last week")]
-
-add_relationship("user", "met", "John")
-add_relationship("John", "works_at", "Google")
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Frontend (platform-frontend)                        │
+│  SpacesPanel │ Runs │ RemMe (Add Memory) │ Graph Explorer │ Login/Register    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Backend API (FastAPI)                            │
+│  /runs │ /remme/* │ /api/sync/* │ /auth/* │ /api/graph/explore               │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │                    │                    │                    │
+         ▼                    ▼                    ▼                    ▼
+┌──────────────┐    ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│ Memory       │    │ Vector Store   │    │ Sync Engine  │    │ Auth / User     │
+│ Retriever    │    │ (Qdrant/FAISS) │    │ (push/pull)  │    │ (JWT, migration)│
+└──────┬───────┘    └───────┬────────┘    └──────┬───────┘    └─────────────────┘
+       │                    │                    │
+       │                    │                    │
+       ▼                    ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Knowledge Graph (Neo4j)                              │
+│  User, Memory, Session, Entity, Fact, Evidence, Space │ Relationships       │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Tech Selection**
-- Planning to use Neo4j as a graph database
-- Planning to use NetworkX for in memory manipulation
+**Data flow (simplified):**
+
+- **Write path:** User adds memory or runs a session → RemMe/runs API → Qdrant (vector + payload) → Neo4j (entities, facts, session–space link). Optional: Sync engine pushes changes to server.
+- **Read path:** Run/agent needs context → Memory Retriever → semantic search (Qdrant) + entity recall (Neo4j) + graph expansion → fused context for the agent.
 
 ---
 
-### **3. Spaces Manager (`memory/spaces.py`)**
+## 3. Key Components
 
-**Purpose:** Organize memories into collections
+### 3.1 Vector Store (Qdrant / FAISS)
 
-**Current:** All memories in one big pile
+| Aspect | Description |
+|--------|-------------|
+| **Role** | Stores memory and RAG chunk vectors; semantic and hybrid (vector + sparse) search. |
+| **Collections** | `arcturus_memories` (RemMe), `arcturus_rag_chunks` (RAG), `arcturus_episodic` (session skeletons). |
+| **Multi-tenancy** | All scoped by `user_id`; memories/RAG/episodic also by `space_id` where applicable. |
+| **Provider** | `VECTOR_STORE_PROVIDER=qdrant` (default `faiss` for backward compatibility). |
 
-**New:** Organized into "Spaces" (like folders, but smarter)
+### 3.2 Knowledge Graph (Neo4j)
 
-**Original Requirements (from Rohan)**
-- **Personal spaces:** Dedicated knowledge areas per project/topic (e.g., "Startup Research", "Home Renovation")
-- **Shared spaces:** Team members can contribute to and query shared knowledge spaces
-- **Auto-organization:** Agent suggests which space new information belongs to
-- **Space templates:** Pre-configured spaces for common use cases (Research Project, Code Repository, Client Management)
+| Aspect | Description |
+|--------|-------------|
+| **Role** | Structured truth: entities, relationships, facts, evidence, spaces; links to Qdrant via `memory_id` / `entity_ids`. |
+| **Main node types** | User, Memory, Session, Entity, Fact, Evidence, Space. |
+| **Relationships** | HAS_MEMORY, FROM_SESSION, CONTAINS_ENTITY, entity–entity (e.g. WORKS_AT, KNOWS), User–Entity (LIVES_IN, WORKS_AT, KNOWS, PREFERS), HAS_FACT, SUPPORTED_BY, IN_SPACE, SHARED_WITH. |
+| **Retrieval** | Entity extraction from query → resolve entities in Neo4j → memory IDs → fetch from Qdrant; graph expansion from semantic results. |
 
-**Key Functions/features:**
-- `memory/spaces.py` - Manages spaces and collections
-    ```python
-    class SpacesManager:
-        def create_space(name, type="personal")
-        def add_to_space(memory_id, space_id)
-        def suggest_space(memory_text)  # AI suggests which space
-        def search_in_space(query, space_id)
-    ```
-- Frontend UI to create/manage spaces
-- Auto-categorization logic
+### 3.3 Memory Retriever
 
-**Tech Selection**
-- TODO: Will do some reading and research when close to start on it
+- **Semantic path:** Qdrant vector search (k=10); optional hybrid with sparse (BM25-style) + RRF fusion.
+- **Entity path:** Query NER → Neo4j resolve → memory IDs → Qdrant; runs even when semantic returns 0.
+- **Graph expansion:** From semantic results’ `entity_ids`; one-hop expansion; space-scoped when run is in a space.
+- **Output:** Fused, deduplicated context for the planner/agent.
 
----
+### 3.4 Spaces & Collections
 
-### **4. Sync Engine (`memory/sync.py`)**
+- **Space:** Logical container (e.g. “Startup Research”, “Personal”). Backed by Neo4j Space node and `space_id` in Qdrant payloads.
+- **Scoping:** Memories, runs, sessions, and (optionally) facts are associated with a space or global (`__global__`).
+- **Retrieval:** When a run is in a non-global space, only that space’s memories/entities are used (no global injection).
+- **Sync policy:** Per space: `sync`, `local_only`, or `shared` (enables sharing with other users).
 
-**Purpose:** Sync memories across devices
+### 3.5 Sync Engine
 
-**Current:** Memories only on one device
+- **Model:** LWW (last-writer-wins) per memory/space; conflict-free convergence.
+- **Endpoints:** `POST /api/sync/push`, `POST /api/sync/pull`, `POST /api/sync/trigger`.
+- **Selective sync:** Only entities in spaces with `sync_policy` = sync or shared are pushed/pulled.
+- **Identity:** `user_id` from auth context (JWT or X-User-Id); body `user_id` ignored.
 
-**New:** Memories sync across all devices (phone, laptop, tablet)
+### 3.6 Auth & Lifecycle
 
-**Original Requirements (from Rohan)**
-- **CRDT-based sync:** Conflict-free replication across devices using CRDTs
-- **Offline-first:** Full functionality offline, sync when connected
-- **Selective sync:** Per-space sync policies (some spaces local-only for privacy)
-
-**Key Functions/Features:**
-- `memory/sync.py` - CRDT-based synchronization
-    ```python
-    class SyncEngine:
-        def sync_to_cloud(space_id)
-        def sync_from_cloud(device_id)
-        def resolve_conflict(local, remote)  # CRDT merge
-        def get_sync_status()
-    ```
-- Handles conflicts gracefully
-- Selective sync (some spaces can be local-only for privacy)
-- Works offline, syncs when connected
+- **Auth:** Register, login, guest (X-User-Id); JWT (HS256) with `MNEMO_SECRET_KEY`; guest→registered migration.
+- **Lifecycle:** Importance scoring, archival, contradiction edges between facts; memory visibility (private/space/public).
 
 ---
 
-### **5. Lifecycle Manager (`memory/lifecycle.py`)**
+## 4. Where Memory Is Used
 
-**Purpose:** Manage memory importance and archival
-
-**Current:** All memories treated equally
-
-**New:** Memories have "importance scores" and lifecycle
-
-**Original Requirements (from Rohan)**
-- **Importance scoring:** Auto-score memory importance, promote frequently accessed memories
-- **Decay & archival:** Gradually archive low-importance memories (retrievable but not in active search)
-- **Contradiction resolution:** When new info conflicts with existing memory, present both and let user/agent resolve
-- **Privacy controls:** Per-memory privacy levels, user can mark memories as private/shareable/public
-
-**Key Functions:**
-- `memory/lifecycle.py` - Importance scoring, decay, archival logic
-    ```python
-    class LifecycleManager:
-        def score_importance(memory_id)  # Based on access frequency
-        def archive_low_importance()
-        def detect_contradiction(new_memory, existing_memories)
-        def set_privacy(memory_id, level="private")
-    ```
-    - **Importance Scoring:** Frequently accessed memories get promoted
-    - **Decay & Archival:** Old, unused memories get archived (still searchable, but not in active results)
-    - **Contradiction Resolution:** If you say "I like pizza" then "I hate pizza", system flags both and asks you to clarify
-    - **Privacy Controls:** Mark memories as private/shareable/public
-- UI to manage memory privacy
+| Consumer | What it uses | Purpose |
+|----------|----------------|--------|
+| **PlannerAgent / Runs** | Memory Retriever (Qdrant + Neo4j), preferences (adapter from Neo4j facts) | Context for planning and answers |
+| **RemMe (Add Memory)** | Vector store (add), KG ingestion, recommend-space API | Store and organize memories |
+| **Episodic memory** | Qdrant `arcturus_episodic` or legacy JSON | Session skeletons for replay/reasoning |
+| **RAG** | Qdrant `arcturus_rag_chunks` (vector + sparse), Notes path-derived `space_id` | Document and note search |
+| **Graph Explorer** | Neo4j subgraph via `GET /api/graph/explore` | Visualization of entities and relationships |
 
 ---
 
-## 📋 Implementation Checklist
+## 5. Configuration at a Glance
 
-### **Week 1: Foundation**
-- [v] Set up Qdrant instance (local or cloud)
-- [ ] Create `memory/vector_store.py` with basic CRUD
-- [ ] Migrate existing FAISS data
-- [ ] Write tests for vector operations
-- [ ] Ensure backward compatibility with `episodic_memory.py`
-
-### **Week 2: Knowledge Graph**
-- [ ] Set up Neo4j or NetworkX
-- [ ] Implement entity extraction (using LLM or NER)
-- [ ] Build relationship extraction
-- [ ] Create graph query interface
-- [ ] Add visualization endpoint for frontend
-
-### **Week 3: Spaces**
-- [ ] Design space schema
-- [ ] Implement space CRUD operations
-- [ ] Build auto-categorization logic
-- [ ] Create frontend UI for spaces
-- [ ] Add space templates
-
-### **Week 3-4: Sync**
-- [ ] Research and implement CRDT library
-- [ ] Build sync protocol
-- [ ] Handle offline scenarios
-- [ ] Add conflict resolution
-- [ ] Test multi-device scenarios
-
-### **Week 3-4: Lifecycle**
-- [ ] Implement importance scoring algorithm
-- [ ] Build archival system
-- [ ] Add contradiction detection
-- [ ] Create privacy controls
-- [ ] Add UI for memory management
-
-### **Week 4: Hardening and Evaluation**
-- [] benchmark
-
-## 🧪 Testing Requirements
-
-The project charter specifies **mandatory test gates**:
-
-### **Acceptance Tests** (`tests/acceptance/p11_mnemo/test_memory_influences_planner_output.py`)
-Must have at least 8 test cases covering:
-- ✅ Happy-path: Memory retrieval works end-to-end
-- ✅ Invalid input handling
-- ✅ Memory ingestion
-- ✅ Retrieval ranking
-- ✅ Contradiction handling
-- ✅ Lifecycle archival
-
-### **Integration Tests** (`tests/integration/test_mnemo_oracle_cross_project_retrieval.py`)
-Must have at least 5 scenarios covering:
-- ✅ Memory affects Planner behavior BEFORE plan generation
-- ✅ Cross-project retrieval (finding memories from other projects)
-- ✅ Failure propagation (graceful degradation)
-
-### **CI Requirements**
-- All acceptance tests pass
-- All integration tests pass
-- Baseline regression suite passes
-- Lint/typecheck passes
-- **Performance:** < 250ms for top-k retrieval
+| Area | Key env vars |
+|------|----------------|
+| Vector | `VECTOR_STORE_PROVIDER`, `QDRANT_URL`, `QDRANT_API_KEY`, `RAG_VECTOR_STORE_PROVIDER` |
+| Graph | `NEO4J_ENABLED`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` |
+| Mnemo unified | `MNEMO_ENABLED` (unified extractor, Neo4j facts, adapter) |
+| Sync | `SYNC_ENGINE_ENABLED`, `SYNC_SERVER_URL`, `DEVICE_ID` |
+| Auth | `MNEMO_SECRET_KEY` (required for login/register) |
+| Episodic | `EPISODIC_STORE_PROVIDER` (qdrant \| legacy) |
 
 ---
 
-## 🎯 Key Success Metrics
+## 6. Future Enhancements and Improvements
 
-1. **Performance:** < 250ms retrieval latency (P95)
-2. **Backward Compatibility:** Existing `episodic_memory.py` code still works
-3. **Test Coverage:** All mandatory tests pass
-4. **User Experience:** Can create spaces, see knowledge graph, sync across devices
-5. **Benchmark Integration:**  Benchmark from https://arxiv.org/html/2602.16313v1 to P11 and evaluate Arcturus performance against it
+- **Multi-hop expansion:** Current graph expansion is one-hop; `depth` parameter reserved for future use.
+- **Graph query API:** Dedicated endpoint for structured reasoning (“What do I know about X and how does it relate to Y?”).
+- **Full spaces manager UI:** Beyond SpacesPanel (permissions, bulk actions, analytics).
+- **Sharding / federated search:** Per-user shards with cross-user federated search for shared spaces.
+- **Embedded / “Lite” mode:** Optional embedded Qdrant and embedded graph (e.g. Kùzu) for local-only, no-Docker setups.
+- **Production JWT:** Move from HS256 to RS256 for production; use public/private key pair and document key configuration (see `P11_AUTH_DESIGN.md`).
 
 ---
+
+**Related documents:** `P11_SETUP_GUIDE.md`, `P11_DELIVERY_README.md`, `P11_mnemo_real_time_memory_knowledge_graph.md` (original charter).

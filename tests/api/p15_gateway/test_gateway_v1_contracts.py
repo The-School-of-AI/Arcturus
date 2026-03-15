@@ -12,7 +12,7 @@ def _auth_headers(api_key: str, idempotency_key: str | None = None) -> dict:
 
 
 def test_post_search_requires_scope_and_returns_typed_citations(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["search:read"])
 
     response = client.post(
@@ -29,7 +29,7 @@ def test_post_search_requires_scope_and_returns_typed_citations(gateway_test_cli
 
 
 def test_post_chat_completions_stream_true_returns_controlled_error(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["chat:write"])
 
     response = client.post(
@@ -48,7 +48,7 @@ def test_post_chat_completions_stream_true_returns_controlled_error(gateway_test
 
 
 def test_post_embeddings_returns_openai_like_shape(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["embeddings:write"])
 
     response = client.post(
@@ -65,7 +65,7 @@ def test_post_embeddings_returns_openai_like_shape(gateway_test_client):
 
 
 def test_memory_scope_enforcement(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["memory:read"])
 
     read_response = client.post(
@@ -84,7 +84,7 @@ def test_memory_scope_enforcement(gateway_test_client):
 
 
 def test_cron_jobs_create_list_history_delete_maps_to_scheduler(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["cron:read", "cron:write"])
 
     create_response = client.post(
@@ -128,7 +128,7 @@ def test_cron_jobs_create_list_history_delete_maps_to_scheduler(gateway_test_cli
 
 
 def test_pages_generate_returns_trace_and_citations(gateway_test_client):
-    client, create_api_key, _, integration_events_file = gateway_test_client
+    client, create_api_key, _, integration_events_file, _ = gateway_test_client
     api_key = create_api_key(["pages:write"])
 
     response = client.post(
@@ -149,7 +149,7 @@ def test_pages_generate_returns_trace_and_citations(gateway_test_client):
 
 
 def test_mutating_route_idempotency_replay_and_conflict(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["pages:write"])
 
     first = client.post(
@@ -177,7 +177,7 @@ def test_mutating_route_idempotency_replay_and_conflict(gateway_test_client):
 
 
 def test_mutating_route_requires_idempotency_key(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["pages:write"])
 
     response = client.post(
@@ -191,7 +191,7 @@ def test_mutating_route_requires_idempotency_key(gateway_test_client):
 
 
 def test_usage_governance_quota_exceeded_returns_429(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(
         ["search:read"],
         monthly_request_quota=1,
@@ -215,7 +215,7 @@ def test_usage_governance_quota_exceeded_returns_429(gateway_test_client):
 
 
 def test_studio_generate_endpoints_return_typed_outline(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["studio:write"])
 
     for endpoint, artifact_type in [
@@ -237,7 +237,7 @@ def test_studio_generate_endpoints_return_typed_outline(gateway_test_client):
 
 
 def test_webhook_routes_exist_and_return_contract_shape(gateway_test_client):
-    client, create_api_key, _, _ = gateway_test_client
+    client, create_api_key, _, _, _ = gateway_test_client
     api_key = create_api_key(["webhooks:write", "webhooks:read"])
 
     create_response = client.post(
@@ -265,7 +265,7 @@ def test_webhook_routes_exist_and_return_contract_shape(gateway_test_client):
 
 
 def test_webhook_inbound_signature_and_dispatch_lifecycle(gateway_test_client, monkeypatch):
-    client, create_api_key, webhook_service, _ = gateway_test_client
+    client, create_api_key, webhook_service, _, _ = gateway_test_client
     api_key = create_api_key(["webhooks:write", "webhooks:read"])
 
     create_response = client.post(
@@ -334,7 +334,7 @@ def test_webhook_inbound_signature_and_dispatch_lifecycle(gateway_test_client, m
 
 
 def test_webhook_dispatch_dead_letter_and_replay(gateway_test_client, monkeypatch):
-    client, create_api_key, webhook_service, _ = gateway_test_client
+    client, create_api_key, webhook_service, _, _ = gateway_test_client
     api_key = create_api_key(["webhooks:write", "webhooks:read"])
 
     client.post(
@@ -382,9 +382,64 @@ def test_webhook_dispatch_dead_letter_and_replay(gateway_test_client, monkeypatc
     assert replay.json()["status"] == "requeued"
 
 
+def test_webhook_connectors_endpoint_lists_supported_sources(gateway_test_client):
+    client, create_api_key, _, _, _ = gateway_test_client
+    api_key = create_api_key(["webhooks:read"])
+
+    response = client.get(
+        "/api/v1/webhooks/connectors",
+        headers=_auth_headers(api_key),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    sources = {row["source"] for row in payload}
+    assert {"github", "jira", "gmail"} <= sources
+
+
+def test_webhook_inbound_github_connector_normalizes_and_replays(gateway_test_client):
+    client, create_api_key, _, _, connector_headers = gateway_test_client
+    api_key = create_api_key(["webhooks:write", "webhooks:read"])
+
+    client.post(
+        "/api/v1/webhooks",
+        json={
+            "target_url": "https://example.com/inbound",
+            "event_types": ["memory.updated"],
+        },
+        headers=_auth_headers(api_key, "idem-connector-sub"),
+    )
+
+    payload = {"ref": "refs/heads/main", "after": "abc123"}
+    headers = connector_headers("github", payload, event_name="push")
+
+    first = client.post("/api/v1/webhooks/inbound/github", content=json.dumps(payload), headers=headers)
+    second = client.post("/api/v1/webhooks/inbound/github", content=json.dumps(payload), headers=headers)
+
+    assert first.status_code == 200
+    assert first.json()["normalized_event_type"] == "memory.updated"
+    assert first.json()["auth_mode"] == "github_signature"
+    assert first.json()["connector_event_id"].startswith("contract-")
+
+    assert second.status_code == 200
+    assert second.headers["X-Idempotency-Status"] == "replayed"
+
+
+def test_webhook_inbound_connector_auth_fails_closed_when_secret_missing(gateway_test_client, monkeypatch):
+    client, _, _, _, connector_headers = gateway_test_client
+    monkeypatch.delenv("ARCTURUS_GATEWAY_GITHUB_WEBHOOK_SECRET", raising=False)
+
+    payload = {"ref": "refs/heads/main", "after": "abc123"}
+    headers = connector_headers("github", payload, event_name="push")
+    response = client.post("/api/v1/webhooks/inbound/github", content=json.dumps(payload), headers=headers)
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"]["code"] == "webhook_signing_not_configured"
+
+
 def test_admin_routes_fail_closed_when_admin_key_not_configured(gateway_test_client, monkeypatch):
     monkeypatch.delenv("ARCTURUS_GATEWAY_ADMIN_KEY", raising=False)
-    client, _, _, _ = gateway_test_client
+    client, _, _, _, _ = gateway_test_client
 
     response = client.get(
         "/api/v1/keys",

@@ -44,6 +44,9 @@ class FaissRAGStore:
         entries: List[Dict[str, Any]],
         embeddings: List[np.ndarray],
         remove_doc: str | None = None,
+        user_id=None,
+        space_id=None,
+        **kwargs,
     ) -> None:
         """
         Add chunks to FAISS and metadata. If remove_doc is set, remove existing entries for that doc first.
@@ -69,6 +72,9 @@ class FaissRAGStore:
         self,
         query_vector: np.ndarray,
         k: int,
+        user_id=None,
+        space_id=None,
+        **kwargs,
     ) -> List[tuple[str, float]]:
         """
         Vector search. Returns [(chunk_id, score), ...]. Score is negative L2 distance (higher = better).
@@ -88,11 +94,11 @@ class FaissRAGStore:
             results.append((chunk_id, score))
         return results
 
-    def get_metadata(self) -> List[Dict[str, Any]]:
-        """Return full metadata for BM25 and entity gate."""
+    def get_metadata(self, user_id=None, **kwargs) -> List[Dict[str, Any]]:
+        """Return full metadata for BM25 and entity gate. FAISS is not tenant-scoped; user_id ignored."""
         return self._metadata
 
-    def delete_by_doc(self, doc_path: str) -> int:
+    def delete_by_doc(self, doc_path: str, user_id=None, **kwargs) -> int:
         """Remove entries for doc. FAISS cannot delete; we rebuild index from remaining metadata.
         Rebuild requires re-embedding - not supported here. Returns 0 (no-op for FAISS)."""
         # FAISS limitation: would need full rebuild with re-embedding

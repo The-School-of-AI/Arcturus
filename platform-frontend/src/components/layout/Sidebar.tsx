@@ -2,13 +2,12 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, Upload, X, FileText, Image
+    CalendarClock, Terminal, Zap, Wand2, Upload, X, FileText, Image, Shield, FolderOpen, Mic, Network
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -19,15 +18,18 @@ import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { NotesPanel } from '@/components/sidebar/NotesPanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
+import { EchoPanel } from '@/components/sidebar/EchoPanel';
 import { AppsSidebar } from '@/features/apps/components/AppsSidebar';
 import { SettingsPanel } from '@/components/sidebar/SettingsPanel';
 import { NewsPanel } from '@/components/sidebar/NewsPanel';
+import { GraphPanel } from '@/components/sidebar/GraphPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
+import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
 
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio',
+    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm',
     active: boolean,
     onClick: () => void
 }) => {
@@ -40,6 +42,7 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     const selectedMcpServer = useAppStore(state => state.selectedMcpServer);
     const selectedRagFile = useAppStore(state => state.selectedRagFile);
     const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
+    const currentRun = useAppStore(state => state.currentRun);
 
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
@@ -48,8 +51,9 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
         if (sidebarTab === 'rag' && (ragActiveDocumentId || selectedRagFile)) return true;
         if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
+        if (sidebarTab === 'echo' && currentRun) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel, currentRun]);
 
     const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
 
@@ -105,8 +109,13 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         fetchRuns();
     }, [fetchRuns]);
 
+    // Spaces moved to header modal; 'spaces' tab no longer exists in the type union
+
     const isNewRunOpen = useAppStore(state => state.isNewRunOpen);
     const setIsNewRunOpen = useAppStore(state => state.setIsNewRunOpen);
+    const spaces = useAppStore(state => state.spaces);
+    const currentSpaceId = useAppStore(state => state.currentSpaceId);
+    const fetchSpaces = useAppStore(state => state.fetchSpaces);
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isOptimizing, setIsOptimizing] = React.useState(false);
@@ -114,7 +123,6 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const [focusMode, setFocusMode] = React.useState("general");
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const [uploadedFiles, setUploadedFiles] = React.useState<{ file: File; name: string }[]>([]);
-    const [spaces, setSpaces] = React.useState<{ id: string; name: string }[]>([]);
     const [selectedSpaceId, setSelectedSpaceId] = React.useState<string>("");
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,7 +140,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     // Fetch spaces and reset dialog state
     React.useEffect(() => {
         if (isNewRunOpen) {
-            api.getSpaces().then(setSpaces).catch(() => setSpaces([]));
+            fetchSpaces();
         } else {
             setNewQuery("");
             setResearchMode("standard");
@@ -141,15 +149,37 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
             setSelectedSpaceId("");
         }
     }, [isNewRunOpen]);
+    const [runSpaceId, setRunSpaceId] = React.useState<string | null>(null);
 
-    // Filter runs
+    // Sync run space from current space when dialog opens
+    React.useEffect(() => {
+        if (isNewRunOpen) {
+            setRunSpaceId(currentSpaceId);
+            fetchSpaces();
+        }
+    }, [isNewRunOpen, currentSpaceId, fetchSpaces]);
+
+    // Filter runs by search and by space (Phase 4). Global = only unscoped runs; space = only runs in that space.
     const filteredRuns = React.useMemo(() => {
-        if (!searchQuery.trim()) return runs;
-        return runs.filter(run =>
-            run.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            run.id.includes(searchQuery)
-        );
-    }, [runs, searchQuery]);
+        let list = runs;
+        if (currentSpaceId) {
+            list = list.filter((r) => r.space_id === currentSpaceId);
+        } else {
+            // Global: show only runs with no space (unscoped)
+            list = list.filter((r) => !r.space_id || r.space_id === '__global__');
+        }
+        if (searchQuery.trim()) {
+            list = list.filter((run) =>
+                run.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                run.id.includes(searchQuery)
+            );
+        }
+        return list;
+    }, [runs, searchQuery, currentSpaceId]);
+
+    const currentSpaceName = currentSpaceId
+        ? spaces.find((s) => s.space_id === currentSpaceId)?.name || 'Space'
+        : 'Global';
 
     const handleStartRun = async () => {
         if (!newQuery.trim() && uploadedFiles.length === 0) return;
@@ -182,15 +212,17 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         <div className="h-full flex overflow-hidden">
             {/* NavRail - Left Vertical Bar */}
             <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
-                {/* Top Tools */}
-                <div className="flex-1 w-full px-2 space-y-2">
+                {/* Top Tools — scrollable so Echo + Settings always stay pinned at bottom */}
+                <div className="flex-1 w-full px-2 space-y-2 overflow-y-auto min-h-0 no-scrollbar">
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
                     <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} />
                     <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} />
                     <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} />
                     <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
+                    <NavIcon icon={Network} label="Graph" tab="graph" active={sidebarTab === 'graph'} onClick={() => setSidebarTab('graph')} />
                     <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
                     <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} />
+                    <NavIcon icon={Network} label="Swarm" tab="swarm" active={sidebarTab === 'swarm'} onClick={() => setSidebarTab('swarm')} />
 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
@@ -202,10 +234,12 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Terminal} label="Console" tab="console" active={sidebarTab === 'console'} onClick={() => setSidebarTab('console')} />
                     <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
                     <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
+                    <NavIcon icon={Shield} label="Admin" tab="admin" active={sidebarTab === 'admin'} onClick={() => setSidebarTab('admin')} />
                 </div>
 
                 {/* Bottom Tools */}
-                <div className="w-full px-2">
+                <div className="w-full px-2 space-y-2">
+                    <NavIcon icon={Mic} label="Echo" tab="echo" active={sidebarTab === 'echo'} onClick={() => setSidebarTab('echo')} />
                     <NavIcon icon={Settings} label="Settings" tab="settings" active={sidebarTab === 'settings'} onClick={() => setSidebarTab('settings')} />
                 </div>
             </div>
@@ -217,159 +251,188 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">
 
-                            <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center gap-1.5 shrink-0">
-                                <div className="relative flex-1 group">
-                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                                    <Input
-                                        className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
-                                        placeholder="Search runs..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
+                            <div className="p-2 border-b border-border/50 bg-muted/20 space-y-2 shrink-0">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="relative flex-1 group">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                        <Input
+                                            className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                                            placeholder="Search runs..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
 
-                                <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Run">
-                                            <Plus className="w-4 h-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="bg-card border-border sm:max-w-lg text-foreground">
-                                        <DialogHeader>
-                                            <DialogTitle className="text-foreground text-lg">Start New Agent Run</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4 py-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-muted-foreground">What should the agent do?</label>
-                                                <div className="relative">
-                                                    <Input
-                                                        placeholder="e.g., Research latest AI trends..."
-                                                        value={newQuery}
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
-                                                        className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24" // Extra padding for button
-                                                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
-                                                        autoFocus
-                                                        disabled={isOptimizing}
-                                                    />
-                                                </div>
-                                                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                                    <span>Tip: Be specific about tools and outputs.</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        disabled={isOptimizing || !newQuery.trim()}
-                                                        className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
-                                                        onClick={async () => {
-                                                            if (!newQuery) return;
-                                                            setIsOptimizing(true);
-                                                            try {
-                                                                const res = await axios.post(`${API_BASE}/optimizer/preview`, { query: newQuery });
-                                                                if (res.data && res.data.optimized) {
-                                                                    setNewQuery(res.data.optimized);
-                                                                }
-                                                            } catch (e) {
-                                                                console.error("Optimization failed", e);
-                                                            } finally {
-                                                                setIsOptimizing(false);
-                                                            }
-                                                        }}
+                                    <Dialog open={isNewRunOpen} onOpenChange={setIsNewRunOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80" title="New Run">
+                                                <Plus className="w-4 h-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-card border-border sm:max-w-lg text-foreground">
+                                            <DialogHeader>
+                                                <DialogTitle className="text-foreground text-lg">Start New Agent Run</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-medium text-muted-foreground">Space</Label>
+                                                    <Select
+                                                        value={runSpaceId ?? "__global__"}
+                                                        onValueChange={(v) => setRunSpaceId(v === "__global__" ? null : v)}
                                                     >
-                                                        {isOptimizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                                                        {isOptimizing ? "Optimizing..." : "Optimize"}
-                                                    </Button>
-                                                    <input
-                                                        type="file"
-                                                        ref={fileInputRef}
-                                                        onChange={handleFileUpload}
-                                                        style={{ display: 'none' }}
-                                                        title="Upload file for agent to analyze"
-                                                    />
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="h-6 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        Upload
-                                                    </Button>
-                                                </div>
-                                                {/* Uploaded file chips */}
-                                                {uploadedFiles.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                                        {uploadedFiles.map((uf, idx) => {
-                                                            const ext = uf.name.split('.').pop()?.toLowerCase() || '';
-                                                            const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
-                                                            return (
-                                                                <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted/60 border border-border/50 text-xs text-foreground">
-                                                                    {isImage ? <Image className="w-3 h-3 text-blue-400" /> : <FileText className="w-3 h-3 text-orange-400" />}
-                                                                    <span className="max-w-[140px] truncate">{uf.name}</span>
-                                                                    <button
-                                                                        onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
-                                                                        className="ml-0.5 hover:text-red-400 transition-colors"
-                                                                    >
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </span>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {/* Space Selector */}
-                                            {spaces.length > 0 && (
-                                                <div className="flex items-center gap-2">
-                                                    <label className="text-xs text-muted-foreground shrink-0">Space:</label>
-                                                    <Select value={selectedSpaceId} onValueChange={setSelectedSpaceId}>
-                                                        <SelectTrigger className="h-[30px] flex-1 bg-muted/50 border-border/50 text-foreground text-xs rounded-md px-3">
-                                                            <SelectValue placeholder="Global (no space)" />
+                                                        <SelectTrigger className="bg-muted border-input text-foreground">
+                                                            <SelectValue placeholder="Global" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="">Global (no space)</SelectItem>
-                                                            {spaces.map(s => (
-                                                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                                            <SelectItem value="__global__">Global (all runs)</SelectItem>
+                                                            {spaces.map((s) => (
+                                                                <SelectItem key={s.space_id} value={s.space_id}>
+                                                                    {s.name || 'Unnamed Space'}
+                                                                </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                            )}
-                                            {/* Research Mode — Toggle + Inline Focus */}
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => setResearchMode(researchMode === "standard" ? "deep_research" : "standard")}
-                                                    className={cn(
-                                                        "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 border",
-                                                        researchMode === "deep_research"
-                                                            ? "bg-primary/15 text-primary border-primary/30 shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
-                                                            : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:border-border"
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-medium text-muted-foreground">What should the agent do?</Label>
+                                                    <div className="relative">
+                                                        <Input
+                                                            placeholder="e.g., Research latest AI trends..."
+                                                            value={newQuery}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
+                                                            className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24" // Extra padding for button
+                                                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
+                                                            autoFocus
+                                                            disabled={isOptimizing}
+                                                        />
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                                        <span>Tip: Be specific about tools and outputs.</span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={isOptimizing || !newQuery.trim()}
+                                                            className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
+                                                            onClick={async () => {
+                                                                if (!newQuery) return;
+                                                                setIsOptimizing(true);
+                                                                try {
+                                                                    const res = await axios.post(`${API_BASE}/optimizer/preview`, { query: newQuery });
+                                                                    if (res.data && res.data.optimized) {
+                                                                        setNewQuery(res.data.optimized);
+                                                                    }
+                                                                } catch (e) {
+                                                                    console.error("Optimization failed", e);
+                                                                } finally {
+                                                                    setIsOptimizing(false);
+                                                                }
+                                                            }}
+                                                        >
+                                                            {isOptimizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                                                            {isOptimizing ? "Optimizing..." : "Optimize"}
+                                                        </Button>
+                                                        <input
+                                                            type="file"
+                                                            ref={fileInputRef}
+                                                            onChange={handleFileUpload}
+                                                            style={{ display: 'none' }}
+                                                            title="Upload file for agent to analyze"
+                                                        />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="h-6 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 gap-1"
+                                                        >
+                                                            <Upload className="w-3 h-3" />
+                                                            Upload
+                                                        </Button>
+                                                    </div>
+                                                    {/* Uploaded file chips */}
+                                                    {uploadedFiles.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                                            {uploadedFiles.map((uf, idx) => {
+                                                                const ext = uf.name.split('.').pop()?.toLowerCase() || '';
+                                                                const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
+                                                                return (
+                                                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted/60 border border-border/50 text-xs text-foreground">
+                                                                        {isImage ? <Image className="w-3 h-3 text-blue-400" /> : <FileText className="w-3 h-3 text-orange-400" />}
+                                                                        <span className="max-w-[140px] truncate">{uf.name}</span>
+                                                                        <button
+                                                                            onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                                            className="ml-0.5 hover:text-red-400 transition-colors"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     )}
-                                                >
-                                                    <Search className="w-3 h-3" />
-                                                    Deep Research
-                                                </button>
-                                                {researchMode === 'deep_research' && (
-                                                    <Select value={focusMode} onValueChange={setFocusMode}>
-                                                        <SelectTrigger className="h-[30px] w-auto min-w-[110px] bg-muted/50 border-border/50 text-foreground text-xs rounded-full px-3 animate-in fade-in slide-in-from-left-2 duration-200">
-                                                            <SelectValue placeholder="General" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="general">General</SelectItem>
-                                                            <SelectItem value="academic">Academic</SelectItem>
-                                                            <SelectItem value="news">News</SelectItem>
-                                                            <SelectItem value="code">Code</SelectItem>
-                                                            <SelectItem value="finance">Finance</SelectItem>
-                                                            <SelectItem value="writing">Writing</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                                </div>
+                                                {/* Space Selector */}
+                                                {spaces.length > 0 && (
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="text-xs text-muted-foreground shrink-0">Space:</label>
+                                                        <Select value={selectedSpaceId} onValueChange={setSelectedSpaceId}>
+                                                            <SelectTrigger className="h-[30px] flex-1 bg-muted/50 border-border/50 text-foreground text-xs rounded-md px-3">
+                                                                <SelectValue placeholder="Global (no space)" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="">Global (no space)</SelectItem>
+                                                                {spaces.map(s => (
+                                                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                 )}
+                                                {/* Research Mode — Toggle + Inline Focus */}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setResearchMode(researchMode === "standard" ? "deep_research" : "standard")}
+                                                        className={cn(
+                                                            "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 border",
+                                                            researchMode === "deep_research"
+                                                                ? "bg-primary/15 text-primary border-primary/30 shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
+                                                                : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:border-border"
+                                                        )}
+                                                    >
+                                                        <Search className="w-3 h-3" />
+                                                        Deep Research
+                                                    </button>
+                                                    {researchMode === 'deep_research' && (
+                                                        <Select value={focusMode} onValueChange={setFocusMode}>
+                                                            <SelectTrigger className="h-[30px] w-auto min-w-[110px] bg-muted/50 border-border/50 text-foreground text-xs rounded-full px-3 animate-in fade-in slide-in-from-left-2 duration-200">
+                                                                <SelectValue placeholder="General" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="general">General</SelectItem>
+                                                                <SelectItem value="academic">Academic</SelectItem>
+                                                                <SelectItem value="news">News</SelectItem>
+                                                                <SelectItem value="code">Code</SelectItem>
+                                                                <SelectItem value="finance">Finance</SelectItem>
+                                                                <SelectItem value="writing">Writing</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                                            <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
+                                                <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                                <button
+                                    onClick={() => useAppStore.getState().setIsSpacesModalOpen(true)}
+                                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                    title="Manage Spaces"
+                                >
+                                    <FolderOpen className="w-3 h-3" />
+                                    Space: {currentSpaceName}
+                                </button>
                             </div>
 
                             {/* List - Matches Remme Style */}
@@ -482,9 +545,11 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'notes' && <NotesPanel />}
                     {sidebarTab === 'mcp' && <McpPanel />}
                     {sidebarTab === 'remme' && <RemmePanel />}
+                    {sidebarTab === 'graph' && <GraphPanel />}
                     {sidebarTab === 'explorer' && <ExplorerPanel />}
+                    {sidebarTab === 'echo' && <EchoPanel />}
                     {sidebarTab === 'studio' && <StudioSidebar />}
-
+                    {sidebarTab === 'swarm' && <SwarmSidebar />}
                     {/* Persist AppsSidebar to prevent reloading app components */}
                     <div style={{ display: sidebarTab === 'apps' ? 'block' : 'none', height: '100%' }}>
                         <AppsSidebar />

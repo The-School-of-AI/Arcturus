@@ -25,6 +25,11 @@ def _parse_path(path: str) -> List[Tuple[str, Optional[int]]]:
         "slides[2].title"  -> [("slides", 2), ("title", None)]
         "rows[0][1]"       -> [("rows", 0), ("__idx__", 1)]
     """
+    if "[?(" in path:
+        raise ValueError(
+            f"JSONPath filter expressions are not supported in path {path!r}. "
+            "Use numeric indices (e.g. elements[0]) or target kind 'slide_element' with 'element_id'."
+        )
     segments = []
     for part in path.split("."):
         m = _PATH_SEGMENT_RE.fullmatch(part)
@@ -281,6 +286,119 @@ def _apply_delete(subtree: Any, segments: List[Tuple[str, Optional[int]]]) -> Op
     return None
 
 
+# --- LLM value coercion ---
+
+# Element types whose `content` field is a plain string.
+# chart, table, stat_callout have dict/list content — never coerce those.
+_STRING_CONTENT_ELEMENT_TYPES = frozenset({
+    "title", "subtitle", "body", "kicker", "takeaway",
+    "image", "quote", "code", "source_citation", "tag_badge",
+})
+
+def _extract_string_from_dict(value: Any) -> Optional[str]:
+    """Try to extract a string from a dict the LLM produced for a string field.
+
+    Common LLM patterns:
+      {"text": "actual value", "text_color": "blue"}
+      {"value": "actual value"}
+      {"content": "actual value"}
+    """
+    if not isinstance(value, dict):
+        return None
+    for key in ("text", "value", "content"):
+        if key in value and isinstance(value[key], str):
+            return value[key]
+    return None
+
+
+def _coerce_llm_value_types(artifact_type: str, tree: Dict[str, Any]) -> List[str]:
+    """Fix common LLM type mistakes in-place: dict-for-string, etc.
+
+    The LLM sometimes "enriches" plain string fields into dicts like
+    {"text": "...", "text_color": "blue"}.  This coercion extracts the
+    string before Pydantic validation rejects the tree.
+
+    Returns a list of warnings for every field that was coerced.
+    """
+    coerce_warnings: List[str] = []
+
+    if artifact_type == "slides":
+        # Top-level string fields
+        for key in ("deck_title", "subtitle"):
+            if isinstance(tree.get(key), dict):
+                extracted = _extract_string_from_dict(tree[key])
+                if extracted is not None:
+                    coerce_warnings.append(f"Coerced {key} from dict to string")
+                    tree[key] = extracted
+
+        # Per-slide string fields
+        for i, slide in enumerate(tree.get("slides", [])):
+            if not isinstance(slide, dict):
+                continue
+            for key in ("title", "speaker_notes"):
+                if isinstance(slide.get(key), dict):
+                    extracted = _extract_string_from_dict(slide[key])
+                    if extracted is not None:
+                        coerce_warnings.append(f"Coerced slides[{i}].{key} from dict to string")
+                        slide[key] = extracted
+            # Element-level coercion
+            for el in slide.get("elements", []):
+                if not isinstance(el, dict):
+                    continue
+                # id and type must be strings
+                for key in ("id", "type"):
+                    if isinstance(el.get(key), dict):
+                        extracted = _extract_string_from_dict(el[key])
+                        if extracted is not None:
+                            coerce_warnings.append(f"Coerced element {key} from dict to string")
+                            el[key] = extracted
+                # content: coerce dict→string only for element types where
+                # content is expected to be a plain string (not chart/table dicts)
+                el_type = el.get("type", "")
+                if (
+                    el_type in _STRING_CONTENT_ELEMENT_TYPES
+                    and isinstance(el.get("content"), dict)
+                ):
+                    extracted = _extract_string_from_dict(el["content"])
+                    if extracted is not None:
+                        coerce_warnings.append(
+                            f"Coerced element ({el_type}).content from dict to string"
+                        )
+                        el["content"] = extracted
+
+    elif artifact_type == "document":
+        for key in ("doc_title", "abstract", "doc_type"):
+            if isinstance(tree.get(key), dict):
+                extracted = _extract_string_from_dict(tree[key])
+                if extracted is not None:
+                    coerce_warnings.append(f"Coerced {key} from dict to string")
+                    tree[key] = extracted
+        _coerce_document_sections(tree.get("sections", []), coerce_warnings)
+
+    elif artifact_type == "sheet":
+        if isinstance(tree.get("workbook_title"), dict):
+            extracted = _extract_string_from_dict(tree["workbook_title"])
+            if extracted is not None:
+                coerce_warnings.append("Coerced workbook_title from dict to string")
+                tree["workbook_title"] = extracted
+
+    return coerce_warnings
+
+
+def _coerce_document_sections(sections: List[Any], warnings: List[str]) -> None:
+    """Recursively coerce string fields in document sections."""
+    for sec in sections:
+        if not isinstance(sec, dict):
+            continue
+        for key in ("heading", "content", "id"):
+            if isinstance(sec.get(key), dict):
+                extracted = _extract_string_from_dict(sec[key])
+                if extracted is not None:
+                    warnings.append(f"Coerced section {key} from dict to string")
+                    sec[key] = extracted
+        _coerce_document_sections(sec.get("subsections", []), warnings)
+
+
 # --- Post-apply normalization ---
 
 def _normalize_after_patch(artifact_type: str, tree_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -366,7 +484,11 @@ def apply_patch_to_content_tree(
         else:
             raise ValueError(f"Unknown op type: {op_type!r}")
 
-    # 4. Post-apply validation
+    # 4. Coerce common LLM mistakes (dict-for-string, etc.) before validation
+    coerce_warnings = _coerce_llm_value_types(artifact_type, new_tree)
+    warnings.extend(coerce_warnings)
+
+    # 5. Post-apply validation
     from core.schemas.studio_schema import ArtifactType, validate_content_tree
     try:
         at = ArtifactType(artifact_type)
@@ -374,7 +496,7 @@ def apply_patch_to_content_tree(
     except Exception as e:
         raise ValueError(f"Patch produced invalid content tree: {e}") from e
 
-    # 5. Post-apply normalization
+    # 6. Post-apply normalization
     new_tree = _normalize_after_patch(artifact_type, new_tree)
 
     return new_tree, warnings

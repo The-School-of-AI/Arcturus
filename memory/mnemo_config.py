@@ -15,3 +15,8 @@ import os
 def is_mnemo_enabled() -> bool:
     """True when unified extractor and Neo4j Fact/Evidence path should be used."""
     return os.environ.get("MNEMO_ENABLED", "").lower() in ("true", "1", "yes")
+
+
+def is_async_kg_ingest_enabled() -> bool:
+    """True when KG ingestion runs in background after Qdrant upsert (faster add latency)."""
+    return os.environ.get("ASYNC_KG_INGEST", "false").lower() in ("true", "1", "yes")

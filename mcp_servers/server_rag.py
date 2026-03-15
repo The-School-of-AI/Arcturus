@@ -67,14 +67,27 @@ from typing import Optional
 # Import the new index scheduler
 from index_scheduler import init_scheduler, get_scheduler, shutdown_scheduler
 
-# BM25 for hybrid search
-try:
-    from rank_bm25 import BM25Okapi
-    BM25_AVAILABLE = True
-except ImportError:
-    BM25_AVAILABLE = False
-
 from config.settings_loader import settings, get_ollama_url, get_model, get_timeout
+from memory.space_constants import SPACE_ID_GLOBAL
+
+
+def _derive_space_id_for_notes(rel_path: str, default_space_id: Optional[str]) -> str:
+    """Phase B: For Notes, derive space_id from path. Notes/__global__/ → __global__; Notes/{uuid}/ → uuid; else default."""
+    norm = rel_path.replace("\\", "/").strip("/")
+    if not norm.lower().startswith("notes/"):
+        return default_space_id or SPACE_ID_GLOBAL
+    parts = norm.split("/")
+    if len(parts) >= 2:
+        first = parts[1]
+        if first == "__global__":
+            return SPACE_ID_GLOBAL
+        import uuid as _uuid
+        try:
+            _uuid.UUID(first)
+            return first
+        except (ValueError, TypeError):
+            pass
+    return default_space_id or SPACE_ID_GLOBAL
 
 # RAG vector store: Qdrant or FAISS (default). Switch via RAG_VECTOR_STORE_PROVIDER=qdrant
 def _get_rag_store():
@@ -336,68 +349,6 @@ def analyze_query(query: str) -> QueryAnalysis:
     
     return analysis
 
-class BM25Index:
-    """BM25 keyword search index for hybrid search."""
-    
-    def __init__(self):
-        self.bm25 = None
-        self.corpus = []
-        self.chunk_ids = []
-        self.metadata = []
-    
-    def tokenize(self, text: str) -> list:
-        text = text.lower()
-        text = re.sub(r'[^\w\s]', ' ', text)
-        return [t for t in text.split() if len(t) > 1]
-    
-    def build_from_metadata(self, metadata: list):
-        if not BM25_AVAILABLE:
-            mcp_log("WARN", "BM25 not available - install rank-bm25")
-            return
-        self.corpus = []
-        self.chunk_ids = []
-        self.metadata = metadata
-        for entry in metadata:
-            self.corpus.append(self.tokenize(entry.get('chunk', '')))
-            self.chunk_ids.append(entry.get('chunk_id', ''))
-        self.bm25 = BM25Okapi(self.corpus)
-        mcp_log("INFO", f"BM25 index built with {len(self.corpus)} chunks")
-    
-    def search(self, query: str, top_k: int = 20) -> list:
-        if not self.bm25:
-            return []
-        tokens = self.tokenize(query)
-        scores = self.bm25.get_scores(tokens)
-        top_indices = np.argsort(scores)[::-1][:top_k]
-        return [(self.chunk_ids[i], float(scores[i])) for i in top_indices if scores[i] > 0]
-    
-    def save(self, path: str):
-        with open(path, 'wb') as f:
-            pickle.dump({'bm25': self.bm25, 'corpus': self.corpus, 'chunk_ids': self.chunk_ids}, f)
-    
-    def load(self, path: str) -> bool:
-        try:
-            with open(path, 'rb') as f:
-                data = pickle.load(f)
-            self.bm25 = data['bm25']
-            self.corpus = data['corpus']
-            self.chunk_ids = data['chunk_ids']
-            return True
-        except:
-            return False
-
-# Global BM25 index instance
-_bm25_index = BM25Index()
-
-def rrf_fuse(bm25_results: list, faiss_results: list, k: int = 60) -> list:
-    """Reciprocal Rank Fusion of BM25 and FAISS results."""
-    scores = defaultdict(float)
-    for rank, (chunk_id, _) in enumerate(bm25_results):
-        scores[chunk_id] += 1.0 / (k + rank + 1)
-    for rank, (chunk_id, _) in enumerate(faiss_results):
-        scores[chunk_id] += 1.0 / (k + rank + 1)
-    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
 def entity_gate(results: list, metadata: list, analysis: QueryAnalysis) -> tuple:
     """Filter results based on query entities. Returns (filtered_results, gate_applied)."""
     if analysis.intent == "SEMANTIC" or not analysis.entities:
@@ -531,50 +482,43 @@ CONTEXT FROM DOCUMENT:
         return f"Error: Could not reach the AI model for this document query. ({str(e)})"
 
 @mcp.tool()
-def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
-    """Search stored documents using HYBRID search (BM25 + vector + entity gating).
+def search_stored_documents_rag(query: str, doc_path: str = None, user_id: str = None, space_id: str = None) -> list[str]:
+    """Search stored documents using hybrid search (Qdrant: sparse+vector+RRF; FAISS: vector) and entity gating.
     Returns relevant chunks with source information.
     Optionally provide doc_path to search within a specific document only.
-    """
-    global _bm25_index
+    Phase A: user_id and space_id for tenant/space scope."""
     ensure_rag_ready()
-    mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path})")
+    mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path}, user_id: {user_id or 'all'})")
     
     try:
-        meta_path = ROOT / "faiss_index" / "metadata.json"
-        if not meta_path.exists():
+        rag_store = _get_rag_store()
+        use_qdrant = os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant"
+        # Metadata: Qdrant tenant uses get_metadata(user_id); else metadata.json
+        if use_qdrant and hasattr(rag_store, "get_metadata") and user_id:
+            metadata = rag_store.get_metadata(user_id=user_id)
+        else:
+            meta_path = ROOT / "faiss_index" / "metadata.json"
+            if not meta_path.exists():
+                return ["No documents indexed yet. Run reindex_documents first."]
+            metadata = json.loads(meta_path.read_text())
+        
+        if not metadata:
             return ["No documents indexed yet. Run reindex_documents first."]
-        metadata = json.loads(meta_path.read_text())
         
         # 1. Analyze query for intent and entities
         analysis = analyze_query(query)
         mcp_log("SEARCH", f"Intent: {analysis.intent}, Entities: {analysis.entities}")
         
-        # 2. Vector search (Qdrant or FAISS)
-        rag_store = _get_rag_store()
+        # 2. Vector/hybrid search (Qdrant: hybrid prefetch+RRF; FAISS: vector-only)
         query_vec = get_embedding(query)
         k = 50 if doc_path else 30
-        faiss_results = rag_store.search(query_vec, k=k)
+        search_kwargs = {"query_vector": query_vec, "k": k, "user_id": user_id, "space_id": space_id}
+        if use_qdrant and hasattr(rag_store, "search"):
+            search_kwargs["query_text"] = query
+        faiss_results = rag_store.search(**search_kwargs)
+        fused_results = [(cid, score) for cid, score in faiss_results]
         
-        # 3. BM25 keyword search (if available)
-        bm25_results = []
-        if BM25_AVAILABLE:
-            bm25_path = ROOT / "faiss_index" / "bm25_index.pkl"
-            if not _bm25_index.bm25:
-                if bm25_path.exists():
-                    _bm25_index.load(str(bm25_path))
-                else:
-                    _bm25_index.build_from_metadata(metadata)
-                    _bm25_index.save(str(bm25_path))
-            bm25_results = _bm25_index.search(query, top_k=30)
-        
-        # 4. RRF Fusion
-        if bm25_results:
-            fused_results = rrf_fuse(bm25_results, faiss_results)
-        else:
-            fused_results = [(cid, score) for cid, score in faiss_results]
-        
-        # 5. Entity Gate (for lexical-intent queries)
+        # 3. Entity Gate (for lexical-intent queries)
         gated_results, gate_applied = entity_gate(fused_results, metadata, analysis)
         
         if gate_applied:
@@ -584,7 +528,6 @@ def search_stored_documents_rag(query: str, doc_path: str = None) -> list[str]:
                 mcp_log("SEARCH", f"No documents contain '{analysis.entities}'")
                 return [f"⚠️ No documents contain '{', '.join(analysis.entities)}' exactly. Try a broader search."]
         
-        # 6. Build result list
         chunk_lookup = {e['chunk_id']: e for e in metadata}
         results = []
         seen_docs = set()
@@ -1409,8 +1352,8 @@ def process_single_file(file: Path, doc_path_root: Path, cache_meta: dict):
         return {"status": "ERROR", "rel_path": str(file), "message": str(e)}
 
 
-def process_documents(target_path: str = None, specific_files: list[Path] = None):
-    """Process documents and create FAISS index using Parallel Processing (ThreadPoolExecutor)."""
+def process_documents(target_path: str = None, specific_files: list[Path] = None, user_id: str = None, space_id: str = None):
+    """Process documents and create FAISS/Qdrant index. Phase A: user_id, space_id for tenant/space scope."""
     mcp_log("INFO", f"Indexing documents... {'(Target: ' + target_path + ')' if target_path else ''}")
     ROOT = Path(__file__).parent.resolve()
     DOC_PATH = ROOT.parent / "data"
@@ -1517,11 +1460,12 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
 
                         # 2. Add to vector store (Qdrant or FAISS)
                         remove_doc = rel_path if rel_path in CACHE_META else None
-                        rag_store.add_chunks(
-                            entries=new_meta,
-                            embeddings=new_embs,
-                            remove_doc=remove_doc,
-                        )
+                        add_kwargs = {"entries": new_meta, "embeddings": new_embs, "remove_doc": remove_doc}
+                        if user_id is not None:
+                            add_kwargs["user_id"] = user_id
+                        effective_space_id = _derive_space_id_for_notes(rel_path, space_id)
+                        add_kwargs["space_id"] = effective_space_id
+                        rag_store.add_chunks(**add_kwargs)
 
                         # Update ledger with new format
                         from datetime import datetime
@@ -1573,11 +1517,11 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
 
 
 @mcp.tool()
-async def reindex_documents(target_path: str = None, force: bool = False) -> str:
+async def reindex_documents(target_path: str = None, force: bool = False, user_id: str = None, space_id: str = None) -> str:
     """Trigger a manual re-index of the RAG documents. 
     Optionally provide a target_path (relative to data/ folder) to index a specific file.
     If force is True, it wipes the index and performs a full fresh scan.
-    """
+    Phase A: user_id and space_id for tenant/space scope (required when using Qdrant with multi-tenant)."""
     # SIMPLIFIED: Always use the legacy process_documents with ledger updates
     # The scheduler-based approach had issues with process isolation
     
@@ -1607,9 +1551,13 @@ async def reindex_documents(target_path: str = None, force: bool = False) -> str
                     except Exception as e:
                         mcp_log("WARN", f"Failed to delete {f}: {e}")
                         
-        # Run process_documents in a separate thread 
-        # It will now update the new ledger format
-        threading.Thread(target=process_documents, args=(target_path,), daemon=True).start()
+        # Run process_documents in a separate thread
+        kwargs = {}
+        if user_id is not None:
+            kwargs["user_id"] = user_id
+        if space_id is not None:
+            kwargs["space_id"] = space_id
+        threading.Thread(target=process_documents, args=(target_path,), kwargs=kwargs, daemon=True).start()
         return f"Re-indexing started {'for ' + target_path if target_path else 'for all documents'}."
     except Exception as e:
         with INDEXING_LOCK:
@@ -1822,9 +1770,6 @@ def start_background_services():
                     rag_store.add_chunks(entries=new_meta, embeddings=new_embs, remove_doc=rel_path)
                     metadata.extend(new_meta)
                     METADATA_FILE.write_text(json.dumps(metadata, indent=2))
-                    if BM25_AVAILABLE:
-                        _bm25_index.build_from_metadata(metadata)
-                        _bm25_index.save(str(INDEX_CACHE / "bm25_index.pkl"))
                     return {"chunk_count": len(new_embs)}
             return {"chunk_count": 0}
         except Exception as e:
@@ -1843,9 +1788,6 @@ def start_background_services():
                     rag_store.delete_by_doc(rel_path)
                     METADATA_FILE.write_text(json.dumps(new_metadata, indent=2))
                     mcp_log("INFO", f"Removed {rel_path} from index ({len(metadata) - len(new_metadata)} chunks)")
-                    if BM25_AVAILABLE:
-                        _bm25_index.build_from_metadata(new_metadata)
-                        _bm25_index.save(str(INDEX_CACHE / "bm25_index.pkl"))
         except Exception as e:
             mcp_log("ERROR", f"Delete callback failed for {rel_path}: {e}")
     

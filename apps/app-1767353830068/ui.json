@@ -117,6 +117,36 @@
         "content": "The India air purifier market is characterized by a mix of domestic and international players. Key players include Xiaomi, Philips, Dyson, Daikin, Honeywell, and Eureka Forbes.\n\nXiaomi and Philips have gained traction through affordable pricing and brand recognition. Dyson and Daikin target the premium segment with high-performance models (Mordor Intelligence, T003). Eureka Forbes has a strong domestic presence and service network (Info1India, T003)."
       },
       "style": {}
+    },
+    {
+      "id": "ai_chat-1772340392150",
+      "type": "ai_chat",
+      "label": "AI Chat",
+      "config": {},
+      "data": {
+        "title": "AI Assistant",
+        "placeholder": "Ask me anything...",
+        "welcomeMessage": "Hello! How can I help you today?",
+        "model": "gpt-4",
+        "history": [
+          {
+            "role": "assistant",
+            "content": "Hello! How can I help you today?"
+          }
+        ]
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
     }
   ],
   "layout": [
@@ -204,13 +234,22 @@
     {
       "i": "competitive_landscape",
       "x": 0,
-      "y": 16,
+      "y": 23,
       "w": 24,
       "h": 4,
       "moved": false,
       "static": false
+    },
+    {
+      "i": "ai_chat-1772340392150",
+      "x": 12,
+      "y": 15,
+      "w": 12,
+      "h": 8,
+      "moved": false,
+      "static": false
     }
   ],
-  "lastModified": 1768024507496,
-  "lastHydrated": null
+  "lastModified": 1772340426871,
+  "lastHydrated": 1772340426871
 }

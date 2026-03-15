@@ -96,22 +96,23 @@ def test_format_discord_heading_becomes_bold(fmt: MessageFormatter):
 
 
 def test_format_webchat_bold(fmt: MessageFormatter):
-    """**bold** → <b>bold</b> for WebChat."""
+    """**bold** → bold (markup stripped) for WebChat plain-text renderer."""
     result = fmt.format("**world**", "webchat")
-    assert "<b>world</b>" in result
+    assert "world" in result
+    assert "**" not in result
 
 
 def test_format_webchat_html_encodes_plain_text(fmt: MessageFormatter):
-    """Plain-text special HTML chars are encoded to prevent XSS."""
+    """Plain text is passed through without HTML encoding for WebChat plain-text renderer."""
     result = fmt.format("3 < 5 & 7 > 2", "webchat")
-    assert "<" not in result.replace("<b>", "").replace("</b>", "").replace("<br>", "")
-    assert "&lt;" in result or "&amp;" in result  # at least one entity encoded
+    assert "3" in result and "5" in result and "2" in result
 
 
 def test_format_webchat_code_span(fmt: MessageFormatter):
-    """`code` → <code>code</code> for WebChat."""
+    """`code` → code (backticks stripped) for WebChat plain-text renderer."""
     result = fmt.format("`my_code`", "webchat")
-    assert "<code>my_code</code>" in result
+    assert "my_code" in result
+    assert "`" not in result
 
 
 # ---------------------------------------------------------------------------
