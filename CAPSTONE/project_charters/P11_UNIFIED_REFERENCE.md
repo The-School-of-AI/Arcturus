@@ -48,6 +48,20 @@ Update **§2 Status at a glance** and **§8 Remaining / next steps** as work pro
 | **Expansion depth** | ⏳ Future | One-hop only; `depth` parameter reserved for multi-hop |
 | **user_id: FE ownership** | ✅ Done | Frontend/context; backend accepts JWT/X-User-Id; file fallback gated; see §8.7 |
 
+### 2a. Known issues (for future)
+
+Keep this list updated from test runs and triage. See also `P11_ISSUES_AND_IMPROVEMENTS.md`.
+
+| Area | Issue | Notes |
+|------|--------|------|
+| **P11 automation (ASYNC_KG_INGEST=true)** | 3 tests can fail: Neo4j assertions run before async ingest completes | `test_entities_list_returns_records`, `test_step_01_add_raleigh_memory`, `test_step_03_add_jon_google_memory`. Increase `wait_for_condition` timeout or mark sync-only. |
+| **P11 automation** | `test_tg4_01_sync_trigger_after_add` skipped when sync server unreachable | Expected; start sync server or accept skip in CI. |
+| **Testing** | Default `pytest` excludes `p11_automation` | Run via `./scripts/run_p11_automation_tests.sh` or `pytest -m p11_automation`. |
+| **Retrieval / space isolation** | Space-scoped retrieval not fully asserted in automation | Add tests that call `retrieve(query, space_id=...)` and assert filtering. |
+| **Episodic** | Episodic memory verification not in automation suite | Add when run creation is mocked or episodic API exists. |
+| **Charter gaps (§11.2)** | No dedicated graph query API; full spaces manager UI deferred | See §11.2 Remaining / Gaps. |
+| **Dependency injection** | Stores/KG are module-level singletons | Makes test overrides harder; test flush or DI improvement recommended (see P11_Automation_Improvement doc). |
+
 ---
 
 ## 3. Big picture (what Mnemo is)
