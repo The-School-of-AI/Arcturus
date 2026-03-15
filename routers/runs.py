@@ -1,11 +1,13 @@
 # Runs Router - Handles agent run execution, listing, and management
 import asyncio
 import json
+import os
+import re
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body, UploadFile, File
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from ops.tracing import run_span, agent_execute_node_span
 from opentelemetry.trace import Status, StatusCode
 from shared.state import (
@@ -44,9 +46,12 @@ remme_extractor = get_remme_extractor()
 class RunRequest(BaseModel):
     query: str
     model: str = None  # Will use settings default if not provided
-    source: str = "web"  # "web" or "voice"
-    stream: bool = False  # Whether the caller expects a streaming response
+    mode: str = "standard"  # "standard" or "deep_research"
+    focus_mode: str = None  # "general", "academic", "news", "code", "finance", "writing"
+    source: str = "web" # "web" or "voice"
+    stream: bool = False # Whether the caller expects a streaming response
     space_id: Optional[str] = None  # Phase 3C: optional space to scope session and retrieval
+    file_paths: List[str] = []  # Paths to uploaded files for content extraction
     dry_run: Optional[bool] = None  # If True, skip agent; return synthetic run (for automation). None = use DRY_RUN_RUNS env.
 
     def __init__(self, **data):
@@ -70,6 +75,10 @@ class UserInputRequest(BaseModel):
 class AgentTestRequest(BaseModel):
     """Optional request body for agent testing"""
     pass
+
+
+class QueryApprovalRequest(BaseModel):
+    queries: list  # list of {query, dimension} dicts
 
 
 class ExecuteNodeRequest(BaseModel):
@@ -100,6 +109,223 @@ async def process_resume(run_id: str, session_path: Path):
             # Clean up
             if run_id in active_loops:
                 del active_loops[run_id]
+
+
+# === File Content Extraction Helpers ===
+
+def _detect_file_paths_in_query(query: str) -> List[str]:
+    """Extract file paths from query text for backward compatibility."""
+    patterns = [
+        r'(?:file at this location|file at|file:)\s*["\']?([/\\][\w./\\~ -]+\.\w+)',
+        r'([/\\][\w./\\~ -]+\.(?:pdf|png|jpg|jpeg|webp|gif|csv|xlsx|docx|txt))\b'
+    ]
+    paths = []
+    for p in patterns:
+        for m in re.finditer(p, query, re.IGNORECASE):
+            path = m.group(1).strip()
+            if os.path.exists(path) and path not in paths:
+                paths.append(path)
+    return paths
+
+
+def _get_extraction_prompt(ext: str) -> str:
+    """Return the extraction prompt based on file extension."""
+    if ext in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+        return "Describe this image in detail. Extract all text, data, charts, diagrams, and visual information present. Be thorough and precise."
+    elif ext == ".pdf":
+        return "Extract and summarize the full content of this PDF document. Include all text, tables, figures, and key information."
+    return "Analyze this file and extract all meaningful content, data, and information."
+
+
+async def _extract_via_openrouter(file_path: str) -> str:
+    """Use OpenRouter multimodal API to analyze a file (image/PDF).
+
+    Model is configurable via settings.models.file_extraction.
+    Raises RuntimeError on failure instead of returning error strings.
+    """
+    import aiohttp
+    import base64
+    from config.settings_loader import settings
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError(f"OPENROUTER_API_KEY not set. Cannot analyze file: {os.path.basename(file_path)}")
+
+    model = settings.get("models", {}).get("file_extraction",
+        settings.get("agent", {}).get("default_model", "google/gemini-2.5-flash"))
+
+    ext = os.path.splitext(file_path)[1].lower().lstrip(".")
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                "webp": "image/webp", "gif": "image/gif", "pdf": "application/pdf"}
+    mime = mime_map.get(ext, f"image/{ext}")
+    prompt = _get_extraction_prompt(f".{ext}")
+
+    with open(file_path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
+                ]}]
+            },
+            timeout=aiohttp.ClientTimeout(total=120)
+        ) as resp:
+            result = await resp.json()
+            if "choices" in result and result["choices"]:
+                content = result["choices"][0]["message"]["content"]
+                if content:
+                    return content
+            # Raise on failure so the outer handler catches it
+            error_msg = result.get("error", {}).get("message", str(result)[:200])
+            raise RuntimeError(f"OpenRouter extraction failed for {os.path.basename(file_path)}: {error_msg}")
+
+
+async def _extract_via_gemini(file_path: str) -> str:
+    """Upload file to Gemini File API and extract content natively.
+
+    Supports images, PDFs, and other Gemini-compatible file types.
+    Model is configurable via settings.models.file_extraction.
+    """
+    from config.settings_loader import settings
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError(f"GEMINI_API_KEY not set. Cannot analyze file: {os.path.basename(file_path)}")
+
+    # Get model from settings (strip provider prefix for native Gemini)
+    model_id = settings.get("models", {}).get("file_extraction", "gemini-2.5-flash")
+    if "/" in model_id:
+        model_id = model_id.split("/", 1)[1]
+
+    ext = os.path.splitext(file_path)[1].lower()
+    prompt = _get_extraction_prompt(ext)
+
+    from google import genai
+
+    client = genai.Client(api_key=api_key)
+    uploaded_file = None
+
+    try:
+        uploaded_file = await asyncio.to_thread(client.files.upload, file=file_path)
+        print(f"  📤 Uploaded to Gemini File API: {os.path.basename(file_path)} → {uploaded_file.name}")
+
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model=model_id,
+            contents=[uploaded_file, prompt]
+        )
+
+        if response and response.text:
+            return response.text
+        raise RuntimeError(f"Gemini returned empty response for {os.path.basename(file_path)}")
+
+    finally:
+        if uploaded_file:
+            try:
+                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
+            except Exception:
+                pass
+
+
+async def _extract_multimodal_file(file_path: str) -> str:
+    """Extract content from an image or PDF using the configured provider.
+
+    Provider is determined by settings.file_extraction_provider:
+      - "openrouter" (default): Uses OpenRouter API with OPENROUTER_API_KEY
+      - "gemini": Uses Gemini File API with GEMINI_API_KEY
+    """
+    from config.settings_loader import settings
+    provider = settings.get("file_extraction_provider", "openrouter")
+
+    if provider == "gemini":
+        return await _extract_via_gemini(file_path)
+    else:
+        return await _extract_via_openrouter(file_path)
+
+
+# Backward-compatible alias
+async def _extract_image_via_openrouter(image_path: str) -> str:
+    """Backward-compatible wrapper — routes to configured provider."""
+    return await _extract_multimodal_file(image_path)
+
+
+# File types that support multimodal extraction (image/PDF)
+MULTIMODAL_TYPES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".pdf"}
+
+
+async def _extract_file_content(file_paths: List[str]) -> tuple:
+    """
+    Extract content from uploaded files.
+    Returns (file_manifest, uploaded_files) for the agent loop.
+    - Images & PDFs: OpenRouter or Gemini (configurable via settings.file_extraction_provider)
+    - CSV/text: Direct file read
+    - Excel: openpyxl conversion
+    """
+    file_manifest = []
+    uploaded_files = []
+
+    for path in file_paths:
+        if not os.path.exists(path):
+            print(f"⚠️ File not found, skipping: {path}")
+            continue
+
+        ext = os.path.splitext(path)[1].lower()
+        name = os.path.basename(path)
+        entry = {"path": path, "name": name, "type": ext}
+
+        try:
+            if ext in MULTIMODAL_TYPES:
+                entry["content"] = await _extract_multimodal_file(path)
+                entry["content_type"] = "image" if ext != ".pdf" else "pdf"
+                print(f"  ✅ Extracted ({entry['content_type']}): {name} ({len(entry['content'])} chars)")
+
+            elif ext == ".csv":
+                with open(path, "r", encoding="utf-8") as f:
+                    entry["content"] = f.read()[:50000]
+                entry["content_type"] = "csv"
+                print(f"  CSV read: {name} ({len(entry['content'])} chars)")
+
+            elif ext in (".xlsx", ".xls"):
+                try:
+                    import openpyxl
+                    wb = openpyxl.load_workbook(path, data_only=True)
+                    ws = wb.active
+                    rows = []
+                    for row in ws.iter_rows(values_only=True):
+                        rows.append(",".join(str(c) if c is not None else "" for c in row))
+                    entry["content"] = "\n".join(rows[:2000])
+                    entry["content_type"] = "spreadsheet"
+                    print(f"  Excel converted: {name} ({len(rows)} rows)")
+                except ImportError:
+                    entry["content"] = f"[Error] openpyxl not installed. Cannot read Excel file: {name}"
+                    entry["content_type"] = "error"
+
+            else:
+                # Try reading as text
+                with open(path, "r", encoding="utf-8") as f:
+                    entry["content"] = f.read()[:50000]
+                entry["content_type"] = "text"
+                print(f"  Text read: {name} ({len(entry['content'])} chars)")
+
+        except UnicodeDecodeError:
+            entry["content"] = f"[Binary file: {name}]"
+            entry["content_type"] = "binary"
+            print(f"  Binary file (skipped content): {name}")
+        except Exception as e:
+            entry["content"] = f"[Error extracting {name}: {str(e)}]"
+            entry["content_type"] = "error"
+            print(f"  Extraction error for {name}: {e}")
+
+        file_manifest.append({"name": name, "type": entry.get("content_type", "unknown"), "size": os.path.getsize(path)})
+        uploaded_files.append(entry)
+
+    return file_manifest, uploaded_files
 
 
 def _extract_voice_output(context) -> str:
@@ -153,11 +379,12 @@ def _extract_voice_output(context) -> str:
 
 async def process_run(
     run_id: str,
-    query: str,
+    query: str, research_mode: str = "standard", focus_mode: str = None,
     source: str = "web",
     stream: bool = False,
     skill_id: str = None,
     space_id: Optional[str] = None,
+    file_paths: List[str] = None,
     user_id: str = None,
 ):
     """
@@ -211,6 +438,11 @@ async def process_run(
                             _space_id = kg.get_space_for_session(run_id)
                     except Exception:
                         pass
+                # NOTE: Do NOT pass session_id=run_id here. Each new run gets a
+                # unique run_id, and filtering by it would exclude ALL prior memories
+                # (they were stored under their own session_ids). We want cross-session
+                # recall for general queries. session_id filtering is only for session
+                # continuity (resuming an existing session), not new runs.
                 # Link session to space at run start so the run appears under the space even if no memories are extracted
                 if _space_id is not None:
                     try:
@@ -225,19 +457,42 @@ async def process_run(
                     space_id=_space_id,
                 )
                 if memory_context:
-                    print(f" Remme: Injected memory context into run {run_id}")
+                    print(f"🧠 Remme: Found {len(results)} memories for run {run_id}")
+                    print(f"   Memory context length: {len(memory_context)} chars")
+                else:
+                    print(f"🧠 Remme: No matching memories found for query in run {run_id}")
             except Exception as e:
                 print(f"⚠️ Remme Retrieval Failed: {e}")
             loop = AgentLoop4(multi_mcp=multi_mcp)
             # Register the LOOP instance immediately so we can stop it
             active_loops[run_id] = loop
 
+            # FILE CONTENT EXTRACTION: Extract content from uploaded files before agent loop
+            all_file_paths = list(file_paths or [])
+            detected_paths = _detect_file_paths_in_query(query)
+            for p in detected_paths:
+                if p not in all_file_paths:
+                    all_file_paths.append(p)
+
+            file_manifest, uploaded_files = [], []
+            if all_file_paths:
+                print(f"[{run_id}] Extracting content from {len(all_file_paths)} file(s)...")
+                file_manifest, uploaded_files = await _extract_file_content(all_file_paths)
+                print(f"[{run_id}] File extraction complete: {[f['name'] for f in file_manifest]}")
+                # Clean old-style file path text from query to avoid confusing the planner
+                clean_query = re.sub(
+                    r'Please do deep research and analyze the content of the file at this location:\s*\S+',
+                    '', query
+                ).strip()
+                if clean_query:
+                    query = clean_query
+
             # Execute the agent loop (planning -> DAG execution)
             # The loop maintains its own internal context and session
             print(f"[{run_id}] MEMORY CONTEXT INJECTED:\n{memory_context}")
             try:
                 run_globals = {"user_id": user_id} if user_id else {}
-                context = await loop.run(query, [], run_globals, [], session_id=run_id, memory_context=memory_context, space_id=_space_id)
+                context = await loop.run(query, file_manifest, run_globals, uploaded_files, session_id=run_id, memory_context=memory_context, research_mode=research_mode, focus_mode=focus_mode, space_id=_space_id)
             except asyncio.CancelledError:
                 span.set_status(Status(StatusCode.ERROR, "cancelled"))
                 print(f"[{run_id}] Run cancelled.")
@@ -409,7 +664,6 @@ async def process_run(
             # 3. AUTO-SAVE REPORTS TO NOTES
             try:
                 if context and context.plan_graph:
-                    import re
 
                     notes_dir = PROJECT_ROOT / "data" / "Notes" / "Arcturus"
                     notes_dir.mkdir(parents=True, exist_ok=True)
@@ -436,13 +690,19 @@ async def process_run(
                         if not output:
                             continue
 
-                        # Check for Formatter output keys
-                        markdown = output.get("markdown_report")
-                        if not markdown:
-                            for k, v in output.items():
-                                if k.startswith("formatted_report") and isinstance(v, str):
-                                    markdown = v
-                                    break
+                        # Check for Formatter output keys (robust extraction)
+                        markdown = None
+                        if isinstance(output, dict):
+                            markdown = output.get("markdown_report")
+                            if not markdown:
+                                for k, v in output.items():
+                                    if k.startswith("formatted_report") and isinstance(v, str):
+                                        markdown = v
+                                        break
+                            if not markdown:
+                                fa = output.get("final_answer", "")
+                                if isinstance(fa, str) and len(fa) > 100:
+                                    markdown = fa
 
                         if markdown and len(markdown) > 100:
                             title = extract_title(markdown)
@@ -458,102 +718,144 @@ async def process_run(
 
             except Exception as e:
                 print(f"⚠️ Failed to auto-save report: {e}")
+            
+        # Return result for Scheduler/Skills
+        final_result = {"status": "completed", "run_id": run_id}
+        if context and context.plan_graph:
+            # Check for any failed nodes
+            for node_id in context.plan_graph.nodes:
+                node = context.plan_graph.nodes[node_id]
+                if node.get("status") == "failed":
+                    final_result["status"] = "failed"
+                    final_result["error"] = node.get("error")
+                    break
+        
+        if context:
+            try:
+                output_str = ""
+                if context.plan_graph:
+                    # 1. Look for FormatterAgent output first (The Final Report)
+                    for node_id in context.plan_graph.nodes:
+                        node = context.plan_graph.nodes[node_id]
+                        node_agent = node.get("agent", "")
+                        out = node.get("output", {})
 
-            # Return result for Scheduler/Skills
-            final_result = {"status": "completed", "run_id": run_id}
-            if context and context.plan_graph:
-                # Check for any failed nodes
-                for node_id in context.plan_graph.nodes:
-                    node = context.plan_graph.nodes[node_id]
-                    if node.get("status") == "failed":
-                        final_result["status"] = "failed"
-                        final_result["error"] = node.get("error")
-                        break
+                        if node_agent == "FormatterAgent" or "Format" in node_agent:
+                            if isinstance(out, dict):
+                                # Try standard key first
+                                md = out.get("markdown_report")
+                                if not md:
+                                    # Try dynamic formatted_report_* keys
+                                    for k, v in out.items():
+                                        if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
+                                            md = v
+                                            break
+                                if not md:
+                                    # Try final_answer (common fallback from JSON parse wrapping)
+                                    fa = out.get("final_answer", "")
+                                    if isinstance(fa, str) and len(fa) > 100:
+                                        md = fa
+                                if not md:
+                                    # Try 'output' key
+                                    o = out.get("output")
+                                    if isinstance(o, str) and len(o) > 100:
+                                        md = o
+                                    elif isinstance(o, dict):
+                                        md = o.get("markdown_report") or o.get("final_answer", "")
 
-            if context:
-                try:
-                    output_str = ""
-                    if context.plan_graph:
-                        # 1. Look for FormatterAgent output first (The Final Report)
-                        for node_id in context.plan_graph.nodes:
+                                if md and isinstance(md, str) and len(md) > 50:
+                                    output_str = md
+                                    break
+
+                            # Handle case where output is a raw string (not dict)
+                            elif isinstance(out, str) and len(out) > 100:
+                                output_str = out
+                                break
+
+                    # 2. Fallback: Check globals_schema for formatted report keys
+                    if not output_str:
+                        gs = context.plan_graph.graph.get('globals_schema', {})
+                        for k, v in gs.items():
+                            if k.startswith("formatted_report") and isinstance(v, str) and len(v) > 100:
+                                output_str = v
+                                print(f"📋 Extracted report from globals_schema['{k}']")
+                                break
+
+                    # 3. Fallback: Check SummarizerAgent output (if formatter failed)
+                    if not output_str:
+                        for node_id in reversed(list(context.plan_graph.nodes)):
                             node = context.plan_graph.nodes[node_id]
                             node_agent = node.get("agent", "")
                             out = node.get("output", {})
-
-                            if node_agent == "FormatterAgent" or "Format" in node_agent:
-                                if isinstance(out, dict):
-                                    md = out.get("markdown_report")
-                                    if not md:
-                                        for k, v in out.items():
-                                            if (k.startswith("formatted_report") or k == "report") and isinstance(v, str):
-                                                md = v
-                                                break
-
-                                    if md:
-                                        output_str = md
-                                        break
-
-                                    if isinstance(out.get("output"), str) and len(out["output"]) > 100:
-                                        output_str = out["output"]
-                                        break
-
-                        # 2. Fallback: Find any node with a substantial string output
-                        if not output_str:
-                            for node_id in reversed(list(context.plan_graph.nodes)):
-                                if node_id == "ROOT":
-                                    continue
-                                node = context.plan_graph.nodes[node_id]
-                                out = node.get("output", {})
-
-                                if isinstance(out, dict):
-                                    def find_largest_string(d):
-                                        largest = ""
-                                        for v in d.values():
-                                            if isinstance(v, str):
-                                                if len(v) > len(largest):
-                                                    largest = v
-                                            elif isinstance(v, dict):
-                                                sub = find_largest_string(v)
-                                                if len(sub) > len(largest):
-                                                    largest = sub
-                                        return largest
-
-                                    largest_str = find_largest_string(out)
-                                    if len(largest_str) > 50:
-                                        output_str = largest_str
-                                        break
-
-                                elif isinstance(out, str) and len(out) > 50:
-                                    output_str = out
+                            if node_agent == "SummarizerAgent" and isinstance(out, dict):
+                                md = out.get("final_answer") or out.get("markdown_report", "")
+                                if isinstance(md, str) and len(md) > 100:
+                                    output_str = md
+                                    print(f"📋 Fell back to SummarizerAgent output")
                                     break
 
-                        # 3. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
-                        if output_str:
-                            import re
-                            if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
-                                try:
-                                    data = json.loads(output_str)
-                                    if isinstance(data, dict):
-                                        for k in ["markdown_report", "formatted_report", "output", "summary", "report"]:
-                                            if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
-                                                output_str = data[k]
-                                                break
-                                except Exception:
-                                    pass
+                    # 4. Fallback: Find any node with a substantial string output
+                    if not output_str:
+                        for node_id in reversed(list(context.plan_graph.nodes)):
+                            if node_id == "ROOT": continue
+                            node = context.plan_graph.nodes[node_id]
+                            out = node.get("output", {})
 
-                            output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
-                            output_str = re.sub(r'\n```$', '', output_str)
+                            if isinstance(out, dict):
+                                # Try to find the largest string value in the dict (recursive search)
+                                def find_largest_string(d, depth=0):
+                                    if depth > 3: return ""
+                                    largest = ""
+                                    for v in d.values():
+                                        if isinstance(v, str):
+                                            if len(v) > len(largest):
+                                                largest = v
+                                        elif isinstance(v, dict):
+                                            sub = find_largest_string(v, depth + 1)
+                                            if len(sub) > len(largest):
+                                                largest = sub
+                                    return largest
 
-                        final_result["output"] = output_str.strip() if output_str else "No substantial output found."
-                        if final_result.get("status") == "failed":
-                            final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
-                        else:
-                            final_result["summary"] = output_str.strip() if output_str else "Completed."
-                except Exception as e:
-                    print(f"⚠️ Extraction Error: {e}")
-                    # Ensure output is always set, even if extraction failed
-                    if "output" not in final_result:
-                        final_result["output"] = "I've processed your request."
+                                largest_str = find_largest_string(out)
+                                if len(largest_str) > 50:
+                                    output_str = largest_str
+                                    break
+
+                            elif isinstance(out, str) and len(out) > 50:
+                                output_str = out
+                                break
+
+                # 5. RUTHLESS CLEANING: Remove typical JSON leakage if content is actually Markdown
+                if output_str:
+                    # If the output starts and ends with {} or [], it might be a JSON dump
+                    # that contains a markdown_report field.
+                    if (output_str.startswith("{") and output_str.endswith("}")) or (output_str.startswith("[") and output_str.endswith("]")):
+                        try:
+                            data = json.loads(output_str)
+                            if isinstance(data, dict):
+                                for k in ["markdown_report", "formatted_report", "final_answer", "output", "summary", "report"]:
+                                    if data.get(k) and isinstance(data[k], str) and len(data[k]) > 50:
+                                        output_str = data[k]
+                                        break
+                        except:
+                            pass
+
+                    # Remove block delimiters if LLM wrapped them in ```markdown
+                    output_str = re.sub(r'^```(?:markdown)?\n', '', output_str)
+                    output_str = re.sub(r'\n```$', '', output_str)
+
+                final_result["output"] = output_str.strip() if output_str else "No substantial output found."
+                if final_result.get("status") == "failed":
+                    final_result["summary"] = f"Failed: {final_result.get('error', 'Unknown error')}"
+                else:
+                    final_result["summary"] = output_str.strip() if output_str else "Completed."
+            except Exception as e:
+                print(f"⚠️ Extraction Error: {e}")
+                import traceback
+                traceback.print_exc()
+                # Ensure output is always set, even if extraction failed
+                if "output" not in final_result:
+                    final_result["output"] = "I've processed your request."
 
             # ── Voice pipeline: signal completion ──────────────────────────────
             # NOTE: Text chunks are pushed incrementally per-node by _execute_dag
@@ -627,7 +929,7 @@ async def process_run(
                 import traceback
                 traceback.print_exc()
 
-            return final_result
+        return final_result
 
 
 # === Helpers ===
@@ -785,7 +1087,11 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
 
     # Start background execution (Phase 3C: pass space_id for session scoping)
     background_tasks.add_task(
-        process_run, run_id, request.query, request.source, request.stream, None, request.space_id, user_id
+        process_run, run_id, request.query,
+        research_mode=request.mode,
+        focus_mode=request.focus_mode,
+        source=request.source, stream=request.stream, skill_id=None, space_id=request.space_id,
+        file_paths=request.file_paths, user_id=user_id
     )
 
     return {
@@ -794,6 +1100,24 @@ async def create_run(request: RunRequest, background_tasks: BackgroundTasks):
         "created_at": datetime.now().isoformat(),
         "query": request.query
     }
+
+
+@router.post("/runs/upload")
+async def upload_run_file(file: UploadFile = File(...)):
+    """Upload a file for agent analysis. Returns the server-side path."""
+    uploads_dir = PROJECT_ROOT / "data" / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    # Sanitize filename
+    safe_name = os.path.basename(file.filename or "upload")
+    # Add timestamp to avoid collisions
+    ts = int(datetime.now().timestamp())
+    target_path = uploads_dir / f"{ts}_{safe_name}"
+
+    content = await file.read()
+    target_path.write_bytes(content)
+
+    return {"path": str(target_path), "name": safe_name, "size": len(content)}
 
 
 @router.get("/runs")
@@ -848,13 +1172,19 @@ async def list_runs():
                         (n.get("total_tokens", 0) or 0) for n in nodes
                     )
                     
+                    run_id_parsed = session_file.stem.replace("session_", "")
+                    # Override status to "running" if this run is still active in memory
+                    if run_id_parsed in active_loops:
+                        computed_status = "running"
+
                     run_id = session_file.stem.replace("session_", "")
                     runs.append({
-                        "id": run_id,
+                        "id": run_id_parsed,
                         "query": query,
                         "created_at": created_at,
                         "status": computed_status,
                         "total_tokens": total_tokens,
+                        "mode": graph_details.get("research_mode", "standard"),
                     })
                 except Exception:
                     continue
@@ -1009,6 +1339,32 @@ async def provide_input(run_id: str, request: UserInputRequest):
         else:
             raise HTTPException(status_code=400, detail="Context not initialized")
     
+    raise HTTPException(status_code=404, detail="Active run not found")
+
+
+@router.post("/runs/{run_id}/approve_queries")
+async def approve_queries(run_id: str, request: QueryApprovalRequest):
+    """Approve decomposed queries to proceed with retriever agents"""
+    if run_id in active_loops:
+        loop = active_loops[run_id]
+        if loop._query_approval_event and not loop._query_approval_event.is_set():
+            loop._approved_queries = request.queries
+            loop._query_approval_event.set()
+            return {"id": run_id, "status": "approved", "query_count": len(request.queries)}
+        raise HTTPException(status_code=400, detail="No pending query approval for this run")
+    raise HTTPException(status_code=404, detail="Active run not found")
+
+
+@router.post("/runs/{run_id}/reject_queries")
+async def reject_queries(run_id: str):
+    """Reject decomposed queries and stop the agent"""
+    if run_id in active_loops:
+        loop = active_loops[run_id]
+        if loop._query_approval_event and not loop._query_approval_event.is_set():
+            loop._queries_rejected = True
+            loop._query_approval_event.set()
+            return {"id": run_id, "status": "rejected"}
+        raise HTTPException(status_code=400, detail="No pending query approval for this run")
     raise HTTPException(status_code=404, detail="Active run not found")
 
 

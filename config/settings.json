@@ -16,8 +16,10 @@
     "image_captioning": "gemma3:4b",
     "memory_extraction": "gemma3:4b",
     "insights_provider": "ollama",
-    "entity_extraction": "gemma3:4b"
+    "entity_extraction": "gemma3:4b",
+    "file_extraction": "google/gemini-2.5-flash"
   },
+  "file_extraction_provider": "openrouter",
   "rag": {
     "chunk_size": 256,
     "chunk_overlap": 40,
@@ -26,9 +28,14 @@
     "top_k": 3
   },
   "agent": {
-    "model_provider": "gemini",
-    "default_model": "gemini-2.5-flash-lite",
-    "overrides": {},
+    "model_provider": "openrouter",
+    "default_model": "google/gemini-2.5-flash-lite-preview-09-2025",
+    "overrides": {
+      "IDEAgent": {
+        "model_provider": "gemini",
+        "model": "gemini-2.5-flash-lite"
+      }
+    },
     "max_steps": 3,
     "max_lifelines_per_step": 3,
     "planning_mode": "conservative",
@@ -47,6 +54,13 @@
   },
   "gemini": {
     "api_key_env": "GEMINI_API_KEY"
+  },
+  "brave_search": {
+    "api_key_env": "BRAVE_API_KEY"
+  },
+  "google_custom_search": {
+    "api_key_env": "GOOGLE_CUSTOM_SEARCH_API_KEY",
+    "engine_id_env": "GOOGLE_CUSTOM_SEARCH_ENGINE_ID"
   },
   "news": {
     "sources": [

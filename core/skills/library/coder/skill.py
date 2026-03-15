@@ -78,6 +78,15 @@ return { "created_file": "output.html" }
 
 ---
 
+## ✅ DATA VISUALIZATION (When analyzing CSV/Excel data)
+When your task involves analyzing data files (CSV, Excel, spreadsheet content):
+1. Use `matplotlib` to generate charts. Save them to `data/uploads/charts/` directory.
+2. Create the directory if it doesn't exist: `os.makedirs('data/uploads/charts', exist_ok=True)`
+3. Generate at minimum: a summary statistics table, and one relevant chart (bar, line, histogram).
+4. Save charts as PNG: `plt.savefig('data/uploads/charts/chart_name.png', dpi=100, bbox_inches='tight')`
+5. Always `plt.close()` after saving to free memory.
+6. Include chart file paths in your return dict: `return {"chart_path": "data/uploads/charts/chart_name.png", "analysis": "..."}`
+
 ## ✅ EXAMPLE
 **Input**: "Calculate factorial of 5"
 **Output**:

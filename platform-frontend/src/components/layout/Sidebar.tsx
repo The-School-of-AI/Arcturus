@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network
+    CalendarClock, Terminal, Zap, Wand2, Upload, X, FileText, Image, Shield, FolderOpen, Mic, Network
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { API_BASE } from '@/lib/api';
+import { API_BASE, api } from '@/lib/api';
 import axios from 'axios';
 import { RagPanel } from '@/components/sidebar/RagPanel';
 import { McpPanel } from '@/components/sidebar/McpPanel';
@@ -119,6 +119,36 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const [newQuery, setNewQuery] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isOptimizing, setIsOptimizing] = React.useState(false);
+    const [researchMode, setResearchMode] = React.useState<"standard" | "deep_research">("standard");
+    const [focusMode, setFocusMode] = React.useState("general");
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [uploadedFiles, setUploadedFiles] = React.useState<{ file: File; name: string }[]>([]);
+    const [selectedSpaceId, setSelectedSpaceId] = React.useState<string>("");
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const name = file.name;
+            if (!uploadedFiles.some(f => f.name === name)) {
+                setUploadedFiles(prev => [...prev, { file, name }]);
+            }
+        }
+        // Reset input so the same file can be re-selected
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // Fetch spaces and reset dialog state
+    React.useEffect(() => {
+        if (isNewRunOpen) {
+            fetchSpaces();
+        } else {
+            setNewQuery("");
+            setResearchMode("standard");
+            setFocusMode("general");
+            setUploadedFiles([]);
+            setSelectedSpaceId("");
+        }
+    }, [isNewRunOpen]);
     const [runSpaceId, setRunSpaceId] = React.useState<string | null>(null);
 
     // Sync run space from current space when dialog opens
@@ -152,10 +182,30 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         : 'Global';
 
     const handleStartRun = async () => {
-        if (!newQuery.trim()) return;
+        if (!newQuery.trim() && uploadedFiles.length === 0) return;
         setIsNewRunOpen(false);
-        await createNewRun(newQuery, undefined, runSpaceId);
+
+        // Upload files to server first, collect server-side paths
+        let serverPaths: string[] = [];
+        if (uploadedFiles.length > 0) {
+            try {
+                const uploads = await Promise.all(
+                    uploadedFiles.map(f => api.uploadRunFile(f.file))
+                );
+                serverPaths = uploads.map(u => u.path);
+            } catch (e) {
+                console.error("File upload failed:", e);
+            }
+        }
+
+        const fm = researchMode === 'deep_research' ? focusMode : undefined;
+        const query = newQuery.trim() || (uploadedFiles.length > 0 ? `Analyze the uploaded file(s): ${uploadedFiles.map(f => f.name).join(', ')}` : '');
+        await createNewRun(query, undefined, researchMode, fm, serverPaths.length > 0 ? serverPaths : undefined, selectedSpaceId || undefined);
         setNewQuery("");
+        setResearchMode("standard");
+        setFocusMode("general");
+        setUploadedFiles([]);
+        setSelectedSpaceId("");
     };
 
     return (
@@ -281,7 +331,91 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                             {isOptimizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                                                             {isOptimizing ? "Optimizing..." : "Optimize"}
                                                         </Button>
+                                                        <input
+                                                            type="file"
+                                                            ref={fileInputRef}
+                                                            onChange={handleFileUpload}
+                                                            style={{ display: 'none' }}
+                                                            title="Upload file for agent to analyze"
+                                                        />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="h-6 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 gap-1"
+                                                        >
+                                                            <Upload className="w-3 h-3" />
+                                                            Upload
+                                                        </Button>
                                                     </div>
+                                                    {/* Uploaded file chips */}
+                                                    {uploadedFiles.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                                            {uploadedFiles.map((uf, idx) => {
+                                                                const ext = uf.name.split('.').pop()?.toLowerCase() || '';
+                                                                const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
+                                                                return (
+                                                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted/60 border border-border/50 text-xs text-foreground">
+                                                                        {isImage ? <Image className="w-3 h-3 text-blue-400" /> : <FileText className="w-3 h-3 text-orange-400" />}
+                                                                        <span className="max-w-[140px] truncate">{uf.name}</span>
+                                                                        <button
+                                                                            onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                                            className="ml-0.5 hover:text-red-400 transition-colors"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {/* Space Selector */}
+                                                {spaces.length > 0 && (
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="text-xs text-muted-foreground shrink-0">Space:</label>
+                                                        <Select value={selectedSpaceId} onValueChange={setSelectedSpaceId}>
+                                                            <SelectTrigger className="h-[30px] flex-1 bg-muted/50 border-border/50 text-foreground text-xs rounded-md px-3">
+                                                                <SelectValue placeholder="Global (no space)" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="">Global (no space)</SelectItem>
+                                                                {spaces.map(s => (
+                                                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
+                                                {/* Research Mode — Toggle + Inline Focus */}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setResearchMode(researchMode === "standard" ? "deep_research" : "standard")}
+                                                        className={cn(
+                                                            "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 border",
+                                                            researchMode === "deep_research"
+                                                                ? "bg-primary/15 text-primary border-primary/30 shadow-[0_0_8px_hsl(var(--primary)/0.15)]"
+                                                                : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:border-border"
+                                                        )}
+                                                    >
+                                                        <Search className="w-3 h-3" />
+                                                        Deep Research
+                                                    </button>
+                                                    {researchMode === 'deep_research' && (
+                                                        <Select value={focusMode} onValueChange={setFocusMode}>
+                                                            <SelectTrigger className="h-[30px] w-auto min-w-[110px] bg-muted/50 border-border/50 text-foreground text-xs rounded-full px-3 animate-in fade-in slide-in-from-left-2 duration-200">
+                                                                <SelectValue placeholder="General" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="general">General</SelectItem>
+                                                                <SelectItem value="academic">Academic</SelectItem>
+                                                                <SelectItem value="news">News</SelectItem>
+                                                                <SelectItem value="code">Code</SelectItem>
+                                                                <SelectItem value="finance">Finance</SelectItem>
+                                                                <SelectItem value="writing">Writing</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
                                                 </div>
                                             </div>
                                             <DialogFooter>
@@ -331,6 +465,11 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                                 : "text-foreground group-hover:text-foreground/80"
                                                     )}>
                                                         {run.name}
+                                                        {run.mode === 'deep_research' && (
+                                                            <span className="inline-flex ml-2.5 align-middle px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-tight bg-primary/15 text-primary border border-primary/20">
+                                                                Deep Research
+                                                            </span>
+                                                        )}
                                                     </p>
                                                 </div>
                                                 {/* Build App Button - Top Right */}

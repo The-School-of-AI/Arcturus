@@ -4,6 +4,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Windows console encoding fix
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
+
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -374,6 +380,8 @@ from routers import studio as studio_router
 from routers import admin as admin_router
 
 app.include_router(studio_router.router, prefix="/api")
+from routers import search as search_router
+app.include_router(search_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
 from routers.marketplace import router as marketplace_router
 

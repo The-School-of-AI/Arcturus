@@ -28,6 +28,11 @@ const GEMINI_MODELS = [
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
 ];
 
+// --- OpenRouter Models ---
+const OPENROUTER_MODELS = [
+    { value: 'google/gemini-2.5-flash-lite-preview-09-2025', label: 'Gemini 2.5 Flash Preview', description: 'Via OpenRouter' },
+];
+
 // --- Reused Components (To be extracted later) ---
 
 const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, ideOpenDocuments, updateIdeDocumentContent, ...props }: any) => {
@@ -452,9 +457,10 @@ export const IdeAgentPanel: React.FC = () => {
     }, [ideProjectChatHistory, isThinking]);
 
     const syncModelChange = async (modelName: string) => {
-        // Find if it's an Ollama model to determine provider
+        // Find provider based on model
         const isOllama = ollamaModels.some(m => m.name === modelName);
-        const provider = isOllama ? 'ollama' : 'gemini';
+        const isOpenRouter = OPENROUTER_MODELS.some(m => m.value === modelName);
+        const provider = isOllama ? 'ollama' : isOpenRouter ? 'openrouter' : 'gemini';
 
         // 1. Update global store for immediate UI effect
         setSelectedModel(modelName);
@@ -1052,6 +1058,21 @@ export const IdeAgentPanel: React.FC = () => {
                                         <div className="max-h-[300px] overflow-y-auto">
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 border-b border-border/30 mb-1">Gemini Cloud</p>
                                             {GEMINI_MODELS.map(m => (
+                                                <button
+                                                    key={m.value}
+                                                    onClick={() => syncModelChange(m.value)}
+                                                    className={cn(
+                                                        "w-full text-left px-2 py-1.5 rounded-md text-[11px] flex items-center gap-2 transition-colors",
+                                                        selectedModel === m.value ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
+                                                    )}
+                                                >
+                                                    {selectedModel === m.value ? <Check className="w-3 h-3 shrink-0" /> : <div className="w-3 h-3" />}
+                                                    <span className="truncate">{m.label}</span>
+                                                </button>
+                                            ))}
+
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-2 border-b border-border/30 my-1">OpenRouter Cloud</p>
+                                            {OPENROUTER_MODELS.map(m => (
                                                 <button
                                                     key={m.value}
                                                     onClick={() => syncModelChange(m.value)}

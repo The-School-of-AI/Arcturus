@@ -12,6 +12,7 @@ export interface Run {
     model: string;
     ragEnabled: boolean;
     total_tokens?: number;
+    mode?: 'standard' | 'deep_research';
     space_id?: string;  // Phase 4: optional space
 }
 

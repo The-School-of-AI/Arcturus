@@ -1,6 +1,5 @@
 # Apps Router - Handles app CRUD, generation, and hydration
 import json
-import os
 import re
 import shutil
 import time
@@ -226,21 +225,14 @@ async def generate_from_report(request: GenerateFromReportRequest):
             model = request.model
         print(f"[GenerateFromReport] Using model: {model} (from config key: {model_key})")
         
-        # Call Gemini
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
-        # No Google Search needed - we have the report
-        print("[GenerateFromReport] Calling Gemini...")
-        response = client.models.generate_content(
-            model=model,
-            contents=generation_prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.3
-            )
-        )
-        response_text = response.text.strip()
+        # Call LLM via ModelManager (respects settings provider)
+        from core.model_manager import ModelManager
+        from config.settings_loader import reload_settings
+        _agent_settings = reload_settings().get("agent", {})
+        _provider = _agent_settings.get("model_provider", "gemini")
+        mm = ModelManager(model, provider=_provider)
+        print(f"[GenerateFromReport] Calling {_provider}...")
+        response_text = await mm.generate_text(generation_prompt)
         print(f"[GenerateFromReport] Got response, length: {len(response_text)} chars")
         
         # Clean up response
@@ -350,24 +342,14 @@ async def hydrate_app(app_id: str, request: HydrateRequest = None):
             model = request.model
         print(f"[Hydrate] Using model: {model} (from config key: {model_key})")
         
-        # Call Gemini for hydration/refinement with Google Search enabled
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
-        # Enable Google Search grounding for real-time data
-        google_search_tool = types.Tool(google_search=types.GoogleSearch())
-        
-        print("[Hydrate] Calling Gemini with Google Search enabled...")
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt_text,
-            config=types.GenerateContentConfig(
-                tools=[google_search_tool],
-                temperature=0.4 if is_refining else 0.2  # Higher temp for creative refinement
-            )
-        )
-        response_text = response.text.strip()
+        # Call LLM via ModelManager (respects settings provider)
+        from core.model_manager import ModelManager
+        from config.settings_loader import reload_settings
+        _agent_settings = reload_settings().get("agent", {})
+        _provider = _agent_settings.get("model_provider", "gemini")
+        mm = ModelManager(model, provider=_provider)
+        print(f"[Hydrate] Calling {_provider}...")
+        response_text = await mm.generate_text(prompt_text)
         print(f"[Hydrate] Got response, length: {len(response_text)} chars")
         
         # Clean up response - extract JSON from markdown fences or explanatory text

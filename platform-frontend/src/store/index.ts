@@ -25,7 +25,7 @@ interface RunSlice {
     setCurrentRun: (runId: string | null) => void;
     updateRunStatus: (input: { id: string, status: Run['status'] }) => void;
     fetchRuns: () => Promise<void>;
-    createNewRun: (query: string, model?: string, space_id?: string | null) => Promise<void>;
+    createNewRun: (query: string, model?: string, mode?: string, focusMode?: string, filePaths?: string[], spaceId?: string, space_id?: string | null) => Promise<void>;
     refreshCurrentRun: () => Promise<void>;
     pollingInterval: ReturnType<typeof setInterval> | null;
     startPolling: (runId: string) => void;
@@ -422,6 +422,20 @@ interface SchedulerSlice {
 }
 
 // --- Event Bus Slice ---
+interface ResearchProgressState {
+    currentPhase: string | null;
+    currentActivity: string | null;  // Tool-level activity: "Searching...", "Found 10 sources"
+    totalSteps: number;
+    completedSteps: number;
+    phaseNumber: number;
+    nodeStatuses: Record<string, 'pending' | 'running' | 'completed' | 'failed'>;
+    isDeepResearch: boolean;
+    isActive: boolean;  // True when ANY research is running (standard or deep)
+    sourceProgress: Record<string, { current: number; total: number }>;
+    urlExtractionProgress: Record<string, { current: number; total: number; done: boolean; urls: { url: string; title: string }[] }>;
+    stepLabels: Record<string, { agent: string; description: string }>;
+}
+
 interface EventBusSlice {
     events: any[];
     isStreaming: boolean;
@@ -429,6 +443,12 @@ interface EventBusSlice {
     startEventStream: () => void;
     stopEventStream: () => void;
     clearEvents: () => void;
+    researchProgress: ResearchProgressState;
+    resetResearchProgress: () => void;
+    pendingQueryApproval: { queries: any[]; runId: string; originalQuery: string } | null;
+    approveQueries: (runId: string, queries: any[]) => Promise<void>;
+    rejectQueries: (runId: string) => Promise<void>;
+    dismissQueryApproval: () => void;
 }
 
 // --- Studio Slice ---
@@ -499,9 +519,9 @@ export const useAppStore = create<AppState>()(
             authUserEmail: null,
             isAuthModalOpen: false,
             setIsAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
-            setAuthUserId: (id, status, token = undefined, firstName = undefined, email = undefined) => set({ 
-                authUserId: id, 
-                authStatus: status, 
+            setAuthUserId: (id, status, token = undefined, firstName = undefined, email = undefined) => set({
+                authUserId: id,
+                authStatus: status,
                 authToken: token,
                 authUserFirstName: firstName,
                 authUserEmail: email
@@ -509,7 +529,7 @@ export const useAppStore = create<AppState>()(
             initAuth: async () => {
                 const state = get();
                 if (state.authStatus === 'logged_in' && state.authUserId) return; // user is currently logged in
-                
+
                 const isLocalMigrationEnabled = import.meta.env.VITE_ENABLE_LOCAL_MIGRATION === 'true';
                 console.log('isLocalMigrationEnabled', isLocalMigrationEnabled);
                 // Try to fetch legacy guest ID if enabled, even if they already have a persisted random guest ID
@@ -527,7 +547,7 @@ export const useAppStore = create<AppState>()(
                         console.log('[Auth] Could not fetch legacy guest ID, falling back to existing or random UUID', e);
                     }
                 }
-                
+
                 // If we get here, either migration is disabled, or it failed to fetch.
                 // Ensure they at least have SOME guest ID if they don't already.
                 if (!state.authUserId) {
@@ -550,7 +570,7 @@ export const useAppStore = create<AppState>()(
                         // silently fall back
                     }
                 }
-                
+
                 set({ authUserId: guestId, authStatus: 'guest', authToken: null, authUserFirstName: null, authUserEmail: null });
             },
 
@@ -653,6 +673,44 @@ export const useAppStore = create<AppState>()(
             events: [],
             isStreaming: false,
             streamConnection: null,
+            researchProgress: {
+                currentPhase: null,
+                currentActivity: null,
+                totalSteps: 0,
+                completedSteps: 0,
+                phaseNumber: 0,
+                nodeStatuses: {},
+                isDeepResearch: false,
+                isActive: false,
+                sourceProgress: {} as Record<string, { current: number; total: number }>,
+                urlExtractionProgress: {} as Record<string, { current: number; total: number; done: boolean; urls: { url: string; title: string }[] }>,
+                stepLabels: {} as Record<string, { agent: string; description: string }>,
+            },
+            pendingQueryApproval: null,
+            resetResearchProgress: () => set({
+                researchProgress: {
+                    currentPhase: null, currentActivity: null, totalSteps: 0, completedSteps: 0,
+                    phaseNumber: 0, nodeStatuses: {}, isDeepResearch: false, isActive: false,
+                    sourceProgress: {},
+                    urlExtractionProgress: {},
+                    stepLabels: {},
+                }
+            }),
+            approveQueries: async (runId: string, queries: any[]) => {
+                await api.post(`${API_BASE}/runs/${runId}/approve_queries`, { queries });
+                set({ pendingQueryApproval: null });
+                // Restart polling — it may have auto-stopped because all nodes looked "completed"
+                get().startPolling(runId);
+            },
+            rejectQueries: async (runId: string) => {
+                try {
+                    await api.post(`${API_BASE}/runs/${runId}/reject_queries`);
+                } catch (e) {
+                    console.error("Failed to reject queries:", e);
+                }
+                set({ pendingQueryApproval: null });
+            },
+            dismissQueryApproval: () => set({ pendingQueryApproval: null }),
             startEventStream: () => {
                 if (get().streamConnection) return;
 
@@ -675,6 +733,165 @@ export const useAppStore = create<AppState>()(
                             if (newEvents.length > 200) newEvents.shift();
                             return { events: newEvents };
                         });
+
+                        // Parse structured events for research progress tracking
+                        const eventType = data.type;
+                        const eventData = data.data || {};
+
+                        if (eventType === 'dag_expanded') {
+                            set(state => ({
+                                researchProgress: {
+                                    ...state.researchProgress,
+                                    isDeepResearch: true,
+                                    currentPhase: eventData.message || `Phase ${eventData.phase}`,
+                                    phaseNumber: eventData.phase || state.researchProgress.phaseNumber,
+                                    sourceProgress: {},  // Reset per-agent source tracking on new phase
+                                }
+                            }));
+                        }
+
+                        if (eventType === 'step_start') {
+                            const { step_id, agent, description } = eventData;
+                            set(state => ({
+                                researchProgress: {
+                                    ...state.researchProgress,
+                                    isActive: true,
+                                    currentPhase: eventData.message || state.researchProgress.currentPhase,
+                                    currentActivity: agent === 'RetrieverAgent'
+                                        ? `Searching: ${(description || '').slice(0, 60)}...`
+                                        : `Running ${agent || 'agent'}...`,
+                                    nodeStatuses: {
+                                        ...state.researchProgress.nodeStatuses,
+                                        ...(step_id ? { [step_id]: 'running' as const } : {}),
+                                    },
+                                    stepLabels: {
+                                        ...state.researchProgress.stepLabels,
+                                        ...(step_id ? { [step_id]: { agent: agent || '', description: description || '' } } : {}),
+                                    },
+                                },
+                            }));
+                        }
+
+                        if (eventType === 'tool_call') {
+                            const { tool_name, agent } = eventData;
+                            const activity = tool_name === 'search_web_with_text_content'
+                                ? 'Fetching and reading sources...'
+                                : `Calling ${tool_name}...`;
+                            set(state => ({
+                                researchProgress: {
+                                    ...state.researchProgress,
+                                    currentActivity: activity,
+                                },
+                            }));
+                        }
+
+                        if (eventType === 'source_progress') {
+                            const { step_id, current, total } = eventData;
+                            if (current === 1) console.log(`[URL_TRACK] source_progress NEW step=${step_id} total=${total}`);
+                            set(state => {
+                                const updated = { ...state.researchProgress.sourceProgress };
+                                if (step_id) updated[step_id] = { current, total };
+                                // Build per-agent activity string
+                                const entries = Object.entries(updated);
+                                const activity = entries.length <= 1
+                                    ? `Reading source ${current}/${total}...`
+                                    : entries.map(([sid, p]) =>
+                                        `${sid}: ${(p as any).current}/${(p as any).total}`
+                                    ).join(' · ');
+                                // Cumulative URL extraction tracking (survives phase resets)
+                                const urlProgress = { ...state.researchProgress.urlExtractionProgress };
+                                if (step_id && !urlProgress[step_id]?.done) {
+                                    urlProgress[step_id] = { current, total, done: false, urls: urlProgress[step_id]?.urls || [] };
+                                }
+                                return {
+                                    researchProgress: {
+                                        ...state.researchProgress,
+                                        isActive: true,
+                                        currentActivity: activity,
+                                        sourceProgress: updated,
+                                        urlExtractionProgress: urlProgress,
+                                    },
+                                };
+                            });
+                        }
+
+                        if (eventType === 'tool_result') {
+                            const { source_count, tool_name, step_id, urls: eventUrls } = eventData;
+                            const extractedUrls: { url: string; title: string }[] = Array.isArray(eventUrls) ? eventUrls : [];
+                            console.log(`[URL_TRACK] tool_result step=${step_id} source_count=${source_count} urls=${extractedUrls.length}`, extractedUrls.slice(0, 2));
+                            const activity = source_count
+                                ? `Extracted ${source_count} sources`
+                                : `${tool_name} completed`;
+                            set(state => {
+                                const urlProgress = { ...state.researchProgress.urlExtractionProgress };
+                                // Finalize tracked steps: preserve original total, mark done, attach URLs
+                                if (step_id && urlProgress[step_id]) {
+                                    const existing = urlProgress[step_id];
+                                    urlProgress[step_id] = {
+                                        current: existing.total,  // Snap to full — extraction complete
+                                        total: existing.total,    // Keep original total (don't reduce)
+                                        done: true,
+                                        urls: extractedUrls.length > 0 ? extractedUrls : existing.urls,
+                                    };
+                                } else if (step_id && source_count > 0) {
+                                    // Step not tracked by source_progress (fallback)
+                                    urlProgress[step_id] = { current: source_count, total: source_count, done: true, urls: extractedUrls };
+                                }
+                                return {
+                                    researchProgress: {
+                                        ...state.researchProgress,
+                                        currentActivity: activity,
+                                        urlExtractionProgress: urlProgress,
+                                    },
+                                };
+                            });
+                        }
+
+                        if (eventType === 'step_complete') {
+                            const { step_id, progress, agent } = eventData;
+                            const parts = (progress || '0/0').split('/').map(Number);
+                            const [completed, total] = parts.length === 2 ? parts : [0, 0];
+                            const isDone = completed > 0 && completed === total;
+                            set(state => {
+                                // Safety net: if this step has URL tracking but tool_result was missed, mark done
+                                const urlProgress = { ...state.researchProgress.urlExtractionProgress };
+                                if (step_id && urlProgress[step_id] && !urlProgress[step_id].done) {
+                                    console.log(`[URL_TRACK] step_complete marking ${step_id} done (tool_result was missed)`);
+                                    const existing = urlProgress[step_id];
+                                    urlProgress[step_id] = {
+                                        current: existing.total,
+                                        total: existing.total,
+                                        done: true,
+                                        urls: existing.urls,
+                                    };
+                                }
+                                return {
+                                    researchProgress: {
+                                        ...state.researchProgress,
+                                        completedSteps: completed || state.researchProgress.completedSteps,
+                                        totalSteps: total || state.researchProgress.totalSteps,
+                                        currentActivity: isDone ? 'Complete' : `Completed ${agent || 'step'} (${completed}/${total})`,
+                                        isActive: !isDone,
+                                        nodeStatuses: {
+                                            ...state.researchProgress.nodeStatuses,
+                                            ...(step_id ? { [step_id]: 'completed' as const } : {}),
+                                        },
+                                        urlExtractionProgress: urlProgress,
+                                    },
+                                };
+                            });
+                        }
+
+                        if (eventType === 'query_approval_required') {
+                            set({
+                                pendingQueryApproval: {
+                                    queries: eventData.queries || [],
+                                    runId: eventData.run_id || '',
+                                    originalQuery: eventData.original_query || '',
+                                },
+                            });
+                        }
+
                     } catch (e) {
                         console.error("Failed to parse event", e);
                     }
@@ -772,9 +989,9 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
-            createNewRun: async (query, model, space_id) => {
+            createNewRun: async (query, model, mode, focusMode, filePaths, spaceId, space_id) => {
                 try {
-                    const res = await api.createRun(query, model, space_id);
+                    const res = await api.createRun(query, model, mode, focusMode, filePaths, spaceId, space_id);
                     const newRun: Run = {
                         id: res.id,
                         name: res.query,
@@ -782,6 +999,7 @@ export const useAppStore = create<AppState>()(
                         status: 'running',
                         model: res.model || model || 'default',
                         ragEnabled: true,
+                        mode: (mode as Run['mode']) || 'standard',
                         space_id: res.space_id ?? space_id ?? undefined
                     };
                     get().addRun(newRun);
@@ -790,6 +1008,9 @@ export const useAppStore = create<AppState>()(
                     set({ nodes: [], edges: [], selectedNodeId: null, codeContent: '', logs: [] });
 
                     get().setCurrentRun(newRun.id);
+
+                    // Start SSE event stream for real-time progress updates
+                    get().startEventStream();
 
                     // Start polling
                     get().startPolling(newRun.id);
@@ -809,6 +1030,52 @@ export const useAppStore = create<AppState>()(
                         isReplayMode: false, // Ensure we are in live mode
                         currentSnapshotIndex: -1
                     });
+
+                    // Derive researchProgress from polled graph data
+                    const metadata = graphData.graph?.metadata;
+                    const isDeep = metadata?.research_mode === 'deep_research';
+                    const nodes = graphData.nodes || [];
+                    const runningNodes = nodes.filter((n: any) => n.data?.status === 'running');
+                    const completedNodes = nodes.filter((n: any) => n.data?.status === 'completed');
+                    const totalNodes = nodes.filter((n: any) => n.data?.status && n.id !== 'ROOT');
+                    const hasRunning = runningNodes.length > 0;
+
+                    if (isDeep || hasRunning) {
+                        // Determine phase from running agents
+                        const runningAgents = runningNodes.map((n: any) => n.data?.type || '');
+                        let phase = '';
+                        let phaseNumber = get().researchProgress.phaseNumber;
+                        if (runningAgents.includes('RetrieverAgent')) {
+                            phase = 'Searching';
+                            phaseNumber = phaseNumber || 2;
+                        } else if (runningAgents.includes('ThinkerAgent')) {
+                            phase = 'Analyzing';
+                            phaseNumber = phaseNumber || 3;
+                        } else if (runningAgents.includes('SummarizerAgent')) {
+                            phase = 'Synthesizing';
+                            phaseNumber = phaseNumber || 5;
+                        } else if (runningAgents.includes('FormatterAgent')) {
+                            phase = 'Formatting Report';
+                            phaseNumber = phaseNumber || 6;
+                        }
+
+                        const currentActivity = hasRunning
+                            ? `${runningNodes.length} agent${runningNodes.length > 1 ? 's' : ''} running...`
+                            : undefined;
+
+                        set(state => ({
+                            researchProgress: {
+                                ...state.researchProgress,
+                                isDeepResearch: isDeep,
+                                isActive: hasRunning,
+                                totalSteps: totalNodes.length > state.researchProgress.totalSteps ? totalNodes.length : state.researchProgress.totalSteps,
+                                completedSteps: completedNodes.length,
+                                ...(phase ? { currentPhase: phase } : {}),
+                                ...(phaseNumber ? { phaseNumber } : {}),
+                                ...(currentActivity ? { currentActivity } : {}),
+                            }
+                        }));
+                    }
                 } catch (e) {
                     console.error("Failed to refresh graph", e);
                 }

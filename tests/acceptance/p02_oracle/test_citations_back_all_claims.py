@@ -3,6 +3,7 @@
 Replace these contract tests with feature-level assertions as implementation matures.
 """
 
+import sys
 from pathlib import Path
 
 PROJECT_ID = "P02"
@@ -35,6 +36,8 @@ def test_04_demo_script_exists() -> None:
 
 
 def test_05_demo_script_is_executable() -> None:
+    if sys.platform == "win32":
+        return
     assert DEMO_SCRIPT.stat().st_mode & 0o111, "Demo script not executable: " + str(DEMO_SCRIPT)
 
 

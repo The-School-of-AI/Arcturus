@@ -32,6 +32,7 @@ export interface API_Run {
     query: string;
     model?: string;  // Model used for this run
     total_tokens?: number;
+    mode?: string;  // "standard" or "deep_research"
     space_id?: string | null;  // Phase 4: optional space for run
 }
 
@@ -56,15 +57,29 @@ export const api = {
             model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true,
             total_tokens: r.total_tokens,
+            mode: (r.mode as Run['mode']) || 'standard',
             space_id: r.space_id ?? undefined
         }));
     },
 
+    // Upload a file for agent analysis, returns server-side path
+    uploadRunFile: async (file: File): Promise<{ path: string; name: string; size: number }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await axios.post(`${API_BASE}/runs/upload`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return res.data;
+    },
+
     // Trigger new run (model optional - backend uses settings default if not provided). Phase 4: optional space_id.
-    createRun: async (query: string, model?: string, space_id?: string | null): Promise<API_Run> => {
-        const payload: { query: string; model?: string; space_id?: string } = { query };
+    createRun: async (query: string, model?: string, mode?: string, focusMode?: string, filePaths?: string[], spaceId?: string): Promise<API_Run> => {
+        const payload: { query: string; model?: string; mode?: string; focus_mode?: string; file_paths?: string[]; space_id?: string } = { query };
         if (model) payload.model = model;
-        if (space_id) payload.space_id = space_id;
+        if (mode) payload.mode = mode;
+        if (focusMode) payload.focus_mode = focusMode;
+        if (filePaths && filePaths.length > 0) payload.file_paths = filePaths;
+        if (spaceId) payload.space_id = spaceId;
         const res = await axios.post(`${API_BASE}/runs`, payload);
         return res.data;
     },
@@ -131,7 +146,6 @@ export const api = {
         return res.data;
     },
 
-    // Get specific run graph
     // Get specific run graph
     getRunGraph: async (runId: string): Promise<{ nodes: PlatformNode[], edges: PlatformEdge[], graph: any }> => {
         const res = await axios.get<API_RunDetail>(`${API_BASE}/runs/${runId}`);

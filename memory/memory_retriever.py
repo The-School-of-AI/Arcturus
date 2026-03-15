@@ -103,6 +103,9 @@ def retrieve(
     result_ids: set = set()
     memory_context = ""
 
+    print(f"🔍 MemoryRetriever: searching for query='{query[:80]}...' session_id={session_id} space_id={space_id}")
+    print(f"   Store type: {type(store).__name__}, available: {store is not None}")
+
     # Build filter for session-scoped retrieval (memory-backed session routing)
     filter_metadata: Optional[Dict[str, Any]] = None
     if session_id:
@@ -136,7 +139,9 @@ def retrieve(
     filter_metadata.setdefault("archived", False)
 
     # 1. Semantic recall (may return 0 — graph recall will still run)
+    print(f"   Filter metadata: {filter_metadata}")
     semantic_results = _semantic_recall(query, store, k=semantic_k, filter_metadata=filter_metadata)
+    print(f"   Semantic recall: {len(semantic_results)} results")
     if semantic_results:
         top = semantic_results[:top_for_context]
         # Dedupe set across ALL recall paths (semantic k + entity + graph)
@@ -144,7 +149,7 @@ def retrieve(
         memory_str = "\n".join(
             [f"- {r['text']} (Confidence: {r.get('score', 0):.2f})" for r in top]
         )
-        memory_context = f"PREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
+        memory_context = f"[SOURCE: MEMORY]\nPREVIOUS MEMORIES ABOUT USER:\n{memory_str}\n"
 
     # 2. Entity recall — INDEPENDENT of semantic. Runs whenever kg enabled, even if semantic returned 0.
     kg = _get_knowledge_graph()
@@ -163,6 +168,7 @@ def retrieve(
             )
             memory_context = _append_graph_expansion(memory_context, expanded, store, result_ids)
 
+    print(f"   Final: memory_context={len(memory_context)} chars, {len(semantic_results)} results")
     # 4. Lifecycle: update usage metrics (importance, access_count, archival) for all memories we surfaced.
     try:
         if result_ids:
@@ -272,7 +278,7 @@ def _append_graph_expansion(
                 else:
                     ent_parts.append(f"  {name} ({etype})")
         if ent_parts:
-            memory_context += "\nRELATED ENTITIES (from knowledge graph):\n" + "\n".join(ent_parts) + "\n"
+            memory_context += "\n[SOURCE: KNOWLEDGE_GRAPH]\nRELATED ENTITIES (from knowledge graph):\n" + "\n".join(ent_parts) + "\n"
     # Extra memories from graph
     extra_ids = [mid for mid in expanded.get("memory_ids", []) if mid not in result_ids]
     if extra_ids:
@@ -317,5 +323,5 @@ def _append_entity_memories(
         if len(texts) >= 3:
             break
     if texts:
-        memory_context += "\nMEMORIES BY ENTITY (from knowledge graph):\n" + "\n".join(texts) + "\n"
+        memory_context += "\n[SOURCE: KNOWLEDGE_GRAPH]\nMEMORIES BY ENTITY (from knowledge graph):\n" + "\n".join(texts) + "\n"
     return memory_context

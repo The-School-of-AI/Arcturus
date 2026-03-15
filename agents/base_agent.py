@@ -32,7 +32,7 @@ class AgentRunner:
         result = calculator.compute(input_tokens, output_tokens, model_key, provider)
         return result.to_dict()
 
-    async def run_agent(self, agent_type: str, input_data: dict, image_path: Optional[str] = None, use_system2: bool = False) -> dict:
+    async def run_agent(self, agent_type: str, input_data: dict, image_path: Optional[str] = None, use_system2: bool = False, exclude_skills: Optional[list] = None) -> dict:
         """Run a specific agent with input data and optional image. use_system2=True enables Reasoning Loop."""
         
         from core.registry import AgentRegistry
@@ -66,9 +66,13 @@ class AgentRunner:
                     from shared.state import get_skill_manager
                     skill_manager = get_skill_manager()
 
-                    # 1. Load Configured Skills
+                    # 1. Load Configured Skills (respecting exclude_skills filter)
                     active_skills = []
+                    excluded = set(exclude_skills or [])
                     for skill_name in config.get("skills", []):
+                        if skill_name in excluded:
+                            log_step(f"⏩ Skipping skill '{skill_name}' (excluded for this mode)", symbol="⏩")
+                            continue
                         skill = skill_manager.get_skill(skill_name)
                         if skill:
                             active_skills.append(skill)
@@ -270,7 +274,22 @@ class AgentRunner:
                 (debug_log_dir / f"{timestamp}_{agent_type}_prompt.txt").write_text(full_prompt, encoding="utf-8")
 
                 # 6. Parse JSON response dynamically
-                output = parse_llm_json(response)
+                try:
+                    output = parse_llm_json(response)
+                except Exception as json_err:
+                    # Fallback: lightweight models may return plain text instead of JSON.
+                    # Wrap the raw response in the expected format so the pipeline continues.
+                    log_error(f"⚠️ {agent_type}: JSON parse failed, wrapping raw text. ({json_err})")
+                    raw = response.strip()
+                    output = {"final_answer": raw}
+                    # FormatterAgent/SummarizerAgent: raw text IS the report — map to expected keys
+                    if agent_type == "FormatterAgent":
+                        output["markdown_report"] = raw
+                        for wk in input_data.get("writes", []):
+                            output[wk] = raw
+                    elif agent_type == "SummarizerAgent":
+                        for wk in input_data.get("writes", []):
+                            output[wk] = raw
 
                 # Robustness: Some models (like gemma3) wrap JSON in a list
                 if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict):

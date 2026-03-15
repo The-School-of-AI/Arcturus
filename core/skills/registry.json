@@ -1,0 +1,366 @@
+{
+  "appgenerationprompt": {
+    "class_name": "AppgenerationpromptSkill",
+    "description": "Skill derived from AppGenerationPrompt.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/appgenerationprompt",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "apphydrationprompt": {
+    "class_name": "ApphydrationpromptSkill",
+    "description": "Skill derived from AppHydrationPrompt.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/apphydrationprompt",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "apprefinementprompt": {
+    "class_name": "ApprefinementpromptSkill",
+    "description": "Skill for refining existing app UI based on user input",
+    "intent_triggers": [],
+    "path": "core/skills/library/apprefinementprompt",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "backendgenerationprompt": {
+    "class_name": "BackendgenerationpromptSkill",
+    "description": "Skill derived from BackendGenerationPrompt.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/backendgenerationprompt",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "browser": {
+    "class_name": "BrowserSkill",
+    "description": "Skill derived from browser.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/browser",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "clarification": {
+    "class_name": "ClarificationSkill",
+    "description": "Skill derived from clarification.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/clarification",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "coder": {
+    "class_name": "CoderSkill",
+    "description": "Skill derived from coder.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/coder",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "debugger_agent": {
+    "class_name": "DebuggerAgentSkill",
+    "description": "Skill derived from debugger_agent.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/debugger_agent",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "decision": {
+    "class_name": "DecisionSkill",
+    "description": "Skill derived from decision.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/decision",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "deep_research": {
+    "class_name": "DeepResearchSkill",
+    "description": "Teaches PlannerAgent to generate iterative deep research plans with focus modes",
+    "intent_triggers": [],
+    "path": "core/skills/library/deep-research",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "distiller": {
+    "class_name": "DistillerSkill",
+    "description": "Skill derived from distiller.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/distiller",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "email": {
+    "class_name": "EmailSkill",
+    "description": "Checks and manages your emails",
+    "intent_triggers": [
+      "check my email",
+      "read my emails",
+      "any new emails",
+      "check email",
+      "read email"
+    ],
+    "path": "core/skills/library/email",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "entity_extraction": {
+    "class_name": "EntityExtractionSkill",
+    "description": "Extracts entities and relationships from memory text for the knowledge graph",
+    "intent_triggers": [],
+    "path": "core/skills/library/entity_extraction",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "file_reader": {
+    "class_name": "FileReadSkill",
+    "description": "Allows reading and searching files within the project workspace.",
+    "intent_triggers": [],
+    "path": "core/skills/library/file_reader",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "forge_outline": {
+    "class_name": "ForgeOutlineSkill",
+    "description": "Generates structured outlines for slides, documents, and sheets.",
+    "intent_triggers": [
+      "create slides",
+      "make a presentation",
+      "pitch deck",
+      "create document",
+      "write a report",
+      "technical spec",
+      "create spreadsheet",
+      "financial model",
+      "create sheet"
+    ],
+    "path": "core/skills/library/forge_outline",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "formatter": {
+    "class_name": "FormatterSkill",
+    "description": "Skill derived from formatter.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/formatter",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "formatter_old_with_html": {
+    "class_name": "FormatterOldWithHtmlSkill",
+    "description": "Skill derived from formatter_old_with_html.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/formatter_old_with_html",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "ide_agent_prompt": {
+    "class_name": "IdeAgentPromptSkill",
+    "description": "Skill derived from ide_agent_prompt.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/ide_agent_prompt",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "manager": {
+    "class_name": "ManagerSkill",
+    "description": "Decomposer prompt for the ManagerAgent \u2014 breaks user requests into DAG sub-tasks.",
+    "intent_triggers": [],
+    "path": "core/skills/library/manager",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "market_analyst": {
+    "class_name": "MarketAnalystSkill",
+    "description": "Analyzes stock markets and news using Yahoo Finance and Web Search",
+    "intent_triggers": [
+      "stock price",
+      "market analysis",
+      "news briefing",
+      "finance update",
+      "price",
+      "news",
+      "value",
+      "funding",
+      "market"
+    ],
+    "path": "core/skills/library/market_analyst",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "navigation": {
+    "class_name": "NavigationSkill",
+    "description": "Navigates the UI via voice commands",
+    "intent_triggers": [
+      "show me the dashboard",
+      "go to dashboard",
+      "show dashboard",
+      "open dashboard",
+      "navigate to dashboard",
+      "show me the runs",
+      "go to runs",
+      "open runs",
+      "navigate to runs",
+      "show me the notes",
+      "go to notes",
+      "open notes",
+      "navigate to notes",
+      "show me the rag",
+      "go to rag",
+      "show me the knowledge base",
+      "open rag",
+      "open knowledge base",
+      "navigate to rag",
+      "go to settings",
+      "show settings",
+      "open settings",
+      "navigate to settings",
+      "show me the apps",
+      "go to apps",
+      "open apps",
+      "navigate to apps",
+      "show me the explorer",
+      "go to explorer",
+      "open explorer",
+      "navigate to explorer",
+      "show me the scheduler",
+      "go to scheduler",
+      "open scheduler",
+      "navigate to scheduler",
+      "show me the ide",
+      "go to ide",
+      "open ide",
+      "navigate to ide",
+      "show me the console",
+      "go to console",
+      "open console",
+      "navigate to console"
+    ],
+    "path": "core/skills/library/navigation",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "planner": {
+    "class_name": "PlannerSkill",
+    "description": "Skill derived from planner.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/planner",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "qa": {
+    "class_name": "QaSkill",
+    "description": "Skill derived from qa.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/qa",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "rag": {
+    "class_name": "RAGSkill",
+    "description": "Provides RAG capabilities and the search_knowledge_base tool.",
+    "intent_triggers": [],
+    "path": "core/skills/library/rag",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "rag_semantic_chunking": {
+    "class_name": "RagSemanticChunkingSkill",
+    "description": "Skill derived from rag_semantic_chunking.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/rag_semantic_chunking",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "remme_extraction": {
+    "class_name": "RemmeExtractionSkill",
+    "description": "Skill derived from remme_extraction.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/remme_extraction",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "reporttoappprompt": {
+    "class_name": "ReporttoapppromptSkill",
+    "description": "Skill derived from ReportToAppPrompt.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/reporttoappprompt",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "retriever": {
+    "class_name": "RetrieverSkill",
+    "description": "Skill derived from retriever.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/retriever",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "scheduler": {
+    "class_name": "SchedulerSkill",
+    "description": "Skill derived from scheduler.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/scheduler",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "summarizer": {
+    "class_name": "SummarizerSkill",
+    "description": "Skill derived from summarizer.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/summarizer",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "system_monitor": {
+    "class_name": "SystemMonitorSkill",
+    "description": "Checks system resources (CPU, RAM, Disk)",
+    "intent_triggers": [
+      "check system",
+      "cpu usage",
+      "disk space",
+      "system health",
+      "cpu",
+      "ram",
+      "memory",
+      "disk"
+    ],
+    "path": "core/skills/library/system_monitor",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "test_agent": {
+    "class_name": "TestAgentSkill",
+    "description": "Skill derived from test_agent.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/test_agent",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "thinker": {
+    "class_name": "ThinkerSkill",
+    "description": "Skill derived from thinker.md",
+    "intent_triggers": [],
+    "path": "core/skills/library/thinker",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "unified_extraction": {
+    "class_name": "UnifiedExtractionSkill",
+    "description": "Extracts memories, entities, relationships, facts, and evidence from conversation or memory text (Mnemo unified path)",
+    "intent_triggers": [],
+    "path": "core/skills/library/unified_extraction",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "web_clipper": {
+    "class_name": "WebClipperSkill",
+    "description": "Downloads and archives web pages to Notes",
+    "intent_triggers": [
+      "clip url",
+      "archive page",
+      "save website",
+      "download html"
+    ],
+    "path": "core/skills/library/web_clipper",
+    "type": "python",
+    "version": "1.0.0"
+  }
+}

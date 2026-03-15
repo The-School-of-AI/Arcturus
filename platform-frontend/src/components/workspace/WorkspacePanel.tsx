@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import DOMPurify from 'dompurify';
 import { API_BASE } from '@/lib/api';
 import axios from 'axios';
@@ -391,10 +392,10 @@ export const WorkspacePanel: React.FC = () => {
                 <div className="flex items-center border-b border-border px-2">
                     <PanelTab label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Terminal className="w-3 h-3" />} />
                     <PanelTab
-                        label={selectedNode?.data?.iterations?.some((iter: any) => iter.output?.code_variants) ? "Code" : "Output"}
+                        label={selectedNode?.data?.iterations?.some((iter: any) => iter.output?.code_variants && !iter.output?._executed_code) ? "Code" : "Output"}
                         active={activeTab === 'code'}
                         onClick={() => setActiveTab('code')}
-                        icon={selectedNode?.data?.iterations?.some((iter: any) => iter.output?.code_variants) ? <Code2 className="w-3 h-3" /> : <Terminal className="w-3 h-3" />}
+                        icon={selectedNode?.data?.iterations?.some((iter: any) => iter.output?.code_variants && !iter.output?._executed_code) ? <Code2 className="w-3 h-3" /> : <Terminal className="w-3 h-3" />}
                     />
                     <PanelTab label="Web" active={activeTab === 'web'} onClick={() => setActiveTab('web')} icon={<Globe className="w-3 h-3" />} />
                     <PanelTab label="Preview" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Eye className="w-3 h-3" />} />
@@ -643,7 +644,7 @@ export const WorkspacePanel: React.FC = () => {
                                                 </div>
                                             )}
                                             {Object.entries(parsed).slice(0, 5).map(([k, v]) => {
-                                                if (typeof v === 'object' || String(v).length > 200 || k === 'code_variants' || k === 'executed_model') return null;
+                                                if (typeof v === 'object' || String(v).length > 200 || k === 'code_variants' || k === '_executed_code' || k === 'executed_model') return null;
                                                 return (
                                                     <div key={k} className="flex justify-between text-xs py-0.5 border-b border-border/50">
                                                         <span className="text-muted-foreground select-none">{k}</span>
@@ -756,7 +757,10 @@ export const WorkspacePanel: React.FC = () => {
                                     }
                                 }
 
+                                // code_variants may have been moved to _executed_code after successful execution
                                 const codeVariants = output.code_variants || {};
+                                const executedCode = output._executed_code || {};
+                                const hasExecutedCode = Object.keys(executedCode).length > 0;
                                 const callSelf = output.call_self;
                                 const nextInstruction = output.next_instruction;
                                 const iterationContext = output.iteration_context;
@@ -769,8 +773,11 @@ export const WorkspacePanel: React.FC = () => {
 
                                 // Get other data keys (filtering out meta keys)
                                 const dataKeys = Object.keys(output).filter(k =>
-                                    !['code_variants', 'call_self', 'next_instruction', 'iteration_context',
-                                        'executed_variant', 'input_tokens', 'output_tokens', 'cost', 'total_tokens'].includes(k)
+                                    !['code_variants', '_executed_code', '_code_already_executed',
+                                        'call_self', 'next_instruction', 'iteration_context',
+                                        'executed_variant', 'execution_result', 'execution_status',
+                                        'execution_error', 'execution_time', 'execution_logs',
+                                        'input_tokens', 'output_tokens', 'cost', 'total_tokens'].includes(k)
                                 );
 
                                 return (
@@ -799,7 +806,31 @@ export const WorkspacePanel: React.FC = () => {
                                             )}
                                         </div>
 
-                                        {/* Code Variants Section */}
+                                        {/* Data Output Section — shown FIRST when code was executed, or for non-code agents */}
+                                        {(hasExecutedCode || codeKeys.length === 0) && dataKeys.length > 0 && (
+                                            <div className="p-4 space-y-3">
+                                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2">
+                                                    <Terminal className="w-3 h-3" />
+                                                    Output Data
+                                                </div>
+                                                {dataKeys.map(key => (
+                                                    <div key={key} className="space-y-2">
+                                                        <div className="text-[9px] text-muted-foreground font-mono uppercase font-bold tracking-wider">
+                                                            {key}
+                                                        </div>
+                                                        <div className="rounded-lg overflow-hidden border border-border/20 bg-background/40 p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                            {typeof output[key] === 'object' ? (
+                                                                <pre className="text-foreground/80">{JSON.stringify(output[key], null, 2)}</pre>
+                                                            ) : (
+                                                                <div className="text-foreground/80">{String(output[key])}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Active Code Variants (not yet executed — still in code_variants) */}
                                         {codeKeys.length > 0 && (
                                             <div className="p-4 space-y-3">
                                                 <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2">
@@ -835,27 +866,28 @@ export const WorkspacePanel: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {/* Data Output Section (for non-code agents or agents with extra metadata) */}
-                                        {codeKeys.length === 0 && dataKeys.length > 0 && (
-                                            <div className="p-4 space-y-3">
-                                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2">
-                                                    <Terminal className="w-3 h-3" />
-                                                    Output Data
-                                                </div>
-                                                {dataKeys.map(key => (
-                                                    <div key={key} className="space-y-2">
-                                                        <div className="text-[9px] text-muted-foreground font-mono uppercase font-bold tracking-wider">
-                                                            {key}
-                                                        </div>
-                                                        <div className="rounded-lg overflow-hidden border border-border/20 bg-background/40 p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
-                                                            {typeof output[key] === 'object' ? (
-                                                                <pre className="text-foreground/80">{JSON.stringify(output[key], null, 2)}</pre>
-                                                            ) : (
-                                                                <div className="text-foreground/80">{String(output[key])}</div>
-                                                            )}
-                                                        </div>
+                                        {/* Executed Code (collapsed — already ran successfully) */}
+                                        {hasExecutedCode && (
+                                            <div className="px-4 pb-2">
+                                                <details className="group">
+                                                    <summary className="text-[10px] uppercase text-muted-foreground/60 font-bold tracking-widest cursor-pointer flex items-center gap-2 hover:text-muted-foreground transition-colors">
+                                                        <Code2 className="w-3 h-3" />
+                                                        Executed Code ({Object.keys(executedCode).length} variants)
+                                                        <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">COMPLETED</span>
+                                                    </summary>
+                                                    <div className="mt-2 space-y-2">
+                                                        {Object.entries(executedCode).map(([key, code]) => (
+                                                            <div key={key} className="rounded-lg overflow-hidden border border-border/30 bg-background/30">
+                                                                <div className="px-3 py-1 bg-muted/30 border-b border-border/30">
+                                                                    <span className="text-[10px] font-mono text-muted-foreground/70">{key}</span>
+                                                                </div>
+                                                                <pre className="p-3 text-xs font-mono text-foreground/60 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
+                                                                    {String(code)}
+                                                                </pre>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
+                                                </details>
                                             </div>
                                         )}
 
@@ -1595,7 +1627,7 @@ export const WorkspacePanel: React.FC = () => {
                                             {contentType === 'html' ? (
                                                 <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
                                             ) : (
-                                                <ReactMarkdown>{formatContent}</ReactMarkdown>
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{formatContent}</ReactMarkdown>
                                             )}
                                         </div>
                                     );

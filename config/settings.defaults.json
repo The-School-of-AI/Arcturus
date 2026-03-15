@@ -38,5 +38,16 @@
     },
     "gemini": {
         "api_key_env": "GEMINI_API_KEY"
+    },
+    "brave_search": {
+        "api_key_env": "BRAVE_API_KEY"
+    },
+    "google_custom_search": {
+        "api_key_env": "GOOGLE_CUSTOM_SEARCH_API_KEY",
+        "engine_id_env": "GOOGLE_CUSTOM_SEARCH_ENGINE_ID"
+    },
+    "openrouter": {
+        "api_key_env": "OPENROUTER_API_KEY",
+        "base_url": "https://openrouter.ai/api/v1"
     }
 }

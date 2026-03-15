@@ -1,27 +1,40 @@
 {
   "browser": {
-    "command": "uv",
+    "command": "python",
     "args": [
-      "run",
       "server_browser.py"
     ],
     "type": "local-script",
     "enabled": true
   },
   "rag": {
-    "command": "uv",
+    "command": "python",
     "args": [
-      "run",
       "server_rag.py"
     ],
     "type": "local-script",
     "enabled": true
   },
   "sandbox": {
-    "command": "uv",
+    "command": "python",
     "args": [
-      "run",
       "server_sandbox.py"
+    ],
+    "type": "local-script",
+    "enabled": true
+  },
+  "multimodal": {
+    "command": "python",
+    "args": [
+      "server_multimodal.py"
+    ],
+    "type": "local-script",
+    "enabled": true
+  },
+  "internal": {
+    "command": "python",
+    "args": [
+      "server_internal.py"
     ],
     "type": "local-script",
     "enabled": true

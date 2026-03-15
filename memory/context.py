@@ -463,8 +463,14 @@ class ExecutionContextManager:
                 # Strategy 1: Extract from code execution results (RetrieverAgent, CoderAgent)
                 if execution_result and execution_result.get("status") == "success":
                     result_data = execution_result.get("result", {})
-                    
-                    if write_key in result_data:
+
+                    # 🔧 ROBUSTNESS: Ensure result_data is a dict before calling .items()
+                    if not isinstance(result_data, dict):
+                        # If result is a list or primitive, store it directly
+                        globals_schema[write_key] = result_data
+                        print(f"✅ Extracted {write_key} = {str(result_data)[:100]} (raw result)")
+                        extracted = True
+                    elif write_key in result_data:
                         globals_schema[write_key] = result_data[write_key]
                         print(f"✅ Extracted {write_key} = {result_data[write_key]}")
                         extracted = True
@@ -678,4 +684,9 @@ class ExecutionContextManager:
         context.user_input_event = asyncio.Event()
         context.user_input_value = None
         context._live_display = None
+        context.stop_requested = False
+        context.api_mode = True
+        context.user_input_event = asyncio.Event()
+        context.user_input_value = None
+        context.multi_mcp = None
         return context
