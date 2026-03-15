@@ -1,0 +1,27 @@
+"""
+{{ skill_name }} — tool-enabled Bazaar skill.
+
+This skill calls an external API.  It declares the 'network' permission
+in manifest.yaml, which is enforced by the sandbox at runtime.
+"""
+
+import httpx
+
+
+def run(query: str = "", **kwargs) -> dict:
+    """
+    Fetch data for *query* from an external API.
+
+    Args:
+        query: The search or lookup term.
+        **kwargs: Additional parameters from the manifest.
+
+    Returns:
+        dict with at least {"result": ...}
+    """
+    # TODO: replace with your real API endpoint
+    url = f"https://httpbin.org/get?q={query}"
+    response = httpx.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    return {"result": data, "status_code": response.status_code}

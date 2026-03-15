@@ -1,0 +1,22 @@
+"""
+{{ skill_name }} — prompt-only Bazaar skill.
+
+This skill transforms text without calling any external APIs.
+No special permissions are required.
+"""
+
+
+def run(text: str = "", **kwargs) -> dict:
+    """
+    Process *text* and return a structured result.
+
+    Args:
+        text: The input text to transform.
+        **kwargs: Additional parameters from the manifest.
+
+    Returns:
+        dict with at least {"result": str}
+    """
+    # TODO: implement your text transformation here
+    processed = text.strip().upper()   # placeholder logic
+    return {"result": processed, "char_count": len(processed)}

@@ -7,3 +7,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "sdk: marks tests as part of the Bazaar SDK integration suite"
+    )

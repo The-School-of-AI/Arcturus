@@ -1,0 +1,34 @@
+"""
+{{ skill_name }} — agent-based Bazaar skill.
+
+This skill orchestrates other marketplace skills via MarketplaceBridge.
+It does not call external APIs directly — it delegates to sub-skills,
+which manage their own permissions.
+"""
+
+from marketplace.bridge import MarketplaceBridge
+
+
+def run(task: str = "", **kwargs) -> dict:
+    """
+    Orchestrate sub-skills to complete *task*.
+
+    Args:
+        task: A high-level description of the work to be done.
+        **kwargs: Additional parameters from the manifest.
+
+    Returns:
+        dict with at least {"result": ...}
+    """
+    bridge = MarketplaceBridge()
+
+    # TODO: replace with your real sub-skill calls
+    # Example: delegate to a summariser skill
+    # summary_result = bridge.call_skill("summariser", text=task)
+    # Example: delegate to a translator skill
+    # translated = bridge.call_skill("translator", text=summary_result["result"])
+
+    return {
+        "result": f"{{ skill_name }} received task: {task!r}",
+        "delegated_to": [],   # TODO: list sub-skills called
+    }

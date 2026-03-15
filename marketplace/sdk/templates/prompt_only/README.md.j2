@@ -1,0 +1,29 @@
+# {{ skill_name }}
+
+> Bazaar marketplace skill · prompt-only · v1.0.0
+
+## Description
+
+TODO: describe {{ skill_name }}.
+
+## What "prompt-only" means
+
+This skill processes text without calling any external APIs or the filesystem.
+It needs no special permissions — safe for all users by default.
+
+## Installation
+
+```bash
+arcturus skill install {{ skill_name }}
+```
+
+## Permissions required
+
+None.
+
+## Development
+
+```bash
+pytest skills/{{ skill_name }}/tests/ -v
+arcturus skill publish {{ skill_name }}
+```

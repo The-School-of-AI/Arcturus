@@ -1,0 +1,36 @@
+# {{ skill_name }}
+
+> Bazaar marketplace skill · agent-based · v1.0.0
+
+## Description
+
+TODO: describe {{ skill_name }}.
+
+## What "agent-based" means
+
+This skill **orchestrates other marketplace skills** rather than calling external
+APIs directly.  Sub-skills manage their own permissions.  This skill only needs
+to declare `skill_dependencies` in its manifest.
+
+## Installation
+
+```bash
+arcturus skill install {{ skill_name }}
+```
+
+## Permissions required
+
+None directly — permissions are managed by each sub-skill.
+
+## Skill dependencies
+
+| Skill | Purpose |
+|---|---|
+| *(add your sub-skills here)* | *(describe what each one does)* |
+
+## Development
+
+```bash
+pytest skills/{{ skill_name }}/tests/ -v
+arcturus skill publish {{ skill_name }} --key keys/author.pem
+```

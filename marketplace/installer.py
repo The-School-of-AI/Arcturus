@@ -7,6 +7,7 @@ import logging
 
 from marketplace.skill_base import load_manifest, SkillManifest
 from marketplace.registry import SkillRegistry
+from marketplace.integrity import verify_checksum
 
 logger = logging.getLogger("bazaar")
 
@@ -76,6 +77,15 @@ class SkillInstaller:
                 missing_deps=missing
             )
         
+        # Check integrity (checksum verification)
+        if manifest.checksum:
+            if not verify_checksum(source_dir):
+                return InstallResult(
+                    success=False,
+                    skill_name=manifest.name,
+                    message="SECURITY: Checksum verification failed — skill may have been tampered with"
+                )
+        
         return InstallResult(
             success=True,
             skill_name=manifest.name,
@@ -105,6 +115,21 @@ class SkillInstaller:
             return validation
         
         manifest = load_manifest(source_dir / "manifest.yaml")
+
+        # Check moderation status
+        try:
+            from marketplace.moderation import ModerationQueue
+            mq = ModerationQueue(skills_dir=self.registry.skills_dir)
+            if not mq.is_installable(manifest.name):
+                status = mq.get_status(manifest.name)
+                return InstallResult(
+                    success=False,
+                    skill_name=manifest.name,
+                    message=f"Skill '{manifest.name}' is {status.value} — "
+                            f"installation blocked by moderation",
+                )
+        except Exception as exc:
+            logger.warning("Could not check moderation status: %s", exc)
 
         # Check if already installed
         if self.registry.get_skill(manifest.name) and not force:
@@ -147,6 +172,28 @@ class SkillInstaller:
                 message=f"Failed to register skill: {e}"
             )
         
+        # Record in version ledger
+        try:
+            from marketplace.version_manager import VersionManager
+            vm = VersionManager(skills_dir=self.registry.skills_dir)
+            vm.record_install(manifest.name, manifest.version)
+        except Exception as exc:
+            logger.warning("Could not record version: %s", exc)
+
+        # Run auto-flag checks
+        try:
+            from marketplace.moderation import ModerationQueue
+            mq = ModerationQueue(skills_dir=self.registry.skills_dir)
+            auto_flags = mq.check_and_auto_flag(manifest)
+            if auto_flags:
+                logger.warning(
+                    "Skill '%s' was auto-flagged: %s",
+                    manifest.name,
+                    [f.reason for f in auto_flags],
+                )
+        except Exception as exc:
+            logger.warning("Could not run auto-flag checks: %s", exc)
+
         logger.info(f"Successfully installed skill: {manifest.name} v{manifest.version}")
         return InstallResult(
             success=True,
@@ -267,6 +314,14 @@ class SkillInstaller:
                     message=f"Unregistered but failed to delete files: {e}"
                 )
         
+        # Remove from version ledger
+        try:
+            from marketplace.version_manager import VersionManager
+            vm = VersionManager(skills_dir=self.registry.skills_dir)
+            vm.remove(name)
+        except Exception as exc:
+            logger.warning("Could not clean version ledger: %s", exc)
+
         logger.info(f"Uninstalled skill: {name}")
         return InstallResult(
             success=True,

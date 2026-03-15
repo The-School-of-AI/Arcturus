@@ -1,0 +1,34 @@
+# {{ skill_name }}
+
+> Bazaar marketplace skill · tool-enabled · v1.0.0
+
+## Description
+
+TODO: describe {{ skill_name }}.
+
+## What "tool-enabled" means
+
+This skill calls external APIs.  It requires the **`network`** permission,
+which users must grant before installation.
+
+## Installation
+
+```bash
+arcturus skill install {{ skill_name }}
+```
+
+## Permissions required
+
+| Permission | Reason |
+|---|---|
+| `network` | Calls external HTTP APIs |
+
+## Development
+
+```bash
+# Run tests (HTTP calls are mocked)
+pytest skills/{{ skill_name }}/tests/ -v
+
+# Publish to marketplace
+arcturus skill publish {{ skill_name }} --key keys/author.pem
+```

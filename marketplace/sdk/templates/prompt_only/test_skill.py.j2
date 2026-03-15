@@ -1,0 +1,36 @@
+"""Unit tests for {{ skill_name }} (prompt-only skill)."""
+
+import pytest
+from pathlib import Path
+
+
+@pytest.fixture
+def skill_dir() -> Path:
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture
+def manifest(skill_dir):
+    from marketplace.skill_base import load_manifest
+    return load_manifest(skill_dir / "manifest.yaml")
+
+
+def test_manifest_loads(manifest):
+    assert manifest.name == "{{ skill_name }}"
+
+
+def test_manifest_has_no_permissions(manifest):
+    """Prompt-only skills must not request permissions they don't need."""
+    assert manifest.permissions == []
+
+
+def test_tool_runs_with_text():
+    from {{ skill_name }}.tools.main import run
+    result = run(text="hello world")
+    assert "result" in result
+
+
+def test_tool_handles_empty_input():
+    from {{ skill_name }}.tools.main import run
+    result = run(text="")
+    assert "result" in result
