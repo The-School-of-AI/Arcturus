@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExternalLink, Download, RefreshCw, MessageSquare, Eye, Share2 } from 'lucide-react';
+import { ExternalLink, Download, RefreshCw, MessageSquare, Eye, Share2, FolderOpen, Tags, History, Settings } from 'lucide-react';
+import { CollectionManager } from './CollectionManager';
+import { PageShare } from './PageShare';
+import { VersionHistory } from './VersionHistory';
 
 interface SparkPage {
   id: string;
@@ -51,17 +54,28 @@ export const PagesTestUI: React.FC = () => {
   const [pages, setPages] = useState<SparkPage[]>([]);
   const [selectedPage, setSelectedPage] = useState<SparkPage | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCollectionManager, setShowCollectionManager] = useState(false);
 
-  // Load pages on component mount
+  // Load pages when filters change
   useEffect(() => {
     fetchPages();
-  }, []);
+  }, [selectedFolder, selectedTags, searchQuery]);
 
   const fetchPages = async () => {
     try {
-      const response = await fetch('/api/pages');
+      // Build query params for filtering
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('q', searchQuery);
+      if (selectedFolder) params.append('folder_id', selectedFolder);
+      if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
+      
+      const url = `/api/pages${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url);
       const data = await response.json();
-      setPages(data);
+      setPages(data.items || data);
     } catch (error) {
       console.error('Failed to fetch pages:', error);
     }
@@ -294,12 +308,22 @@ export const PagesTestUI: React.FC = () => {
   );
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             ✨ Spark Pages Test UI
-            <Badge variant="secondary">Week 2-3 Features</Badge>
+            <Badge variant="secondary">Week 4 Complete</Badge>
+            <div className="ml-auto flex gap-2">
+              <Button 
+                variant={showCollectionManager ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowCollectionManager(!showCollectionManager)}
+              >
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Collections
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -307,7 +331,13 @@ export const PagesTestUI: React.FC = () => {
             <TabsList>
               <TabsTrigger value="generate">Generate</TabsTrigger>
               <TabsTrigger value="library">Library ({pages.length})</TabsTrigger>
-              {selectedPage && <TabsTrigger value="view">View Page</TabsTrigger>}
+              {selectedPage && (
+                <>
+                  <TabsTrigger value="view">View Page</TabsTrigger>
+                  <TabsTrigger value="share">Share & Collaborate</TabsTrigger>
+                  <TabsTrigger value="history">Version History</TabsTrigger>
+                </>
+              )}
             </TabsList>
 
             <TabsContent value="generate" className="space-y-4">
@@ -349,51 +379,109 @@ export const PagesTestUI: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="library" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pages.map(page => (
-                  <Card key={page.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="text-base truncate">{page.title}</CardTitle>
-                      <p className="text-sm text-gray-600 truncate">{page.query}</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-1">
-                          <Badge variant="outline" className="text-xs">{page.template}</Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {page.sections?.length || 0} sections
-                          </Badge>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => setSelectedPage(page)}
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => exportPage(page.id, 'html')}
-                          >
-                            <Download className="h-3 w-3" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => sharePage(page.id, 'link')}
-                          >
-                            <Share2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Created: {new Date(page.created_at).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex gap-4">
+                <div className={`${showCollectionManager ? 'w-1/3' : 'w-0 overflow-hidden'} transition-all`}>
+                  {showCollectionManager && (
+                    <CollectionManager
+                      selectedFolder={selectedFolder}
+                      selectedTags={selectedTags}
+                      onFolderSelect={setSelectedFolder}
+                      onTagSelect={setSelectedTags}
+                    />
+                  )}
+                </div>
+                
+                <div className={`${showCollectionManager ? 'w-2/3' : 'w-full'} space-y-4`}>
+                  {/* Search and Filters */}
+                  <div className="flex gap-4 items-center">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search pages..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      {selectedFolder && (
+                        <Badge variant="outline" className="cursor-pointer" onClick={() => setSelectedFolder(null)}>
+                          <FolderOpen className="h-3 w-3 mr-1" />
+                          Folder Filter ×
+                        </Badge>
+                      )}
+                      {selectedTags.map((tag) => (
+                        <Badge 
+                          key={tag} 
+                          variant="outline" 
+                          className="cursor-pointer"
+                          onClick={() => setSelectedTags(selectedTags.filter(t => t !== tag))}
+                        >
+                          <Tags className="h-3 w-3 mr-1" />
+                          {tag} ×
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Page Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {pages.map(page => (
+                      <Card key={page.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                        <CardHeader>
+                          <CardTitle className="text-base truncate">{page.title}</CardTitle>
+                          <p className="text-sm text-gray-600 truncate">{page.query}</p>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex gap-1">
+                              <Badge variant="outline" className="text-xs">{page.template}</Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {page.sections?.length || 0} sections
+                              </Badge>
+                              {page.sections?.some(s => s.charts?.length > 0) && (
+                                <Badge variant="secondary" className="text-xs">📊 Charts</Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => setSelectedPage(page)}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => exportPage(page.id, 'html')}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => sharePage(page.id, 'link')}
+                              >
+                                <Share2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Created: {new Date(page.created_at).toLocaleDateString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  
+                  {pages.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div>No pages found</div>
+                      {(selectedFolder || selectedTags.length > 0 || searchQuery) && (
+                        <div className="text-sm">Try adjusting your filters or search terms</div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </TabsContent>
 
@@ -456,9 +544,44 @@ export const PagesTestUI: React.FC = () => {
                 </div>
               )}
             </TabsContent>
+
+            {selectedPage && (
+              <>
+                <TabsContent value="share" className="space-y-4">
+                  <PageShare 
+                    pageId={selectedPage.id}
+                    pageTitle={selectedPage.title}
+                    onShareUpdate={fetchPages}
+                  />
+                </TabsContent>
+
+                <TabsContent value="history" className="space-y-4">
+                  <VersionHistory 
+                    pageId={selectedPage.id}
+                    onVersionRestore={() => {
+                      fetchPages();
+                      // Optionally reload the current page
+                    }}
+                  />
+                </TabsContent>
+              </>
+            )}
           </Tabs>
         </CardContent>
       </Card>
+      
+      {/* Collection Manager Integration Note */}
+      {showCollectionManager && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center text-gray-600">
+              <FolderOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <div>Collection management is now integrated into the Library tab</div>
+              <div className="text-sm">Use the Collections toggle to show/hide the folder and tag manager</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
