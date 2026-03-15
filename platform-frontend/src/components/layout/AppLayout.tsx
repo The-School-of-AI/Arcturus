@@ -91,9 +91,9 @@ export const AppLayout: React.FC = () => {
         return false;
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId]);
 
-    // Scheduler and Console take up full width, no sidebar subpanel needed
+    // Scheduler, Console, Canvas, etc. collapse left panel to rail only
     // Echo should NOT be hidden when inspector is open, because the conversation is the primary surface.
-    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
+    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || sidebarTab === 'canvas' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -193,8 +193,8 @@ export const AppLayout: React.FC = () => {
                 <InboxPanel onClose={() => setIsInboxOpen(false)} />
             )}
 
-            <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3 relative z-20">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown OR Zen Mode */}
+            <div ref={containerRef} className="flex-1 flex overflow-hidden relative z-20 p-3 gap-3">
+                {/* Left Sidebar: Hidden for Apps fullscreen, App View Mode, news chat, or Zen Mode */}
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && !isZenMode && (
                     <>
                         <div

@@ -8,7 +8,8 @@ from .schema import (
     UpdateDataModelMessage, 
     DeleteSurfaceMessage,
     EvalJSMessage,
-    UIComponent
+    UIComponent,
+    UpdateHtmlMessage
 )
 
 class CanvasRuntime:
@@ -26,7 +27,12 @@ class CanvasRuntime:
     async def create_surface(self, surface_id: str, title: str = "New Canvas", catalog: str = "default"):
         """Initialize a new canvas region."""
         msg = CreateSurfaceMessage(surfaceId=surface_id, title=title, catalogId=catalog)
-        self.surfaces[surface_id] = {"components": [], "data": {}}
+        self.surfaces[surface_id] = {
+        "components": [],
+        "data": {},
+        "html": "",
+        "html_title": None,
+        }
         await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
 
     async def push_components(self, surface_id: str, components: List[Dict[str, Any]]):
@@ -48,6 +54,15 @@ class CanvasRuntime:
             
         self.surfaces[surface_id]["data"].update(data)
         msg = UpdateDataModelMessage(surfaceId=surface_id, data=data)
+        await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
+
+    async def push_html(self, surface_id: str, html: str, title: Optional[str] = None):
+        """Set sandbox HTML for a surface and broadcast to clients."""
+        if surface_id not in self.surfaces:
+            await self.create_surface(surface_id)
+        self.surfaces[surface_id]["html"] = html
+        self.surfaces[surface_id]["html_title"] = title
+        msg = UpdateHtmlMessage(surfaceId=surface_id, html=html, title=title)
         await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
 
     async def eval_js(self, surface_id: str, code: str):
@@ -73,7 +88,9 @@ class CanvasRuntime:
             # Convert UIComponents back to dicts for JSON serialization
             serializable_state = {
                 "components": [c.model_dump() if hasattr(c, "model_dump") else c for c in state["components"]],
-                "data": state["data"]
+                "data": state["data"],
+                "html": state.get("html", ""),
+                "html_title": state.get("html_title", None),
             }
             path.write_text(json.dumps(serializable_state, indent=2), encoding="utf-8")
 
@@ -85,6 +102,8 @@ class CanvasRuntime:
             surface_id = path.stem
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
+                data.setdefault("html", "")
+                data.setdefault("html_title", None)
                 self.surfaces[surface_id] = data
             except Exception:
                 pass
