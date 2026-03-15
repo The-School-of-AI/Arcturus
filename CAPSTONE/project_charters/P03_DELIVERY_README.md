@@ -107,7 +107,7 @@
   - Export controls with format selection
   - Section-level refresh capabilities
 
-## 4. Mandatory Test Gate Compliance
+## 4. Mandatory Test Gate Definition
 - **✅ Acceptance**: `tests/acceptance/p03_spark/test_structured_page_not_text_wall.py` 
   - **EXCEEDED REQUIREMENT**: Contains 16 executable test cases (required: 8+)
   - **Comprehensive coverage**: Validates all Week 1-3 features including charts, media, export, interactive widgets
@@ -203,7 +203,15 @@ scripts/test_all.sh quick
 - **Public sharing**: Shareable URLs with optional password protection (`/shared/{token}`)
 - **Production polish**: Enhanced error handling, comprehensive validation, performance monitoring
 
-## 8. Rollback Plan
+## 8. Known Gaps
+- **Database Migration**: Currently uses file-based persistence (`data/pages/`); production deployment should migrate to proper database storage (PostgreSQL/MongoDB) for scalability and concurrent access
+- **Authentication Integration**: Public sharing uses simple token-based access; production should integrate with organization's SSO/authentication system 
+- **Advanced Analytics**: Basic performance metrics collected; comprehensive analytics dashboard and detailed usage tracking planned for future iterations
+- **Mobile Optimization**: Frontend components optimized for desktop; dedicated mobile UI components and responsive design improvements planned
+- **Content Moderation**: Basic input validation present; advanced content filtering and automated moderation capabilities planned for enterprise deployment
+- **Real-time Collaboration**: Comments and sharing implemented; real-time collaborative editing (Google Docs style) planned for future releases
+
+## 9. Rollback Plan
 - **Low Risk**: All changes are additive with no modifications to existing functionality
 - **Rollback Steps**: 
   1. Revert feature branch PR to remove introduced files and API routes
@@ -211,7 +219,7 @@ scripts/test_all.sh quick
   3. Remove CI gate `p03-spark-pages` from workflow if needed
 - **Recovery**: Full system restoration possible within 5 minutes via git revert
 
-## 9. Demo Steps
+## 10. Demo Steps
 1. **Start backend with infrastructure:**
 ```bash
 # Start Docker Compose infrastructure first
