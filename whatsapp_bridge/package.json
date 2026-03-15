@@ -1,0 +1,21 @@
+{
+  "name": "arcturus-whatsapp-bridge",
+  "version": "1.0.0",
+  "description": "Baileys WhatsApp Web sidecar for Arcturus Nexus gateway",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.17.16",
+    "axios": "^1.6.0",
+    "dotenv": "^17.3.1",
+    "express": "^4.18.2",
+    "pino": "^8.19.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

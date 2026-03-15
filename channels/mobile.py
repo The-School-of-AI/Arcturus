@@ -14,7 +14,7 @@ Outbox model (Week 1):
 import uuid
 from collections import deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from channels.base import ChannelAdapter
 
@@ -27,9 +27,9 @@ class MobileAdapter(ChannelAdapter):
     """
 
     # Class-level outbox: session_id -> bounded deque of message dicts.
-    _outboxes: Dict[str, deque] = {}
+    _outboxes: dict[str, deque] = {}
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize Mobile adapter."""
         super().__init__("mobile", config)
 
@@ -39,9 +39,9 @@ class MobileAdapter(ChannelAdapter):
             MobileAdapter._outboxes[session_id] = deque(maxlen=200)
         return MobileAdapter._outboxes[session_id]
 
-    async def send_message(self, recipient_id: str, content: str, **kwargs) -> Dict[str, Any]:
+    async def send_message(self, recipient_id: str, content: str, **kwargs) -> dict[str, Any]:
         """Enqueue an outbound message to a mobile session."""
-        msg: Dict[str, Any] = {
+        msg: dict[str, Any] = {
             "message_id": str(uuid.uuid4()),
             "timestamp": datetime.utcnow().isoformat(),
             "channel": "mobile",
@@ -52,7 +52,7 @@ class MobileAdapter(ChannelAdapter):
         self.get_outbox(recipient_id).append(msg)
         return {"message_id": msg["message_id"], "success": True}
 
-    def drain_outbox(self, session_id: str) -> List[Dict[str, Any]]:
+    def drain_outbox(self, session_id: str) -> list[dict[str, Any]]:
         """Return all pending outbound messages for *session_id* and clear the queue."""
         outbox = self.get_outbox(session_id)
         messages = list(outbox)

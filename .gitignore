@@ -97,10 +97,19 @@ S15A.egg-info/
 .arcturus/
 .arcturus
 
+# Other personal files
+HOWTOGETSLACKBOT.md
+P01-Delivery-Status.md
+
 # Project 13: Orbit - Local State & Private Drafts
 Canvas_Pic_Current.json
 memory/remme_staging.json
 memory/episodes/
+
+# Runtime state (machine-specific, changes every run)
+memory/matrix_since_token.txt
+memory/chronicle_events/
+memory/chronicle_checkpoints/
 
 # PR Body Drafts
 scripts/github/PR_body*.md

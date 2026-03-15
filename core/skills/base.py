@@ -18,10 +18,11 @@ class SkillContext(BaseModel):
     agent_id: Optional[str] = None
     config: Dict[str, Any] = {}
 
+
 class Skill(ABC):
     name: str = "base_skill"
     description: str = "Base skill description"
-    
+
     def __init__(self, config: Optional[SkillConfig] = None):
         self.config = config or SkillConfig()
         self.context = SkillContext()
@@ -52,6 +53,14 @@ class Skill(ABC):
 
     def on_deactivate(self):
         """Called when skill is deactivated."""
+        pass
+
+    def on_run_failure(self, error: Any = None):
+        """Called when a run using this skill fails."""
+        pass
+
+    def on_run_success(self, result: Any = None):
+        """Called when a run using this skill succeeds."""
         pass
 
 # Alias for compatibility

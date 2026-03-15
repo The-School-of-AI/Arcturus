@@ -13,6 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
+# Load .env before anything else so env vars are available to all modules.
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
+
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -208,6 +212,14 @@ async def lifespan(app: FastAPI):
         print("⚠️ Ollama NOT found.")
     # 🧠 Start Smart Sync in background
     asyncio.create_task(background_smart_scan())
+
+    # 4. Initialize Nexus gateway adapters (creates httpx clients, Telegram polling, etc.)
+    try:
+        from shared.state import initialize_message_bus
+        await initialize_message_bus()
+    except Exception as e:
+        print(f"⚠️ [Nexus] Message bus initialization failed: {e}")
+
     # Phase 4: run sync (push then pull) on startup when SYNC_ENGINE_ENABLED + SYNC_SERVER_URL
     asyncio.create_task(run_sync_background())
 

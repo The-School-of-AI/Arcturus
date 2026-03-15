@@ -68,4 +68,7 @@ def get_vector_store(
 
 
 # Concrete implementations for direct use if needed
-from memory.backends.qdrant_store import QdrantVectorStore
+try:
+    from memory.backends.qdrant_store import QdrantVectorStore
+except ImportError:
+    QdrantVectorStore = None  # type: ignore[assignment,misc]
