@@ -10,7 +10,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from config.settings_loader import settings
+from config.settings_loader import load_settings
 from ops.health.alerts import AlertEvaluator
 from ops.health.checks import collect_resources, run_all_health_checks
 from ops.health.repository import HealthRepository
@@ -32,7 +32,7 @@ class HealthScheduler:
     ):
         self._repository = repository
         self._alert_evaluator = alert_evaluator
-        watchtower_cfg = settings.get("watchtower", {})
+        watchtower_cfg = load_settings().get("watchtower", {})
         self._interval = interval_seconds or watchtower_cfg.get(
             "health_check_interval_seconds", 60
         )

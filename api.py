@@ -141,8 +141,14 @@ async def lifespan(app: FastAPI):
         app.state.orchestrator = orchestrator
         print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
 
+        from shared.state import voice_mark_ready
+        voice_mark_ready()
+
     except Exception as e:
         print(f"⚠️ [Voice] Startup failed: {e}")
+
+        from shared.state import voice_mark_failed
+        voice_mark_failed(str(e))
 
     # 2. Bootstrap & Validate Registry (Slower metadata checks)
     from core.bootstrap import bootstrap_agents
@@ -194,6 +200,7 @@ async def lifespan(app: FastAPI):
             alert_evaluator = AlertEvaluator.from_config(watchtower.get("alert_rules", []))
             health_scheduler = HealthScheduler(repository=health_repo, alert_evaluator=alert_evaluator)
             await health_scheduler.start()
+            app.state.health_scheduler = health_scheduler
             print("✅ [Watchtower] Health scheduler started")
         except Exception as e:
             print(f"⚠️ [Watchtower] Health scheduler unavailable: {e}")

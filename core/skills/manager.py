@@ -9,14 +9,20 @@ from .base import Skill, SkillMetadata
 
 logger = logging.getLogger("skill_manager")
 
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent.parent.parent
+
+
 class SkillManager:
     _instance = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(SkillManager, cls).__new__(cls)
-            cls._instance.skills_dir = Path("core/skills/library")
-            cls._instance.registry_file = Path("core/skills/registry.json")
+            root = _project_root()
+            cls._instance.skills_dir = root / "core" / "skills" / "library"
+            cls._instance.registry_file = root / "core" / "skills" / "registry.json"
             cls._instance.skill_classes: Dict[str, Type[Skill]] = {}
         return cls._instance
 
@@ -55,8 +61,9 @@ class SkillManager:
                             temp_instance = skill_class()
                             meta = temp_instance.get_metadata()
                             
+                            rel_path = item.relative_to(_project_root())
                             registry[meta.name] = {
-                                "path": str(item),
+                                "path": str(rel_path).replace("\\", "/"),
                                 "version": meta.version,
                                 "description": meta.description,
                                 "intent_triggers": meta.intent_triggers,
@@ -97,8 +104,10 @@ class SkillManager:
             return None
             
         info = registry[skill_name]
-        path = Path(info["path"]) / "skill.py"
-        
+        # Normalize path separators for cross-platform (registry may have been written on Windows)
+        raw_path = info["path"].replace("\\", "/")
+        path = _project_root() / raw_path / "skill.py"
+
         klass = self._load_skill_class(path)
         if klass:
             self.skill_classes[skill_name] = klass

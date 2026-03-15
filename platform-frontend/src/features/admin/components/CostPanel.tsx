@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
 import { DollarSign, TrendingUp } from 'lucide-react';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 interface CostSummary {
+    disabled?: boolean;
     total_cost_usd: number;
     trace_count: number;
     by_agent: Record<string, number>;
@@ -15,6 +17,7 @@ interface CostSummary {
 export const CostPanel: React.FC = () => {
     const [data, setData] = useState<CostSummary | null>(null);
     const [loading, setLoading] = useState(true);
+    const { flags } = useFeatureFlags();
 
     useEffect(() => {
         const fetchCost = async () => {
@@ -42,6 +45,18 @@ export const CostPanel: React.FC = () => {
 
     if (!data) {
         return <p className="text-sm text-muted-foreground p-4">Failed to load cost data.</p>;
+    }
+
+    if (data.disabled || flags.cost_tracking === false) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+                <DollarSign className="w-10 h-10 text-muted-foreground/40 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">Cost tracking is disabled</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">
+                    Enable the <span className="font-mono">cost_tracking</span> flag to start collecting cost data.
+                </p>
+            </div>
+        );
     }
 
     return (

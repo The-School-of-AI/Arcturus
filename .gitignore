@@ -21,6 +21,9 @@ build/
 *.pyc
 action/sandbox_state/
 memory/remme_index/index.bin
+memory/chronicle_checkpoints/
+memory/chronicle_index/
+memory/chronicle_events/
 memory/remme_index/memories.json
 memory/remme_index/scanned_runs.json
 memory/remme_index/device_id.json

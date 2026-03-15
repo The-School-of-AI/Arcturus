@@ -5,10 +5,12 @@ Exports trace spans to MongoDB for persistence and querying.
 WATCHTOWER: All instrumentation is in this package. Import span helpers to avoid
 inlining tracer logic in business code.
 """
+
 from ops.tracing.core import (
     MongoDBSpanExporter,
     init_tracing,
     get_tracer,
+    force_flush,
     shutdown_tracing,
 )
 from ops.tracing.context import (
@@ -17,6 +19,7 @@ from ops.tracing.context import (
 )
 from ops.tracing.spans import (
     run_span,
+    run_throttled_span,
     agent_loop_run_span,
     agent_plan_span,
     agent_execute_dag_span,
@@ -32,10 +35,12 @@ __all__ = [
     "MongoDBSpanExporter",
     "init_tracing",
     "get_tracer",
+    "force_flush",
     "shutdown_tracing",
     "set_span_context",
     "get_span_context",
     "run_span",
+    "run_throttled_span",
     "agent_loop_run_span",
     "agent_plan_span",
     "agent_execute_dag_span",
