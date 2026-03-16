@@ -196,14 +196,13 @@ class EpisodicQdrantStore:
             payload["updated_at"] = datetime.now().isoformat()
             payload["version"] = payload.get("version", 1) + 1
             
-            vec = raw[0].vector
-            if vec is not None:
-                if self._is_named:
-                    vec_data = {"default": vec}
-                else:
-                    vec_data = vec
-                point = PointStruct(id=str(session_id), vector=vec_data, payload=payload)
-                self.client.upsert(collection_name=self.collection_name, points=[point])
+            # Use set_payload instead of upsert to avoid re-sending vectors and potential "Not existing vector name" errors.
+            self.client.set_payload(
+                collection_name=self.collection_name,
+                payload=payload,
+                points=[str(session_id)],
+                wait=True
+            )
             return True
         except Exception as e:
             log_error(f"Episodic soft delete failed: {e}")

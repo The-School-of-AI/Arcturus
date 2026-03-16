@@ -642,14 +642,13 @@ class QdrantVectorStore:
             updated["updated_at"] = _utc_iso_now()
             updated["version"] = updated.get("version", 1) + 1
             
-            vec = self._get_vector_for_point(memory_id)
-            if vec:
-                if self._is_named:
-                    vec_data = {"default": vec}
-                else:
-                    vec_data = vec
-                point = PointStruct(id=memory_id, vector=vec_data, payload=_sanitize_payload_for_qdrant(updated))
-                self.client.upsert(collection_name=self.collection_name, points=[point])
+            # Use set_payload instead of upsert to avoid re-sending vectors and potential "Not existing vector name" errors.
+            self.client.set_payload(
+                collection_name=self.collection_name,
+                payload=_sanitize_payload_for_qdrant(updated),
+                points=[memory_id],
+                wait=True
+            )
             
             log_step(f"🗑️ Soft deleted memory: {memory_id[:8]}...", symbol="❌")
             # Keep knowledge graph in sync
