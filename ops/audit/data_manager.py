@@ -155,7 +155,7 @@ class SessionDataManager:
     # ------------------------------------------------------------------
 
     def _export_spans(self, session_id: str) -> Dict[str, Any]:
-        if not self._spans_coll:
+        if self._spans_coll is None:
             return {"count": 0, "note": "MongoDB not available"}
         try:
             cursor = self._spans_coll.find(
@@ -174,7 +174,7 @@ class SessionDataManager:
             return {"count": 0, "error": str(e)}
 
     def _delete_spans(self, session_id: str) -> Dict[str, Any]:
-        if not self._spans_coll:
+        if self._spans_coll is None:
             return {"deleted": 0, "note": "MongoDB not available"}
         try:
             result = self._spans_coll.delete_many({"attributes.session_id": session_id})
@@ -337,7 +337,7 @@ class SessionDataManager:
     # ------------------------------------------------------------------
 
     def _export_audit(self, session_id: str) -> Dict[str, Any]:
-        if not self._audit_coll:
+        if self._audit_coll is None:
             return {"count": 0, "note": "Audit collection not available"}
         try:
             cursor = self._audit_coll.find(
@@ -354,7 +354,7 @@ class SessionDataManager:
             return {"count": 0, "error": str(e)}
 
     def _delete_audit(self, session_id: str) -> Dict[str, Any]:
-        if not self._audit_coll:
+        if self._audit_coll is None:
             return {"deleted": 0, "note": "Audit collection not available"}
         try:
             result = self._audit_coll.delete_many({"resource": {"$regex": session_id}})

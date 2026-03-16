@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Activity, DollarSign, AlertTriangle, Heart, Flag, Settings, Stethoscope, FileText, Database } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Activity, DollarSign, AlertTriangle, Heart, Flag, Settings, Stethoscope, FileText, Database, Gauge } from 'lucide-react';
 import { TracesPanel } from './components/TracesPanel';
 import { CostPanel } from './components/CostPanel';
 import { ErrorsPanel } from './components/ErrorsPanel';
@@ -9,14 +9,17 @@ import { ConfigPanel } from './components/ConfigPanel';
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { AuditLogPanel } from './components/AuditLogPanel';
 import { CachePanel } from './components/CachePanel';
+import { ThrottlePanel } from './components/ThrottlePanel';
 import { cn } from '@/lib/utils';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
-type TabId = 'traces' | 'cost' | 'errors' | 'health' | 'flags' | 'config' | 'diagnostics' | 'audit' | 'cache';
+type TabId = 'traces' | 'cost' | 'errors' | 'health' | 'flags' | 'config' | 'diagnostics' | 'throttle' | 'audit' | 'cache';
 
 export const AdminDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabId>('traces');
+    const { flags } = useFeatureFlags();
 
-    const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+    const allTabs: { id: TabId; label: string; icon: React.ElementType }[] = [
         { id: 'traces', label: 'Traces', icon: Activity },
         { id: 'cost', label: 'Cost', icon: DollarSign },
         { id: 'errors', label: 'Errors', icon: AlertTriangle },
@@ -24,16 +27,25 @@ export const AdminDashboard: React.FC = () => {
         { id: 'flags', label: 'Flags', icon: Flag },
         { id: 'config', label: 'Config', icon: Settings },
         { id: 'diagnostics', label: 'Doctor', icon: Stethoscope },
+        { id: 'throttle', label: 'Throttle', icon: Gauge },
         { id: 'audit', label: 'Audit', icon: FileText },
         { id: 'cache', label: 'Cache', icon: Database },
     ];
+
+    const tabs = useMemo(() => {
+        return allTabs.filter((tab) => {
+            if (tab.id === 'cost' && flags.cost_tracking === false) return false;
+            if (tab.id === 'health' && flags.health_scheduler === false) return false;
+            return true;
+        });
+    }, [flags.cost_tracking, flags.health_scheduler]);
 
     return (
         <div className="h-full flex flex-col bg-background text-foreground">
             <div className="border-b border-border px-6 py-4">
                 <h1 className="text-xl font-bold uppercase tracking-tighter">Watchtower Admin</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Tracing, cost, errors, health, feature flags, config, diagnostics, audit, and cache
+                    Tracing, cost, errors, health, feature flags, config, diagnostics, throttle, audit, and cache
                 </p>
             </div>
             <div className="flex border-b border-border overflow-x-auto">
@@ -61,6 +73,7 @@ export const AdminDashboard: React.FC = () => {
                 {activeTab === 'flags' && <FlagsPanel />}
                 {activeTab === 'config' && <ConfigPanel />}
                 {activeTab === 'diagnostics' && <DiagnosticsPanel />}
+                {activeTab === 'throttle' && <ThrottlePanel />}
                 {activeTab === 'audit' && <AuditLogPanel />}
                 {activeTab === 'cache' && <CachePanel />}
             </div>

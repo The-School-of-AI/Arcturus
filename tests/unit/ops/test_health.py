@@ -306,8 +306,8 @@ class TestCollectResources:
 class TestRunAllHealthChecks:
     """Tests for run_all_health_checks behavior."""
 
-    def test_returns_six_services(self):
-        """run_all_health_checks returns exactly six service results."""
+    def test_returns_seven_services(self):
+        """run_all_health_checks returns exactly seven service results."""
         with (
             patch(
                 "ops.health.check_mongodb", return_value=HealthResult("mongodb", "ok")
@@ -318,6 +318,10 @@ class TestRunAllHealthChecks:
                 "ops.health.check_mcp", return_value=HealthResult("mcp_gateway", "ok")
             ),
             patch("ops.health.check_neo4j", return_value=HealthResult("neo4j", "ok")),
+            patch(
+                "ops.health.checks.get_voice_status",
+                return_value=(True, None),
+            ),
             patch(
                 "ops.health.check_agent_core",
                 return_value=HealthResult("agent_core", "ok"),
@@ -330,5 +334,6 @@ class TestRunAllHealthChecks:
         assert "ollama" in services
         assert "mcp_gateway" in services
         assert "neo4j" in services
+        assert "voice_pipeline" in services
         assert "agent_core" in services
-        assert len(results) == 6
+        assert len(results) == 7

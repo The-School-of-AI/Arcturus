@@ -12,6 +12,7 @@ import { TemplateDrawer } from './TemplateDrawer';
 import type { SwarmEvent, SwarmTemplate } from './types';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 export const SwarmSidebar: React.FC = () => {
     const activeRunId = useSwarmStore(s => s.activeRunId);
@@ -25,6 +26,8 @@ export const SwarmSidebar: React.FC = () => {
     const setTemplateDrawerOpen = useSwarmStore(s => s.setTemplateDrawerOpen);
     const runHistory = useSwarmStore(s => s.runHistory);
     const setRunHistory = useSwarmStore(s => s.setRunHistory);
+    const { flags } = useFeatureFlags();
+    const costEnabled = flags.cost_tracking !== false;
 
     const [query, setQuery] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -261,7 +264,7 @@ export const SwarmSidebar: React.FC = () => {
                                         </div>
 
                                         {/* Cost display */}
-                                        {isActive && costUsd > 0 && (
+                                        {costEnabled && isActive && costUsd > 0 && (
                                             <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                                                 <span>${costUsd.toFixed(4)}</span>
                                             </div>

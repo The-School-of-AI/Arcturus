@@ -215,6 +215,11 @@ class AgentRunner:
                 # 4. Final Prompt Construction
                 full_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}{tools_text}\n\n```json\n{json.dumps(input_data, indent=2, default=str)}\n```"
 
+                # Cache key: same prompt but without run-specific IDs (so repeated queries can hit cache)
+                _run_specific_keys = {"run_id", "step_id", "session_id", "session_context"}
+                input_data_for_cache = {k: v for k, v in input_data.items() if k not in _run_specific_keys}
+                cache_key_prompt = f"CURRENT_DATE: {current_date}\n\n{prompt_template.strip()}{user_prefs_text}{profile_context}{episodic_context}{factual_context}{tools_text}\n\n```json\n{json.dumps(input_data_for_cache, sort_keys=True, indent=2, default=str)}\n```"
+
                 print(f"🛠️ [DEBUG] Generated Tools Text for {agent_type}:\n{tools_text}\n")
 
                 debug_log_dir = Path(__file__).parent.parent / "memory" / "debug_logs"
@@ -247,7 +252,7 @@ class AgentRunner:
                     if image_path and os.path.exists(image_path):
                         image = Image.open(image_path)
                         return await model_manager.generate_content([full_prompt, image])
-                    return await model_manager.generate_text(full_prompt)
+                    return await model_manager.generate_text(full_prompt, cache_key=cache_key_prompt)
 
                 if use_system2:
                     from core.reasoning import ReasoningEngine

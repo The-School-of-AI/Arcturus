@@ -4,7 +4,11 @@
     "mongodb_uri": "mongodb://localhost:27017",
     "jaeger_endpoint": "http://localhost:4318/v1/traces",
     "health_check_interval_seconds": 60,
-    "alert_rules": []
+    "alert_rules": [],
+    "throttle": {
+      "daily_budget_usd": 10.0,
+      "hourly_budget_usd": 2.0
+    }
   },
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
@@ -27,13 +31,8 @@
   },
   "agent": {
     "model_provider": "gemini",
-    "default_model": "gemini-2.5-flash-lite",
-    "overrides": {
-      "IDEAgent": {
-        "model_provider": "gemini",
-        "model": "gemini-2.5-flash"
-      }
-    },
+    "default_model": "gemini-3.1-flash-lite-preview",
+    "overrides": {},
     "max_steps": 3,
     "max_lifelines_per_step": 3,
     "planning_mode": "conservative",

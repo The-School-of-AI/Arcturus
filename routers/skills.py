@@ -1,7 +1,11 @@
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from pydantic import BaseModel
+
 from core.skills.manager import skill_manager
+from shared.state import PROJECT_ROOT
 
 router = APIRouter(prefix="/skills", tags=["Skills"])
 
@@ -65,17 +69,16 @@ async def list_store():
 async def install_skill(skill_name: str):
     """Download skill from GitHub."""
     import requests
-    from pathlib import Path
-    
+
     try:
         # Raw URL for SKILL.md
         url = f"https://raw.githubusercontent.com/sickn33/antigravity-awesome-skills/main/skills/{skill_name}/SKILL.md"
         resp = requests.get(url, timeout=10)
-        
+
         if resp.status_code == 404:
             raise HTTPException(status_code=404, detail="Skill definition not found")
-            
-        target_dir = Path(f"core/skills/library/{skill_name}")
+
+        target_dir = PROJECT_ROOT / "core" / "skills" / "library" / skill_name
         target_dir.mkdir(parents=True, exist_ok=True)
         
         (target_dir / "SKILL.md").write_text(resp.text)
@@ -97,9 +100,8 @@ class ToggleRequest(BaseModel):
 async def toggle_skill(req: ToggleRequest):
     """Enable or disable a skill for an agent."""
     import yaml
-    from pathlib import Path
-    
-    config_path = Path("config/agent_config.yaml")
+
+    config_path = PROJECT_ROOT / "config" / "agent_config.yaml"
     try:
         data = yaml.safe_load(config_path.read_text())
         agent_config = data["agents"].get(req.agent_name)
@@ -128,9 +130,10 @@ async def toggle_skill(req: ToggleRequest):
 async def get_assignments():
     """Return map of Agent -> List[Skills]."""
     import yaml
-    from pathlib import Path
+
     try:
-        data = yaml.safe_load(Path("config/agent_config.yaml").read_text())
+        config_path = PROJECT_ROOT / "config" / "agent_config.yaml"
+        data = yaml.safe_load(config_path.read_text())
         assignments = {}
         for agent, conf in data["agents"].items():
             assignments[agent] = conf.get("skills", [])
@@ -142,9 +145,10 @@ async def get_assignments():
 async def list_agents():
     """List available agents for assignment."""
     import yaml
-    from pathlib import Path
+
     try:
-        data = yaml.safe_load(Path("config/agent_config.yaml").read_text())
+        config_path = PROJECT_ROOT / "config" / "agent_config.yaml"
+        data = yaml.safe_load(config_path.read_text())
         return list(data.get("agents", {}).keys())
     except Exception:
         return []
