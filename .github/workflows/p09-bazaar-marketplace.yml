@@ -108,6 +108,17 @@ jobs:
           pip install uv
           uv pip install --system -e ".[dev]"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: platform-frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: platform-frontend
+
       - name: Run baseline regression suite
         run: |
           bash scripts/test_all.sh quick
