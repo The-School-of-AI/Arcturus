@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { API_BASE } from '@/lib/api';
 import { AlertCircle, Globe, Loader2, Lock } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { PageRenderer } from './PageRenderer';
@@ -20,7 +21,7 @@ const SharedPageView: React.FC = () => {
         setWrongPassword(false);
         try {
             const qs = pwd ? `?password=${encodeURIComponent(pwd)}` : '';
-            const res = await fetch(`/api/pages/shared/${token}${qs}`);
+            const res = await fetch(`${API_BASE}/pages/shared/${token}${qs}`);
             if (res.status === 401) {
                 setNeedsPassword(true);
                 if (pwd) setWrongPassword(true);

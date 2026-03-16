@@ -424,6 +424,30 @@ PUBLIC_PAGES: Dict[str, Dict[str, Any]] = {}  # Store public page shares with pa
 TAGS_REGISTRY: Dict[str, Dict[str, Any]] = {}  # Global tag registry with metadata
 TEAM_MEMBERS: Dict[str, Dict[str, Any]] = {}  # Team collaboration data
 
+# Path to persist share tokens across restarts
+_PUBLIC_SHARES_FILE = Path(__file__).resolve().parents[1] / "data" / "public_shares.json"
+
+
+def _save_public_pages() -> None:
+    """Persist PUBLIC_PAGES to disk so share links survive server restarts."""
+    try:
+        _PUBLIC_SHARES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _PUBLIC_SHARES_FILE.write_text(json.dumps(PUBLIC_PAGES, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"[pages] ⚠️ Failed to persist public shares: {e}")
+
+
+def _load_public_pages() -> None:
+    """Load persisted share tokens from disk into PUBLIC_PAGES on startup."""
+    if not _PUBLIC_SHARES_FILE.exists():
+        return
+    try:
+        data = json.loads(_PUBLIC_SHARES_FILE.read_text(encoding="utf-8"))
+        PUBLIC_PAGES.update(data)
+        print(f"[pages] ✅ Loaded {len(data)} public share token(s) from disk")
+    except Exception as e:
+        print(f"[pages] ⚠️ Failed to load public shares: {e}")
+
 
 def _load_existing_pages():
     """
@@ -470,8 +494,9 @@ def _load_existing_pages():
         print(f"[pages] ⚠️ Failed to load existing pages: {e}")
 
 
-# Load existing pages on module import
+# Load existing pages and public share tokens on module import
 _load_existing_pages()
+_load_public_pages()
 
 
 @router.get("", response_model=ListResponse)
@@ -1192,7 +1217,7 @@ async def execute_page_action(page_id: str, req: PageActionRequest):
             token = uuid.uuid4().hex
             url = f"/shared/{token}"
             
-            # Store public share with metadata
+            # Store public share with metadata (and persist to disk)
             PUBLIC_PAGES[token] = {
                 "page_id": page_id,
                 "created_at": datetime.utcnow().isoformat(),
@@ -1201,6 +1226,7 @@ async def execute_page_action(page_id: str, req: PageActionRequest):
                 "expires_at": req.expires_at,
                 "permissions": req.permissions or "read"
             }
+            _save_public_pages()
             
             SHARES.setdefault(page_id, []).append({
                 "type": "link",

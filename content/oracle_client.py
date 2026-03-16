@@ -51,7 +51,7 @@ def _transform_oracle_result(oracle_item: Dict[str, Any], idx: int) -> Dict[str,
         "citation_id": cid,
         "url": url,
         "title": title,
-        "extracted_text": content[:3000],  # LLM context budget: 3K chars/source keeps total prompt manageable across 5-10 sources
+        "extracted_text": content,  # Full content from Oracle — let the page generator decide what to use
         "snippet": content[:300] if content else f"Content from {title}",  # UI preview only
         "published_at": "2025-01-15T00:00:00Z",  # Real timestamp would come from extraction
         "source_type": "web_article",

@@ -788,56 +788,82 @@ const SectionBlock: React.FC<{
                 </div>
 
                 <div className={`flex gap-2 ${isEditMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                    ) : (<>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowCopilot(!showCopilot);
-                            setShowRefineMenu(false);
-                        }}
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                    </Button>
-                    <div className="relative">
+                    {isEditMode ? (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); handleCancel(); }}
+                                className="text-muted-foreground"
+                            >
+                                <X className="w-4 h-4 mr-1" />Revert
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); handleSave(); }}
+                                disabled={saveLoading}
+                            >
+                                {saveLoading
+                                    ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                    : saveSuccess
+                                        ? <Check className="w-4 h-4 mr-1 text-green-400" />
+                                        : null
+                                }
+                                {saveSuccess ? 'Saved!' : 'Save'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setShowRefineMenu(m => !m);
-                                setShowCopilot(false);
+                                setShowCopilot(!showCopilot);
+                                setShowRefineMenu(false);
                             }}
                         >
-                            <Edit2 className="w-4 h-4" />
+                            <MessageSquare className="w-4 h-4" />
                         </Button>
-                        {showRefineMenu && (
-                            <div
-                                className="absolute right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 w-40"
-                                onClick={e => e.stopPropagation()}
+                        <div className="relative">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowRefineMenu(m => !m);
+                                    setShowCopilot(false);
+                                }}
                             >
-                                {([
-                                    { label: '↑ Expand', msg: 'expand' },
-                                    { label: '↓ Simplify', msg: 'simplify' },
-                                    { label: '+ Add Examples', msg: 'add concrete examples' },
-                                    { label: '📚 More Sources', msg: 'add more citations and sources' },
-                                ] as const).map(({ label, msg }) => (
-                                    <button
-                                        key={msg}
-                                        onClick={() => {
-                                            setShowRefineMenu(false);
-                                            onRequestCopilot?.(`[${section.title}] Please ${msg} for this section.`);
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent first:rounded-t-lg last:rounded-b-lg"
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    </>)}
+                                <Edit2 className="w-4 h-4" />
+                            </Button>
+                            {showRefineMenu && (
+                                <div
+                                    className="absolute right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 w-40"
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    {([
+                                        { label: '↑ Expand', msg: 'expand' },
+                                        { label: '↓ Simplify', msg: 'simplify' },
+                                        { label: '+ Add Examples', msg: 'add concrete examples' },
+                                        { label: '📚 More Sources', msg: 'add more citations and sources' },
+                                    ] as const).map(({ label, msg }) => (
+                                        <button
+                                            key={msg}
+                                            onClick={() => {
+                                                setShowRefineMenu(false);
+                                                onRequestCopilot?.(`[${section.title}] Please ${msg} for this section.`);
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent first:rounded-t-lg last:rounded-b-lg"
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        </>
+                    )}
                 </div>
             </div>
 
