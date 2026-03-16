@@ -8,6 +8,7 @@ Used when MNEMO_ENABLED=true; step 3 will ingest to Neo4j (Fact/Evidence).
 Entry points:
 - extract_from_session(query, conversation_history, existing_memories) for session/smart-scan
 - extract_from_memory_text(text) for direct memory add / Qdrant ingestion
+- extract_from_query(query) for query NER (entity-first retrieval in memory_retriever)
 """
 
 from __future__ import annotations
@@ -111,6 +112,15 @@ class UnifiedExtractor:
         """
         user_content = f"Memory text:\n{text}\n\nExtract and return the single JSON object (memories can be one add with this text or empty)."
         return self._call_llm(user_content, source="memory")
+
+    def extract_from_query(self, query: str) -> List[Dict[str, str]]:
+        """
+        Extract entities from a short user query (NER for entity-first retrieval).
+        Uses the same skill-loaded prompt as other extraction. Returns list of {"name", "type"} dicts.
+        """
+        user_content = f"Query: {query}\n\nExtract entities mentioned in this query. Return the single JSON object (entities only if nothing else applies)."
+        result = self._call_llm(user_content, source="query")
+        return [{"name": e.name, "type": e.type} for e in result.entities]
 
     def _call_llm(self, user_content: str, source: str) -> UnifiedExtractionResult:
         prompt = self._load_prompt()

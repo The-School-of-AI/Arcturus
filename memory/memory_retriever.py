@@ -324,8 +324,8 @@ def _entity_recall(
     if not kg or not user_id:
         return [], None
     try:
-        from memory.entity_extractor import EntityExtractor
-        entities = EntityExtractor().extract_from_query(query)
+        from shared.state import get_unified_extractor
+        entities = get_unified_extractor().extract_from_query(query)
         if entities:
             resolved = kg.resolve_entity_candidates(user_id, entities, fuzzy_threshold=0.85)
             if resolved:

@@ -2,7 +2,10 @@
 P11 Phase 4 Sync Engine — HTTP client for push/pull.
 
 Calls sync server POST /sync/push and POST /sync/pull.
+Auth: pass X-User-Id (or Authorization) in headers so the API accepts the request.
 """
+
+from typing import Optional
 
 import httpx
 
@@ -14,14 +17,17 @@ def push_changes(
     request: PushRequest,
     *,
     timeout: float = 30.0,
+    headers: Optional[dict] = None,
 ) -> PushResponse:
     """POST /sync/push to sync server."""
     url = f"{base_url.rstrip('/')}/sync/push"
+    req_headers = dict(headers) if headers else {}
     try:
         with httpx.Client(timeout=timeout) as client:
             resp = client.post(
                 url,
                 json=request.model_dump(mode="json"),
+                headers=req_headers,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -43,14 +49,17 @@ def pull_changes(
     request: PullRequest,
     *,
     timeout: float = 30.0,
+    headers: Optional[dict] = None,
 ) -> PullResponse:
     """POST /sync/pull to sync server."""
     url = f"{base_url.rstrip('/')}/sync/pull"
+    req_headers = dict(headers) if headers else {}
     try:
         with httpx.Client(timeout=timeout) as client:
             resp = client.post(
                 url,
                 json=request.model_dump(mode="json"),
+                headers=req_headers,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -69,14 +78,17 @@ async def push_changes_async(
     request: PushRequest,
     *,
     timeout: float = 30.0,
+    headers: Optional[dict] = None,
 ) -> PushResponse:
     """Async POST /sync/push."""
     url = f"{base_url.rstrip('/')}/sync/push"
+    req_headers = dict(headers) if headers else {}
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.post(
                 url,
                 json=request.model_dump(mode="json"),
+                headers=req_headers,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -98,14 +110,17 @@ async def pull_changes_async(
     request: PullRequest,
     *,
     timeout: float = 30.0,
+    headers: Optional[dict] = None,
 ) -> PullResponse:
     """Async POST /sync/pull."""
     url = f"{base_url.rstrip('/')}/sync/pull"
+    req_headers = dict(headers) if headers else {}
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.post(
                 url,
                 json=request.model_dump(mode="json"),
+                headers=req_headers,
             )
             resp.raise_for_status()
             data = resp.json()

@@ -6,8 +6,8 @@ and user-centric facts (LIVES_IN, WORKS_AT, KNOWS, PREFERS).
 Model and prompt follow the same config/skill pattern as remme/extractor.py.
 
 NOTE when MNEMO_ENABLED=true (permanently): extract() is unused for memory ingestion
-(qdrant_store uses unified extractor). extract_from_query() remains in use for NER
-in memory_retriever entity-first retrieval.
+(qdrant_store uses unified extractor). Query NER uses memory.unified_extractor.UnifiedExtractor
+extract_from_query() via memory_retriever; this module is fallback for non-Mnemo and migrate scripts.
 """
 
 from __future__ import annotations
@@ -65,10 +65,10 @@ class EntityExtractor:
     def extract_from_query(self, query: str) -> List[Dict[str, str]]:
         """
         Extract entities from a short query (NER-style) for entity-first retrieval.
-        Uses a lighter prompt optimized for queries. Returns entities only.
+        Uses the same skill/config-injected prompt as extract() (_load_prompt). Returns entities only.
         Example: {"entities": [{"name": "John", "type": "Person"}]}
         """
-        prompt = "Extract only entity names and types mentioned. Return JSON: {entities: [{name, type}]}. Types: Person, Company, City, Place, Concept, Date, etc."
+        prompt = self._load_prompt()
         try:
             user_msg = f"Query: {query}\nReturn ONLY valid JSON, no markdown."
             response = requests.post(
@@ -88,9 +88,13 @@ class EntityExtractor:
             result = response.json()
             content = result.get("message", {}).get("content", "{}")
             parsed = self._parse(content)
-            print(f"[EntityExtractor] Parsed entities {parsed} from the query {query}") # TODO 
-            return parsed.get("entities", [])
-        except Exception:
+            entities = parsed.get("entities", [])
+            if not entities and content.strip():
+                print(f"[EntityExtractor] No entities parsed; raw LLM response ({len(content)} chars): {content[:500]!r}")
+            print(f"[EntityExtractor] Parsed entities {parsed} from the query {query}")  # TODO
+            return entities
+        except Exception as e:
+            print(f"[EntityExtractor] extract_from_query failed: {e}")
             return []
 
     def extract(self, text: str, verbose: bool = False) -> Dict[str, Any]:

@@ -444,8 +444,9 @@ async def add_memory(request: AddMemoryRequest, background_tasks: BackgroundTask
         try:
             from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
             if is_sync_engine_enabled() and get_sync_server_url():
+                from memory.user_id import get_user_id
                 from routers.sync import run_sync_background
-                background_tasks.add_task(run_sync_background)
+                background_tasks.add_task(run_sync_background, get_user_id())
         except Exception:
             pass
 
@@ -567,8 +568,9 @@ async def move_memory_to_space(
         try:
             from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
             if is_sync_engine_enabled() and get_sync_server_url():
+                from memory.user_id import get_user_id
                 from routers.sync import run_sync_background
-                background_tasks.add_task(run_sync_background)
+                background_tasks.add_task(run_sync_background, get_user_id())
         except Exception:
             pass
 
@@ -610,8 +612,9 @@ async def create_space(request: CreateSpaceRequest, background_tasks: Background
         try:
             from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
             if is_sync_engine_enabled() and get_sync_server_url() and request.sync_policy not in ("local_only",):
+                from memory.user_id import get_user_id
                 from routers.sync import run_sync_background
-                background_tasks.add_task(run_sync_background)
+                background_tasks.add_task(run_sync_background, get_user_id())
         except Exception:
             pass
 

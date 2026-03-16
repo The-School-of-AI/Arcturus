@@ -41,7 +41,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subt
 export const Header: React.FC = () => {
     const {
         currentRun, sidebarTab, runs, savedApps, memories, fetchSpaces,
-        isSpacesModalOpen, setIsSpacesModalOpen,
+        spaces, isSpacesModalOpen, setIsSpacesModalOpen,
         analysisHistory, newsSources, ragFiles, mcpServers,
         isRagIndexing, setIsRagNewFolderOpen, fetchRagFiles,
         setIsNewRunOpen, setIsMcpAddOpen, setIsRemmeAddOpen,

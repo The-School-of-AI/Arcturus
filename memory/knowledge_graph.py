@@ -340,7 +340,7 @@ class KnowledgeGraph:
         )
         return space_id
 
-    def get_spaces_for_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_spaces_for_user(self, user_id: Optional[str] = None, include_deleted: bool = False) -> List[Dict[str, Any]]:
         """List spaces owned by user. Returns [{space_id, name, description, sync_policy, version, ...}]."""
         uid = user_id or get_user_id()
         if not self._enabled or not uid:
@@ -348,12 +348,13 @@ class KnowledgeGraph:
         records = self._run_query(
             """
             MATCH (u:User {user_id: $user_id})-[:OWNS_SPACE]->(sp:Space)
+            WHERE $include_deleted OR sp.deleted IS NULL OR sp.deleted = false
             RETURN sp.space_id AS space_id, sp.name AS name, sp.description AS description,
                    sp.sync_policy AS sync_policy, sp.version AS version,
                    sp.device_id AS device_id, sp.updated_at AS updated_at
             ORDER BY sp.created_at ASC
             """,
-            {"user_id": uid},
+            {"user_id": uid, "include_deleted": include_deleted},
         )
         out = []
         for r in records:
@@ -371,7 +372,7 @@ class KnowledgeGraph:
             out.append(rec)
         return out
 
-    def get_spaces_shared_with_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_spaces_shared_with_user(self, user_id: Optional[str] = None, include_deleted: bool = False) -> List[Dict[str, Any]]:
         """List spaces shared with this user (not owned). Returns same shape as get_spaces_for_user, with is_shared=True."""
         uid = user_id or get_user_id()
         if not self._enabled or not uid:
@@ -379,12 +380,13 @@ class KnowledgeGraph:
         records = self._run_query(
             """
             MATCH (sp:Space)-[:SHARED_WITH]->(u:User {user_id: $user_id})
+            WHERE $include_deleted OR sp.deleted IS NULL OR sp.deleted = false
             RETURN sp.space_id AS space_id, sp.name AS name, sp.description AS description,
                    sp.sync_policy AS sync_policy, sp.version AS version,
                    sp.device_id AS device_id, sp.updated_at AS updated_at
             ORDER BY sp.name ASC
             """,
-            {"user_id": uid},
+            {"user_id": uid, "include_deleted": include_deleted},
         )
         out = []
         for r in records:
@@ -403,10 +405,10 @@ class KnowledgeGraph:
             out.append(rec)
         return out
 
-    def get_all_spaces_for_user(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_all_spaces_for_user(self, user_id: Optional[str] = None, include_deleted: bool = False) -> List[Dict[str, Any]]:
         """List spaces owned by user plus spaces shared with user. Owned first, then shared; each has is_shared True only if shared."""
-        owned = self.get_spaces_for_user(user_id=user_id)
-        shared = self.get_spaces_shared_with_user(user_id=user_id)
+        owned = self.get_spaces_for_user(user_id=user_id, include_deleted=include_deleted)
+        shared = self.get_spaces_shared_with_user(user_id=user_id, include_deleted=include_deleted)
         seen = {s["space_id"] for s in owned}
         for s in shared:
             if s["space_id"] not in seen:
@@ -552,7 +554,21 @@ class KnowledgeGraph:
         return False
 
     def delete_space(self, space_id: str) -> None:
-        """Phase 4 Sync: delete Space node (for pulled deleted space). DETACH DELETE."""
+        """Phase 4 Sync: Soft delete Space node (for pulled deleted space)."""
+        if not self._enabled or not space_id:
+            return
+        self._run_write(
+            """
+            MATCH (sp:Space {space_id: $space_id})
+            SET sp.deleted = true,
+                sp.updated_at = $now,
+                sp.version = COALESCE(sp.version, 1) + 1
+            """,
+            {"space_id": space_id, "now": datetime.now().isoformat()},
+        )
+
+    def hard_delete_space(self, space_id: str) -> None:
+        """Actually delete Space node."""
         if not self._enabled or not space_id:
             return
         self._run_write(
@@ -1574,12 +1590,21 @@ class KnowledgeGraph:
         if records and records[0].get("entity_ids"):
             entity_ids = [eid for eid in records[0]["entity_ids"] if eid]
 
-        # Remove the memory and its relationships
+        # Remove the memory and its relationships (Soft Delete Version)
         self._run_write(
             """
             MATCH (m:Memory {id: $memory_id})
-            DETACH DELETE m
+            SET m.deleted = true, m.updated_at = $now
             """,
+            {"memory_id": memory_id, "now": datetime.now().isoformat()},
+        )
+
+    def hard_delete_memory(self, memory_id: str) -> None:
+        """Actually remove Memory node and its relationships from the graph."""
+        if not self._enabled or not memory_id:
+            return
+        self._run_write(
+            "MATCH (m:Memory {id: $memory_id}) DETACH DELETE m",
             {"memory_id": memory_id},
         )
 
@@ -1621,9 +1646,9 @@ class KnowledgeGraph:
         params["user_id"] = user_id or ""
 
         if user_id:
-            memory_match = "OPTIONAL MATCH (u:User {user_id: $user_id})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e)"
+            memory_match = "OPTIONAL MATCH (u:User {user_id: $user_id})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e) WHERE m.deleted IS NULL OR m.deleted = false"
         else:
-            memory_match = "OPTIONAL MATCH (m:Memory)-[:CONTAINS_ENTITY]->(e)"
+            memory_match = "OPTIONAL MATCH (m:Memory)-[:CONTAINS_ENTITY]->(e) WHERE m.deleted IS NULL OR m.deleted = false"
 
         space_filter = ""
         if space_ids:
@@ -1710,6 +1735,7 @@ class KnowledgeGraph:
         records = self._run_query(
             """
             MATCH (u:User {user_id: $user_id})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e:Entity)
+            WHERE m.deleted IS NULL OR m.deleted = false
             RETURN DISTINCT e.id AS id, e.type AS type, e.name AS name
             """,
             {"user_id": user_id},
@@ -1965,6 +1991,7 @@ class KnowledgeGraph:
                 OPTIONAL MATCH (m)-[:IN_SPACE]->(sp:Space)
                 WHERE (ANY(n IN $names_lower WHERE toLower(e.name) = n OR toLower(e.name) CONTAINS n))
                   AND (sp IS NULL OR sp.space_id IN $space_ids)
+                  AND (m.deleted IS NULL OR m.deleted = false)
                 RETURN DISTINCT m.id AS memory_id
                 """,
                 {"user_id": user_id, "names_lower": names_lower, "space_ids": space_ids},
@@ -1973,7 +2000,8 @@ class KnowledgeGraph:
             records = self._run_query(
                 """
                 MATCH (u:User {user_id: $user_id})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e:Entity)
-                WHERE ANY(n IN $names_lower WHERE toLower(e.name) = n OR toLower(e.name) CONTAINS n)
+                WHERE (ANY(n IN $names_lower WHERE toLower(e.name) = n OR toLower(e.name) CONTAINS n))
+                  AND (m.deleted IS NULL OR m.deleted = false)
                 RETURN DISTINCT m.id AS memory_id
                 """,
                 {"user_id": user_id, "names_lower": names_lower},
@@ -2009,6 +2037,7 @@ class KnowledgeGraph:
 
         entity_query = f"""
             MATCH (u:User {{user_id: $user_id}})-[:HAS_MEMORY]->(m:Memory)
+            WHERE m.deleted IS NULL OR m.deleted = false
             {space_filter}
             MATCH (m)-[:CONTAINS_ENTITY]->(e:Entity)
             WITH DISTINCT e
@@ -2072,6 +2101,7 @@ class KnowledgeGraph:
             mem_space_filter = "\n            MATCH (m)-[:IN_SPACE]->(sp:Space {space_id: $space_id})"
         mem_query = f"""
             MATCH (u:User {{user_id: $user_id}})-[:HAS_MEMORY]->(m:Memory)-[:CONTAINS_ENTITY]->(e:Entity)
+            WHERE m.deleted IS NULL OR m.deleted = false
             {mem_space_filter}
             WITH m, e
             ORDER BY m.created_at DESC
@@ -2102,6 +2132,7 @@ class KnowledgeGraph:
             me_query = f"""
                 MATCH (m:Memory)-[:CONTAINS_ENTITY]->(e:Entity)
                 WHERE m.id IN [{mem_ph}] AND e.id IN $eids
+                  AND (m.deleted IS NULL OR m.deleted = false)
                 RETURN m.id AS source, e.id AS target
                 """
             for r in self._run_query(me_query, params4):

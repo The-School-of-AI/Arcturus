@@ -77,7 +77,7 @@ class EvidenceEventItem(BaseModel):
 
 # --- Unified Extraction Result ---
 class UnifiedExtractionResult(BaseModel):
-    source: Literal["session", "memory"] = "memory"
+    source: Literal["session", "memory", "query"] = "memory"
     memories: List[MemoryCommand] = Field(default_factory=list)
     entities: List[EntityItem] = Field(default_factory=list)
     entity_relationships: List[EntityRelationshipItem] = Field(default_factory=list)
