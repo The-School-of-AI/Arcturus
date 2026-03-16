@@ -90,13 +90,13 @@ class SyncEngine:
             spaces: list[dict] = []
             policy_map: dict[str, str] = {}
         else:
-            spaces = self._kg.get_spaces_for_user(self.user_id)
+            spaces = self._kg.get_spaces_for_user(self.user_id, include_deleted=True)
             policy_map = {s["space_id"]: s.get("sync_policy", "sync") for s in spaces}
 
         def get_policy(sid: str) -> str:
             return policy_map.get(sid, "sync")
 
-        memories = self._store.get_all() if hasattr(self._store, "get_all") else []
+        memories = self._store.get_all(include_deleted=True) if hasattr(self._store, "get_all") else []
         mem_deltas = build_memory_deltas(
             memories,
             device_id=self.device_id,
@@ -109,7 +109,7 @@ class SyncEngine:
             if get_episodic_store_provider() == "qdrant":
                 from memory.backends.episodic_qdrant_store import EpisodicQdrantStore
                 ep_store = EpisodicQdrantStore()
-                episodes = ep_store.get_all(limit=10000, user_id=self.user_id)
+                episodes = ep_store.get_all(limit=10000, user_id=self.user_id, include_deleted=True)
                 episodic_deltas = build_episodic_deltas(
                     episodes,
                     device_id=self.device_id,

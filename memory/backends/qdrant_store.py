@@ -370,6 +370,7 @@ class QdrantVectorStore:
         k: int = 10,
         score_threshold: Optional[float] = None,
         filter_metadata: Optional[Dict[str, Any]] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         query_vector = query_vector.tolist() if isinstance(query_vector, np.ndarray) else list(query_vector)
         merged_filter = self._tenant_filter(filter_metadata)
@@ -387,6 +388,16 @@ class QdrantVectorStore:
                     )
             if conditions:
                 search_filter = Filter(must=conditions)
+            
+        if not include_deleted:
+            deleted_filter = FieldCondition(key="deleted", match=MatchValue(value=False))
+            if search_filter:
+                if search_filter.must:
+                    search_filter.must.append(deleted_filter)
+                else:
+                    search_filter.must = [deleted_filter]
+            else:
+                search_filter = Filter(must=[deleted_filter])
 
         distance_threshold = 1.0 - score_threshold if score_threshold is not None else None
 
@@ -497,6 +508,8 @@ class QdrantVectorStore:
                 if self._is_tenant and current_user_id:
                     if payload.get(self._tenant_keyword_field) != current_user_id:
                         return None
+                if payload.get("deleted") is True:
+                    return None
                 return {"id": str(p.id), **payload}
             return None
         except Exception as e:
@@ -610,15 +623,36 @@ class QdrantVectorStore:
             return False
 
     def delete(self, memory_id: str) -> bool:
-        if self._is_tenant and self.get(memory_id) is None:
-            return False
+        """Soft delete: set deleted=True and update Neo4j."""
         try:
-            self.client.delete(
-                collection_name=self.collection_name,
-                points_selector=[memory_id],
-            )
-            log_step(f"🗑️ Deleted memory: {memory_id[:8]}...", symbol="❌")
-            # Keep knowledge graph in sync: remove Memory node and its relationships
+            existing = self.get(memory_id)
+            if not existing:
+                # Check if it's already soft-deleted (get returns None for deleted=True)
+                # We need to bypass get() to see if it exists at all
+                raw = self.client.retrieve(collection_name=self.collection_name, ids=[memory_id])
+                if not raw:
+                    return False
+                existing = {"id": str(raw[0].id), **raw[0].payload}
+                if existing.get("deleted") is True:
+                    return True # already deleted
+
+            updated = existing.copy()
+            memory_id = updated.pop("id")
+            updated["deleted"] = True
+            updated["updated_at"] = _utc_iso_now()
+            updated["version"] = updated.get("version", 1) + 1
+            
+            vec = self._get_vector_for_point(memory_id)
+            if vec:
+                if self._is_named:
+                    vec_data = {"default": vec}
+                else:
+                    vec_data = vec
+                point = PointStruct(id=memory_id, vector=vec_data, payload=_sanitize_payload_for_qdrant(updated))
+                self.client.upsert(collection_name=self.collection_name, points=[point])
+            
+            log_step(f"🗑️ Soft deleted memory: {memory_id[:8]}...", symbol="❌")
+            # Keep knowledge graph in sync
             try:
                 from memory.knowledge_graph import get_knowledge_graph
                 kg = get_knowledge_graph()
@@ -628,13 +662,26 @@ class QdrantVectorStore:
                 log_error(f"Knowledge graph delete_memory failed: {e}")
             return True
         except Exception as e:
-            log_error(f"Failed to delete memory {memory_id}: {e}")
+            log_error(f"Failed to soft delete memory {memory_id}: {e}")
+            return False
+
+    def hard_delete(self, memory_id: str) -> bool:
+        """Actually remove point from Qdrant."""
+        try:
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=[memory_id],
+            )
+            return True
+        except Exception as e:
+            log_error(f"Hard delete failed for {memory_id}: {e}")
             return False
 
     def get_all(
         self,
         limit: Optional[int] = None,
         filter_metadata: Optional[Dict[str, Any]] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         try:
             merged_filter = self._tenant_filter(filter_metadata)
@@ -654,8 +701,14 @@ class QdrantVectorStore:
                         )
                     else:
                         must_conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
+                
+                if not include_deleted:
+                    must_conditions.append(FieldCondition(key="deleted", match=MatchValue(value=False)))
+                
                 if must_conditions:
                     search_filter = Filter(must=must_conditions)
+            elif not include_deleted:
+                search_filter = Filter(must=[FieldCondition(key="deleted", match=MatchValue(value=False))])
             results = []
             offset = None
             while True:
