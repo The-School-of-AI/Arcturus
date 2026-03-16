@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network
+    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network, Store
 } from 'lucide-react';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
 const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     icon: any,
     label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm',
+    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm' | 'marketplace',
     active: boolean,
     onClick: () => void
 }) => {
@@ -189,6 +189,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
                     <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
                     <NavIcon icon={Shield} label="Admin" tab="admin" active={sidebarTab === 'admin'} onClick={() => setSidebarTab('admin')} />
+                    <NavIcon icon={Store} label="Marketplace" tab="marketplace" active={sidebarTab === 'marketplace'} onClick={() => setSidebarTab('marketplace')} />
                 </div>
 
                 {/* Bottom Tools */}

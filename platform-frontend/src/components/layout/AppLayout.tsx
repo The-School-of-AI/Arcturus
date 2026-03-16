@@ -50,6 +50,7 @@ import { AdminDashboard } from '@/features/admin/AdminDashboard';
 import { SwarmGraphView } from '@/features/swarm/SwarmGraphView';
 import { AgentPeekPanel } from '@/features/swarm/AgentPeekPanel';
 import { useSwarmStore } from '@/features/swarm/useSwarmStore';
+import { MarketplacePage } from '@/features/marketplace/components/MarketplacePage';
 
 export const AppLayout: React.FC = () => {
     // Mount useVoice at the root so wake-word events trigger the Echo tab
@@ -93,7 +94,7 @@ export const AppLayout: React.FC = () => {
 
     // Scheduler and Console take up full width, no sidebar subpanel needed
     // Echo should NOT be hidden when inspector is open, because the conversation is the primary surface.
-    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
+    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || sidebarTab === 'marketplace' || !isSidebarSubPanelOpen;
 
     const [leftWidth, setLeftWidth] = useState(400);
     const [rightWidth, setRightWidth] = useState(450); // original was 450px
@@ -267,6 +268,8 @@ export const AppLayout: React.FC = () => {
                                     <CanvasHost surfaceId="main-canvas" />
                                 ) : sidebarTab === 'swarm' ? (
                                     <SwarmGraphView />
+                                ) : sidebarTab === 'marketplace' ? (
+                                    <MarketplacePage />
                                 ) : (
                                     <>
                                         <GraphCanvas />
