@@ -81,8 +81,8 @@ def get_ollama_url(endpoint: str = "generate") -> str:
     endpoints = {
         "generate": "/api/generate",
         "chat": "/api/chat",
-        "embed": "/api/embeddings",
-        "embeddings": "/api/embeddings"
+        "embed": "/api/embed",
+        "embeddings": "/api/embed"
     }
     return f"{base}{endpoints.get(endpoint, '/api/' + endpoint)}"
 

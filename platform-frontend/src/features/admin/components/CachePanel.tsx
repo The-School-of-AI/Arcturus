@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE } from '@/lib/api';
-import { Database, RefreshCw, Trash2, Activity, CheckCircle, XCircle, HardDrive } from 'lucide-react';
+import { Database, RefreshCw, Trash2, Activity, CheckCircle, XCircle, HardDrive, Zap } from 'lucide-react';
 
 interface CacheEntry {
     name: string;
@@ -10,6 +10,13 @@ interface CacheEntry {
     files?: number;
     size_mb?: number;
     sessions?: number;
+    /** Semantic cache: entries, hits, misses, hit_rate, enabled */
+    entries?: number;
+    max_entries?: number;
+    hits?: number;
+    misses?: number;
+    hit_rate?: number;
+    enabled?: boolean;
 }
 
 export const CachePanel: React.FC = () => {
@@ -62,7 +69,7 @@ export const CachePanel: React.FC = () => {
                 <div>
                     <h2 className="text-sm font-semibold">Cache Management</h2>
                     <p className="text-xs text-muted-foreground mt-1">
-                        View cache status and flush where safe. Only settings cache is flushable.
+                        View cache status and flush where safe. Settings and semantic_cache are flushable.
                     </p>
                 </div>
                 <button
@@ -95,7 +102,7 @@ export const CachePanel: React.FC = () => {
                             <div>
                                 <span className="text-sm font-mono font-medium">{cache.name}</span>
                                 <p className="text-xs text-muted-foreground mt-0.5">{cache.description}</p>
-                                <div className="flex items-center gap-3 mt-1">
+                                <div className="flex items-center gap-3 mt-1 flex-wrap">
                                     {cache.files !== undefined && (
                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                                             <HardDrive className="w-3 h-3" />
@@ -105,6 +112,18 @@ export const CachePanel: React.FC = () => {
                                     {cache.sessions !== undefined && (
                                         <span className="text-xs text-muted-foreground">
                                             {cache.sessions} active sessions
+                                        </span>
+                                    )}
+                                    {cache.entries !== undefined && (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Zap className="w-3 h-3" />
+                                            {cache.entries}/{cache.max_entries ?? 128} entries · {cache.hits ?? 0} hits, {cache.misses ?? 0} misses
+                                            {typeof cache.hit_rate === 'number' && (
+                                                <span className="text-green-500/80"> · {(cache.hit_rate * 100).toFixed(1)}% hit rate</span>
+                                            )}
+                                            {cache.enabled === false && (
+                                                <span className="text-amber-500"> (disabled)</span>
+                                            )}
                                         </span>
                                     )}
                                 </div>

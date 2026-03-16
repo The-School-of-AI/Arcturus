@@ -8,8 +8,10 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
+from shared.state import PROJECT_ROOT
+
 # --- Configuration ---
-DB_PATH = Path("data/inbox/notifications.db")
+DB_PATH = PROJECT_ROOT / "data" / "inbox" / "notifications.db"
 router = APIRouter(prefix="/inbox", tags=["Inbox"])
 
 # --- Schema ---

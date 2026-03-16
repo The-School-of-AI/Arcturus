@@ -13,6 +13,7 @@ import { TemplateDrawer } from './TemplateDrawer';
 import { useSwarmStore } from './useSwarmStore';
 import { useSwarmSSE } from './useSwarmSSE';
 import { swarmApi } from './swarmApi';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import type { SwarmTemplate, SwarmEvent } from './types';
 
 export const SwarmPanel: React.FC = () => {
@@ -26,6 +27,8 @@ export const SwarmPanel: React.FC = () => {
     const tokensUsed = useSwarmStore(s => s.tokensUsed);
     const costUsd = useSwarmStore(s => s.costUsd);
     const tasks = useSwarmStore(s => s.tasks);
+    const { flags } = useFeatureFlags();
+    const costEnabled = flags.cost_tracking !== false;
 
     const [query, setQuery] = useState('');
     const [isStarting, setIsStarting] = useState(false);
@@ -169,7 +172,7 @@ export const SwarmPanel: React.FC = () => {
                         <span className="text-green-400">{completedCount} done</span>
                         {inProgressCount > 0 && <span className="text-primary animate-pulse">{inProgressCount} running</span>}
                         {failedCount > 0 && <span className="text-red-400">{failedCount} failed</span>}
-                        <span className="ml-auto">{tokensUsed.toLocaleString()} tokens · ${costUsd.toFixed(5)}</span>
+                        <span className="ml-auto">{tokensUsed.toLocaleString()} tokens{costEnabled ? ` · $${costUsd.toFixed(5)}` : ''}</span>
                         {isPaused && <span className="text-yellow-400 font-bold">⏸ PAUSED</span>}
                     </div>
                 )}

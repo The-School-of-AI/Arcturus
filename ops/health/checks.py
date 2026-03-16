@@ -5,16 +5,17 @@ Watchtower Health checks: service connectivity and system resource probes.
 import os
 from typing import List
 
-from config.settings_loader import settings, get_ollama_url
+from config.settings_loader import load_settings, get_ollama_url
 from memory.qdrant_config import get_qdrant_url
 from ops.health.models import HealthResult, ResourceSnapshot
+from shared.state import get_voice_status
 
 
 def check_mongodb() -> HealthResult:
     """Check MongoDB connectivity via watchtower config."""
     import time
 
-    watchtower = settings.get("watchtower", {})
+    watchtower = load_settings().get("watchtower", {})
     uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
     client = None
     try:
@@ -35,14 +36,14 @@ def check_mongodb() -> HealthResult:
 
 
 def check_qdrant() -> HealthResult:
-    """Check Qdrant REST API health endpoint."""
+    """Check Qdrant REST API health endpoint (GET /healthz)."""
     import time
 
     try:
         import httpx
 
         url = get_qdrant_url().rstrip("/")
-        health_url = f"{url}/health"
+        health_url = f"{url}/healthz"
         start = time.perf_counter()
         with httpx.Client(timeout=3.0) as client:
             resp = client.get(health_url)
@@ -161,6 +162,25 @@ def check_neo4j() -> HealthResult:
             driver.close()
 
 
+def check_voice() -> HealthResult:
+    """Check voice pipeline status via shared startup state."""
+    try:
+        available, error = get_voice_status()
+        if available:
+            return HealthResult(service="voice_pipeline", status="ok")
+        if error:
+            return HealthResult(
+                service="voice_pipeline", status="down", details=error
+            )
+        return HealthResult(
+            service="voice_pipeline",
+            status="down",
+            details="Not initialized",
+        )
+    except Exception as e:
+        return HealthResult(service="voice_pipeline", status="down", details=str(e))
+
+
 def check_agent_core() -> HealthResult:
     """Check agent core liveness via active_loops state."""
     try:
@@ -217,5 +237,6 @@ def run_all_health_checks() -> List[HealthResult]:
         check_ollama(),
         check_mcp(),
         check_neo4j(),
+        check_voice(),
         check_agent_core(),
     ]

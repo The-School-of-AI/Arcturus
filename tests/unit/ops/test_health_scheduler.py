@@ -185,18 +185,18 @@ class TestHealthSchedulerConfig:
 
     def test_reads_interval_from_settings(self, repo):
         """When no interval_seconds, reads from watchtower config."""
-        with patch.dict(
-            "config.settings_loader.settings",
-            {"watchtower": {"health_check_interval_seconds": 45}},
+        with patch(
+            "ops.health.scheduler.load_settings",
+            return_value={"watchtower": {"health_check_interval_seconds": 45}},
         ):
             scheduler = HealthScheduler(repository=repo)
             assert scheduler.interval_seconds == 45
 
     def test_defaults_to_60_seconds(self, repo):
         """When no config at all, defaults to 60 seconds."""
-        with patch.dict(
-            "config.settings_loader.settings",
-            {"watchtower": {}},
+        with patch(
+            "ops.health.scheduler.load_settings",
+            return_value={"watchtower": {}},
         ):
             scheduler = HealthScheduler(repository=repo)
             assert scheduler.interval_seconds == 60

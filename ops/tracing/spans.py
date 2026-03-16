@@ -2,10 +2,29 @@
 WATCHTOWER: Span context managers for common trace patterns.
 Import these instead of inlining tracer/span logic in business code.
 """
+
 from contextlib import contextmanager
+
+from opentelemetry.trace import Status, StatusCode
 
 from ops.tracing.core import get_tracer
 from ops.tracing.context import get_span_context
+
+
+@contextmanager
+def run_throttled_span(run_id: str, reason: str, query: str = ""):
+    """
+    WATCHTOWER: Span for run rejected due to budget throttle (429).
+    Span name: run.throttled
+    Records the rejection in traces for observability (Jaeger/Watchtower).
+    """
+    tracer = get_tracer("runs")
+    with tracer.start_as_current_span("run.throttled") as span:
+        span.set_attribute("run_id", run_id or "")
+        span.set_attribute("throttle.reason", reason)
+        span.set_attribute("query", (query or "")[:200])
+        span.set_status(Status(StatusCode.ERROR, reason))
+        yield span
 
 
 @contextmanager
@@ -56,6 +75,7 @@ def agent_execute_dag_span(session_id: str = "", resumed: bool = False):
     """
     tracer = get_tracer("agent_loop")
     from datetime import datetime
+
     with tracer.start_as_current_span("agent_loop.execute_dag") as span:
         if session_id:
             span.set_attribute("session_id", session_id)

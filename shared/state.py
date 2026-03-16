@@ -63,6 +63,34 @@ def tts_request_cancel() -> None:
     cancel_tts_event.set()
 
 
+# ── Voice pipeline health state (consumed by Watchtower health checks) ───────
+_voice_status_lock = threading.Lock()
+_voice_orchestrator_available: bool = False
+_voice_startup_error: str | None = None
+
+
+def voice_mark_ready() -> None:
+    """Mark the voice pipeline as successfully started."""
+    global _voice_orchestrator_available, _voice_startup_error
+    with _voice_status_lock:
+        _voice_orchestrator_available = True
+        _voice_startup_error = None
+
+
+def voice_mark_failed(error: str) -> None:
+    """Record that the voice pipeline failed to start."""
+    global _voice_orchestrator_available, _voice_startup_error
+    with _voice_status_lock:
+        _voice_orchestrator_available = False
+        _voice_startup_error = error
+
+
+def get_voice_status() -> tuple[bool, str | None]:
+    """Return (is_available, error_message_or_none)."""
+    with _voice_status_lock:
+        return _voice_orchestrator_available, _voice_startup_error
+
+
 def tts_in_barge_in_grace_window() -> bool:
     """True if we are still within the post-TTS-start grace window."""
     now = time.monotonic()
