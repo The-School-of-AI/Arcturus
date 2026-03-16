@@ -149,9 +149,13 @@ def retrieve(
     # 2. Entity recall — INDEPENDENT of semantic. Runs whenever kg enabled, even if semantic returned 0.
     kg = _get_knowledge_graph()
     if kg and kg.enabled:
-        entity_recall_ids = _entity_recall(query, user_id, kg, space_ids=_neo4j_space_ids)
+        entity_recall_ids, entity_expanded = _entity_recall(query, user_id, kg, space_ids=_neo4j_space_ids)
         if entity_recall_ids:
             memory_context = _append_entity_memories(memory_context, entity_recall_ids, store, result_ids)
+        if entity_expanded:
+            memory_context = _append_graph_expansion(
+                memory_context, entity_expanded, store, result_ids, include_user_facts=False
+            )
 
         # 3. Graph expansion from semantic entity_ids (only when semantic had results with entity_ids)
         entity_ids_from_semantic = []
@@ -161,9 +165,25 @@ def retrieve(
             expanded = kg.expand_from_entities(
                 entity_ids_from_semantic, user_id=user_id, space_ids=_neo4j_space_ids
             )
-            memory_context = _append_graph_expansion(memory_context, expanded, store, result_ids)
+            memory_context = _append_graph_expansion(
+                memory_context, expanded, store, result_ids, include_user_facts=False
+            )
 
-    # 4. Lifecycle: update usage metrics (importance, access_count, archival) for all memories we surfaced.
+        # 4. Always include user facts (LIVES_IN, WORKS_AT, KNOWS, PREFERS) when KG enabled and we have user_id
+        if user_id:
+            user_facts = kg.get_user_facts_for_retrieval(user_id)
+            if user_facts:
+                facts_str = ", ".join(
+                    f"{f.get('rel_type', '')}({f.get('name', '')})" for f in user_facts[:10]
+                )
+                memory_context += f"\nUSER FACTS (from knowledge graph): {facts_str}\n"
+
+    # 5. Always include user preferences (location, verbosity, diet, tone/avoid) when present
+    pref_str = _get_preferences_context(user_id, space_id=space_id, space_ids=_neo4j_space_ids)
+    if pref_str:
+        memory_context += pref_str
+
+    # 6. Lifecycle: update usage metrics (importance, access_count, archival) for all memories we surfaced.
     try:
         if result_ids:
             from memory.lifecycle import record_access
@@ -201,6 +221,79 @@ def _get_knowledge_graph():
         return None
 
 
+def _get_preferences_context(
+    user_id: Optional[str],
+    space_id: Optional[str] = None,
+    space_ids: Optional[List[str]] = None,
+) -> str:
+    """Build a short USER PREFERENCES block (location, verbosity, diet, tone/avoid) when present. Used for run context."""
+    if not user_id:
+        return ""
+    lines: List[str] = []
+    try:
+        from memory.mnemo_config import is_mnemo_enabled
+        if is_mnemo_enabled():
+            from memory.neo4j_preferences_adapter import build_preferences_from_neo4j
+            data = build_preferences_from_neo4j(user_id, space_id=space_id, space_ids=space_ids)
+            if not data:
+                return ""
+            prefs = data.get("preferences") or {}
+            oc = data.get("operating_context") or {}
+            soft = data.get("soft_identity") or {}
+            loc = oc.get("location")
+            if loc:
+                lines.append(f"- Location: {loc}")
+            verb = (prefs.get("output_contract") or {}).get("verbosity")
+            if verb:
+                lines.append(f"- Verbosity: {verb}")
+            diet = (soft.get("food_and_dining") or {}).get("dietary_style")
+            if diet:
+                lines.append(f"- Diet: {diet}")
+            anti = prefs.get("anti_preferences") or {}
+            phrases = anti.get("phrases") or []
+            moves = anti.get("moves") or []
+            if phrases or moves:
+                parts = []
+                if phrases:
+                    parts.append("avoid phrases: " + ", ".join(phrases[:5]))
+                if moves:
+                    parts.append("avoid moves: " + ", ".join(moves[:3]))
+                lines.append("- Tone / avoid: " + "; ".join(parts))
+        else:
+            from remme.hubs.preferences_hub import get_preferences_hub
+            from remme.hubs.operating_context_hub import get_operating_context_hub
+            from remme.hubs.soft_identity_hub import get_soft_identity_hub
+            prefs_hub = get_preferences_hub()
+            context_hub = get_operating_context_hub()
+            soft_hub = get_soft_identity_hub()
+            loc = context_hub.data.environment.location_region.value if hasattr(context_hub.data.environment, "location_region") else None
+            if loc:
+                lines.append(f"- Location: {loc}")
+            verb = prefs_hub.get_verbosity()
+            if verb:
+                lines.append(f"- Verbosity: {verb}")
+            diet = soft_hub.get_dietary_style()
+            if diet:
+                lines.append(f"- Diet: {diet}")
+            avoid = prefs_hub.get_avoid_patterns()
+            if avoid:
+                phrases = avoid.get("phrases") or []
+                moves = avoid.get("moves") or []
+                if phrases or moves:
+                    parts = []
+                    if phrases:
+                        parts.append("avoid phrases: " + ", ".join(phrases[:5]))
+                    if moves:
+                        parts.append("avoid moves: " + ", ".join(moves[:3]))
+                    lines.append("- Tone / avoid: " + "; ".join(parts))
+    except Exception as e:
+        log_error(f"MemoryRetriever: failed to build preferences context: {e}")
+        return ""
+    if not lines:
+        return ""
+    return "\nUSER PREFERENCES (from profile):\n" + "\n".join(lines) + "\n"
+
+
 def _semantic_recall(
     query: str,
     store: Any,
@@ -226,10 +319,10 @@ def _semantic_recall(
 
 def _entity_recall(
     query: str, user_id: str, kg: Any, space_ids: Optional[List[str]] = None
-) -> List[str]:
-    """NER on query → resolve against graph → expand → memory_ids."""
+) -> tuple[List[str], Optional[Dict[str, Any]]]:
+    """NER on query → resolve against graph → expand. Returns (memory_ids, expanded) so caller can append both entity-matched memories and graph expansion (related entities, extra memories)."""
     if not kg or not user_id:
-        return []
+        return [], None
     try:
         from memory.entity_extractor import EntityExtractor
         entities = EntityExtractor().extract_from_query(query)
@@ -239,14 +332,15 @@ def _entity_recall(
                 expanded = kg.expand_from_entities(
                     resolved, user_id=user_id, depth=1, space_ids=space_ids
                 )
-                return expanded.get("memory_ids", [])
-        # Fallback: stop-word heuristic
+                return expanded.get("memory_ids", []), expanded
+        # Fallback: stop-word heuristic (no expanded dict, only memory_ids)
         tokens = [w for w in re.findall(r"\b\w+\b", query) if w.lower() not in _STOP_WORDS and len(w) > 1]
         if tokens:
-            return kg.get_memory_ids_for_entity_names(user_id, tokens, space_ids=space_ids)
+            ids = kg.get_memory_ids_for_entity_names(user_id, tokens, space_ids=space_ids)
+            return ids, None
     except Exception as e:
         log_error(f"MemoryRetriever: entity recall failed: {e}")
-    return []
+    return [], None
 
 
 def _append_graph_expansion(
@@ -254,8 +348,9 @@ def _append_graph_expansion(
     expanded: Dict[str, Any],
     store: Any,
     result_ids: set,
+    include_user_facts: bool = False,
 ) -> str:
-    """Append graph-expanded entities, memories, user facts."""
+    """Append graph-expanded entities and memories. User facts are appended separately (always when KG enabled)."""
     if not store:
         return memory_context
     # Related entities
@@ -287,8 +382,7 @@ def _append_graph_expansion(
                 result_ids.add(mid)
         if extra_texts:
             memory_context += "\nADDITIONAL RELEVANT MEMORIES (from graph):\n" + "\n".join(extra_texts) + "\n"
-    # User facts
-    if expanded.get("user_facts"):
+    if include_user_facts and expanded.get("user_facts"):
         facts_str = ", ".join(
             f"{f.get('rel_type', '')}({f.get('name', '')})" for f in expanded["user_facts"][:5]
         )
