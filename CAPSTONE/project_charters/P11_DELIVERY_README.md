@@ -307,45 +307,59 @@ uv run pytest tests/integration/test_sync_two_devices_converge.py -v -m slow
 - **Data**: FAISS index unchanged; Qdrant data in `./data/qdrant_storage/` (Docker) or cloud cluster
 
 ## 10. Demo Steps
+
 - **Script**: `scripts/demos/p11_mnemo.sh` (scaffold; replace with end-to-end demo as features mature)
 
 ### Quick Qdrant Demo
-1. Set up Qdrant (see `CAPSTONE/project_charters/P11_SETUP_GUIDE.md`): Docker or Cloud
-2. Configure env: `QDRANT_URL`, `QDRANT_API_KEY` if using Cloud
-3. Test connection:
+
+#### Act 1 — Migration and Guest Experience
+
+Migrating existing memories/RAG/episodic/etc. to Qdrant/Neo4j while supporting existing behavior (enhanced).
+
+1. **Run end-to-end migrations** (FAISS → Qdrant memories, RAG FAISS → Qdrant, Qdrant → Neo4j) with a single command using Docker:
+
    ```bash
-   uv run python scripts/test_qdrant_setup.py
-   ```
-4. Run end-to-end migrations (FAISS → Qdrant memories, RAG FAISS → Qdrant, Qdrant → Neo4j) with a single command:
-
-   - **Docker (default)** — uses local Docker services, runs `docker-compose up -d`, optionally appends Qdrant/Neo4j env vars to `.env`, then runs all migrations in order:
-     ```bash
-     uv run python scripts/migrate_all_memories.py
-     # or explicitly
-     uv run python scripts/migrate_all_memories.py docker
-     ```
-
-   - **Cloud** — assumes Qdrant Cloud + Neo4j Aura (or similar). The script will prompt you to create the accounts and configure `.env` (`QDRANT_URL`, `QDRANT_API_KEY`, `VECTOR_STORE_PROVIDER=qdrant`, `RAG_VECTOR_STORE_PROVIDER=qdrant`, `NEO4J_ENABLED=true`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`) before running the same migration sequence:
-     ```bash
-     uv run python scripts/migrate_all_memories.py cloud
-     ```
-
-5. (Optional) Use individual scripts directly if you need fine-grained control:
-   ```bash
-   # FAISS → Qdrant (Remme memories)
-   uv run python scripts/migrate_faiss_to_qdrant.py
-
-   # RAG FAISS → Qdrant (RAG chunks)
-   uv run python scripts/migrate_rag_faiss_to_qdrant.py
-
-   # Qdrant → Neo4j backfill
-   uv run python scripts/migrate_memories_to_neo4j.py
+   uv run python scripts/migrate_all_memories.py
+   # or explicitly
+   uv run python scripts/migrate_all_memories.py docker
    ```
 
-6. Use Qdrant in RemMe: `export VECTOR_STORE_PROVIDER=qdrant` (and `RAG_VECTOR_STORE_PROVIDER=qdrant`) or add them in your `.env` file before starting the API
+2. **Start the application:**
 
-### Neo4j Knowledge Graph (Phase 2/3)
-6. Start Neo4j: `docker-compose up -d neo4j` (or use Neo4j Aura)
-7. Configure env: `NEO4J_ENABLED=true`, `NEO4J_URI=bolt://localhost:7687`, `NEO4J_USER=neo4j`, `NEO4J_PASSWORD=arcturus-neo4j` (match docker-compose `NEO4J_AUTH`)
-8. Backfill existing memories: `uv run python scripts/migrate_memories_to_neo4j.py`
-9. New memories will auto-ingest to Neo4j when added via Qdrant (requires Ollama for entity extraction)
+   ```bash
+   npm run electron:dev:all
+   ```
+
+3. **You should be able to:**
+   - See existing Runs, RAG, Notes, and Remme that you had before.
+   - See a new **Graph** option to explore your memory graph (no other users visible).
+   - See **Guest** option on the top right where you can log in.
+   - See **Space** option where you can create new spaces (default is Global).
+   - **Add a new memory:** "I moved to Morrisville, NC last year and I love it here. I especially love the weather here as it is not too cold, not too warm."
+      - Look at the updated user facts (in the graph as well as in preferences).
+   - **Add a new Run:** "I am planning to go for a run. Can you check today's weather?"
+      - It should identify your location.
+   - **Add a new memory:** "My friend Jon has recently transferred from his California Google office to the Durham office. Planning to meet him as he may need help settling down at the new location."
+      - Look at the updated user facts
+  
+#### Act 2 — Multiple Spaces and Login Experience
+
+1. Create a Space by clicking on the Top right. You would only notice the "Computer Only" Space available. Others require you to login. Go ahead with it.
+2. **Add new memories and runs in this space** . You should only see the runs and memories specific to this space. Other spaces wouldn't show up. witch between the spaces to notice the space scoped behavior
+3. **JWT Secret Key**Check whether you have `MNEMO_SECRET_KEY` declared in your .env. If not, generate it as it is needed for the auth:
+    ```bash
+   openssl rand -base64 48
+   ``` 
+  Once added the MNEMO_SECRET_KEY in the .env, restart the server. At this point, we also recommend to comment or disable `VITE_ENABLE_LOCAL_MIGRATION` key as it was only needed for the first migration:
+   ```bash
+   npm run electron:dev:all
+   ```
+4. **Registration** : I the top right, click on the "Guest" and Select "register" tab. Fill in the details and Sign Up.
+5. **Migration of guest memories** - You should be auto logged-in and see your name on the top right.  You should also be able to see all the guest memories, runs etc have been migrated to your logged-in account.
+6. **Create new Spaces** - At this point you should be able to create different type of spaces and add different type of runs/memories and will eb able to verify that they do not show up in each others.
+7. **Space Recommendations** - While there is no UI plugin at this point, you should be able to see in the logs that every new memory and run is recommended with a space that a user can choose. 
+
+#### Act 3 — Multiple Devices
+
+1. This is a bit more complicated as you need to setup different setup i.e. same application running on different ports and poiting to different docker containers, but pointing to the same auth server.
+2. You should be able to login to both and create runs. They will auto syn even though they have separate qdrant/neo4j instances.   

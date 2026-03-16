@@ -12,7 +12,7 @@ services:
     tmpfs:
       - /qdrant/storage
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/healthz"]
       interval: 5s
       timeout: 5s
       retries: 10

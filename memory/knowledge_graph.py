@@ -1688,6 +1688,21 @@ class KnowledgeGraph:
             "user_facts": user_facts,
         }
 
+    def get_user_facts_for_retrieval(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Return all user–entity facts (LIVES_IN, WORKS_AT, KNOWS, PREFERS) for the user.
+        Used to always include user facts in memory context when KG is enabled.
+        """
+        if not self._enabled or not user_id:
+            return []
+        return self._run_query(
+            """
+            MATCH (u:User {user_id: $user_id})-[r:LIVES_IN|WORKS_AT|KNOWS|PREFERS]->(e:Entity)
+            RETURN type(r) AS rel_type, e.id AS entity_id, e.name AS name, e.type AS type
+            """,
+            {"user_id": user_id},
+        )
+
     def get_entities_for_user(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all entities in the user's graph (from their memories)."""
         if not self._enabled or not user_id:
