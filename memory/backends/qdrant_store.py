@@ -96,19 +96,28 @@ class QdrantVectorStore:
         self.client = QdrantClient(url=self.url, api_key=api_key, timeout=10.0)
         self._scanned_runs_path = Path(scanned_runs_path) if scanned_runs_path else Path(__file__).parent.parent.parent / "memory" / "remme_index" / "scanned_runs.json"
         self._ensure_collection()
-        self._has_sparse = self._check_has_sparse()
-        log_step(f"✅ QdrantVectorStore initialized: {self.url}/{self.collection_name}", symbol="🔧")
+        self._has_sparse, self._is_named = self._check_collection_capabilities()
+        log_step(f"✅ QdrantVectorStore initialized: {self.url}/{self.collection_name} (sparse={self._has_sparse}, named={self._is_named})", symbol="🔧")
 
-    def _check_has_sparse(self) -> bool:
-        """Check if collection has sparse vectors (Phase C)."""
+    def _check_collection_capabilities(self) -> tuple[bool, bool]:
+        """Check if collection has sparse vectors and if it uses named vectors."""
         try:
             info = self.client.get_collection(self.collection_name)
-            sparse = getattr(info.config, "params", None) and getattr(
-                info.config.params, "sparse_vectors", None
-            )
-            return bool(sparse and "text-bm25" in sparse)
+            params = getattr(info.config, "params", None)
+            if not params:
+                return False, False
+            
+            # Check for named vectors
+            v_config = getattr(params, "vectors_config", None)
+            is_named = isinstance(v_config, dict)
+            
+            # Check for sparse vectors
+            sparse = getattr(params, "sparse_vectors", None)
+            has_sparse = bool(sparse and "text-bm25" in sparse)
+            
+            return has_sparse, is_named
         except Exception:
-            return False
+            return False, False
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
@@ -312,7 +321,9 @@ class QdrantVectorStore:
                 idx, vals = embed_sparse_single(text)
                 vec_data = {"default": embedding_list, "text-bm25": SparseVector(indices=idx, values=vals)}
             except Exception:
-                vec_data = embedding_list
+                vec_data = {"default": embedding_list} if self._is_named else embedding_list
+        elif self._is_named:
+            vec_data = {"default": embedding_list}
         else:
             vec_data = embedding_list
         point = PointStruct(id=memory_id, vector=vec_data, payload=payload)
@@ -445,7 +456,7 @@ class QdrantVectorStore:
         )
         if score_threshold is not None:
             kwargs["score_threshold"] = score_threshold
-        if self._has_sparse:
+        if self._is_named:
             kwargs["using"] = "default"
         return self.client.query_points(**kwargs)
 
@@ -517,7 +528,12 @@ class QdrantVectorStore:
             if len(vec) != self.dimension:
                 log_error(f"Memory update: invalid embedding len={len(vec)}, expected {self.dimension}. Skipping update.")
                 return False
-            point = PointStruct(id=memory_id, vector=vec, payload=updated)
+            
+            if self._is_named:
+                vec_data = {"default": vec}
+            else:
+                vec_data = vec
+            point = PointStruct(id=memory_id, vector=vec_data, payload=updated)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             log_step(f"✏️ Updated memory: {memory_id[:8]}...", symbol="🔄")
             return True
@@ -535,7 +551,9 @@ class QdrantVectorStore:
             )
             if pts and hasattr(pts[0], "vector"):
                 v = pts[0].vector
-                return v if isinstance(v, list) else v.tolist()
+                if isinstance(v, dict):
+                    v = v.get("default")
+                return v if isinstance(v, list) else v.tolist() if v is not None else None
         except Exception:
             pass
         return None
@@ -557,7 +575,7 @@ class QdrantVectorStore:
             if not vec or len(vec) != self.dimension:
                 log_error(f"Sync upsert: invalid embedding len={len(vec)}, expected {self.dimension}. Using zero vector.")
                 vec = [0.0] * self.dimension
-            # Match add(): when collection has named vectors (e.g. default + text-bm25), send dict
+            # Match add(): handle named vs unnamed vectors correctly
             if self._has_sparse:
                 if text:
                     try:
@@ -568,6 +586,8 @@ class QdrantVectorStore:
                         vec_data = {"default": vec}
                 else:
                     vec_data = {"default": vec}
+            elif self._is_named:
+                vec_data = {"default": vec}
             else:
                 vec_data = vec
             merged = dict(payload)

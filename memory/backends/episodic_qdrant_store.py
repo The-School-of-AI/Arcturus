@@ -50,6 +50,16 @@ class EpisodicQdrantStore:
         api_key = get_qdrant_api_key()
         self.client = QdrantClient(url=url, api_key=api_key, timeout=10.0)
         self._ensure_collection()
+        self._is_named = self._check_is_named()
+
+    def _check_is_named(self) -> bool:
+        """Check if collection uses named vectors."""
+        try:
+            info = self.client.get_collection(self.collection_name)
+            v_config = getattr(info.config.params, "vectors_config", None)
+            return isinstance(v_config, dict)
+        except Exception:
+            return False
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
@@ -115,7 +125,8 @@ class EpisodicQdrantStore:
             "created_at": now,
             "updated_at": now,
         }
-        point = PointStruct(id=point_id, vector=vec, payload=payload)
+        vec_data = {"default": vec} if self._is_named else vec
+        point = PointStruct(id=point_id, vector=vec_data, payload=payload)
         self.client.upsert(collection_name=self.collection_name, points=[point])
         log_step(f"💾 Episodic saved: {session_id[:12]}...", symbol="🧠")
         return point_id
@@ -157,7 +168,8 @@ class EpisodicQdrantStore:
                 "created_at": now,
                 "updated_at": now,
             }
-            point = PointStruct(id=str(session_id), vector=vec, payload=payload)
+            vec_data = {"default": vec} if self._is_named else vec
+            point = PointStruct(id=str(session_id), vector=vec_data, payload=payload)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             return True
         except Exception as e:
@@ -193,12 +205,15 @@ class EpisodicQdrantStore:
         search_filter = Filter(must=conditions) if conditions else None
         vec = query_vector.tolist() if isinstance(query_vector, np.ndarray) else list(query_vector)
         try:
-            results = self.client.query_points(
+            kwargs = dict(
                 collection_name=self.collection_name,
                 query=vec,
                 limit=limit,
                 query_filter=search_filter,
             )
+            if self._is_named:
+                kwargs["using"] = "default"
+            results = self.client.query_points(**kwargs)
             out = []
             for r in (results.result if hasattr(results, "result") else results):
                 if hasattr(r, "id") and hasattr(r, "score") and hasattr(r, "payload"):
