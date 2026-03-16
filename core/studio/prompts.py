@@ -60,23 +60,44 @@ def _get_theme_recommendation_guidance() -> str:
     from core.studio.slides.themes import get_theme_catalog_for_prompt
     catalog = get_theme_catalog_for_prompt()
     return f"""
-THEME SELECTION (mandatory for slides):
-Choose the most appropriate visual theme based on the user's topic, tone, and audience.
-Analyze the user's prompt for style cues: "dark", "tech", "investor", "creative", "minimal",
-"medical", "legal", "startup", "nature", etc. Match these to the best theme below.
+VISUAL STYLE & THEME (mandatory for slides):
+Design a custom color palette and style that matches the user's topic, tone, and audience.
+Analyze the prompt for style cues: "dark", "tech", "investor", "creative", "minimal", etc.
 
-Available themes:
+Reference these existing themes for inspiration (pick the closest as recommended_theme_id):
 {catalog}
 
-Include your recommended theme ID in the "recommended_theme_id" field of the response JSON.
-If the user explicitly mentions a style preference (e.g., "dark theme", "minimal", "investor deck"),
-prioritize themes matching that preference. Otherwise, choose based on the topic domain."""
+Then CREATE your own custom color palette in the "custom_style" field:
+
+CRITICAL COLOR RULES:
+- Background MUST be very light (near white like #F5F5F5) or very dark (near black like #0D0D1A)
+- NEVER use mid-tone backgrounds (no #808080, #666666, etc.)
+- Text must have strong contrast against background (dark text on light bg, light text on dark bg)
+- Primary and accent colors should be from different hue families (not both blue)
+- Avoid neon-bright or fully saturated colors — use rich but tasteful tones
+- font_style: "modern" (clean sans-serif), "formal" (serif headings), "warm" (friendly serif), "bold" (impact sans-serif)
+- background_style: "gradient" for dynamic feel, "solid" for clean professional look"""
 
 
 def _get_theme_field_schema(artifact_type: ArtifactType) -> str:
-    """Return the recommended_theme_id field for the JSON schema if slides."""
+    """Return the custom_style field for the JSON schema if slides."""
     if artifact_type == ArtifactType.slides:
-        return '  "recommended_theme_id": "theme-id-from-catalog",\n'
+        return """  "recommended_theme_id": "closest-base-theme-id",
+  "custom_style": {
+    "name": "Your Theme Name",
+    "colors": {
+      "primary": "#hex",
+      "secondary": "#hex",
+      "accent": "#hex",
+      "background": "#hex",
+      "text": "#hex",
+      "text_light": "#hex",
+      "title_background": "#hex"
+    },
+    "font_style": "modern|formal|warm|bold",
+    "background_style": "solid|gradient"
+  },
+"""
     return ""
 
 
@@ -175,7 +196,8 @@ def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
       "elements": [
         {"id": "e1", "type": "title|subtitle|kicker|takeaway|body|bullet_list|image|chart|code|quote|stat_callout|table_data|tag_badge|callout_box|source_citation|progress_bar", "content": "..."}
       ],
-      "speaker_notes": "Notes for the presenter"
+      "speaker_notes": "Notes for the presenter",
+      "metadata": {"visual_style": {"bg_variant": "solid|gradient|accent_wash|dark_invert", "decoration": "none|corner_accent|top_bar|side_stripe", "card_style": "flat|elevated|glass|outlined"}}
     }
   ],
   "metadata": {"audience": "...", "tone": "..."}
@@ -191,7 +213,12 @@ def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
   * Use "two_column" when comparing or contrasting
   * Use "quote" for testimonials or key insights
   * Use "chart" when referencing data or metrics
-  * Use "image_full" for dramatic full-bleed visuals (provide image description in an "image" element)
+  * Use "image_text" for split layout with image and descriptive text
+  * Use "image_full" for dramatic full-bleed visuals
+  * For image elements, content MUST be a JSON object: {"url": "https://images.unsplash.com/...", "alt": "Description of the image"}
+  * Use real, publicly accessible image URLs from Unsplash (https://images.unsplash.com/photo-...), Pexels, or Wikimedia Commons
+  * Choose images that match the slide content and mood — prefer high-quality, landscape-oriented photos
+  * If you cannot find a suitable URL, use {"alt": "Description for AI generation"} without the url field
 
 For elements with type="chart", content MUST be a structured JSON object:
 {
@@ -234,7 +261,28 @@ SPEAKER NOTES REQUIREMENTS (mandatory for every slide):
 - Include a transition sentence or audience callout
 - Do NOT repeat bullet points or body text verbatim in notes
 - Title/closing slides may have 1-2 shorter sentences
-- Target 15-60 words per slide's speaker notes"""
+- Target 15-60 words per slide's speaker notes
+
+PER-SLIDE VISUAL STYLE (mandatory for every slide):
+Each slide MUST include a "metadata" field with visual styling tokens:
+  "metadata": {
+    "visual_style": {
+      "bg_variant": "solid|gradient|accent_wash|dark_invert",
+      "decoration": "none|corner_accent|top_bar|side_stripe",
+      "card_style": "flat|elevated|glass|outlined"
+    }
+  }
+
+Visual style rules:
+- bg_variant controls the slide background treatment. "solid" = plain, "gradient" = subtle gradient, "accent_wash" = tinted, "dark_invert" = uses dark title background
+- Title/section_divider slides: bg_variant="solid" or "gradient", decoration="none"
+- Stat slides: prefer bg_variant="accent_wash" or "dark_invert" for visual emphasis
+- Quote slides: prefer bg_variant="gradient" or "dark_invert" for drama
+- NO MORE than 2 consecutive slides with the same bg_variant — vary the backgrounds!
+- Use "dark_invert" sparingly (max 3 slides per deck) for high-impact moments
+- card_style applies to content cards in two_column, comparison, agenda slides
+- Vary decoration across slides — use a mix of "none", "corner_accent", "top_bar", "side_stripe"
+- Create a visual rhythm: alternate between simple and decorated slides"""
 
     elif artifact_type == ArtifactType.document:
         return """Generate a DocumentContentTree JSON with this exact schema:

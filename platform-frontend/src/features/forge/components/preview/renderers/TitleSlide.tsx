@@ -2,7 +2,7 @@ import type { SlideTheme } from './theme-utils';
 import { isDarkBackground } from './theme-utils';
 import type { Slide } from '../normalizers';
 import { findElement, normalizeTitleMeta, normalizeStats } from '../normalizers';
-import { StatCalloutElement } from './elements';
+import { StatCalloutElement, AnimatedElement } from './elements';
 
 interface Props {
   slide: Slide;
@@ -27,50 +27,60 @@ export function TitleSlide({ slide, theme, slideIndex, totalSlides, isThumb }: P
     <div className="flex flex-col items-center justify-center h-full text-center px-[8%]">
       {/* Badge */}
       {meta.badge && !isThumb && (
-        <div
-          className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase mb-3"
-          style={{ backgroundColor: theme.colors.accent, color: '#ffffff' }}
-        >
-          {meta.badge}
-        </div>
+        <AnimatedElement animation="fade" delay={0} isThumb={isThumb}>
+          <div
+            className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase mb-3"
+            style={{ backgroundColor: theme.colors.accent, color: '#ffffff' }}
+          >
+            {meta.badge}
+          </div>
+        </AnimatedElement>
       )}
 
       {/* Title — multi-line: line1 in primary, line2 in accent */}
-      {meta.titleLines.map((line, i) => (
-        <div
-          key={i}
-          className={isThumb ? 'text-[7px] font-bold leading-tight' : 'text-3xl font-bold leading-tight'}
-          style={{
-            color: i === 0 ? titleColor : theme.colors.accent,
-            fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
-          }}
-        >
-          {line}
-        </div>
-      ))}
+      <AnimatedElement animation="rise" delay={80} isThumb={isThumb}>
+        {meta.titleLines.map((line, i) => (
+          <div
+            key={i}
+            className={isThumb ? 'text-[7px] font-bold leading-tight' : 'text-3xl font-bold leading-tight'}
+            style={{
+              color: i === 0 ? titleColor : theme.colors.accent,
+              fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
+            }}
+          >
+            {line}
+          </div>
+        ))}
+      </AnimatedElement>
 
       {/* Subtitle */}
       {subtitleEl?.content && (
-        <div
-          className={isThumb ? 'text-[4px] mt-1' : 'text-base mt-4'}
-          style={{ color: subtitleColor }}
-        >
-          {subtitleEl.content}
-        </div>
+        <AnimatedElement animation="rise" delay={200} isThumb={isThumb}>
+          <div
+            className={isThumb ? 'text-[4px] mt-1' : 'text-base mt-4'}
+            style={{ color: subtitleColor }}
+          >
+            {subtitleEl.content}
+          </div>
+        </AnimatedElement>
       )}
 
       {/* Date / Category footer */}
       {!isThumb && (meta.date || meta.category) && (
-        <div className="mt-4 text-xs" style={{ color: subtitleColor }}>
-          {[meta.date, meta.category].filter(Boolean).join(' · ')}
-        </div>
+        <AnimatedElement animation="fade" delay={300} isThumb={isThumb}>
+          <div className="mt-4 text-xs" style={{ color: subtitleColor }}>
+            {[meta.date, meta.category].filter(Boolean).join(' · ')}
+          </div>
+        </AnimatedElement>
       )}
 
       {/* Closing stats footer */}
       {closingStats.length > 0 && (
-        <div className={isThumb ? 'mt-2' : 'mt-8'}>
-          <StatCalloutElement stats={closingStats} theme={theme} isThumb={isThumb} />
-        </div>
+        <AnimatedElement animation="count" delay={200} isThumb={isThumb}>
+          <div className={isThumb ? 'mt-2' : 'mt-8'}>
+            <StatCalloutElement stats={closingStats} theme={theme} isThumb={isThumb} />
+          </div>
+        </AnimatedElement>
       )}
     </div>
   );

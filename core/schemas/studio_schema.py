@@ -248,6 +248,7 @@ class Artifact(BaseModel):
     creation_prompt: Optional[str] = None
     content_tree: Optional[Dict[str, Any]] = None
     theme_id: Optional[str] = None
+    custom_theme: Optional[Dict[str, Any]] = None
     revision_head_id: Optional[str] = None
     outline: Optional[Outline] = None
     exports: List[ExportJobSummary] = Field(default_factory=list)

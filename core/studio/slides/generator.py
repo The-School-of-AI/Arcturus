@@ -341,3 +341,86 @@ def enforce_slide_count(
 
     slides = [opening] + body + [closing]
     return content_tree.model_copy(update={"slides": slides})
+
+
+# ── Per-slide visual style normalization ────────────────────────────────────
+
+_BG_VARIANTS = {"solid", "gradient", "accent_wash", "dark_invert"}
+_DECORATIONS = {"none", "corner_accent", "top_bar", "side_stripe"}
+_CARD_STYLES = {"flat", "elevated", "glass", "outlined"}
+
+# Default visual_style per slide type
+_SLIDE_TYPE_DEFAULTS: dict[str, dict[str, str]] = {
+    "title": {"bg_variant": "gradient", "decoration": "none", "card_style": "flat"},
+    "section_divider": {"bg_variant": "dark_invert", "decoration": "top_bar", "card_style": "flat"},
+    "content": {"bg_variant": "solid", "decoration": "none", "card_style": "flat"},
+    "two_column": {"bg_variant": "solid", "decoration": "side_stripe", "card_style": "elevated"},
+    "comparison": {"bg_variant": "solid", "decoration": "none", "card_style": "elevated"},
+    "chart": {"bg_variant": "solid", "decoration": "none", "card_style": "flat"},
+    "table": {"bg_variant": "solid", "decoration": "top_bar", "card_style": "flat"},
+    "quote": {"bg_variant": "accent_wash", "decoration": "none", "card_style": "flat"},
+    "timeline": {"bg_variant": "solid", "decoration": "side_stripe", "card_style": "flat"},
+    "image_text": {"bg_variant": "solid", "decoration": "none", "card_style": "flat"},
+    "team": {"bg_variant": "accent_wash", "decoration": "none", "card_style": "elevated"},
+    "agenda": {"bg_variant": "gradient", "decoration": "none", "card_style": "elevated"},
+    "code": {"bg_variant": "dark_invert", "decoration": "none", "card_style": "flat"},
+}
+
+
+def normalize_visual_styles(content_tree: "SlidesContentTree") -> "SlidesContentTree":
+    """Validate and normalise per-slide visual_style metadata.
+
+    - Clamp tokens to allowed enums
+    - Fill defaults for slides missing visual_style
+    - Enforce max 2 consecutive same bg_variant
+    - Enforce max 3 dark_invert per deck
+    """
+    slides = list(content_tree.slides)
+    if not slides:
+        return content_tree
+
+    # Phase 1: ensure every slide has valid visual_style
+    for slide in slides:
+        meta = dict(slide.metadata or {})
+        vs = meta.get("visual_style")
+        if not isinstance(vs, dict):
+            vs = {}
+
+        defaults = _SLIDE_TYPE_DEFAULTS.get(slide.slide_type, _SLIDE_TYPE_DEFAULTS["content"])
+        vs["bg_variant"] = vs.get("bg_variant", defaults["bg_variant"])
+        vs["decoration"] = vs.get("decoration", defaults["decoration"])
+        vs["card_style"] = vs.get("card_style", defaults["card_style"])
+
+        # Clamp to valid enums
+        if vs["bg_variant"] not in _BG_VARIANTS:
+            vs["bg_variant"] = defaults["bg_variant"]
+        if vs["decoration"] not in _DECORATIONS:
+            vs["decoration"] = defaults["decoration"]
+        if vs["card_style"] not in _CARD_STYLES:
+            vs["card_style"] = defaults["card_style"]
+
+        meta["visual_style"] = vs
+        slide.metadata = meta
+
+    # Phase 2: fix consecutive duplicates (max 2 same bg_variant in a row)
+    for i in range(2, len(slides)):
+        vs_prev2 = slides[i - 2].metadata["visual_style"]["bg_variant"]
+        vs_prev1 = slides[i - 1].metadata["visual_style"]["bg_variant"]
+        vs_curr = slides[i].metadata["visual_style"]["bg_variant"]
+        if vs_prev2 == vs_prev1 == vs_curr:
+            # Pick a different variant
+            alternatives = [v for v in ("solid", "gradient", "accent_wash") if v != vs_curr]
+            slides[i].metadata["visual_style"]["bg_variant"] = alternatives[i % len(alternatives)]
+
+    # Phase 3: enforce max 3 dark_invert per deck
+    dark_count = sum(1 for s in slides if s.metadata["visual_style"]["bg_variant"] == "dark_invert")
+    if dark_count > 3:
+        excess = dark_count - 3
+        for s in reversed(slides):
+            if excess <= 0:
+                break
+            if s.metadata["visual_style"]["bg_variant"] == "dark_invert" and s.slide_type not in ("title", "section_divider", "code"):
+                s.metadata["visual_style"]["bg_variant"] = "solid"
+                excess -= 1
+
+    return content_tree.model_copy(update={"slides": slides})

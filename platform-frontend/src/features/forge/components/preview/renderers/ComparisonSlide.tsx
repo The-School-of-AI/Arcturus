@@ -1,7 +1,8 @@
 import type { SlideTheme } from './SlideFrame';
 import type { Slide } from '../normalizers';
 import { findElement, findElements, normalizeComparisonColumn, normalizeCalloutBox } from '../normalizers';
-import { KickerElement, TakeawayElement } from './elements';
+import { KickerElement, TakeawayElement, AnimatedElement } from './elements';
+import { cardStyles } from './theme-utils';
 
 interface Props {
   slide: Slide;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function ComparisonSlide({ slide, theme, isThumb }: Props) {
+  const cs = cardStyles(slide.metadata?.visual_style?.card_style, theme, !!isThumb);
   const kickerEl = findElement(slide, 'kicker');
   const bodyEls = findElements(slide, 'body');
   const takeawayEl = findElement(slide, 'takeaway');
@@ -22,20 +24,24 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
 
   return (
     <div className={`flex flex-col h-full ${isThumb ? 'p-2' : 'p-[6%]'}`}>
-      {kickerEl?.content && (
-        <KickerElement content={kickerEl.content} theme={theme} isThumb={isThumb} />
-      )}
+      <AnimatedElement animation="fade" delay={0} isThumb={isThumb}>
+        {kickerEl?.content && (
+          <KickerElement content={kickerEl.content} theme={theme} isThumb={isThumb} />
+        )}
+      </AnimatedElement>
 
       {slide.title && (
-        <div
-          className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
-          style={{
-            color: theme.colors.primary,
-            fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
-          }}
-        >
-          {slide.title}
-        </div>
+        <AnimatedElement animation="rise" delay={80} isThumb={isThumb}>
+          <div
+            className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
+            style={{
+              color: theme.colors.primary,
+              fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
+            }}
+          >
+            {slide.title}
+          </div>
+        </AnimatedElement>
       )}
 
       <div className={`flex-1 grid grid-cols-2 ${isThumb ? 'gap-1' : 'gap-4'} min-h-0`}>
@@ -53,9 +59,9 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
             </div>
           )}
           <div
-            className={isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'}
+            className={`${isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'} ${cs.className}`}
             style={{
-              backgroundColor: theme.colors.primary + '08',
+              ...cs.inlineStyle,
               color: theme.colors.text,
             }}
           >
@@ -77,9 +83,9 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
             </div>
           )}
           <div
-            className={isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'}
+            className={`${isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'} ${cs.className}`}
             style={{
-              backgroundColor: theme.colors.secondary + '08',
+              ...cs.inlineStyle,
               color: theme.colors.text,
             }}
           >

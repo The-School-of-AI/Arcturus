@@ -1,6 +1,7 @@
 import type { SlideTheme } from './SlideFrame';
 import type { Slide } from '../normalizers';
 import { findElement } from '../normalizers';
+import { AnimatedElement } from './elements';
 
 interface Props {
   slide: Slide;
@@ -10,12 +11,37 @@ interface Props {
   availableImageIds?: ReadonlySet<string>;
 }
 
+/** Extract image URL and alt text from the image element content. */
+function parseImageContent(content: unknown): { url: string | null; alt: string } {
+  if (!content) return { url: null, alt: 'Image' };
+  if (typeof content === 'string') {
+    if (content.startsWith('http://') || content.startsWith('https://')) {
+      return { url: content, alt: 'Slide image' };
+    }
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === 'object') {
+        return { url: parsed.url || null, alt: parsed.alt || parsed.description || 'Image' };
+      }
+    } catch { /* not JSON */ }
+    return { url: null, alt: content };
+  }
+  if (typeof content === 'object' && content !== null) {
+    const obj = content as Record<string, unknown>;
+    return { url: (obj.url as string) || null, alt: (obj.alt as string) || (obj.description as string) || 'Image' };
+  }
+  return { url: null, alt: 'Image' };
+}
+
 export function ImageFullSlide({ slide, theme, isThumb, imageBaseUrl, availableImageIds }: Props) {
   const imageEl = findElement(slide, 'image');
   const bodyEl = findElement(slide, 'body');
 
-  const imageReady = !!(imageBaseUrl && availableImageIds?.has(slide.id));
-  const imageUrl = imageReady ? `${imageBaseUrl}/${slide.id}` : null;
+  const { url: externalUrl, alt } = parseImageContent(imageEl?.content);
+
+  const generatedReady = !!(imageBaseUrl && availableImageIds?.has(slide.id));
+  const generatedUrl = generatedReady ? `${imageBaseUrl}/${slide.id}` : null;
+  const imageUrl = externalUrl || generatedUrl;
 
   return (
     <div
@@ -29,8 +55,9 @@ export function ImageFullSlide({ slide, theme, isThumb, imageBaseUrl, availableI
       {imageUrl ? (
         <img
           src={imageUrl}
-          alt={typeof imageEl?.content === 'string' ? imageEl.content : 'Slide image'}
+          alt={alt}
           className="absolute inset-0 w-full h-full object-cover"
+          referrerPolicy="no-referrer"
         />
       ) : (
         <div className={`flex flex-col items-center gap-2 ${isThumb ? 'text-[4px]' : 'text-sm'}`}>
@@ -41,13 +68,9 @@ export function ImageFullSlide({ slide, theme, isThumb, imageBaseUrl, availableI
               <path d="m21 15-5-5L5 21" />
             </svg>
           )}
-          {imageEl?.content && typeof imageEl.content === 'string' ? (
-            <span className={isThumb ? 'line-clamp-1' : 'italic opacity-60 text-xs text-center px-6'}>
-              {imageEl.content}
-            </span>
-          ) : (
-            <span className="opacity-50">[Full Bleed Image]</span>
-          )}
+          <span className={isThumb ? 'line-clamp-1' : 'italic opacity-60 text-xs text-center px-6'}>
+            {alt}
+          </span>
         </div>
       )}
 
@@ -57,23 +80,25 @@ export function ImageFullSlide({ slide, theme, isThumb, imageBaseUrl, availableI
           className={`absolute bottom-0 left-0 right-0 ${isThumb ? 'p-1' : 'p-6'} z-10`}
           style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }}
         >
-          <div
-            className={isThumb ? 'text-[5px] font-bold' : 'text-xl font-bold'}
-            style={{
-              color: '#ffffff',
-              fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
-            }}
-          >
-            {slide.title}
-          </div>
-          {bodyEl?.content && (
+          <AnimatedElement animation="rise" delay={120} isThumb={isThumb}>
             <div
-              className={isThumb ? 'text-[3px] mt-0.5' : 'text-sm mt-2'}
-              style={{ color: '#dddddd' }}
+              className={isThumb ? 'text-[5px] font-bold' : 'text-xl font-bold'}
+              style={{
+                color: '#ffffff',
+                fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
+              }}
             >
-              {bodyEl.content}
+              {slide.title}
             </div>
-          )}
+            {bodyEl?.content && (
+              <div
+                className={isThumb ? 'text-[3px] mt-0.5' : 'text-sm mt-2'}
+                style={{ color: '#dddddd' }}
+              >
+                {bodyEl.content}
+              </div>
+            )}
+          </AnimatedElement>
         </div>
       )}
     </div>

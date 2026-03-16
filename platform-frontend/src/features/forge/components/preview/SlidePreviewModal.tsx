@@ -77,8 +77,12 @@ function SlidePreviewContent() {
   const theme: SlideTheme = useMemo(() => {
     const found = studioThemes.find((t: { id: string }) => t.id === selectedThemeId);
     if (found) return found as SlideTheme;
+    // Fall back to LLM-generated custom theme stored on artifact
+    if (activeArtifact?.custom_theme && typeof activeArtifact.custom_theme === 'object' && activeArtifact.custom_theme.colors) {
+      return activeArtifact.custom_theme as SlideTheme;
+    }
     return DEFAULT_THEME;
-  }, [studioThemes, selectedThemeId]);
+  }, [studioThemes, selectedThemeId, activeArtifact?.custom_theme]);
 
   // Image base URL for preview (will be undefined for non-slides)
   const imageBaseUrl = activeArtifact?.id

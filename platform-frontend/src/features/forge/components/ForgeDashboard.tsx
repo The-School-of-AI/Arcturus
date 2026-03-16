@@ -652,8 +652,12 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
             const found = studioThemes.find((t: any) => t.id === artifact.theme_id);
             if (found) return found;
         }
+        // Fall back to LLM-generated custom theme stored on artifact
+        if (artifact.custom_theme && typeof artifact.custom_theme === 'object' && artifact.custom_theme.colors) {
+            return artifact.custom_theme as SlideTheme;
+        }
         return DEFAULT_THEME;
-    }, [artifact.theme_id, studioThemes]);
+    }, [artifact.theme_id, artifact.custom_theme, studioThemes]);
 
     const slides: Slide[] = useMemo(() => {
         return artifact.content_tree?.slides ?? [];

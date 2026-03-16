@@ -1,7 +1,8 @@
 import type { SlideTheme } from './SlideFrame';
 import type { Slide } from '../normalizers';
 import { findElement } from '../normalizers';
-import { BodyElement } from './elements';
+import { BodyElement, AnimatedElement } from './elements';
+import { cardStyles } from './theme-utils';
 
 interface Props {
   slide: Slide;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function TeamSlide({ slide, theme, isThumb }: Props) {
+  const cs = cardStyles(slide.metadata?.visual_style?.card_style, theme, !!isThumb);
   const bulletEl = findElement(slide, 'bullet_list');
   const bodyEl = findElement(slide, 'body');
   const items = bulletEl?.content && Array.isArray(bulletEl.content) ? bulletEl.content : [];
@@ -19,15 +21,17 @@ export function TeamSlide({ slide, theme, isThumb }: Props) {
   return (
     <div className={`flex flex-col h-full ${isThumb ? 'p-2' : 'p-[6%]'}`}>
       {slide.title && (
-        <div
-          className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
-          style={{
-            color: theme.colors.primary,
-            fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
-          }}
-        >
-          {slide.title}
-        </div>
+        <AnimatedElement animation="rise" delay={80} isThumb={isThumb}>
+          <div
+            className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
+            style={{
+              color: theme.colors.primary,
+              fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
+            }}
+          >
+            {slide.title}
+          </div>
+        </AnimatedElement>
       )}
 
       {items.length === 0 && bodyEl?.content ? (
@@ -45,8 +49,8 @@ export function TeamSlide({ slide, theme, isThumb }: Props) {
             return (
               <div
                 key={i}
-                className={`flex flex-col items-center justify-center rounded-lg ${isThumb ? 'p-0.5' : 'p-3'}`}
-                style={{ backgroundColor: theme.colors.primary + '08' }}
+                className={`flex flex-col items-center justify-center rounded-lg ${isThumb ? 'p-0.5' : 'p-3'} ${cs.className}`}
+                style={cs.inlineStyle}
               >
                 {/* Avatar placeholder */}
                 <div

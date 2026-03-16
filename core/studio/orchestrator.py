@@ -82,20 +82,43 @@ class ForgeOrchestrator:
 
         # Slides-specific outline normalization
         recommended_theme_id = None
+        custom_theme_dict = None
         if artifact_type == ArtifactType.slides:
             from core.studio.slides.generator import normalize_slide_outline
             outline = normalize_slide_outline(outline, parameters, prompt)
 
-            # Extract LLM-recommended theme
+            # Extract LLM-recommended base theme
             raw_theme_id = parsed.get("recommended_theme_id")
             if raw_theme_id and isinstance(raw_theme_id, str):
                 from core.studio.slides.themes import get_theme_ids
                 valid_ids = set(get_theme_ids())
                 if raw_theme_id.strip() in valid_ids:
                     recommended_theme_id = raw_theme_id.strip()
-                    logger.info("LLM recommended theme: %s", recommended_theme_id)
-                else:
-                    logger.info("LLM recommended unknown theme '%s', ignoring", raw_theme_id)
+                    logger.info("LLM recommended base theme: %s", recommended_theme_id)
+
+            # Extract and create custom theme from LLM style spec
+            custom_style = parsed.get("custom_style")
+            if custom_style and isinstance(custom_style, dict):
+                try:
+                    from core.studio.slides.themes import create_custom_theme, register_custom_theme
+                    custom_theme = create_custom_theme(
+                        name=custom_style.get("name", "Custom Theme"),
+                        colors=custom_style.get("colors", {}),
+                        font_style=custom_style.get("font_style", "modern"),
+                        background_style=custom_style.get("background_style", "solid"),
+                        recommended_base_id=recommended_theme_id or "corporate-blue",
+                    )
+                    # Only use custom theme if it wasn't a fallback to base
+                    if custom_theme.id.startswith("custom-"):
+                        register_custom_theme(custom_theme)
+                        custom_theme_dict = custom_theme.model_dump(mode="json")
+                        recommended_theme_id = custom_theme.id
+                        logger.info("Created custom theme: %s (%s)", custom_theme.id, custom_theme.name)
+                    else:
+                        logger.info("Custom theme fell back to base: %s", custom_theme.id)
+                        recommended_theme_id = custom_theme.id
+                except Exception as e:
+                    logger.warning("Custom theme creation failed: %s", e)
 
         # Document-specific outline normalization
         if artifact_type == ArtifactType.document:
@@ -116,6 +139,7 @@ class ForgeOrchestrator:
             outline=outline,
             content_tree=None,
             theme_id=recommended_theme_id,
+            custom_theme=custom_theme_dict,
         )
 
         self.storage.save_artifact(artifact)
@@ -201,6 +225,10 @@ class ForgeOrchestrator:
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.generator import enforce_slide_count
             content_tree_model = enforce_slide_count(content_tree_model, target_count=target_count)
+
+            # Normalize per-slide visual styles
+            from core.studio.slides.generator import normalize_visual_styles
+            content_tree_model = normalize_visual_styles(content_tree_model)
 
             # Phase 3: notes quality repair pass
             from core.studio.slides.notes import repair_speaker_notes
@@ -339,6 +367,7 @@ class ForgeOrchestrator:
         theme = None
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.themes import get_theme
+            _ensure_custom_theme_registered(artifact)
             theme = get_theme(theme_id or artifact.theme_id)
 
         # Create export job
@@ -972,6 +1001,23 @@ class ForgeOrchestrator:
                 "restored_from": target_revision_id,
             },
         }
+
+
+def _ensure_custom_theme_registered(artifact: "Artifact") -> None:
+    """Re-register a custom theme from artifact data if not already in memory."""
+    if not artifact.custom_theme or not artifact.theme_id:
+        return
+    if not artifact.theme_id.startswith("custom-"):
+        return
+    from core.studio.slides.themes import get_theme_ids, register_custom_theme, SlideTheme
+    if artifact.theme_id in get_theme_ids():
+        return
+    try:
+        theme = SlideTheme(**artifact.custom_theme)
+        register_custom_theme(theme)
+        logger.info("Re-registered custom theme from artifact: %s", theme.id)
+    except Exception as e:
+        logger.warning("Failed to re-register custom theme: %s", e)
 
 
 def _parse_outline_item(data: dict) -> OutlineItem:

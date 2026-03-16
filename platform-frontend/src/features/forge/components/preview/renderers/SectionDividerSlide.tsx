@@ -2,6 +2,7 @@ import type { SlideTheme } from './theme-utils';
 import { isDarkBackground } from './theme-utils';
 import type { Slide } from '../normalizers';
 import { findElement } from '../normalizers';
+import { AnimatedElement } from './elements';
 
 interface Props {
   slide: Slide;
@@ -18,22 +19,26 @@ export function SectionDividerSlide({ slide, theme, isThumb }: Props) {
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-[10%]">
-      <div
-        className={isThumb ? 'text-[6px] font-bold' : 'text-2xl font-bold'}
-        style={{
-          color: titleColor,
-          fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
-        }}
-      >
-        {slide.title}
-      </div>
-      {subtitleEl?.content && (
+      <AnimatedElement animation="rise" delay={80} isThumb={isThumb}>
         <div
-          className={isThumb ? 'text-[3.5px] mt-0.5' : 'text-sm mt-3'}
-          style={{ color: subtitleColor }}
+          className={isThumb ? 'text-[6px] font-bold' : 'text-2xl font-bold'}
+          style={{
+            color: titleColor,
+            fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
+          }}
         >
-          {subtitleEl.content}
+          {slide.title}
         </div>
+      </AnimatedElement>
+      {subtitleEl?.content && (
+        <AnimatedElement animation="fade" delay={200} isThumb={isThumb}>
+          <div
+            className={isThumb ? 'text-[3.5px] mt-0.5' : 'text-sm mt-3'}
+            style={{ color: subtitleColor }}
+          >
+            {subtitleEl.content}
+          </div>
+        </AnimatedElement>
       )}
     </div>
   );

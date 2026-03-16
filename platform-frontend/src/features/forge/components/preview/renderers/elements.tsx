@@ -17,6 +17,36 @@ interface ElementProps {
   isThumb?: boolean;
 }
 
+// ── Animated Element Wrapper ────────────────────────────────────────────────
+
+type AnimationType = 'fade' | 'rise' | 'scale' | 'count';
+
+const ANIM_MAP: Record<AnimationType, string> = {
+  fade: 'animate-slide-el-fade',
+  rise: 'animate-slide-el-rise',
+  scale: 'animate-slide-el-scale',
+  count: 'animate-slide-el-count',
+};
+
+interface AnimatedElementProps {
+  children: React.ReactNode;
+  delay?: number;
+  animation?: AnimationType;
+  isThumb?: boolean;
+}
+
+export function AnimatedElement({ children, delay = 0, animation = 'fade', isThumb }: AnimatedElementProps) {
+  if (isThumb) return <>{children}</>;
+  return (
+    <div
+      className={ANIM_MAP[animation]}
+      style={{ animationDelay: `${delay}ms`, animationFillMode: 'both' }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ── Kicker ──────────────────────────────────────────────────────────────────
 
 export function KickerElement({ content, theme, isThumb }: ElementProps & { content: string }) {

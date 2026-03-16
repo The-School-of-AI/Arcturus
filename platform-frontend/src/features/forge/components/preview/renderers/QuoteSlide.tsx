@@ -1,7 +1,7 @@
 import type { SlideTheme } from './SlideFrame';
 import type { Slide } from '../normalizers';
 import { findElement, normalizeCalloutBox } from '../normalizers';
-import { QuoteElement } from './elements';
+import { QuoteElement, AnimatedElement } from './elements';
 
 interface Props {
   slide: Slide;
@@ -21,7 +21,9 @@ export function QuoteSlide({ slide, theme, isThumb }: Props) {
 
   return (
     <div className="flex items-center justify-center h-full">
-      <QuoteElement quote={quoteText} attribution={attribution} theme={theme} isThumb={isThumb} />
+      <AnimatedElement animation="scale" delay={100} isThumb={isThumb}>
+        <QuoteElement quote={quoteText} attribution={attribution} theme={theme} isThumb={isThumb} />
+      </AnimatedElement>
     </div>
   );
 }
