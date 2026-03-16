@@ -550,12 +550,26 @@ class QdrantVectorStore:
         """
         Phase 4 Sync: upsert memory with explicit id (for applying pulled changes).
         Skips KG ingest (caller handles separately if needed).
+        Uses same vector shape as add(): named "default" (and "text-bm25" when sparse) when collection has sparse vectors.
         """
         try:
             vec = embedding.tolist() if isinstance(embedding, np.ndarray) else list(embedding)
             if not vec or len(vec) != self.dimension:
                 log_error(f"Sync upsert: invalid embedding len={len(vec)}, expected {self.dimension}. Using zero vector.")
                 vec = [0.0] * self.dimension
+            # Match add(): when collection has named vectors (e.g. default + text-bm25), send dict
+            if self._has_sparse:
+                if text:
+                    try:
+                        from memory.sparse_embedding import embed_sparse_single
+                        idx, vals = embed_sparse_single(text)
+                        vec_data = {"default": vec, "text-bm25": SparseVector(indices=idx, values=vals)}
+                    except Exception:
+                        vec_data = {"default": vec}
+                else:
+                    vec_data = {"default": vec}
+            else:
+                vec_data = vec
             merged = dict(payload)
             merged["text"] = text
             if "version" not in merged:
@@ -568,7 +582,7 @@ class QdrantVectorStore:
             if self._is_tenant and current_user_id and "user_id" not in merged:
                 merged[self._tenant_keyword_field] = current_user_id
             merged = _sanitize_payload_for_qdrant(merged)
-            point = PointStruct(id=memory_id, vector=vec, payload=merged)
+            point = PointStruct(id=memory_id, vector=vec_data, payload=merged)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             return True
         except Exception as e:
