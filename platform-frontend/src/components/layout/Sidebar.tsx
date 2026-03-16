@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
@@ -27,12 +28,13 @@ import { GraphPanel } from '@/components/sidebar/GraphPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
 import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
 
-const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
+const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
     icon: any,
     label: string,
     tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm',
     active: boolean,
-    onClick: () => void
+    onClick: () => void,
+    tooltip?: string
 }) => {
     const clearSelection = useAppStore(state => state.clearSelection);
     const sidebarTab = useAppStore(state => state.sidebarTab);
@@ -71,7 +73,7 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
         }
     };
 
-    return (
+    const btn = (
         <button
             onClick={handleIconClick}
             className={cn(
@@ -80,7 +82,6 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
                     ? "text-primary glass border-primary/20 shadow-lg z-10"
                     : "text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 hover:bg-white/5"
             )}
-            title={label}
         >
             <Icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "group-hover:text-foreground")} />
             <span className={cn(
@@ -90,6 +91,15 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
                 {label}
             </span>
         </button>
+    );
+
+    if (!tooltip) return btn;
+
+    return (
+        <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>{btn}</TooltipTrigger>
+            <TooltipContent side="right" className="max-w-[220px]">{tooltip}</TooltipContent>
+        </Tooltip>
     );
 };
 
@@ -166,35 +176,35 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
             <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools — scrollable so Echo + Settings always stay pinned at bottom */}
                 <div className="flex-1 w-full px-2 space-y-2 overflow-y-auto min-h-0 no-scrollbar">
-                    <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
-                    <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} />
-                    <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} />
-                    <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} />
-                    <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
-                    <NavIcon icon={Network} label="Graph" tab="graph" active={sidebarTab === 'graph'} onClick={() => setSidebarTab('graph')} />
-                    <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
-                    <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} />
+                    <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} tooltip="Start and manage agent task executions. View run history, execution graphs, and token usage." />
+                    <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} tooltip="Knowledge base manager. Upload, index, and search documents (PDFs, code, text) for agent retrieval." />
+                    <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} tooltip="Markdown note-taking with folder hierarchy, full-text search, and AI-powered analysis." />
+                    <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} tooltip="Model Context Protocol server manager. Add external tool servers to extend agent capabilities." />
+                    <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} tooltip="Persistent memory and user profiling. Stores facts and preferences to personalize agent behavior." />
+                    <NavIcon icon={Network} label="Graph" tab="graph" active={sidebarTab === 'graph'} onClick={() => setSidebarTab('graph')} tooltip="Neo4j knowledge graph explorer. Visualize entities and relationships extracted from your memories." />
+                    {/* Explorer hidden — not needed for current deployment */}
+                    <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} tooltip="Real-time interactive surface. Agents render widgets or HTML/JS via WebSocket for dynamic UIs." />
                     {flags.multi_agent !== false && (
-                        <NavIcon icon={Network} label="Swarm" tab="swarm" active={sidebarTab === 'swarm'} onClick={() => setSidebarTab('swarm')} />
+                        <NavIcon icon={Network} label="Swarm" tab="swarm" active={sidebarTab === 'swarm'} onClick={() => setSidebarTab('swarm')} tooltip="Multi-agent orchestration. Decompose complex tasks across specialized agents running in parallel." />
                     )}
 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
-                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" active={sidebarTab === 'apps'} onClick={() => setSidebarTab('apps')} />
-                    <NavIcon icon={Code2} label="IDE" tab="ide" active={sidebarTab === 'ide'} onClick={() => setSidebarTab('ide')} />
-                    <NavIcon icon={CalendarClock} label="Scheduler" tab="scheduler" active={sidebarTab === 'scheduler'} onClick={() => setSidebarTab('scheduler')} />
-                    <NavIcon icon={Zap} label="Skills" tab="skills" active={sidebarTab === 'skills'} onClick={() => setSidebarTab('skills')} />
-                    <NavIcon icon={Wand2} label="Forge" tab="studio" active={sidebarTab === 'studio'} onClick={() => setSidebarTab('studio')} />
-                    <NavIcon icon={Terminal} label="Console" tab="console" active={sidebarTab === 'console'} onClick={() => setSidebarTab('console')} />
-                    <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
-                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
-                    <NavIcon icon={Shield} label="Admin" tab="admin" active={sidebarTab === 'admin'} onClick={() => setSidebarTab('admin')} />
+                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" active={sidebarTab === 'apps'} onClick={() => setSidebarTab('apps')} tooltip="Dashboard builder with 60+ widget types. Drag-and-drop charts, tables, metrics, and forms." />
+                    <NavIcon icon={Code2} label="IDE" tab="ide" active={sidebarTab === 'ide'} onClick={() => setSidebarTab('ide')} tooltip="Full code editor with Monaco, terminal, git, test runner, and AI coding assistant." />
+                    <NavIcon icon={CalendarClock} label="Scheduler" tab="scheduler" active={sidebarTab === 'scheduler'} onClick={() => setSidebarTab('scheduler')} tooltip="Cron job manager. Automate recurring agent tasks with simple or advanced cron expressions." />
+                    <NavIcon icon={Zap} label="Skills" tab="skills" active={sidebarTab === 'skills'} onClick={() => setSidebarTab('skills')} tooltip="Agent plugin system. Browse, install, and assign reusable skills from the community store." />
+                    <NavIcon icon={Wand2} label="Forge" tab="studio" active={sidebarTab === 'studio'} onClick={() => setSidebarTab('studio')} tooltip="AI document studio. Generate slides, documents, and spreadsheets from natural language prompts." />
+                    <NavIcon icon={Terminal} label="Console" tab="console" active={sidebarTab === 'console'} onClick={() => setSidebarTab('console')} tooltip="Real-time system event log. Monitor tool calls, agent steps, and errors in a terminal-style view." />
+                    <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} tooltip="RSS feed reader and web browser. Aggregate feeds, search the web, bookmark and analyze articles." />
+                    {/* Learn hidden — coming soon placeholder */}
+                    <NavIcon icon={Shield} label="Admin" tab="admin" active={sidebarTab === 'admin'} onClick={() => setSidebarTab('admin')} tooltip="Watchtower ops dashboard. Monitor health, costs, errors, traces, feature flags, and diagnostics." />
                 </div>
 
                 {/* Bottom Tools */}
                 <div className="w-full px-2 space-y-2">
-                    <NavIcon icon={Mic} label="Echo" tab="echo" active={sidebarTab === 'echo'} onClick={() => setSidebarTab('echo')} />
-                    <NavIcon icon={Settings} label="Settings" tab="settings" active={sidebarTab === 'settings'} onClick={() => setSidebarTab('settings')} />
+                    <NavIcon icon={Mic} label="Echo" tab="echo" active={sidebarTab === 'echo'} onClick={() => setSidebarTab('echo')} tooltip="Voice assistant. Say 'Hey Arcturus' for hands-free interaction with cloud or fully-local privacy modes." />
+                    <NavIcon icon={Settings} label="Settings" tab="settings" active={sidebarTab === 'settings'} onClick={() => setSidebarTab('settings')} tooltip="System configuration. Models, RAG pipeline, agent behavior, API keys, and advanced options." />
                 </div>
             </div>
 

@@ -165,7 +165,7 @@ def _get_health_repo():
 
     watchtower = settings.get("watchtower", {})
     uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-    client = MongoClient(uri)
+    client = MongoClient(uri, serverSelectionTimeoutMS=3000)
     return HealthRepository(client["watchtower"]["health_checks"])
 
 
@@ -580,7 +580,7 @@ def _get_data_manager():
     try:
         watchtower = settings.get("watchtower", {})
         uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-        client = MongoClient(uri)
+        client = MongoClient(uri, serverSelectionTimeoutMS=3000)
         audit_coll = client["watchtower"]["audit_log"]
     except Exception:
         audit_coll = None
@@ -623,7 +623,7 @@ async def delete_all_watchtower_data():
 
     watchtower = settings.get("watchtower", {})
     uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-    client = MongoClient(uri)
+    client = MongoClient(uri, serverSelectionTimeoutMS=3000)
     db = client["watchtower"]
 
     summary = {

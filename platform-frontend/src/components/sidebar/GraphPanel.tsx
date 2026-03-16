@@ -44,7 +44,7 @@ export const GraphPanel: React.FC = () => {
             <div className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 border border-border/50">
                 <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    Requires Neo4j and Mnemo. Empty graph if no entities extracted yet.
+                    Uses NetworkX (local) or Neo4j. Click &quot;Populate Graph&quot; to extract entities from your memories.
                 </p>
             </div>
         </div>

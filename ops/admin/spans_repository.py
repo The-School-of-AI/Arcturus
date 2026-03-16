@@ -23,7 +23,7 @@ def get_spans_collection() -> Optional[Collection]:
 
         watchtower = load_settings().get("watchtower", {})
         uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-        client = MongoClient(uri)
+        client = MongoClient(uri, serverSelectionTimeoutMS=3000)
         return client["watchtower"]["spans"]
     except Exception:
         return None

@@ -19,7 +19,7 @@ class MongoDBSpanExporter(SpanExporter):
     """
 
     def __init__(self, mongodb_uri: str, database: str = "watchtower", collection: str = "spans"):
-        self.client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+        self.client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=3000)
         self.collection = self.client[database][collection]
         try:
             self._ensure_indexes()

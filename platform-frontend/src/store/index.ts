@@ -119,8 +119,8 @@ interface RagViewerSlice {
     clearSelectedFileContexts: () => void;
     selectedMcpServer: string | null;
     setSelectedMcpServer: (server: string | null) => void;
-    settingsActiveTab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
-    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced') => void;
+    settingsActiveTab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'keys' | 'advanced' | 'about';
+    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'keys' | 'advanced' | 'about') => void;
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;

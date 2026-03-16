@@ -3,7 +3,7 @@ import { DataSet } from 'vis-data';
 import { Network } from 'vis-network';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import { Network as NetworkIcon, RefreshCw, ZoomIn, ZoomOut, Loader2, AlertCircle } from 'lucide-react';
+import { Network as NetworkIcon, RefreshCw, ZoomIn, ZoomOut, Loader2, AlertCircle, DatabaseZap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -84,6 +84,9 @@ export const KnowledgeGraphExplorer: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo | null>(null);
+    const [migrating, setMigrating] = useState(false);
+    const [migrateResult, setMigrateResult] = useState<string | null>(null);
+    const [isEmpty, setIsEmpty] = useState(false);
     const spaces = useAppStore((s) => s.spaces);
     const currentSpaceId = useAppStore((s) => s.currentSpaceId);
     const setCurrentSpaceId = useAppStore((s) => s.setCurrentSpaceId);
@@ -115,6 +118,10 @@ export const KnowledgeGraphExplorer: React.FC = () => {
                 LIMIT
             );
             if (!containerRef.current) return;
+
+            // Check if graph only has the "You" user node (empty)
+            const entityNodes = nodes.filter(n => (n.nodeKind ?? 'entity') !== 'user');
+            setIsEmpty(entityNodes.length === 0);
 
             const visNodes = nodes.map((n) => {
                 const k = nodeKind(n);
@@ -241,6 +248,25 @@ export const KnowledgeGraphExplorer: React.FC = () => {
     };
     const handleFit = () => networkRef.current?.fit();
 
+    const handleMigrate = async () => {
+        setMigrating(true);
+        setMigrateResult(null);
+        try {
+            const result = await api.migrateGraphMemories();
+            if (result.status === 'ok') {
+                setMigrateResult(`Migrated ${result.migrated} of ${result.total} memories (${result.skipped} skipped, ${result.errors} errors)`);
+                // Refresh graph after migration
+                setTimeout(() => fetchAndRender(), 500);
+            } else {
+                setMigrateResult(result.message || 'Migration failed');
+            }
+        } catch (err: unknown) {
+            setMigrateResult(err instanceof Error ? err.message : 'Migration failed');
+        } finally {
+            setMigrating(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-background">
             {/* Toolbar */}
@@ -292,6 +318,26 @@ export const KnowledgeGraphExplorer: React.FC = () => {
                         <Button variant="outline" size="sm" onClick={fetchAndRender}>
                             <RefreshCw className="w-4 h-4 mr-2" /> Retry
                         </Button>
+                    </div>
+                )}
+                {isEmpty && !loading && !error && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center">
+                        <DatabaseZap className="w-12 h-12 text-muted-foreground mb-3" />
+                        <p className="text-sm text-muted-foreground mb-1">No entities in the graph yet.</p>
+                        <p className="text-xs text-muted-foreground mb-4">Populate from your existing RemMe memories.</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleMigrate}
+                            disabled={migrating}
+                            className="gap-2"
+                        >
+                            {migrating ? <Loader2 className="w-4 h-4 animate-spin" /> : <DatabaseZap className="w-4 h-4" />}
+                            {migrating ? 'Extracting entities...' : 'Populate Graph from Memories'}
+                        </Button>
+                        {migrateResult && (
+                            <p className="text-xs text-muted-foreground mt-3">{migrateResult}</p>
+                        )}
                     </div>
                 )}
                 <div

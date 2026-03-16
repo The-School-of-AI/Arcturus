@@ -110,6 +110,12 @@ export const api = {
         return res.data;
     },
 
+    /** Migrate FAISS RemMe memories into the knowledge graph (entity extraction + ingestion). */
+    migrateGraphMemories: async (): Promise<{ status: string; migrated: number; skipped: number; errors: number; total: number; message?: string }> => {
+        const res = await axios.post(`${API_BASE}/graph/migrate`);
+        return res.data;
+    },
+
     /** P11 §11.2: Knowledge graph explorer — fetch subgraph (entities + relationships) for visualization. */
     getGraphExplore: async (space_id?: string | null, limit?: number): Promise<{ nodes: { id: string; label: string; type: string; nodeKind?: 'entity' | 'user' | 'memory' }[]; edges: { source: string; target: string; type: string }[] }> => {
         const params: Record<string, string | number> = {};

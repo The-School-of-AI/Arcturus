@@ -194,7 +194,7 @@ async def lifespan(app: FastAPI):
             from ops.health.alerts import AlertEvaluator
 
             mongo_uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-            health_mongo_client = MongoClient(mongo_uri)
+            health_mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000)
             health_coll = health_mongo_client["watchtower"]["health_checks"]
             health_repo = HealthRepository(health_coll)
             alert_evaluator = AlertEvaluator.from_config(watchtower.get("alert_rules", []))

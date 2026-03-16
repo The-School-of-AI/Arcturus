@@ -1,9 +1,9 @@
 import React from 'react';
-import { Cpu, FileText, Brain, Terminal, Wrench, Settings, ChevronRight, Layout } from 'lucide-react';
+import { Cpu, FileText, Brain, Terminal, Wrench, Settings, ChevronRight, Layout, KeyRound, Info } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
-type SettingsTabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
+type SettingsTabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'keys' | 'advanced' | 'about';
 
 const SETTINGS_TABS: { id: SettingsTabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini models' },
@@ -11,7 +11,9 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string; icon: typeof Cpu; descr
     { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution & Gemini' },
     { id: 'ide', label: 'IDE', icon: Layout, description: 'IDE, Test, & Debugging' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Agent prompts' },
+    { id: 'keys', label: 'API Keys', icon: KeyRound, description: 'Tokens & secrets' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs & restart' },
+    { id: 'about', label: 'About', icon: Info, description: 'Features & reference' },
 ];
 
 export const SettingsPanel: React.FC = () => {

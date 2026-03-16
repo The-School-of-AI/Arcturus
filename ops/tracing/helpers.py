@@ -19,7 +19,7 @@ def get_trace_id_for_run(session_id: str) -> Tuple[Optional[str], Optional[str]]
         from config.settings_loader import load_settings
         watchtower = load_settings().get("watchtower", {})
         uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-        client = MongoClient(uri)
+        client = MongoClient(uri, serverSelectionTimeoutMS=3000)
         coll = client["watchtower"]["spans"]
         doc = coll.find_one(
             {"$or": [

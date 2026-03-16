@@ -2146,9 +2146,31 @@ class KnowledgeGraph:
 _kg: Optional[KnowledgeGraph] = None
 
 
-def get_knowledge_graph() -> Optional[KnowledgeGraph]:
-    """Get or create KnowledgeGraph singleton. Returns None if Neo4j disabled."""
+def get_knowledge_graph():
+    """Get or create KnowledgeGraph singleton.
+
+    Tries Neo4j first.  When Neo4j is unavailable (not installed, wrong
+    password, service down) falls back to a pure-Python NetworkX backend
+    that persists to ``data/knowledge_graph_nx.json``.  Returns ``None``
+    only when ``NEO4J_ENABLED`` is explicitly false.
+    """
     global _kg
-    if _kg is None:
-        _kg = KnowledgeGraph()
-    return _kg if _kg.enabled else None
+    if _kg is not None:
+        return _kg if _kg.enabled else _kg  # already resolved
+
+    # Attempt Neo4j
+    _kg = KnowledgeGraph()
+    if _kg.enabled:
+        return _kg
+
+    # Fallback: NetworkX backend (if Neo4j was requested but unavailable)
+    if _is_neo4j_enabled():
+        try:
+            from memory.knowledge_graph_nx import NetworkXKnowledgeGraph
+            _kg = NetworkXKnowledgeGraph()  # type: ignore[assignment]
+            log_step("KnowledgeGraph", "Using NetworkX fallback (Neo4j unreachable)")
+            return _kg
+        except Exception as exc:
+            log_error("KnowledgeGraph", f"NetworkX fallback failed: {exc}")
+
+    return None
