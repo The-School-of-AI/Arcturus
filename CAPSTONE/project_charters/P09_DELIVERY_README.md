@@ -31,6 +31,11 @@
 - **Admin dashboard** (`marketplace/admin.py`) — facade over all management systems, formatted CLI output
 - **CLI: 14 commands** — `skill create/test/publish/doc/rollback/pin/unpin/upgrade` + `admin status/info/queue/flag/review/approve/suspend/abuse-report/reset-abuse`
 
+### Phase 5: Billing & Frontend (Bonus - Day 21)
+- **Billing engine** (`marketplace/billing.py`) — Stripe integration stub, pricing tiers, purchase history, 70/30 revenue split
+- **Extended API router** (`routers/marketplace.py`) — version management, moderation, abuse, and billing endpoints
+- **Marketplace frontend** (`platform-frontend/src/features/marketplace/`) — dedicated UI for browsing, installing, moderating, and purchasing skills
+
 ## 2. Architecture Changes
 
 ```
@@ -48,6 +53,7 @@ marketplace/
 ├── moderation.py        ← flag/review/approve/suspend (Day 17)
 ├── abuse.py             ← rate limit/quota/circuit breaker (Day 18)
 ├── admin.py             ← admin facade + formatters (Day 19)
+├── billing.py           ← pricing and purchases (Day 21)
 └── sdk/
     ├── cli.py           ← CLI entry point (Days 11, 14, 15, 16, 19)
     ├── test_harness.py  ← local test runner (Day 12)
@@ -150,9 +156,7 @@ pytest tests/acceptance/p09_bazaar/ \
 
 ## 8. Known Gaps
 
-- **No persistent database** — all state files (ledger, moderation, abuse log) are JSON on disk; not suitable for multi-process concurrent access
-- **No web UI** — all admin operations are CLI-only
-- **No Stripe billing integration** — charter mentions monetization (§9.4) but billing was descoped for this sprint
+- **No persistent database** — all state files (ledger, moderation, abuse log, billing) are JSON on disk; not suitable for multi-process concurrent access
 - **No user authentication** — moderator identity is passed as a string parameter, not verified
 - **SDK publish uploads locally** — no real remote registry upload; `_step_upload` is a stub
 
