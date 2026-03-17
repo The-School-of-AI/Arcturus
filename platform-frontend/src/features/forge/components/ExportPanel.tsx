@@ -509,6 +509,10 @@ export function ExportPanel({ artifact }: { artifact: any }) {
     // Show for slides, documents, or sheets with content_tree
     if (!['slides', 'document', 'sheet'].includes(artifact.type) || !artifact.content_tree) return null;
 
+    const handlePdfExport = () => {
+        startExport(artifact.id, 'pdf');
+    };
+
     const handleThemeSelected = (themeId: string, strictLayout?: boolean, generateImages?: boolean) => {
         startExport(artifact.id, 'pptx', themeId, strictLayout, generateImages);
     };
@@ -535,33 +539,45 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                     <FileDown className="w-4 h-4" />
                     Export
                 </h3>
-                <button
-                    onClick={() => isSheet ? setSheetFormatPickerOpen(true) : isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
-                    disabled={isExporting}
-                    className="h-7 px-3 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                >
-                    {isExporting ? (
-                        <>
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Exporting...
-                        </>
-                    ) : isSheet ? (
-                        <>
-                            <FileDown className="w-3 h-3" />
-                            Export Sheet
-                        </>
-                    ) : isDocument ? (
-                        <>
-                            <FileDown className="w-3 h-3" />
-                            Export Doc
-                        </>
-                    ) : (
-                        <>
-                            <Palette className="w-3 h-3" />
-                            Export PPTX
-                        </>
+                <div className="flex items-center gap-1.5">
+                    {isSlides && (
+                        <button
+                            onClick={handlePdfExport}
+                            disabled={isExporting}
+                            className="h-7 px-3 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-300 hover:bg-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                            {isExporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <File className="w-3 h-3" />}
+                            Export PDF
+                        </button>
                     )}
-                </button>
+                    <button
+                        onClick={() => isSheet ? setSheetFormatPickerOpen(true) : isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
+                        disabled={isExporting}
+                        className="h-7 px-3 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                        {isExporting ? (
+                            <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Exporting...
+                            </>
+                        ) : isSheet ? (
+                            <>
+                                <FileDown className="w-3 h-3" />
+                                Export Sheet
+                            </>
+                        ) : isDocument ? (
+                            <>
+                                <FileDown className="w-3 h-3" />
+                                Export Doc
+                            </>
+                        ) : (
+                            <>
+                                <Palette className="w-3 h-3" />
+                                Export PPTX
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Export jobs list */}

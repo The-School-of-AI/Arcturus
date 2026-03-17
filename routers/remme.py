@@ -239,7 +239,8 @@ async def background_smart_scan():
 async def get_memories(space_id: str | None = Query(None, description="Filter memories by space; omit for all")):
     """Get all stored memories with source existence check. Phase 4: optional space_id filter."""
     try:
-        filter_meta = {"space_id": space_id} if space_id else None
+        # __global__ or None means "show all memories" (no space filter)
+        filter_meta = {"space_id": space_id} if space_id and space_id != "__global__" else None
         memories = remme_store.get_all(filter_metadata=filter_meta)
         summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
         

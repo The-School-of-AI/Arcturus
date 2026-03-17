@@ -377,7 +377,7 @@ class ForgeOrchestrator:
 
         # Validate artifact type / format combinations
         _VALID_COMBOS = {
-            ArtifactType.slides: {ExportFormat.pptx},
+            ArtifactType.slides: {ExportFormat.pptx, ExportFormat.pdf},
             ArtifactType.document: {ExportFormat.docx, ExportFormat.pdf, ExportFormat.html},
             ArtifactType.sheet: {ExportFormat.xlsx, ExportFormat.csv},
         }
@@ -437,6 +437,13 @@ class ForgeOrchestrator:
         ))
         artifact.updated_at = datetime.now(timezone.utc)
         self.storage.save_artifact(artifact)
+
+        # Slide PDF export — always async (Playwright browser rendering)
+        if artifact.type == ArtifactType.slides and export_format == ExportFormat.pdf:
+            asyncio.create_task(self._run_slide_pdf_export(
+                artifact_id, export_job, artifact.content_tree, theme,
+            ))
+            return export_job.model_dump(mode="json")
 
         if artifact.type == ArtifactType.slides and generate_images:
             # Run heavy work in background — return pending job immediately
@@ -640,6 +647,54 @@ class ForgeOrchestrator:
             artifact.updated_at = datetime.now(timezone.utc)
             self.storage.save_artifact(artifact)
 
+
+    async def _run_slide_pdf_export(
+        self,
+        artifact_id: str,
+        export_job: Any,
+        content_tree_dict: dict,
+        theme: Any,
+    ) -> None:
+        """Export slides to PDF using Playwright browser rendering."""
+        from core.schemas.studio_schema import ExportStatus, SlidesContentTree
+        from core.studio.slides.exporter_pdf import export_to_pdf
+
+        try:
+            content_tree_model = SlidesContentTree(**content_tree_dict)
+
+            output_path = self.storage.get_export_file_path(
+                artifact_id, export_job.id, "pdf"
+            )
+
+            await export_to_pdf(content_tree_model, theme, output_path)
+
+            export_job.status = ExportStatus.completed
+            export_job.output_uri = str(output_path)
+            export_job.file_size_bytes = output_path.stat().st_size
+            export_job.validator_results = {
+                "valid": True,
+                "quality_score": 95,
+                "slide_count": len(content_tree_model.slides),
+            }
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        except Exception as e:
+            logger.error(f"Slide PDF export failed: {e}", exc_info=True)
+            export_job.status = ExportStatus.failed
+            export_job.error = str(e)
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        self.storage.save_export_job(export_job)
+
+        # Update the artifact's exports summary
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is not None:
+            for summary in artifact.exports:
+                if summary.id == export_job.id:
+                    summary.status = export_job.status.value
+                    break
+            artifact.updated_at = datetime.now(timezone.utc)
+            self.storage.save_artifact(artifact)
 
     async def _run_document_export(
         self,

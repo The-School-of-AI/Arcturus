@@ -425,13 +425,13 @@ function OutlineItemWithSlide({
             {/* Inline slide preview — split layout: slide left, editor right */}
             {(() => {
                 const editorOpen = (htmlEditOpen || textEditOpen || aiEditOpen) && !!slide;
+                const previewW = editorOpen && containerWidth > 0 ? Math.floor(containerWidth * 0.5) : containerWidth;
+                const previewScale = containerWidth > 0 ? previewW / SLIDE_W : 1;
+                const previewH = Math.round(SLIDE_H * previewScale);
                 return (
                     <div ref={slideContainerRef} className={cn("mt-2 mb-1 w-full", editorOpen && "flex gap-2")}>
                         {/* Left: slide preview */}
                         {slide && containerWidth > 0 && (() => {
-                            const previewW = editorOpen ? Math.floor(containerWidth * 0.5) : containerWidth;
-                            const previewScale = previewW / SLIDE_W;
-                            const previewH = Math.round(SLIDE_H * previewScale);
                             return (
                                 <div
                                     className={editorOpen ? "w-1/2 shrink-0" : "w-full"}
@@ -465,37 +465,39 @@ function OutlineItemWithSlide({
                                             />
                                         </div>
                                         {/* Code2 button — bottom right of slide preview */}
-                                        {slide.html && (
-                                            <button
-                                                onClick={() => {
-                                                    const opening = !htmlEditOpen && !textEditOpen && !aiEditOpen;
-                                                    if (opening) {
-                                                        setHtmlEditOpen(true); setTextEditOpen(false); setAiEditOpen(false); setActiveTab('html');
-                                                    } else {
-                                                        setHtmlEditOpen(false); setTextEditOpen(false); setAiEditOpen(false);
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    "absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm border font-mono text-[10px] font-semibold transition-all duration-150 shadow-lg",
-                                                    editorOpen
-                                                        ? "bg-orange-500 border-orange-400 text-white"
-                                                        : "bg-black/70 border-white/20 text-white/70 hover:text-orange-400 hover:border-orange-400/50 hover:bg-black/80"
-                                                )}
-                                                style={{ zIndex: 10, pointerEvents: 'auto' }}
-                                                title="Edit slide HTML"
-                                            >
-                                                <Code2 className="w-3.5 h-3.5" />
-                                                <span>&lt;/&gt;</span>
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => {
+                                                const opening = !htmlEditOpen && !textEditOpen && !aiEditOpen;
+                                                if (opening) {
+                                                    const defaultTab = slide.html ? 'html' : 'text';
+                                                    setHtmlEditOpen(true); setTextEditOpen(false); setAiEditOpen(false); setActiveTab(defaultTab);
+                                                } else {
+                                                    setHtmlEditOpen(false); setTextEditOpen(false); setAiEditOpen(false);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm border font-mono text-[10px] font-semibold transition-all duration-150 shadow-lg",
+                                                editorOpen
+                                                    ? "bg-orange-500 border-orange-400 text-white"
+                                                    : "bg-black/70 border-white/20 text-white/70 hover:text-orange-400 hover:border-orange-400/50 hover:bg-black/80"
+                                            )}
+                                            style={{ zIndex: 10, pointerEvents: 'auto' }}
+                                            title={slide.html ? "Edit slide" : "Edit slide"}
+                                        >
+                                            {slide.html ? (
+                                                <><Code2 className="w-3.5 h-3.5" /><span>&lt;/&gt;</span></>
+                                            ) : (
+                                                <><Pencil className="w-3 h-3" /><span>Edit</span></>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             );
                         })()}
 
-                        {/* Right: 3-tab editor panel */}
+                        {/* Right: 3-tab editor panel — matches slide height */}
                         {editorOpen && slide && (
-                            <div className="w-1/2 rounded-lg border border-border/30 bg-muted/10 overflow-hidden flex flex-col">
+                            <div className="w-1/2 rounded-lg border border-border/30 bg-muted/10 overflow-hidden flex flex-col" style={{ height: previewH }}>
                                 {/* Tab bar */}
                                 <div className="flex border-b border-border/20 shrink-0">
                                     {slide.html && (
@@ -564,50 +566,85 @@ function OutlineItemWithSlide({
 
                                 {/* Tab content — scrollable */}
                                 <div className="flex-1 overflow-auto min-h-0">
-                                    {/* HTML tab — syntax highlighted overlay */}
-                                    {activeTab === 'html' && slide.html && (
-                                        <div className="h-full flex flex-col p-2">
-                                            <div className="relative flex-1 min-h-[120px] rounded-md overflow-hidden" style={{ background: '#1e1e2e', border: '1px solid #313244' }}>
-                                                {/* Highlighted layer (behind) */}
-                                                <pre
-                                                    className="absolute inset-0 text-[10px] font-mono leading-relaxed p-2 m-0 overflow-auto whitespace-pre-wrap break-words pointer-events-none"
-                                                    aria-hidden="true"
-                                                    dangerouslySetInnerHTML={{ __html: (() => {
-                                                        // Simple HTML syntax highlighter
-                                                        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                                                        return htmlDraft.replace(/<!--[\s\S]*?-->|<\/?[\w-]+(?:\s+[\w-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*\/?>|[^<]+/g, (match) => {
-                                                            if (match.startsWith('<!--')) {
-                                                                return `<span style="color:#6a737d;font-style:italic">${esc(match)}</span>`;
-                                                            }
-                                                            if (match.startsWith('<')) {
-                                                                return match.replace(
-                                                                    /(<\/?)([\w-]+)((?:\s+[\w-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*)(\/?>)/g,
-                                                                    (_m, open, tag, attrs, close) => {
-                                                                        const coloredAttrs = attrs.replace(
-                                                                            /([\w-]+)(\s*=\s*)("[^"]*"|'[^']*')/g,
-                                                                            (_a: string, name: string, eq: string, val: string) =>
-                                                                                `<span style="color:#9cdcfe">${esc(name)}</span><span style="color:#cdd6f4">${esc(eq)}</span><span style="color:#ce9178">${esc(val)}</span>`
-                                                                        );
-                                                                        return `<span style="color:#808080">${esc(open)}</span><span style="color:#569cd6">${esc(tag)}</span>${coloredAttrs}<span style="color:#808080">${esc(close)}</span>`;
-                                                                    }
-                                                                );
-                                                            }
-                                                            // Text content — bright white
-                                                            return `<span style="color:#f0f0f0">${esc(match)}</span>`;
-                                                        });
-                                                    })() }}
-                                                />
-                                                {/* Editable textarea (on top, transparent text) */}
-                                                <textarea
-                                                    value={htmlDraft}
-                                                    onChange={e => { setHtmlDraft(e.target.value); setHtmlSaved(false); }}
-                                                    spellCheck={false}
-                                                    className="absolute inset-0 w-full h-full text-[10px] font-mono leading-relaxed p-2 bg-transparent resize-none focus:outline-none"
-                                                    style={{ color: 'transparent', caretColor: '#f0f0f0', WebkitTextFillColor: 'transparent' }}
-                                                />
+                                    {/* HTML tab — syntax highlighted editor */}
+                                    {activeTab === 'html' && slide.html && (() => {
+                                        // Shared text styles — identical on pre and textarea to prevent layout drift
+                                        const sharedStyle: React.CSSProperties = {
+                                            margin: 0,
+                                            border: 0,
+                                            background: 'none',
+                                            boxSizing: 'border-box',
+                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                            fontSize: '11px',
+                                            fontWeight: 400,
+                                            lineHeight: '1.6',
+                                            letterSpacing: 'normal',
+                                            whiteSpace: 'pre-wrap',
+                                            overflowWrap: 'break-word',
+                                            wordBreak: 'keep-all',
+                                            padding: '12px',
+                                            tabSize: 2,
+                                        };
+                                        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                        const highlighted = htmlDraft.replace(
+                                            /<!--[\s\S]*?-->|<\/?[\w-]+(?:\s+[\w-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*\/?>|[^<]+/g,
+                                            (match) => {
+                                                if (match.startsWith('<!--')) {
+                                                    return `<span style="color:#6a737d;font-style:italic">${esc(match)}</span>`;
+                                                }
+                                                if (match.startsWith('<')) {
+                                                    return match.replace(
+                                                        /(<\/?)([\w-]+)((?:\s+[\w-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*)(\/?>)/g,
+                                                        (_m, open, tag, attrs, close) => {
+                                                            const coloredAttrs = attrs.replace(
+                                                                /([\w-]+)(\s*=\s*)("[^"]*"|'[^']*')/g,
+                                                                (_a: string, name: string, eq: string, val: string) =>
+                                                                    `<span style="color:#9cdcfe">${esc(name)}</span><span style="color:#cdd6f4">${esc(eq)}</span><span style="color:#ce9178">${esc(val)}</span>`
+                                                            );
+                                                            return `<span style="color:#808080">${esc(open)}</span><span style="color:#4ec9b0">${esc(tag)}</span>${coloredAttrs}<span style="color:#808080">${esc(close)}</span>`;
+                                                        }
+                                                    );
+                                                }
+                                                return `<span style="color:#f0f0f0">${esc(match)}</span>`;
+                                            }
+                                        );
+                                        return (
+                                            <div
+                                                className="h-full overflow-auto"
+                                                style={{ background: '#1e1e2e' }}
+                                            >
+                                                {/* Container: pre drives layout, textarea overlays */}
+                                                <div style={{ position: 'relative', minHeight: '100%' }}>
+                                                    {/* Highlighted layer — flows naturally, determines scroll height */}
+                                                    <pre
+                                                        style={{ ...sharedStyle, position: 'relative', pointerEvents: 'none', color: 'transparent' }}
+                                                        aria-hidden="true"
+                                                        dangerouslySetInnerHTML={{ __html: highlighted + '\n' }}
+                                                    />
+                                                    {/* Editable textarea — absolute overlay, no own scroll */}
+                                                    <textarea
+                                                        value={htmlDraft}
+                                                        onChange={e => { setHtmlDraft(e.target.value); setHtmlSaved(false); }}
+                                                        spellCheck={false}
+                                                        className="focus:outline-none"
+                                                        style={{
+                                                            ...sharedStyle,
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            resize: 'none',
+                                                            overflow: 'hidden',
+                                                            color: 'transparent',
+                                                            caretColor: '#f0f0f0',
+                                                            WebkitTextFillColor: 'transparent',
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     {/* Text tab */}
                                     {activeTab === 'text' && (
@@ -1345,6 +1382,8 @@ export function ForgeDashboard() {
     const fetchArtifacts = useAppStore(s => s.fetchArtifacts);
     const deleteArtifact = useAppStore(s => s.deleteArtifact);
     const clearAllArtifacts = useAppStore(s => s.clearAllArtifacts);
+    const isSidebarSubPanelOpen = useAppStore(s => s.isSidebarSubPanelOpen);
+    const showArtifactList = isSidebarSubPanelOpen;
 
     const [createOpen, setCreateOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -1365,8 +1404,11 @@ export function ForgeDashboard() {
 
     return (
         <div className="flex h-full w-full overflow-hidden">
-            {/* Left Pane — Artifact List */}
-            <div className="w-80 border-r border-border/50 flex flex-col shrink-0">
+            {/* Left Pane — Artifact List (toggle via nav rail click) */}
+            <div className={cn(
+                "border-r border-border/50 flex flex-col shrink-0 transition-all duration-200 overflow-hidden",
+                showArtifactList ? "w-80" : "w-0 border-r-0"
+            )}>
                 {/* Toolbar */}
                 <div className="p-3 border-b border-border/50 flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-2 flex-1">
@@ -1436,48 +1478,66 @@ export function ForgeDashboard() {
                             const Icon = meta.icon;
                             const isActive = activeArtifactId === a.id;
                             const outlineStatus = a.outline?.status;
+                            // Detect mode from slide_mode field (returned by list API)
+                            const isBusinessMode = a.type === 'slides' && a.slide_mode === 'business';
 
                             return (
                                 <div
                                     key={a.id}
                                     className={cn(
-                                        "group w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 flex items-start gap-2.5 cursor-pointer",
+                                        "group w-full text-left px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer",
                                         isActive
                                             ? "bg-primary/10 border border-primary/30"
                                             : "hover:bg-muted/50 border border-transparent"
                                     )}
                                     onClick={() => setActiveArtifactId(a.id)}
                                 >
-                                    <Icon className={cn("w-4 h-4 mt-0.5 shrink-0", meta.color)} />
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2.5">
+                                        <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
                                         <p className={cn(
-                                            "text-sm font-medium truncate",
+                                            "text-sm font-medium truncate flex-1 min-w-0",
                                             isActive ? "text-primary" : "text-foreground"
                                         )}>
                                             {a.title || 'Untitled'}
                                         </p>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className="text-xs text-muted-foreground capitalize">{a.type}</span>
-                                            {outlineStatus && (
-                                                <span className={cn(
-                                                    "px-1 py-0 rounded text-[8px] uppercase font-bold tracking-tighter",
-                                                    STATUS_STYLE[outlineStatus]
-                                                )}>
-                                                    {outlineStatus}
-                                                </span>
-                                            )}
-                                        </div>
+                                        <button
+                                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-all shrink-0"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteTarget({ id: a.id, title: a.title || 'Untitled' });
+                                            }}
+                                            title="Delete artifact"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
                                     </div>
-                                    <button
-                                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-all shrink-0 mt-0.5"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeleteTarget({ id: a.id, title: a.title || 'Untitled' });
-                                        }}
-                                        title="Delete artifact"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    <div className="flex items-center gap-1.5 mt-1 ml-6.5 pl-0.5">
+                                        <span className="text-[10px] text-muted-foreground capitalize">{a.type}</span>
+                                        {a.type === 'slides' && (
+                                            <span className={cn(
+                                                "px-1.5 py-0 rounded-full text-[8px] font-semibold",
+                                                isBusinessMode
+                                                    ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                                    : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                            )}>
+                                                {isBusinessMode ? 'Business' : 'Artistic'}
+                                            </span>
+                                        )}
+                                        <span className="flex-1" />
+                                        {outlineStatus && (
+                                            <span className={cn(
+                                                "px-1.5 py-0 rounded-full text-[8px] uppercase font-bold tracking-tighter",
+                                                STATUS_STYLE[outlineStatus]
+                                            )}>
+                                                {outlineStatus}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {a.created_at && (
+                                        <p className="text-[9px] text-muted-foreground/40 mt-0.5 ml-6.5 pl-0.5">
+                                            {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                                        </p>
+                                    )}
                                 </div>
                             );
                         })}

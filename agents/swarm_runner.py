@@ -174,6 +174,17 @@ class SwarmRunner:
                     task.result = "Blocked: upstream dependency failed."
                     failed_tasks[node_id] = task
                     logger.warning(f"Task {task.title} blocked by upstream failure.")
+                    # Emit task_done for blocked tasks
+                    try:
+                        from core.event_bus import event_bus
+                        asyncio.create_task(event_bus.publish("task_done", task.assigned_to or "unknown", {
+                            "task_id": task.id,
+                            "status": "failed",
+                            "result": task.result,
+                            "run_id": self.session_id,
+                        }))
+                    except Exception:
+                        pass
                 break
 
             logger.info(f"Ready tasks to execute: {ready_nodes}")
@@ -284,6 +295,20 @@ class SwarmRunner:
                         f"Cost so far: ${self._cost_usd:.4f} / ${self.swarm_cost_budget_usd:.2f}"
                     )
 
+                    # Emit task_done event for SSE subscribers
+                    try:
+                        from core.event_bus import event_bus
+                        asyncio.create_task(event_bus.publish("task_done", t_obj.assigned_to or "unknown", {
+                            "task_id": t_obj.id,
+                            "status": t_obj.status.value,
+                            "result": t_obj.result,
+                            "token_used": t_obj.token_used,
+                            "cost_usd": t_obj.cost_usd,
+                            "run_id": self.session_id,
+                        }))
+                    except Exception as exc:
+                        logger.debug(f"[SwarmRunner] task_done event failed: {exc}")
+
                     # 📼 Chronicle: emit STEP_COMPLETE and checkpoint
                     try:
                         import asyncio
@@ -337,6 +362,20 @@ class SwarmRunner:
                         break
 
         all_tasks = list(completed_tasks.values()) + list(failed_tasks.values())
+
+        # Emit swarm_done event for SSE subscribers
+        try:
+            from core.event_bus import event_bus
+            await event_bus.publish("swarm_done", "swarm_runner", {
+                "tokens": self._tokens_used,
+                "cost_usd": self._cost_usd,
+                "completed": len(completed_tasks),
+                "failed": len(failed_tasks),
+                "run_id": self.session_id,
+            })
+        except Exception as exc:
+            logger.debug(f"[SwarmRunner] swarm_done event failed: {exc}")
+
         return [t.model_dump() for t in all_tasks]
 
     # ------------------------------------------------------------------

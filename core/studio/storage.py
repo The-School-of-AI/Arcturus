@@ -68,7 +68,9 @@ class StudioStorage:
                             "id": data.get("id", entry.name),
                             "type": data.get("type"),
                             "title": data.get("title", "Untitled"),
+                            "created_at": data.get("created_at"),
                             "updated_at": data.get("updated_at"),
+                            "slide_mode": data.get("slide_mode"),
                             "outline": {"status": outline_status} if outline_status else None,
                         })
                     except (json.JSONDecodeError, KeyError):

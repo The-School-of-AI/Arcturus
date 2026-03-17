@@ -215,15 +215,6 @@ class SpansRepository:
             {"$sort": {"start_time": -1}},
             {"$limit": limit},
             _traces_add_fields_stage(),
-            {
-                "$match": {
-                    "$or": [
-                        {"session_id": {"$ne": None}},
-                        {"run_id": {"$exists": True, "$ne": None, "$ne": ""}},
-                        {"has_throttled_span": True},
-                    ]
-                }
-            },
             _traces_project_stage(),
         ]
         cursor = self._coll.aggregate(pipeline)

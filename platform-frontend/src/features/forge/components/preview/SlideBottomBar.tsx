@@ -58,7 +58,8 @@ export function SlideBottomBar({
 
   const handleDownload = async (job: { id: string; format?: string }) => {
     const url = api.getExportDownloadUrl(artifactId, job.id);
-    const defaultName = `${artifactTitle || 'slides'}.pptx`;
+    const ext = job.format || 'pdf';
+    const defaultName = `${artifactTitle || 'slides'}.${ext}`;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const electronAPI = (window as any).electronAPI;
@@ -85,8 +86,8 @@ export function SlideBottomBar({
     }
   };
 
-  const handleExport = () => {
-    startExport(artifactId, 'pptx', selectedThemeId, strictLayout || undefined, generateImages || undefined);
+  const handleExport = (format: 'pdf' | 'pptx' = 'pdf') => {
+    startExport(artifactId, format, selectedThemeId, format === 'pptx' ? (strictLayout || undefined) : undefined, format === 'pptx' ? (generateImages || undefined) : undefined);
     setShowExportOptions(false);
   };
 
@@ -176,27 +177,37 @@ export function SlideBottomBar({
 
         {showExportOptions && (
           <div className="absolute bottom-full right-0 mb-2 p-3 rounded-xl border border-white/[0.08] bg-[#111215] shadow-2xl z-50 space-y-2.5 w-52">
-            <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
-              <Switch checked={strictLayout} onCheckedChange={setStrictLayout} />
-              Strict layout
-            </label>
-            <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
-              <Switch checked={generateImages} onCheckedChange={setGenerateImages} />
-              Generate images (AI)
-            </label>
+            <button
+              onClick={() => handleExport('pptx')}
+              disabled={isExporting}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+            >
+              <Download className="w-3 h-3" />
+              Export as PPTX
+            </button>
+            <div className="border-t border-white/[0.06] pt-2 space-y-2">
+              <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
+                <Switch checked={strictLayout} onCheckedChange={setStrictLayout} />
+                Strict layout (PPTX)
+              </label>
+              <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
+                <Switch checked={generateImages} onCheckedChange={setGenerateImages} />
+                Generate images (PPTX)
+              </label>
+            </div>
           </div>
         )}
 
         <Button
           size="sm"
-          onClick={handleExport}
+          onClick={() => handleExport('pdf')}
           disabled={isExporting}
           className="h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-500 text-white border-0"
         >
           {isExporting ? (
             <><Loader2 className="w-3 h-3 animate-spin" /> Exporting...</>
           ) : (
-            <><Download className="w-3 h-3" /> Export PPTX</>
+            <><Download className="w-3 h-3" /> Export PDF</>
           )}
         </Button>
       </div>

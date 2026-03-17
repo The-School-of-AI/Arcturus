@@ -4,7 +4,7 @@ import {
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
     CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network
 } from 'lucide-react';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+// import { useFeatureFlags } from '@/hooks/useFeatureFlags'; // only used by Swarm (hidden)
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -114,7 +114,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const deleteRun = useAppStore(state => state.deleteRun);
     const generateAppFromReport = useAppStore(state => state.generateAppFromReport);
     const isGeneratingApp = useAppStore(state => state.isGeneratingApp);
-    const { flags } = useFeatureFlags();
+    // const { flags } = useFeatureFlags(); // only used by Swarm (hidden)
 
     // Fetch runs on mount
     React.useEffect(() => {
@@ -184,9 +184,10 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={Network} label="Graph" tab="graph" active={sidebarTab === 'graph'} onClick={() => setSidebarTab('graph')} tooltip="Neo4j knowledge graph explorer. Visualize entities and relationships extracted from your memories." />
                     {/* Explorer hidden — not needed for current deployment */}
                     <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} tooltip="Real-time interactive surface. Agents render widgets or HTML/JS via WebSocket for dynamic UIs." />
-                    {flags.multi_agent !== false && (
+                    {/* Swarm hidden — data flow between agents needs fixing */}
+                    {/* {flags.multi_agent !== false && (
                         <NavIcon icon={Network} label="Swarm" tab="swarm" active={sidebarTab === 'swarm'} onClick={() => setSidebarTab('swarm')} tooltip="Multi-agent orchestration. Decompose complex tasks across specialized agents running in parallel." />
-                    )}
+                    )} */}
 
                     <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
 
