@@ -9,6 +9,7 @@ __pycache__/
 *.pyd
 .Python
 *.bin
+*.onnx
 
 # Build Artifacts
 platform-frontend/dist/
