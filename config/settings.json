@@ -30,8 +30,8 @@
     "top_k": 3
   },
   "agent": {
-    "model_provider": "gemini",
-    "default_model": "gemini-3.1-pro-preview",
+    "model_provider": "ollama",
+    "default_model": "gemma3:12b",
     "overrides": {},
     "max_steps": 3,
     "max_lifelines_per_step": 3,

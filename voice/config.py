@@ -53,8 +53,10 @@ VOICE_CONFIG = {
     # OpenWakeWord configuration
     # -----------------------------
     "openwakeword": {
-        # Path to trained .tflite model
-        "model_path": os.path.join(_VOICE_DIR, "models", "hey_jarvis_v0.1.tflite"),
+        # Model path: None = auto-use bundled ONNX hey_jarvis model.
+        # The engine auto-converts .tflite → bundled ONNX (tflite-runtime
+        # is unavailable on macOS ARM64 + Python 3.11+).
+        "model_path": None,
 
         # Detection threshold (probability)
         # Higher = fewer false positives
@@ -63,8 +65,8 @@ VOICE_CONFIG = {
         # OpenWakeWord expects 16kHz mono
         "sample_rate": 16000,
 
-        # Audio chunk size (flexible)
-        "frame_length": 512,
+        # Audio chunk size — OpenWakeWord needs >=1280 samples per call
+        "frame_length": 1280,
     },
 
     # -----------------------------
@@ -107,22 +109,23 @@ VOICE_CONFIG = {
     # Stricter values reduce self-interrupt when TTS is picked up by the mic.
     "barge_in": {
         # Suppress barge-in detection for this long after TTS starts.
-        # Azure TTS has 200-600ms of synthesis latency before audio reaches the speaker,
-        # so 1000ms was only ~400-800ms of real echo suppression. 1500ms is safer.
-        "grace_ms": 1500,
+        # Kokoro local TTS has near-zero synthesis latency, so the full phrase
+        # plays out quickly. 3000ms covers most ack phrases (~2-3s) and prevents
+        # speaker echo from triggering false barge-in.
+        "grace_ms": 3000,
 
         # Continuous speech required before interrupt.
-        # 120ms = lower bound of the 120-200ms design band → fastest reliable detection.
-        "min_speech_ms": 120,
+        # 200ms avoids brief echo bursts from triggering barge-in.
+        "min_speech_ms": 200,
 
         # Energy must be at least this multiple of ambient noise floor.
-        "energy_ratio": 2.7,
+        "energy_ratio": 3.0,
 
         # Near-field gates (int16 RMS units).
-        # 1100 provides a harder gate against speaker echo in quiet rooms where the
-        # noise floor is very low (making the ratio gate easier to trip).
-        "min_absolute_rms": 1100,
-        "min_rms_above_noise": 250,
+        # 1500 provides a harder gate against speaker echo from local TTS
+        # (Kokoro outputs at 24kHz, louder than Azure cloud TTS).
+        "min_absolute_rms": 1500,
+        "min_rms_above_noise": 350,
     },
 
     # -----------------------------
@@ -138,7 +141,7 @@ VOICE_CONFIG = {
 
         # Moonshine-specific (local, 5x faster than Whisper)
         "moonshine": {
-            "model": "base",         # 'tiny' (fastest) or 'base' (best accuracy)
+            "model": "tiny",         # 'tiny' (bundled, fastest) or 'base' (needs download)
         },
 
         # Whisper-specific (local fallback)

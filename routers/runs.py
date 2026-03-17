@@ -40,6 +40,8 @@ def cleanup_stale_sessions():
 
     Called once during lifespan — no active loops exist yet, so any session
     still marked 'running' on disk is leftover from a previous crash.
+    Cleans both graph-level AND node-level statuses so list_runs() sees them
+    as failed (list_runs computes status from node statuses, not just graph).
     """
     summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
     if not summaries_dir.exists():
@@ -48,11 +50,22 @@ def cleanup_stale_sessions():
     for session_file in summaries_dir.rglob("session_*.json"):
         try:
             data = json.loads(session_file.read_text())
+            dirty = False
+
+            # Fix graph-level status
             graph = data.get("graph", {})
-            status = graph.get("status", "")
-            if status == "running":
+            if graph.get("status") == "running":
                 graph["status"] = "failed"
                 data["graph"] = graph
+                dirty = True
+
+            # Fix node-level statuses (list_runs computes status from these)
+            for node in data.get("nodes", []):
+                if node.get("status") == "running":
+                    node["status"] = "failed"
+                    dirty = True
+
+            if dirty:
                 session_file.write_text(json.dumps(data))
                 cleaned += 1
         except Exception:
@@ -1135,13 +1148,39 @@ async def provide_input(run_id: str, request: UserInputRequest):
 
 @router.post("/runs/{run_id}/stop")
 async def stop_run(run_id: str):
-    """Stop a running agent execution"""
+    """Stop a running agent execution.
+
+    If the run is actively in memory, stop its loop.
+    If it's a stale run (e.g. after restart), mark its session file as failed.
+    """
+    # Try live stop first
     if run_id in active_loops:
         loop = active_loops[run_id]
         loop.stop()
         return {"id": run_id, "status": "stopping"}
 
-    raise HTTPException(status_code=404, detail="Active run not found")
+    # Stale run — not in active_loops (server restarted). Mark as failed on disk.
+    summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    for session_file in summaries_dir.rglob(f"session_{run_id}.json"):
+        try:
+            data = json.loads(session_file.read_text())
+            dirty = False
+            graph = data.get("graph", {})
+            if graph.get("status") == "running":
+                graph["status"] = "failed"
+                data["graph"] = graph
+                dirty = True
+            for node in data.get("nodes", []):
+                if node.get("status") == "running":
+                    node["status"] = "failed"
+                    dirty = True
+            if dirty:
+                session_file.write_text(json.dumps(data))
+            return {"id": run_id, "status": "failed"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to stop stale run: {e}")
+
+    raise HTTPException(status_code=404, detail="Run not found")
 
 
 @router.delete("/runs/{run_id}")

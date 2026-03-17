@@ -287,6 +287,14 @@ def classify(text: str) -> GateDecision:
     best_intent = max(scores, key=scores.__getitem__)
     best_score  = scores[best_intent]
 
+    # ── Low-confidence fallback: default to AGENTIC (safe Nexus dispatch) ────
+    # When all scores are very low (< 0.20), the text is likely garbled or
+    # ambiguous.  AGENTIC (Nexus query) is the safest default — it handles
+    # questions, garbled text gracefully, and never starts dictation by accident.
+    if best_score < 0.20:
+        best_intent = IntentType.AGENTIC
+        best_score = 0.15
+
     # ── Safety gate: AGENTIC is never auto-selected below threshold ──────────
     if best_intent == IntentType.AGENTIC:
         reasoning = f"Agentic confirmed: score={best_score:.2f}"

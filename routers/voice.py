@@ -158,6 +158,10 @@ class AddPersonaRequest(BaseModel):
 @router.post("/voice/start")
 async def start_listening(request: Request):
     orch = _get_orch(request)
+    # If currently dictating, stop dictation first so the mic button
+    # always escapes back to listening mode.
+    if getattr(orch, "state", None) == "DICTATING":
+        orch.stop_dictation()
     orch.on_wake({})
     return {"status": "listening"}
 

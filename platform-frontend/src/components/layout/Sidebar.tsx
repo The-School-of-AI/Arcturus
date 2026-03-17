@@ -61,6 +61,8 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
 
     const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
 
+    const setSidebarSubPanelOpen = useAppStore(state => state.setSidebarSubPanelOpen);
+
     const handleIconClick = () => {
         if (active && isInspectorOpen) {
             // MCP should be persistent as per user request
@@ -68,7 +70,13 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
 
             clearSelection();
         } else if (active) {
-            toggleSidebarSubPanel();
+            // Always OPEN the panel (never toggle closed).
+            // Clicking a tab icon should always expand its panel.
+            if (setSidebarSubPanelOpen) {
+                setSidebarSubPanelOpen(true);
+            } else {
+                toggleSidebarSubPanel();
+            }
         } else {
             onClick();
         }

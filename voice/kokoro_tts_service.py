@@ -347,7 +347,7 @@ class KokoroTTSService:
             return
 
         try:
-            audio, sr = self._kokoro.synthesize(
+            audio, sr = self._kokoro.create(
                 text=text,
                 voice=self._voice_name,
                 speed=self._speed,
