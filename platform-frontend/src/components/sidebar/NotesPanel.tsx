@@ -139,7 +139,7 @@ const NoteTreeItem: React.FC<{
                     onClick={handleClick}
                 >
                     {getIcon()}
-                    <div className="flex-1 truncate text-xs font-medium">
+                    <div className="flex-1 truncate text-sm">
                         {isRenaming ? (
                             <input
                                 ref={inputRef}

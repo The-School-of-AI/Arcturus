@@ -101,7 +101,13 @@
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-web-links": "^0.9.0",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.9",
+    "@excalidraw/excalidraw": "^0.18.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.2",
@@ -127,6 +133,7 @@
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vitest": "^4.0.17",
-    "wait-on": "^9.0.3"
+    "wait-on": "^9.0.3",
+    "@types/leaflet": "^1.9.21"
   }
 }

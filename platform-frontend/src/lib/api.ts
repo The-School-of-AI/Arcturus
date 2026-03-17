@@ -337,6 +337,25 @@ export const api = {
         return res.data;
     },
 
+    // ── Canvas ──────────────────────────────────────────────────────────
+    getCanvasSurfaces: async (): Promise<{ id: string, title: string, componentCount: number }[]> => {
+        const res = await axios.get(`${API_BASE}/canvas/surfaces`);
+        const raw = res.data.surfaces || res.data;
+        return raw.map((s: any) => ({
+            id: s.id,
+            title: s.title || s.id,
+            componentCount: s.componentCount ?? s.component_count ?? 0,
+        }));
+    },
+
+    deleteCanvasWidget: async (surfaceId: string, componentId: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/canvas/state/${surfaceId}/component/${componentId}`);
+    },
+
+    renameCanvasWidget: async (surfaceId: string, componentId: string, newTitle: string): Promise<void> => {
+        await axios.patch(`${API_BASE}/canvas/state/${surfaceId}/component/${componentId}/rename`, { title: newTitle });
+    },
+
     analyzeSheetUpload: async (artifactId: string, file: File): Promise<any> => {
         const formData = new FormData();
         formData.append('file', file);

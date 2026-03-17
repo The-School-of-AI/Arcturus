@@ -82,3 +82,39 @@ async def test_update_canvas(surface_id: str, payload: dict):
     if "html" in payload:
         await runtime.push_html(surface_id, payload["html"], payload.get("title"))
     return {"status": "ok"}
+
+@router.delete("/state/{surface_id}/component/{component_id}")
+async def delete_canvas_component(surface_id: str, component_id: str):
+    """Delete a single component from a surface."""
+    runtime = get_canvas_runtime()
+    state = runtime.get_surface_state(surface_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Surface not found")
+    comps = state.get("components", [])
+    filtered = [c for c in comps if (c.get("id") if isinstance(c, dict) else getattr(c, "id", None)) != component_id]
+    if len(filtered) == len(comps):
+        raise HTTPException(status_code=404, detail="Component not found")
+    await runtime.push_components(surface_id, [c if isinstance(c, dict) else c.model_dump() for c in filtered])
+    return {"status": "deleted", "component_id": component_id}
+
+@router.patch("/state/{surface_id}/component/{component_id}/rename")
+async def rename_canvas_component(surface_id: str, component_id: str, payload: dict):
+    """Rename (update title prop) of a component on a surface."""
+    runtime = get_canvas_runtime()
+    state = runtime.get_surface_state(surface_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Surface not found")
+    new_title = payload.get("title", "Untitled")
+    comps = state.get("components", [])
+    found = False
+    updated = []
+    for c in comps:
+        d = c if isinstance(c, dict) else c.model_dump()
+        if d.get("id") == component_id:
+            d.setdefault("props", {})["title"] = new_title
+            found = True
+        updated.append(d)
+    if not found:
+        raise HTTPException(status_code=404, detail="Component not found")
+    await runtime.push_components(surface_id, updated)
+    return {"status": "renamed", "component_id": component_id, "title": new_title}

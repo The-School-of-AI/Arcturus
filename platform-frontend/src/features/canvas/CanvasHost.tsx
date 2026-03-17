@@ -4,8 +4,10 @@ import SandboxFrame from './SandboxFrame';
 import { getWidget } from './WidgetRegistry';
 import { GenerateDiagramModal } from './GenerateDiagramModal';
 import { useTheme } from '@/components/theme';
+import { useAppStore } from '@/store';
 import { API_BASE } from '@/lib/api';
 import { LayoutTemplate } from 'lucide-react';
+import axios from 'axios';
 
 interface CanvasHostProps {
     surfaceId: string;
@@ -13,6 +15,8 @@ interface CanvasHostProps {
 
 const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
     const { theme } = useTheme();
+    const selectedCanvasWidgetId = useAppStore((s: any) => s.selectedCanvasWidgetId);
+    const selectCanvasWidget = useAppStore((s: any) => s.selectCanvasWidget);
     const [components, setComponents] = useState<any[]>([]);
     const [dataModel, setDataModel] = useState<any>({});
     const [isSandbox, setIsSandbox] = useState(false);
@@ -80,8 +84,25 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         });
     }, [surfaceId, sendJsonMessage]);
 
+    // Optimistic local update + persist to backend
+    const handleLocalComponentUpdate = useCallback(async (componentId: string, propsUpdate: any) => {
+        setComponents(prev => {
+            const updated = prev.map(c =>
+                c.id === componentId
+                    ? { ...c, props: { ...c.props, ...propsUpdate } }
+                    : c
+            );
+            // Persist to backend
+            axios.post(`${API_BASE}/canvas/test-update/${surfaceId}`, {
+                components: updated
+            }).catch(err => console.error('[Canvas] Failed to persist update:', err));
+            return updated;
+        });
+    }, [surfaceId]);
+
     const renderComponent = (comp: any) => {
         const Widget = getWidget(comp.component);
+        const isSelected = selectedCanvasWidgetId === comp.id;
 
         // Resolve props if they reference the data model (e.g., "$ref:path.to.data")
         const resolvedProps = { ...comp.props };
@@ -94,16 +115,33 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         });
 
         return (
-            <Widget
+            <div
                 key={comp.id}
-                {...resolvedProps}
-                onClick={() => handleUserEvent(comp.id, 'click')}
+                onClick={(e) => { e.stopPropagation(); selectCanvasWidget(comp.id); }}
+                className={`relative transition-all ${isSelected ? 'ring-2 ring-primary/60 rounded-lg' : ''}`}
             >
-                {comp.children?.map((childId: string) => {
-                    const child = components.find(c => c.id === childId);
-                    return child ? renderComponent(child) : null;
-                })}
-            </Widget>
+                <Widget
+                    {...resolvedProps}
+                    onClick={() => handleUserEvent(comp.id, 'click')}
+                    onCodeChange={(code: string) => {
+                        handleLocalComponentUpdate(comp.id, { code });
+                        handleUserEvent(comp.id, 'change', { code });
+                    }}
+                    onDrawingChange={(elements: any, appState: any) => {
+                        handleLocalComponentUpdate(comp.id, { elements, appState });
+                        handleUserEvent(comp.id, 'drawing_change', { elements, appState });
+                    }}
+                    onTaskUpdate={(tasks: any[]) => {
+                        handleLocalComponentUpdate(comp.id, { initialTasks: tasks });
+                        handleUserEvent(comp.id, 'kanban_update', { initialTasks: tasks });
+                    }}
+                >
+                    {comp.children?.map((childId: string) => {
+                        const child = components.find(c => c.id === childId);
+                        return child ? renderComponent(child) : null;
+                    })}
+                </Widget>
+            </div>
         );
     };
 

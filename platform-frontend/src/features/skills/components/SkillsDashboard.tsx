@@ -152,41 +152,33 @@ export const SkillsDashboard: React.FC = () => {
 
             {/* Content */}
             <ScrollArea className="flex-1 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                     {displayedSkills.map((skill: any) => {
                         const isInstalled = installedSkills.some(is => is.name === skill.name);
 
                         return (
-                            <div key={skill.name} className="group relative bg-card/50 border border-border/50 rounded-xl p-5 hover:border-neon-purple/50 hover:bg-neon-purple/1 transition-all duration-300 flex flex-col gap-3">
-                                <div className="flex justify-between items-start">
-                                    <h3 className="font-bold text-lg capitalize truncate pr-2" title={skill.name}>{skill.name.replace(/-/g, ' ')}</h3>
+                            <div key={skill.name} className="group relative bg-card/50 border border-border/50 rounded-lg px-3 py-2.5 hover:border-neon-purple/50 hover:bg-neon-purple/1 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-neon-purple/5 flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-semibold text-sm capitalize truncate pr-2" title={skill.name}>{skill.name.replace(/-/g, ' ')}</h3>
                                     {isInstalled && activeTab === 'store' && (
-                                        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 gap-1 shrink-0">
-                                            <CheckCircle className="w-3 h-3" />
+                                        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 gap-1 shrink-0 text-[10px] px-1.5 py-0">
+                                            <CheckCircle className="w-2.5 h-2.5" />
                                             Owned
                                         </Badge>
                                     )}
                                 </div>
 
-                                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
+                                <p className="text-xs text-muted-foreground line-clamp-1">
                                     {skill.description}
                                 </p>
 
-                                <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
-                                    {(skill.intent_triggers || []).slice(0, 3).map((trigger: string) => (
-                                        <Badge key={trigger} variant="secondary" className="text-[10px] bg-white/5 text-muted-foreground">
-                                            "{trigger}"
-                                        </Badge>
-                                    ))}
-                                </div>
-
-                                <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between text-xs text-muted-foreground">
+                                <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-muted-foreground">
                                     <span className="font-mono opacity-50">{skill.version ? `v${skill.version}` : 'latest'}</span>
 
                                     {activeTab === 'installed' ? (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                                                <Button variant="outline" size="sm" className="h-6 text-[11px] px-2 gap-1">
                                                     <Plus className="w-3 h-3" /> Assign
                                                 </Button>
                                             </DropdownMenuTrigger>
@@ -210,7 +202,7 @@ export const SkillsDashboard: React.FC = () => {
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                className="h-7 text-xs hover:text-neon-purple"
+                                                className="h-6 text-[11px] px-2 hover:text-neon-purple"
                                                 onClick={() => installSkill(skill.name)}
                                                 disabled={installing === skill.name}
                                             >

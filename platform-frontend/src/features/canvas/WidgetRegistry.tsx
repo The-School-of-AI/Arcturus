@@ -1,6 +1,9 @@
 import React from 'react';
 import LineChartWidget from './widgets/LineChartWidget';
 import MonacoWidget from './widgets/MonacoWidget';
+import WhiteboardWidget from './widgets/WhiteboardWidget';
+import MapWidget from './widgets/MapWidget';
+import KanbanWidget from './widgets/KanbanWidget';
 import SandboxFrame from './SandboxFrame';
 
 const ButtonWidget = ({ text, onClick }: { text: string; onClick: () => void }) => (
@@ -27,6 +30,9 @@ export const WidgetRegistry: Record<string, React.FC<any>> = {
     "Container": ContainerWidget,
     "LineChart": LineChartWidget,
     "MonacoEditor": MonacoWidget,
+    "Whiteboard": WhiteboardWidget,
+    "Map": MapWidget,
+    "Kanban": KanbanWidget,
     "Sandbox": SandboxFrame,
 };
 

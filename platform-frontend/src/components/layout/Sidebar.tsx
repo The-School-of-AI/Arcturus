@@ -28,6 +28,7 @@ import { NewsPanel } from '@/components/sidebar/NewsPanel';
 import { GraphPanel } from '@/components/sidebar/GraphPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
 import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
+import { CanvasPanel } from '@/components/sidebar/CanvasPanel';
 
 const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
     icon: any,
@@ -437,6 +438,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'echo' && <EchoPanel />}
                     {sidebarTab === 'studio' && <StudioSidebar />}
                     {sidebarTab === 'swarm' && <SwarmSidebar />}
+                    {sidebarTab === 'canvas' && <CanvasPanel />}
                     {/* Persist AppsSidebar to prevent reloading app components */}
                     <div style={{ display: sidebarTab === 'apps' ? 'block' : 'none', height: '100%' }}>
                         <AppsSidebar />
