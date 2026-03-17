@@ -265,6 +265,7 @@ Use `SchedulerAgent` to define:
 * Do NOT output placeholders or markdown
 * DO ensure each `agent_prompt` can run immediately with no improvisation
 * **NEVER create separate CoderAgent steps for generation vs execution** — CoderAgent always generates AND executes in one atomic step
+* **FormatterAgent LENGTH RULE**: When creating FormatterAgent tasks, do NOT include length or verbosity instructions in `agent_prompt` (e.g., "brief", "concise", "moderate-length", "short summary"). FormatterAgent has its own adaptive depth system that determines report length based on input data size. Only describe WHAT to format and HOW to structure it, never HOW LONG it should be.
 
 ---
 

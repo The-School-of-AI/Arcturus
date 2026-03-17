@@ -33,6 +33,7 @@ export interface API_Run {
     model?: string;  // Model used for this run
     total_tokens?: number;
     space_id?: string | null;  // Phase 4: optional space for run
+    source?: string;           // Channel origin: "web" | "telegram" | etc.
 }
 
 export interface API_RunDetail {
@@ -56,7 +57,8 @@ export const api = {
             model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true,
             total_tokens: r.total_tokens,
-            space_id: r.space_id ?? undefined
+            space_id: r.space_id ?? undefined,
+            source: r.source ?? 'web',
         }));
     },
 

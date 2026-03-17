@@ -31,7 +31,7 @@
   },
   "agent": {
     "model_provider": "gemini",
-    "default_model": "gemini-3.1-flash-lite-preview",
+    "default_model": "gemini-3.1-pro-preview",
     "overrides": {},
     "max_steps": 3,
     "max_lifelines_per_step": 3,

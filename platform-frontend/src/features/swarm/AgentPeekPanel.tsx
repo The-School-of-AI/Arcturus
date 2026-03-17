@@ -496,6 +496,30 @@ export const AgentPeekPanel: React.FC = () => {
                                                 }
                                             }
                                         }
+
+                                        // PASS 4: Check the task's "writes" field keys (FormatterAgent uses dynamic key names like "final_comparison_T007")
+                                        if (!formatContent && selectedTask?.writes?.length) {
+                                            for (const writeKey of selectedTask.writes) {
+                                                const value = parsed[writeKey as keyof typeof parsed];
+                                                if (typeof value === 'string' && (value as string).trim().length > 50) {
+                                                    formatContent = cleanContent(value as string);
+                                                    contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // PASS 5: Last resort — find any long string value (likely the report body)
+                                        if (!formatContent) {
+                                            const metaKeys = new Set(['final_format', 'call_self', 'next_instruction', 'iteration_context', 'ui_config']);
+                                            for (const [key, value] of Object.entries(parsed)) {
+                                                if (typeof value === 'string' && value.length > 200 && !metaKeys.has(key)) {
+                                                    formatContent = cleanContent(value);
+                                                    contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             } catch {

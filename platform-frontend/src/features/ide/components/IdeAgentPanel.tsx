@@ -17,16 +17,7 @@ import permissions from '@/config/agent_permissions.json'; // Direct import assu
 import { checkContentSafety, checkPathSafety, getContentTypeFromPath, BLOCKED_PATTERNS } from '@/config/blocked_patterns';
 import { PermissionDialog } from '@/components/dialogs/PermissionDialog';
 import { usePermissionDialog, determineRiskLevel } from '@/hooks/usePermissionDialog';
-
-// --- Gemini Models (Shared with Settings) ---
-const GEMINI_MODELS = [
-    { value: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash', description: 'Latest, fast (Dec 2025)' },
-    { value: 'gemini-3.0-pro', label: 'Gemini 3.0 Pro', description: 'Best multimodal (Nov 2025)' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, grounded' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Advanced reasoning' },
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Low cost' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
-];
+import { GEMINI_MODELS_FALLBACK, type GeminiModel } from '@/lib/gemini-models';
 
 // --- Reused Components (To be extracted later) ---
 
@@ -392,6 +383,18 @@ export const IdeAgentPanel: React.FC = () => {
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
     const [copiedImage, setCopiedImage] = useState(false);
     const thinkingRef = useRef(false);
+    const [geminiModels, setGeminiModels] = useState<GeminiModel[]>(GEMINI_MODELS_FALLBACK);
+
+    // Fetch available Gemini models on mount (falls back to GEMINI_MODELS_FALLBACK)
+    useEffect(() => {
+        axios.get(`${API_BASE}/settings/gemini/models`)
+            .then(res => {
+                if (res.data.status === 'success' && res.data.models?.length > 0) {
+                    setGeminiModels(res.data.models);
+                }
+            })
+            .catch(() => {}); // keep fallback
+    }, []);
 
     // Permission dialog hook for agent operations
     // Review State from Global Store
@@ -1051,7 +1054,7 @@ export const IdeAgentPanel: React.FC = () => {
                                     <div className="absolute bottom-full left-0 mb-2 w-64 bg-popover border border-border shadow-xl rounded-lg z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-1 p-1">
                                         <div className="max-h-[300px] overflow-y-auto">
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 border-b border-border/30 mb-1">Gemini Cloud</p>
-                                            {GEMINI_MODELS.map(m => (
+                                            {geminiModels.map(m => (
                                                 <button
                                                     key={m.value}
                                                     onClick={() => syncModelChange(m.value)}

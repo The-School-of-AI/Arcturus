@@ -13,6 +13,7 @@ export interface Run {
     ragEnabled: boolean;
     total_tokens?: number;
     space_id?: string;  // Phase 4: optional space
+    source?: string;    // Channel origin: "web" | "telegram" | "slack" | etc.
 }
 
 export type SpaceSyncPolicy = 'sync' | 'local_only' | 'shared';

@@ -656,6 +656,10 @@ class NetworkXKnowledgeGraph:
                     result.append({"id": eid, "type": nd.get("type", ""), "name": nd.get("name", "")})
         return result
 
+    def get_evidence_count_for_user(self, user_id: str) -> Dict[str, Any]:
+        """Stub for NetworkX fallback — no Evidence nodes in the in-memory graph."""
+        return {"total_events": 0, "events_by_source": {}, "events_by_type": {}}
+
     # Space management (lightweight)
     def create_space(self, space_id: str, **kwargs: Any) -> None:
         self._ensure_space(space_id)

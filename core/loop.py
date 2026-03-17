@@ -240,7 +240,7 @@ class AgentLoop4:
             log_error(f"Failed to resume session: {e}")
             raise
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, space_id=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, space_id=None, display_query=None, source="web"):
         """
         Main agent loop: bootstrap context with Query node, optionally run file distiller,
         then planning loop (PlannerAgent) -> merge plan -> execute DAG. Handles replanning when
@@ -278,7 +278,9 @@ class AgentLoop4:
                     bootstrap_graph,
                     session_id=session_id,
                     original_query=query,
-                    file_manifest=file_manifest
+                    file_manifest=file_manifest,
+                    display_query=display_query,
+                    source=source,
                 )
                 if space_id is not None:
                     self.context.plan_graph.graph["space_id"] = space_id

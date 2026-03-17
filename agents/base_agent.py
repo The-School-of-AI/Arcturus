@@ -53,10 +53,13 @@ class AgentRunner:
         with set_span_context(span_ctx):
             try:
                 # 1. Load prompt template
+                has_explicit_prompt = False
                 if "prompt_text" in config:
                     prompt_template = config["prompt_text"]
+                    has_explicit_prompt = True
                 elif "prompt_file" in config:
                     prompt_template = Path(config["prompt_file"]).read_text(encoding="utf-8")
+                    has_explicit_prompt = True
                 else:
                     prompt_template = f"You are {agent_type}. No specific prompt provided."
 
@@ -89,8 +92,13 @@ class AgentRunner:
                         log_step(f"🧩 Applied Skill: {meta.name}", symbol="🧩")
 
                     if skill_prompts:
-                        # Append skill prompts to the main prompt template
-                        prompt_template = prompt_template.strip() + "\n\n" + "\n\n".join(skill_prompts)
+                        if has_explicit_prompt:
+                            # Append skill prompts to the explicit prompt
+                            prompt_template = prompt_template.strip() + "\n\n" + "\n\n".join(skill_prompts)
+                        else:
+                            # No explicit prompt — skill prompts ARE the primary prompt
+                            # Don't prepend the generic "You are X. No specific prompt provided." stub
+                            prompt_template = "\n\n".join(skill_prompts)
 
                 except Exception as e:
                     log_error(f"Failed to inject skills: {e}")

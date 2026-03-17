@@ -3,7 +3,14 @@
 # API keys are read from the PROJECT ROOT .env (the same file used by all
 # other Arcturus modules).  Do NOT place a separate voice/.env file —
 # keys defined there would shadow the global ones and cause confusion.
-# Keys needed by voice modules:
+#
+# LOCAL-FIRST defaults (March 2026):
+#   Wake word:  OpenWakeWord (no API key)
+#   STT:        Moonshine    (no API key, pip install moonshine-voice)
+#   TTS:        Kokoro       (no API key, pip install kokoro-onnx)
+#   Intent:     Ollama Gemma 3 (local, ollama pull gemma3:4b)
+#
+# Optional cloud keys (for fallback providers):
 #   PICOVOICE_ACCESS_KEY  — wake word detection (Porcupine)
 #   DEEPGRAM_API_KEY      — cloud STT (Deepgram Nova-2)
 #   AZURE_SPEECH_KEY      — TTS (Azure Neural Speech)
@@ -25,8 +32,8 @@ VOICE_CONFIG = {
     "enabled": True,
 
     # Wake engine selection
-    # Options: "porcupine", "openwakeword", "pocketsphinx"
-    "engine": "porcupine",
+    # Options: "openwakeword" (local), "porcupine" (cloud), "pocketsphinx" (local)
+    "engine": "openwakeword",
     "wake_word": "Hey Arcturus",
 
     # -----------------------------
@@ -121,22 +128,27 @@ VOICE_CONFIG = {
     # -----------------------------
     # STT configuration
     # -----------------------------
-    # Provider: "whisper" (local, private) or "deepgram" (cloud, faster)
-    "stt_provider": "deepgram",
+    # Provider: "moonshine" (local, fastest), "whisper" (local), "deepgram" (cloud)
+    "stt_provider": "moonshine",
 
     "stt": {
         # Shared
         "sample_rate": 16000,
         "noise_reduce": True,
 
-        # Whisper-specific (local)
+        # Moonshine-specific (local, 5x faster than Whisper)
+        "moonshine": {
+            "model": "base",         # 'tiny' (fastest) or 'base' (best accuracy)
+        },
+
+        # Whisper-specific (local fallback)
         "whisper": {
             "model_size": "small",   # tiny, base, small, medium, large-v2
             "device": "cpu",         # cpu or cuda
             "language": "en",        # or None for auto-detect
         },
 
-        # Deepgram-specific (cloud)
+        # Deepgram-specific (cloud fallback)
         "deepgram": {
             # API key loaded from env var DEEPGRAM_API_KEY
             "language": "en",        # or "multi" for auto-detect
@@ -146,8 +158,8 @@ VOICE_CONFIG = {
     # -----------------------------
     # TTS configuration
     # -----------------------------
-    # Provider selection: "azure" (cloud, premium) or "piper" (local, offline, streaming)
-    "tts_provider": "azure",
+    # Provider: "kokoro" (local, best), "piper" (local), "azure" (cloud)
+    "tts_provider": "kokoro",
 
     # Azure Speech credentials loaded from env: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
     "tts": {
@@ -209,12 +221,44 @@ VOICE_CONFIG = {
         "streaming_enabled": True,
     },
     # -----------------------------
+    # Kokoro TTS configuration (local, high-quality)
+    # -----------------------------
+    # Requires: pip install kokoro-onnx && brew install espeak-ng
+    # Download models from kokoro-onnx releases → voice/kokoro_models/
+    "kokoro_tts": {
+        "model_path": os.path.join(_VOICE_DIR, "kokoro_models", "kokoro-v1.0.onnx"),
+        "voices_path": os.path.join(_VOICE_DIR, "kokoro_models", "voices-v1.0.bin"),
+        "streaming_enabled": True,
+
+        # Persona → Kokoro voice mapping (60+ voices available)
+        # Naming: first letter = language (a=American), second = gender (f/m)
+        "personas": {
+            "professional": {
+                "kokoro_voice": "af_bella",
+                "speed": 1.0,
+                "description": "Clear, confident, and measured — great for work & productivity.",
+            },
+            "casual": {
+                "kokoro_voice": "af_sarah",
+                "speed": 1.05,
+                "description": "Warm, friendly, and conversational — ideal for everyday chat.",
+            },
+            "energetic": {
+                "kokoro_voice": "am_michael",
+                "speed": 1.15,
+                "description": "Upbeat, enthusiastic, and lively — perfect for motivation & hype.",
+            },
+        },
+    },
+
+    # -----------------------------
     # Intent Gate configuration
     # -----------------------------
     "intent_gate": {
-        "use_llm": True,  # When True, uses ModelManager to classify intents
-        "fallback_to_rules": True, # If LLM fails, use regex-based classification
-        "model": "gemini", # Model key from models.json
+        "use_llm": True,        # When True, uses ModelManager to classify intents
+        "fallback_to_rules": True,  # If LLM fails, use regex-based classification
+        "model": "gemma3:4b",   # Ollama model (local)
+        "provider": "ollama",   # "ollama" (local) or "gemini" (cloud)
     },
 }
 

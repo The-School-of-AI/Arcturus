@@ -1,6 +1,7 @@
 # Runs Router - Handles agent run execution, listing, and management
 import asyncio
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Body
@@ -32,6 +33,33 @@ from core.skills.manager import skill_manager
 
 
 router = APIRouter(tags=["Runs"])
+
+
+def cleanup_stale_sessions():
+    """Mark all 'running' sessions as 'failed' on server startup.
+
+    Called once during lifespan — no active loops exist yet, so any session
+    still marked 'running' on disk is leftover from a previous crash.
+    """
+    summaries_dir = PROJECT_ROOT / "memory" / "session_summaries_index"
+    if not summaries_dir.exists():
+        return
+    cleaned = 0
+    for session_file in summaries_dir.rglob("session_*.json"):
+        try:
+            data = json.loads(session_file.read_text())
+            graph = data.get("graph", {})
+            status = graph.get("status", "")
+            if status == "running":
+                graph["status"] = "failed"
+                data["graph"] = graph
+                session_file.write_text(json.dumps(data))
+                cleaned += 1
+        except Exception:
+            pass
+    if cleaned:
+        print(f"🧹 Cleaned {cleaned} stale 'running' sessions → 'failed'")
+
 
 # Get shared instances
 multi_mcp = get_multi_mcp()
@@ -166,6 +194,7 @@ async def process_run(
     skill_id: str = None,
     space_id: Optional[str] = None,
     user_id: str = None,
+    display_query: Optional[str] = None,
 ):
     """
     Background task: retrieve Remme memories, run agent loop, extract new memories.
@@ -264,7 +293,8 @@ async def process_run(
             try:
                 run_globals = {"user_id": user_id} if user_id else {}
                 context = await loop.run(
-                    query, [], run_globals, [], session_id=run_id, memory_context=memory_context, space_id=_space_id
+                    query, [], run_globals, [], session_id=run_id, memory_context=memory_context, space_id=_space_id,
+                    display_query=display_query, source=source,
                 )
             except asyncio.CancelledError:
                 span.set_status(Status(StatusCode.ERROR, "cancelled"))
@@ -905,23 +935,28 @@ async def list_runs():
                         created_at = datetime.fromtimestamp(session_file.stat().st_ctime).isoformat()
 
                     # Compute status from node statuses
-                    # Check nodes for their statuses
                     nodes = data.get("nodes", [])
                     node_statuses = [n.get("status", "pending") for n in nodes if n.get("id") != "ROOT"]
 
+                    # Stale detection: if file hasn't been modified in 5 minutes and still "running", mark failed
+                    file_age_seconds = time.time() - session_file.stat().st_mtime
+                    is_stale = file_age_seconds > 300  # 5 minutes
+
                     if any(s == "running" for s in node_statuses):
-                        computed_status = "running"
+                        computed_status = "failed" if is_stale else "running"
                     elif any(s == "failed" for s in node_statuses):
                         computed_status = "failed"
-                    elif all(s == "completed" for s in node_statuses) and node_statuses:
+                    elif all(s in ("completed", "waiting_input") for s in node_statuses) and node_statuses:
                         computed_status = "completed"
                     else:
-                        # Fallback to graph-level status or completed
-                        computed_status = graph_details.get("status", "completed")
+                        # Fallback to graph-level status; mark stale runs as failed
+                        graph_status = graph_details.get("status", "completed")
+                        computed_status = "failed" if (is_stale and graph_status == "running") else graph_status
 
                     total_tokens = sum((n.get("total_tokens", 0) or 0) for n in nodes)
 
                     run_id = session_file.stem.replace("session_", "")
+                    run_source = graph_details.get("source", "web")
                     runs.append(
                         {
                             "id": run_id,
@@ -929,6 +964,7 @@ async def list_runs():
                             "created_at": created_at,
                             "status": computed_status,
                             "total_tokens": total_tokens,
+                            "source": run_source,
                         }
                     )
                 except Exception:
@@ -990,7 +1026,16 @@ async def get_run(run_id: str):
         react_flow = nx_to_reactflow(G)
 
         # Determine status: Running if in memory, else use file status
-        status = "running" if run_id in active_loops else data.get("graph", {}).get("status", "completed")
+        # Apply same stale detection as list_runs() — 5 minute timeout
+        if run_id in active_loops:
+            status = "running"
+        else:
+            file_status = data.get("graph", {}).get("status", "completed")
+            if file_status == "running":
+                file_age = time.time() - found_file.stat().st_mtime
+                status = "failed" if file_age > 300 else "running"
+            else:
+                status = file_status
 
         return {"id": run_id, "status": status, "graph": react_flow}
 

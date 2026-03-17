@@ -270,6 +270,58 @@ async def restart_server():
     }
 
 
+# === GEMINI API ENDPOINTS ===
+
+@router.get("/gemini/models")
+async def get_gemini_models():
+    """List available Gemini models from the configured API (Vertex AI or API key)."""
+    try:
+        from config.gemini_client import get_gemini_client, _load_gemini_settings
+        cfg = _load_gemini_settings()
+        mode = cfg.get("mode", "api_key")
+        client = get_gemini_client()
+
+        models = []
+        for model in client.models.list():
+            name = getattr(model, 'name', '') or ''
+            # Normalize model ID — API key: "models/gemini-2.5-flash", Vertex: "publishers/google/models/gemini-2.5-flash"
+            model_id = name
+            for prefix in ("publishers/google/models/", "models/"):
+                if model_id.startswith(prefix):
+                    model_id = model_id[len(prefix):]
+                    break
+
+            # Skip non-Gemini and embedding-only models
+            if not model_id.startswith("gemini"):
+                continue
+
+            # Skip embedding models by name
+            if "embedding" in model_id or "aqa" in model_id:
+                continue
+
+            # Check generation support if available
+            supported = getattr(model, 'supported_generation_methods', None)
+            if supported and 'generateContent' not in supported:
+                continue
+
+            display = getattr(model, 'display_name', '') or model_id
+            desc = getattr(model, 'description', '') or ''
+            models.append({
+                "value": model_id,
+                "label": display,
+                "description": desc[:120],
+            })
+
+        # Sort: newer/better models first (2.5-pro, 2.5-flash before 2.0, 1.5)
+        models.sort(key=lambda m: m["value"], reverse=True)
+
+        return {"status": "success", "mode": mode, "models": models}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "error": str(e), "models": []}
+
+
 # === OLLAMA API ENDPOINTS ===
 
 @router.get("/ollama/models")

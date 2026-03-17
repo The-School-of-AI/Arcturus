@@ -29,7 +29,6 @@ agents:
     - sandbox
     - browser
     - rag
-    - yahoo_finance
     skills:
     - coder
     - python_coding
@@ -45,7 +44,6 @@ agents:
     mcp_servers:
     - rag
     - browser
-    - yahoo_finance
     skills:
     - retriever
     description: Gathers raw external or document-based info.

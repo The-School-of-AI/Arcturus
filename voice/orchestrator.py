@@ -407,14 +407,24 @@ class Orchestrator:
     def _should_use_streaming(self) -> bool:
         """
         Check if the TTS backend supports streaming and it's enabled.
-        Returns True for PiperTTSService or Azure TTSService when their
-        respective streaming_enabled flag is set in config.
+        Returns True for KokoroTTSService, PiperTTSService, or Azure
+        TTSService when their respective streaming_enabled flag is set.
         """
         try:
             from voice.config import VOICE_CONFIG
         except Exception:
             print("⚠️ [Orchestrator] _should_use_streaming: failed to import VOICE_CONFIG")
             return False
+
+        # Check Kokoro
+        try:
+            from voice.kokoro_tts_service import KokoroTTSService
+            if isinstance(self.tts, KokoroTTSService):
+                result = VOICE_CONFIG.get("kokoro_tts", {}).get("streaming_enabled", True)
+                print(f"🔍 [Orchestrator] TTS=Kokoro, streaming_enabled={result}")
+                return result
+        except ImportError:
+            pass
 
         # Check Piper
         from voice.piper_tts_service import PiperTTSService

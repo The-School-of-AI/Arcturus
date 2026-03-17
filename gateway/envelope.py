@@ -574,6 +574,11 @@ class MessageEnvelope:
             },
         )
 
+    @property
+    def mode(self) -> str | None:
+        """Return the user-selected interaction mode (e.g. from Telegram menu)."""
+        return self.metadata.get("mode")
+
     def to_dict(self) -> dict[str, Any]:
         """Convert envelope to dictionary for serialization."""
         return {

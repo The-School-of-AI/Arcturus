@@ -370,7 +370,10 @@ class IntentRouter:
         self.model_manager = None
         if self.config.get("use_llm"):
             model_name = self.config.get("model")
-            self.model_manager = ModelManager(model_name=model_name)
+            provider = self.config.get("provider")  # "ollama" or "gemini"
+            self.model_manager = ModelManager(
+                model_name=model_name, provider=provider
+            )
 
     async def _classify_llm(self, utterance: str) -> Optional[tuple[IntentType, float, str]]:
         """

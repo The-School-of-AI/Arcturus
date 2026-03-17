@@ -114,22 +114,12 @@ export const WorkspacePanel: React.FC = () => {
             setEditedInput(selectedNode.data.prompt || '');
         }
 
-        const nodeType = selectedNode.data.type;
-        const nodeLabel = selectedNode.data.label?.toLowerCase() || '';
-
         // Reset web tab state when switching nodes
         setExpandedUrl(null);
         setActiveIframeUrl(null);
 
-        // Switch to appropriate tab based on agent type
-        if (nodeType === 'Summarizer' || nodeType === 'Evaluator' ||
-            nodeLabel.includes('formatter') || nodeLabel.includes('summarizer')) {
-            setActiveTab('preview');
-        } else if (nodeType === 'Coder' || nodeLabel.includes('thinker') || nodeLabel.includes('distiller') || nodeLabel.includes('retriever')) {
-            setActiveTab('code');
-        } else if (selectedNodeId) {
-            setActiveTab('overview');
-        }
+        // Always default to overview — user can switch manually
+        setActiveTab('overview');
     }, [selectedNodeId, selectedNode?.data.type, selectedNode?.data.label, isPlanner, currentRun?.name, currentRun?.id]);
 
     // Auto-switch to Compare tab when test mode activates with results
@@ -1545,6 +1535,30 @@ export const WorkspacePanel: React.FC = () => {
                                             for (const key of fallbackKeys) {
                                                 const value = parsed[key as keyof typeof parsed];
                                                 if (typeof value === 'string' && value.trim()) {
+                                                    formatContent = cleanContent(value);
+                                                    contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // PASS 4: Check the node's "writes" field keys (FormatterAgent uses dynamic key names like "final_comparison_T007")
+                                        if (!formatContent && selectedNode?.data?.writes?.length) {
+                                            for (const writeKey of selectedNode.data.writes) {
+                                                const value = parsed[writeKey as keyof typeof parsed];
+                                                if (typeof value === 'string' && value.trim().length > 50) {
+                                                    formatContent = cleanContent(value);
+                                                    contentType = isHtml(formatContent) ? 'html' : 'markdown';
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // PASS 5: Last resort — find any long string value (likely the report body)
+                                        if (!formatContent) {
+                                            const metaKeys = new Set(['final_format', 'call_self', 'next_instruction', 'iteration_context', 'ui_config']);
+                                            for (const [key, value] of Object.entries(parsed)) {
+                                                if (typeof value === 'string' && value.length > 200 && !metaKeys.has(key)) {
                                                     formatContent = cleanContent(value);
                                                     contentType = isHtml(formatContent) ? 'html' : 'markdown';
                                                     break;

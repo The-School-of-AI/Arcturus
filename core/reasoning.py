@@ -11,14 +11,14 @@ class Verifier:
     Uses a specialized 'verifier' role model (e.g., small local model).
     """
     def __init__(self):
-        # Initialize with strict 'verifier' role - ModelManager will enforce local/cloud policy
+        # Prefer local model for verification (cheap, fast, no API cost)
         try:
-            # FORCE GEMINI for stability during emergency remediation
-            self.model_manager = ModelManager("gemini-2.5-flash-lite", provider="gemini")
+            self.model_manager = ModelManager("gemma3:12b", provider="ollama")
+            log_step("Verifier using local model: gemma3:12b", symbol="🔍")
         except Exception as e:
-            log_error(f"⚠️ Verifier model failed to load (Role: verifier): {e}. Falling back to Gemini Flash.")
+            log_error(f"⚠️ Local verifier model failed: {e}. Falling back to Gemini Flash Lite.")
             try:
-                self.model_manager = ModelManager("gemini-2.5-flash", provider="gemini")
+                self.model_manager = ModelManager("gemini-2.5-flash-lite", provider="gemini")
             except Exception as e2:
                  log_error(f"⚠️ Fallback Verifier failed: {e2}. Verification will be skipped.")
                  self.model_manager = None

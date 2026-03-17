@@ -75,8 +75,21 @@ async def lifespan(app: FastAPI):
         voice_agent = Agent()
 
         # Choose TTS backend based on config
-        tts_provider = VOICE_CONFIG.get("tts_provider", "azure")
-        if tts_provider == "piper":
+        tts_provider = VOICE_CONFIG.get("tts_provider", "kokoro")
+        if tts_provider == "kokoro":
+            from voice.kokoro_tts_service import KokoroTTSService
+
+            kokoro_cfg = VOICE_CONFIG.get("kokoro_tts", {})
+            voice_tts = KokoroTTSService(
+                model_path=kokoro_cfg.get("model_path"),
+                voices_path=kokoro_cfg.get("voices_path"),
+                personas=kokoro_cfg.get("personas"),
+                active_persona="professional",
+            )
+            print(
+                f"🔊 [Voice] TTS provider: Kokoro (local, streaming={kokoro_cfg.get('streaming_enabled', True)})"
+            )
+        elif tts_provider == "piper":
             from voice.piper_tts_service import PiperTTSService
 
             piper_cfg = VOICE_CONFIG.get("piper_tts", {})
@@ -103,11 +116,21 @@ async def lifespan(app: FastAPI):
         )
 
         stt_cfg = VOICE_CONFIG.get("stt", {})
-        stt_provider = VOICE_CONFIG.get("stt_provider", "deepgram")
+        stt_provider = VOICE_CONFIG.get("stt_provider", "moonshine")
         sample_rate = stt_cfg.get("sample_rate", 16000)
         noise_reduce = stt_cfg.get("noise_reduce", True)
 
-        if stt_provider == "deepgram":
+        if stt_provider == "moonshine":
+            from voice.moonshine_stt_service import MoonshineSTTService
+
+            m_cfg = stt_cfg.get("moonshine", {})
+            voice_stt = MoonshineSTTService(
+                sample_rate=sample_rate,
+                on_text_callback=orchestrator.on_text,
+                model=m_cfg.get("model", "base"),
+                noise_reduce=noise_reduce,
+            )
+        elif stt_provider == "deepgram":
             dg_cfg = stt_cfg.get("deepgram", {})
             voice_stt = DeepgramSTTService(
                 sample_rate=sample_rate,
@@ -232,6 +255,10 @@ async def lifespan(app: FastAPI):
         await initialize_message_bus()
     except Exception as e:
         print(f"⚠️ [Nexus] Message bus initialization failed: {e}")
+
+    # Clean up stale sessions from previous crashes — mark "running" as "failed"
+    from routers.runs import cleanup_stale_sessions
+    cleanup_stale_sessions()
 
     # Phase 4: run sync (push then pull) on startup when SYNC_ENGINE_ENABLED + SYNC_SERVER_URL
     asyncio.create_task(run_sync_background())

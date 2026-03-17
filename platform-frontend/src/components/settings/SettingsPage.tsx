@@ -11,16 +11,7 @@ import { Input } from '@/components/ui/input';
 import { API_BASE } from '@/lib/api';
 import { useAppStore } from '@/store';
 import axios from 'axios';
-
-// Gemini model names (December 2025)
-const GEMINI_MODELS = [
-    { value: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash', description: 'Latest, fast (Dec 2025)' },
-    { value: 'gemini-3.0-pro', label: 'Gemini 3.0 Pro', description: 'Best multimodal (Nov 2025)' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, grounded' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Advanced reasoning' },
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Low cost' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
-];
+import { GEMINI_MODELS_FALLBACK, type GeminiModel } from '@/lib/gemini-models';
 
 interface OllamaModel {
     name: string;
@@ -150,6 +141,10 @@ export const SettingsPage: React.FC = () => {
     const [skills, setSkills] = useState<any[]>([]);
     const [assignments, setAssignments] = useState<Record<string, string[]>>({});
 
+    // Gemini models (dynamic from API)
+    const [geminiModels, setGeminiModels] = useState<GeminiModel[]>(GEMINI_MODELS_FALLBACK);
+    const [geminiModelsLoading, setGeminiModelsLoading] = useState(false);
+
     // API Keys tab state
     const [apiKeysStatus, setApiKeysStatus] = useState<Record<string, ApiKeyGroup> | null>(null);
     const [apiKeyEdits, setApiKeyEdits] = useState<Record<string, string>>({});
@@ -158,7 +153,22 @@ export const SettingsPage: React.FC = () => {
 
     useEffect(() => {
         fetchAll();
+        fetchGeminiModels();
     }, []);
+
+    const fetchGeminiModels = async () => {
+        setGeminiModelsLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/settings/gemini/models`);
+            if (res.data.status === 'success' && res.data.models?.length > 0) {
+                setGeminiModels(res.data.models);
+            }
+        } catch {
+            // Keep fallback models
+        } finally {
+            setGeminiModelsLoading(false);
+        }
+    };
 
     const fetchAll = async () => {
         setLoading(true);
@@ -576,20 +586,29 @@ export const SettingsPage: React.FC = () => {
         return (
             <div className="space-y-6">
                 <SettingGroup title="Default Agent Model" description="Model used for agent execution (Cloud or Local)">
-                    <select
-                        value={currentValue}
-                        onChange={(e) => handleAgentModelChange(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
-                    >
-                        {/* Gemini Cloud Models */}
-                        <option disabled value="" className="text-muted-foreground font-semibold">
-                            Gemini (Cloud)
-                        </option>
-                        {GEMINI_MODELS.map((m) => (
-                            <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
-                                &nbsp;&nbsp;{m.label} — {m.description}
+                    <div className="flex items-center gap-2">
+                        <select
+                            value={currentValue}
+                            onChange={(e) => handleAgentModelChange(e.target.value)}
+                            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm"
+                        >
+                            {/* Gemini Cloud Models */}
+                            <option disabled value="" className="text-muted-foreground font-semibold">
+                                {geminiStatus?.mode === 'vertex_ai' ? 'Gemini (Vertex AI)' : 'Gemini (Cloud)'}
                             </option>
-                        ))}
+                            {geminiModels.map((m) => (
+                                <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                    &nbsp;&nbsp;{m.label} — {m.description}
+                                </option>
+                            ))}
+
+                            {/* Show current model if not in list */}
+                            {settings?.agent.model_provider === 'gemini' &&
+                             !geminiModels.some(m => m.value === settings?.agent.default_model) && (
+                                <option value={currentValue}>
+                                    &nbsp;&nbsp;{settings?.agent.default_model} (custom)
+                                </option>
+                            )}
 
                         {/* Ollama Local Models */}
                         {ollamaTextModels.length > 0 && (
@@ -604,7 +623,16 @@ export const SettingsPage: React.FC = () => {
                                 ))}
                             </>
                         )}
-                    </select>
+                        </select>
+                        <button
+                            onClick={fetchGeminiModels}
+                            disabled={geminiModelsLoading}
+                            className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
+                            title="Refresh available models"
+                        >
+                            <RefreshCw className={cn("w-4 h-4", geminiModelsLoading && "animate-spin")} />
+                        </button>
+                    </div>
 
                     {/* Provider indicator */}
                     <div className="mt-2 flex items-center gap-2 text-xs">
@@ -612,15 +640,21 @@ export const SettingsPage: React.FC = () => {
                             <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
                                 Local Execution
                             </span>
+                        ) : geminiStatus?.mode === 'vertex_ai' ? (
+                            <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                Vertex AI
+                            </span>
                         ) : (
                             <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Cloud Execution
+                                Gemini API
                             </span>
                         )}
                         <span className="text-muted-foreground">
                             {settings?.agent.model_provider === 'ollama'
                                 ? 'Running on your machine via Ollama'
-                                : 'Using Google Gemini API'}
+                                : geminiStatus?.mode === 'vertex_ai'
+                                    ? `Vertex AI — ${geminiStatus?.vertex_project || 'project'} (${geminiStatus?.vertex_location || 'us-central1'})`
+                                    : 'Using Google Gemini API'}
                         </span>
                     </div>
                 </SettingGroup>
@@ -760,7 +794,7 @@ export const SettingsPage: React.FC = () => {
                                     >
                                         <option value="default" className="text-foreground">Global Default Model</option>
                                         <optgroup label="Gemini (Cloud)">
-                                            {GEMINI_MODELS.map(m => (
+                                            {geminiModels.map(m => (
                                                 <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
                                                     Gemini: {m.label}
                                                 </option>
@@ -884,7 +918,7 @@ export const SettingsPage: React.FC = () => {
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-shadow"
                     >
                         <option disabled value="" className="text-muted-foreground font-semibold">Gemini (Cloud)</option>
-                        {GEMINI_MODELS.map((m) => (
+                        {geminiModels.map((m) => (
                             <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
                                 {m.label} — {m.description}
                             </option>

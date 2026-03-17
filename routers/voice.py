@@ -24,8 +24,9 @@ def _hot_swap_voice_services(orch, enable_privacy: bool) -> dict:
     Hot-swap STT and TTS services on the live orchestrator *without* a server
     restart.  Called while holding _privacy_swap_lock.
 
-    Privacy ON  → STT: Whisper (local)   TTS: Piper (local)
-    Privacy OFF → STT: Deepgram (cloud)  TTS: Azure (cloud)
+    Privacy ON  → STT: Moonshine (local)   TTS: Kokoro (local)
+                  Fallback: Whisper / Piper if primary unavailable
+    Privacy OFF → STT: Deepgram (cloud)    TTS: Azure (cloud)
 
     Returns a dict describing what was actually switched.
     """
@@ -45,16 +46,30 @@ def _hot_swap_voice_services(orch, enable_privacy: bool) -> dict:
     noise_reduce = stt_cfg.get("noise_reduce", True)
 
     if enable_privacy:
-        from voice.stt_service import STTService
-        w_cfg = stt_cfg.get("whisper", {})
-        new_stt = STTService(
-            sample_rate=sample_rate,
-            on_text_callback=orch.on_text,
-            model_size=w_cfg.get("model_size", "small"),
-            device=w_cfg.get("device", "cpu"),
-            noise_reduce=noise_reduce,
-        )
-        new_stt_label = f"Whisper/{w_cfg.get('model_size', 'small')} (local)"
+        # Local STT: prefer Moonshine, fallback to Whisper
+        try:
+            from voice.moonshine_stt_service import MoonshineSTTService
+            m_cfg = stt_cfg.get("moonshine", {})
+            new_stt = MoonshineSTTService(
+                sample_rate=sample_rate,
+                on_text_callback=orch.on_text,
+                model=m_cfg.get("model", "base"),
+                noise_reduce=noise_reduce,
+            )
+            new_stt_label = f"Moonshine/{m_cfg.get('model', 'base')} (local)"
+            VOICE_CONFIG["stt_provider"] = "moonshine"
+        except ImportError:
+            from voice.stt_service import STTService
+            w_cfg = stt_cfg.get("whisper", {})
+            new_stt = STTService(
+                sample_rate=sample_rate,
+                on_text_callback=orch.on_text,
+                model_size=w_cfg.get("model_size", "small"),
+                device=w_cfg.get("device", "cpu"),
+                noise_reduce=noise_reduce,
+            )
+            new_stt_label = f"Whisper/{w_cfg.get('model_size', 'small')} (local)"
+            VOICE_CONFIG["stt_provider"] = "whisper"
     else:
         from voice.deepgram_stt_service import DeepgramSTTService
         dg_cfg = stt_cfg.get("deepgram", {})
@@ -65,10 +80,10 @@ def _hot_swap_voice_services(orch, enable_privacy: bool) -> dict:
             noise_reduce=noise_reduce,
         )
         new_stt_label = "Deepgram Nova-2 (cloud)"
+        VOICE_CONFIG["stt_provider"] = "deepgram"
 
     new_stt.start()
     orch.stt = new_stt
-    VOICE_CONFIG["stt_provider"] = "whisper" if enable_privacy else "deepgram"
 
     # ── 3. Cancel current TTS and build the new one ─────────────────────
     try:
@@ -77,15 +92,29 @@ def _hot_swap_voice_services(orch, enable_privacy: bool) -> dict:
         pass
 
     if enable_privacy:
-        from voice.piper_tts_service import PiperTTSService
-        piper_cfg = VOICE_CONFIG.get("piper_tts", {})
-        new_tts = PiperTTSService(
-            model_path=piper_cfg.get("model_path"),
-            length_scale=piper_cfg.get("length_scale", 1.0),
-            sentence_silence=piper_cfg.get("sentence_silence", 0.15),
-            speaker_id=piper_cfg.get("speaker_id"),
-        )
-        new_tts_label = "Piper (local)"
+        # Local TTS: prefer Kokoro, fallback to Piper
+        try:
+            from voice.kokoro_tts_service import KokoroTTSService
+            kokoro_cfg = VOICE_CONFIG.get("kokoro_tts", {})
+            new_tts = KokoroTTSService(
+                model_path=kokoro_cfg.get("model_path"),
+                voices_path=kokoro_cfg.get("voices_path"),
+                personas=kokoro_cfg.get("personas"),
+                active_persona="professional",
+            )
+            new_tts_label = "Kokoro (local)"
+            VOICE_CONFIG["tts_provider"] = "kokoro"
+        except ImportError:
+            from voice.piper_tts_service import PiperTTSService
+            piper_cfg = VOICE_CONFIG.get("piper_tts", {})
+            new_tts = PiperTTSService(
+                model_path=piper_cfg.get("model_path"),
+                length_scale=piper_cfg.get("length_scale", 1.0),
+                sentence_silence=piper_cfg.get("sentence_silence", 0.15),
+                speaker_id=piper_cfg.get("speaker_id"),
+            )
+            new_tts_label = "Piper (local)"
+            VOICE_CONFIG["tts_provider"] = "piper"
     else:
         from voice.tts_service import TTSService
         tts_cfg = VOICE_CONFIG.get("tts", {})
@@ -95,9 +124,9 @@ def _hot_swap_voice_services(orch, enable_privacy: bool) -> dict:
             active_persona=tts_cfg.get("active_persona"),
         )
         new_tts_label = "Azure Neural (cloud)"
+        VOICE_CONFIG["tts_provider"] = "azure"
 
     orch.tts = new_tts
-    VOICE_CONFIG["tts_provider"] = "piper" if enable_privacy else "azure"
 
     print(f"🔒 [Privacy] Mode {'ON' if enable_privacy else 'OFF'} — "
           f"STT: {new_stt_label}, TTS: {new_tts_label}")
@@ -148,10 +177,12 @@ async def get_privacy_mode(request: Request):
     }
     """
     from voice.config import VOICE_CONFIG
-    stt = VOICE_CONFIG.get("stt_provider", "deepgram")
-    tts = VOICE_CONFIG.get("tts_provider", "azure")
+    stt = VOICE_CONFIG.get("stt_provider", "moonshine")
+    tts = VOICE_CONFIG.get("tts_provider", "kokoro")
     # Privacy mode = both services are local
-    is_private = (stt == "whisper" and tts == "piper")
+    local_stt = stt in ("whisper", "moonshine")
+    local_tts = tts in ("piper", "kokoro")
+    is_private = local_stt and local_tts
     return {
         "privacy_mode": is_private,
         "stt_provider": stt,

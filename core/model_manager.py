@@ -300,7 +300,7 @@ class ModelManager:
                 model=self.model_info["model"],
                 contents=prompt,
                 config=genai.types.GenerateContentConfig(
-                    max_output_tokens=65536,
+                    max_output_tokens=65535,
                 ),
             )
             text = response.text.strip()
@@ -325,7 +325,7 @@ class ModelManager:
                 model=self.model_info["model"],
                 contents=contents,
                 config=genai.types.GenerateContentConfig(
-                    max_output_tokens=65536,
+                    max_output_tokens=65535,
                 ),
             )
             text = response.text.strip()

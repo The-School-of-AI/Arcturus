@@ -2,7 +2,8 @@ import React from 'react';
 import {
     Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network
+    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network,
+    MessageSquare
 } from 'lucide-react';
 // import { useFeatureFlags } from '@/hooks/useFeatureFlags'; // only used by Swarm (hidden)
 import { Button } from "@/components/ui/button";
@@ -345,6 +346,12 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                                 ? "text-red-500 group-hover:text-red-400"
                                                                 : "text-foreground group-hover:text-foreground/80"
                                                     )}>
+                                                        {run.source && run.source !== 'web' && (
+                                                            <span className="inline-flex items-center gap-1 mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-primary/10 text-primary border border-primary/20">
+                                                                <MessageSquare className="w-2.5 h-2.5" />
+                                                                {run.source}
+                                                            </span>
+                                                        )}
                                                         {run.name}
                                                     </p>
                                                 </div>

@@ -45,10 +45,21 @@ def get_gemini_client() -> genai.Client:
         if vertex_api_key:
             # API key mode: project/location not needed
             return genai.Client(vertexai=True, api_key=vertex_api_key)
+        # Fallback: try gcloud CLI default project
+        if not project:
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["gcloud", "config", "get-value", "project"],
+                    capture_output=True, text=True, timeout=5
+                )
+                project = result.stdout.strip()
+            except Exception:
+                pass
         if not project:
             raise ValueError(
                 "Vertex AI mode requires VERTEX_AI_API_KEY or "
-                "GOOGLE_CLOUD_PROJECT + ADC credentials"
+                "GOOGLE_CLOUD_PROJECT env var or `gcloud config set project <id>`"
             )
         return genai.Client(vertexai=True, project=project, location=location)
     else:
