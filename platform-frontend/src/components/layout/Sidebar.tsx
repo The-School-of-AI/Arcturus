@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
+    Plus, Clock, Search, Trash2, Database, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
     CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network,
     MessageSquare
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
 import axios from 'axios';
 import { RagPanel } from '@/components/sidebar/RagPanel';
-import { McpPanel } from '@/components/sidebar/McpPanel';
+// McpPanel moved into SettingsPage
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { NotesPanel } from '@/components/sidebar/NotesPanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
@@ -43,7 +43,7 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
     const selectedAppCardId = useAppStore(state => state.selectedAppCardId);
     const selectedExplorerNodeId = useAppStore(state => state.selectedExplorerNodeId);
     const ragActiveDocumentId = useAppStore(state => state.ragActiveDocumentId);
-    const selectedMcpServer = useAppStore(state => state.selectedMcpServer);
+    // selectedMcpServer removed — MCP moved to Settings
     const selectedRagFile = useAppStore(state => state.selectedRagFile);
     const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
     const currentRun = useAppStore(state => state.currentRun);
@@ -53,11 +53,10 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
         if (sidebarTab === 'rag' && (ragActiveDocumentId || selectedRagFile)) return true;
-        if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel, currentRun]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedRagFile, showNewsChatPanel, currentRun]);
 
     const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
 
@@ -65,9 +64,6 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
 
     const handleIconClick = () => {
         if (active && isInspectorOpen) {
-            // MCP should be persistent as per user request
-            if (sidebarTab === 'mcp') return;
-
             clearSelection();
         } else if (active) {
             // Always OPEN the panel (never toggle closed).
@@ -188,7 +184,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} tooltip="Start and manage agent task executions. View run history, execution graphs, and token usage." />
                     <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} tooltip="Knowledge base manager. Upload, index, and search documents (PDFs, code, text) for agent retrieval." />
                     <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} tooltip="Markdown note-taking with folder hierarchy, full-text search, and AI-powered analysis." />
-                    <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} tooltip="Model Context Protocol server manager. Add external tool servers to extend agent capabilities." />
+                    {/* MCP moved into Settings tab */}
                     <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} tooltip="Persistent memory and user profiling. Stores facts and preferences to personalize agent behavior." />
                     <NavIcon icon={Network} label="Graph" tab="graph" active={sidebarTab === 'graph'} onClick={() => setSidebarTab('graph')} tooltip="Neo4j knowledge graph explorer. Visualize entities and relationships extracted from your memories." />
                     {/* Explorer hidden — not needed for current deployment */}
@@ -434,7 +430,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     )}
                     {sidebarTab === 'rag' && <RagPanel />}
                     {sidebarTab === 'notes' && <NotesPanel />}
-                    {sidebarTab === 'mcp' && <McpPanel />}
+                    {/* MCP moved into Settings tab */}
                     {sidebarTab === 'remme' && <RemmePanel />}
                     {sidebarTab === 'graph' && <GraphPanel />}
                     {sidebarTab === 'explorer' && <ExplorerPanel />}

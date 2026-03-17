@@ -42,6 +42,22 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
         logger.error(f"WebSocket error on surface {surface_id}: {e}")
         ws_handler.disconnect(websocket, surface_id)
 
+@router.get("/surfaces")
+async def list_surfaces():
+    """List all canvas surfaces with metadata."""
+    runtime = get_canvas_runtime()
+    surfaces = []
+    for sid, state in runtime.surfaces.items():
+        comps = state.get("components", [])
+        surfaces.append({
+            "id": sid,
+            "title": state.get("html_title") or sid,
+            "mode": "sandbox" if state.get("html") else "widgets",
+            "component_count": len(comps),
+            "has_data": bool(state.get("data")),
+        })
+    return {"surfaces": surfaces}
+
 @router.get("/state/{surface_id}")
 async def get_canvas_state(surface_id: str):
     """

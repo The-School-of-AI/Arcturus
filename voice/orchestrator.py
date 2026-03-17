@@ -608,6 +608,121 @@ class Orchestrator:
 
     # ─────────────── Nexus → event → TTS ───────────────
 
+    # ─────────────── Direct LLM Chat (fast voice path) ───────────────
+
+    def _direct_chat_then_speak(self, query: str):
+        """
+        Fast voice conversation path — calls Ollama directly, bypasses Nexus.
+
+        1. Build a short conversation prompt from session history
+        2. Call Ollama synchronously via HTTP
+        3. Speak the response via TTS
+        4. Enter follow-up listening window
+
+        This is ~5-10x faster than the Nexus pipeline for simple Q&A.
+        """
+        import asyncio
+
+        t_start = time.time()
+        print(f"💬 [Orchestrator] Direct chat: \"{query}\"")
+
+        # Build conversation messages from session history
+        history = self.session_logger.get_conversation_history()
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are Arcturus, a helpful voice assistant. "
+                    "Keep your responses concise and conversational — "
+                    "you are speaking aloud, not writing. "
+                    "Aim for 1-3 sentences unless the user asks for detail. "
+                    "Do not use markdown, code blocks, or bullet points."
+                ),
+            }
+        ]
+        # Add recent history (last 8 turns)
+        for msg in history[-16:]:
+            messages.append({
+                "role": msg.get("role", "user"),
+                "content": msg.get("content", ""),
+            })
+        # Add the current query
+        messages.append({"role": "user", "content": query})
+
+        # Call Ollama directly via HTTP (synchronous — we're in a bg thread)
+        from config.settings_loader import reload_settings
+        fresh = reload_settings()
+        agent_cfg = fresh.get("agent", {})
+        model = agent_cfg.get("default_model", "gemma3:12b")
+        provider = agent_cfg.get("model_provider", "ollama")
+
+        ollama_url = fresh.get("ollama", {}).get("base_url", "http://127.0.0.1:11434")
+
+        response_text = None
+        try:
+            if provider == "ollama":
+                resp = requests.post(
+                    f"{ollama_url}/api/chat",
+                    json={
+                        "model": model,
+                        "messages": messages,
+                        "stream": False,
+                    },
+                    timeout=(5.0, 60.0),
+                )
+                if resp.ok:
+                    data = resp.json()
+                    response_text = data.get("message", {}).get("content", "")
+                else:
+                    print(f"⚠️ [DirectChat] Ollama returned {resp.status_code}: {resp.text[:200]}")
+            else:
+                # Fallback: use ModelManager for non-Ollama providers
+                from core.model_manager import ModelManager
+                mm = ModelManager(model, provider=provider)
+                loop = self._event_loop
+                if loop and loop.is_running():
+                    future = asyncio.run_coroutine_threadsafe(
+                        mm.generate_text("\n".join(m["content"] for m in messages)),
+                        loop,
+                    )
+                    response_text = future.result(timeout=30.0)
+        except Exception as e:
+            print(f"❌ [DirectChat] LLM call failed: {e}")
+
+        latency_ms = (time.time() - t_start) * 1000
+
+        # Check barge-in
+        with self._lock:
+            if self.state != "THINKING":
+                print("⚡ [DirectChat] Barge-in during thinking — skipping TTS.")
+                return
+
+        if response_text and response_text.strip():
+            spoken = self._markdown_to_speech(response_text)
+            print(f"💬 [DirectChat] Response ({latency_ms:.0f}ms): \"{spoken[:100]}...\"")
+            with self._lock:
+                self._set_state("SPEAKING")
+            self._speak(spoken, source="answer")
+        else:
+            print("⚠️ [DirectChat] No response from LLM.")
+            with self._lock:
+                self._set_state("SPEAKING")
+            self._speak("Sorry, I didn't get a response. Could you try again?", source="agent")
+
+        # Log the turn
+        self.session_logger.log_turn(
+            user_transcript=query,
+            tts_text=response_text,
+            run_id=None,
+            persona=self.tts.active_persona,
+            latency_ms=latency_ms,
+            source="direct_chat",
+        )
+
+        self._enter_follow_up()
+
+    # ─────────────── Nexus pipeline (heavy multi-agent path) ───────────────
+
     # Varied acknowledgment phrases so it doesn't feel robotic
     _ACK_PHRASES = [
         "Let me look into that for you.",

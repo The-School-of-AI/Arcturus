@@ -604,17 +604,17 @@ Intent: AGENTIC
                     daemon=True,
                 ).start()
             else:
-                # Not a known navigation route — let Nexus handle it as a general query
-                print("⚡ [IntentGate] Command → not navigation, falling back to Nexus.")
-                self._route_to_nexus(utterance)
+                # Not a known navigation route — use direct chat
+                print("⚡ [IntentGate] Command → not navigation, using direct chat.")
+                self._route_to_direct_chat(utterance)
 
         # IntentType.QUERY does not exist — AGENTIC handles all Q&A via Nexus
 
         elif intent == IntentType.AGENTIC:
-            # ── AGENTIC PATH: only reachable with confidence ≥ threshold ─────
-            print(f"🤖 [IntentGate] Agentic escalation approved "
+            # ── AGENTIC PATH: direct LLM chat for fast voice conversation ────
+            print(f"💬 [IntentGate] Direct chat "
                   f"(conf={decision.confidence:.2f})")
-            self._route_to_nexus(utterance)
+            self._route_to_direct_chat(utterance)
 
     def _execute_navigation(self, utterance: str) -> None:
         """
@@ -646,8 +646,16 @@ Intent: AGENTIC
         self._orch._speak(spoken, source="navigation")
         self._orch._enter_follow_up()
 
+    def _route_to_direct_chat(self, utterance: str) -> None:
+        """Fast path: direct LLM chat for voice conversations."""
+        threading.Thread(
+            target=self._orch._direct_chat_then_speak,
+            args=(utterance,),
+            daemon=True,
+        ).start()
+
     def _route_to_nexus(self, utterance: str) -> None:
-        """Dispatch to the appropriate TTS/Nexus path."""
+        """Heavy path: full Nexus pipeline for complex multi-step tasks."""
         use_streaming = self._orch._should_use_streaming()
         if use_streaming:
             threading.Thread(

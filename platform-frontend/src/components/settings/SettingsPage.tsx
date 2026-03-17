@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Settings, Cpu, FileText, Brain, Wrench, RotateCcw, Save, AlertTriangle,
     Loader2, RefreshCw, Download, Check, X, Terminal, Code, Play, Bot, CheckCircle2,
-    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout, Zap, KeyRound, Eye, EyeOff, Dices, Info
+    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout, Zap, KeyRound, Eye, EyeOff, Dices, Info, Box
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,6 +12,8 @@ import { API_BASE } from '@/lib/api';
 import { useAppStore } from '@/store';
 import axios from 'axios';
 import { GEMINI_MODELS_FALLBACK, type GeminiModel } from '@/lib/gemini-models';
+import { McpPanel } from '@/components/sidebar/McpPanel';
+import { McpInspector } from '@/components/mcp/McpInspector';
 
 interface OllamaModel {
     name: string;
@@ -79,7 +81,7 @@ interface ApiKeyGroup {
     total_count: number;
 }
 
-type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about';
+type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about' | 'mcp';
 
 const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini model selection' },
@@ -89,6 +91,7 @@ const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Edit agent system prompts' },
     { id: 'skills', label: 'Skills', icon: Zap, description: 'Manage agent skills' },
     { id: 'keys', label: 'API Keys', icon: KeyRound, description: 'Manage tokens & secrets' },
+    { id: 'mcp', label: 'MCP Servers', icon: Box, description: 'Model Context Protocol servers' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs, timeouts, restart' },
     { id: 'about', label: 'About', icon: Info, description: 'Features & reference guide' },
 ];
@@ -1282,6 +1285,19 @@ export const SettingsPage: React.FC = () => {
         </div>
     );
 
+    const renderMcpTab = () => (
+        <div className="flex gap-4 h-[calc(100vh-220px)] -mx-6 -mt-2">
+            {/* Server list (left) */}
+            <div className="w-[300px] shrink-0 border border-border/50 rounded-xl overflow-hidden">
+                <McpPanel />
+            </div>
+            {/* Inspector / tool toggles (right) */}
+            <div className="flex-1 border border-border/50 rounded-xl overflow-hidden">
+                <McpInspector />
+            </div>
+        </div>
+    );
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'models': return renderModelsTab();
@@ -1291,6 +1307,7 @@ export const SettingsPage: React.FC = () => {
             case 'prompts': return renderPromptsTab();
             case 'skills': return renderSkillsTab();
             case 'keys': return renderKeysTab();
+            case 'mcp': return renderMcpTab();
             case 'advanced': return renderAdvancedTab();
             case 'about': return renderAboutTab();
         }
@@ -1308,7 +1325,7 @@ export const SettingsPage: React.FC = () => {
                     <h2 className="font-bold text-foreground">{TABS.find(t => t.id === activeTab)?.label}</h2>
                     <p className="text-xs text-muted-foreground">{TABS.find(t => t.id === activeTab)?.description}</p>
                 </div>
-                {activeTab !== 'prompts' && activeTab !== 'keys' && activeTab !== 'skills' && activeTab !== 'about' && (
+                {activeTab !== 'prompts' && activeTab !== 'keys' && activeTab !== 'skills' && activeTab !== 'about' && activeTab !== 'mcp' && (
                     <Button onClick={saveSettings} disabled={saving || !hasChanges}>
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
                         Save Changes

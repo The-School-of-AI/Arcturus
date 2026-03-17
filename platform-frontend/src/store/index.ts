@@ -119,8 +119,8 @@ interface RagViewerSlice {
     clearSelectedFileContexts: () => void;
     selectedMcpServer: string | null;
     setSelectedMcpServer: (server: string | null) => void;
-    settingsActiveTab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'keys' | 'advanced' | 'about';
-    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'keys' | 'advanced' | 'about') => void;
+    settingsActiveTab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about' | 'mcp';
+    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about' | 'mcp') => void;
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;
@@ -1195,7 +1195,7 @@ export const useAppStore = create<AppState>()(
             },
             clearSelectedContexts: () => set({ selectedContexts: [], showNewsChatPanel: false }),
             selectedMcpServer: null,
-            setSelectedMcpServer: (server) => set({ selectedMcpServer: server, sidebarTab: 'mcp' }),
+            setSelectedMcpServer: (server) => set({ selectedMcpServer: server }),
             showRagInsights: false,
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),

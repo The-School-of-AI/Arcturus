@@ -33,8 +33,7 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
 
 import { AppGrid } from '@/features/apps/components/AppGrid';
 import { AppInspector } from '@/features/apps/components/AppInspector';
-import { McpBrowser } from '../mcp/McpBrowser';
-import { McpInspector } from '../mcp/McpInspector';
+// MCP moved into Settings tab
 import { SettingsPage } from '../settings/SettingsPage';
 import { RemMeProfileView } from '../remme/RemmeProfileView';
 import { KnowledgeGraphExplorer } from '../graph/KnowledgeGraphExplorer';
@@ -61,7 +60,7 @@ export const AppLayout: React.FC = () => {
         viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
         ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
-        selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
+        selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode, isInboxOpen, setIsInboxOpen,
         isSidebarSubPanelOpen,
         startEventStream, stopEventStream, currentRun
@@ -84,12 +83,12 @@ export const AppLayout: React.FC = () => {
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
         if (sidebarTab === 'rag' && showRagInsights) return true;
-        if (sidebarTab === 'mcp' && selectedMcpServer) return true;
+        // MCP moved into Settings tab
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
         if (sidebarTab === 'swarm' && !!selectedAgentId) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId]);
 
     // Scheduler, Console, Canvas, etc. collapse left panel to rail only
     // Echo should NOT be hidden when inspector is open, because the conversation is the primary surface.
@@ -118,10 +117,7 @@ export const AppLayout: React.FC = () => {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                // MCP should be persistent as per user request
-                if (sidebarTab !== 'mcp') {
-                    clearSelection();
-                }
+                clearSelection();
             }
         };
 
@@ -229,9 +225,7 @@ export const AppLayout: React.FC = () => {
 
                             {/* Transient Views */}
                             {sidebarTab !== 'apps' && sidebarTab !== 'news' && (
-                                sidebarTab === 'mcp' ? (
-                                    <McpBrowser />
-                                ) : sidebarTab === 'settings' ? (
+                                sidebarTab === 'settings' ? (
                                     <SettingsPage />
                                 ) : sidebarTab === 'rag' ? (
                                     <DocumentViewer />
@@ -298,7 +292,6 @@ export const AppLayout: React.FC = () => {
                             style={{ width: rightWidth }}
                         >
                             {sidebarTab === 'apps' ? <AppInspector /> :
-                                sidebarTab === 'mcp' ? <McpInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
                                         sidebarTab === 'swarm' ? <AgentPeekPanel /> :
                                             (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
