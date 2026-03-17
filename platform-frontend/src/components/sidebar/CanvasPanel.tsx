@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Monitor, Activity, Plus, RefreshCw, Layers, LineChart as LineChartIcon, Code, Map as MapIcon, Edit3 } from 'lucide-react';
+import { Layout, Monitor, Activity, Plus, RefreshCw, Layers, LineChart as LineChartIcon, Code, Map as MapIcon, Edit3, Table, FileText, Terminal, Gauge, Image, Braces, CheckSquare, GitBranch, Share2, Loader } from 'lucide-react';
 import { IconLayoutKanban } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -76,6 +76,131 @@ export const CanvasPanel: React.FC = () => {
                 title: `New ${label}`,
                 elements: [],
                 appState: { theme: 'dark' }
+            };
+        } else if (componentType === 'DataTable') {
+            props = {
+                title: 'Agent Results',
+                columns: [
+                    { key: 'name', label: 'Name' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'score', label: 'Score' },
+                    { key: 'time', label: 'Time' },
+                ],
+                rows: [
+                    { name: 'Task Alpha', status: 'Complete', score: 94, time: '2.3s' },
+                    { name: 'Task Beta', status: 'Running', score: 78, time: '5.1s' },
+                    { name: 'Task Gamma', status: 'Pending', score: 0, time: '-' },
+                ]
+            };
+        } else if (componentType === 'Markdown') {
+            props = {
+                title: 'Agent Report',
+                content: '## Analysis Summary\n\nThe agent completed **3 tasks** across 2 surfaces.\n\n- Task 1: Data collection ✅\n- Task 2: Processing ✅\n- Task 3: Report generation ⏳\n\n> Results are preliminary and subject to verification.\n\n| Metric | Value |\n|--------|-------|\n| Accuracy | 94.2% |\n| Latency | 120ms |'
+            };
+        } else if (componentType === 'Terminal') {
+            props = {
+                title: 'Agent Logs',
+                lines: [
+                    '$ arcturus agent start --mode=research',
+                    '✓ Agent initialized (model: gemma3:4b)',
+                    '✓ Memory context loaded (42 entries)',
+                    '# Searching knowledge base...',
+                    '> Found 7 relevant documents',
+                    '> Processing query: "system architecture"',
+                    '✓ Response generated in 1.2s',
+                ]
+            };
+        } else if (componentType === 'MetricCard') {
+            props = {
+                title: 'System Metrics',
+                metrics: [
+                    { label: 'Uptime', value: '99.9%', delta: '+0.1%', deltaType: 'positive' },
+                    { label: 'Latency', value: '42ms', delta: '-8ms', deltaType: 'positive' },
+                    { label: 'Requests', value: '12.4K', delta: '+2.1K', deltaType: 'positive' },
+                    { label: 'Errors', value: '3', delta: '+1', deltaType: 'negative' },
+                ]
+            };
+        } else if (componentType === 'ImageViewer') {
+            props = {
+                title: 'Screenshots',
+                layout: 'carousel',
+                images: [
+                    { src: 'https://picsum.photos/seed/arc1/600/400', caption: 'Dashboard Overview' },
+                    { src: 'https://picsum.photos/seed/arc2/600/400', caption: 'Agent Flow' },
+                ]
+            };
+        } else if (componentType === 'JSONViewer') {
+            props = {
+                title: 'API Response',
+                data: {
+                    status: 'success',
+                    agent: { id: 'agent-001', model: 'gemma3:4b', mode: 'research' },
+                    results: [
+                        { query: 'architecture', matches: 7, confidence: 0.94 },
+                        { query: 'deployment', matches: 3, confidence: 0.87 },
+                    ],
+                    metadata: { latency_ms: 42, tokens_used: 1250 }
+                }
+            };
+        } else if (componentType === 'TodoList') {
+            props = {
+                title: 'Sprint Tasks',
+                items: [
+                    { id: 't1', text: 'Set up agent pipeline', done: true },
+                    { id: 't2', text: 'Configure memory store', done: true },
+                    { id: 't3', text: 'Implement RAG indexing', done: false },
+                    { id: 't4', text: 'Add WebSocket sync', done: false },
+                    { id: 't5', text: 'Deploy to production', done: false },
+                ]
+            };
+        } else if (componentType === 'Progress') {
+            props = {
+                title: 'Agent Pipeline',
+                steps: [
+                    { label: 'Input Parsing', status: 'done', detail: 'Tokenized 250 words' },
+                    { label: 'Memory Retrieval', status: 'done', detail: '7 matches found' },
+                    { label: 'Reasoning', status: 'active', detail: 'Chain-of-thought in progress' },
+                    { label: 'Response Generation', status: 'pending' },
+                    { label: 'Quality Check', status: 'pending' },
+                ]
+            };
+        } else if (componentType === 'FlowChart') {
+            props = {
+                title: 'Agent Workflow',
+                nodes: [
+                    { id: '1', data: { label: 'User Input' }, position: { x: 0, y: 0 }, style: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px' } },
+                    { id: '2', data: { label: 'Intent Router' }, position: { x: 0, y: 100 }, style: { background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '8px' } },
+                    { id: '3', data: { label: 'Memory Search' }, position: { x: -150, y: 200 }, style: { background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px' } },
+                    { id: '4', data: { label: 'RAG Lookup' }, position: { x: 150, y: 200 }, style: { background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px' } },
+                    { id: '5', data: { label: 'Response' }, position: { x: 0, y: 300 }, style: { background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px' } },
+                ],
+                edges: [
+                    { id: 'e1-2', source: '1', target: '2', animated: true },
+                    { id: 'e2-3', source: '2', target: '3' },
+                    { id: 'e2-4', source: '2', target: '4' },
+                    { id: 'e3-5', source: '3', target: '5' },
+                    { id: 'e4-5', source: '4', target: '5' },
+                ]
+            };
+        } else if (componentType === 'NetworkGraph') {
+            props = {
+                title: 'Knowledge Graph',
+                nodes: [
+                    { id: 1, label: 'Arcturus', color: '#3b82f6' },
+                    { id: 2, label: 'Canvas', color: '#10b981' },
+                    { id: 3, label: 'Echo', color: '#8b5cf6' },
+                    { id: 4, label: 'Memory', color: '#f59e0b' },
+                    { id: 5, label: 'RAG', color: '#ef4444' },
+                    { id: 6, label: 'Agent', color: '#ec4899' },
+                ],
+                edges: [
+                    { from: 1, to: 2, label: 'renders' },
+                    { from: 1, to: 3, label: 'speaks' },
+                    { from: 1, to: 4, label: 'remembers' },
+                    { from: 6, to: 4, label: 'queries' },
+                    { from: 6, to: 5, label: 'searches' },
+                    { from: 6, to: 2, label: 'pushes UI' },
+                ]
             };
         }
 
@@ -191,42 +316,33 @@ export const CanvasPanel: React.FC = () => {
                     <Layout className="w-3 h-3" />
                     Widget Catalog
                 </h2>
-                <div className="grid grid-cols-3 gap-2">
-                    <div
-                        onClick={() => spawnWidget('Kanban', 'Kanban')}
-                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
-                    >
-                        <IconLayoutKanban className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Kanban</span>
-                    </div>
-                    <div
-                        onClick={() => spawnWidget('Map', 'Map')}
-                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
-                    >
-                        <MapIcon className="w-4 h-4 text-green-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Map</span>
-                    </div>
-                    <div
-                        onClick={() => spawnWidget('Whiteboard', 'Sketch')}
-                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
-                    >
-                        <Edit3 className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Sketch</span>
-                    </div>
-                    <div
-                        onClick={() => spawnWidget('LineChart', 'Analytics')}
-                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
-                    >
-                        <LineChartIcon className="w-4 h-4 text-orange-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Analytics</span>
-                    </div>
-                    <div
-                        onClick={() => spawnWidget('MonacoEditor', 'Code')}
-                        className="flex flex-col items-center gap-2 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
-                    >
-                        <Code className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[8px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">Code</span>
-                    </div>
+                <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto scrollbar-hide">
+                    {([
+                        { type: 'DataTable', label: 'Table', icon: Table, color: 'text-emerald-400' },
+                        { type: 'Markdown', label: 'Markdown', icon: FileText, color: 'text-slate-400' },
+                        { type: 'Terminal', label: 'Terminal', icon: Terminal, color: 'text-lime-400' },
+                        { type: 'MetricCard', label: 'Metrics', icon: Gauge, color: 'text-rose-400' },
+                        { type: 'LineChart', label: 'Chart', icon: LineChartIcon, color: 'text-orange-400' },
+                        { type: 'MonacoEditor', label: 'Code', icon: Code, color: 'text-cyan-400' },
+                        { type: 'Kanban', label: 'Kanban', icon: IconLayoutKanban, color: 'text-blue-400' },
+                        { type: 'Map', label: 'Map', icon: MapIcon, color: 'text-green-400' },
+                        { type: 'Whiteboard', label: 'Sketch', icon: Edit3, color: 'text-purple-400' },
+                        { type: 'TodoList', label: 'Tasks', icon: CheckSquare, color: 'text-teal-400' },
+                        { type: 'Progress', label: 'Progress', icon: Loader, color: 'text-amber-400' },
+                        { type: 'FlowChart', label: 'Flow', icon: GitBranch, color: 'text-violet-400' },
+                        { type: 'NetworkGraph', label: 'Network', icon: Share2, color: 'text-pink-400' },
+                        { type: 'JSONViewer', label: 'JSON', icon: Braces, color: 'text-yellow-400' },
+                        { type: 'ImageViewer', label: 'Images', icon: Image, color: 'text-sky-400' },
+                    ] as const).map(w => (
+                        <div
+                            key={w.type}
+                            onClick={() => spawnWidget(w.type, w.label)}
+                            className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
+                        >
+                            <w.icon className={`w-3.5 h-3.5 ${w.color} group-hover:scale-110 transition-transform`} />
+                            <span className="text-[7px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">{w.label}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 

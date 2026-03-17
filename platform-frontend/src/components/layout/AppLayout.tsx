@@ -49,7 +49,6 @@ import { AdminDashboard } from '@/features/admin/AdminDashboard';
 import { SwarmGraphView } from '@/features/swarm/SwarmGraphView';
 import { AgentPeekPanel } from '@/features/swarm/AgentPeekPanel';
 import { useSwarmStore } from '@/features/swarm/useSwarmStore';
-import { CanvasInspector } from '../sidebar/CanvasInspector';
 
 export const AppLayout: React.FC = () => {
     // Mount useVoice at the root so wake-word events trigger the Echo tab
@@ -89,7 +88,7 @@ export const AppLayout: React.FC = () => {
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
         if (sidebarTab === 'swarm' && !!selectedAgentId) return true;
-        if (sidebarTab === 'canvas' && selectedCanvasWidgetId) return true;
+        // Canvas uses per-widget dropdown instead of right panel
         return false;
     }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId, selectedCanvasWidgetId]);
 
@@ -297,7 +296,6 @@ export const AppLayout: React.FC = () => {
                             {sidebarTab === 'apps' ? <AppInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
                                         sidebarTab === 'swarm' ? <AgentPeekPanel /> :
-                                            sidebarTab === 'canvas' ? <CanvasInspector /> :
                                                 (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
                                                     <WorkspacePanel />}
                         </div>

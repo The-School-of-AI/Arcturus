@@ -6,7 +6,7 @@ import { GenerateDiagramModal } from './GenerateDiagramModal';
 import { useTheme } from '@/components/theme';
 import { useAppStore } from '@/store';
 import { API_BASE } from '@/lib/api';
-import { LayoutTemplate } from 'lucide-react';
+import { LayoutTemplate, MoreHorizontal, Trash2, Edit3, Copy } from 'lucide-react';
 import axios from 'axios';
 
 interface CanvasHostProps {
@@ -100,6 +100,36 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
         });
     }, [surfaceId]);
 
+    const handleDeleteWidget = useCallback(async (componentId: string) => {
+        setComponents(prev => {
+            const filtered = prev.filter(c => c.id !== componentId);
+            axios.post(`${API_BASE}/canvas/test-update/${surfaceId}`, {
+                components: filtered
+            }).catch(err => console.error('[Canvas] Failed to delete:', err));
+            return filtered;
+        });
+        selectCanvasWidget(null);
+    }, [surfaceId, selectCanvasWidget]);
+
+    const handleRenameWidget = useCallback(async (componentId: string) => {
+        const newTitle = window.prompt("New widget title:");
+        if (!newTitle) return;
+        handleLocalComponentUpdate(componentId, { title: newTitle });
+    }, [handleLocalComponentUpdate]);
+
+    const handleDuplicateWidget = useCallback(async (comp: any) => {
+        const dupeId = `${comp.component.toLowerCase()}_${Math.random().toString(36).substr(2, 5)}`;
+        const dupe = { ...comp, id: dupeId, props: { ...comp.props, title: `${comp.props?.title || comp.component} (copy)` } };
+        setComponents(prev => {
+            const updated = [...prev, dupe];
+            axios.post(`${API_BASE}/canvas/test-update/${surfaceId}`, {
+                components: updated
+            }).catch(err => console.error('[Canvas] Failed to duplicate:', err));
+            return updated;
+        });
+        selectCanvasWidget(dupeId);
+    }, [surfaceId, selectCanvasWidget]);
+
     const renderComponent = (comp: any) => {
         const Widget = getWidget(comp.component);
         const isSelected = selectedCanvasWidgetId === comp.id;
@@ -118,8 +148,21 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
             <div
                 key={comp.id}
                 onClick={(e) => { e.stopPropagation(); selectCanvasWidget(comp.id); }}
-                className={`relative transition-all ${isSelected ? 'ring-2 ring-primary/60 rounded-lg' : ''}`}
+                className={`group/widget relative transition-all ${isSelected ? 'ring-2 ring-primary/60 rounded-lg' : ''}`}
             >
+                {/* Per-widget action menu */}
+                <div className={`absolute top-1 right-1 z-20 flex items-center gap-0.5 rounded-md bg-background/90 border border-border/60 shadow-lg px-0.5 py-0.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'}`}>
+                    <button onClick={(e) => { e.stopPropagation(); handleRenameWidget(comp.id); }} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Rename">
+                        <Edit3 className="w-3 h-3" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDuplicateWidget(comp); }} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Duplicate">
+                        <Copy className="w-3 h-3" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteWidget(comp.id); }} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+                        <Trash2 className="w-3 h-3" />
+                    </button>
+                    <span className="text-[8px] font-mono text-muted-foreground/50 px-1 border-l border-border/40">{comp.component}</span>
+                </div>
                 <Widget
                     {...resolvedProps}
                     onClick={() => handleUserEvent(comp.id, 'click')}

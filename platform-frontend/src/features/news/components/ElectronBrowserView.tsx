@@ -24,6 +24,7 @@ export const ElectronBrowserView: React.FC = () => {
         closeAllNewsTabs,
         openNewsTab,
         addSelectedContext,
+        showNewsChatPanel,
         setShowNewsChatPanel,
         sidebarTab
     } = useAppStore();
@@ -104,6 +105,18 @@ export const ElectronBrowserView: React.FC = () => {
             window.electronAPI.send('browser:hide-all', {});
         }
     }, [sidebarTab, updateBounds]);
+
+    // Re-position native BrowserView when the chat/insights panel opens or closes.
+    // The CSS layout shifts (left sidebar removed, right panel added) but the native
+    // view is positioned via absolute pixel coords and needs an explicit IPC update.
+    useEffect(() => {
+        if (sidebarTab !== 'news') return;
+        // Immediate update for the new layout
+        updateBounds();
+        // Delayed update to catch any CSS transition settling
+        const t = setTimeout(updateBounds, 350);
+        return () => clearTimeout(t);
+    }, [showNewsChatPanel, updateBounds, sidebarTab]);
 
     // Subscribe to browser events from main process
     useEffect(() => {
