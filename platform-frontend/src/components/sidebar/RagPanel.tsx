@@ -294,21 +294,25 @@ export const RagPanel: React.FC = () => {
         if (path) setIndexingPath(path);
         else setIndexing(true);
 
-        setIndexStatus(path ? `Indexing...` : "Starting scan...");
+        setIndexStatus(path ? `Indexing...` : "Scanning files...");
 
-        // Start global polling
+        // Start global polling — this polls /indexing_status every 1s
+        // and updates the progress bar. When backend reports active=false
+        // after being active, polling auto-stops and refreshes file list.
         startRagPolling();
 
         try {
             const params: Record<string, string> = path ? { path } : {};
             if (currentSpaceId) params.space_id = currentSpaceId;
-            const res = await axios.post(`${API_BASE}/rag/reindex`, null, { params });
-
-            if (res.data.status === 'success') {
-                setIndexStatus("Done!");
-                fetchFiles();
-                setTimeout(() => setIndexStatus(null), 2000);
+            await axios.post(`${API_BASE}/rag/reindex`, null, { params });
+            // Don't mark "Done!" here — the POST just kicks off a background task.
+            // The polling mechanism will track actual progress and auto-complete.
+            if (path) {
+                // Single-file reindex is fast — OK to mark done after POST
+                setIndexStatus("Queued");
+                setTimeout(() => { setIndexStatus(null); setIndexingPath(null); }, 1500);
             }
+            // For full scan: leave indexing=true — polling will set it false when done
         } catch (e) {
             setIndexStatus("Failed");
             setTimeout(() => setIndexStatus(null), 2000);
@@ -463,7 +467,7 @@ export const RagPanel: React.FC = () => {
 
                         <button
                             onClick={() => setIsSpacesModalOpen(true)}
-                            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
+                            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
                             title="Select Space"
                         >
                             <FolderOpen className="w-3 h-3" />
@@ -485,13 +489,13 @@ export const RagPanel: React.FC = () => {
                                     <Library className="w-4 h-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-primary/20">
+                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] bg-card border border-border border-primary/20">
                                 <p className="font-bold text-sm text-primary flex items-center gap-2">
                                     <Library className="w-4 h-4" /> Mode 1: Browse (File-System)
                                 </p>
                                 <div className="space-y-2 text-xs leading-relaxed">
                                     <p>Uses <strong>Ripgrep</strong> to search raw files on disk. Best for code and markdown.</p>
-                                    <div className="p-2.5 bg-primary/5 rounded border border-primary/20 text-[10px]">
+                                    <div className="p-2.5 bg-primary/5 rounded border border-primary/20 text-xs">
                                         <p className="font-bold mb-1 underline decoration-primary/30">The indexing nuance:</p>
                                         <p>Normally Ripgrep misses binary PDFs. However, we've added a <strong>Fallback</strong>: if Ripgrep finds 0 hits, it automatically checks the indexed text-metadata.</p>
                                         <p className="mt-1.5 pt-1.5 border-t border-primary/10"><strong>Try:</strong> Searching 'anmol' might only show .md files, but 'anmol singh' triggers the fallback and reveals the PDF!</p>
@@ -514,7 +518,7 @@ export const RagPanel: React.FC = () => {
                                     <FileSearch className="w-4 h-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-blue-400/20">
+                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] bg-card border border-border border-blue-400/20">
                                 <p className="font-bold text-sm text-blue-400 flex items-center gap-2">
                                     <FileSearch className="w-4 h-4" /> Mode 2: Seek (Hybrid RAG)
                                 </p>
@@ -543,7 +547,7 @@ export const RagPanel: React.FC = () => {
                                     <Zap className="w-4 h-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] glass-panel border-yellow-400/20">
+                            <TooltipContent side="bottom" className="max-w-[320px] p-4 space-y-3 z-[100] bg-card border border-border border-yellow-400/20">
                                 <p className="font-bold text-sm text-yellow-500 flex items-center gap-2">
                                     <Zap className="w-4 h-4" /> Mode 3: Grep (Pure Match)
                                 </p>
@@ -568,7 +572,7 @@ export const RagPanel: React.FC = () => {
                                     onChange={(e) => setIsRegex(e.target.checked)}
                                     className="w-3 h-3 rounded border-border bg-muted text-primary focus:ring-0 focus:ring-offset-0"
                                 />
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover:text-foreground transition-colors">Regex</span>
+                                <span className="text-xs uppercase font-bold text-muted-foreground group-hover:text-foreground transition-colors">Regex</span>
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer group">
                                 <input
@@ -577,11 +581,11 @@ export const RagPanel: React.FC = () => {
                                     onChange={(e) => setIsCaseSensitive(e.target.checked)}
                                     className="w-3 h-3 rounded border-border bg-muted text-primary focus:ring-0 focus:ring-offset-0"
                                 />
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover:text-foreground transition-colors">Match Case</span>
+                                <span className="text-xs uppercase font-bold text-muted-foreground group-hover:text-foreground transition-colors">Match Case</span>
                             </label>
                         </div>
                         {grepResults.length > 0 && (
-                            <span className="text-[9px] font-mono text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/20">
+                            <span className="text-2xs font-mono text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/20">
                                 {grepResults.length} Matches
                             </span>
                         )}
@@ -614,7 +618,7 @@ export const RagPanel: React.FC = () => {
                         {files.length === 0 && !loading && (
                             <div className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-2 opacity-30">
                                 <Library className="w-8 h-8" />
-                                <p className="text-[10px] font-medium">Empty Library</p>
+                                <p className="text-xs font-medium">Empty Library</p>
                             </div>
                         )}
                     </div>
@@ -638,14 +642,14 @@ export const RagPanel: React.FC = () => {
                                     key={i}
                                     className={cn(
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                        "hover:shadow-lg hover:border-primary/50",
+                                        "hover:shadow-sm hover:border-primary/50",
                                         "border-border/50"
                                     )}
                                     onClick={() => source && openRagDocument({ id: source, title: name, type: ext, targetPage: page, searchText: content?.slice(0, 80) })}
                                 >
                                     <div className="flex items-center gap-1.5 mb-1">
                                         <FileText className="w-2.5 h-2.5 text-red-400" />
-                                        <span className="text-[9px] font-bold text-muted-foreground truncate flex-1">{name}</span>
+                                        <span className="text-2xs font-bold text-muted-foreground truncate flex-1">{name}</span>
                                         {page > 1 && <span className="text-[8px] font-mono opacity-50">p{page}</span>}
                                     </div>
                                     <p className="text-[11px] text-foreground/70 leading-snug line-clamp-3">"{content}"</p>
@@ -653,7 +657,7 @@ export const RagPanel: React.FC = () => {
                             );
                         })}
                         {!seeking && innerSearch && ragSearchResults.length === 0 && (
-                            <div className="text-center py-6 text-[10px] text-muted-foreground opacity-50 uppercase tracking-widest font-bold">No Matches</div>
+                            <div className="text-center py-6 text-xs text-muted-foreground opacity-50 uppercase tracking-wide font-bold">No Matches</div>
                         )}
                     </div>
                 ) : (
@@ -688,20 +692,20 @@ export const RagPanel: React.FC = () => {
                             >
                                 <div className="flex items-center gap-1.5 mb-2 border-b border-border/30 pb-1.5">
                                     <File className="w-3 h-3 text-blue-400/70" />
-                                    <span className="text-[10px] font-black text-muted-foreground truncate uppercase flex-1" title={file}>{file}</span>
-                                    <span className="text-[9px] font-mono bg-muted px-1.5 rounded-full text-muted-foreground shrink-0 opacity-70">
+                                    <span className="text-xs font-semibold text-muted-foreground truncate uppercase flex-1" title={file}>{file}</span>
+                                    <span className="text-2xs font-mono bg-muted px-1.5 rounded-full text-muted-foreground shrink-0 opacity-70">
                                         {matches.length} Matches
                                     </span>
                                 </div>
                                 <div className="space-y-1">
                                     {matches.slice(0, 5).map((m: any, idx: number) => (
                                         <div key={idx} className="flex gap-2 items-start opacity-80 hover:opacity-100">
-                                            <span className="text-[9px] font-mono text-primary/60 min-w-[24px] text-right shrink-0">L{m.line}</span>
-                                            <span className="text-[10px] font-mono text-foreground/80 line-clamp-1 break-all flex-1">{m.content.trim()}</span>
+                                            <span className="text-2xs font-mono text-primary/60 min-w-[24px] text-right shrink-0">L{m.line}</span>
+                                            <span className="text-xs font-mono text-foreground/80 line-clamp-1 break-all flex-1">{m.content.trim()}</span>
                                         </div>
                                     ))}
                                     {matches.length > 5 && (
-                                        <div className="pl-8 text-[9px] italic opacity-50 text-muted-foreground">
+                                        <div className="pl-8 text-2xs italic opacity-50 text-muted-foreground">
                                             + {matches.length - 5} more...
                                         </div>
                                     )}
@@ -711,7 +715,7 @@ export const RagPanel: React.FC = () => {
                         {!seeking && innerSearch && grepResults.length === 0 && (
                             <div className="text-center py-8 opacity-30 flex flex-col items-center gap-2">
                                 <Search className="w-6 h-6" />
-                                <p className="text-[9px] font-bold uppercase tracking-widest">No Pattern Matches</p>
+                                <p className="text-2xs font-bold uppercase tracking-wide">No Pattern Matches</p>
                             </div>
                         )}
                     </div>
@@ -743,19 +747,19 @@ export const RagPanel: React.FC = () => {
                 {selectedFile ? (
                     <div className="p-3 space-y-3">
                         <div className="flex items-center justify-between border-b border-border/30 pb-1.5">
-                            <h4 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Properties</h4>
-                            <button onClick={() => setSelectedFile(null)} className="text-[9px] text-muted-foreground hover:text-foreground">ESC</button>
+                            <h4 className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">Properties</h4>
+                            <button onClick={() => setSelectedFile(null)} className="text-2xs text-muted-foreground hover:text-foreground">ESC</button>
                         </div>
                         <div className="space-y-2">
                             <div className="space-y-0.5">
                                 <label className="text-[8px] uppercase text-muted-foreground/60 font-bold">Path</label>
-                                <div className="text-[10px] font-mono text-primary truncate" title={selectedFile.path}>{selectedFile.path}</div>
+                                <div className="text-xs font-mono text-primary truncate" title={selectedFile.path}>{selectedFile.path}</div>
                             </div>
                             {selectedFile.type !== 'folder' && (
                                 <div className="flex items-center justify-between bg-muted/10 p-1.5 rounded border border-border/20">
                                     <span className="text-[8px] font-bold uppercase text-muted-foreground">Indexing</span>
                                     {selectedFile.indexed ? (
-                                        <div className="flex items-center gap-1 text-green-500 font-bold text-[9px] uppercase"><CheckCircle className="w-2.5 h-2.5" /> Ready</div>
+                                        <div className="flex items-center gap-1 text-green-500 font-bold text-2xs uppercase"><CheckCircle className="w-2.5 h-2.5" /> Ready</div>
                                     ) : (
                                         <button onClick={() => handleReindex(selectedFile.path)} className="text-[8px] font-bold text-yellow-500 flex items-center gap-1 hover:underline"><Zap className="w-2.5 h-2.5" /> Start</button>
                                     )}
@@ -769,22 +773,22 @@ export const RagPanel: React.FC = () => {
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <RefreshCw className="w-3 h-3 text-neon-yellow animate-spin" />
-                                        <span className="text-[9px] font-black text-neon-yellow uppercase tracking-tight">
+                                        <RefreshCw className="w-3 h-3 text-primary animate-spin" />
+                                        <span className="text-2xs font-semibold text-primary uppercase tracking-tight">
                                             Indexing {ragIndexingProgress ? `${ragIndexingProgress.completed}/${ragIndexingProgress.total}` : ''}
                                         </span>
                                     </div>
                                     {ragIndexingProgress && (
-                                        <span className="text-[9px] font-mono text-neon-yellow/60">
+                                        <span className="text-2xs font-mono text-primary/60">
                                             {Math.round((ragIndexingProgress.completed / ragIndexingProgress.total) * 100)}%
                                         </span>
                                     )}
                                 </div>
 
                                 {/* Progress Bar */}
-                                <div className="h-1 w-full bg-neon-yellow/10 rounded-full overflow-hidden">
+                                <div className="h-1 w-full bg-primary/10 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-neon-yellow transition-all duration-500 ease-out shadow-[0_0_8px_rgba(255,255,0,0.5)]"
+                                        className="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_8px_rgba(255,255,0,0.5)]"
                                         style={{ width: `${ragIndexingProgress ? (ragIndexingProgress.completed / ragIndexingProgress.total) * 100 : 0}%` }}
                                     />
                                 </div>
@@ -805,7 +809,7 @@ export const RagPanel: React.FC = () => {
                                         <RefreshCw className="w-3 h-3 text-yellow-500 animate-spin" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] font-bold text-yellow-500 uppercase leading-tight tracking-tighter">
+                                        <span className="text-2xs font-bold text-yellow-500 uppercase leading-tight tracking-tight">
                                             {indexingStats.pending} FILES QUEUED FOR INDEXING
                                         </span>
                                     </div>
@@ -814,11 +818,11 @@ export const RagPanel: React.FC = () => {
                         ) : !indexingStats.allDone ? (
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <div className="p-1 bg-neon-yellow/10 rounded">
-                                        <Zap className="w-3 h-3 text-neon-yellow" />
+                                    <div className="p-1 bg-primary/10 rounded">
+                                        <Zap className="w-3 h-3 text-primary" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] font-bold text-neon-yellow uppercase leading-tight tracking-tighter">
+                                        <span className="text-2xs font-bold text-primary uppercase leading-tight tracking-tight">
                                             {indexingStats.empty ? "FULL INDEXING REQUIRED" :
                                                 indexingStats.errors > 0 ? `${indexingStats.errors} ERRORS, ${indexingStats.unindexed - indexingStats.errors} UNINDEXED` :
                                                     `${indexingStats.unindexed}/${indexingStats.total} FILES NEED INDEXING`}
@@ -828,7 +832,7 @@ export const RagPanel: React.FC = () => {
                                         size="sm"
                                         onClick={() => handleReindex()}
                                         disabled={indexing}
-                                        className="h-6 px-3 bg-neon-yellow text-neutral-950 hover:bg-neon-yellow/90 text-[9px] font-black uppercase ml-auto transition-transform active:scale-95 shadow-lg shadow-neon-yellow/20"
+                                        className="h-6 px-3 bg-primary text-neutral-950 hover:bg-primary/90 text-2xs font-semibold uppercase ml-auto transition-transform active:scale-95 shadow-sm shadow-primary/20"
                                     >
                                         SCAN
                                     </Button>
@@ -838,7 +842,7 @@ export const RagPanel: React.FC = () => {
                             <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">Documents Synced</span>
+                                    <span className="text-2xs font-bold text-muted-foreground/60 uppercase tracking-wide">Documents Synced</span>
                                 </div>
                                 <button
                                     onClick={() => handleReindex()}

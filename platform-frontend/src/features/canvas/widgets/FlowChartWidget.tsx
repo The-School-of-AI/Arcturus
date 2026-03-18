@@ -41,7 +41,7 @@ const FlowChartWidget: React.FC<FlowChartWidgetProps> = ({ title, nodes: initial
                     className={isDark ? 'bg-gray-900' : 'bg-gray-50'}
                 >
                     <Background color={isDark ? '#374151' : '#e5e7eb'} gap={16} />
-                    <Controls className="!bg-background !border-border !shadow-lg" />
+                    <Controls className="!bg-background !border-border !shadow-sm" />
                     <MiniMap
                         nodeColor={isDark ? '#4b5563' : '#d1d5db'}
                         maskColor={isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.1)'}

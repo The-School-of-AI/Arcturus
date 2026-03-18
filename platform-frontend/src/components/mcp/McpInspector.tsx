@@ -86,7 +86,7 @@ export const McpInspector: React.FC = () => {
                         <Settings2 className="w-4 h-4 text-primary" />
                         <h2 className="text-sm font-bold uppercase tracking-wider">{selectedMcpServer.replace('_', ' ')} Inspector</h2>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Configure and enable/disable specific capabilities</p>
+                    <p className="text-xs text-muted-foreground">Configure and enable/disable specific capabilities</p>
                 </div>
 
                 {tools.length > 0 && (
@@ -95,12 +95,12 @@ export const McpInspector: React.FC = () => {
                             onClick={toggleAll}
                             className="flex items-center gap-2 px-2 py-1 rounded bg-muted/50 border border-border hover:bg-muted cursor-pointer transition-colors"
                         >
-                            <span className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground">
+                            <span className="text-xs uppercase font-bold tracking-tight text-muted-foreground">
                                 {isAllEnabled ? 'Disable All' : 'Enable All'}
                             </span>
                             <div className={cn(
                                 "w-6 h-3 rounded-full relative transition-colors",
-                                isAllEnabled ? "bg-primary" : "bg-white/20"
+                                isAllEnabled ? "bg-primary" : "bg-accent"
                             )}>
                                 <div className={cn(
                                     "absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all",
@@ -144,7 +144,7 @@ export const McpInspector: React.FC = () => {
                                         {tool.name}
                                         {enabledTools[tool.name] && <CheckCircle2 className="w-3 h-3" />}
                                     </h4>
-                                    <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">
+                                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                                         {tool.description}
                                     </p>
                                 </div>
@@ -158,10 +158,10 @@ export const McpInspector: React.FC = () => {
 
                             {enabledTools[tool.name] && tool.inputSchema?.properties && (
                                 <div className="mt-2 pt-2 border-t border-primary/10">
-                                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter mb-1">Params:</div>
+                                    <div className="text-2xs text-muted-foreground uppercase font-bold tracking-tight mb-1">Params:</div>
                                     <div className="flex flex-wrap gap-1">
                                         {Object.keys(tool.inputSchema.properties).map(prop => (
-                                            <span key={prop} className="text-[8px] bg-white/5 px-1.5 py-0.5 rounded font-mono">
+                                            <span key={prop} className="text-[8px] bg-accent px-1.5 py-0.5 rounded font-mono">
                                                 {prop}
                                             </span>
                                         ))}

@@ -96,7 +96,7 @@ export const GraphCanvas: React.FC = () => {
                 maxZoom={2}
             >
                 <Background color="#888" gap={20} size={1} className="opacity-20" />
-                <Controls className="glass-panel border-border fill-white" />
+                <Controls className="bg-card border border-border border-border fill-white" />
                 <div className="absolute top-4 right-4 z-50">
                     <button
                         onClick={async () => {
@@ -119,9 +119,9 @@ export const GraphCanvas: React.FC = () => {
                 {/* Skeleton JSON overlay */}
                 {skeletonData && (
                     <div className="absolute inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center p-8">
-                        <div className="relative w-full max-w-2xl max-h-[80vh] bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+                        <div className="relative w-full max-w-2xl max-h-[80vh] bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
                             <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-                                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Episodic Skeletons</span>
+                                <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Episodic Skeletons</span>
                                 <button onClick={() => setSkeletonData(null)} className="text-muted-foreground hover:text-foreground text-lg leading-none">&times;</button>
                             </div>
                             <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-foreground/80 whitespace-pre-wrap">

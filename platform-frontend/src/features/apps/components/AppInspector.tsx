@@ -99,8 +99,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'date_picker':
             return (
                 <div className="p-3 flex flex-col gap-2">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Date Range</label>
-                    <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded text-[10px] text-foreground">
+                    <label className="text-xs uppercase font-bold text-muted-foreground">Date Range</label>
+                    <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded text-xs text-foreground">
                         📅 2024-01-01 → Present
                     </div>
                 </div>
@@ -120,8 +120,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground">
                     <LayoutTemplate className="w-8 h-8 opacity-50" />
-                    <span className="text-[10px] font-medium">HTML Diagram</span>
-                    <span className="text-[9px] opacity-70">Set data.html or Generate with API</span>
+                    <span className="text-xs font-medium">HTML Diagram</span>
+                    <span className="text-2xs opacity-70">Set data.html or Generate with API</span>
                 </div>
             );
 
@@ -135,7 +135,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     {[{ v: '$287K', c: '+8%' }, { v: '$9.4K', c: '-12%' }, { v: '$173K', c: '+2%' }, { v: '$52K', c: '-5%' }].map((s, i) => (
                         <div key={i} className="bg-muted/50 rounded p-2 flex flex-col items-center">
                             <div className="text-sm font-bold text-foreground">{s.v}</div>
-                            <div className={`text-[10px] ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                            <div className={`text-xs ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
                         </div>
                     ))}
                 </div>
@@ -154,7 +154,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'simple_table':
             return (
                 <div className="p-3 flex flex-col gap-1">
-                    <div className="flex gap-2 text-[10px] text-muted-foreground border-b border-border pb-1">
+                    <div className="flex gap-2 text-xs text-muted-foreground border-b border-border pb-1">
                         <span className="flex-1">Task</span><span className="flex-1">Status</span>
                     </div>
                     {[['Auth', '🟡'], ['UI', '🟢'], ['API', '⚪']].map(([t, s], i) => (
@@ -169,12 +169,12 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                 <div className="p-3 flex flex-col gap-2">
                     {[{ n: 'API', p: 35 }, { n: 'Storage', p: 30 }, { n: 'Users', p: 48 }].map((u, i) => (
                         <div key={i} className="flex flex-col gap-1">
-                            <div className="flex justify-between text-[10px]">
+                            <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground">{u.n}</span>
                                 <span className="text-muted-foreground">{u.p}%</span>
                             </div>
                             <div className="h-1.5 bg-charcoal-700 rounded-full overflow-hidden">
-                                <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${u.p}%` }} />
                             </div>
                         </div>
                     ))}
@@ -197,9 +197,9 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="flex items-center gap-2 text-xs text-foreground bg-muted/50 rounded px-2 py-1">
                         <span className="text-muted-foreground">▶</span>
                         <span>Project A</span>
-                        <span className="ml-auto text-neon-yellow">$45K</span>
+                        <span className="ml-auto text-primary">$45K</span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground pl-4">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground pl-4">
                         <span>└ Frontend</span>
                         <span className="ml-auto">$15K</span>
                     </div>
@@ -213,15 +213,15 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="text-sm font-medium text-foreground">What is the capital of France?</div>
                     <div className="flex flex-col gap-2">
                         {['Paris', 'London', 'Berlin', 'Madrid'].map((opt, i) => (
-                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${i === 0 ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border bg-muted/30'}`}>
-                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${i === 0 ? 'border-neon-yellow' : 'border-muted-foreground'}`}>
-                                    {i === 0 && <div className="w-2 h-2 rounded-full bg-neon-yellow" />}
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${i === 0 ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'}`}>
+                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${i === 0 ? 'border-primary' : 'border-muted-foreground'}`}>
+                                    {i === 0 && <div className="w-2 h-2 rounded-full bg-primary" />}
                                 </div>
-                                <span className={`text-sm ${i === 0 ? 'text-neon-yellow' : 'text-muted-foreground'}`}>{opt}</span>
+                                <span className={`text-sm ${i === 0 ? 'text-primary' : 'text-muted-foreground'}`}>{opt}</span>
                             </div>
                         ))}
                     </div>
-                    <div className="text-[10px] text-green-400">✓ 10 points</div>
+                    <div className="text-xs text-green-400">✓ 10 points</div>
                 </div>
             );
         case 'quiz_tf':
@@ -240,11 +240,11 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="text-sm font-medium text-foreground">Select all prime numbers:</div>
                     <div className="flex flex-col gap-2">
                         {[['2', true], ['3', true], ['4', false], ['5', true]].map(([opt, checked], i) => (
-                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${checked ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border bg-muted/30'}`}>
-                                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center ${checked ? 'border-neon-yellow bg-neon-yellow' : 'border-muted-foreground'}`}>
-                                    {checked && <span className="text-black text-[10px]">✓</span>}
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${checked ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'}`}>
+                                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center ${checked ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                                    {checked && <span className="text-black text-xs">✓</span>}
                                 </div>
-                                <span className={`text-sm ${checked ? 'text-neon-yellow' : 'text-muted-foreground'}`}>{opt}</span>
+                                <span className={`text-sm ${checked ? 'text-primary' : 'text-muted-foreground'}`}>{opt}</span>
                             </div>
                         ))}
                     </div>
@@ -256,7 +256,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="text-sm font-medium text-foreground">Rate your experience:</div>
                     <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((s) => (
-                            <span key={s} className={`text-2xl ${s <= 4 ? 'text-neon-yellow' : 'text-gray-600'}`}>{s <= 4 ? '★' : '☆'}</span>
+                            <span key={s} className={`text-2xl ${s <= 4 ? 'text-primary' : 'text-gray-600'}`}>{s <= 4 ? '★' : '☆'}</span>
                         ))}
                     </div>
                     <div className="text-xs text-muted-foreground">4 / 5 stars</div>
@@ -269,7 +269,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="flex justify-between items-center gap-2">
                         {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map((label, i) => (
                             <div key={i} className="flex flex-col items-center gap-1">
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${i === 3 ? 'border-neon-yellow bg-neon-yellow' : 'border-gray-500'}`}>
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${i === 3 ? 'border-primary bg-primary' : 'border-gray-500'}`}>
                                     {i === 3 && <div className="w-2 h-2 rounded-full bg-foreground" />}
                                 </div>
                                 <span className="text-[8px] text-muted-foreground text-center w-12">{label}</span>
@@ -285,10 +285,10 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="flex gap-1">
                         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                             <div key={n} className={`flex-1 py-2 rounded text-xs text-center font-medium ${n <= 6 ? 'bg-red-500/30 text-red-400' : n <= 8 ? 'bg-yellow-500/30 text-yellow-400' : 'bg-green-500/30 text-green-400'
-                                } ${n === 9 ? 'ring-2 ring-neon-yellow' : ''}`}>{n}</div>
+                                } ${n === 9 ? 'ring-2 ring-primary' : ''}`}>{n}</div>
                         ))}
                     </div>
-                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Not at all likely</span><span>Extremely likely</span>
                     </div>
                 </div>
@@ -313,7 +313,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-4 flex flex-col gap-3">
                     <div className="text-sm text-foreground">
-                        The largest planet in our solar system is <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow rounded border border-neon-yellow">Jupiter</span>
+                        The largest planet in our solar system is <span className="px-2 py-1 bg-primary/20 text-primary rounded border border-primary">Jupiter</span>
                     </div>
                 </div>
             );
@@ -321,8 +321,8 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-4 flex flex-col gap-3">
                     <div className="text-sm text-foreground">
-                        <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow rounded border border-neon-yellow">H₂O</span> is the chemical formula for
-                        <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow rounded border border-neon-yellow ml-1">water</span>
+                        <span className="px-2 py-1 bg-primary/20 text-primary rounded border border-primary">H₂O</span> is the chemical formula for
+                        <span className="px-2 py-1 bg-primary/20 text-primary rounded border border-primary ml-1">water</span>
                     </div>
                 </div>
             );
@@ -330,14 +330,14 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
             return (
                 <div className="p-4 flex flex-col gap-3">
                     <div className="text-sm font-medium text-foreground">What is 12 × 8?</div>
-                    <input type="text" value="96" readOnly className="w-full px-3 py-2 bg-muted border border-neon-yellow rounded text-neon-yellow font-mono text-lg" />
+                    <input type="text" value="96" readOnly className="w-full px-3 py-2 bg-muted border border-primary rounded text-primary font-mono text-lg" />
                 </div>
             );
         case 'quiz_formula':
             return (
                 <div className="p-4 flex flex-col gap-3">
                     <div className="text-sm font-medium text-foreground">Solve: 2x + 5 = 15</div>
-                    <div className="px-3 py-2 bg-muted border border-neon-yellow rounded text-neon-yellow font-mono">x = 5</div>
+                    <div className="px-3 py-2 bg-muted border border-primary rounded text-primary font-mono">x = 5</div>
                 </div>
             );
         case 'quiz_date':
@@ -356,7 +356,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="h-32 p-3 bg-muted border border-border rounded text-sm text-muted-foreground">
                         Clean code is important because it improves readability, maintainability, and reduces bugs...
                     </div>
-                    <div className="text-[10px] text-muted-foreground">Word count: 12 / 500</div>
+                    <div className="text-xs text-muted-foreground">Word count: 12 / 500</div>
                 </div>
             );
 
@@ -367,9 +367,9 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="flex-1 flex flex-col gap-2">
                         {['HTML', 'CSS', 'JS'].map((l) => <div key={l} className="px-3 py-2 bg-muted/30 rounded border border-border text-sm text-foreground">{l}</div>)}
                     </div>
-                    <div className="flex items-center text-neon-yellow">→</div>
+                    <div className="flex items-center text-primary">→</div>
                     <div className="flex-1 flex flex-col gap-2">
-                        {['Styling', 'Structure', 'Logic'].map((r) => <div key={r} className="px-3 py-2 bg-neon-yellow/10 rounded border border-neon-yellow text-sm text-neon-yellow">{r}</div>)}
+                        {['Styling', 'Structure', 'Logic'].map((r) => <div key={r} className="px-3 py-2 bg-primary/10 rounded border border-primary text-sm text-primary">{r}</div>)}
                     </div>
                 </div>
             );
@@ -387,7 +387,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                 <div className="p-4 flex flex-col gap-3">
                     <div className="text-sm font-medium text-foreground">Write a function to add two numbers:</div>
                     <div className="bg-charcoal-900 rounded-lg p-3 font-mono text-sm">
-                        <div className="text-purple-400">def <span className="text-neon-yellow">add</span>(a, b):</div>
+                        <div className="text-purple-400">def <span className="text-primary">add</span>(a, b):</div>
                         <div className="text-foreground pl-4">return a + b</div>
                     </div>
                 </div>
@@ -409,7 +409,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                     <div className="relative h-32 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center">
                         <span className="text-4xl">🖼️</span>
                         <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-red-500/50 border-2 border-red-500" />
-                        <div className="absolute bottom-4 left-4 w-4 h-4 rounded-full bg-neon-yellow/50 border-2 border-neon-yellow" />
+                        <div className="absolute bottom-4 left-4 w-4 h-4 rounded-full bg-primary/50 border-2 border-primary" />
                     </div>
                 </div>
             );
@@ -425,14 +425,14 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'quiz_section':
             return (
                 <div className="p-4 flex items-center justify-center">
-                    <div className="text-xl font-bold text-foreground border-b-2 border-neon-yellow pb-1">Section 1: Fundamentals</div>
+                    <div className="text-xl font-bold text-foreground border-b-2 border-primary pb-1">Section 1: Fundamentals</div>
                 </div>
             );
         case 'quiz_media':
             return (
                 <div className="p-4 flex flex-col gap-3">
                     <div className="h-32 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
                             <span className="text-foreground text-xl">▶</span>
                         </div>
                     </div>
@@ -464,9 +464,9 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                 <div className="p-4 grid grid-cols-4 gap-4">
                     {[{ n: 'Profit', v: '$287K', c: '+8.3%' }, { n: 'Late', v: '$9.4K', c: '-12.6%' }, { n: 'Pending', v: '$173K', c: '+2.9%' }, { n: 'Costs', v: '$52K', c: '-5.7%' }].map((s, i) => (
                         <div key={i} className="text-center">
-                            <div className="text-[10px] text-muted-foreground">{s.n}</div>
+                            <div className="text-xs text-muted-foreground">{s.n}</div>
                             <div className="text-sm font-bold text-foreground">{s.v}</div>
-                            <div className={`text-[10px] ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
+                            <div className={`text-xs ${s.c.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
                         </div>
                     ))}
                 </div>
@@ -482,7 +482,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                             </svg>
                             <div>
                                 <div className="text-xs font-medium text-foreground">{s.n}</div>
-                                <div className="text-[10px] text-muted-foreground">{s.p}% used</div>
+                                <div className="text-xs text-muted-foreground">{s.p}% used</div>
                             </div>
                         </div>
                     ))}
@@ -510,7 +510,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
                                 <span className="text-muted-foreground">{u.p}%</span>
                             </div>
                             <div className="h-2 bg-charcoal-700 rounded-full overflow-hidden">
-                                <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${u.p}%` }} />
                             </div>
                         </div>
                     ))}
@@ -539,7 +539,7 @@ const renderPreviewComponent = (type: string, data: any, style: any) => {
         case 'ai_chat':
             return (
                 <div className="p-4 flex flex-col gap-3">
-                    <div className="self-end bg-neon-yellow/20 rounded-lg px-3 py-2 text-sm text-neon-yellow">Hello, how can I help?</div>
+                    <div className="self-end bg-primary/20 rounded-lg px-3 py-2 text-sm text-primary">Hello, how can I help?</div>
                     <div className="self-start bg-muted rounded-lg px-3 py-2 text-sm text-muted-foreground">AI assistant ready...</div>
                 </div>
             );
@@ -1506,7 +1506,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
                     <div>
                         <div className="font-bold text-xs uppercase tracking-wider text-primary">Library Preview</div>
-                        <div className="text-[10px] text-muted-foreground  opacity-80">{selectedLibraryComponent.type}</div>
+                        <div className="text-xs text-muted-foreground  opacity-80">{selectedLibraryComponent.type}</div>
                     </div>
                 </div>
 
@@ -1517,7 +1517,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
 
                     {/* Live Preview - Render the actual component */}
-                    <div className="rounded-xl overflow-hidden bg-card border border-border shadow-lg">
+                    <div className="rounded-xl overflow-hidden bg-card border border-border shadow-sm">
                         <div className="w-full aspect-[16/10] relative">
                             <div className="absolute inset-0 p-2">
                                 <div className="w-full h-full">
@@ -1529,13 +1529,13 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                     {/* Typical Usage - Below the preview */}
                     <div className="p-3 rounded-lg bg-muted border border-border space-y-1.5">
-                        <div className="text-[10px] uppercase font-bold text-primary/80 tracking-wider">Typical Usage</div>
+                        <div className="text-xs uppercase font-bold text-primary/80 tracking-wider">Typical Usage</div>
                         <p className="text-xs text-foreground/80 leading-relaxed">{usageText}</p>
                     </div>
                 </div>
 
                 <div className="p-4 border-t border-border bg-muted/50">
-                    <Button onClick={onAddClick} className="w-full gap-2 bg-primary text-primary-foreground font-bold text-xs h-10 uppercase tracking-widest hover:bg-primary/90">
+                    <Button onClick={onAddClick} className="w-full gap-2 bg-primary text-primary-foreground font-bold text-xs h-10 uppercase tracking-wide hover:bg-primary/90">
                         <Zap className="w-4 h-4" /> Add to Canvas
                     </Button>
                 </div>
@@ -1546,7 +1546,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
     if (!selectedCard) {
         return (
             <div className={cn("h-full flex flex-col items-center justify-center p-8 bg-card text-center space-y-4", className)}>
-                <div className="p-4 rounded-full bg-white/5">
+                <div className="p-4 rounded-full bg-accent">
                     <Settings2 className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
                 <div className="space-y-1">
@@ -1570,7 +1570,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                     </div>
                     <div>
                         <div className="font-bold text-xs uppercase tracking-wider">{selectedCard.label}</div>
-                        <div className="text-[10px] text-muted-foreground  opacity-50">{selectedCard.id}</div>
+                        <div className="text-xs text-muted-foreground  opacity-50">{selectedCard.id}</div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1612,7 +1612,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                         >
                             <div className="space-y-3">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Display Title</label>
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">Display Title</label>
                                     <Input
                                         value={selectedCard.label}
                                         onChange={(e) => updateAppCardLabel(selectedCard.id, e.target.value)}
@@ -1620,7 +1620,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">
                                         Context <span className="text-primary ml-1 opacity-70">(for AI refresh)</span>
                                     </label>
                                     <textarea
@@ -1630,7 +1630,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         rows={2}
                                         className="w-full bg-muted border border-border rounded text-xs p-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none placeholder:text-muted-foreground/50"
                                     />
-                                    <div className="text-[9px] text-muted-foreground/60">
+                                    <div className="text-2xs text-muted-foreground/60">
                                         Describe what data this component needs. Used by AI to populate values.
                                     </div>
                                 </div>
@@ -1646,7 +1646,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                         >
                             <div className="space-y-3">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Source Type</label>
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">Source Type</label>
                                     <select
                                         value={selectedCard.config?.dataSource || 'local'}
                                         onChange={(e) => updateAppCardConfig(selectedCard.id, { dataSource: e.target.value })}
@@ -1662,7 +1662,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 {/* Local Data Editor */}
                                 {(!selectedCard.config?.dataSource || selectedCard.config?.dataSource === 'local') && (
                                     <div className="space-y-3 pt-2 border-t border-border/50">
-                                        <div className="text-[10px] text-primary font-bold uppercase">Edit Card Data</div>
+                                        <div className="text-xs text-primary font-bold uppercase">Edit Card Data</div>
 
                                         {(selectedCard.type === 'html_diagram' || selectedCard.type === 'visual_explainer') && (
                                             <div className="flex flex-col gap-2">
@@ -1681,7 +1681,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                                         {CARD_DATA_FIELDS[selectedCard.type]?.map(field => (
                                             <div key={field.key} className="space-y-1">
-                                                <label className="text-[10px] text-muted-foreground font-medium">{field.name}</label>
+                                                <label className="text-xs text-muted-foreground font-medium">{field.name}</label>
                                                 {field.type === 'text' && (
                                                     <Input
                                                         value={selectedCard.data?.[field.key] || ''}
@@ -1708,7 +1708,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                 {field.type === 'json' && (
                                                     <div className="space-y-1">
                                                         {field.options && field.options[0] && (
-                                                            <div className="text-[9px] text-muted-foreground bg-background rounded px-2 py-1  break-all">
+                                                            <div className="text-2xs text-muted-foreground bg-background rounded px-2 py-1  break-all">
                                                                 <span className="text-muted-foreground">Example: </span>{field.options[0]}
                                                             </div>
                                                         )}
@@ -1742,7 +1742,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="h-8 px-2 border-border bg-muted hover:bg-white/10 text-[10px]"
+                                                                className="h-8 px-2 border-border bg-muted hover:bg-accent text-xs"
                                                                 onClick={() => {
                                                                     const input = document.createElement('input');
                                                                     input.type = 'file';
@@ -1765,7 +1765,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                             </Button>
                                                         </div>
                                                         {selectedCard.data?.[field.key]?.startsWith('data:image') && (
-                                                            <div className="text-[9px] text-neon-yellow/60 italic px-1">
+                                                            <div className="text-2xs text-primary/60 italic px-1">
                                                                 Local image uploaded (encoded as Base64)
                                                             </div>
                                                         )}
@@ -1787,7 +1787,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         ))}
 
                                         {!CARD_DATA_FIELDS[selectedCard.type] && (
-                                            <div className="text-[10px] text-muted-foreground italic py-2">
+                                            <div className="text-xs text-muted-foreground italic py-2">
                                                 This card type uses default data. Custom data fields coming soon.
                                             </div>
                                         )}
@@ -1798,7 +1798,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 {selectedCard.config?.dataSource === 'agent' && (
                                     <div className="p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 text-center">
                                         <Zap className="w-5 h-5 mx-auto text-primary mb-2" />
-                                        <p className="text-[10px] text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             Data will be populated by the Research Agent in real-time.
                                         </p>
                                     </div>
@@ -1806,7 +1806,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                                 {selectedCard.config?.dataSource === 'script' && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">Script Path</label>
+                                        <label className="text-xs text-muted-foreground font-bold uppercase">Script Path</label>
                                         <Input
                                             value={selectedCard.config?.scriptPath || ''}
                                             onChange={(e) => updateAppCardConfig(selectedCard.id, { scriptPath: e.target.value })}
@@ -1818,7 +1818,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                                 {selectedCard.config?.dataSource === 'api' && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">API Endpoint</label>
+                                        <label className="text-xs text-muted-foreground font-bold uppercase">API Endpoint</label>
                                         <Input
                                             value={selectedCard.config?.apiEndpoint || ''}
                                             onChange={(e) => updateAppCardConfig(selectedCard.id, { apiEndpoint: e.target.value })}
@@ -1863,17 +1863,17 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 {cardStyle.showBorder !== false && (
                                     <>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-muted-foreground font-bold uppercase">Border Width</label>
+                                            <label className="text-xs text-muted-foreground font-bold uppercase">Border Width</label>
                                             <div className="flex gap-1">
                                                 {[1, 2, 3].map(w => (
                                                     <button
                                                         key={w}
                                                         onClick={() => updateAppCardStyle(selectedCard.id, { borderWidth: w })}
                                                         className={cn(
-                                                            "flex-1 py-1.5 text-[10px] rounded border transition-colors",
+                                                            "flex-1 py-1.5 text-xs rounded border transition-colors",
                                                             (cardStyle.borderWidth || 2) === w
                                                                 ? "bg-primary/20 border-primary text-primary"
-                                                                : "bg-muted border-border text-muted-foreground hover:border-white/20"
+                                                                : "bg-muted border-border text-muted-foreground hover:border-border"
                                                         )}
                                                     >
                                                         {w}px
@@ -1883,7 +1883,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-muted-foreground font-bold uppercase">Border Color</label>
+                                            <label className="text-xs text-muted-foreground font-bold uppercase">Border Color</label>
                                             <ColorPicker
                                                 value={cardStyle.borderColor || 'rgba(255,255,255,0.1)'}
                                                 onChange={(c) => updateAppCardStyle(selectedCard.id, { borderColor: c })}
@@ -1909,7 +1909,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                         >
                             <div className="space-y-3">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Accent Color</label>
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">Accent Color</label>
                                     <ColorPicker
                                         value={cardStyle.accentColor || DEFAULT_COLORS.accent}
                                         onChange={(c) => updateAppCardStyle(selectedCard.id, { accentColor: c })}
@@ -1918,7 +1918,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Background</label>
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">Background</label>
                                     <ColorPicker
                                         value={cardStyle.backgroundColor || 'transparent'}
                                         onChange={(c) => updateAppCardStyle(selectedCard.id, { backgroundColor: c })}
@@ -1933,8 +1933,8 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">Opacity</label>
-                                        <span className="text-[10px] text-primary ">{cardStyle.opacity || 100}%</span>
+                                        <label className="text-xs text-muted-foreground font-bold uppercase">Opacity</label>
+                                        <span className="text-xs text-primary ">{cardStyle.opacity || 100}%</span>
                                     </div>
                                     <input
                                         type="range"
@@ -1947,7 +1947,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Corner Radius</label>
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">Corner Radius</label>
                                     <div className="flex gap-1">
                                         {[
                                             { label: 'None', value: 0 },
@@ -1959,10 +1959,10 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                                 key={opt.value}
                                                 onClick={() => updateAppCardStyle(selectedCard.id, { borderRadius: opt.value })}
                                                 className={cn(
-                                                    "flex-1 py-1.5 text-[10px] rounded border transition-colors",
+                                                    "flex-1 py-1.5 text-xs rounded border transition-colors",
                                                     (cardStyle.borderRadius ?? 12) === opt.value
                                                         ? "bg-primary/20 border-primary text-primary"
-                                                        : "bg-muted border-border text-muted-foreground hover:border-white/20"
+                                                        : "bg-muted border-border text-muted-foreground hover:border-border"
                                                 )}
                                             >
                                                 {opt.label}
@@ -1977,7 +1977,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                     enabled={selectedCard.config?.autoFit !== false}
                                     onChange={(v) => updateAppCardConfig(selectedCard.id, { autoFit: v })}
                                 />
-                                <div className="text-[9px] text-muted-foreground/60 -mt-1">
+                                <div className="text-2xs text-muted-foreground/60 -mt-1">
                                     Automatically expand height to fit content. Disable for scrollable cards.
                                 </div>
                             </div>
@@ -2016,7 +2016,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                         >
                             <div className="space-y-3">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] text-muted-foreground font-bold uppercase">Text Color</label>
+                                    <label className="text-xs text-muted-foreground font-bold uppercase">Text Color</label>
                                     <ColorPicker
                                         value={cardStyle.textColor || '#ffffff'}
                                         onChange={(c) => updateAppCardStyle(selectedCard.id, { textColor: c })}
@@ -2031,7 +2031,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
 
                                 {CARD_COLORS[selectedCard.type]?.map(colorOpt => (
                                     <div key={colorOpt.key} className="space-y-1.5">
-                                        <label className="text-[10px] text-muted-foreground font-bold uppercase">{colorOpt.name}</label>
+                                        <label className="text-xs text-muted-foreground font-bold uppercase">{colorOpt.name}</label>
                                         <ColorPicker
                                             value={cardStyle[colorOpt.key] || colorOpt.default}
                                             onChange={(c) => updateAppCardStyle(selectedCard.id, { [colorOpt.key]: c })}
@@ -2042,7 +2042,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                 {!CARD_COLORS[selectedCard.type] && (
                                     <>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-muted-foreground font-bold uppercase">Success Color</label>
+                                            <label className="text-xs text-muted-foreground font-bold uppercase">Success Color</label>
                                             <ColorPicker
                                                 value={cardStyle.successColor || '#4ade80'}
                                                 onChange={(c) => updateAppCardStyle(selectedCard.id, { successColor: c })}
@@ -2055,7 +2055,7 @@ export const AppInspector: React.FC<AppInspectorProps> = ({ className }) => {
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-muted-foreground font-bold uppercase">Danger Color</label>
+                                            <label className="text-xs text-muted-foreground font-bold uppercase">Danger Color</label>
                                             <ColorPicker
                                                 value={cardStyle.dangerColor || '#f87171'}
                                                 onChange={(c) => updateAppCardStyle(selectedCard.id, { dangerColor: c })}
@@ -2096,7 +2096,7 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick:
     <button
         onClick={onClick}
         className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-tighter transition-all relative",
+            "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-tight transition-all relative",
             active ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
         )}
     >
@@ -2109,7 +2109,7 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick:
 const SectionHeader = ({ icon, label }: { icon: React.ReactNode, label: string }) => (
     <div className="flex items-center gap-2 pb-2 border-b border-border/50">
         <div className="text-primary">{icon}</div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{label}</span>
+        <span className="text-xs font-bold uppercase tracking-wide text-foreground">{label}</span>
     </div>
 );
 
@@ -2129,11 +2129,11 @@ const CollapsibleSection = ({
     <div className="rounded-lg border border-border/50 overflow-hidden bg-muted/30">
         <button
             onClick={onToggle}
-            className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+            className="w-full flex items-center justify-between p-3 hover:bg-accent transition-colors"
         >
             <div className="flex items-center gap-2">
                 <div className="text-primary">{icon}</div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{title}</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-foreground">{title}</span>
             </div>
             {expanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
         </button>

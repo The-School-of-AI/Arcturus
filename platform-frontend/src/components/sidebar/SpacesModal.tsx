@@ -174,7 +174,7 @@ export const SpacesModal: React.FC<{
                         </Button>
                         <DialogFooter className="gap-2 p-0 m-0 border-0">
                             <Button variant="outline" onClick={onClose} className="border-border text-foreground">Cancel</Button>
-                            <Button onClick={handleOk} className="bg-neon-yellow text-white hover:bg-neon-yellow/90">Ok</Button>
+                            <Button onClick={handleOk} className="bg-primary text-white hover:bg-primary/90">Ok</Button>
                         </DialogFooter>
                     </div>
                 </DialogContent>

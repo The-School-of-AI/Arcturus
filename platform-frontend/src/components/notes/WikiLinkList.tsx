@@ -57,8 +57,8 @@ export const WikiLinkList = forwardRef((props: WikiLinkListProps, ref) => {
     }));
 
     return (
-        <div className="bg-popover border border-border/50 rounded-lg shadow-xl overflow-hidden min-w-[280px] flex flex-col p-1.5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border-b border-border/30 mb-1">
+        <div className="bg-popover border border-border/50 rounded-lg shadow-xl overflow-hidden min-w-[280px] flex flex-col p-1.5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/70 border-b border-border/30 mb-1">
                 Notes
             </div>
             {props.items.length
@@ -82,13 +82,13 @@ export const WikiLinkList = forwardRef((props: WikiLinkListProps, ref) => {
                         >
                             <div className="flex items-center justify-between w-full gap-2">
                                 <span className="font-semibold truncate flex-1 text-left">{fileName}</span>
-                                {line && <span className="text-[9px] font-mono opacity-40 bg-muted px-1 rounded shrink-0">L{line}</span>}
+                                {line && <span className="text-2xs font-mono opacity-40 bg-muted px-1 rounded shrink-0">L{line}</span>}
                             </div>
-                            <span className="text-[10px] opacity-40 truncate w-full text-left font-mono">
+                            <span className="text-xs opacity-40 truncate w-full text-left font-mono">
                                 {folder}
                             </span>
                             {content && (
-                                <div className="text-[10px] opacity-70 line-clamp-1 w-full text-left mt-1 italic border-t border-border/20 pt-1">
+                                <div className="text-xs opacity-70 line-clamp-1 w-full text-left mt-1 italic border-t border-border/20 pt-1">
                                     {content.trim()}
                                 </div>
                             )}

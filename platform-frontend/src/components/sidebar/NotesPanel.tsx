@@ -440,7 +440,7 @@ export const NotesPanel: React.FC = () => {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsSpacesModalOpen(true)}
-                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
                         title="Select Space"
                     >
                         <FolderOpen className="w-3 h-3" />
@@ -511,11 +511,11 @@ export const NotesPanel: React.FC = () => {
                                     <div className="flex items-center justify-between mb-1">
                                         <div className="flex items-center gap-1.5 truncate flex-1">
                                             <FileText className="w-3 h-3 text-blue-400/70" />
-                                            <span className="text-[10px] font-bold text-muted-foreground truncate">{res.file.replace(/^Notes\//, '')}</span>
+                                            <span className="text-xs font-bold text-muted-foreground truncate">{res.file.replace(/^Notes\//, '')}</span>
                                         </div>
-                                        <span className="text-[9px] font-mono bg-muted px-1 rounded text-muted-foreground shrink-0">L{res.line}</span>
+                                        <span className="text-2xs font-mono bg-muted px-1 rounded text-muted-foreground shrink-0">L{res.line}</span>
                                     </div>
-                                    <div className="text-[10px] text-foreground/80 font-mono line-clamp-2 break-all opacity-80 group-hover:opacity-100">
+                                    <div className="text-xs text-foreground/80 font-mono line-clamp-2 break-all opacity-80 group-hover:opacity-100">
                                         {res.content}
                                     </div>
                                 </div>

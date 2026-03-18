@@ -40,7 +40,7 @@ export const TrendMetric: React.FC<TrendMetricProps> = ({
                     <div className="text-2xl font-bold tracking-tight" style={{ color: textColor }}>{displayValue}</div>
                     {displayChange !== undefined && (
                         <div className={cn(
-                            "flex items-center text-[10px] font-bold px-1 py-0.5 rounded w-fit"
+                            "flex items-center text-xs font-bold px-1 py-0.5 rounded w-fit"
                         )}
                             style={{
                                 color: isUp ? successColor : dangerColor,

@@ -84,15 +84,15 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick, tooltip }: {
         <button
             onClick={handleIconClick}
             className={cn(
-                "w-12 h-12 flex flex-col items-center justify-center gap-0.5 transition-all rounded-xl group relative mx-auto",
+                "w-11 h-12 flex flex-col items-center justify-center gap-1 transition-all rounded-lg group relative mx-auto",
                 active
-                    ? "text-primary glass border-primary/20 shadow-lg z-10"
-                    : "text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 hover:bg-white/5"
+                    ? "bg-primary/10 text-primary z-10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
         >
-            <Icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "group-hover:text-foreground")} />
+            <Icon className={cn("w-4 h-4 transition-colors", active ? "text-primary" : "group-hover:text-foreground")} />
             <span className={cn(
-                "text-[7px] font-black uppercase tracking-tighter transition-all duration-200",
+                "text-[8px] font-medium uppercase tracking-wide transition-all duration-200 leading-none",
                 active ? "text-primary opacity-100" : "text-muted-foreground/90 group-hover:text-foreground"
             )}>
                 {label}
@@ -186,7 +186,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     return (
         <div className="h-full flex overflow-hidden">
             {/* NavRail - Left Vertical Bar */}
-            <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
+            <div className="w-16 bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 gap-2 shrink-0 z-20">
                 {/* Top Tools — scrollable so Echo + Settings always stay pinned at bottom */}
                 <div className="flex-1 w-full px-2 space-y-2 overflow-y-auto min-h-0 no-scrollbar">
                     <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} tooltip="Start and manage agent task executions. View run history, execution graphs, and token usage." />
@@ -224,7 +224,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
 
             {/* Content Area */}
             {!hideSubPanel && (
-                <div className="flex-1 min-w-0 bg-transparent border-l border-white/10 shadow-none flex flex-col overflow-hidden relative">
+                <div className="flex-1 min-w-0 bg-sidebar border-l border-sidebar-border flex flex-col overflow-hidden relative">
                     {sidebarTab === 'settings' && <SettingsPanel />}
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">
@@ -234,7 +234,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                     <div className="relative flex-1 group">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                                         <Input
-                                            className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                                            className="w-full bg-secondary border-border focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
                                             placeholder="Search runs..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -290,7 +290,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                             variant="ghost"
                                                             size="sm"
                                                             disabled={isOptimizing || !newQuery.trim()}
-                                                            className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
+                                                            className="h-6 text-xs text-primary hover:text-primary hover:bg-primary/10 px-2 gap-1 disabled:opacity-50"
                                                             onClick={async () => {
                                                                 if (!newQuery) return;
                                                                 setIsOptimizing(true);
@@ -314,7 +314,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                             </div>
                                             <DialogFooter>
                                                 <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                                                <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                                <Button onClick={handleStartRun} className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">Start Run</Button>
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
@@ -322,7 +322,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                 <div className="flex items-center justify-between">
                                     <button
                                         onClick={() => useAppStore.getState().setIsSpacesModalOpen(true)}
-                                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                                         title="Manage Spaces"
                                     >
                                         <FolderOpen className="w-3 h-3" />
@@ -334,7 +334,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                 key={f}
                                                 onClick={() => setRunSourceFilter(f)}
                                                 className={cn(
-                                                    "px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors capitalize",
+                                                    "px-1.5 py-0.5 rounded text-2xs font-medium transition-colors capitalize",
                                                     runSourceFilter === f
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
@@ -360,9 +360,9 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                             onClick={() => setCurrentRun(run.id)}
                                             className={cn(
                                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                                "hover:shadow-md",
+                                                "hover:shadow-sm",
                                                 isActive
-                                                    ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                                    ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                             )}
                                         >
@@ -371,13 +371,13 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                     <p className={cn(
                                                         "text-[13px] leading-relaxed font-medium transition-all duration-300",
                                                         isActive
-                                                            ? "text-neon-yellow selection:bg-neon-yellow/30"
+                                                            ? "text-primary selection:bg-primary/30"
                                                             : displayStatus === 'failed'
                                                                 ? "text-red-500 group-hover:text-red-400"
                                                                 : "text-foreground group-hover:text-foreground/80"
                                                     )}>
                                                         {run.source && run.source !== 'web' && (
-                                                            <span className="inline-flex items-center gap-1 mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-primary/10 text-primary border border-primary/20">
+                                                            <span className="inline-flex items-center gap-1 mr-1.5 px-1.5 py-0.5 rounded text-xs font-semibold uppercase bg-primary/10 text-primary border border-primary/20">
                                                                 <MessageSquare className="w-2.5 h-2.5" />
                                                                 {run.source}
                                                             </span>
@@ -398,7 +398,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                         "opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all duration-200",
                                                         useAppStore.getState().isGeneratingApp
                                                             ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                                            : "hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow"
+                                                            : "hover:bg-primary/10 text-muted-foreground hover:text-primary"
                                                     )}
                                                     title="Build App from this Run"
                                                 >
@@ -414,13 +414,13 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                             {isActive && (
                                                 <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
                                                     <div className="flex items-center gap-3">
-                                                        <span className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
+                                                        <span className="flex items-center gap-1 text-2xs text-muted-foreground font-mono">
                                                             <Clock className="w-3 h-3" />
                                                             {new Date(run.createdAt).toLocaleDateString()}
                                                         </span>
 
                                                         {run.total_tokens !== undefined && (
-                                                            <span className="text-[9px] text-muted-foreground font-mono opacity-70">
+                                                            <span className="text-2xs text-muted-foreground font-mono opacity-70">
                                                                 • {run.total_tokens.toLocaleString()} tks
                                                             </span>
                                                         )}
@@ -439,7 +439,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
 
                                                     </div>
                                                     <span className={cn(
-                                                        "px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter",
+                                                        "px-2 py-0.5 rounded-full text-2xs uppercase font-bold tracking-tight",
                                                         displayStatus === 'completed' && "bg-green-500/10 text-green-400/80",
                                                         displayStatus === 'failed' && "bg-red-500/10 text-red-400/80",
                                                         displayStatus === 'running' && "bg-orange-500/10 text-orange-400 animate-pulse",
@@ -476,11 +476,11 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     </div>
                     {sidebarTab === 'learn' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
-                            <div className="p-6 bg-muted/50 rounded-full ring-1 ring-white/10">
+                            <div className="p-6 bg-muted/50 rounded-full ring-1 ring-border">
                                 <GraduationCap className="w-12 h-12" />
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-xl font-bold text-foreground uppercase tracking-tighter">Under Construction</h2>
+                                <h2 className="text-xl font-bold text-foreground uppercase tracking-tight">Under Construction</h2>
                                 <p className="text-xs text-muted-foreground">This feature is currently in development and will be available in a future update.</p>
                             </div>
                         </div>

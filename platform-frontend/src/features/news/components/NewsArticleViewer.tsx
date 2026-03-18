@@ -79,7 +79,7 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, active
 
     return (
         <div
-            className="fixed z-[9999] flex items-center gap-2 p-1 bg-popover border border-border rounded-lg shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
+            className="fixed z-[9999] flex items-center gap-2 p-1 bg-popover border border-border rounded-lg shadow-sm animate-in fade-in zoom-in-95 duration-200"
             style={{ left: position.x, top: position.y, transform: 'translateX(-50%)' }}
         >
             <button
@@ -87,8 +87,8 @@ const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, onShowChat, active
                 className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all active:scale-95",
                     isAdded
-                        ? "bg-green-500 text-foreground shadow-lg shadow-green-500/20"
-                        : "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20"
+                        ? "bg-green-500 text-foreground shadow-sm shadow-green-500/20"
+                        : "bg-primary text-primary-foreground hover:shadow-sm hover:shadow-primary/20"
                 )}
             >
                 {isAdded ? (
@@ -512,7 +512,7 @@ export const NewsArticleViewer: React.FC = () => {
 
                 <button
                     onClick={closeAllNewsTabs}
-                    className="text-[10px] text-muted-foreground hover:text-red-400 px-2 font-bold uppercase tracking-tighter transition-colors"
+                    className="text-xs text-muted-foreground hover:text-red-400 px-2 font-bold uppercase tracking-tight transition-colors"
                 >
                     Close All
                 </button>
@@ -556,7 +556,7 @@ export const NewsArticleViewer: React.FC = () => {
                                 }
                             }}
                             className={cn(
-                                "px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-colors",
+                                "px-3 py-1 text-xs font-bold uppercase tracking-wide rounded-md transition-colors",
                                 readerMode
                                     ? "bg-cyan-500 text-white"
                                     : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -583,9 +583,9 @@ export const NewsArticleViewer: React.FC = () => {
                             className="p-1 hover:bg-background rounded-l-md transition-colors text-muted-foreground"
                             title="Zoom Out"
                         >
-                            <span className="text-[10px] font-bold px-1">-</span>
+                            <span className="text-xs font-bold px-1">-</span>
                         </button>
-                        <span className="text-[10px] px-1 min-w-[3ch] text-center font-mono">{zoomLevel}%</span>
+                        <span className="text-xs px-1 min-w-[3ch] text-center font-mono">{zoomLevel}%</span>
                         <button
                             onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
                             className="p-1 hover:bg-background rounded-r-md transition-colors text-muted-foreground"
@@ -627,10 +627,10 @@ export const NewsArticleViewer: React.FC = () => {
             <div className="flex-1 relative bg-white">
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-10 space-y-4">
-                        <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-2xl">
+                        <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-sm">
                             <Loader2 className="w-10 h-10 text-primary animate-spin" />
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 animate-pulse">Rendering Page...</div>
+                        <div className="text-xs font-bold uppercase tracking-[0.3em] text-primary/60 animate-pulse">Rendering Page...</div>
                     </div>
                 )}
 

@@ -120,10 +120,10 @@ export const SelectionMenu: React.FC<SelectionMenuProps> = ({ onAdd, manualVisib
             <button
                 onMouseDown={handleAddClick}
                 className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-sm transition-all active:scale-95 shadow-lg",
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-sm transition-all active:scale-95 shadow-sm",
                     isAdded
-                        ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
-                        : "bg-primary text-white hover:shadow-lg hover:shadow-primary/20"
+                        ? "bg-green-500 text-white shadow-sm shadow-green-500/20"
+                        : "bg-primary text-white hover:shadow-sm hover:shadow-primary/20"
                 )}
             >
                 {isAdded ? (

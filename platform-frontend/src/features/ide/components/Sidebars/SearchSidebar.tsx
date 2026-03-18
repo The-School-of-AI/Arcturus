@@ -131,13 +131,13 @@ export const SearchSidebar: React.FC = () => {
                     </div>
                 ) : groupedResults.length > 0 ? (
                     <div className="space-y-0">
-                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/10">
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/10">
                             {results.length} results in {groupedResults.length} files
                         </div>
                         {groupedResults.map((group) => (
                             <div key={group.file} className="border-b border-border/5">
                                 <div
-                                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white/5 cursor-pointer group select-none"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-accent cursor-pointer group select-none"
                                     onClick={() => toggleFile(group.file)}
                                 >
                                     {expandedFiles.has(group.file) ? (
@@ -149,12 +149,12 @@ export const SearchSidebar: React.FC = () => {
                                     <span className="text-[11px] font-semibold text-foreground/90 truncate" title={group.file}>
                                         {group.rel_path.split(/[/\\]/).pop()}
                                     </span>
-                                    <span className="text-[9px] text-muted-foreground/40 font-mono ml-auto">
+                                    <span className="text-2xs text-muted-foreground/40 font-mono ml-auto">
                                         {group.matches.length}
                                     </span>
                                 </div>
                                 {expandedFiles.has(group.file) && (
-                                    <div className="bg-black/10 dark:bg-white/5">
+                                    <div className="bg-black/10 dark:bg-accent">
                                         {group.matches.map((res, i) => (
                                             <div
                                                 key={`${res.file}-${res.line}-${i}`}
@@ -167,7 +167,7 @@ export const SearchSidebar: React.FC = () => {
                                                     searchText: res.content
                                                 })}
                                             >
-                                                <div className="text-[10px] font-mono text-muted-foreground line-clamp-2 break-all group-hover:text-foreground/80">
+                                                <div className="text-xs font-mono text-muted-foreground line-clamp-2 break-all group-hover:text-foreground/80">
                                                     <span className="text-primary/70 font-bold mr-2 w-4 inline-block text-right">{res.line}</span>
                                                     {res.content.trim()}
                                                 </div>

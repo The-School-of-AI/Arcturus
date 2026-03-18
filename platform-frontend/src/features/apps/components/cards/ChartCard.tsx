@@ -192,14 +192,14 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                                 barPoints.map((p: any, i: number) => (
                                     <div key={i} className="flex items-center gap-1.5">
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || accentColor }} />
-                                        <span className="text-[10px] text-muted-foreground font-medium">{p.x}</span>
+                                        <span className="text-xs text-muted-foreground font-medium">{p.x}</span>
                                     </div>
                                 ))
                             ) : (
                                 series.map((s: any, i: number) => (
                                     <div key={i} className="flex items-center gap-1.5">
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color || accentColor }} />
-                                        <span className="text-[10px] text-muted-foreground font-medium">{s.name}</span>
+                                        <span className="text-xs text-muted-foreground font-medium">{s.name}</span>
                                     </div>
                                 ))
                             )}
@@ -209,7 +209,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-[10px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}

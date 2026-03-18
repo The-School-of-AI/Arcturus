@@ -151,7 +151,7 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                 className={`group/widget relative transition-all ${isSelected ? 'ring-2 ring-primary/60 rounded-lg' : ''}`}
             >
                 {/* Per-widget action menu */}
-                <div className={`absolute top-1 right-1 z-20 flex items-center gap-0.5 rounded-md bg-background/90 border border-border/60 shadow-lg px-0.5 py-0.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'}`}>
+                <div className={`absolute top-1 right-1 z-20 flex items-center gap-0.5 rounded-md bg-background/90 border border-border/60 shadow-sm px-0.5 py-0.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'}`}>
                     <button onClick={(e) => { e.stopPropagation(); handleRenameWidget(comp.id); }} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Rename">
                         <Edit3 className="w-3 h-3" />
                     </button>
@@ -189,7 +189,7 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-card text-card-foreground rounded-xl overflow-hidden shadow-lg border border-border">
+        <div className="flex flex-col h-full bg-card text-card-foreground rounded-xl overflow-hidden shadow-sm border border-border">
             <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border">
                 <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 rounded-full ${readyState === ReadyState.OPEN ? 'bg-green-500' : 'bg-destructive'}`} />
@@ -202,7 +202,7 @@ const CanvasHost: React.FC<CanvasHostProps> = ({ surfaceId }) => {
                     <button
                         type="button"
                         onClick={() => setGenerateModalOpen(true)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-border text-[10px] font-medium uppercase tracking-wider transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-border text-xs font-medium uppercase tracking-wider transition-colors"
                         title="Generate diagram"
                     >
                         <LayoutTemplate className="w-3.5 h-3.5" />

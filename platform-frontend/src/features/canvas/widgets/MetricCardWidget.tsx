@@ -28,7 +28,7 @@ const MetricCardWidget: React.FC<MetricCardWidgetProps> = ({ title, metrics = []
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px" style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 4)}, 1fr)` }}>
                 {metrics.map((m, i) => (
                     <div key={i} className={`p-4 ${i > 0 ? (isDark ? 'border-l border-gray-700/50' : 'border-l border-gray-100') : ''}`}>
-                        <div className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <div className={`text-xs uppercase tracking-wider font-semibold mb-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                             {m.label}
                         </div>
                         <div className={`text-2xl font-bold tabular-nums ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>

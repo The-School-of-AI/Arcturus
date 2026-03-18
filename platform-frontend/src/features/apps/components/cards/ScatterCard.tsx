@@ -128,7 +128,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-[9px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-2xs rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         {tooltip.content}
@@ -162,7 +162,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                         <div
                             key={i}
                             className={cn(
-                                "absolute w-3 h-3 rounded-full hover:scale-150 hover:ring-2 ring-white/30 transition-all cursor-crosshair z-10 shadow-lg",
+                                "absolute w-3 h-3 rounded-full hover:scale-150 hover:ring-2 ring-white/30 transition-all cursor-crosshair z-10 shadow-sm",
                                 animate && "animate-in zoom-in-50 duration-500"
                             )}
                             style={{
@@ -189,9 +189,9 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                 )}
 
                 {/* Labels */}
-                <div className="absolute bottom-0 left-8 right-0 text-center text-[10px] text-muted-foreground font-medium">{xLabel}</div>
+                <div className="absolute bottom-0 left-8 right-0 text-center text-xs text-muted-foreground font-medium">{xLabel}</div>
                 <div className="absolute top-0 bottom-8 left-0 flex items-center justify-center w-5">
-                    <span className="-rotate-90 whitespace-nowrap text-[10px] text-muted-foreground font-medium">{yLabel}</span>
+                    <span className="-rotate-90 whitespace-nowrap text-xs text-muted-foreground font-medium">{yLabel}</span>
                 </div>
 
                 {/* Legend */}
@@ -200,7 +200,7 @@ export const ScatterCard: React.FC<ScatterCardProps> = ({
                         {categories.map((cat, i) => (
                             <div key={i} className="flex items-center gap-1.5">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colorMap[cat as string] }} />
-                                <span className="text-[9px] text-muted-foreground font-medium">{cat as string}</span>
+                                <span className="text-2xs text-muted-foreground font-medium">{cat as string}</span>
                             </div>
                         ))}
                     </div>

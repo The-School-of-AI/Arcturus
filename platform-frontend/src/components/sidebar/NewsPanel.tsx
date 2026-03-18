@@ -210,7 +210,7 @@ export const NewsPanel: React.FC = () => {
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </Button>
-                                    <span className="text-sm font-medium truncate flex-1 leading-none uppercase tracking-widest text-muted-foreground">
+                                    <span className="text-sm font-medium truncate flex-1 leading-none uppercase tracking-wide text-muted-foreground">
                                         Andrej Karpathy News
                                     </span>
                                 </div>
@@ -221,7 +221,7 @@ export const NewsPanel: React.FC = () => {
                                         placeholder="Search Web"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                                     />
                                     {searchQuery && (
                                         <button
@@ -255,9 +255,9 @@ export const NewsPanel: React.FC = () => {
                                                 key={index}
                                                 className={cn(
                                                     "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                                    "hover:shadow-lg hover:border-primary/50",
+                                                    "hover:shadow-sm hover:border-primary/50",
                                                     activeNewsTab === item.url
-                                                        ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-lg shadow-primary/5"
+                                                        ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-sm shadow-primary/5"
                                                         : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                                 )}
                                                 onClick={() => openNewsTab(item.url)}
@@ -270,7 +270,7 @@ export const NewsPanel: React.FC = () => {
                                                         {item.title}
                                                     </h4>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[10px] text-muted-foreground/60 font-mono truncate max-w-[150px]">
+                                                        <span className="text-xs text-muted-foreground/60 font-mono truncate max-w-[150px]">
                                                             {new URL(item.url).hostname.replace('www.', '')}
                                                         </span>
                                                         <button
@@ -307,7 +307,7 @@ export const NewsPanel: React.FC = () => {
                         {viewMode === 'sources' && (
                             <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
                                 <div className="h-4" />
-                                <p className="text-[10px] font-bold text-muted-foreground px-1 uppercase tracking-widest">Available Sources</p>
+                                <p className="text-xs font-bold text-muted-foreground px-1 uppercase tracking-wide">Available Sources</p>
 
                                 {/* Global Feed */}
                                 {/* Global Feed */}
@@ -317,20 +317,20 @@ export const NewsPanel: React.FC = () => {
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer mb-2",
                                         " hover:shadow-md",
                                         selectedNewsSourceId === null
-                                            ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                            ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                             : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                     )}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
                                             "p-2 rounded-lg transition-colors",
-                                            selectedNewsSourceId === null ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted text-muted-foreground group-hover:text-foreground"
+                                            selectedNewsSourceId === null ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground group-hover:text-foreground"
                                         )}>
                                             <Globe className="w-4 h-4" />
                                         </div>
                                         <span className={cn(
                                             "text-sm font-medium transition-colors",
-                                            selectedNewsSourceId === null ? "text-neon-yellow" : "text-foreground group-hover:text-foreground/80"
+                                            selectedNewsSourceId === null ? "text-primary" : "text-foreground group-hover:text-foreground/80"
                                         )}>AI Feed</span>
                                     </div>
                                 </div>
@@ -343,7 +343,7 @@ export const NewsPanel: React.FC = () => {
                                             "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
                                             " hover:shadow-md",
                                             selectedNewsSourceId === source.id
-                                                ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                                ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                                 : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                         )}
                                     >
@@ -351,7 +351,7 @@ export const NewsPanel: React.FC = () => {
                                             <div className="flex items-center gap-3">
                                                 <div className={cn(
                                                     "p-2 rounded-lg transition-colors",
-                                                    selectedNewsSourceId === source.id ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted text-muted-foreground group-hover:text-foreground"
+                                                    selectedNewsSourceId === source.id ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground group-hover:text-foreground"
                                                 )}>
                                                     {source.type === 'rss' ? (
                                                         <Rss className="w-4 h-4" />
@@ -362,9 +362,9 @@ export const NewsPanel: React.FC = () => {
                                                 <div className="flex flex-col min-w-0">
                                                     <span className={cn(
                                                         "text-sm font-medium truncate transition-colors",
-                                                        selectedNewsSourceId === source.id ? "text-neon-yellow" : "text-foreground group-hover:text-foreground/80"
+                                                        selectedNewsSourceId === source.id ? "text-primary" : "text-foreground group-hover:text-foreground/80"
                                                     )}>{source.name}</span>
-                                                    <span className="text-[10px] text-muted-foreground truncate opacity-60 font-mono">{new URL(source.url).hostname}</span>
+                                                    <span className="text-xs text-muted-foreground truncate opacity-60 font-mono">{new URL(source.url).hostname}</span>
                                                 </div>
                                             </div>
                                             <button
@@ -392,7 +392,7 @@ export const NewsPanel: React.FC = () => {
                                             </div>
                                             <div>
                                                 <span className="text-sm font-medium text-amber-400">Saved Articles</span>
-                                                <p className="text-[10px] text-muted-foreground">{savedArticles.length} items</p>
+                                                <p className="text-xs text-muted-foreground">{savedArticles.length} items</p>
                                             </div>
                                         </div>
                                     </div>
@@ -458,7 +458,7 @@ export const NewsPanel: React.FC = () => {
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </Button>
-                            <span className="text-sm font-bold uppercase tracking-widest truncate flex-1 leading-none text-primary">
+                            <span className="text-sm font-bold uppercase tracking-wide truncate flex-1 leading-none text-primary">
                                 {selectedSource ? selectedSource.name : (newsItems.length > 0 ? new URL(newsItems[0].url).hostname.replace('www.', '') : 'Articles')}
                             </span>
                         </div>
@@ -466,7 +466,7 @@ export const NewsPanel: React.FC = () => {
                         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-3">
                             {isNewsLoading && newsItems.length === 0 ? (
                                 <div className="flex items-center justify-center py-10">
-                                    <Loader2 className="w-6 h-6 text-neon-yellow animate-spin" />
+                                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
                                 </div>
                             ) : newsItems.length === 0 ? (
                                 <div className="py-10 text-center text-muted-foreground text-sm opacity-60">
@@ -482,9 +482,9 @@ export const NewsPanel: React.FC = () => {
                                             key={item.id}
                                             className={cn(
                                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                                "hover:shadow-lg",
+                                                "hover:shadow-sm",
                                                 isActive
-                                                    ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-lg shadow-primary/5"
+                                                    ? "border-primary/40 hover:border-primary/60 bg-primary/5 shadow-sm shadow-primary/5"
                                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                             )}
                                             onClick={() => openNewsTab(item.url)}
@@ -517,7 +517,7 @@ export const NewsPanel: React.FC = () => {
                                                         {isSaved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
                                                     </button>
                                                     {/* Index number */}
-                                                    <span className="text-[10px] font-sans text-muted-foreground/50 pr-1">
+                                                    <span className="text-xs font-sans text-muted-foreground/50 pr-1">
                                                         {(index + 1).toString().padStart(2, '0')}
                                                     </span>
                                                 </div>
@@ -556,7 +556,7 @@ export const NewsPanel: React.FC = () => {
                                                 }
                                             }}
                                         />
-                                        <p className="text-[10px] text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             Page title will be fetched automatically. Saved locally in your browser.
                                         </p>
                                     </div>
@@ -602,7 +602,7 @@ export const NewsPanel: React.FC = () => {
                                                         {item.title}
                                                     </h4>
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] text-muted-foreground/60 font-mono">
+                                                        <span className="text-xs text-muted-foreground/60 font-mono">
                                                             {new URL(item.url).hostname.replace('www.', '')}
                                                         </span>
                                                     </div>

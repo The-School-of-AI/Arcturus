@@ -37,10 +37,10 @@ export const RemmePanel: React.FC = () => {
                 <button
                     onClick={() => setActiveTab('snippets')}
                     className={cn(
-                        "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 relative",
+                        "flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-all duration-300 relative",
                         activeTab === 'snippets'
                             ? "text-primary bg-primary/5"
-                            : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-accent"
                     )}
                 >
                     Snippets
@@ -50,10 +50,10 @@ export const RemmePanel: React.FC = () => {
                 <button
                     onClick={() => setActiveTab('preferences')}
                     className={cn(
-                        "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 relative",
+                        "flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-all duration-300 relative",
                         activeTab === 'preferences'
                             ? "text-primary bg-primary/5"
-                            : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-accent"
                     )}
                 >
                     Preferences
@@ -251,7 +251,7 @@ const SnippetsView: React.FC = () => {
                 </div>
                 <button
                     onClick={() => setIsSpacesModalOpen(true)}
-                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                     title="Manage Spaces"
                 >
                     <FolderOpen className="w-3 h-3" />
@@ -263,7 +263,7 @@ const SnippetsView: React.FC = () => {
             {isAddOpen && (
                 <div className="p-3 border-b border-border/50 bg-primary/5 space-y-2">
                     <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Space</Label>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Space</Label>
                         <Select value={memorySpaceId ?? "__global__"} onValueChange={(v) => setMemorySpaceId(v === "__global__" ? null : v)}>
                             <SelectTrigger className="h-8 bg-background border-border text-xs">
                                 <SelectValue placeholder="Global" />
@@ -289,7 +289,7 @@ const SnippetsView: React.FC = () => {
                         autoFocus
                     />
                     {showRecommendBanner && (
-                        <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md bg-muted/60 border border-border/50 text-[10px]">
+                        <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md bg-muted/60 border border-border/50 text-xs">
                             <span className="text-muted-foreground truncate">
                                 Suggested: Add to {recommendedSpaceId ? (spaces.find((s) => s.space_id === recommendedSpaceId)?.name || 'space') : 'Global'}?
                             </span>
@@ -297,7 +297,7 @@ const SnippetsView: React.FC = () => {
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-6 px-2 text-[10px]"
+                                    className="h-6 px-2 text-xs"
                                     onClick={handleAddToRecommended}
                                     disabled={isAdding}
                                 >
@@ -344,12 +344,12 @@ const SnippetsView: React.FC = () => {
                 {memoriesLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 px-8 text-center space-y-4 opacity-50">
                         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Loading memories...</p>
+                        <p className="text-xs font-bold uppercase tracking-wide">Loading memories...</p>
                     </div>
                 ) : memoriesError ? (
                     <div className="flex flex-col items-center justify-center py-20 px-8 text-center space-y-4">
                         <WifiOff className="w-10 h-10 text-orange-400 opacity-60" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400">Backend unreachable</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-orange-400">Backend unreachable</p>
                         <button
                             onClick={() => fetchMemories()}
                             className="mt-2 px-4 py-1.5 text-xs font-medium rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
@@ -363,7 +363,7 @@ const SnippetsView: React.FC = () => {
                             <Brain className="w-12 h-12 mx-auto" />
                             <Search className="w-6 h-6 absolute -bottom-1 -right-1" />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed">No matching memory patterns found</p>
+                        <p className="text-xs font-bold uppercase tracking-wide leading-relaxed">No matching memory patterns found</p>
                     </div>
                 ) : (
                     filteredMemories.map((memory) => {
@@ -403,14 +403,14 @@ const SnippetsView: React.FC = () => {
                                 <div className="mt-4 pt-3 border-t border-border/10 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className={cn(
-                                            "px-2 py-0.5 rounded-md text-[8px] uppercase font-black tracking-tight",
+                                            "px-2 py-0.5 rounded-md text-[8px] uppercase font-semibold tracking-tight",
                                             memory.category === 'derived'
                                                 ? "bg-purple-500/10 text-purple-400"
                                                 : "bg-blue-500/10 text-blue-400"
                                         )}>
                                             {memory.category}
                                         </div>
-                                        <span className="text-[9px] text-muted-foreground/50 font-mono">
+                                        <span className="text-2xs text-muted-foreground/50 font-mono">
                                             {formatMemoryDate(memory.created_at)}
                                         </span>
                                     </div>
@@ -525,8 +525,8 @@ const PreferencesView: React.FC = () => {
                     <div>
                         <span className="text-xs font-semibold tracking-tight">Profile Awareness</span>
                         <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/70 font-light">Evidence: <span className="font-semibold text-foreground/80">{meta.total_evidence || 0}</span></span>
-                            <span className="text-[10px] text-muted-foreground/70 font-light">Conf: <span className="font-semibold text-foreground/80">{((meta.overall_confidence || 0) * 100).toFixed(0)}%</span></span>
+                            <span className="text-xs text-muted-foreground/70 font-light">Evidence: <span className="font-semibold text-foreground/80">{meta.total_evidence || 0}</span></span>
+                            <span className="text-xs text-muted-foreground/70 font-light">Conf: <span className="font-semibold text-foreground/80">{((meta.overall_confidence || 0) * 100).toFixed(0)}%</span></span>
                         </div>
                     </div>
                 </div>
@@ -560,13 +560,13 @@ const PreferencesView: React.FC = () => {
                     <div className="grid grid-cols-1 gap-1">
                         {Object.entries(soft.extras).map(([key, item]: [string, any]) => (
                             <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/5 last:border-0 group">
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
+                                <span className="text-xs text-muted-foreground uppercase tracking-tight font-medium">
                                     {key.replace(/_/g, " ")}
                                 </span>
                                 <div className="text-right">
                                     <span className="text-xs text-foreground/80 font-normal block">{String(item.value || 'None')}</span>
                                     {item.confidence && (
-                                        <div className="text-[8px] text-muted-foreground/40 font-mono tracking-tighter">
+                                        <div className="text-[8px] text-muted-foreground/40 font-mono tracking-tight">
                                             {Math.round(item.confidence * 100)}% CONF
                                         </div>
                                     )}
@@ -647,7 +647,7 @@ const PreferencesView: React.FC = () => {
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div className="space-y-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 border-l border-foreground/30 pl-2">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground/50 border-l border-foreground/30 pl-2">
             {title}
         </h3>
         <div className="pl-2 space-y-0.5">
@@ -675,7 +675,7 @@ const TagRow: React.FC<{ label: string; items: string[] }> = ({ label, items }) 
             <span className="text-[11px] text-muted-foreground block mb-1.5">{label}</span>
             <div className="flex flex-wrap gap-1.5">
                 {items.map((item, i) => (
-                    <span key={i} className="px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground bg-muted/5">
+                    <span key={i} className="px-1.5 py-0.5 rounded border border-border/40 text-xs text-muted-foreground bg-muted/5">
                         {item}
                     </span>
                 ))}

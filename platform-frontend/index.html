@@ -4,7 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:8000 ws://localhost:8000 http://127.0.0.1:8000 http://127.0.0.1:11434 https://cdn.jsdelivr.net blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; worker-src 'self' blob:; img-src 'self' data: https: blob:; frame-src 'self' blob:; object-src 'self' blob:;">
+    content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:8000 ws://localhost:8000 http://127.0.0.1:8000 http://127.0.0.1:11434 https://cdn.jsdelivr.net blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; worker-src 'self' blob:; img-src 'self' data: https: blob:; frame-src 'self' blob:; object-src 'self' blob:;">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <link rel="icon" href="/favicon.svg" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="/favicon.svg" media="(prefers-color-scheme: light)" />

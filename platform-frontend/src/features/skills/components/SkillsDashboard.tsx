@@ -110,7 +110,7 @@ export const SkillsDashboard: React.FC = () => {
                     </div>
                     <div>
                         <h1 className="text-xl font-bold tracking-tight">Skill Store</h1>
-                        <p className="text-xs text-muted-foreground uppercase tracking-widest">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">
                             {activeTab === 'installed' ? `${installedSkills.length} Installed Skills` : "Community Skills Repository"}
                         </p>
                     </div>
@@ -157,11 +157,11 @@ export const SkillsDashboard: React.FC = () => {
                         const isInstalled = installedSkills.some(is => is.name === skill.name);
 
                         return (
-                            <div key={skill.name} className="group relative bg-card/50 border border-border/50 rounded-lg px-3 py-2.5 hover:border-neon-purple/50 hover:bg-neon-purple/1 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-neon-purple/5 flex flex-col gap-1.5">
+                            <div key={skill.name} className="group relative bg-card/50 border border-border/50 rounded-lg px-3 py-2.5 hover:border-neon-purple/50 hover:bg-neon-purple/1 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm hover:shadow-neon-purple/5 flex flex-col gap-1.5">
                                 <div className="flex justify-between items-center">
                                     <h3 className="font-semibold text-sm capitalize truncate pr-2" title={skill.name}>{skill.name.replace(/-/g, ' ')}</h3>
                                     {isInstalled && activeTab === 'store' && (
-                                        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 gap-1 shrink-0 text-[10px] px-1.5 py-0">
+                                        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 gap-1 shrink-0 text-xs px-1.5 py-0">
                                             <CheckCircle className="w-2.5 h-2.5" />
                                             Owned
                                         </Badge>
@@ -172,7 +172,7 @@ export const SkillsDashboard: React.FC = () => {
                                     {skill.description}
                                 </p>
 
-                                <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-muted-foreground">
+                                <div className="flex items-center justify-between pt-1 border-t border-border text-xs text-muted-foreground">
                                     <span className="font-mono opacity-50">{skill.version ? `v${skill.version}` : 'latest'}</span>
 
                                     {activeTab === 'installed' ? (

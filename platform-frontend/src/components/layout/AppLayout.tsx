@@ -5,13 +5,11 @@ import { WorkspacePanel } from '../workspace/WorkspacePanel';
 import { GraphCanvas } from '../graph/GraphCanvas';
 import { FlowWorkspace } from '../workspace/FlowWorkspace';
 import { RunTimeline } from '@/features/replay/RunTimeline';
-import { GripVertical } from 'lucide-react';
 import { DocumentViewer } from '../rag/DocumentViewer';
 import { DocumentAssistant } from '../rag/DocumentAssistant';
 import { NotesEditor } from '../notes/NotesEditor';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { Meteors } from '../ui/meteors';
 import { InboxPanel } from '../inbox/InboxPanel';
 import CanvasHost from '@/features/canvas/CanvasHost';
 import useVoice from '@/hooks/useVoice';
@@ -22,12 +20,11 @@ interface ResizeHandleProps {
 
 const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
     <div
-        className="w-1 cursor-col-resize group relative flex items-center justify-center hover:bg-primary/30 active:bg-primary/50 transition-colors"
+        className="relative w-px bg-border cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
         onMouseDown={onMouseDown}
     >
-        <div className="absolute z-10 flex items-center justify-center w-4 h-8 rounded bg-muted border border-border opacity-0 group-hover:opacity-100 transition-opacity">
-            <GripVertical className="w-3 h-3 text-muted-foreground" />
-        </div>
+        {/* Wider invisible hit area */}
+        <div className="absolute inset-y-0 -left-1.5 -right-1.5 z-10" />
     </div>
 );
 
@@ -178,11 +175,7 @@ export const AppLayout: React.FC = () => {
 
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg relative">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <Meteors number={35} />
-            </div>
-
+        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
 
             {/* Hide header when in App View Mode */}
             {!isAppViewMode && <Header />}
@@ -192,13 +185,13 @@ export const AppLayout: React.FC = () => {
                 <InboxPanel onClose={() => setIsInboxOpen(false)} />
             )}
 
-            <div ref={containerRef} className="flex-1 flex overflow-hidden relative z-20 p-3 gap-3">
+            <div ref={containerRef} className="flex-1 flex overflow-hidden relative z-20 gap-0">
                 {/* Left Sidebar: Hidden for Apps fullscreen, App View Mode, news chat, or Zen Mode */}
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && !isZenMode && (
                     <>
                         <div
                             className={cn(
-                                "h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out",
+                                "h-full bg-sidebar border-r border-sidebar-border flex-shrink-0 overflow-hidden flex flex-col transition-all duration-300 ease-out",
                                 hideSidebarSubPanel ? "w-16" : ""
                             )}
                             style={{ width: hideSidebarSubPanel ? 64 : leftWidth }}
@@ -211,7 +204,7 @@ export const AppLayout: React.FC = () => {
                 )}
 
                 {/* Center Canvas or Document Viewer - Main visual area */}
-                <div className="flex-1 flex flex-col min-w-0 glass-panel rounded-2xl relative overflow-hidden shadow-2xl transition-all duration-300">
+                <div className="flex-1 flex flex-col min-w-0 bg-card rounded-none relative overflow-hidden transition-all duration-300">
                     {/* Content Logic */}
                     {/* Content Logic */}
                     {!isAppViewMode && (
@@ -276,7 +269,7 @@ export const AppLayout: React.FC = () => {
 
                     {/* APP RUNTIME VIEW (When "View App" is clicked) */}
                     {isAppViewMode && (
-                        <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center">
+                        <div className="absolute inset-0 z-50 bg-background/95 flex items-center justify-center">
                             <div className="w-full h-full p-4">
                                 <AppGrid isFullScreen={true} onToggleFullScreen={() => { }} />
                             </div>
@@ -291,7 +284,7 @@ export const AppLayout: React.FC = () => {
 
                         {/* Right Workspace Panel - Floating Glass */}
                         <div
-                            className="h-full glass-panel rounded-2xl flex-shrink-0 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ease-out"
+                            className="h-full bg-card border-l border-border rounded-none flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300 ease-out"
                             style={{ width: rightWidth }}
                         >
                             {sidebarTab === 'apps' ? <AppInspector /> :

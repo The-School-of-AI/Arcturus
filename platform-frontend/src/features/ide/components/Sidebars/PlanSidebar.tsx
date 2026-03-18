@@ -105,7 +105,7 @@ export const PlanSidebar = () => {
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground/50 p-4 text-center">
                 <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
                 <span className="text-xs">{error}</span>
-                <span className="text-[10px] mt-2 opacity-60">Create a task.md file in your project root.</span>
+                <span className="text-xs mt-2 opacity-60">Create a task.md file in your project root.</span>
             </div>
         );
     }
@@ -114,7 +114,7 @@ export const PlanSidebar = () => {
         <div className="h-full flex flex-col bg-transparent">
             <div className="px-4 py-3 border-b border-border/40">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Plan</h3>
-                {planPath && <p className="text-[9px] text-muted-foreground/50 truncate mt-1">{planPath.split('/').pop()}</p>}
+                {planPath && <p className="text-2xs text-muted-foreground/50 truncate mt-1">{planPath.split('/').pop()}</p>}
             </div>
 
             <div className="flex-1 overflow-y-auto p-2">

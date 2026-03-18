@@ -77,7 +77,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-2xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="w-full max-w-2xl bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="flex items-center justify-between p-4 border-b border-border/50">
                     <h2 className="text-lg font-semibold text-foreground">Settings</h2>
                     <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 hover:text-destructive">
@@ -190,7 +190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground">Changes to agent models take effect on next run.</p>
+                                <p className="text-xs text-muted-foreground">Changes to agent models take effect on next run.</p>
                             </div>
                         </>
                     ) : (

@@ -97,7 +97,7 @@ export function TimelineSlide({ slide, theme, isThumb }: Props) {
 
                 {entry.tag && !isThumb && (
                   <span
-                    className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                    className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold text-white"
                     style={{ backgroundColor: sc.accentColor }}
                   >
                     {entry.tag}

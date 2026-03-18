@@ -31,7 +31,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                 <div className="bg-muted border border-border/50 rounded-xl overflow-hidden mb-2">
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-primary/80 hover:bg-background/50 transition-colors"
+                        className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary/80 hover:bg-background/50 transition-colors"
                     >
                         <div className="flex items-center gap-2">
                             <span className="relative flex h-2 w-2">
@@ -209,13 +209,13 @@ export const NewsInspector: React.FC = () => {
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <Sparkles className="w-4 h-4 text-cyan-400" />
-                        <h3 className="font-bold text-xs uppercase tracking-widest text-foreground">Insights</h3>
+                        <h3 className="font-bold text-xs uppercase tracking-wide text-foreground">Insights</h3>
                     </div>
-                    <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{activeTitle}</p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">{activeTitle}</p>
                 </div>
                 <button
                     onClick={() => setShowNewsChatPanel(false)}
-                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                    className="px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors"
                 >
                     Exit
                 </button>
@@ -232,7 +232,7 @@ export const NewsInspector: React.FC = () => {
 
                         {/* Quick Actions */}
                         <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Quick Actions</p>
+                            <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">Quick Actions</p>
                             <button
                                 onClick={() => {
                                     setInputValue('Summarize this article in 3-5 concise bullet points');
@@ -305,7 +305,7 @@ export const NewsInspector: React.FC = () => {
                 {selectedContexts.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-2">
                         {selectedContexts.map((ctx, i) => (
-                            <div key={i} className="flex items-center gap-1 px-2 py-1 bg-cyan-500/20 text-cyan-400 text-[10px] rounded max-w-full">
+                            <div key={i} className="flex items-center gap-1 px-2 py-1 bg-cyan-500/20 text-cyan-400 text-xs rounded max-w-full">
                                 <span className="truncate max-w-[200px]"><Quote className="w-3 h-3 inline mr-1" />{(typeof ctx === 'string' ? ctx : ctx.text).substring(0, 30)}...</span>
                                 <button onClick={() => removeSelectedContext(i)} className="hover:text-cyan-300"><X className="w-3 h-3" /></button>
                             </div>

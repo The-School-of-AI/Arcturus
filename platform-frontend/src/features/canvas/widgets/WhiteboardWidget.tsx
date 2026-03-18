@@ -42,7 +42,7 @@ class WhiteboardErrorBoundary extends React.Component<{ children: React.ReactNod
                     </svg>
                     <h3 className="text-lg font-bold mb-2">Whiteboard Component Failed</h3>
                     <p className="text-sm opacity-70 mb-2">A critical error occurred while rendering the drawing surface.</p>
-                    <p className="text-[10px] font-mono opacity-50 mb-4 px-4 py-2 bg-black/30 rounded max-w-md overflow-hidden">{this.state.error?.toString()}</p>
+                    <p className="text-xs font-mono opacity-50 mb-4 px-4 py-2 bg-black/30 rounded max-w-md overflow-hidden">{this.state.error?.toString()}</p>
                     <div className="flex gap-2">
                         <button
                             onClick={() => window.location.reload()}
@@ -356,7 +356,7 @@ const WhiteboardWidget: React.FC<WhiteboardWidgetProps> = ({
                                         }
                                     }}
                                     title={bg.name}
-                                    className={`w-4 h-4 rounded border ${bg.color === '#ffffff' ? 'border-gray-400' : 'border-white/30'} hover:scale-110 transition-transform shadow-md ring-1 ring-black/50`}
+                                    className={`w-4 h-4 rounded border ${bg.color === '#ffffff' ? 'border-gray-400' : 'border-border'} hover:scale-110 transition-transform shadow-md ring-1 ring-black/50`}
                                     style={{ backgroundColor: bg.color }}
                                 />
                             ))}
@@ -366,7 +366,7 @@ const WhiteboardWidget: React.FC<WhiteboardWidgetProps> = ({
                             <button
                                 id={`save-btn-${title}`}
                                 onClick={handleManualSave}
-                                className={`flex items-center gap-1.5 text-[10px] px-3 py-1 rounded transition-all border ${isSaved
+                                className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded transition-all border ${isSaved
                                     ? 'bg-green-600/40 text-green-200 border-green-500/50'
                                     : 'bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white border-blue-500/30'
                                     }`}
@@ -378,11 +378,11 @@ const WhiteboardWidget: React.FC<WhiteboardWidgetProps> = ({
                             </button>
                             <button
                                 onClick={() => (window as any).__EXCALIDRAW_DIAGNOSTIC?.forceUpdate()}
-                                className="text-[9px] bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-neon-yellow hover:text-white transition-colors border border-neon-yellow/20"
+                                className="text-2xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-primary hover:text-white transition-colors border border-primary/20"
                             >
                                 Force Refresh
                             </button>
-                            {readOnly && <span className="text-[10px] bg-gray-700 px-2 py-1 rounded text-gray-400 uppercase tracking-tighter">Read Only</span>}
+                            {readOnly && <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-400 uppercase tracking-tight">Read Only</span>}
                         </div>
                     </div>
                 )}

@@ -36,7 +36,7 @@ const ProgressWidget: React.FC<ProgressWidgetProps> = ({ title, steps = [], perc
             <div className="p-3 space-y-1">
                 {steps.map((step, i) => (
                     <div key={i} className="flex items-start gap-3 py-1.5">
-                        <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
+                        <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
                             step.status === 'done' ? 'bg-green-500 text-white' :
                             step.status === 'active' ? 'bg-blue-500 text-white animate-pulse' :
                             isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
@@ -49,7 +49,7 @@ const ProgressWidget: React.FC<ProgressWidgetProps> = ({ title, steps = [], perc
                                 step.status === 'active' ? (isDark ? 'text-blue-400' : 'text-blue-600') :
                                 isDark ? 'text-gray-500' : 'text-gray-400'
                             }`}>{step.label}</div>
-                            {step.detail && <div className={`text-[10px] mt-0.5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{step.detail}</div>}
+                            {step.detail && <div className={`text-xs mt-0.5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{step.detail}</div>}
                         </div>
                     </div>
                 ))}

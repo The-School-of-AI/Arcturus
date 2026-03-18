@@ -59,7 +59,7 @@ export function StudioCreationModal() {
                             >
                                 <Icon className="w-6 h-6" />
                                 <span className="text-sm font-medium">{t.label}</span>
-                                <span className="text-[10px] opacity-60">{t.desc}</span>
+                                <span className="text-xs opacity-60">{t.desc}</span>
                             </button>
                         );
                     })}

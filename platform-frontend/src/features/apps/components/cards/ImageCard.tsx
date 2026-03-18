@@ -35,13 +35,13 @@ export const ImageCard: React.FC<ImageCardProps> = ({ data = {}, config = {}, st
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-20">
                         <ImageIcon className="w-8 h-8" />
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-foreground">No Image</span>
+                        <span className="text-xs uppercase font-bold tracking-wide text-foreground">No Image</span>
                     </div>
                 )}
             </div>
             {caption && config.showCaption !== false && (
                 <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/60 to-transparent">
-                    <p className="text-[10px] text-foreground/90 italic text-center truncate drop-shadow-md">{caption}</p>
+                    <p className="text-xs text-foreground/90 italic text-center truncate drop-shadow-md">{caption}</p>
                 </div>
             )}
         </div>

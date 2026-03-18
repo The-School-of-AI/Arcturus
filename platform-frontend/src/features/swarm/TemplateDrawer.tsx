@@ -60,7 +60,7 @@ export const TemplateDrawer: React.FC<TemplateDrawerProps> = ({ onApply }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-y-0 right-0 w-80 bg-card border-l border-border shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+        <div className="fixed inset-y-0 right-0 w-80 bg-card border-l border-border shadow-sm z-50 flex flex-col animate-in slide-in-from-right duration-200">
             {/* Header */}
             <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export const TemplateDrawer: React.FC<TemplateDrawerProps> = ({ onApply }) => {
                     {saving ? 'Saving…' : 'Save Template'}
                 </Button>
                 {tasks.length === 0 && (
-                    <p className="text-[10px] text-muted-foreground text-center">Start a run first to save its task structure.</p>
+                    <p className="text-xs text-muted-foreground text-center">Start a run first to save its task structure.</p>
                 )}
             </div>
 
@@ -124,7 +124,7 @@ export const TemplateDrawer: React.FC<TemplateDrawerProps> = ({ onApply }) => {
                                     {tmpl.description && (
                                         <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{tmpl.description}</p>
                                     )}
-                                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                    <p className="text-xs text-muted-foreground/60 mt-1">
                                         {tmpl.tasks_template.length} task{tmpl.tasks_template.length !== 1 ? 's' : ''}
                                     </p>
                                 </div>

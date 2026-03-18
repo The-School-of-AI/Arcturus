@@ -48,7 +48,7 @@ const ImageViewerWidget: React.FC<ImageViewerWidgetProps> = ({ images = [], titl
                 {images.map((img, i) => (
                     <div key={i} className={`rounded-md overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all ${isDark ? 'border-gray-700' : 'border-gray-200'}`} onClick={() => setSelected(selected === i ? null : i)}>
                         <img src={img.src} alt={img.alt || ''} className="w-full h-32 object-cover" />
-                        {img.caption && <p className={`text-[10px] p-1.5 truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{img.caption}</p>}
+                        {img.caption && <p className={`text-xs p-1.5 truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{img.caption}</p>}
                     </div>
                 ))}
             </div>

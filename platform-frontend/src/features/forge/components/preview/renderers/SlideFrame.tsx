@@ -73,7 +73,7 @@ export function SlideFrame({
 
   return (
     <div
-      className={`relative w-full aspect-[16/9] overflow-hidden select-none${isThumb ? '' : ' shadow-2xl rounded-lg'}`}
+      className={`relative w-full aspect-[16/9] overflow-hidden select-none${isThumb ? '' : ' shadow-sm rounded-lg'}`}
       style={{
         ...bgStyles,
         fontFamily: `"${theme.font_body}", "Segoe UI", system-ui, sans-serif`,
@@ -103,7 +103,7 @@ export function SlideFrame({
             />
           </div>
           <div
-            className="absolute bottom-1.5 right-3 text-[10px] font-mono"
+            className="absolute bottom-1.5 right-3 text-xs font-mono"
             style={{ color: chromeColor }}
           >
             {slideIndex + 1}

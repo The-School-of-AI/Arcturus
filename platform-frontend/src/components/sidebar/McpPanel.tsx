@@ -159,13 +159,13 @@ export const McpPanel: React.FC = () => {
                                         onChange={e => setNewServerEntry(e.target.value)}
                                         className="bg-muted border-border"
                                     />
-                                    <p className="text-[10px] text-muted-foreground">Relative path to the server script in the repo.</p>
+                                    <p className="text-xs text-muted-foreground">Relative path to the server script in the repo.</p>
                                 </div>
                             )}
                         </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsAddOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                            <Button onClick={handleAddServer} disabled={adding} className="bg-neon-yellow text-neutral-950 font-semibold hover:bg-neon-yellow/90">
+                            <Button onClick={handleAddServer} disabled={adding} className="bg-primary text-neutral-950 font-semibold hover:bg-primary/90">
                                 {adding && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
                                 Add Server
                             </Button>
@@ -192,7 +192,7 @@ export const McpPanel: React.FC = () => {
                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
                                 "hover:shadow-md",
                                 isActive
-                                    ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                    ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                             )}
                         >
@@ -216,7 +216,7 @@ export const McpPanel: React.FC = () => {
                                             server.status === 'connected' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500"
                                         )} title={server.status} />
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground truncate opacity-70 font-mono">
+                                    <div className="text-xs text-muted-foreground truncate opacity-70 font-mono">
                                         {server.config?.type || 'local'} • {server.config?.args?.[0] || 'managed'}
                                     </div>
                                 </div>
@@ -237,7 +237,7 @@ export const McpPanel: React.FC = () => {
                 })}
 
                 {filteredServers.length === 0 && !loading && (
-                    <div className="text-center p-8 text-xs text-muted-foreground opacity-50 uppercase tracking-widest font-bold">
+                    <div className="text-center p-8 text-xs text-muted-foreground opacity-50 uppercase tracking-wide font-bold">
                         No servers found
                     </div>
                 )}

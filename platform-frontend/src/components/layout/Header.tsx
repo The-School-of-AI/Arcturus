@@ -11,31 +11,31 @@ import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { api, API_BASE } from '@/lib/api';
-import { ThemeToggle, useTheme } from '@/components/theme';
+import { ThemeToggle } from '@/components/theme';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 import { StatsModal } from '@/components/stats/StatsModal';
 import { SpacesModal } from '@/components/sidebar/SpacesModal';
 import { AuthModal } from '@/components/auth/AuthModal';
 
 const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subtitleSuffix: string }> = {
-    runs: { label: 'Agent Runs', icon: PlayCircle, color: 'text-neon-yellow', subtitleSuffix: 'SESSIONS' },
-    spaces: { label: 'Spaces', icon: FolderOpen, color: 'text-neon-yellow', subtitleSuffix: 'PROJECT HUBS' },
-    rag: { label: 'RAG Documents', icon: Database, color: 'text-neon-yellow', subtitleSuffix: 'SOURCES' },
-    mcp: { label: 'MCP Servers', icon: Box, color: 'text-neon-yellow', subtitleSuffix: 'CONNECTED' },
-    remme: { label: 'Memory Vault', icon: Brain, color: 'text-neon-yellow', subtitleSuffix: 'PERSISTENT FACTS' },
-    explorer: { label: 'Explorer', icon: Code2, color: 'text-neon-yellow', subtitleSuffix: 'PROJECTS' },
-    apps: { label: 'App Builder', icon: LayoutGrid, color: 'text-neon-yellow', subtitleSuffix: 'DASHBOARDS' },
-    news: { label: 'News Feed', icon: Newspaper, color: 'text-cyan-400', subtitleSuffix: 'SOURCES' },
-    learn: { label: 'Learning', icon: GraduationCap, color: 'text-neon-yellow', subtitleSuffix: 'COURSES' },
-    notes: { label: 'Notes', icon: Notebook, color: 'text-blue-400', subtitleSuffix: 'NOTES' },
-    settings: { label: 'Settings', icon: Settings, color: 'text-neon-yellow', subtitleSuffix: 'CONFIG' },
-    skills: { label: 'Skill Store', icon: Zap, color: 'text-neon-cyan', subtitleSuffix: 'INSTALLED' },
-    ide: { label: 'IDE', icon: Code2, color: 'text-neon-cyan', subtitleSuffix: '' },
-    scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-neon-cyan', subtitleSuffix: 'JOBS' },
-    console: { label: 'Mission Control', icon: Terminal, color: 'text-green-400', subtitleSuffix: 'EVENTS' },
-    echo: { label: 'Echo', icon: Mic, color: 'text-indigo-400', subtitleSuffix: 'VOICE' },
-    studio: { label: 'Forge', icon: Wand2, color: 'text-amber-400', subtitleSuffix: 'ARTIFACTS' },
-    canvas: { label: 'Canvas', icon: LayoutGrid, color: 'text-neon-cyan', subtitleSuffix: '' },
+    runs: { label: 'Agent Runs', icon: PlayCircle, color: 'text-primary', subtitleSuffix: 'SESSIONS' },
+    spaces: { label: 'Spaces', icon: FolderOpen, color: 'text-primary', subtitleSuffix: 'PROJECT HUBS' },
+    rag: { label: 'RAG Documents', icon: Database, color: 'text-primary', subtitleSuffix: 'SOURCES' },
+    mcp: { label: 'MCP Servers', icon: Box, color: 'text-primary', subtitleSuffix: 'CONNECTED' },
+    remme: { label: 'Memory Vault', icon: Brain, color: 'text-primary', subtitleSuffix: 'PERSISTENT FACTS' },
+    explorer: { label: 'Explorer', icon: Code2, color: 'text-primary', subtitleSuffix: 'PROJECTS' },
+    apps: { label: 'App Builder', icon: LayoutGrid, color: 'text-primary', subtitleSuffix: 'DASHBOARDS' },
+    news: { label: 'News Feed', icon: Newspaper, color: 'text-primary', subtitleSuffix: 'SOURCES' },
+    learn: { label: 'Learning', icon: GraduationCap, color: 'text-primary', subtitleSuffix: 'COURSES' },
+    notes: { label: 'Notes', icon: Notebook, color: 'text-primary', subtitleSuffix: 'NOTES' },
+    settings: { label: 'Settings', icon: Settings, color: 'text-primary', subtitleSuffix: 'CONFIG' },
+    skills: { label: 'Skill Store', icon: Zap, color: 'text-primary', subtitleSuffix: 'INSTALLED' },
+    ide: { label: 'IDE', icon: Code2, color: 'text-primary', subtitleSuffix: '' },
+    scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-primary', subtitleSuffix: 'JOBS' },
+    console: { label: 'Mission Control', icon: Terminal, color: 'text-primary', subtitleSuffix: 'EVENTS' },
+    echo: { label: 'Echo', icon: Mic, color: 'text-primary', subtitleSuffix: 'VOICE' },
+    studio: { label: 'Forge', icon: Wand2, color: 'text-primary', subtitleSuffix: 'ARTIFACTS' },
+    canvas: { label: 'Canvas', icon: LayoutGrid, color: 'text-primary', subtitleSuffix: '' },
 };
 
 export const Header: React.FC = () => {
@@ -54,7 +54,7 @@ export const Header: React.FC = () => {
         unreadCount, isInboxOpen, setIsInboxOpen,
         authStatus, authUserId, authUserFirstName, authUserEmail, isAuthModalOpen, setIsAuthModalOpen
     } = useAppStore();
-    const { theme } = useTheme();
+
 
     const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -223,10 +223,7 @@ export const Header: React.FC = () => {
 
     return (
         <>
-            <header className={cn(
-                "h-10 border-b flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-0 drag-region", // Added drag-region
-                theme === 'dark' ? "bg-[#0b1220] border-border/50" : "bg-white border-border"
-            )}>
+            <header className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-0 drag-region bg-background">
                 <div className="flex items-center gap-2 pl-16"> {/* Added pl-16 to clear traffic lights */}
                     {/* Brand / Logo */}
                     <div className="flex items-center gap-0 text-primary font-bold text-lg tracking-tight mr-4 cursor-pointer no-drag" onClick={() => window.location.reload()}>
@@ -260,7 +257,7 @@ export const Header: React.FC = () => {
                                     : (config?.label || sidebarTab)}
                             </h2>
                             {sidebarTab === 'ide' ? (
-                                <p className={cn("text-[9px] font-mono tracking-widest opacity-80 uppercase leading-none", config?.color || 'text-neon-yellow')}>
+                                <p className={cn("text-2xs font-mono tracking-wide opacity-80 uppercase leading-none", config?.color || 'text-primary')}>
                                     {!gitSummary ? (
                                         "GIT NOT FOUND"
                                     ) : gitSummary.staged > 0 ? (
@@ -272,7 +269,7 @@ export const Header: React.FC = () => {
                                     )}
                                 </p>
                             ) : (
-                                <p className={cn("text-[9px] font-mono tracking-widest opacity-80 uppercase leading-none", config?.color || 'text-neon-yellow')}>
+                                <p className={cn("text-2xs font-mono tracking-wide opacity-80 uppercase leading-none", config?.color || 'text-primary')}>
                                     {getCount()} {config?.subtitleSuffix}
                                 </p>
                             )}
@@ -282,10 +279,10 @@ export const Header: React.FC = () => {
                         <div className="flex items-center gap-1 ml-4 py-1 px-2 rounded-full bg-muted/30 border border-border/50">
                             {sidebarTab === 'runs' && (
                                 <>
-                                    <button onClick={() => setIsNewRunOpen(true)} className="p-1.5 hover:bg-neon-yellow/10 rounded-full text-muted-foreground hover:text-neon-yellow transition-all no-drag" title="New Run">
+                                    <button onClick={() => setIsNewRunOpen(true)} className="p-1.5 hover:bg-primary/10 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="New Run">
                                         <Plus className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => setIsStatsOpen(true)} className="p-1.5 hover:bg-cyan-500/10 rounded-full text-muted-foreground hover:text-cyan-400 transition-all no-drag" title="Platform Analytics">
+                                    <button onClick={() => setIsStatsOpen(true)} className="p-1.5 hover:bg-primary/10 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Platform Analytics">
                                         <LayoutDashboard className="w-4 h-4" />
                                     </button>
                                 </>
@@ -293,13 +290,13 @@ export const Header: React.FC = () => {
 
                             {sidebarTab === 'rag' && (
                                 <>
-                                    <button onClick={() => setIsRagNewFolderOpen(true)} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground no-drag" title="New Folder">
+                                    <button onClick={() => setIsRagNewFolderOpen(true)} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="New Folder">
                                         <FolderPlus className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => (document.getElementById('rag-upload-input') as HTMLInputElement)?.click()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground no-drag" title="Upload File">
+                                    <button onClick={() => (document.getElementById('rag-upload-input') as HTMLInputElement)?.click()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Upload File">
                                         <UploadCloud className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => fetchRagFiles()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground no-drag" title="Refresh">
+                                    <button onClick={() => fetchRagFiles()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Refresh">
                                         <RefreshCw className={cn("w-4 h-4", isRagLoading && "animate-spin")} />
                                     </button>
                                 </>
@@ -307,10 +304,10 @@ export const Header: React.FC = () => {
 
                             {sidebarTab === 'mcp' && (
                                 <>
-                                    <button onClick={() => setIsMcpAddOpen(true)} className="p-1.5 hover:bg-muted/50 rounded-full text-muted-foreground hover:text-neon-yellow transition-all no-drag" title="Add Server">
+                                    <button onClick={() => setIsMcpAddOpen(true)} className="p-1.5 hover:bg-muted/50 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Add Server">
                                         <Plus className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => fetchMcpServers()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground no-drag" title="Refresh">
+                                    <button onClick={() => fetchMcpServers()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Refresh">
                                         <RefreshCw className="w-4 h-4" />
                                     </button>
                                 </>
@@ -318,7 +315,7 @@ export const Header: React.FC = () => {
 
                             {sidebarTab === 'remme' && (
                                 <>
-                                    <button onClick={() => setIsRemmeAddOpen(true)} className="p-1.5 hover:bg-neon-yellow/5 rounded-full text-muted-foreground hover:text-neon-yellow transition-all no-drag" title="Manual Add">
+                                    <button onClick={() => setIsRemmeAddOpen(true)} className="p-1.5 hover:bg-primary/5 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Manual Add">
                                         <Plus className="w-4 h-4" />
                                     </button>
                                     <button
@@ -328,7 +325,7 @@ export const Header: React.FC = () => {
                                                 catch (e) { console.error("Scan failed", e); }
                                             }
                                         }}
-                                        className="p-1.5 hover:bg-neon-yellow/5 rounded-full text-muted-foreground hover:text-neon-yellow transition-all no-drag" title="Scan for Memories"
+                                        className="p-1.5 hover:bg-primary/5 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Scan for Memories"
                                     >
                                         <Sparkles className="w-4 h-4 animate-pulse" />
                                     </button>
@@ -343,10 +340,10 @@ export const Header: React.FC = () => {
                                         } else {
                                             setIsNewsAddOpen(true);
                                         }
-                                    }} className="p-1.5 hover:bg-muted rounded-full hover:text-cyan-400 transition-all text-muted-foreground no-drag" title={newsViewMode === 'saved' ? "Add Article" : "Add Source"}>
+                                    }} className="p-1.5 hover:bg-muted rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title={newsViewMode === 'saved' ? "Add Article" : "Add Source"}>
                                         <Plus className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => fetchNewsSources()} className="p-1.5 hover:bg-muted rounded-full hover:text-cyan-400 transition-all text-muted-foreground no-drag" title="Refresh">
+                                    <button onClick={() => fetchNewsSources()} className="p-1.5 hover:bg-muted rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Refresh">
                                         <RefreshCw className={cn("w-4 h-4", isNewsLoading && "animate-spin")} />
                                     </button>
                                 </>
@@ -360,7 +357,7 @@ export const Header: React.FC = () => {
                                         if (sidebarTab === 'notes') fetchNotesFiles();
                                         if (sidebarTab === 'skills') fetchSkillsCount();
                                     }}
-                                    className="p-1.5 hover:bg-muted/50 rounded-full hover:text-neon-yellow transition-all text-muted-foreground no-drag"
+                                    className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag"
                                     title="Refresh"
                                 >
                                     <RefreshCw className={cn(
@@ -379,7 +376,7 @@ export const Header: React.FC = () => {
                     {currentRun?.status === 'running' && (
                         <div className="flex items-center gap-2 px-3 py-1 border border-yellow-500/30 bg-yellow-500/10 rounded-full animate-in fade-in zoom-in">
                             <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                            <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-tight">Agent Running</span>
+                            <span className="text-xs font-semibold text-yellow-500 uppercase tracking-tight">Agent Running</span>
                             <button onClick={handleStop} className="ml-1 p-0.5 hover:bg-yellow-500/20 rounded-md text-yellow-600 no-drag">
                                 <X className="w-3 h-3" />
                             </button>
@@ -395,7 +392,7 @@ export const Header: React.FC = () => {
                         title="Manage Spaces"
                     >
                         <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest max-w-[120px] truncate">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide max-w-[120px] truncate">
                             Space:{' '}
                             {currentSpaceId
                                 ? (spaces.find(s => s.space_id === currentSpaceId)?.name || 'Space')
@@ -411,10 +408,10 @@ export const Header: React.FC = () => {
                         className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50 hover:bg-muted/60 hover:border-primary/30 transition-colors no-drag"
                         title={authStatus === 'logged_in' ? 'Account Settings / Logout' : 'Login / Register'}
                     >
-                        <User className={cn("w-3.5 h-3.5", authStatus === 'logged_in' ? "text-neon-cyan" : "text-neon-yellow")} />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest max-w-[80px] truncate">
-                            {authStatus === 'logged_in' 
-                                ? (authUserFirstName ? authUserFirstName.trim().substring(0, 4) : (authUserEmail ? authUserEmail.split('@')[0].substring(0, 8) : 'User')) 
+                        <User className={cn("w-3.5 h-3.5", authStatus === 'logged_in' ? "text-primary" : "text-primary")} />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide max-w-[80px] truncate">
+                            {authStatus === 'logged_in'
+                                ? (authUserFirstName ? authUserFirstName.trim().substring(0, 4) : (authUserEmail ? authUserEmail.split('@')[0].substring(0, 8) : 'User'))
                                 : 'Guest'}
                         </span>
                     </button>
@@ -449,7 +446,7 @@ export const Header: React.FC = () => {
                         ) : (
                             <ShieldCheck className="w-3 h-3" />
                         )}
-                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                        <span className="text-xs font-semibold uppercase tracking-wide">
                             {privacyMode === null ? 'Voice' : privacyMode ? 'Private' : 'Cloud'}
                         </span>
                     </button>
@@ -476,7 +473,7 @@ export const Header: React.FC = () => {
                                 disabled={personaChanging || privacyMode === true}
                                 className={cn(
                                     'appearance-none bg-transparent border-none outline-none',
-                                    'text-[10px] font-bold uppercase tracking-widest',
+                                    'text-xs font-semibold uppercase tracking-wide',
                                     'pl-0.5 pr-5 py-1.5 cursor-pointer',
                                     'text-muted-foreground hover:text-foreground transition-colors',
                                     (personaChanging || privacyMode) && 'cursor-not-allowed'
@@ -502,12 +499,12 @@ export const Header: React.FC = () => {
                         <Circle
                             className={cn(
                                 "w-2 h-2 fill-current",
-                                ollamaStatus === 'online' && "text-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]",
-                                ollamaStatus === 'offline' && "text-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]",
+                                ollamaStatus === 'online' && "text-green-500",
+                                ollamaStatus === 'offline' && "text-red-500",
                                 ollamaStatus === 'checking' && "text-yellow-500 animate-pulse"
                             )}
                         />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ollama</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ollama</span>
                     </div>
 
                     <div className="flex items-center gap-3 no-drag z-50">
@@ -517,13 +514,13 @@ export const Header: React.FC = () => {
                             className={cn(
                                 "relative p-2 rounded-full transition-all duration-200",
                                 isInboxOpen
-                                    ? "bg-neon-yellow/10 text-neon-yellow"
+                                    ? "bg-primary/10 text-primary"
                                     : "hover:bg-muted text-muted-foreground hover:text-foreground"
                             )}
                         >
                             <Bell className="w-4 h-4" />
                             {unreadCount > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-neon-yellow rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
                             )}
                         </button>
 

@@ -30,7 +30,7 @@ export function TitleSlide({ slide, theme, slideIndex, totalSlides, isThumb }: P
       {meta.badge && !isThumb && (
         <AnimatedElement animation="fade" delay={0} isThumb={isThumb}>
           <div
-            className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase mb-3"
+            className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase mb-3"
             style={{ backgroundColor: sc.accentColor, color: '#ffffff' }}
           >
             {meta.badge}
@@ -43,7 +43,7 @@ export function TitleSlide({ slide, theme, slideIndex, totalSlides, isThumb }: P
         {meta.titleLines.map((line, i) => (
           <div
             key={i}
-            className={isThumb ? 'text-[7px] font-bold leading-tight' : 'text-3xl font-bold leading-tight'}
+            className={isThumb ? 'text-2xs font-bold leading-tight' : 'text-3xl font-bold leading-tight'}
             style={{
               color: i === 0 ? titleColor : sc.accentColor,
               fontFamily: sc.titleFont,

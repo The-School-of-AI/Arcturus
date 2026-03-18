@@ -1,7 +1,7 @@
 //  USE THIS FILE TO SET DEFAULT DATA, COLORS AND FEATURE FOR CARDS
 // Default colors for cards
 export const DEFAULT_COLORS = {
-    accent: '#F5C542',      // neon-yellow (keep fixed for now or make variable)
+    accent: '#F5C542',      // primary (keep fixed for now or make variable)
     background: 'hsl(var(--card))',
     text: 'hsl(var(--foreground))',
     secondary: 'hsl(var(--muted-foreground))',

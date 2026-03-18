@@ -18,7 +18,7 @@ const TerminalWidget: React.FC<TerminalWidgetProps> = ({ lines = [], title = 'Te
                     <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
                 </div>
-                <span className="text-[10px] text-gray-400 uppercase tracking-wider ml-2">{title}</span>
+                <span className="text-xs text-gray-400 uppercase tracking-wider ml-2">{title}</span>
             </div>
             <div className="p-3 max-h-80 overflow-y-auto text-xs leading-5 scrollbar-hide">
                 {lines.map((line, i) => {

@@ -115,7 +115,7 @@ export const JobFormDialog: React.FC<JobFormDialogProps> = ({
                             onClick={() => setMode('simple')}
                             className={cn(
                                 "text-xs font-bold uppercase transition-colors hover:text-foreground",
-                                mode === 'simple' ? "text-neon-cyan border-b-2 border-neon-cyan" : "text-muted-foreground"
+                                mode === 'simple' ? "text-info border-b-2 border-info" : "text-muted-foreground"
                             )}
                         >
                             Simple Mode
@@ -124,7 +124,7 @@ export const JobFormDialog: React.FC<JobFormDialogProps> = ({
                             onClick={() => setMode('advanced')}
                             className={cn(
                                 "text-xs font-bold uppercase transition-colors hover:text-foreground",
-                                mode === 'advanced' ? "text-neon-cyan border-b-2 border-neon-cyan" : "text-muted-foreground"
+                                mode === 'advanced' ? "text-info border-b-2 border-info" : "text-muted-foreground"
                             )}
                         >
                             Advanced (Cron)
@@ -134,9 +134,9 @@ export const JobFormDialog: React.FC<JobFormDialogProps> = ({
                     {mode === 'simple' && (
                         <div className="space-y-3 bg-muted/20 p-3 rounded-md border border-border/30">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-medium uppercase text-muted-foreground">Frequency</label>
+                                <label className="text-xs font-medium uppercase text-muted-foreground">Frequency</label>
                                 <select
-                                    className="w-full bg-background/50 border border-border/30 rounded-md p-2 text-sm text-foreground focus:outline-none focus:border-neon-cyan"
+                                    className="w-full bg-background/50 border border-border/30 rounded-md p-2 text-sm text-foreground focus:outline-none focus:border-info"
                                     value={simpleFrequency}
                                     onChange={(e) => setSimpleFrequency(e.target.value)}
                                 >
@@ -149,12 +149,12 @@ export const JobFormDialog: React.FC<JobFormDialogProps> = ({
                             </div>
                             {(simpleFrequency === 'daily' || simpleFrequency === 'weekly') && (
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-medium uppercase text-muted-foreground">Time</label>
+                                    <label className="text-xs font-medium uppercase text-muted-foreground">Time</label>
                                     <Input type="time" value={simpleTime} onChange={(e) => setSimpleTime(e.target.value)} className="bg-background/50" />
                                 </div>
                             )}
-                            <div className="text-[10px] text-muted-foreground pt-1">
-                                Will run as: <code className="text-neon-cyan">{currentCron}</code>
+                            <div className="text-xs text-muted-foreground pt-1">
+                                Will run as: <code className="text-info">{currentCron}</code>
                             </div>
                         </div>
                     )}
@@ -164,7 +164,7 @@ export const JobFormDialog: React.FC<JobFormDialogProps> = ({
                             <label className="text-xs font-medium uppercase text-muted-foreground">Cron Expression</label>
                             <div className="flex gap-2">
                                 <Input placeholder="* * * * *" className="font-mono bg-muted/50" value={cron} onChange={(e) => setCron(e.target.value)} />
-                                <div className="text-[10px] text-muted-foreground flex flex-col justify-center min-w-[100px]">
+                                <div className="text-xs text-muted-foreground flex flex-col justify-center min-w-[100px]">
                                     <div>* * * * *</div>
                                     <div>min hr day mo wkd</div>
                                 </div>
@@ -179,7 +179,7 @@ export const JobFormDialog: React.FC<JobFormDialogProps> = ({
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button className="bg-neon-cyan text-black hover:bg-neon-cyan/90" disabled={saving} onClick={handleSave}>
+                    <Button className="bg-info text-black hover:bg-info/90" disabled={saving} onClick={handleSave}>
                         {saving ? 'Saving...' : submitLabel}
                     </Button>
                 </DialogFooter>

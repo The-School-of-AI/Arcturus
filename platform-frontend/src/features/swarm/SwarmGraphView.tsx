@@ -229,7 +229,7 @@ const Inner: React.FC = () => {
             maxZoom={2}
         >
             <Background color="#888" gap={20} size={1} className="opacity-20" />
-            <Controls className="glass-panel border-border fill-white" />
+            <Controls className="bg-card border border-border border-border fill-white" />
         </ReactFlow>
     );
 };

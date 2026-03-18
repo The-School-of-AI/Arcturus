@@ -418,7 +418,7 @@ export const EchoPanel: React.FC = () => {
 
             {/* ── Privacy info strip ───────────────────────────────── */}
             {isPrivate && (
-                <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/8 border-b border-emerald-500/20 text-emerald-400/80 text-[10px] font-medium">
+                <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/8 border-b border-emerald-500/20 text-emerald-400/80 text-xs font-medium">
                     <ShieldCheck className="w-3 h-3 shrink-0" />
                     <span>
                         STT: {privacy?.stt_provider === 'whisper' ? 'Whisper (local)' : privacy?.stt_provider}
@@ -437,7 +437,7 @@ export const EchoPanel: React.FC = () => {
                     )}
                     title={isPrivate ? 'Persona selection is unavailable in Privacy Mode (Piper TTS does not support Azure personas)' : ''}
                 >
-                    <span className="text-[10px] text-muted-foreground font-medium shrink-0 flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground font-medium shrink-0 flex items-center gap-1">
                         {isPrivate && (
                             <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
                                 <path d="M9 5V4a3 3 0 1 0-6 0v1H2v7h8V5H9zm-4-1a1 1 0 1 1 2 0v1H5V4zm1 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" />
@@ -533,18 +533,18 @@ export const EchoPanel: React.FC = () => {
 
                 {/* Hint text */}
                 {voiceState === 'idle' && (
-                    <p className="text-[10px] text-muted-foreground/50 text-center">
+                    <p className="text-xs text-muted-foreground/50 text-center">
                         Tap to start recording
                     </p>
                 )}
                 {voiceState === 'listening' && (
-                    <p className="text-[10px] text-red-400/60 text-center">
+                    <p className="text-xs text-red-400/60 text-center">
                         Tap to stop &amp; send
                     </p>
                 )}
 
                 {nexusRunActive && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[10px] font-medium">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 text-xs font-medium">
                         <span className="relative flex h-1.5 w-1.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500" />
@@ -611,7 +611,7 @@ export const EchoPanel: React.FC = () => {
                             <div className="shrink-0 flex justify-end mb-1">
                                 <button
                                     onClick={handleResetConversation}
-                                    className="flex items-center gap-1.5 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 hover:text-red-400 bg-muted/20 hover:bg-red-400/10 rounded-md border border-border/20 hover:border-red-400/30 transition-all duration-200"
+                                    className="flex items-center gap-1.5 px-2 py-1 text-2xs font-bold uppercase tracking-wider text-muted-foreground/60 hover:text-red-400 bg-muted/20 hover:bg-red-400/10 rounded-md border border-border/20 hover:border-red-400/30 transition-all duration-200"
                                 >
                                     <XCircle className="w-3 h-3" />
                                     End Conversation
@@ -624,7 +624,7 @@ export const EchoPanel: React.FC = () => {
                                 <div className="w-full max-w-[240px] space-y-3">
                                     <div className="flex items-center gap-2">
                                         <div className="h-px flex-1 bg-border/20" />
-                                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50">Try Saying</p>
+                                        <p className="text-xs uppercase font-bold tracking-wide text-muted-foreground/50">Try Saying</p>
                                         <div className="h-px flex-1 bg-border/20" />
                                     </div>
                                     <div className="space-y-2 text-left">
@@ -643,7 +643,7 @@ export const EchoPanel: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <p className="text-[10px] text-muted-foreground/40 leading-relaxed max-w-[200px]">
+                                <p className="text-xs text-muted-foreground/40 leading-relaxed max-w-[200px]">
                                     Tap the mic button above, speak, then tap again to send.
                                     Or say <span className="italic text-primary/60">"Hey Arcturus"</span>.
                                 </p>
@@ -670,7 +670,7 @@ export const EchoPanel: React.FC = () => {
                             >
                                 {entry.source === 'system' ? (
                                     <div className="w-full text-center">
-                                        <span className="inline-block text-[10px] text-muted-foreground italic px-2 py-1 rounded-md bg-muted/30 border border-border/20">
+                                        <span className="inline-block text-xs text-muted-foreground italic px-2 py-1 rounded-md bg-muted/30 border border-border/20">
                                             {entry.text}
                                         </span>
                                     </div>
@@ -690,7 +690,7 @@ export const EchoPanel: React.FC = () => {
                                         )}>
                                             {entry.role === 'assistant' && entry.source && entry.source !== 'agent' && (
                                                 <span className={cn(
-                                                    'inline-block mb-1 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide',
+                                                    'inline-block mb-1 px-1.5 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide',
                                                     entry.source === 'answer' ? 'bg-emerald-500/15 text-emerald-400' :
                                                         entry.source === 'clarification' ? 'bg-amber-500/15 text-amber-400' :
                                                             entry.source === 'navigation' ? 'bg-sky-500/15 text-sky-400' :
@@ -768,7 +768,7 @@ export const EchoPanel: React.FC = () => {
                                                     </p>
                                                     <div className="flex items-center gap-1.5 mt-0.5">
                                                         <Clock className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
-                                                        <span className="text-[10px] text-muted-foreground/60">
+                                                        <span className="text-xs text-muted-foreground/60">
                                                             {new Date(run.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             {' · '}
                                                             {new Date(run.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
@@ -778,7 +778,7 @@ export const EchoPanel: React.FC = () => {
 
                                                 {/* Status pill */}
                                                 <span className={cn(
-                                                    'shrink-0 self-start px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wide',
+                                                    'shrink-0 self-start px-1.5 py-0.5 rounded text-2xs uppercase font-bold tracking-wide',
                                                     status === 'completed' && 'bg-emerald-500/10 text-emerald-400/80',
                                                     status === 'failed' && 'bg-red-500/10 text-red-400/80',
                                                     status === 'running' && nexusRunActive && 'bg-violet-500/15 text-violet-400 animate-pulse',

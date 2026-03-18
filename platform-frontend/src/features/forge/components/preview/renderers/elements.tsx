@@ -459,7 +459,7 @@ export function TableElement({ headers, rows, badgeColumn, sourceCitation, theme
                   <td key={ci} className="px-3 py-1.5" style={{ color: theme.colors.text }}>
                     {isBadge ? (
                       <span
-                        className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                        className="inline-block px-2 py-0.5 rounded-full text-xs font-bold text-white"
                         style={{ backgroundColor: theme.colors.accent }}
                       >
                         {cellValue}
@@ -476,7 +476,7 @@ export function TableElement({ headers, rows, badgeColumn, sourceCitation, theme
       </table>
       {sourceCitation && (
         <div
-          className="text-right text-[10px] mt-1 pr-1"
+          className="text-right text-xs mt-1 pr-1"
           style={{ color: theme.colors.text_light }}
         >
           {sourceCitation}

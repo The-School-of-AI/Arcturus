@@ -185,14 +185,14 @@ export const GitSidebar: React.FC = () => {
             <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/50 shrink-0">
                 <div className="flex items-center gap-2">
                     <GitBranch className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
+                    <span className="text-xs font-bold tracking-wide uppercase text-muted-foreground">
                         {status?.branch || 'HEAD'}
                     </span>
                 </div>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 hover:bg-white/5"
+                    className="h-7 w-7 hover:bg-accent"
                     onClick={fetchStatus}
                     disabled={loading}
                 >
@@ -205,10 +205,10 @@ export const GitSidebar: React.FC = () => {
                 <button
                     onClick={() => setActiveGitView('arcturus')}
                     className={cn(
-                        "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-all",
+                        "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-xs font-bold transition-all",
                         activeGitView === 'arcturus'
                             ? "bg-primary/20 text-primary border border-primary/30"
-                            : "text-muted-foreground hover:bg-white/5"
+                            : "text-muted-foreground hover:bg-accent"
                     )}
                 >
                     <span>Arcturus</span>
@@ -219,10 +219,10 @@ export const GitSidebar: React.FC = () => {
                 <button
                     onClick={() => setActiveGitView('user')}
                     className={cn(
-                        "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold transition-all",
+                        "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded text-xs font-bold transition-all",
                         activeGitView === 'user'
                             ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                            : "text-muted-foreground hover:bg-white/5"
+                            : "text-muted-foreground hover:bg-accent"
                     )}
                 >
                     <span>User</span>
@@ -234,7 +234,7 @@ export const GitSidebar: React.FC = () => {
                 {/* COMMIT SECTION */}
                 <div className="p-3 space-y-2 border-b border-border/10">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Changes</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Changes</span>
                     </div>
 
                     <div className="relative group/input">
@@ -263,7 +263,7 @@ export const GitSidebar: React.FC = () => {
                 </div>
 
                 {error && (
-                    <div className="mx-3 mt-3 p-2 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex gap-2">
+                    <div className="mx-3 mt-3 p-2 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex gap-2">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span className="break-all">{error}</span>
                     </div>
@@ -274,12 +274,12 @@ export const GitSidebar: React.FC = () => {
                     {/* Staged Section */}
                     {status && status.staged.length > 0 && (
                         <div className="mb-2">
-                            <div className="px-3 py-1 flex items-center justify-between group cursor-pointer hover:bg-white/5">
+                            <div className="px-3 py-1 flex items-center justify-between group cursor-pointer hover:bg-accent">
                                 <div className="flex items-center gap-1">
                                     <ChevronDown className="w-3 h-3 text-muted-foreground/50" />
-                                    <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Staged Changes</span>
+                                    <span className="text-2xs font-bold text-muted-foreground/70 uppercase tracking-wide">Staged Changes</span>
                                 </div>
-                                <span className="text-[9px] bg-primary/20 text-primary px-1 rounded-sm">{status.staged.length}</span>
+                                <span className="text-2xs bg-primary/20 text-primary px-1 rounded-sm">{status.staged.length}</span>
                             </div>
                             {status.staged.map((file: string) => (
                                 <GitNavItem
@@ -296,12 +296,12 @@ export const GitSidebar: React.FC = () => {
                     {/* Unstaged Section */}
                     {status && (status.unstaged.length > 0 || status.untracked.length > 0) && (
                         <div>
-                            <div className="px-3 py-1 flex items-center justify-between group cursor-pointer hover:bg-white/5">
+                            <div className="px-3 py-1 flex items-center justify-between group cursor-pointer hover:bg-accent">
                                 <div className="flex items-center gap-1">
                                     <ChevronDown className="w-3 h-3 text-muted-foreground/50" />
-                                    <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Changes</span>
+                                    <span className="text-2xs font-bold text-muted-foreground/70 uppercase tracking-wide">Changes</span>
                                 </div>
-                                <span className="text-[9px] bg-muted/50 text-muted-foreground/60 px-1 rounded-sm">
+                                <span className="text-2xs bg-muted/50 text-muted-foreground/60 px-1 rounded-sm">
                                     {status.unstaged.length + status.untracked.length}
                                 </span>
                             </div>
@@ -329,7 +329,7 @@ export const GitSidebar: React.FC = () => {
                     {!hasChanges && !loading && (
                         <div className="flex flex-col items-center justify-center p-8 opacity-20 text-center">
                             <Check className="w-8 h-8 mb-2" />
-                            <p className="text-[10px] tracking-tight uppercase font-bold">Workspace Clean</p>
+                            <p className="text-xs tracking-tight uppercase font-bold">Workspace Clean</p>
                         </div>
                     )}
                 </div>
@@ -337,7 +337,7 @@ export const GitSidebar: React.FC = () => {
                 {/* GRAPH / HISTORY SECTION */}
                 <div className="mt-4 border-t border-border/10 pt-4 pb-8">
                     <div className="px-4 mb-3 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Graph</span>
+                        <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground/60">Graph</span>
                     </div>
 
                     <div className="relative ml-4">
@@ -353,7 +353,7 @@ export const GitSidebar: React.FC = () => {
                                     <div key={commit.hash} className="mb-1">
                                         <div
                                             onClick={() => toggleCommit(commit.hash)}
-                                            className="group relative flex items-start gap-4 py-2 hover:bg-white/5 cursor-pointer transition-colors max-w-full pr-4"
+                                            className="group relative flex items-start gap-4 py-2 hover:bg-accent cursor-pointer transition-colors max-w-full pr-4"
                                         >
                                             {/* Commit Dot (Solid) */}
                                             <div className="relative shrink-0 w-[11px] h-full flex flex-col items-center">
@@ -374,7 +374,7 @@ export const GitSidebar: React.FC = () => {
                                                         <div
                                                             key={branch}
                                                             className={cn(
-                                                                "text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0",
+                                                                "text-2xs px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0",
                                                                 branch.includes('master') || branch.includes('main')
                                                                     ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                                                                     : "bg-muted text-muted-foreground/70"
@@ -386,7 +386,7 @@ export const GitSidebar: React.FC = () => {
                                                     ))}
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground/50">
+                                                <div className="flex items-center gap-2 text-2xs text-muted-foreground/50">
                                                     <span className="font-medium text-muted-foreground/70">{commit.author}</span>
                                                     <span>•</span>
                                                     <span>{commit.date}</span>
@@ -416,7 +416,7 @@ export const GitSidebar: React.FC = () => {
                             })}
 
                             {history.length === 0 && !loading && (
-                                <div className="py-8 text-center opacity-30 italic text-[10px] mr-4">
+                                <div className="py-8 text-center opacity-30 italic text-xs mr-4">
                                     No commit history yet
                                 </div>
                             )}
@@ -427,7 +427,7 @@ export const GitSidebar: React.FC = () => {
 
             {/* Beta Footer */}
             <div className="px-4 py-2 border-t border-border/50 bg-muted/5 shrink-0">
-                <div className="flex items-center gap-2 text-[9px] text-muted-foreground/40 justify-center uppercase tracking-[0.2em] font-bold">
+                <div className="flex items-center gap-2 text-2xs text-muted-foreground/40 justify-center uppercase tracking-[0.2em] font-bold">
                     <span>Arcturus SCM v2</span>
                 </div>
             </div>
@@ -444,14 +444,14 @@ const GitNavItem: React.FC<{
     return (
         <div
             onClick={onClick}
-            className="group flex items-center gap-2 px-3 py-1 hover:bg-white/5 transition-all cursor-pointer select-none overflow-hidden"
+            className="group flex items-center gap-2 px-3 py-1 hover:bg-accent transition-all cursor-pointer select-none overflow-hidden"
         >
             <FileCode className={cn(
                 "w-3 h-3 shrink-0",
                 state === 'staged' ? "text-green-400" : state === 'modified' ? "text-amber-400" : "text-blue-400"
             )} />
             <div className="flex-1 min-w-0">
-                <p className="text-[10px] truncate font-bold text-foreground/80">{name.split(/[/\\]/).pop()}</p>
+                <p className="text-xs truncate font-bold text-foreground/80">{name.split(/[/\\]/).pop()}</p>
                 <p className="text-[8px] truncate text-muted-foreground/40">{name.split(/[/\\]/).slice(0, -1).join('/') || './'}</p>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -465,7 +465,7 @@ const GitNavItem: React.FC<{
                 </Button>
             </div>
             <span className={cn(
-                "text-[8px] font-black uppercase tracking-tighter w-3 text-center shrink-0",
+                "text-[8px] font-semibold uppercase tracking-tight w-3 text-center shrink-0",
                 state === 'staged' ? "text-green-500/50" : state === 'modified' ? "text-amber-500/50" : "text-blue-500/50"
             )}>
                 {state === 'staged' ? 'A' : state === 'modified' ? 'M' : 'U'}

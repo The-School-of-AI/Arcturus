@@ -122,7 +122,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {/* Tooltip */}
                 {tooltip.visible && (
                     <div
-                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-[9px] rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
+                        className="absolute z-50 px-2 py-1.5 bg-popover text-popover-foreground text-2xs rounded border border-border shadow-xl pointer-events-none whitespace-nowrap"
                         style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
                     >
                         <div className="font-bold">{tooltip.value}</div>
@@ -136,7 +136,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                         <div key={i} className={cn("flex-1 flex gap-0.5 min-h-0", animate && "animate-in fade-in duration-500")} style={{ animationDelay: `${i * 100}ms` }}>
                             {/* Y Label */}
                             {showAxis && (
-                                <div className="w-16 flex items-center justify-end pr-2 text-[9px] text-muted-foreground truncate shrink-0 font-medium">
+                                <div className="w-16 flex items-center justify-end pr-2 text-2xs text-muted-foreground truncate shrink-0 font-medium">
                                     {yLabels[i] || ''}
                                 </div>
                             )}
@@ -165,7 +165,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {showAxis && (
                     <div className="flex gap-0.5 pl-16 pt-1.5 h-5 shrink-0">
                         {xLabels.map((label: string, i: number) => (
-                            <div key={i} className="flex-1 text-[9px] text-muted-foreground text-center truncate font-medium">
+                            <div key={i} className="flex-1 text-2xs text-muted-foreground text-center truncate font-medium">
                                 {label}
                             </div>
                         ))}
@@ -175,7 +175,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                 {/* Legend */}
                 {showLegend && (
                     <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/50 mt-2">
-                        <span className="text-[9px] text-muted-foreground">Low</span>
+                        <span className="text-2xs text-muted-foreground">Low</span>
                         <div className="flex h-2 w-24 rounded-full overflow-hidden">
                             {autoMultiColor ? (
                                 <>
@@ -189,7 +189,7 @@ export const HeatmapCard: React.FC<HeatmapCardProps> = ({
                                 <div className="flex-1" style={{ background: `linear-gradient(to right, ${accentColor}20, ${accentColor})` }} />
                             )}
                         </div>
-                        <span className="text-[9px] text-muted-foreground">High</span>
+                        <span className="text-2xs text-muted-foreground">High</span>
                     </div>
                 )}
             </div>

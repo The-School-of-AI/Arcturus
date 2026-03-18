@@ -34,7 +34,7 @@ export const MissionControl: React.FC = () => {
     const getEventColor = (type: string) => {
         if (type.includes('error') || type.includes('fail')) return 'text-red-400';
         if (type.includes('complete') || type.includes('success')) return 'text-green-400';
-        if (type.includes('start')) return 'text-neon-yellow';
+        if (type.includes('start')) return 'text-primary';
         if (type.includes('tool')) return 'text-cyan-400';
         return 'text-muted-foreground';
     };
@@ -42,17 +42,17 @@ export const MissionControl: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-[#09090b] font-mono text-xs">
             {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b border-white/10 bg-black/40 backdrop-blur-md">
+            <div className="flex items-center justify-between p-3 border-b border-border bg-black/40">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 text-neon-green">
                         <Terminal className="w-4 h-4 text-white" />
                         <h2 className="font-bold tracking-wider text-white uppercase text-sm">Mission Control</h2>
                     </div>
 
-                    <div className="h-4 w-px bg-white/10" />
+                    <div className="h-4 w-px bg-accent" />
 
                     <Badge variant="outline" className={cn(
-                        "h-5 px-1.5 border-transparent bg-white/5",
+                        "h-5 px-1.5 border-transparent bg-accent",
                         isStreaming ? "text-green-400 animate-pulse" : "text-muted-foreground"
                     )}>
                         <Activity className="w-3 h-3 mr-1" />
@@ -83,7 +83,7 @@ export const MissionControl: React.FC = () => {
             </div>
 
             {/* Filter Bar */}
-            <div className="flex items-center gap-2 p-2 border-b border-white/10 bg-black/20">
+            <div className="flex items-center gap-2 p-2 border-b border-border bg-black/20">
                 <Filter className="w-3 h-3 text-muted-foreground ml-2" />
                 <input
                     className="bg-transparent border-none text-muted-foreground focus:text-foreground outline-none text-[11px] w-full placeholder:text-muted-foreground/50"
@@ -92,7 +92,7 @@ export const MissionControl: React.FC = () => {
                     onChange={(e) => setFilter(e.target.value)}
                 />
                 {filter && (
-                    <button onClick={() => setFilter('')} className="text-[10px] text-muted-foreground hover:text-white px-2">
+                    <button onClick={() => setFilter('')} className="text-xs text-muted-foreground hover:text-white px-2">
                         Clear
                     </button>
                 )}
@@ -108,9 +108,9 @@ export const MissionControl: React.FC = () => {
                         </div>
                     ) : (
                         filteredEvents.map((event, i) => (
-                            <div key={i} className="flex gap-3 px-2 py-1 hover:bg-white/5 rounded-sm group leading-relaxed">
+                            <div key={i} className="flex gap-3 px-2 py-1 hover:bg-accent rounded-sm group leading-relaxed">
                                 {/* Timestamp */}
-                                <span className="opacity-40 shrink-0 select-none font-mono text-[10px] w-16 text-right">
+                                <span className="opacity-40 shrink-0 select-none font-mono text-xs w-16 text-right">
                                     {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                                 </span>
 

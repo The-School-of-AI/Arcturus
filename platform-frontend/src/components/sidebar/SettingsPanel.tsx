@@ -29,8 +29,8 @@ export const SettingsPanel: React.FC = () => {
                         <Settings className="w-4 h-4" />
                     </div>
                     <div>
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-primary">System Settings</h2>
-                        <p className="text-[10px] text-muted-foreground opacity-60">Configure your environment</p>
+                        <h2 className="text-xs font-bold uppercase tracking-wide text-primary">System Settings</h2>
+                        <p className="text-xs text-muted-foreground opacity-60">Configure your environment</p>
                     </div>
                 </div>
             </div>
@@ -46,7 +46,7 @@ export const SettingsPanel: React.FC = () => {
                             className={cn(
                                 "w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 text-left group overflow-hidden relative",
                                 isActive
-                                    ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/5 ring-1 ring-primary/20"
+                                    ? "border-primary/40 bg-primary/5 shadow-sm shadow-primary/5 ring-1 ring-primary/20"
                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50 hover:shadow-md"
                             )}
                         >
@@ -64,7 +64,7 @@ export const SettingsPanel: React.FC = () => {
                                 )}>
                                     {tab.label}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground opacity-60 truncate group-hover:opacity-100 transition-opacity">
+                                <div className="text-xs text-muted-foreground opacity-60 truncate group-hover:opacity-100 transition-opacity">
                                     {tab.description}
                                 </div>
                             </div>

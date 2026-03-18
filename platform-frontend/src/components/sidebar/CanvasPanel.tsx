@@ -257,7 +257,7 @@ export const CanvasPanel: React.FC = () => {
             {/* Header / Search */}
             <div className="p-4 border-b border-border/50 bg-muted/20 shrink-0">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
                         <Layers className="w-3.5 h-3.5 text-primary" />
                         Surface Explorer
                     </h2>
@@ -279,28 +279,28 @@ export const CanvasPanel: React.FC = () => {
                                 className={cn(
                                     "group p-3 rounded-lg border transition-all cursor-pointer",
                                     activeSurfaceId === surface.id
-                                        ? "border-neon-yellow/50 bg-neon-yellow/5 shadow-[0_0_10px_rgba(255,255,0,0.05)]"
+                                        ? "border-primary/50 bg-primary/5 shadow-[0_0_10px_rgba(255,255,0,0.05)]"
                                         : "border-border/40 hover:border-border/60 bg-background/50 hover:bg-background/80"
                                 )}
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className={cn(
                                         "text-[11px] font-bold truncate",
-                                        activeSurfaceId === surface.id ? "text-neon-yellow" : "text-foreground"
+                                        activeSurfaceId === surface.id ? "text-primary" : "text-foreground"
                                     )}>
                                         {surface.title || surface.id}
                                     </h3>
                                     <Monitor className={cn(
                                         "w-3 h-3",
-                                        activeSurfaceId === surface.id ? "text-neon-yellow" : "text-muted-foreground/30"
+                                        activeSurfaceId === surface.id ? "text-primary" : "text-muted-foreground/30"
                                     )} />
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1">
                                         <Activity className="w-2.5 h-2.5 text-muted-foreground/40" />
-                                        <span className="text-[9px] text-muted-foreground font-medium">{surface.componentCount || 0} Components</span>
+                                        <span className="text-2xs text-muted-foreground font-medium">{surface.componentCount || 0} Components</span>
                                     </div>
-                                    <div className="text-[9px] text-muted-foreground/40 font-mono">
+                                    <div className="text-2xs text-muted-foreground/40 font-mono">
                                         ID: {surface.id}
                                     </div>
                                 </div>
@@ -312,7 +312,7 @@ export const CanvasPanel: React.FC = () => {
 
             {/* Catalog Section */}
             <div className="p-4 border-b border-border/50 bg-muted/10 shrink-0">
-                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-4 flex items-center gap-2">
                     <Layout className="w-3 h-3" />
                     Widget Catalog
                 </h2>
@@ -340,7 +340,7 @@ export const CanvasPanel: React.FC = () => {
                             className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-background/40 border border-border/30 hover:border-border/60 transition-all cursor-pointer group hover:translate-y-[-1px] hover:bg-primary/5"
                         >
                             <w.icon className={`w-3.5 h-3.5 ${w.color} group-hover:scale-110 transition-transform`} />
-                            <span className="text-[7px] uppercase font-bold tracking-tighter opacity-60 group-hover:opacity-100">{w.label}</span>
+                            <span className="text-2xs uppercase font-bold tracking-tight opacity-60 group-hover:opacity-100">{w.label}</span>
                         </div>
                     ))}
                 </div>
@@ -350,7 +350,7 @@ export const CanvasPanel: React.FC = () => {
             <div className="p-4 mt-auto">
                 <div className="p-3 rounded-xl bg-muted/20 border border-border/30 backdrop-blur-sm">
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
                             <Activity className="w-3.5 h-3.5 text-blue-400" />
                             Health
                         </span>
@@ -361,7 +361,7 @@ export const CanvasPanel: React.FC = () => {
                                     latency < 50 ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" : latency < 150 ? "bg-amber-400" : "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]"
                                 )} />
                                 <span className={cn(
-                                    "text-[10px] font-mono font-bold tabular-nums",
+                                    "text-xs font-mono font-bold tabular-nums",
                                     latency < 50 ? "text-green-400" : latency < 150 ? "text-amber-400" : "text-red-400"
                                 )}>
                                     {latency}ms
@@ -372,7 +372,7 @@ export const CanvasPanel: React.FC = () => {
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full text-[10px] font-bold uppercase tracking-widest h-8 border border-border/40 hover:bg-background/80 hover:border-neon-yellow/30 transition-all group"
+                        className="w-full text-xs font-bold uppercase tracking-wide h-8 border border-border/40 hover:bg-background/80 hover:border-primary/30 transition-all group"
                         onClick={runConnectivityTest}
                         disabled={testing}
                     >

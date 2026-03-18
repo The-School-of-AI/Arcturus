@@ -67,11 +67,11 @@ const TaskItem = ({ task }: { task: Task }) => {
             style={style}
             {...attributes}
             {...listeners}
-            className={`group relative p-4 mb-3 bg-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-lg shadow-lg cursor-grab active:cursor-grabbing hover:border-blue-500/50 hover:bg-gray-700/80 transition-all duration-200 ease-out`}
+            className={`group relative p-4 mb-3 bg-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-500/50 hover:bg-gray-700/80 transition-all duration-200 ease-out`}
         >
             <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium tracking-wide uppercase ${getPriorityColor(task.content)}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium tracking-wide uppercase ${getPriorityColor(task.content)}`}>
                         {task.content.toLowerCase().includes('security') ? 'High Priority' : 'Standard'}
                     </span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -82,7 +82,7 @@ const TaskItem = ({ task }: { task: Task }) => {
                 <p className="text-sm text-gray-100 font-medium leading-relaxed">
                     {task.content}
                 </p>
-                <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-500">
+                <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -114,7 +114,7 @@ const DroppableColumn = ({ column, tasks, children }: { column: Column; tasks: T
             <div className="flex items-center justify-between mb-5 px-1">
                 <div className="flex items-center gap-2">
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-[0.15em]">{column.title}</h4>
-                    <span className="bg-gray-800 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-700">
+                    <span className="bg-gray-800 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full border border-gray-700">
                         {tasks.length}
                     </span>
                 </div>
@@ -218,7 +218,7 @@ const KanbanWidget: React.FC<KanbanWidgetProps> = ({
     };
 
     return (
-        <div className="w-full bg-gray-950/90 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl flex flex-col ring-1 ring-white/5">
+        <div className="w-full bg-gray-950/90 rounded-2xl overflow-hidden border border-gray-800 shadow-sm flex flex-col ring-1 ring-white/5">
             {title && (
                 <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 px-6 py-4 border-b border-gray-800 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -230,7 +230,7 @@ const KanbanWidget: React.FC<KanbanWidgetProps> = ({
                         <h3 className="text-sm font-bold text-gray-200 tracking-tight">{title}</h3>
                     </div>
                     <div className="flex items-center gap-4">
-                        <span className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase">Board Sync Active</span>
+                        <span className="text-xs text-gray-500 font-mono tracking-tight uppercase">Board Sync Active</span>
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
                     </div>
                 </div>
@@ -258,8 +258,8 @@ const KanbanWidget: React.FC<KanbanWidgetProps> = ({
                         easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
                     }}>
                         {activeId ? (
-                            <div className="p-4 bg-blue-600/90 backdrop-blur-md border border-blue-400 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-sm text-white scale-105 rotate-1 cursor-grabbing ring-4 ring-blue-500/20">
-                                <p className="font-bold mb-1 opacity-70 text-[10px] uppercase">Moving Task</p>
+                            <div className="p-4 bg-blue-600/90 border border-blue-400 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-sm text-white scale-105 rotate-1 cursor-grabbing ring-4 ring-blue-500/20">
+                                <p className="font-bold mb-1 opacity-70 text-xs uppercase">Moving Task</p>
                                 {tasks.find(t => t.id === activeId)?.content}
                             </div>
                         ) : null}

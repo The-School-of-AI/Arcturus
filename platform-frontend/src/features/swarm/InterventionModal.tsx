@@ -97,7 +97,7 @@ export const InterventionModal: React.FC = () => {
                                     <Icon className={cn('w-4 h-4 shrink-0', action.color)} />
                                     <div>
                                         <p className="text-xs font-semibold text-foreground">{action.label}</p>
-                                        <p className="text-[10px] text-muted-foreground">{action.description}</p>
+                                        <p className="text-xs text-muted-foreground">{action.description}</p>
                                     </div>
                                 </button>
                             );

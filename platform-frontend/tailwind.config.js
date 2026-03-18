@@ -3,6 +3,21 @@ export default {
     darkMode: ["class"],
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
     theme: {
+        fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SF Mono', 'Fira Code', 'monospace'],
+        },
+        fontSize: {
+            '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+            'xs': ['0.75rem', { lineHeight: '1rem' }],
+            'sm': ['0.8125rem', { lineHeight: '1.25rem' }],
+            'base': ['0.875rem', { lineHeight: '1.5rem' }],
+            'lg': ['1rem', { lineHeight: '1.5rem' }],
+            'xl': ['1.25rem', { lineHeight: '1.75rem' }],
+            '2xl': ['1.5rem', { lineHeight: '2rem' }],
+            '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+            '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
+        },
         extend: {
             colors: {
                 border: 'hsl(var(--border))',
@@ -38,46 +53,78 @@ export default {
                     DEFAULT: 'hsl(var(--card))',
                     foreground: 'hsl(var(--card-foreground))'
                 },
+                success: 'hsl(var(--success))',
+                warning: 'hsl(var(--warning))',
+                info: 'hsl(var(--info))',
+                sidebar: {
+                    DEFAULT: 'hsl(var(--sidebar-bg))',
+                    border: 'hsl(var(--sidebar-border))',
+                    active: 'hsl(var(--sidebar-active))',
+                },
+                surface: {
+                    0: 'hsl(var(--surface-0))',
+                    1: 'hsl(var(--surface-1))',
+                    2: 'hsl(var(--surface-2))',
+                    3: 'hsl(var(--surface-3))',
+                },
+                /* Backward-compatible aliases so existing neon references don't break the build */
                 neon: {
-                    yellow: 'hsl(var(--neon-yellow))',
-                    lime: '#D7E600',
-                    cyan: '#00F0FF',
+                    yellow: 'hsl(var(--primary))',
+                    lime: 'hsl(var(--success))',
+                    cyan: 'hsl(var(--info))',
                 },
                 charcoal: {
-                    DEFAULT: '#0F1115',
-                    50: '#F5F5F6',
-                    100: '#E6E7E8',
-                    200: '#C9CBCD',
-                    300: '#ACAEB2',
-                    400: '#8F9297',
-                    500: '#72757C',
-                    600: '#55585D',
-                    700: '#383B3E',
-                    800: '#1C1D1F',
-                    900: '#0F1115',
-                    950: '#08090B',
-                }
+                    DEFAULT: 'hsl(var(--foreground))',
+                    50: 'hsl(var(--muted))',
+                    100: 'hsl(var(--muted))',
+                    200: 'hsl(var(--border))',
+                    300: 'hsl(var(--muted-foreground))',
+                    400: 'hsl(var(--muted-foreground))',
+                    500: 'hsl(var(--muted-foreground))',
+                    600: 'hsl(var(--muted-foreground))',
+                    700: 'hsl(var(--secondary))',
+                    800: 'hsl(var(--card))',
+                    900: 'hsl(var(--background))',
+                    950: 'hsl(var(--background))',
+                },
             },
             borderRadius: {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)'
             },
+            spacing: {
+                'sidebar': '220px',
+                'sidebar-collapsed': '52px',
+                'header': '44px',
+            },
+            boxShadow: {
+                'xs': '0 1px 2px 0 rgb(0 0 0 / 0.03)',
+                'popover': '0 4px 12px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.02)',
+                'modal': '0 8px 30px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.02)',
+            },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
                 'accordion-up': 'accordion-up 0.2s ease-out',
+                'fade-in': 'fade-in 0.15s ease-out',
+                'fade-out': 'fade-out 0.15s ease-out',
+                'slide-up': 'slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                'slide-down': 'slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                'scale-in': 'scale-in 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                'spinner': 'spinner 0.75s linear infinite',
+                /* Backward-compatible animation names */
                 'ticker': 'ticker 10s linear infinite',
                 'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                'slide-fade-in': 'slide-fade-in 0.2s ease-out',
-                'modal-scale-in': 'modal-scale-in 0.25s ease-out',
-                'slide-from-right': 'slide-from-right 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                'slide-from-left': 'slide-from-left 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                'slide-from-bottom': 'slide-from-bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                'slide-from-top': 'slide-from-top 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                'slide-el-fade': 'slide-el-fade 0.4s ease-out both',
-                'slide-el-rise': 'slide-el-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
-                'slide-el-scale': 'slide-el-scale 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
-                'slide-el-count': 'slide-el-count 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+                'slide-fade-in': 'fade-in 0.2s ease-out',
+                'modal-scale-in': 'scale-in 0.25s ease-out',
+                'slide-from-right': 'slide-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                'slide-from-left': 'slide-from-left 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                'slide-from-bottom': 'slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                'slide-from-top': 'slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                'slide-el-fade': 'fade-in 0.3s ease-out both',
+                'slide-el-rise': 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
+                'slide-el-scale': 'scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
+                'slide-el-count': 'scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
             },
             keyframes: {
                 'accordion-down': {
@@ -88,6 +135,30 @@ export default {
                     from: { height: 'var(--radix-accordion-content-height)' },
                     to: { height: '0' }
                 },
+                'fade-in': {
+                    from: { opacity: '0' },
+                    to: { opacity: '1' }
+                },
+                'fade-out': {
+                    from: { opacity: '1' },
+                    to: { opacity: '0' }
+                },
+                'slide-up': {
+                    from: { opacity: '0', transform: 'translateY(4px)' },
+                    to: { opacity: '1', transform: 'translateY(0)' }
+                },
+                'slide-down': {
+                    from: { opacity: '0', transform: 'translateY(-4px)' },
+                    to: { opacity: '1', transform: 'translateY(0)' }
+                },
+                'scale-in': {
+                    from: { opacity: '0', transform: 'scale(0.97)' },
+                    to: { opacity: '1', transform: 'scale(1)' }
+                },
+                'spinner': {
+                    from: { transform: 'rotate(0deg)' },
+                    to: { transform: 'rotate(360deg)' }
+                },
                 'ticker': {
                     '0%': { transform: 'translateX(100%)' },
                     '100%': { transform: 'translateX(-100%)' }
@@ -96,47 +167,14 @@ export default {
                     '0%, 100%': { opacity: '1' },
                     '50%': { opacity: '0.8' }
                 },
-                'slide-fade-in': {
-                    '0%': { opacity: '0', transform: 'scale(0.98)' },
-                    '100%': { opacity: '1', transform: 'scale(1)' }
-                },
-                'modal-scale-in': {
-                    '0%': { opacity: '0', transform: 'scale(0.96)' },
-                    '100%': { opacity: '1', transform: 'scale(1)' }
-                },
                 'slide-from-right': {
-                    '0%': { opacity: '0', transform: 'translateX(60px) scale(0.97)' },
-                    '100%': { opacity: '1', transform: 'translateX(0) scale(1)' }
+                    from: { opacity: '0', transform: 'translateX(8px)' },
+                    to: { opacity: '1', transform: 'translateX(0)' }
                 },
                 'slide-from-left': {
-                    '0%': { opacity: '0', transform: 'translateX(-60px) scale(0.97)' },
-                    '100%': { opacity: '1', transform: 'translateX(0) scale(1)' }
+                    from: { opacity: '0', transform: 'translateX(-8px)' },
+                    to: { opacity: '1', transform: 'translateX(0)' }
                 },
-                'slide-from-bottom': {
-                    '0%': { opacity: '0', transform: 'translateY(40px) scale(0.97)' },
-                    '100%': { opacity: '1', transform: 'translateY(0) scale(1)' }
-                },
-                'slide-from-top': {
-                    '0%': { opacity: '0', transform: 'translateY(-40px) scale(0.97)' },
-                    '100%': { opacity: '1', transform: 'translateY(0) scale(1)' }
-                },
-                'slide-el-fade': {
-                    '0%': { opacity: '0' },
-                    '100%': { opacity: '1' }
-                },
-                'slide-el-rise': {
-                    '0%': { opacity: '0', transform: 'translateY(12px)', filter: 'blur(4px)' },
-                    '100%': { opacity: '1', transform: 'translateY(0)', filter: 'blur(0)' }
-                },
-                'slide-el-scale': {
-                    '0%': { opacity: '0', transform: 'scale(0.92)' },
-                    '100%': { opacity: '1', transform: 'scale(1)' }
-                },
-                'slide-el-count': {
-                    '0%': { opacity: '0', transform: 'scale(0.5)' },
-                    '60%': { opacity: '1', transform: 'scale(1.05)' },
-                    '100%': { opacity: '1', transform: 'scale(1)' }
-                }
             }
         }
     },

@@ -59,12 +59,12 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
     });
 
     return (
-        <div className="w-[400px] h-[calc(100vh-80px)] flex flex-col border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 absolute right-0 top-14 z-50 rounded-l-xl overflow-hidden bg-[#09090b] border-l border-white/10 shadow-black/50">
+        <div className="w-[400px] h-[calc(100vh-80px)] flex flex-col border-l border-border shadow-sm animate-in slide-in-from-right duration-300 absolute right-0 top-14 z-50 rounded-l-xl overflow-hidden bg-[#09090b] border-l border-border shadow-black/50">
             <div className="p-4 border-b border-border/50 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-neon-yellow" />
+                    <Bell className="w-4 h-4 text-primary" />
                     <h2 className="font-semibold text-sm tracking-tight">Inbox</h2>
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-neon-yellow/30 text-neon-yellow">
+                    <Badge variant="outline" className="text-xs h-5 px-1.5 border-primary/30 text-primary">
                         {notifications.filter(n => !n.is_read).length} Unread
                     </Badge>
                 </div>
@@ -72,7 +72,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 hover:bg-white/10 hover:text-green-400"
+                        className="h-7 w-7 hover:bg-accent hover:text-green-400"
                         title="Mark all as read"
                         onClick={() => markAllAsRead()}
                     >
@@ -81,7 +81,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 hover:bg-white/10"
+                        className="h-7 w-7 hover:bg-accent"
                         onClick={onClose}
                     >
                         <X className="w-4 h-4" />
@@ -103,8 +103,8 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
                                 className={cn(
                                     "p-3 rounded-lg border transition-all duration-200 group relative",
                                     notification.is_read
-                                        ? "bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-white/5"
-                                        : "bg-white/5 border-white/10 shadow-sm"
+                                        ? "bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-accent"
+                                        : "bg-accent border-border shadow-sm"
                                 )}
                             >
                                 <div className="flex items-start justify-between gap-3 mb-1.5">
@@ -114,7 +114,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
                                             {notification.source}
                                         </span>
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
                                         <Clock className="w-3 h-3" />
                                         {formatTime(notification.timestamp)}
                                     </span>
@@ -122,7 +122,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
 
                                 <h3 className={cn(
                                     "text-sm font-medium mb-1 leading-snug",
-                                    !notification.is_read && "text-neon-yellow"
+                                    !notification.is_read && "text-primary"
                                 )}>
                                     {notification.title}
                                 </h3>
@@ -137,7 +137,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-7 text-[10px] gap-1.5 border-neon-yellow/30 bg-neon-yellow/5 hover:bg-neon-yellow/10"
+                                            className="h-7 text-xs gap-1.5 border-primary/30 bg-primary/5 hover:bg-primary/10"
                                             onClick={() => {
                                                 useAppStore.getState().setSidebarTab('runs');
                                                 useAppStore.getState().setCurrentRun(notification.metadata.run_id);
@@ -152,7 +152,7 @@ export const InboxPanel: React.FC<InboxPanelProps> = ({ onClose }) => {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-7 text-[10px] gap-1.5 border-neon-cyan/30 bg-neon-cyan/5 hover:bg-neon-cyan/10"
+                                            className="h-7 text-xs gap-1.5 border-info/30 bg-info/5 hover:bg-info/10"
                                             onClick={() => {
                                                 const path = notification.metadata.file_path;
                                                 // Map to relative if needed or just use as is

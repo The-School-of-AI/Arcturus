@@ -118,20 +118,20 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
   };
 
   return (
-    <div className="w-80 border-l border-white/[0.06] bg-[#0a0b0d] flex flex-col shrink-0">
+    <div className="w-80 border-l border-border[0.06] bg-[#0a0b0d] flex flex-col shrink-0">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-border[0.06] flex items-center gap-2">
         <MessageSquare className="w-3.5 h-3.5 text-blue-400/70" />
         <span className="text-xs font-semibold text-white/80">Edit Slide {slideIndex + 1}</span>
       </div>
 
       {/* Edit input */}
-      <div className="p-4 border-b border-white/[0.06] space-y-3">
+      <div className="p-4 border-b border-border[0.06] space-y-3">
         <Textarea
           value={instruction}
           onChange={e => { setInstruction(e.target.value); clearEditState(); }}
           placeholder="e.g. 'Make the title shorter' or 'Add a stat about revenue'"
-          className="min-h-[70px] text-xs bg-white/[0.03] border-white/[0.08] text-white/90 placeholder:text-white/20 focus:border-blue-500/40 resize-none"
+          className="min-h-[70px] text-xs bg-white/[0.03] border-border[0.08] text-white/90 placeholder:text-white/20 focus:border-blue-500/40 resize-none"
           onKeyDown={e => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -176,7 +176,7 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
       {/* Revisions */}
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
         <History className="w-3 h-3 text-white/30" />
-        <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">Revisions</span>
+        <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Revisions</span>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
@@ -190,23 +190,23 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
             <p className="text-xs text-white/20 italic py-2">No revisions yet</p>
           ) : (
             revisions.map((rev) => (
-              <div key={rev.id} className="rounded-md border border-white/[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.04] transition-colors">
+              <div key={rev.id} className="rounded-md border border-border[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.04] transition-colors">
                 <div className="flex items-center gap-1">
                   <p className="text-[11px] text-white/70 truncate flex-1">{rev.change_summary}</p>
                   {rev.id === revisionHeadId ? (
-                    <span className="text-[9px] text-emerald-400/60 shrink-0 font-medium">current</span>
+                    <span className="text-2xs text-emerald-400/60 shrink-0 font-medium">current</span>
                   ) : (
                     <button
                       onClick={() => handleRestore(rev.id, rev.change_summary)}
                       disabled={restoreLoading}
-                      className="flex items-center gap-1 text-[9px] text-blue-400/60 hover:text-blue-400 disabled:opacity-50 transition-colors shrink-0"
+                      className="flex items-center gap-1 text-2xs text-blue-400/60 hover:text-blue-400 disabled:opacity-50 transition-colors shrink-0"
                     >
                       <RotateCcw className="w-2.5 h-2.5" /> Restore
                     </button>
                   )}
                 </div>
                 {rev.created_at && (
-                  <span className="text-[9px] text-white/20">
+                  <span className="text-2xs text-white/20">
                     {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true })}
                   </span>
                 )}
@@ -224,7 +224,7 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
       )}
 
       {/* Speaker Notes Toggle */}
-      <div className="border-t border-white/[0.06]">
+      <div className="border-t border-border[0.06]">
         <button
           onClick={() => setShowNotes(v => !v)}
           className={cn(
@@ -249,7 +249,7 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
 
       {/* HTML Editor Toggle */}
       {activeSlide.html && (
-        <div className="border-t border-white/[0.06]">
+        <div className="border-t border-border[0.06]">
           <button
             onClick={toggleHtml}
             className={cn(
@@ -266,14 +266,14 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
                 value={htmlDraft}
                 onChange={e => { setHtmlDraft(e.target.value); setHtmlSaved(false); }}
                 spellCheck={false}
-                className="w-full h-48 text-[10px] font-mono leading-relaxed bg-black/40 border border-white/[0.08] rounded-md p-2 text-orange-200/80 placeholder:text-white/15 focus:border-orange-500/40 focus:outline-none resize-y"
+                className="w-full h-48 text-xs font-mono leading-relaxed bg-black/40 border border-border[0.08] rounded-md p-2 text-orange-200/80 placeholder:text-white/15 focus:border-orange-500/40 focus:outline-none resize-y"
               />
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   onClick={handleHtmlSave}
                   disabled={htmlSaving || htmlDraft === (activeSlide.html || '')}
-                  className="h-7 text-[10px] bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-40"
+                  className="h-7 text-xs bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-40"
                 >
                   {htmlSaving ? (
                     <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Saving...</>
@@ -286,7 +286,7 @@ export function SlideEditPanel({ artifactId, activeSlide, slideIndex, revisionHe
                 {htmlDraft !== (activeSlide.html || '') && (
                   <button
                     onClick={() => { setHtmlDraft(activeSlide.html || ''); setHtmlSaved(false); }}
-                    className="text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                    className="text-xs text-white/30 hover:text-white/60 transition-colors"
                   >
                     Reset
                   </button>

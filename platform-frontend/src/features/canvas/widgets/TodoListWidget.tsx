@@ -34,7 +34,7 @@ const TodoListWidget: React.FC<TodoListWidgetProps> = ({ title = 'Tasks', items:
             <div className={`px-4 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <div className="flex items-center justify-between">
                     <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{title}</h3>
-                    <span className={`text-[10px] font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{doneCount}/{items.length}</span>
+                    <span className={`text-xs font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{doneCount}/{items.length}</span>
                 </div>
                 <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
                     <div

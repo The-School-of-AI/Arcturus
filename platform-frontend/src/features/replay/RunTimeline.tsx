@@ -148,12 +148,12 @@ export const RunTimeline: React.FC = () => {
     const displayTotal = totalSteps;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-card/10 backdrop-blur border border-border rounded-xl shadow-2xl flex items-center px-4 gap-4 z-50">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] h-12 bg-card/10 backdrop-blur border border-border rounded-xl shadow-sm flex items-center px-4 gap-4 z-50">
             <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:text-neon-yellow"
+                    className="h-8 w-8 hover:text-primary"
                     onClick={() => loadStep(Math.max(0, currentStep - 1))}
                     disabled={currentStep <= 0 || totalSteps === 0}
                 >
@@ -164,7 +164,7 @@ export const RunTimeline: React.FC = () => {
                     variant="outline"
                     size="icon"
                     className={cn(
-                        "h-10 w-10 rounded-full border-neon-yellow/30 text-neon-yellow hover:bg-neon-yellow/10 hover:border-neon-yellow",
+                        "h-10 w-10 rounded-full border-primary/30 text-primary hover:bg-primary/10 hover:border-primary",
                         isPlaying && "animate-pulse"
                     )}
                     onClick={handlePlayPause}
@@ -176,7 +176,7 @@ export const RunTimeline: React.FC = () => {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:text-neon-yellow"
+                    className="h-8 w-8 hover:text-primary"
                     onClick={() => loadStep(Math.min(maxStep, currentStep + 1))}
                     disabled={currentStep >= maxStep || totalSteps === 0}
                 >
@@ -185,10 +185,10 @@ export const RunTimeline: React.FC = () => {
             </div>
 
             <div className="flex-1 flex flex-col justify-center gap-1.5 pt-3">
-                <div className="flex justify-between items-center text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                <div className="flex justify-between items-center text-xs font-mono text-muted-foreground uppercase tracking-wider">
                     <span
                         className={cn(
-                            isReplayMode && "text-neon-yellow cursor-pointer hover:underline"
+                            isReplayMode && "text-primary cursor-pointer hover:underline"
                         )}
                         onClick={isReplayMode ? exitReplay : undefined}
                     >
@@ -199,11 +199,11 @@ export const RunTimeline: React.FC = () => {
 
                 <div className="relative h-1.5 bg-background rounded-full overflow-hidden cursor-pointer group">
                     {/* Hover effect bar */}
-                    <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors" />
+                    <div className="absolute inset-0 bg-accent group-hover:bg-accent transition-colors" />
 
                     {/* Progress Bar */}
                     <div
-                        className="absolute h-full bg-neon-yellow transition-[width] duration-300 ease-out"
+                        className="absolute h-full bg-primary transition-[width] duration-300 ease-out"
                         style={{ width: `${progress}%` }}
                     />
 

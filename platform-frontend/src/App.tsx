@@ -1,7 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ThemeProvider } from '@/components/theme';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Meteors } from '@/components/ui/meteors';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
@@ -12,19 +11,18 @@ const API_BASE = 'http://localhost:8000';
 
 function SplashScreen() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background overflow-hidden">
-      {/* Animated meteors background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <Meteors number={30} />
-      </div>
-
-      {/* Content */}
-      <div className="text-center space-y-4 relative z-10">
-        <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center animate-pulse backdrop-blur-sm border border-primary/20">
-          <ArcturusLogo className="w-12 h-12" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+      <div className="text-center space-y-6">
+        <div className="w-16 h-16 mx-auto flex items-center justify-center">
+          <ArcturusLogo className="w-10 h-10" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Arcturus Platform</h2>
-        <p className="text-sm text-muted-foreground animate-pulse">Initializing backend services...</p>
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-foreground">Arcturus</h2>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-2 border-muted-foreground/20 border-t-primary rounded-full animate-spinner" />
+            <p className="text-sm text-muted-foreground">Initializing...</p>
+          </div>
+        </div>
       </div>
     </div>
   );

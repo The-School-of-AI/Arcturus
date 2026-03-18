@@ -94,7 +94,7 @@ export function SlideBottomBar({
   const selectedTheme = themes.find((t: { id: string }) => t.id === selectedThemeId);
 
   return (
-    <div className="h-12 border-t border-white/[0.06] bg-[#0a0b0d] flex items-center px-4 gap-3 shrink-0">
+    <div className="h-12 border-t border-border[0.06] bg-[#0a0b0d] flex items-center px-4 gap-3 shrink-0">
       {/* Theme selector */}
       <div className="relative">
         <button
@@ -112,7 +112,7 @@ export function SlideBottomBar({
         </button>
 
         {showThemeDropdown && (
-          <div className="absolute bottom-full left-0 mb-2 w-60 max-h-72 overflow-y-auto rounded-xl border border-white/[0.08] bg-[#111215] shadow-2xl z-50">
+          <div className="absolute bottom-full left-0 mb-2 w-60 max-h-72 overflow-y-auto rounded-xl border border-border[0.08] bg-[#111215] shadow-sm z-50">
             {themes.map((t: { id: string; name: string; colors?: { primary: string; accent: string; background: string } }) => (
               <button
                 key={t.id}
@@ -124,7 +124,7 @@ export function SlideBottomBar({
               >
                 <div className="flex items-center gap-0.5 shrink-0">
                   {[t.colors?.primary, t.colors?.accent, t.colors?.background].filter(Boolean).map((c, ci) => (
-                    <div key={ci} className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: c }} />
+                    <div key={ci} className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: c }} />
                   ))}
                 </div>
                 <span className={cn('truncate', t.id === selectedThemeId ? 'text-blue-400' : 'text-white/60')}>{t.name}</span>
@@ -176,7 +176,7 @@ export function SlideBottomBar({
         </button>
 
         {showExportOptions && (
-          <div className="absolute bottom-full right-0 mb-2 p-3 rounded-xl border border-white/[0.08] bg-[#111215] shadow-2xl z-50 space-y-2.5 w-52">
+          <div className="absolute bottom-full right-0 mb-2 p-3 rounded-xl border border-border[0.08] bg-[#111215] shadow-sm z-50 space-y-2.5 w-52">
             <button
               onClick={() => handleExport('pptx')}
               disabled={isExporting}
@@ -185,7 +185,7 @@ export function SlideBottomBar({
               <Download className="w-3 h-3" />
               Export as PPTX
             </button>
-            <div className="border-t border-white/[0.06] pt-2 space-y-2">
+            <div className="border-t border-border[0.06] pt-2 space-y-2">
               <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
                 <Switch checked={strictLayout} onCheckedChange={setStrictLayout} />
                 Strict layout (PPTX)

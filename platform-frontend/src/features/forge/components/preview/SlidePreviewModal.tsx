@@ -196,13 +196,13 @@ function SlidePreviewContent() {
     return (
       <>
         <DialogTitle className="sr-only">Slide Preview</DialogTitle>
-        <div className="h-14 border-b border-white/[0.06] flex items-center px-6 shrink-0 bg-[#0a0b0d]">
+        <div className="h-14 border-b border-border[0.06] flex items-center px-6 shrink-0 bg-[#0a0b0d]">
           <span className="text-sm font-semibold text-white/90 tracking-tight">
             Slide Preview
           </span>
           <div className="ml-auto">
             <DialogClose asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-white/60 hover:text-white hover:bg-white/[0.06]">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-white/60 hover:text-white hover:bg-accent[0.06]">
                 <X className="w-4 h-4" />
               </Button>
             </DialogClose>
@@ -263,7 +263,7 @@ function SlidePreviewContent() {
               <button
                 onClick={e => { e.stopPropagation(); navigateTo(Math.max(0, clampedIndex - 1), 'left'); }}
                 disabled={clampedIndex === 0}
-                className="p-2 rounded-full bg-white/10 backdrop-blur-sm text-white/80 hover:bg-white/20 hover:text-white disabled:opacity-30 transition-all"
+                className="p-2 rounded-full bg-accent backdrop-blur-sm text-white/80 hover:bg-accent hover:text-white disabled:opacity-30 transition-all"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -273,7 +273,7 @@ function SlidePreviewContent() {
               <button
                 onClick={e => { e.stopPropagation(); navigateTo(Math.min(slides.length - 1, clampedIndex + 1), 'right'); }}
                 disabled={clampedIndex >= slides.length - 1}
-                className="p-2 rounded-full bg-white/10 backdrop-blur-sm text-white/80 hover:bg-white/20 hover:text-white disabled:opacity-30 transition-all"
+                className="p-2 rounded-full bg-accent backdrop-blur-sm text-white/80 hover:bg-accent hover:text-white disabled:opacity-30 transition-all"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -284,11 +284,11 @@ function SlidePreviewContent() {
           <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <button
               onClick={e => { e.stopPropagation(); setSlideshowMode(false); }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm text-white/70 text-xs hover:bg-white/20 hover:text-white transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent backdrop-blur-sm text-white/70 text-xs hover:bg-accent hover:text-white transition-all"
             >
               <Minimize2 className="w-3.5 h-3.5" />
               Exit
-              <kbd className="ml-1 px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono">Esc</kbd>
+              <kbd className="ml-1 px-1.5 py-0.5 rounded bg-accent text-xs font-mono">Esc</kbd>
             </button>
           </div>
         </div>
@@ -302,7 +302,7 @@ function SlidePreviewContent() {
       <DialogTitle className="sr-only">Slide Preview</DialogTitle>
 
       {/* Header — sleek dark gradient */}
-      <div className="h-14 border-b border-white/[0.06] flex items-center px-6 shrink-0 bg-[#0a0b0d]">
+      <div className="h-14 border-b border-border[0.06] flex items-center px-6 shrink-0 bg-[#0a0b0d]">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-sm font-semibold text-white/90 tracking-tight shrink-0">
             Slide Preview
@@ -316,14 +316,14 @@ function SlidePreviewContent() {
             variant="ghost"
             size="sm"
             onClick={() => setSlideshowMode(true)}
-            className="gap-1.5 h-8 text-white/50 hover:text-white hover:bg-white/[0.06] text-xs"
+            className="gap-1.5 h-8 text-white/50 hover:text-white hover:bg-accent[0.06] text-xs"
             title="Slideshow mode (F)"
           >
             <Maximize2 className="w-3.5 h-3.5" />
             Slideshow
           </Button>
           <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/[0.06]">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white hover:bg-accent[0.06]">
               <X className="w-4 h-4" />
             </Button>
           </DialogClose>
@@ -360,14 +360,14 @@ function SlidePreviewContent() {
           <button
             onClick={() => navigateTo(Math.max(0, clampedIndex - 1), 'left')}
             disabled={clampedIndex === 0}
-            className="absolute left-4 z-10 p-2 rounded-full bg-white/[0.04] border border-white/[0.06] text-white/30 hover:bg-white/[0.08] hover:text-white/60 disabled:opacity-0 transition-all duration-200"
+            className="absolute left-4 z-10 p-2 rounded-full bg-accent[0.04] border border-border[0.06] text-white/30 hover:bg-accent[0.08] hover:text-white/60 disabled:opacity-0 transition-all duration-200"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={() => navigateTo(Math.min(slides.length - 1, clampedIndex + 1), 'right')}
             disabled={clampedIndex >= slides.length - 1}
-            className="absolute right-4 z-10 p-2 rounded-full bg-white/[0.04] border border-white/[0.06] text-white/30 hover:bg-white/[0.08] hover:text-white/60 disabled:opacity-0 transition-all duration-200"
+            className="absolute right-4 z-10 p-2 rounded-full bg-accent[0.04] border border-border[0.06] text-white/30 hover:bg-accent[0.08] hover:text-white/60 disabled:opacity-0 transition-all duration-200"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -439,7 +439,7 @@ export function SlidePreviewModal({ open, onClose }: { open: boolean; onClose: (
       <DialogContent
         hideCloseButton
         noDefaultAnimation
-        className="fixed inset-0 sm:inset-3 max-w-none translate-x-0 translate-y-0 left-0 top-0 flex flex-col bg-[#0d0e11] rounded-none sm:rounded-xl border-0 sm:border sm:border-white/[0.06] overflow-hidden p-0 animate-modal-scale-in shadow-2xl"
+        className="fixed inset-0 sm:inset-3 max-w-none translate-x-0 translate-y-0 left-0 top-0 flex flex-col bg-[#0d0e11] rounded-none sm:rounded-xl border-0 sm:border sm:border-border[0.06] overflow-hidden p-0 animate-modal-scale-in shadow-sm"
       >
         <SlidePreviewContent key={openCount} />
       </DialogContent>

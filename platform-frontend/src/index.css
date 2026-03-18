@@ -5,107 +5,97 @@
 
 @layer base {
   :root {
-    /* Modern Light Mode - Crisp, Airy, Tech Blue */
-    --background: 210 40% 98%;
-    /* Very light cool blue-grey */
-    --foreground: 222 47% 11%;
-    /* Deep navy text */
+    /* Linear-inspired Light Mode - Clean, Minimal, Professional */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 9%;
 
-    --primary: 221 83% 53%;
-    /* Bright Tech Blue */
-    --primary-foreground: 210 40% 98%;
+    --primary: 252 56% 57%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11.2%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222 47% 11.2%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 9%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --success: 152 56% 39%;
+    --warning: 40 96% 53%;
+    --info: 206 100% 50%;
 
-    --radius: 0.75rem;
-    /* Softer corners */
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 252 56% 57%;
 
-    --neon-blue: 217 91% 60%;
-    --neon-cyan: 189 94% 43%;
-    --neon-yellow: var(--primary);
-    /* Aligned with global theme blue */
+    --radius: 0.5rem;
 
-    /* Glass Design System - Light Mode */
-    --glass-bg: 255 255 255;
-    --glass-alpha: 0.35;
-    --glass-border: 255 255 255;
-    --glass-border-alpha: 0.22;
-    --glass-shadow: 15 23 42;
-    --glass-shadow-alpha: 0.10;
-    --accent-glow: 56 189 248;
-    --accent-glow-alpha: 0.22;
+    /* Sidebar tokens */
+    --sidebar-bg: 240 5% 97.5%;
+    --sidebar-border: 240 6% 92%;
+    --sidebar-active: 252 56% 57%;
+
+    /* Surface elevation tokens */
+    --surface-0: 0 0% 100%;
+    --surface-1: 240 5% 97.5%;
+    --surface-2: 240 5% 96%;
+    --surface-3: 240 5% 93%;
   }
 
-  /* Dark Mode - Deep Space, Cyberpunk, Glass */
   .dark {
-    --background: 222 47% 11%;
-    /* Deep Navy/Black */
-    --foreground: 210 40% 98%;
+    /* Linear-inspired Dark Mode - True dark, sophisticated */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 93%;
 
-    --card: 217 33% 17%;
-    /* Lighter navy for cards */
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 93%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 93%;
 
-    --primary: 217 91% 60%;
-    /* Electric Blue */
-    --primary-foreground: 222 47% 11%;
+    --primary: 252 56% 57%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 4% 12%;
+    --secondary-foreground: 0 0% 93%;
 
-    --muted: 217 33% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 4% 12%;
+    --muted-foreground: 240 5% 52%;
 
-    --accent: 217 33% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 4% 15%;
+    --accent-foreground: 0 0% 93%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 17.5%;
-    --input: 217 33% 17.5%;
-    --ring: 224 76% 48%;
+    --success: 152 56% 39%;
+    --warning: 40 96% 53%;
+    --info: 206 100% 50%;
 
-    --neon-blue: 217 91% 60%;
-    --neon-cyan: 190 100% 50%;
-    /* Bright Cyan for accents */
-    --neon-yellow: var(--primary);
-    /* Aligned with global theme blue */
+    --border: 240 4% 14%;
+    --input: 240 4% 14%;
+    --ring: 252 56% 57%;
 
-    /* Glass Design System - Dark Mode */
-    --glass-bg: 8 12 24;
-    /* deep navy (instead of flat slate) */
-    --glass-alpha: 0.28;
-    --glass-border: 255 255 255;
-    --glass-border-alpha: 0.10;
-    --glass-shadow: 0 0 0;
-    --glass-shadow-alpha: 0.0;
-    --accent-glow: 56 189 248;
-    /* keep your sky accent */
-    --accent-glow-alpha: 0.16;
+    /* Sidebar tokens */
+    --sidebar-bg: 0 0% 5.5%;
+    --sidebar-border: 240 4% 12%;
+    --sidebar-active: 252 56% 57%;
+
+    /* Surface elevation tokens */
+    --surface-0: 0 0% 4%;
+    --surface-1: 0 0% 7%;
+    --surface-2: 240 4% 12%;
+    --surface-3: 240 4% 15%;
   }
 }
 
@@ -115,57 +105,40 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased selection:bg-cyan-500/30 selection:text-cyan-100;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 /* --- UTILITIES --- */
 
-/* Unified Glass Design System */
 @layer utilities {
-
-  /* Base glass (cards, header) */
+  /* Backward-compatible glass utilities - now map to solid surfaces */
   .glass {
-    background: rgb(var(--glass-bg) / var(--glass-alpha));
-    border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
-    backdrop-filter: blur(5px);
-    box-shadow: 0 1px 2px rgb(var(--glass-shadow) / var(--glass-shadow-alpha));
+    @apply bg-card/80 border border-border;
+    backdrop-filter: blur(2px);
   }
 
-  /* Stronger glass (panels, modals) */
   .glass-panel {
-    background: rgb(var(--glass-bg) / calc(var(--glass-alpha) - 0.18));
-    border: 1px solid rgb(var(--glass-border) / calc(var(--glass-border-alpha) + 0.12));
-    backdrop-filter: blur(5px);
-    box-shadow:
-      0 10px 30px rgb(var(--glass-shadow) / 0.14),
-      0 1px 0 rgb(255 255 255 / 0.12) inset;
+    @apply bg-card border border-border;
   }
 
-  /* Subtle edge highlight (makes glass feel real) */
   .glass-edge {
-    box-shadow: 0 1px 0 rgb(255 255 255 / 0.14) inset;
+    /* No-op - removed */
   }
 
-  /* Tinted glass that picks up gradient mood */
   .glass-tint {
-    background:
-      linear-gradient(135deg,
-        rgb(165 180 252 / 0.18),
-        rgb(196 181 253 / 0.14),
-        rgb(249 168 212 / 0.10)),
-      rgb(var(--glass-bg) / calc(var(--glass-alpha) - 0.10));
-    border: 1px solid rgb(var(--glass-border) / var(--glass-border-alpha));
-    backdrop-filter: blur(5px);
+    @apply bg-card border border-border;
   }
 
-  /* Glow utilities - use sparingly for interaction states */
   .text-glow {
-    text-shadow: 0 0 18px rgb(var(--accent-glow) / 0.35);
+    /* No-op - removed */
   }
 
   .border-glow {
-    box-shadow: 0 0 14px rgb(var(--accent-glow) / var(--accent-glow-alpha));
+    /* No-op - removed */
   }
 
   /* Electron Drag Regions */
@@ -178,73 +151,7 @@
   }
 }
 
-/* Background Animation */
-@keyframes gradient-xy {
-
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-
-  50% {
-    background-position: 100% 100%;
-  }
-}
-
-
-@keyframes meteor-effect {
-  0% {
-    transform: rotate(135deg) translateX(0);
-    opacity: 1;
-  }
-
-  70% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: rotate(135deg) translateX(2000px);
-    opacity: 0;
-  }
-}
-
-.animate-meteor-effect {
-  animation: meteor-effect linear infinite;
-}
-
-
-.animate-gradient-bg {
-  background: linear-gradient(-45deg,
-      #ffffff,
-      #fcfdff,
-      #ffffff,
-      #fbfdff,
-      #ffffff,
-      #fafdff);
-  background-size: 400% 400%;
-  animation: gradient-xy 150s ease infinite;
-}
-
-.dark .animate-gradient-bg {
-  background: radial-gradient(circle at center, transparent 0%, rgba(6, 9, 19, 0.2) 100%),
-    linear-gradient(-45deg,
-      #04050b,
-      #0b1220,
-      #10213a,
-      #0a1326,
-      #0c1a33,
-      #060913);
-  background-size: 100% 100%, 400% 400%;
-  animation: gradient-xy 150s ease infinite;
-  filter: saturate(0.9) brightness(1.03);
-}
-
-
-
-
-
-
-/* Custom Grid Background - Updated for blue theme */
+/* Custom Grid Background */
 .bg-grid-lines {
   background-size: 50px 40px;
   background-image:
@@ -252,10 +159,19 @@
     linear-gradient(to bottom, hsl(var(--border) / 0.3) 1px, transparent 1px);
 }
 
-/* ReactFlow Controls - Modernized */
+/* Gradient background - simplified to solid */
+.animate-gradient-bg {
+  @apply bg-background;
+}
+
+.dark .animate-gradient-bg {
+  @apply bg-background;
+}
+
+/* ReactFlow Controls */
 .react-flow__controls {
-  @apply flex flex-col glass-panel p-1 gap-1 m-0 rounded-lg top-3 left-3 bottom-auto !important;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
+  @apply flex flex-col bg-card border border-border p-1 gap-1 m-0 rounded-lg top-3 left-3 bottom-auto !important;
+  box-shadow: var(--tw-shadow-popover, 0 4px 12px rgb(0 0 0 / 0.08)) !important;
 }
 
 .react-flow__controls-button {
@@ -263,7 +179,7 @@
 }
 
 .react-flow__controls-button:hover {
-  @apply bg-primary/10 text-primary border border-primary/20 !important;
+  @apply bg-primary/10 text-primary !important;
 }
 
 .react-flow__controls-button svg {
@@ -301,7 +217,7 @@
   @apply bg-white p-20 mt-0 mb-0 rounded-sm text-black !important;
 }
 
-/* Syntax Highlighter Correction */
+/* Syntax Highlighter */
 .syntax-highlighter pre {
   margin: 0 !important;
 }
@@ -325,27 +241,31 @@
   right: 4px !important;
 }
 
-/* Custom Animation Speeds */
+/* Spinner Animation */
 @keyframes pulse-slow {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.3;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .animate-pulse-slow {
   animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Scrollbar Theming */
+/* Meteor animation stub for backward compatibility */
+@keyframes meteor-effect {
+  0% { transform: rotate(135deg) translateX(0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(135deg) translateX(2000px); opacity: 0; }
+}
+
+.animate-meteor-effect {
+  animation: meteor-effect linear infinite;
+}
+
+/* Scrollbar Theming - Subtle, thin */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -353,39 +273,27 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(155, 155, 155, 0.2);
-  border-radius: 5px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+  background: hsl(var(--muted-foreground) / 0.15);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(155, 155, 155, 0.4);
+  background: hsl(var(--muted-foreground) / 0.25);
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Monaco specific scrollbar fixes */
+/* Monaco specific scrollbar */
 .monaco-editor .scrollbar .slider {
-  background: rgba(155, 155, 155, 0.2) !important;
+  background: hsl(var(--muted-foreground) / 0.1) !important;
 }
 
-.dark .monaco-editor .scrollbar .slider {
-  background: rgba(255, 255, 255, 0.1) !important;
+.monaco-editor .scrollbar .slider:hover {
+  background: hsl(var(--muted-foreground) / 0.2) !important;
 }
 
 /* ============================================
    TipTap Task List / Checkbox Styles
-   Minimalist grey design with inline layout
    ============================================ */
 
-/* Task List Container */
 ul[data-type="taskList"] {
   list-style: none !important;
   padding: 0 !important;
@@ -400,7 +308,6 @@ ul[data-type="taskList"] li.task-item {
   padding: 0.25rem 0 !important;
 }
 
-/* Custom Checkbox Styling - Minimalist */
 ul[data-type="taskList"] li.task-item>label {
   display: inline-flex !important;
   align-items: center !important;
@@ -413,9 +320,9 @@ ul[data-type="taskList"] li.task-item>label {
 ul[data-type="taskList"] li.task-item>label>input[type="checkbox"] {
   appearance: none !important;
   -webkit-appearance: none !important;
-  width: 18px !important;
-  height: 18px !important;
-  border: 2px solid hsl(var(--muted-foreground) / 0.4) !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1.5px solid hsl(var(--border)) !important;
   border-radius: 4px !important;
   background: transparent !important;
   cursor: pointer !important;
@@ -424,15 +331,13 @@ ul[data-type="taskList"] li.task-item>label>input[type="checkbox"] {
   margin: 0 !important;
 }
 
-/* Hover state */
 ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:hover {
-  border-color: hsl(var(--muted-foreground) / 0.7) !important;
+  border-color: hsl(var(--primary)) !important;
 }
 
-/* Checked state [x] - grey checkmark */
 ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:checked {
-  background: hsl(var(--muted-foreground) / 0.3) !important;
-  border-color: hsl(var(--muted-foreground) / 0.5) !important;
+  background: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
 }
 
 ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:checked::after {
@@ -440,35 +345,32 @@ ul[data-type="taskList"] li.task-item>label>input[type="checkbox"]:checked::afte
   position: absolute !important;
   left: 50% !important;
   top: 45% !important;
-  width: 5px !important;
-  height: 9px !important;
-  border: solid hsl(var(--muted-foreground)) !important;
-  border-width: 0 2px 2px 0 !important;
+  width: 4px !important;
+  height: 8px !important;
+  border: solid white !important;
+  border-width: 0 1.5px 1.5px 0 !important;
   transform: translate(-50%, -50%) rotate(45deg) !important;
 }
 
-/* Content wrapper - inline with checkbox */
 ul[data-type="taskList"] li.task-item>div {
   flex: 1 !important;
   line-height: 1.4 !important;
 }
 
-/* Remove margins from paragraphs inside task items */
 ul[data-type="taskList"] li.task-item>div>p {
   margin: 0 !important;
   padding: 0 !important;
   display: inline !important;
 }
 
-/* Completed task - muted text */
 ul[data-type="taskList"] li.task-item[data-checked="true"]>div {
-  color: hsl(var(--muted-foreground) / 0.7) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  text-decoration: line-through !important;
 }
 
-/* In-progress state [/] - filled grey circle inside */
 ul[data-type="taskList"] li.task-item[data-state="in-progress"]>label>input[type="checkbox"] {
   background: transparent !important;
-  border-color: hsl(var(--muted-foreground) / 0.4) !important;
+  border-color: hsl(var(--primary) / 0.5) !important;
 }
 
 ul[data-type="taskList"] li.task-item[data-state="in-progress"]>label>input[type="checkbox"]::after {
@@ -477,14 +379,13 @@ ul[data-type="taskList"] li.task-item[data-state="in-progress"]>label>input[type
   left: 50% !important;
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
-  width: 8px !important;
-  height: 8px !important;
+  width: 6px !important;
+  height: 6px !important;
   border-radius: 50% !important;
-  background: hsl(var(--muted-foreground) / 0.6) !important;
+  background: hsl(var(--primary)) !important;
   border: none !important;
 }
 
-/* Nested task lists */
 ul[data-type="taskList"] ul[data-type="taskList"] {
   margin-left: 1.5rem !important;
   margin-top: 0.25rem !important;

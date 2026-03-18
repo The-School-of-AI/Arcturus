@@ -21,7 +21,7 @@ function QualityScoreBadge({ score }: { score: number }) {
             ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
             : 'bg-orange-500/10 text-orange-400 border-orange-500/20';
     return (
-        <Badge variant="outline" className={cn("text-[10px] font-bold gap-0.5", color)}>
+        <Badge variant="outline" className={cn("text-xs font-bold gap-0.5", color)}>
             Q{score}
         </Badge>
     );
@@ -49,13 +49,13 @@ function ValidationSummary({ results }: { results: any }) {
         <div className="mt-1.5">
             <button
                 onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
                 <ChevronDown className={cn("w-3 h-3 transition-transform", expanded && "rotate-180")} />
                 {warnings.length + (notesValid === false ? 1 : 0) + (chartValid === false ? 1 : 0)} issue{(warnings.length + (notesValid === false ? 1 : 0) + (chartValid === false ? 1 : 0)) !== 1 ? 's' : ''}
             </button>
             {expanded && (
-                <div className="mt-1 pl-4 space-y-0.5 text-[10px] text-muted-foreground">
+                <div className="mt-1 pl-4 space-y-0.5 text-xs text-muted-foreground">
                     {notesValid === false && (
                         <p className="text-amber-400">Speaker notes quality check failed</p>
                     )}
@@ -183,7 +183,7 @@ function ThemePickerDialog({
                                         {theme.description}
                                     </p>
                                     <div className="flex items-center justify-between mt-1">
-                                        <p className="text-[10px] text-muted-foreground/60">
+                                        <p className="text-xs text-muted-foreground/60">
                                             {theme.font_heading} / {theme.font_body}
                                         </p>
                                         {!theme.base_theme_id && (
@@ -209,7 +209,7 @@ function ThemePickerDialog({
                                 {expandedBase === theme.id && (
                                     <div className="col-span-2 flex gap-2 overflow-x-auto py-1 px-1">
                                         {loadingVariants === theme.id && (
-                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground py-2 px-3">
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground py-2 px-3">
                                                 <Loader2 className="w-3 h-3 animate-spin" />
                                                 Loading variants...
                                             </div>
@@ -231,11 +231,11 @@ function ThemePickerDialog({
                                                     ))}
                                                 </div>
                                                 <p className="text-[11px] font-medium text-foreground truncate">{v.name}</p>
-                                                <p className="text-[9px] text-muted-foreground/60 truncate">{v.font_heading} / {v.font_body}</p>
+                                                <p className="text-2xs text-muted-foreground/60 truncate">{v.font_heading} / {v.font_body}</p>
                                             </button>
                                         ))}
                                         {!loadingVariants && variants[theme.id]?.length === 0 && (
-                                            <p className="text-[10px] text-muted-foreground py-2 px-3">No variants found</p>
+                                            <p className="text-xs text-muted-foreground py-2 px-3">No variants found</p>
                                         )}
                                     </div>
                                 )}
@@ -293,7 +293,7 @@ function StatusBadge({ status }: { status: string }) {
     const s = styles[status] || styles.pending;
     const Icon = s.icon;
     return (
-        <Badge variant="outline" className={cn("text-[10px] uppercase font-bold gap-1", s.class)}>
+        <Badge variant="outline" className={cn("text-xs uppercase font-bold gap-1", s.class)}>
             <Icon className={cn("w-3 h-3", status === 'pending' && "animate-spin")} />
             {status}
         </Badge>
@@ -349,7 +349,7 @@ function DocFormatPickerDialog({
                     >
                         <FileText className="w-8 h-8 text-blue-400" />
                         <span className="text-sm font-medium">DOCX</span>
-                        <span className="text-[10px] text-muted-foreground">Word Document</span>
+                        <span className="text-xs text-muted-foreground">Word Document</span>
                     </button>
                     <button
                         onClick={() => handleSelect('pdf')}
@@ -357,7 +357,7 @@ function DocFormatPickerDialog({
                     >
                         <File className="w-8 h-8 text-red-400" />
                         <span className="text-sm font-medium">PDF</span>
-                        <span className="text-[10px] text-muted-foreground">PDF Document</span>
+                        <span className="text-xs text-muted-foreground">PDF Document</span>
                     </button>
                     <button
                         onClick={() => handleSelect('html')}
@@ -370,7 +370,7 @@ function DocFormatPickerDialog({
                     >
                         <Globe className="w-8 h-8 text-emerald-400" />
                         <span className="text-sm font-medium">HTML</span>
-                        <span className="text-[10px] text-muted-foreground">Web Page</span>
+                        <span className="text-xs text-muted-foreground">Web Page</span>
                     </button>
                 </div>
                 {selected === 'html' && (
@@ -425,7 +425,7 @@ function SheetFormatPickerDialog({
                     >
                         <FileSpreadsheet className="w-8 h-8 text-green-400" />
                         <span className="text-sm font-medium">XLSX</span>
-                        <span className="text-[10px] text-muted-foreground">Excel Workbook</span>
+                        <span className="text-xs text-muted-foreground">Excel Workbook</span>
                     </button>
                     <button
                         onClick={() => handleSelect('csv')}
@@ -433,7 +433,7 @@ function SheetFormatPickerDialog({
                     >
                         <Table2 className="w-8 h-8 text-blue-400" />
                         <span className="text-sm font-medium">CSV</span>
-                        <span className="text-[10px] text-muted-foreground">All Tabs (ZIP)</span>
+                        <span className="text-xs text-muted-foreground">All Tabs (ZIP)</span>
                     </button>
                 </div>
             </DialogContent>
@@ -592,11 +592,11 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         <StatusBadge status={job.status} />
-                                        <span className="text-[10px] text-muted-foreground uppercase">
+                                        <span className="text-xs text-muted-foreground uppercase">
                                             {job.format || 'pptx'}
                                         </span>
                                         {job.file_size_bytes && (
-                                            <span className="text-[10px] text-muted-foreground">
+                                            <span className="text-xs text-muted-foreground">
                                                 {formatSize(job.file_size_bytes)}
                                             </span>
                                         )}
@@ -605,7 +605,7 @@ export function ExportPanel({ artifact }: { artifact: any }) {
                                         )}
                                     </div>
                                     {job.created_at && (
-                                        <span className="text-[10px] text-muted-foreground/60 mt-0.5 block">
+                                        <span className="text-xs text-muted-foreground/60 mt-0.5 block">
                                             {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                                         </span>
                                     )}
@@ -691,7 +691,7 @@ export function ExportButton({ artifactId, artifactType }: { artifactId: string;
             <button
                 onClick={() => isSheet ? setSheetFormatPickerOpen(true) : isDocument ? setDocFormatPickerOpen(true) : setThemePickerOpen(true)}
                 disabled={isExporting}
-                className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-1"
+                className="px-2 py-0.5 rounded text-2xs uppercase font-bold tracking-tight bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 flex items-center gap-1"
             >
                 {isExporting ? (
                     <Loader2 className="w-3 h-3 animate-spin" />

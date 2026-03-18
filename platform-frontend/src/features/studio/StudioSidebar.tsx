@@ -95,10 +95,10 @@ export function StudioSidebar() {
                                         {a.title || 'Untitled'}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] text-muted-foreground capitalize">{a.type}</span>
+                                        <span className="text-xs text-muted-foreground capitalize">{a.type}</span>
                                         {outlineStatus && (
                                             <span className={cn(
-                                                "px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter",
+                                                "px-1.5 py-0.5 rounded text-2xs uppercase font-bold tracking-tight",
                                                 outlineStatus === 'pending' && "bg-orange-500/10 text-orange-400",
                                                 outlineStatus === 'approved' && "bg-green-500/10 text-green-400",
                                                 outlineStatus === 'rejected' && "bg-red-500/10 text-red-400",
@@ -108,7 +108,7 @@ export function StudioSidebar() {
                                         )}
                                     </div>
                                     {a.updated_at && (
-                                        <span className="text-[9px] text-muted-foreground/60 mt-1 block">
+                                        <span className="text-2xs text-muted-foreground/60 mt-1 block">
                                             {formatDistanceToNow(new Date(a.updated_at), { addSuffix: true })}
                                         </span>
                                     )}

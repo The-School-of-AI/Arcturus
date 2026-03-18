@@ -55,7 +55,7 @@ const CodeBlock = ({ inline, className, children, theme, ...props }: any) => {
             <div className={cn(
                 "flex items-center justify-between px-3 py-1.5 border-b cursor-pointer select-none",
                 theme === 'dark'
-                    ? "bg-muted/40 border-border/30 backdrop-blur-md"
+                    ? "bg-muted/40 border-border/30"
                     : "bg-slate-100 border-slate-300"
             )}
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -67,7 +67,7 @@ const CodeBlock = ({ inline, className, children, theme, ...props }: any) => {
                         theme === 'dark' ? "text-muted-foreground/60" : "text-slate-500"
                     )} />
                     <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-[2px]",
+                        "text-xs font-bold uppercase tracking-[2px]",
                         theme === 'dark' ? "text-muted-foreground/60" : "text-slate-600"
                     )}>{match[1]}</span>
                 </div>
@@ -83,7 +83,7 @@ const CodeBlock = ({ inline, className, children, theme, ...props }: any) => {
                                 title="Insert into active file"
                             >
                                 <ArrowRightToLine className="w-3 h-3" />
-                                <span className="text-[9px] font-bold">INSERT</span>
+                                <span className="text-2xs font-bold">INSERT</span>
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleCopy(); }}
@@ -94,12 +94,12 @@ const CodeBlock = ({ inline, className, children, theme, ...props }: any) => {
                                 title="Copy to clipboard"
                             >
                                 {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
+                                <span className="text-2xs font-bold">{copied ? 'COPIED' : 'COPY'}</span>
                             </button>
                         </div>
                     )}
                     {isCollapsed && (
-                        <span className="text-[9px] font-medium text-muted-foreground italic px-2">
+                        <span className="text-2xs font-medium text-muted-foreground italic px-2">
                             {content.split('\n').length} lines
                         </span>
                     )}
@@ -161,12 +161,12 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                             "w-1.5 h-1.5 rounded-full shrink-0",
                                             tr.name === 'run_command' ? "bg-green-500 animate-pulse" : "bg-primary"
                                         )} />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]">
+                                        <span className="text-2xs font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]">
                                             {tr.name.replace(/_/g, ' ')}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <span className="text-[8px] opacity-40 font-mono tracking-tighter">AGENT TOOL OUTPUT</span>
+                                        <span className="text-[8px] opacity-40 font-mono tracking-tight">AGENT TOOL OUTPUT</span>
                                         <X className="w-2.5 h-2.5 opacity-20" />
                                     </div>
                                 </div>
@@ -266,15 +266,15 @@ const ContextPill: React.FC<{ item: ContextItem | string }> = ({ item }) => {
 
                 {metadata ? (
                     <div className="flex flex-col min-w-0 flex-1">
-                        <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                        <span className={cn("font-semibold truncate text-xs", isExpanded && "whitespace-normal")}>
                             {metadata.file?.split('/').pop()} <span className="opacity-60 font-normal">:{metadata.range?.startLine}-{metadata.range?.endLine}</span>
                         </span>
-                        <span className={cn("truncate text-[9px] opacity-70 font-mono", isExpanded && "whitespace-normal")}>
+                        <span className={cn("truncate text-2xs opacity-70 font-mono", isExpanded && "whitespace-normal")}>
                             {label}
                         </span>
                     </div>
                 ) : (
-                    <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                    <span className={cn("font-semibold truncate text-xs", isExpanded && "whitespace-normal")}>
                         {label}
                     </span>
                 )}
@@ -289,7 +289,7 @@ const ContextPill: React.FC<{ item: ContextItem | string }> = ({ item }) => {
                 <div className={cn(
                     "mt-1 w-full font-mono p-2.5 rounded border whitespace-pre-wrap break-words text-[11px] leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200",
                     theme === 'dark'
-                        ? "bg-black/40 text-foreground/90 border-white/10"
+                        ? "bg-black/40 text-foreground/90 border-border"
                         : "bg-white text-slate-800 border-blue-100 shadow-inner"
                 )}>
                     {content}
@@ -319,7 +319,7 @@ const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file
                     type: file.name.split('.').pop() || 'txt'
                 });
             }}
-            className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-accent/30 text-foreground text-[10px] font-medium rounded-md border border-border/50 cursor-pointer hover:bg-accent/50 transition-all select-none mb-1 shadow-sm"
+            className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-accent/30 text-foreground text-xs font-medium rounded-md border border-border/50 cursor-pointer hover:bg-accent/50 transition-all select-none mb-1 shadow-sm"
         >
             {getIcon()}
             <span className="truncate max-w-[140px]">{file.name}</span>
@@ -921,7 +921,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
     if (!activeDoc) {
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-card text-center space-y-4">
-                <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
+                <div className="p-4 rounded-full bg-slate-100 dark:bg-accent">
                     <ScrollText className="w-8 h-8 text-muted-foreground opacity-20" />
                 </div>
                 <div className="space-y-1">
@@ -961,7 +961,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
             {/* Full Panel Drop Overlay */}
             {isDragging && (
                 <div className="absolute inset-0 z-[100] bg-primary/5 backdrop-blur-[2px] border-2 border-dashed border-primary/40 rounded-lg flex flex-col items-center justify-center p-8 pointer-events-none animate-in fade-in duration-200">
-                    <div className="bg-background/80 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-primary/20 scale-110">
+                    <div className="bg-background/80 p-6 rounded-2xl shadow-sm flex flex-col items-center gap-4 border border-primary/20 scale-110">
                         <div className="p-4 bg-primary/10 rounded-full">
                             <Plus className="w-8 h-8 text-primary animate-bounce" />
                         </div>
@@ -970,10 +970,10 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                 </div>
             )}
             {/* Header: Minimal */}
-            <div className="px-4 py-3 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border bg-accent dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
                 <div className="flex items-center gap-3 overflow-hidden">
                     <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Chat</span>
+                        <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Chat</span>
                         <span className="text-xs font-medium truncate text-foreground">
                             {activeDoc?.title}
                         </span>
@@ -1006,7 +1006,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
 
                         {isHistoryOpen && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-background border border-border shadow-xl rounded-lg z-50 p-2 max-h-60 overflow-y-auto">
-                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1 mb-1">Previous Chats</p>
+                                <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wide px-2 py-1 mb-1">Previous Chats</p>
                                 {chatSessions.length === 0 ? (
                                     <p className="text-xs text-muted-foreground px-2 py-4 text-center italic">No history yet</p>
                                 ) : (
@@ -1025,7 +1025,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                                         >
                                             <div className="truncate flex-1 pr-2">
                                                 <span className="block truncate font-medium">{session.title}</span>
-                                                <span className="block text-[9px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                <span className="block text-2xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                                     <Clock className="w-2 h-2" />
                                                     {new Date(session.updated_at * 1000).toLocaleDateString()}
                                                 </span>
@@ -1064,7 +1064,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
 
                         {/* Quick Actions */}
                         <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Quick Actions</p>
+                            <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">Quick Actions</p>
                             <button
                                 onClick={() => {
                                     setInputValue('Summarize this document in 3-5 concise bullet points');
@@ -1099,7 +1099,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                         {/* Message Header (Role Name) - Optional, maybe just for Bot */}
                         {msg.role === 'assistant' && (
                             <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">RESPONSE</span>
+                                <span className="text-xs font-bold uppercase tracking-wide">RESPONSE</span>
                             </div>
                         )}
 
@@ -1123,7 +1123,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                             <div className={cn(
                                 "text-sm",
                                 msg.role === 'user'
-                                    ? "bg-white/10 border border-input text-foreground py-2.5 px-4 rounded-sm shadow-md leading-normal" // User Bubble: Matches input box
+                                    ? "bg-accent border border-input text-foreground py-2.5 px-4 rounded-sm shadow-md leading-normal" // User Bubble: Matches input box
                                     : "text-foreground leading-relaxed pl-1" // Bot: minimal/no style
                             )}>
                                 <MessageContent content={msg.content} role={msg.role} />
@@ -1136,7 +1136,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                     <div className="flex flex-col w-full mb-4">
                         <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
                             <Bot className="w-3 h-3" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest">Assistant</span>
+                            <span className="text-xs font-bold uppercase tracking-wide">Assistant</span>
                         </div>
                         <div className="pl-1 text-sm text-foreground">
                             {/* Simple pulse for "Thinking..." state before we have content */}
@@ -1167,7 +1167,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                 {selectedContexts.map((ctx: any, i: number) => {
                     const text = typeof ctx === 'string' ? ctx : ctx.text;
                     return (
-                        <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                        <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
                             <Quote className="w-3 h-3 shrink-0 opacity-70" />
                             <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
                             <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
@@ -1182,7 +1182,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                         {selectedContexts.map((ctx, i) => {
                             const text = typeof ctx === 'string' ? ctx : ctx.text;
                             return (
-                                <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm">
+                                <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-md max-w-full border border-primary/20 shadow-sm">
                                     <Quote className="w-3 h-3 shrink-0 opacity-70" />
                                     <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
                                     <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
@@ -1225,7 +1225,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                             <div className="relative">
                                 <button
                                     onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-                                    className="h-7 px-2 flex items-center gap-2 text-[10px] font-medium bg-background border border-border rounded-sm hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
+                                    className="h-7 px-2 flex items-center gap-2 text-xs font-medium bg-background border border-border rounded-sm hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
                                 >
                                     <span>{selectedModel}</span>
                                     <ChevronDown className={cn("w-3 h-3 transition-transform", isModelMenuOpen && "rotate-180")} />
@@ -1233,10 +1233,10 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
 
                                 {isModelMenuOpen && (
                                     <div className="absolute bottom-full left-0 mb-2 w-56 bg-background border border-border shadow-xl rounded-lg z-50 p-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 mb-1 opacity-50">Select Local Model</p>
+                                        <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wide px-2 py-1.5 mb-1 opacity-50">Select Local Model</p>
                                         <div className="max-h-64 overflow-y-auto">
                                             {ollamaModels.length === 0 ? (
-                                                <p className="text-[10px] text-muted-foreground p-2 text-center italic">No models found</p>
+                                                <p className="text-xs text-muted-foreground p-2 text-center italic">No models found</p>
                                             ) : (
                                                 ollamaModels.map(opt => (
                                                     <button
@@ -1252,7 +1252,7 @@ export const DocumentAssistant: React.FC<{ context?: 'rag' | 'notes' }> = ({ con
                                                     >
                                                         <div className="flex flex-col">
                                                             <span className="font-medium">{opt.name}</span>
-                                                            <span className="text-[9px] opacity-50">{opt.size_gb}GB</span>
+                                                            <span className="text-2xs opacity-50">{opt.size_gb}GB</span>
                                                         </div>
                                                         {selectedModel === opt.name && <div className="w-1 h-1 rounded-full bg-primary" />}
                                                     </button>

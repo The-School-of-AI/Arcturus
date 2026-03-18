@@ -52,7 +52,7 @@ const ExpandableText: React.FC<{ text: string; className?: string }> = ({ text, 
             {isLong && (
                 <button
                     onClick={() => setExpanded(!expanded)}
-                    className="mt-1 text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    className="mt-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 >
                     {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show full output</>}
                 </button>
@@ -110,25 +110,25 @@ export const SchedulerDashboard: React.FC = () => {
                 <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3">
-                            <div className={cn("p-2 rounded-lg border shrink-0", isDark ? "bg-neon-cyan/10 border-neon-cyan/20" : "bg-teal-50 border-teal-200")}>
-                                <CalendarClock className={cn("w-4 h-4", isDark ? "text-neon-cyan" : "text-teal-600")} />
+                            <div className={cn("p-2 rounded-lg border shrink-0", isDark ? "bg-info/10 border-info/20" : "bg-teal-50 border-teal-200")}>
+                                <CalendarClock className={cn("w-4 h-4", isDark ? "text-info" : "text-teal-600")} />
                             </div>
                             <div className="min-w-0">
                                 <h1 className="text-base font-bold tracking-tight truncate">{selectedJob.name}</h1>
                                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                    <Badge variant="outline" className="font-mono text-[10px] bg-muted/50">
+                                    <Badge variant="outline" className="font-mono text-xs bg-muted/50">
                                         {selectedJob.cron_expression}
                                     </Badge>
                                     <Badge variant="outline" className={cn(
-                                        "font-mono text-[10px]",
-                                        selectedJob.status === 'running' ? "bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30" :
+                                        "font-mono text-xs",
+                                        selectedJob.status === 'running' ? "bg-primary/10 text-primary border-primary/30" :
                                             selectedJob.status === 'failed' ? "bg-red-500/10 text-red-500 border-red-500/30" :
                                                 "bg-green-500/10 text-green-500 border-green-500/30"
                                     )}>
                                         {selectedJob.status || 'SCHEDULED'}
                                     </Badge>
                                     {selectedJob.skill_id && (
-                                        <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30">
+                                        <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/30">
                                             Skill: {selectedJob.skill_id}
                                         </Badge>
                                     )}
@@ -138,22 +138,22 @@ export const SchedulerDashboard: React.FC = () => {
 
                         {/* Query */}
                         <div className="mt-3 p-2.5 bg-muted/50 rounded-lg border border-border/30">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Instructions</p>
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground/60 mb-0.5">Instructions</p>
                             <p className="text-xs text-foreground/80 font-mono leading-relaxed">"{selectedJob.query}"</p>
                         </div>
 
                         {/* Meta */}
                         <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
                             <div className="flex flex-col gap-0.5">
-                                <span className="text-[9px] uppercase tracking-wider opacity-70">Next Run</span>
-                                <span className={cn("flex items-center gap-1.5 font-medium text-[11px]", isDark ? "text-neon-cyan" : "text-teal-600")}>
+                                <span className="text-2xs uppercase tracking-wider opacity-70">Next Run</span>
+                                <span className={cn("flex items-center gap-1.5 font-medium text-[11px]", isDark ? "text-info" : "text-teal-600")}>
                                     <Clock className="w-3 h-3" />
                                     {selectedJob.next_run ? format(new Date(selectedJob.next_run), 'MMM d, h:mm a') : 'Calculating...'}
                                 </span>
                             </div>
                             {selectedJob.last_run && (
                                 <div className="flex flex-col gap-0.5">
-                                    <span className="text-[9px] uppercase tracking-wider opacity-70">Last Run</span>
+                                    <span className="text-2xs uppercase tracking-wider opacity-70">Last Run</span>
                                     <span className="font-medium text-[11px]">
                                         {formatDistanceToNow(new Date(selectedJob.last_run))} ago
                                     </span>
@@ -170,8 +170,8 @@ export const SchedulerDashboard: React.FC = () => {
                             className={cn(
                                 "gap-1.5 h-8 text-xs",
                                 isJobRunning
-                                    ? isDark ? "text-neon-yellow border-neon-yellow/30 bg-neon-yellow/10 animate-pulse" : "text-amber-600 border-amber-300 bg-amber-50 animate-pulse"
-                                    : isDark ? "text-neon-cyan border-neon-cyan/30 hover:bg-neon-cyan/10 hover:border-neon-cyan" : "text-teal-600 border-teal-300 hover:bg-teal-50 hover:border-teal-400"
+                                    ? isDark ? "text-primary border-primary/30 bg-primary/10 animate-pulse" : "text-amber-600 border-amber-300 bg-amber-50 animate-pulse"
+                                    : isDark ? "text-info border-info/30 hover:bg-info/10 hover:border-info" : "text-teal-600 border-teal-300 hover:bg-teal-50 hover:border-teal-400"
                             )}
                             onClick={() => !isJobRunning && triggerJob(selectedJob.id)}
                             disabled={isJobRunning}
@@ -203,11 +203,11 @@ export const SchedulerDashboard: React.FC = () => {
 
             {/* Running Banner */}
             {isJobRunning && (
-                <div className={cn("flex-none px-4 py-2 border-b", isDark ? "border-neon-yellow/20 bg-neon-yellow/5" : "border-amber-200 bg-amber-50")}>
+                <div className={cn("flex-none px-4 py-2 border-b", isDark ? "border-primary/20 bg-primary/5" : "border-amber-200 bg-amber-50")}>
                     <div className="flex items-center gap-2">
-                        <Loader2 className={cn("w-3.5 h-3.5 animate-spin", isDark ? "text-neon-yellow" : "text-amber-600")} />
-                        <span className={cn("text-xs font-medium", isDark ? "text-neon-yellow" : "text-amber-600")}>Job is executing...</span>
-                        <span className="text-[10px] text-muted-foreground">Results will appear automatically when complete.</span>
+                        <Loader2 className={cn("w-3.5 h-3.5 animate-spin", isDark ? "text-primary" : "text-amber-600")} />
+                        <span className={cn("text-xs font-medium", isDark ? "text-primary" : "text-amber-600")}>Job is executing...</span>
+                        <span className="text-xs text-muted-foreground">Results will appear automatically when complete.</span>
                     </div>
                 </div>
             )}
@@ -215,10 +215,10 @@ export const SchedulerDashboard: React.FC = () => {
             {/* Execution History — first entry is "Latest Result" */}
             <div className="flex-1 overflow-hidden flex flex-col">
                 <div className="flex-none px-4 pt-3 pb-1.5 flex items-center justify-between">
-                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                         Execution History
                     </h3>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-xs text-muted-foreground font-mono">
                         {jobHistory.length} run{jobHistory.length !== 1 ? 's' : ''}
                     </span>
                 </div>
@@ -247,7 +247,7 @@ export const SchedulerDashboard: React.FC = () => {
                                         className={cn(
                                             "group/entry p-3 rounded-lg border transition-all bg-background",
                                             isLatest
-                                                ? isDark ? "border-neon-cyan/30 bg-neon-cyan/5" : "border-teal-300 bg-teal-50/50"
+                                                ? isDark ? "border-info/30 bg-info/5" : "border-teal-300 bg-teal-50/50"
                                                 : isSuccess
                                                     ? "border-green-500/20 hover:border-green-500/30"
                                                     : isPartial
@@ -258,7 +258,7 @@ export const SchedulerDashboard: React.FC = () => {
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 {isLatest ? (
-                                                    <CheckCircle2 className={cn("w-3.5 h-3.5 shrink-0", isDark ? "text-neon-cyan" : "text-teal-600")} />
+                                                    <CheckCircle2 className={cn("w-3.5 h-3.5 shrink-0", isDark ? "text-info" : "text-teal-600")} />
                                                 ) : isSuccess ? (
                                                     <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
                                                 ) : isPartial ? (
@@ -267,19 +267,19 @@ export const SchedulerDashboard: React.FC = () => {
                                                     <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                                                 )}
                                                 <span className={cn(
-                                                    "text-[10px] font-bold uppercase",
-                                                    isLatest ? (isDark ? "text-neon-cyan" : "text-teal-600") :
+                                                    "text-xs font-bold uppercase",
+                                                    isLatest ? (isDark ? "text-info" : "text-teal-600") :
                                                         isSuccess ? "text-green-500" :
                                                             isPartial ? "text-amber-500" : "text-red-500"
                                                 )}>
                                                     {isLatest ? 'LATEST RESULT' : isPartial ? 'PARTIAL FAILURE' : entry.status}
                                                 </span>
-                                                <span className="text-[9px] text-muted-foreground font-mono truncate">
+                                                <span className="text-2xs text-muted-foreground font-mono truncate">
                                                     {entry.run_id}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
-                                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                     {entry.started_at && (
                                                         <span className="flex items-center gap-1">
                                                             <Clock className="w-2.5 h-2.5" />

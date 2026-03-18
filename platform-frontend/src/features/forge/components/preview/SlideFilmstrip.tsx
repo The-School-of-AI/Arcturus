@@ -22,7 +22,7 @@ const DISPLAY_H = Math.round(THUMB_H * SCALE);  // ~119px
 
 export function SlideFilmstrip({ slides, theme, currentIndex, onSelect, imageBaseUrl, availableImageIds }: SlideFilmstripProps) {
   return (
-    <ScrollArea className="h-full w-56 border-r border-white/[0.06] bg-[#08090b] shrink-0">
+    <ScrollArea className="h-full w-56 border-r border-border[0.06] bg-[#08090b] shrink-0">
       <div className="p-3 space-y-2">
         {slides.map((slide, i) => (
           <button
@@ -31,13 +31,13 @@ export function SlideFilmstrip({ slides, theme, currentIndex, onSelect, imageBas
             className={cn(
               'w-full rounded-lg overflow-hidden transition-all duration-200',
               i === currentIndex
-                ? 'ring-2 ring-blue-500/70 shadow-lg shadow-blue-500/10 scale-[1.02]'
+                ? 'ring-2 ring-blue-500/70 shadow-sm shadow-blue-500/10 scale-[1.02]'
                 : 'ring-1 ring-white/[0.06] hover:ring-white/[0.12] opacity-50 hover:opacity-90 hover:shadow-md'
             )}
           >
             {/* Slide number */}
             <div className={cn(
-              'text-[9px] font-mono text-left px-1.5 py-0.5',
+              'text-2xs font-mono text-left px-1.5 py-0.5',
               i === currentIndex ? 'text-blue-400/80' : 'text-white/20'
             )}>
               {i + 1}

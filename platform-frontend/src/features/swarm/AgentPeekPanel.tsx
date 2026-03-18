@@ -15,7 +15,7 @@ const PanelTab: React.FC<{ label: string; active: boolean; onClick: () => void; 
     <button
         onClick={onClick}
         className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-tighter transition-all relative border-b border-border/50",
+            "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-tight transition-all relative border-b border-border/50",
             active ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
         )}
     >
@@ -105,10 +105,10 @@ export const AgentPeekPanel: React.FC = () => {
                                 "bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.4)]"
                     )} />
                     <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground leading-none truncate">
+                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground leading-none truncate">
                             {selectedAgentId}
                         </span>
-                        <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest mt-1 opacity-70">
+                        <span className="text-2xs text-muted-foreground font-medium uppercase tracking-wide mt-1 opacity-70">
                             {selectedTask.status}
                         </span>
                     </div>
@@ -156,7 +156,7 @@ export const AgentPeekPanel: React.FC = () => {
                             <div className="flex items-center justify-between pb-2 border-b border-border/50">
                                 <div className="flex items-center gap-2">
                                     <Terminal className="w-3 h-3 text-primary" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Task Goal</span>
+                                    <span className="text-xs font-bold uppercase tracking-wide text-foreground">Task Goal</span>
                                 </div>
                             </div>
                             <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg text-foreground/90 leading-relaxed text-[11px] border border-border/50 select-text">
@@ -167,23 +167,23 @@ export const AgentPeekPanel: React.FC = () => {
                         {/* Section: I/O Context */}
                         <div className="grid grid-cols-2 gap-2 select-none">
                             <div className="space-y-1">
-                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-1 italic opacity-70">Inputs (Reads)</div>
+                                <div className="text-xs uppercase text-muted-foreground font-bold tracking-wide mb-1 italic opacity-70">Inputs (Reads)</div>
                                 <div className="flex flex-wrap gap-1">
                                     {selectedTask.dependencies?.length ? selectedTask.dependencies.map((r: string) => (
-                                        <span key={r} className="text-[9px] px-1.5 py-0.5 bg-blue-500/5 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded font-bold uppercase select-text">
+                                        <span key={r} className="text-2xs px-1.5 py-0.5 bg-blue-500/5 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded font-bold uppercase select-text">
                                             {r}
                                         </span>
-                                    )) : <span className="text-[10px] text-muted-foreground italic">None</span>}
+                                    )) : <span className="text-xs text-muted-foreground italic">None</span>}
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-1 italic opacity-70">Outputs (Writes)</div>
+                                <div className="text-xs uppercase text-muted-foreground font-bold tracking-wide mb-1 italic opacity-70">Outputs (Writes)</div>
                                 <div className="flex flex-wrap gap-1">
                                     {selectedTask.result ? (
-                                        <span className="text-[9px] px-1.5 py-0.5 bg-green-500/5 text-green-600 dark:text-green-400 border border-green-500/20 rounded font-bold uppercase select-text">
+                                        <span className="text-2xs px-1.5 py-0.5 bg-green-500/5 text-green-600 dark:text-green-400 border border-green-500/20 rounded font-bold uppercase select-text">
                                             Result Generated
                                         </span>
-                                    ) : <span className="text-[10px] text-muted-foreground italic">Pending</span>}
+                                    ) : <span className="text-xs text-muted-foreground italic">Pending</span>}
                                 </div>
                             </div>
                         </div>
@@ -192,13 +192,13 @@ export const AgentPeekPanel: React.FC = () => {
                         <div className="p-3 bg-slate-50 dark:bg-muted/50 rounded-lg flex items-center justify-between border border-border/50 select-none">
                             <div className="flex items-center gap-2">
                                 <Clock className="w-3.5 h-3.5 text-primary" />
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Tokens</span>
+                                <span className="text-xs uppercase font-bold text-muted-foreground tracking-tight">Tokens</span>
                                 <span className="text-xs text-foreground font-mono font-bold">
                                     {displayTokens.toLocaleString()}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Cost</span>
+                                <span className="text-xs uppercase font-bold text-muted-foreground tracking-tight">Cost</span>
                                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-bold">
                                     ${displayCost.toFixed(6)}
                                 </span>
@@ -209,14 +209,14 @@ export const AgentPeekPanel: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 pb-2 border-b border-border/50">
                                 <Terminal className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Execution Output</span>
+                                <span className="text-xs font-bold uppercase tracking-wide text-foreground">Execution Output</span>
                             </div>
                             {selectedTask.result ? (
                                 <div className="space-y-1 select-text">
                                     {(() => {
                                         if (!parsedResult) {
                                             return (
-                                                <div className="text-[10px] text-muted-foreground italic pl-2 opacity-50 py-2">
+                                                <div className="text-xs text-muted-foreground italic pl-2 opacity-50 py-2">
                                                     No formatted keys to display here.
                                                 </div>
                                             );
@@ -225,13 +225,13 @@ export const AgentPeekPanel: React.FC = () => {
                                             <div className="mt-2 space-y-1">
                                                 {parsedResult.status && (
                                                     <div className="flex flex-col gap-1 mb-2">
-                                                        <div className="text-[10px] text-muted-foreground uppercase opacity-70 select-none">STATUS</div>
+                                                        <div className="text-xs text-muted-foreground uppercase opacity-70 select-none">STATUS</div>
                                                         <div className="text-foreground/80 lowercase text-[11px] font-mono">{parsedResult.status}</div>
                                                     </div>
                                                 )}
                                                 {parsedResult.type && (
                                                     <div className="flex flex-col gap-1 mb-2">
-                                                        <div className="text-[10px] text-muted-foreground uppercase opacity-70 select-none">TYPE</div>
+                                                        <div className="text-xs text-muted-foreground uppercase opacity-70 select-none">TYPE</div>
                                                         <div className="text-foreground/80 text-[11px] font-mono">{parsedResult.type}</div>
                                                     </div>
                                                 )}
@@ -277,7 +277,7 @@ export const AgentPeekPanel: React.FC = () => {
                             if (!parsedResult) {
                                 return (
                                     <div className="space-y-4">
-                                        <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2 mb-2">
+                                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wide flex items-center gap-2 mb-2">
                                             <Terminal className="w-3 h-3" />
                                             RAW OUTPUT
                                         </div>
@@ -304,7 +304,7 @@ export const AgentPeekPanel: React.FC = () => {
                                                 {codeKeys.map(key => (
                                                     <div key={key} className="rounded-lg overflow-hidden border border-border/50 bg-background/50">
                                                         <div className="px-3 py-1.5 bg-muted/50 border-b border-border/50 flex items-center justify-between">
-                                                            <span className="text-[10px] font-mono font-bold text-muted-foreground">{key}</span>
+                                                            <span className="text-xs font-mono font-bold text-muted-foreground">{key}</span>
                                                         </div>
                                                         <pre className="p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed">
                                                             {typeof parsedResult[key] === 'object' ? JSON.stringify(parsedResult[key], null, 2) : String(parsedResult[key])}
@@ -317,13 +317,13 @@ export const AgentPeekPanel: React.FC = () => {
 
                                     {dataKeys.length > 0 && (
                                         <div className="p-4 space-y-3">
-                                            <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest flex items-center gap-2">
+                                            <div className="text-xs uppercase text-muted-foreground font-bold tracking-wide flex items-center gap-2">
                                                 <Terminal className="w-3 h-3" />
                                                 Output Data
                                             </div>
                                             {dataKeys.map(key => (
                                                 <div key={key} className="space-y-2">
-                                                    <div className="text-[9px] text-muted-foreground font-mono uppercase font-bold tracking-wider">
+                                                    <div className="text-2xs text-muted-foreground font-mono uppercase font-bold tracking-wider">
                                                         {key}
                                                     </div>
                                                     <div className="rounded-lg overflow-hidden border border-border/20 bg-background/40 p-3 text-xs font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
@@ -349,11 +349,11 @@ export const AgentPeekPanel: React.FC = () => {
                             # Node Execution Details
                         </div>
                         <div className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3 py-1 bg-muted/50 rounded-r hover:bg-muted transition-colors">
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-70 select-none">STATUS</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wide opacity-70 select-none">STATUS</div>
                             <div className="text-foreground whitespace-pre-wrap break-words font-mono">{selectedTask.status}</div>
                         </div>
                         <div className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3 py-1 bg-muted/50 rounded-r hover:bg-muted transition-colors">
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-70 select-none">TYPE</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wide opacity-70 select-none">TYPE</div>
                             <div className="text-foreground whitespace-pre-wrap break-words font-mono">{selectedTask.assigned_to}</div>
                         </div>
 
@@ -409,7 +409,7 @@ export const AgentPeekPanel: React.FC = () => {
                                                 : 'bg-muted/50 text-foreground ml-6 border-border/50',
                                     )}>
                                     <span className={cn(
-                                        'block text-[9px] font-bold uppercase tracking-widest mb-1.5',
+                                        'block text-2xs font-bold uppercase tracking-wide mb-1.5',
                                         entry.role === 'assistant' ? 'text-primary' : 'text-muted-foreground',
                                     )}>
                                         {entry.role}

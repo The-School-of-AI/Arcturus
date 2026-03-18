@@ -51,7 +51,7 @@ export const SchedulerPanel: React.FC = () => {
                         <Plus className="w-4 h-4" />
                     </Button>
                 </div>
-                <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <CalendarClock className="w-3 h-3" />
                     {jobs.length} scheduled job{jobs.length !== 1 ? 's' : ''}
                 </div>
@@ -69,9 +69,9 @@ export const SchedulerPanel: React.FC = () => {
                             className={cn(
                                 "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer hover:shadow-md",
                                 isRunning
-                                    ? "border-neon-yellow/40 bg-neon-yellow/5 animate-pulse"
+                                    ? "border-primary/40 bg-primary/5 animate-pulse"
                                     : isActive
-                                        ? "border-neon-cyan/40 hover:border-neon-cyan/60 bg-neon-cyan/5"
+                                        ? "border-info/40 hover:border-info/60 bg-info/5"
                                         : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                             )}
                         >
@@ -79,24 +79,24 @@ export const SchedulerPanel: React.FC = () => {
                                 <div className="flex-1 min-w-0">
                                     <p className={cn(
                                         "text-[13px] leading-relaxed font-medium transition-all duration-300",
-                                        isRunning ? "text-neon-yellow" :
-                                            isActive ? "text-neon-cyan" : "text-foreground group-hover:text-foreground/80"
+                                        isRunning ? "text-primary" :
+                                            isActive ? "text-info" : "text-foreground group-hover:text-foreground/80"
                                     )}>
                                         {job.name}
                                     </p>
-                                    <Badge variant="outline" className="mt-1 font-mono text-[10px] bg-muted/50">
+                                    <Badge variant="outline" className="mt-1 font-mono text-xs bg-muted/50">
                                         {job.cron_expression}
                                     </Badge>
                                 </div>
                                 {isRunning ? (
-                                    <Badge variant="outline" className="font-mono text-[9px] shrink-0 bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30 animate-pulse">
+                                    <Badge variant="outline" className="font-mono text-2xs shrink-0 bg-primary/10 text-primary border-primary/30 animate-pulse">
                                         <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />
                                         RUNNING
                                     </Badge>
                                 ) : (
                                     <Badge variant="outline" className={cn(
-                                        "font-mono text-[9px] shrink-0",
-                                        job.status === 'running' ? "bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30" :
+                                        "font-mono text-2xs shrink-0",
+                                        job.status === 'running' ? "bg-primary/10 text-primary border-primary/30" :
                                             job.status === 'failed' ? "bg-red-500/10 text-red-500 border-red-500/30" :
                                                 "bg-green-500/10 text-green-500 border-green-500/30"
                                     )}>
@@ -109,12 +109,12 @@ export const SchedulerPanel: React.FC = () => {
                             {isActive && (
                                 <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
                                     <div className="flex items-center gap-3">
-                                        <span className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
+                                        <span className="flex items-center gap-1 text-2xs text-muted-foreground font-mono">
                                             <Clock className="w-3 h-3" />
                                             {job.next_run ? format(new Date(job.next_run), 'MMM d, h:mm a') : '—'}
                                         </span>
                                         <button
-                                            className="p-1 hover:bg-neon-cyan/10 rounded text-muted-foreground hover:text-neon-cyan transition-all duration-200"
+                                            className="p-1 hover:bg-info/10 rounded text-muted-foreground hover:text-info transition-all duration-200"
                                             onClick={(e) => { e.stopPropagation(); triggerJob(job.id); }}
                                             title="Run now"
                                         >

@@ -974,7 +974,7 @@ export const NotesEditor: React.FC = () => {
                                 ) : (
                                     <Code2 className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                                 )}
-                                <span className="text-[10px] font-black uppercase tracking-wider whitespace-nowrap">{doc.title}</span>
+                                <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">{doc.title}</span>
 
                                 <div className="flex items-center justify-center w-4 h-4">
                                     {isCurrentlySaving ? (
@@ -984,7 +984,7 @@ export const NotesEditor: React.FC = () => {
                                     ) : (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); closeNotesDocument(doc.id); }}
-                                            className="p-0.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                                            className="p-0.5 rounded-md hover:bg-accent opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -1006,7 +1006,7 @@ export const NotesEditor: React.FC = () => {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground">
+                                            <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs font-bold text-muted-foreground hover:text-foreground">
                                                 <Type className="w-3.5 h-3.5 mr-0" />
                                                 <ChevronDown className="w-3 h-3 opacity-50" />
                                             </Button>
@@ -1014,7 +1014,7 @@ export const NotesEditor: React.FC = () => {
                                     </TooltipTrigger>
                                     <TooltipContent side="bottom">Text Style</TooltipContent>
                                 </Tooltip>
-                                <DropdownMenuContent align="start" className="w-40 glass-panel border-border/30 bg-background/80 backdrop-blur-xl">
+                                <DropdownMenuContent align="start" className="w-40 bg-card border border-border border-border/30 bg-background/80">
                                     <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className="flex items-center gap-2 text-xs cursor-pointer">
                                         <Heading1 className="w-3.5 h-3.5" /> Heading 1
                                     </DropdownMenuItem>
@@ -1123,7 +1123,7 @@ export const NotesEditor: React.FC = () => {
                                                 value={linkUrl}
                                                 onChange={(e) => setLinkUrl(e.target.value)}
                                                 placeholder="https://..."
-                                                className="h-7 text-[10px]"
+                                                className="h-7 text-xs"
                                                 onKeyDown={(e) => {
                                                     e.stopPropagation();
                                                     if (e.key === 'Enter') {
@@ -1134,7 +1134,7 @@ export const NotesEditor: React.FC = () => {
                                                     }
                                                 }}
                                             />
-                                            <Button size="sm" className="h-7 px-2 text-[10px]" onClick={() => {
+                                            <Button size="sm" className="h-7 px-2 text-xs" onClick={() => {
                                                 if (linkUrl) {
                                                     editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
                                                     setLinkUrl('');
@@ -1215,7 +1215,7 @@ export const NotesEditor: React.FC = () => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={insertDetails}
-                                        className="h-7 px-1.5 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                                        className="h-7 px-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     >
                                         <SquarePlus className="w-3.5 h-3.5" />
                                     </Button>
@@ -1234,8 +1234,8 @@ export const NotesEditor: React.FC = () => {
                                             size="sm"
                                             onClick={toggleMode}
                                             className={cn(
-                                                "h-7 px-2 text-[10px] font-bold uppercase tracking-widest gap-1 transition-all border border-transparent",
-                                                mode === 'wysiwyg' ? "bg-white/10 text-foreground border-primary/30" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                                "h-7 px-2 text-xs font-bold uppercase tracking-wide gap-1 transition-all border border-transparent",
+                                                mode === 'wysiwyg' ? "bg-accent text-foreground border-primary/30" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                                             )}
                                         >
                                             {mode === 'wysiwyg' ? <SquareDashedBottomCode className="w-3.5 h-3.5 text-primary" /> : <View className="w-3.5 h-3.5" />}
@@ -1251,7 +1251,7 @@ export const NotesEditor: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all hover:bg-white/5"
+                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
                                             onClick={() => setFontSize(s => Math.max(12, s - 1))}
                                         >
                                             <Minus className="w-3 h-3" />
@@ -1265,7 +1265,7 @@ export const NotesEditor: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110 hover:bg-white/5"
+                                            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all focus:scale-110 hover:bg-accent"
                                             onClick={() => setFontSize(s => Math.min(32, s + 1))}
                                         >
                                             <Plus className="w-3 h-3" />
@@ -1282,7 +1282,7 @@ export const NotesEditor: React.FC = () => {
                                             variant="ghost"
                                             size="icon"
                                             className={cn(
-                                                "h-7 w-7 transition-all text-muted-foreground hover:text-foreground hover:bg-white/5",
+                                                "h-7 w-7 transition-all text-muted-foreground hover:text-foreground hover:bg-accent",
                                                 isZenMode && "text-primary bg-primary/10"
                                             )}
                                             onClick={toggleZenMode}
@@ -1302,7 +1302,7 @@ export const NotesEditor: React.FC = () => {
                                             variant="ghost"
                                             size="sm"
                                             onClick={closeAllNotesDocuments}
-                                            className="h-7 px-2 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-all gap-1"
+                                            className="h-7 px-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-all gap-1"
                                         >
                                             <X className="w-3.5 h-3.5" />
                                         </Button>

@@ -476,10 +476,10 @@ function OutlineItemWithSlide({
                                                 }
                                             }}
                                             className={cn(
-                                                "absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm border font-mono text-[10px] font-semibold transition-all duration-150 shadow-lg",
+                                                "absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm border font-mono text-xs font-semibold transition-all duration-150 shadow-sm",
                                                 editorOpen
                                                     ? "bg-orange-500 border-orange-400 text-white"
-                                                    : "bg-black/70 border-white/20 text-white/70 hover:text-orange-400 hover:border-orange-400/50 hover:bg-black/80"
+                                                    : "bg-black/70 border-border text-white/70 hover:text-orange-400 hover:border-orange-400/50 hover:bg-black/80"
                                             )}
                                             style={{ zIndex: 10, pointerEvents: 'auto' }}
                                             title={slide.html ? "Edit slide" : "Edit slide"}
@@ -541,7 +541,7 @@ function OutlineItemWithSlide({
                                             {htmlDraft !== (slide.html || '') && (
                                                 <button
                                                     onClick={() => { setHtmlDraft(slide.html || ''); setHtmlSaved(false); }}
-                                                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                                 >
                                                     Reset
                                                 </button>
@@ -550,7 +550,7 @@ function OutlineItemWithSlide({
                                                 size="sm"
                                                 onClick={handleHtmlSave}
                                                 disabled={htmlSaving || htmlDraft === (slide.html || '')}
-                                                className="h-6 text-[10px] px-2.5 bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-40"
+                                                className="h-6 text-xs px-2.5 bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-40"
                                             >
                                                 {htmlSaving ? (
                                                     <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Saving...</>
@@ -657,7 +657,7 @@ function OutlineItemWithSlide({
                                                     )}
                                                     {htmlTextParts.map((part) => (
                                                         <div key={part.index}>
-                                                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                                            <label className="text-xs text-muted-foreground uppercase tracking-wider">
                                                                 &lt;{part.tag}&gt;
                                                             </label>
                                                             <input
@@ -675,14 +675,14 @@ function OutlineItemWithSlide({
                                                         </div>
                                                     ))}
                                                     {htmlTextParts.length > 0 && htmlDraft !== (slide.html || '') && (
-                                                        <p className="text-[10px] text-orange-400/70 italic">Text changes applied to HTML. Use Save on HTML tab to persist.</p>
+                                                        <p className="text-xs text-orange-400/70 italic">Text changes applied to HTML. Use Save on HTML tab to persist.</p>
                                                     )}
                                                 </>
                                             ) : (
                                                 /* Structured slide: edit elements directly */
                                                 <>
                                                     <div>
-                                                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Title</label>
+                                                        <label className="text-xs text-muted-foreground uppercase tracking-wider">Title</label>
                                                         <input
                                                             className="w-full text-xs text-foreground bg-transparent border-b border-border/50 focus:border-primary/60 outline-none py-1"
                                                             value={directEdits.title ?? slide.title ?? ''}
@@ -693,7 +693,7 @@ function OutlineItemWithSlide({
                                                         const key = `element_${el.idx}_content`;
                                                         return (
                                                             <div key={key}>
-                                                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                                                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                                                                     {el.type}
                                                                 </label>
                                                                 <textarea
@@ -821,7 +821,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                                     <Palette className="w-4 h-4 shrink-0" />
                                     <div>
                                         <div className="text-sm font-medium">Artistic</div>
-                                        <div className="text-[10px] opacity-70">Rich HTML, creative layouts</div>
+                                        <div className="text-xs opacity-70">Rich HTML, creative layouts</div>
                                     </div>
                                 </button>
                                 <button
@@ -836,7 +836,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                                     <Presentation className="w-4 h-4 shrink-0" />
                                     <div>
                                         <div className="text-sm font-medium">Business</div>
-                                        <div className="text-[10px] opacity-70">Clean templates, PPTX-optimized</div>
+                                        <div className="text-xs opacity-70">Clean templates, PPTX-optimized</div>
                                     </div>
                                 </button>
                             </div>
@@ -873,7 +873,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g., Q4 Sales Report"
                             disabled={isGenerating}
-                            className="bg-white/[0.06] border-white/[0.15]"
+                            className="bg-white/[0.06] border-border[0.15]"
                         />
                     </div>
 
@@ -887,7 +887,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                             onChange={e => setPrompt(e.target.value)}
                             placeholder="Describe the content you want to generate..."
                             rows={5}
-                            className="text-sm bg-white/[0.06] border-white/[0.15]"
+                            className="text-sm bg-white/[0.06] border-border[0.15]"
                             disabled={isGenerating}
                         />
                     </div>
@@ -1047,13 +1047,13 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-sm text-muted-foreground capitalize">{artifact.type}</span>
                             {outlineStatus && (
-                                <Badge variant="outline" className={cn("text-[10px] uppercase font-bold", STATUS_STYLE[outlineStatus])}>
+                                <Badge variant="outline" className={cn("text-xs uppercase font-bold", STATUS_STYLE[outlineStatus])}>
                                     {outlineStatus}
                                 </Badge>
                             )}
                         </div>
                         {artifact.updated_at && (
-                            <span className="text-[10px] text-muted-foreground/60 mt-1 block">
+                            <span className="text-xs text-muted-foreground/60 mt-1 block">
                                 Updated {formatDistanceToNow(new Date(artifact.updated_at), { addSuffix: true })}
                             </span>
                         )}
@@ -1294,11 +1294,11 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                             <p className="text-xs font-medium text-foreground truncate">
                                                 {rev.change_summary}
                                                 {rev.id === artifact.revision_head_id && (
-                                                    <span className="ml-1.5 text-[9px] text-green-400/70 font-normal">(current)</span>
+                                                    <span className="ml-1.5 text-2xs text-green-400/70 font-normal">(current)</span>
                                                 )}
                                             </p>
                                             {rev.created_at && (
-                                                <span className="text-[10px] text-muted-foreground">
+                                                <span className="text-xs text-muted-foreground">
                                                     {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true })}
                                                 </span>
                                             )}
@@ -1315,7 +1315,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                             {expandedRevisionData.diff?.highlights && expandedRevisionData.diff.highlights.length > 0 && (
                                                 <div className="space-y-1">
                                                     {expandedRevisionData.diff.highlights.map((h: any, i: number) => (
-                                                        <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                        <div key={i} className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <span className="font-mono bg-muted/50 px-1 rounded">{h.kind}</span>
                                                             <span>{h.change}</span>
                                                         </div>
@@ -1324,7 +1324,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                             )}
                                             {expandedRevisionData.diff?.paths && expandedRevisionData.diff.paths.length > 0 && (
                                                 <div className="overflow-x-auto">
-                                                    <table className="text-[10px] w-full">
+                                                    <table className="text-xs w-full">
                                                         <thead>
                                                             <tr className="text-muted-foreground">
                                                                 <th className="text-left pr-2">Path</th>
@@ -1512,7 +1512,7 @@ export function ForgeDashboard() {
                                         </button>
                                     </div>
                                     <div className="flex items-center gap-1.5 mt-1 ml-6.5 pl-0.5">
-                                        <span className="text-[10px] text-muted-foreground capitalize">{a.type}</span>
+                                        <span className="text-xs text-muted-foreground capitalize">{a.type}</span>
                                         {a.type === 'slides' && (
                                             <span className={cn(
                                                 "px-1.5 py-0 rounded-full text-[8px] font-semibold",
@@ -1526,7 +1526,7 @@ export function ForgeDashboard() {
                                         <span className="flex-1" />
                                         {outlineStatus && (
                                             <span className={cn(
-                                                "px-1.5 py-0 rounded-full text-[8px] uppercase font-bold tracking-tighter",
+                                                "px-1.5 py-0 rounded-full text-[8px] uppercase font-bold tracking-tight",
                                                 STATUS_STYLE[outlineStatus]
                                             )}>
                                                 {outlineStatus}
@@ -1534,7 +1534,7 @@ export function ForgeDashboard() {
                                         )}
                                     </div>
                                     {a.created_at && (
-                                        <p className="text-[9px] text-muted-foreground/40 mt-0.5 ml-6.5 pl-0.5">
+                                        <p className="text-2xs text-muted-foreground/40 mt-0.5 ml-6.5 pl-0.5">
                                             {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
                                         </p>
                                     )}

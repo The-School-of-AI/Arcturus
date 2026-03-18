@@ -86,7 +86,7 @@ const ArcturusTimerDisplay = () => {
                     <span className="text-amber-400">Paused</span>
                     <button
                         onClick={resumeArcturusTimer}
-                        className="p-0.5 hover:bg-white/10  transition-colors"
+                        className="p-0.5 hover:bg-accent  transition-colors"
                         title="Resume auto-commit timer"
                     >
                         <Play className="w-2.5 h-2.5 text-green-400" />
@@ -97,7 +97,7 @@ const ArcturusTimerDisplay = () => {
                     <span className="text-primary font-mono">{arcturusTimer.countdown}s</span>
                     <button
                         onClick={pauseArcturusTimer}
-                        className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                        className="p-0.5 hover:bg-accent rounded transition-colors"
                         title="Pause auto-commit"
                     >
                         <Pause className="w-2.5 h-2.5 text-amber-400" />
@@ -317,7 +317,7 @@ export const IdeLayout: React.FC = () => {
                         <PanelResizeHandle className="w-px bg-border/50 hover:bg-primary/50 transition-colors" />
                         {/* @ts-ignore */}
                         <Panel defaultSize={25} minSize={20} order={3}>
-                            <div className="h-full border-l border-border/50 bg-background/50 backdrop-blur-md overflow-hidden">
+                            <div className="h-full border-l border-border/50 bg-background/50 overflow-hidden">
                                 <IdeAgentPanel />
                             </div>
                         </Panel>
@@ -326,7 +326,7 @@ export const IdeLayout: React.FC = () => {
             </PanelGroup>
 
             {/* Status Bar (Global Bottom) */}
-            <div className="h-6 bg-primary/5 border-t border-border/50 flex items-center px-3 text-[10px] text-muted-foreground gap-4 select-none justify-between">
+            <div className="h-6 bg-primary/5 border-t border-border/50 flex items-center px-3 text-xs text-muted-foreground gap-4 select-none justify-between">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5 hover:text-foreground cursor-pointer transition-colors">
                         <GitBranch className="w-3 h-3" />
@@ -341,21 +341,21 @@ export const IdeLayout: React.FC = () => {
                     <div className="flex items-center bg-transparent rounded p-0.5 gap-px">
                         <button
                             onClick={() => useIdeStore.getState().toggleLeftPanel()}
-                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", isLeftPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
+                            className={cn("p-1 rounded hover:bg-accent transition-colors", isLeftPanelVisible ? "text-primary bg-accent" : "text-muted-foreground/50")}
                             title="Toggle Left Panel"
                         >
                             <PanelLeft className="w-3.5 h-3.5" />
                         </button>
                         <button
                             onClick={() => useIdeStore.getState().toggleBottomPanel()}
-                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", isBottomPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
+                            className={cn("p-1 rounded hover:bg-accent transition-colors", isBottomPanelVisible ? "text-primary bg-accent" : "text-muted-foreground/50")}
                             title="Toggle Terminal"
                         >
                             <PanelBottom className="w-3.5 h-3.5" />
                         </button>
                         <button
                             onClick={() => useIdeStore.getState().toggleRightPanel()}
-                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", isRightPanelVisible ? "text-primary bg-white/5" : "text-muted-foreground/50")}
+                            className={cn("p-1 rounded hover:bg-accent transition-colors", isRightPanelVisible ? "text-primary bg-accent" : "text-muted-foreground/50")}
                             title="Toggle Right Panel"
                         >
                             <PanelRight className="w-3.5 h-3.5" />
@@ -366,7 +366,7 @@ export const IdeLayout: React.FC = () => {
 
                     <button
                         onClick={resetLayout}
-                        className="px-2 py-0.5 rounded hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                        className="px-2 py-0.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
                         title="Reset Layout Sizes"
                     >
                         Reset

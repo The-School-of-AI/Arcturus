@@ -219,15 +219,15 @@ export const SettingsPage: React.FC = () => {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-sm">{skill.name}</span>
-                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">v{skill.version}</span>
+                                        <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">v{skill.version}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                    <span className="text-[10px] text-muted-foreground">Triggers:</span>
+                                    <span className="text-xs text-muted-foreground">Triggers:</span>
                                     <div className="flex gap-1">
                                         {skill.intent_triggers.map((t: string) => (
-                                            <span key={t} className="text-[9px] bg-muted px-1.5 py-0.5 rounded border border-border">{t}</span>
+                                            <span key={t} className="text-2xs bg-muted px-1.5 py-0.5 rounded border border-border">{t}</span>
                                         ))}
                                     </div>
                                 </div>
@@ -710,7 +710,7 @@ export const SettingsPage: React.FC = () => {
                                     });
                                     setHasChanges(true);
                                 }}
-                                className="h-7 px-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
+                                className="h-7 px-2 text-xs uppercase tracking-wider font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
                             >
                                 <RotateCcw className="w-3 h-3" />
                                 Reset to Globals
@@ -778,7 +778,7 @@ export const SettingsPage: React.FC = () => {
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-foreground">{agentType}</span>
                                             <span className={cn(
-                                                "text-[9px] uppercase tracking-widest font-bold",
+                                                "text-2xs uppercase tracking-wide font-bold",
                                                 override ? "text-primary" : "text-muted-foreground"
                                             )}>
                                                 {override ? `${override.model_provider} — ${override.model}` : "Using Global Default"}
@@ -908,7 +908,7 @@ export const SettingsPage: React.FC = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => resetOverride(agentType)}
-                                className="h-7 text-[10px] text-muted-foreground hover:text-foreground"
+                                className="h-7 text-xs text-muted-foreground hover:text-foreground"
                             >
                                 <RotateCcw className="w-3 h-3 mr-1" />
                                 Reset to Default
@@ -999,7 +999,7 @@ export const SettingsPage: React.FC = () => {
                                 )}
                             >
                                 <span className="block truncate">{p.name}</span>
-                                <span className="text-[10px] text-muted-foreground opacity-70">({p.lines} lines)</span>
+                                <span className="text-xs text-muted-foreground opacity-70">({p.lines} lines)</span>
                             </button>
                         ))}
                     </div>
@@ -1018,7 +1018,7 @@ export const SettingsPage: React.FC = () => {
                                 )}
                             >
                                 <span className="block truncate">{p.name.replace('_', ' ')}</span>
-                                <span className="text-[10px] text-muted-foreground opacity-70">({p.lines} lines)</span>
+                                <span className="text-xs text-muted-foreground opacity-70">({p.lines} lines)</span>
                             </button>
                         ))}
                     </div>
@@ -1146,7 +1146,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="flex items-center gap-2 pb-2 border-b border-border">
                         <h3 className="text-sm font-bold text-foreground">{group.label}</h3>
                         <span className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded-full border",
+                            "text-xs px-1.5 py-0.5 rounded-full border",
                             group.configured_count === group.total_count
                                 ? "bg-green-500/10 text-green-500 border-green-500/30"
                                 : group.configured_count > 0
@@ -1176,11 +1176,11 @@ export const SettingsPage: React.FC = () => {
                                     <div className="flex-1 space-y-1.5">
                                         <div className="flex items-center gap-2">
                                             <label className="text-sm font-medium text-foreground">{keyDef.label}</label>
-                                            <code className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                                            <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
                                                 {keyDef.env}
                                             </code>
                                             {keyDef.has_default && keyDef.configured && (
-                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                                     auto
                                                 </span>
                                             )}

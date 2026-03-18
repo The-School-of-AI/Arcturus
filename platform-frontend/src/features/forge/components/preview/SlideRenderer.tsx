@@ -39,7 +39,7 @@ export function SlideRenderer({ slide, theme, slideIndex, totalSlides, isThumb =
         {/* Minimal slide counter for non-thumb views */}
         {!isThumb && totalSlides > 1 && (
           <div
-            className="absolute bottom-2 right-3 text-[10px] font-mono tabular-nums"
+            className="absolute bottom-2 right-3 text-xs font-mono tabular-nums"
             style={{ color: 'rgba(255,255,255,0.35)', zIndex: 10 }}
           >
             {slideIndex + 1} / {totalSlides}
@@ -49,7 +49,7 @@ export function SlideRenderer({ slide, theme, slideIndex, totalSlides, isThumb =
         {!isThumb && onEditHtml && (
           <button
             onClick={(e) => { e.stopPropagation(); onEditHtml(); }}
-            className="absolute top-2.5 right-10 p-1.5 rounded-md bg-black/60 backdrop-blur-sm border border-white/15 text-white/50 hover:text-orange-400 hover:border-orange-400/40 hover:bg-black/80 transition-colors duration-150"
+            className="absolute top-2.5 right-10 p-1.5 rounded-md bg-black/60 backdrop-blur-sm border border-border text-white/50 hover:text-orange-400 hover:border-orange-400/40 hover:bg-black/80 transition-colors duration-150"
             style={{ zIndex: 20 }}
             title="Edit slide HTML"
           >

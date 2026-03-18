@@ -210,7 +210,7 @@ export const SpacesPanel: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-transparent text-foreground">
             <div className="p-2 border-b border-border/50 bg-muted/20 flex items-center justify-between shrink-0">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     Project Hubs
                 </span>
                 <Button

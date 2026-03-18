@@ -90,7 +90,7 @@ export const RemMeProfileView: React.FC = () => {
                         {meta && (
                             <div className="flex items-center gap-2 px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20">
                                 <Zap className="w-3 h-3 text-yellow-500" />
-                                <span className="text-[10px] font-bold text-yellow-500/80 uppercase tracking-tighter">
+                                <span className="text-xs font-bold text-yellow-500/80 uppercase tracking-tight">
                                     {Math.round(meta.confidence * 100)}% Profile Awareness
                                 </span>
                             </div>
@@ -117,20 +117,20 @@ export const RemMeProfileView: React.FC = () => {
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <Brain className="w-20 h-20 rotate-12" />
                         </div>
-                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Contextual Baseline</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Contextual Baseline</h4>
                         <div className="flex flex-wrap gap-4">
                             <div className="flex flex-col">
-                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Identity Source</span>
+                                <span className="text-xs text-muted-foreground font-medium uppercase tracking-tight">Identity Source</span>
                                 <span className="text-xs font-semibold text-foreground/80">{meta?.evidenceCount || 0} Evidence Points</span>
                             </div>
                             <div className="w-px h-6 bg-border/50 self-end mb-1" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Analysis Depth</span>
+                                <span className="text-xs text-muted-foreground font-medium uppercase tracking-tight">Analysis Depth</span>
                                 <span className="text-xs font-semibold text-foreground/80">Psychological & Professional</span>
                             </div>
                             <div className="w-px h-6 bg-border/50 self-end mb-1" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Style Adaptation</span>
+                                <span className="text-xs text-muted-foreground font-medium uppercase tracking-tight">Style Adaptation</span>
                                 <span className="text-xs font-semibold text-foreground/80">Profile-Aware (Tone + Verbosity)</span>
                             </div>
                         </div>

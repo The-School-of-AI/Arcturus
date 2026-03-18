@@ -108,7 +108,7 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                             <span className="text-xs font-mono text-muted-foreground">{rootPath}</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-mono bg-black/40 px-3 py-1.5 rounded-lg border border-border/50">
-                            <span className={cn(stats.tokens > 1000000 ? "text-red-400 animate-pulse" : "text-neon-yellow")}>
+                            <span className={cn(stats.tokens > 1000000 ? "text-red-400 animate-pulse" : "text-primary")}>
                                 ~{Math.round(stats.tokens / 1000)}k Tokens
                             </span>
                             <span className="text-muted-foreground">|</span>
@@ -127,14 +127,14 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Filter files..."
-                            className="w-full bg-muted/50 border border-border rounded-md py-1.5 pl-9 pr-3 text-xs text-foreground focus:outline-none focus:border-neon-yellow/50 transition-all font-mono"
+                            className="w-full bg-muted/50 border border-border rounded-md py-1.5 pl-9 pr-3 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-all font-mono"
                         />
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={toggleAll}
-                        className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground hover:text-foreground"
+                        className="text-xs uppercase font-bold tracking-wider text-muted-foreground hover:text-foreground"
                     >
                         {selectedPaths.size === filteredFiles.length ? "Select None" : "Select All"}
                     </Button>
@@ -154,13 +154,13 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                                     onClick={() => !isBinary && toggleFile(file.path)}
                                     className={cn(
                                         "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-all hover:bg-muted/50 border border-transparent font-mono",
-                                        isSelected ? "bg-neon-yellow/5 border-neon-yellow/10" : "opacity-70 hover:opacity-100",
+                                        isSelected ? "bg-primary/5 border-primary/10" : "opacity-70 hover:opacity-100",
                                         isBinary && "opacity-40 cursor-not-allowed grayscale hover:bg-transparent"
                                     )}
                                 >
                                     <div className={cn(
                                         "w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
-                                        isSelected ? "bg-neon-yellow border-neon-yellow" : "border-white/20 bg-transparent",
+                                        isSelected ? "bg-primary border-primary" : "border-border bg-transparent",
                                         isBinary && "border-border/50 bg-muted/50"
                                     )}>
                                         {isSelected && <Check className="w-3 h-3 text-black stroke-[3]" />}
@@ -179,19 +179,19 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                                     {/* Warnings / Badges */}
                                     <div className="flex items-center gap-3 shrink-0">
                                         {isLarge && (
-                                            <span className="flex items-center gap-1 text-[10px] text-amber-500/80 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                            <span className="flex items-center gap-1 text-xs text-amber-500/80 bg-amber-500/10 px-1.5 py-0.5 rounded">
                                                 <BadgeInfo className="w-3 h-3" />
                                                 Large
                                             </span>
                                         )}
                                         {isBinary && (
-                                            <span className="text-[10px] text-muted-foreground italic px-2">Binary</span>
+                                            <span className="text-xs text-muted-foreground italic px-2">Binary</span>
                                         )}
 
-                                        <div className="w-20 text-right text-[10px] text-muted-foreground">
+                                        <div className="w-20 text-right text-xs text-muted-foreground">
                                             {file.lines > 0 ? `${file.lines} lines` : ''}
                                         </div>
-                                        <div className="w-16 text-right text-[10px] text-muted-foreground">
+                                        <div className="w-16 text-right text-xs text-muted-foreground">
                                             {formatSize(file.size)}
                                         </div>
                                     </div>
@@ -203,7 +203,7 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
 
                 {/* Footer */}
                 <DialogFooter className="p-4 border-t border-border bg-card gap-3">
-                    <div className="flex-1 text-[10px] text-muted-foreground italic flex items-center gap-2">
+                    <div className="flex-1 text-xs text-muted-foreground italic flex items-center gap-2">
                         <ShieldAlert className="w-3 h-3 text-amber-500" />
                         Gemini 1.5 Pro Context Window: ~1M Tokens. Select wisely.
                     </div>
@@ -211,7 +211,7 @@ export const FileSelectionModal: React.FC<FileSelectionModalProps> = ({ isOpen, 
                     <Button
                         onClick={() => onConfirm(Array.from(selectedPaths))}
                         disabled={selectedPaths.size === 0}
-                        className="bg-neon-yellow text-black hover:bg-neon-yellow/80 rounded-xl px-8 font-bold tracking-wide"
+                        className="bg-primary text-black hover:bg-primary/80 rounded-xl px-8 font-bold tracking-wide"
                     >
                         ANALYZE CONTEXT
                     </Button>
