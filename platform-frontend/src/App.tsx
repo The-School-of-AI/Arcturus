@@ -6,6 +6,7 @@ import axios from 'axios';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 import { useAppStore } from './store';
 import { FeatureFlagsProvider } from '@/hooks/useFeatureFlags';
+import { CommandPalette } from '@/components/command/CommandPalette';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -75,6 +76,7 @@ function App() {
         ) : (
           <FeatureFlagsProvider>
             <AppLayout />
+            <CommandPalette />
           </FeatureFlagsProvider>
         )}
       </TooltipProvider>

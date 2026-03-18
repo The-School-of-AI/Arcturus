@@ -1,65 +1,53 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Box, Square, Circle, PlayCircle, Database, Brain, Code2,
-    LayoutGrid, Newspaper, GraduationCap, Settings, Plus,
-    RefreshCw, Zap, Sparkles, X, FolderPlus, UploadCloud, Search,
-    Loader2, ChevronLeft, Notebook, LayoutDashboard, Bell,
-    CalendarClock, Terminal, FolderOpen, User, Mic, Wand2, ShieldCheck, ShieldOff, Volume2, ChevronDown, Cloud
+    Circle, X, Loader2, Bell, User, ChevronDown, Cloud,
+    ShieldCheck, Volume2, FolderOpen, Command
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { api, API_BASE } from '@/lib/api';
+import { api } from '@/lib/api';
 import { ThemeToggle } from '@/components/theme';
 import { ArcturusLogo } from '@/components/common/ArcturusLogo';
 import { StatsModal } from '@/components/stats/StatsModal';
 import { SpacesModal } from '@/components/sidebar/SpacesModal';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { Kbd } from '@/components/ui/kbd';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const TAB_CONFIG: Record<string, { label: string; icon: any; color: string; subtitleSuffix: string }> = {
-    runs: { label: 'Agent Runs', icon: PlayCircle, color: 'text-primary', subtitleSuffix: 'SESSIONS' },
-    spaces: { label: 'Spaces', icon: FolderOpen, color: 'text-primary', subtitleSuffix: 'PROJECT HUBS' },
-    rag: { label: 'RAG Documents', icon: Database, color: 'text-primary', subtitleSuffix: 'SOURCES' },
-    mcp: { label: 'MCP Servers', icon: Box, color: 'text-primary', subtitleSuffix: 'CONNECTED' },
-    remme: { label: 'Memory Vault', icon: Brain, color: 'text-primary', subtitleSuffix: 'PERSISTENT FACTS' },
-    explorer: { label: 'Explorer', icon: Code2, color: 'text-primary', subtitleSuffix: 'PROJECTS' },
-    apps: { label: 'App Builder', icon: LayoutGrid, color: 'text-primary', subtitleSuffix: 'DASHBOARDS' },
-    news: { label: 'News Feed', icon: Newspaper, color: 'text-primary', subtitleSuffix: 'SOURCES' },
-    learn: { label: 'Learning', icon: GraduationCap, color: 'text-primary', subtitleSuffix: 'COURSES' },
-    notes: { label: 'Notes', icon: Notebook, color: 'text-primary', subtitleSuffix: 'NOTES' },
-    settings: { label: 'Settings', icon: Settings, color: 'text-primary', subtitleSuffix: 'CONFIG' },
-    skills: { label: 'Skill Store', icon: Zap, color: 'text-primary', subtitleSuffix: 'INSTALLED' },
-    ide: { label: 'IDE', icon: Code2, color: 'text-primary', subtitleSuffix: '' },
-    scheduler: { label: 'Scheduler', icon: CalendarClock, color: 'text-primary', subtitleSuffix: 'JOBS' },
-    console: { label: 'Mission Control', icon: Terminal, color: 'text-primary', subtitleSuffix: 'EVENTS' },
-    echo: { label: 'Echo', icon: Mic, color: 'text-primary', subtitleSuffix: 'VOICE' },
-    studio: { label: 'Forge', icon: Wand2, color: 'text-primary', subtitleSuffix: 'ARTIFACTS' },
-    canvas: { label: 'Canvas', icon: LayoutGrid, color: 'text-primary', subtitleSuffix: '' },
+// ── Tab display names for breadcrumb ─────────────────────────────────────────
+const TAB_LABELS: Record<string, string> = {
+    runs: 'Agent Runs',
+    rag: 'RAG Documents',
+    notes: 'Notes',
+    remme: 'Memory Vault',
+    graph: 'Knowledge Graph',
+    explorer: 'Explorer',
+    apps: 'App Builder',
+    news: 'News Feed',
+    settings: 'Settings',
+    skills: 'Skill Store',
+    ide: 'IDE',
+    scheduler: 'Scheduler',
+    console: 'Mission Control',
+    echo: 'Echo',
+    studio: 'Forge',
+    canvas: 'Canvas',
+    admin: 'Admin',
+    swarm: 'Swarm',
 };
 
 export const Header: React.FC = () => {
     const {
-        currentRun, sidebarTab, runs, savedApps, memories, fetchSpaces,
-        spaces, isSpacesModalOpen, setIsSpacesModalOpen,
-        analysisHistory, newsSources, ragFiles, mcpServers,
-        isRagIndexing, setIsRagNewFolderOpen, fetchRagFiles,
-        setIsNewRunOpen, setIsMcpAddOpen, setIsRemmeAddOpen,
-        setIsNewsAddOpen, isRagLoading, isNewsLoading, fetchNewsSources,
-        fetchApps, fetchMemories, fetchRuns, fetchMcpServers,
-        newsViewMode, setNewsViewMode, setNewsSearchQuery, setSearchResults,
-        notesFiles, fetchNotesFiles, isNotesLoading,
+        currentRun, sidebarTab, spaces,
+        isSpacesModalOpen, setIsSpacesModalOpen,
         currentSpaceId,
-        gitSummary, fetchGitSummary,
         unreadCount, isInboxOpen, setIsInboxOpen,
-        authStatus, authUserId, authUserFirstName, authUserEmail, isAuthModalOpen, setIsAuthModalOpen
+        authStatus, authUserFirstName, authUserEmail, isAuthModalOpen, setIsAuthModalOpen,
+        gitSummary, fetchGitSummary,
     } = useAppStore();
-
 
     const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [isStatsOpen, setIsStatsOpen] = useState(false);
-    const [skillsCount, setSkillsCount] = useState(0);
-    const [isSkillsLoading, setIsSkillsLoading] = useState(false);
 
     // ── Privacy Mode ─────────────────────────────────────────────────────────
     const [privacyMode, setPrivacyMode] = useState<boolean | null>(null);
@@ -97,7 +85,7 @@ export const Header: React.FC = () => {
 
     useEffect(() => { fetchPrivacy(); }, [fetchPrivacy]);
 
-    // ── Persona Selection (configurable via voice/config.py) ─────────────────
+    // ── Persona Selection ────────────────────────────────────────────────────
     const [personas, setPersonas] = useState<Record<string, { voice_name: string; rate: string; pitch: string; volume: string; description: string }> | null>(null);
     const [activePersona, setActivePersona] = useState<string | null>(null);
     const [personaChanging, setPersonaChanging] = useState(false);
@@ -134,21 +122,7 @@ export const Header: React.FC = () => {
 
     useEffect(() => { fetchPersonas(); }, [fetchPersonas]);
 
-    const fetchSkillsCount = useCallback(async () => {
-        setIsSkillsLoading(true);
-        try {
-            const res = await api.get(`${API_BASE}/skills/list`);
-            const skills = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.skills) ? res.data.skills : []);
-            setSkillsCount(skills.length);
-        } catch (e) {
-            console.error("Failed to fetch skills count", e);
-            setSkillsCount(0);
-        } finally {
-            setIsSkillsLoading(false);
-        }
-    }, []);
-
-    // Check Ollama status on mount and periodically
+    // Ollama status check
     useEffect(() => {
         const checkOllama = async () => {
             try {
@@ -161,26 +135,19 @@ export const Header: React.FC = () => {
                 setOllamaStatus('offline');
             }
         };
-
         checkOllama();
         const interval = setInterval(checkOllama, 30000);
         return () => clearInterval(interval);
     }, []);
 
-    // Check Git Status if in IDE
+    // Git status for IDE tab
     useEffect(() => {
         if (sidebarTab === 'ide') {
             fetchGitSummary();
-            const interval = setInterval(fetchGitSummary, 5000); // Check every 5s
+            const interval = setInterval(fetchGitSummary, 5000);
             return () => clearInterval(interval);
         }
     }, [sidebarTab, fetchGitSummary]);
-
-    useEffect(() => {
-        if (sidebarTab === 'skills') {
-            fetchSkillsCount();
-        }
-    }, [sidebarTab, fetchSkillsCount]);
 
     const handleStop = async () => {
         if (!currentRun) return;
@@ -191,292 +158,140 @@ export const Header: React.FC = () => {
         }
     };
 
-    const config = TAB_CONFIG[sidebarTab];
-    const Icon = config?.icon || Box;
-
-    const countFilesRecursively = (items: any[]): number => {
-        let count = 0;
-        (items || []).forEach(item => {
-            if (item.type === 'folder') {
-                count += countFilesRecursively(item.children || []);
-            } else {
-                count += 1;
-            }
-        });
-        return count;
-    };
-
-    const getCount = () => {
-        switch (sidebarTab) {
-            case 'runs': return runs.length;
-            case 'apps': return savedApps.length;
-            case 'remme': return memories.length;
-            case 'explorer': return analysisHistory.length;
-            case 'news': return newsSources.length;
-            case 'rag': return ragFiles.length;
-            case 'mcp': return mcpServers.length;
-            case 'notes': return countFilesRecursively(notesFiles);
-            case 'skills': return skillsCount;
-            default: return 0;
-        }
-    };
+    const currentSpaceName = currentSpaceId
+        ? (spaces.find(s => s.space_id === currentSpaceId)?.name || 'Space')
+        : 'Global';
 
     return (
         <>
-            <header className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0 shadow-none z-50 transition-colors pt-0 drag-region bg-background">
-                <div className="flex items-center gap-2 pl-16"> {/* Added pl-16 to clear traffic lights */}
-                    {/* Brand / Logo */}
-                    <div className="flex items-center gap-0 text-primary font-bold text-lg tracking-tight mr-4 cursor-pointer no-drag" onClick={() => window.location.reload()}>
-                        <ArcturusLogo className="w-8 h-8" />
-                        <span className="hidden sm:inline">Arcturus<span className="text-foreground">Platform</span></span>
-                    </div>
-
-                    <div className="h-8 w-px bg-border/50" />
-
-                    {/* Dynamic Panel Header Content */}
-                    <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-                        {sidebarTab === 'news' && (newsViewMode === 'articles' || newsViewMode === 'saved' || newsViewMode === 'search') && (
-                            <button
-                                onClick={() => {
-                                    if (newsViewMode === 'search') {
-                                        setNewsSearchQuery("");
-                                        setSearchResults([]);
-                                    }
-                                    setNewsViewMode('sources');
-                                }}
-                                className="p-1.5 hover:bg-muted rounded-full mr-1 transition-colors no-drag"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                        )}
-
-                        <div className="flex flex-row items-center gap-3">
-                            <h2 className="font-bold text-xs tracking-tight text-foreground uppercase leading-none whitespace-nowrap">
-                                {sidebarTab === 'news'
-                                    ? (newsViewMode === 'saved' ? 'Saved Articles' : newsViewMode === 'search' ? 'Web Search' : Array.isArray(newsSources) && newsSources.find(s => s.id === useAppStore.getState().selectedNewsSourceId)?.name || 'News Feed')
-                                    : (config?.label || sidebarTab)}
-                            </h2>
-                            {sidebarTab === 'ide' ? (
-                                <p className={cn("text-2xs font-mono tracking-wide opacity-80 uppercase leading-none", config?.color || 'text-primary')}>
-                                    {!gitSummary ? (
-                                        "GIT NOT FOUND"
-                                    ) : gitSummary.staged > 0 ? (
-                                        <span className="text-green-400">{gitSummary.staged} STAGED</span>
-                                    ) : (gitSummary.unstaged + gitSummary.untracked) > 0 ? (
-                                        <span className="text-amber-400">{gitSummary.unstaged + gitSummary.untracked} CHANGES</span>
-                                    ) : (
-                                        <span className="text-muted-foreground whitespace-nowrap">ALL COMMITTED</span>
-                                    )}
-                                </p>
-                            ) : (
-                                <p className={cn("text-2xs font-mono tracking-wide opacity-80 uppercase leading-none", config?.color || 'text-primary')}>
-                                    {getCount()} {config?.subtitleSuffix}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Action Buttons for Specific Tabs */}
-                        <div className="flex items-center gap-1 ml-4 py-1 px-2 rounded-full bg-muted/30 border border-border/50">
-                            {sidebarTab === 'runs' && (
-                                <>
-                                    <button onClick={() => setIsNewRunOpen(true)} className="p-1.5 hover:bg-primary/10 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="New Run">
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => setIsStatsOpen(true)} className="p-1.5 hover:bg-primary/10 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Platform Analytics">
-                                        <LayoutDashboard className="w-4 h-4" />
-                                    </button>
-                                </>
-                            )}
-
-                            {sidebarTab === 'rag' && (
-                                <>
-                                    <button onClick={() => setIsRagNewFolderOpen(true)} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="New Folder">
-                                        <FolderPlus className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => (document.getElementById('rag-upload-input') as HTMLInputElement)?.click()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Upload File">
-                                        <UploadCloud className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => fetchRagFiles()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Refresh">
-                                        <RefreshCw className={cn("w-4 h-4", isRagLoading && "animate-spin")} />
-                                    </button>
-                                </>
-                            )}
-
-                            {sidebarTab === 'mcp' && (
-                                <>
-                                    <button onClick={() => setIsMcpAddOpen(true)} className="p-1.5 hover:bg-muted/50 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Add Server">
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => fetchMcpServers()} className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Refresh">
-                                        <RefreshCw className="w-4 h-4" />
-                                    </button>
-                                </>
-                            )}
-
-                            {sidebarTab === 'remme' && (
-                                <>
-                                    <button onClick={() => setIsRemmeAddOpen(true)} className="p-1.5 hover:bg-primary/5 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Manual Add">
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (confirm('Scan recent runs for new memories?')) {
-                                                try { await api.post(`${API_BASE}/remme/scan`); fetchMemories(); }
-                                                catch (e) { console.error("Scan failed", e); }
-                                            }
-                                        }}
-                                        className="p-1.5 hover:bg-primary/5 rounded-full text-muted-foreground hover:text-primary transition-all no-drag" title="Scan for Memories"
-                                    >
-                                        <Sparkles className="w-4 h-4 animate-pulse" />
-                                    </button>
-                                </>
-                            )}
-
-                            {sidebarTab === 'news' && (
-                                <>
-                                    <button onClick={() => {
-                                        if (newsViewMode === 'saved') {
-                                            useAppStore.getState().setIsAddSavedArticleOpen(true);
-                                        } else {
-                                            setIsNewsAddOpen(true);
-                                        }
-                                    }} className="p-1.5 hover:bg-muted rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title={newsViewMode === 'saved' ? "Add Article" : "Add Source"}>
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => fetchNewsSources()} className="p-1.5 hover:bg-muted rounded-full hover:text-primary transition-all text-muted-foreground no-drag" title="Refresh">
-                                        <RefreshCw className={cn("w-4 h-4", isNewsLoading && "animate-spin")} />
-                                    </button>
-                                </>
-                            )}
-
-                            {(sidebarTab === 'runs' || sidebarTab === 'apps' || sidebarTab === 'explorer' || sidebarTab === 'notes' || sidebarTab === 'skills') && (
-                                <button
-                                    onClick={() => {
-                                        if (sidebarTab === 'runs') fetchRuns();
-                                        if (sidebarTab === 'apps') fetchApps();
-                                        if (sidebarTab === 'notes') fetchNotesFiles();
-                                        if (sidebarTab === 'skills') fetchSkillsCount();
-                                    }}
-                                    className="p-1.5 hover:bg-muted/50 rounded-full hover:text-primary transition-all text-muted-foreground no-drag"
-                                    title="Refresh"
-                                >
-                                    <RefreshCw className={cn(
-                                        "w-4 h-4",
-                                        sidebarTab === 'notes' && isNotesLoading && "animate-spin",
-                                        sidebarTab === 'skills' && isSkillsLoading && "animate-spin"
-                                    )} />
-                                </button>
-                            )}
-                        </div>
-                    </div>
+            {/* Running agent — top edge progress bar */}
+            {currentRun?.status === 'running' && (
+                <div className="h-0.5 bg-primary/20 relative overflow-hidden shrink-0 z-50">
+                    <div className="absolute inset-y-0 left-0 w-1/3 bg-primary animate-[ticker_1.5s_ease-in-out_infinite]" />
                 </div>
+            )}
 
-                <div className="flex items-center gap-2">
-                    {/* Active Run Status Indicator */}
+            <header className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0 z-50 drag-region bg-background">
+                {/* Left — Brand + Breadcrumb */}
+                <div className="flex items-center gap-3 pl-16">
+                    <div
+                        className="flex items-center gap-1.5 cursor-pointer no-drag"
+                        onClick={() => window.location.reload()}
+                    >
+                        <ArcturusLogo className="w-6 h-6" />
+                        <span className="hidden sm:inline text-sm font-bold tracking-tight text-foreground">
+                            Arcturus
+                        </span>
+                    </div>
+
+                    <span className="text-border text-sm">/</span>
+
+                    {/* Breadcrumb — current context */}
+                    <span className="text-sm text-muted-foreground font-medium">
+                        {TAB_LABELS[sidebarTab] || sidebarTab}
+                    </span>
+
+                    {/* IDE git status inline */}
+                    {sidebarTab === 'ide' && gitSummary && (
+                        <span className={cn(
+                            "text-2xs font-mono px-1.5 py-0.5 rounded",
+                            gitSummary.staged > 0
+                                ? "text-success bg-success-muted"
+                                : (gitSummary.unstaged + gitSummary.untracked) > 0
+                                    ? "text-warning bg-warning-muted"
+                                    : "text-muted-foreground bg-surface-2"
+                        )}>
+                            {gitSummary.staged > 0
+                                ? `${gitSummary.staged} staged`
+                                : (gitSummary.unstaged + gitSummary.untracked) > 0
+                                    ? `${gitSummary.unstaged + gitSummary.untracked} changes`
+                                    : 'clean'}
+                        </span>
+                    )}
+
+                    {/* Running status — compact inline */}
                     {currentRun?.status === 'running' && (
-                        <div className="flex items-center gap-2 px-3 py-1 border border-yellow-500/30 bg-yellow-500/10 rounded-full animate-in fade-in zoom-in">
-                            <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                            <span className="text-xs font-semibold text-yellow-500 uppercase tracking-tight">Agent Running</span>
-                            <button onClick={handleStop} className="ml-1 p-0.5 hover:bg-yellow-500/20 rounded-md text-yellow-600 no-drag">
+                        <div className="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-warning-muted border border-warning/20 no-drag animate-content-in">
+                            <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
+                            <span className="text-2xs font-semibold text-warning uppercase tracking-tight">Running</span>
+                            <button onClick={handleStop} className="ml-0.5 p-0.5 hover:bg-warning/20 rounded text-warning/80">
                                 <X className="w-3 h-3" />
                             </button>
                         </div>
                     )}
+                </div>
 
-                    <div className="h-6 w-px bg-border/50 mx-2" />
+                {/* Right — Compact controls */}
+                <div className="flex items-center gap-1.5 no-drag">
+                    {/* Command Palette hint */}
+                    <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => {
+                                    // Dispatch Cmd+K to open command palette
+                                    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+                                }}
+                                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border hover:bg-surface-2 transition-colors text-muted-foreground hover:text-foreground"
+                            >
+                                <Command className="w-3 h-3" />
+                                <span className="text-xs">Search</span>
+                                <Kbd>K</Kbd>
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Open command palette</TooltipContent>
+                    </Tooltip>
 
-                    {/* Spaces (Phase 4) — show current space when non-global */}
+                    <div className="w-px h-5 bg-border mx-1" />
+
+                    {/* Space selector — compact pill */}
                     <button
                         onClick={() => setIsSpacesModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50 hover:bg-muted/60 hover:border-primary/30 transition-colors no-drag"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-accent transition-colors"
                         title="Manage Spaces"
                     >
                         <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide max-w-[120px] truncate">
-                            Space:{' '}
-                            {currentSpaceId
-                                ? (spaces.find(s => s.space_id === currentSpaceId)?.name || 'Space')
-                                : 'Global'}
+                        <span className="text-xs font-medium text-muted-foreground max-w-[80px] truncate">
+                            {currentSpaceName}
                         </span>
                     </button>
 
-                    <div className="h-6 w-px bg-border/50 mx-2" />
-
-                    {/* Auth Status & Modal Toggle */}
-                    <button
-                        onClick={() => setIsAuthModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50 hover:bg-muted/60 hover:border-primary/30 transition-colors no-drag"
-                        title={authStatus === 'logged_in' ? 'Account Settings / Logout' : 'Login / Register'}
-                    >
-                        <User className={cn("w-3.5 h-3.5", authStatus === 'logged_in' ? "text-primary" : "text-primary")} />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide max-w-[80px] truncate">
-                            {authStatus === 'logged_in'
-                                ? (authUserFirstName ? authUserFirstName.trim().substring(0, 4) : (authUserEmail ? authUserEmail.split('@')[0].substring(0, 8) : 'User'))
-                                : 'Guest'}
-                        </span>
-                    </button>
-
-                    <div className="h-6 w-px bg-border/50 mx-2" />
-
-                    {/* Privacy Mode Toggle */}
+                    {/* Privacy toggle — minimal */}
                     <button
                         onClick={togglePrivacy}
                         disabled={privacyLoading || privacyMode === null}
-                        title={
-                            privacyMode === null
-                                ? 'Loading voice mode...'
-                                : privacyMode
-                                    ? 'Privacy Mode ON — currently local (Whisper + Piper)'
-                                    : 'Cloud Mode ON — currently cloud (Deepgram + Azure)'
-                        }
+                        title={privacyMode ? 'Privacy Mode (Local)' : 'Cloud Mode'}
                         className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-200 no-drag',
+                            'flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-150',
                             privacyMode === false
-                                ? 'bg-sky-500/15 border-sky-500/40 text-sky-400 hover:bg-sky-500/25'
+                                ? 'text-info hover:bg-info-muted'
                                 : privacyMode === true
-                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
-                                    : 'bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60',
+                                    ? 'text-success hover:bg-success-muted'
+                                    : 'text-muted-foreground hover:bg-accent',
                             (privacyLoading || privacyMode === null) && 'opacity-50 cursor-not-allowed'
                         )}
                     >
                         {privacyLoading ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : privacyMode === false ? (
-                            <Cloud className="w-3 h-3" />
+                            <Cloud className="w-3.5 h-3.5" />
                         ) : (
-                            <ShieldCheck className="w-3 h-3" />
+                            <ShieldCheck className="w-3.5 h-3.5" />
                         )}
-                        <span className="text-xs font-semibold uppercase tracking-wide">
-                            {privacyMode === null ? 'Voice' : privacyMode ? 'Private' : 'Cloud'}
-                        </span>
                     </button>
 
-                    {/* Persona Selector (configured in voice/config.py) */}
-                    {personas && Object.keys(personas).length > 0 && (
-                        <div
-                            className={cn(
-                                'relative flex items-center gap-1.5 rounded-full border transition-all duration-200 no-drag',
-                                privacyMode
-                                    ? 'opacity-40 pointer-events-none bg-muted/30 border-border/30'
-                                    : 'bg-muted/40 border-border/50 hover:border-primary/30'
-                            )}
-                            title={
-                                privacyMode
-                                    ? 'Persona selection unavailable in Privacy Mode (Piper TTS)'
-                                    : `Voice persona: ${activePersona ?? 'unknown'} — configured in voice/config.py`
-                            }
-                        >
-                            <Volume2 className="w-3 h-3 ml-2.5 text-muted-foreground shrink-0" />
+                    {/* Persona selector — only when cloud mode */}
+                    {personas && Object.keys(personas).length > 0 && !privacyMode && (
+                        <div className="relative flex items-center rounded-md hover:bg-accent transition-colors">
+                            <Volume2 className="w-3 h-3 ml-2 text-muted-foreground shrink-0" />
                             <select
                                 value={activePersona ?? ''}
                                 onChange={e => changePersona(e.target.value)}
-                                disabled={personaChanging || privacyMode === true}
+                                disabled={personaChanging}
                                 className={cn(
                                     'appearance-none bg-transparent border-none outline-none',
-                                    'text-xs font-semibold uppercase tracking-wide',
-                                    'pl-0.5 pr-5 py-1.5 cursor-pointer',
+                                    'text-xs font-medium pl-1 pr-5 py-1 cursor-pointer',
                                     'text-muted-foreground hover:text-foreground transition-colors',
-                                    (personaChanging || privacyMode) && 'cursor-not-allowed'
+                                    personaChanging && 'cursor-not-allowed'
                                 )}
                             >
                                 {Object.entries(personas).map(([key, cfg]) => (
@@ -485,57 +300,74 @@ export const Header: React.FC = () => {
                                     </option>
                                 ))}
                             </select>
-                            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground">
                                 {personaChanging
                                     ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                                    : <ChevronDown className="w-2.5 h-2.5" />
-                                }
+                                    : <ChevronDown className="w-2.5 h-2.5" />}
                             </div>
                         </div>
                     )}
 
-                    {/* Ollama Status Indicator */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50">
-                        <Circle
-                            className={cn(
-                                "w-2 h-2 fill-current",
-                                ollamaStatus === 'online' && "text-green-500",
-                                ollamaStatus === 'offline' && "text-red-500",
-                                ollamaStatus === 'checking' && "text-yellow-500 animate-pulse"
-                            )}
-                        />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ollama</span>
-                    </div>
+                    {/* Ollama status — minimal dot */}
+                    <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-accent transition-colors cursor-default">
+                                <Circle className={cn(
+                                    "w-2 h-2 fill-current",
+                                    ollamaStatus === 'online' && "text-success",
+                                    ollamaStatus === 'offline' && "text-destructive",
+                                    ollamaStatus === 'checking' && "text-warning animate-pulse"
+                                )} />
+                                <span className="text-xs text-muted-foreground">Ollama</span>
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            Ollama: {ollamaStatus}
+                        </TooltipContent>
+                    </Tooltip>
 
-                    <div className="flex items-center gap-3 no-drag z-50">
-                        {/* Inbox Toggle */}
-                        <button
-                            onClick={() => setIsInboxOpen(!isInboxOpen)}
-                            className={cn(
-                                "relative p-2 rounded-full transition-all duration-200",
-                                isInboxOpen
-                                    ? "bg-primary/10 text-primary"
-                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <Bell className="w-4 h-4" />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
-                            )}
-                        </button>
+                    <div className="w-px h-5 bg-border mx-1" />
 
-                        <ThemeToggle />
-                    </div>
+                    {/* Auth — avatar-style */}
+                    <button
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-accent transition-colors"
+                    >
+                        <div className={cn(
+                            "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold",
+                            authStatus === 'logged_in'
+                                ? "bg-primary/15 text-primary"
+                                : "bg-surface-3 text-muted-foreground"
+                        )}>
+                            {authStatus === 'logged_in'
+                                ? (authUserFirstName?.[0] || authUserEmail?.[0] || 'U').toUpperCase()
+                                : <User className="w-3 h-3" />}
+                        </div>
+                    </button>
+
+                    {/* Inbox */}
+                    <button
+                        onClick={() => setIsInboxOpen(!isInboxOpen)}
+                        className={cn(
+                            "relative p-1.5 rounded-md transition-all",
+                            isInboxOpen
+                                ? "bg-primary/10 text-primary"
+                                : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <Bell className="w-4 h-4" />
+                        {unreadCount > 0 && (
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
+                        )}
+                    </button>
+
+                    {/* Theme */}
+                    <ThemeToggle />
                 </div>
             </header>
 
-            {/* Stats Modal */}
             <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} />
-
-            {/* Spaces Modal — manage spaces from any panel */}
             <SpacesModal isOpen={isSpacesModalOpen} onClose={() => setIsSpacesModalOpen(false)} />
-
-            {/* Auth Modal */}
             <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
         </>
     );

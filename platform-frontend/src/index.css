@@ -3,99 +3,166 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   ARCTURUS DESIGN SYSTEM v2 — 2027 Edition
+   Inspired by Linear, Arc, Vercel, Apple
+   ============================================ */
+
 @layer base {
   :root {
-    /* Linear-inspired Light Mode - Clean, Minimal, Professional */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    /* ── Light Theme ────────────────────────────────────── */
 
+    /* Core palette — warm whites, subtle depth */
+    --background: 0 0% 99%;
+    --foreground: 240 10% 8%;
+
+    /* Surfaces — 5-level elevation system */
+    --surface-0: 0 0% 99%;
+    --surface-1: 240 7% 97%;
+    --surface-2: 240 6% 95%;
+    --surface-3: 240 5% 92%;
+    --surface-4: 240 5% 89%;
+
+    /* Cards & Popovers */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-
+    --card-foreground: 240 10% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover-foreground: 240 10% 8%;
 
+    /* Brand — refined violet */
     --primary: 252 56% 57%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 252 56% 52%;
+    --primary-muted: 252 40% 95%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 0 0% 9%;
+    /* Secondary */
+    --secondary: 240 5% 95%;
+    --secondary-foreground: 240 6% 25%;
 
-    --muted: 240 5% 96%;
+    /* Muted */
+    --muted: 240 5% 95%;
     --muted-foreground: 240 4% 46%;
 
-    --accent: 240 5% 96%;
-    --accent-foreground: 0 0% 9%;
+    /* Accent */
+    --accent: 240 5% 94%;
+    --accent-foreground: 240 6% 15%;
 
+    /* Semantic colors */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
     --success: 152 56% 39%;
-    --warning: 40 96% 53%;
+    --success-muted: 152 40% 95%;
+    --warning: 38 92% 50%;
+    --warning-muted: 38 80% 95%;
     --info: 206 100% 50%;
+    --info-muted: 206 80% 95%;
 
+    /* Borders & inputs */
     --border: 240 6% 90%;
+    --border-hover: 240 6% 82%;
     --input: 240 6% 90%;
     --ring: 252 56% 57%;
 
+    /* Geometry */
     --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
 
-    /* Sidebar tokens */
-    --sidebar-bg: 240 5% 97.5%;
-    --sidebar-border: 240 6% 92%;
+    /* Sidebar */
+    --sidebar-bg: 240 7% 97%;
+    --sidebar-border: 240 6% 91%;
     --sidebar-active: 252 56% 57%;
+    --sidebar-hover: 240 5% 93%;
+    --sidebar-width-expanded: 240px;
+    --sidebar-width-rail: 52px;
 
-    /* Surface elevation tokens */
-    --surface-0: 0 0% 100%;
-    --surface-1: 240 5% 97.5%;
-    --surface-2: 240 5% 96%;
-    --surface-3: 240 5% 93%;
+    /* Elevation shadows */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.03);
+    --shadow-popover: 0 4px 16px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.03);
+    --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.03);
+
+    /* Motion */
+    --duration-fast: 100ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
+    --duration-slower: 500ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   }
 
   .dark {
-    /* Linear-inspired Dark Mode - True dark, sophisticated */
-    --background: 0 0% 4%;
+    /* ── Dark Theme — OLED-friendly, sophisticated ──────── */
+
+    /* Core palette — true dark with warm undertones */
+    --background: 0 0% 3.5%;
     --foreground: 0 0% 93%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 93%;
+    /* Surfaces — 5-level elevation */
+    --surface-0: 0 0% 3.5%;
+    --surface-1: 0 0% 6%;
+    --surface-2: 240 3% 9%;
+    --surface-3: 240 3% 12%;
+    --surface-4: 240 3% 15%;
 
-    --popover: 0 0% 7%;
+    /* Cards & Popovers */
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 93%;
+    --popover: 240 3% 8%;
     --popover-foreground: 0 0% 93%;
 
-    --primary: 252 56% 57%;
+    /* Brand */
+    --primary: 252 56% 60%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 252 56% 65%;
+    --primary-muted: 252 30% 12%;
 
-    --secondary: 240 4% 12%;
-    --secondary-foreground: 0 0% 93%;
+    /* Secondary */
+    --secondary: 240 3% 11%;
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 240 4% 12%;
-    --muted-foreground: 240 5% 52%;
+    /* Muted */
+    --muted: 240 3% 11%;
+    --muted-foreground: 240 4% 50%;
 
-    --accent: 240 4% 15%;
+    /* Accent */
+    --accent: 240 3% 13%;
     --accent-foreground: 0 0% 93%;
 
+    /* Semantic */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
+    --success: 152 56% 42%;
+    --success-muted: 152 30% 10%;
+    --warning: 38 92% 50%;
+    --warning-muted: 38 50% 10%;
+    --info: 206 100% 55%;
+    --info-muted: 206 50% 10%;
 
-    --success: 152 56% 39%;
-    --warning: 40 96% 53%;
-    --info: 206 100% 50%;
+    /* Borders & inputs */
+    --border: 240 3% 13%;
+    --border-hover: 240 3% 20%;
+    --input: 240 3% 13%;
+    --ring: 252 56% 60%;
 
-    --border: 240 4% 14%;
-    --input: 240 4% 14%;
-    --ring: 252 56% 57%;
+    /* Sidebar */
+    --sidebar-bg: 0 0% 4.5%;
+    --sidebar-border: 240 3% 10%;
+    --sidebar-active: 252 56% 60%;
+    --sidebar-hover: 240 3% 10%;
 
-    /* Sidebar tokens */
-    --sidebar-bg: 0 0% 5.5%;
-    --sidebar-border: 240 4% 12%;
-    --sidebar-active: 252 56% 57%;
-
-    /* Surface elevation tokens */
-    --surface-0: 0 0% 4%;
-    --surface-1: 0 0% 7%;
-    --surface-2: 240 4% 12%;
-    --surface-3: 240 4% 15%;
+    /* Elevation shadows — darker, more diffused */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.2);
+    --shadow-popover: 0 4px 24px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.04);
+    --shadow-modal: 0 24px 64px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.04);
   }
 }
 
@@ -110,46 +177,110 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+
+  /* Focus visible — consistent ring across all elements */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring) / 0.5);
+  }
 }
 
-/* --- UTILITIES --- */
+/* ============================================
+   UTILITIES
+   ============================================ */
 
 @layer utilities {
-  /* Backward-compatible glass utilities - now map to solid surfaces */
+  /* Glass panel — subtle translucency */
   .glass {
-    @apply bg-card/80 border border-border;
-    backdrop-filter: blur(2px);
+    @apply bg-card/90 border border-border;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .glass-panel {
     @apply bg-card border border-border;
   }
 
-  .glass-edge {
-    /* No-op - removed */
-  }
+  /* Surface utilities */
+  .surface-0 { background-color: hsl(var(--surface-0)); }
+  .surface-1 { background-color: hsl(var(--surface-1)); }
+  .surface-2 { background-color: hsl(var(--surface-2)); }
+  .surface-3 { background-color: hsl(var(--surface-3)); }
+  .surface-4 { background-color: hsl(var(--surface-4)); }
 
-  .glass-tint {
-    @apply bg-card border border-border;
-  }
-
-  .text-glow {
-    /* No-op - removed */
-  }
-
-  .border-glow {
-    /* No-op - removed */
-  }
+  /* Backward-compatible no-ops */
+  .glass-edge { }
+  .glass-tint { @apply bg-card border border-border; }
+  .text-glow { }
+  .border-glow { }
 
   /* Electron Drag Regions */
-  .drag-region {
-    -webkit-app-region: drag;
+  .drag-region { -webkit-app-region: drag; }
+  .no-drag { -webkit-app-region: no-drag; }
+
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Hover card lift effect */
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
 
-  .no-drag {
-    -webkit-app-region: no-drag;
+  /* Active press effect */
+  .press-scale:active {
+    transform: scale(0.98);
+  }
+
+  /* Truncate with fade */
+  .truncate-fade {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
   }
 }
+
+/* ============================================
+   SCROLLBAR — Minimal, refined
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.12);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.22);
+}
+
+/* Monaco scrollbar */
+.monaco-editor .scrollbar .slider {
+  background: hsl(var(--muted-foreground) / 0.08) !important;
+}
+.monaco-editor .scrollbar .slider:hover {
+  background: hsl(var(--muted-foreground) / 0.18) !important;
+}
+
+/* ============================================
+   COMPONENT OVERRIDES
+   ============================================ */
 
 /* Custom Grid Background */
 .bg-grid-lines {
@@ -159,19 +290,14 @@
     linear-gradient(to bottom, hsl(var(--border) / 0.3) 1px, transparent 1px);
 }
 
-/* Gradient background - simplified to solid */
-.animate-gradient-bg {
-  @apply bg-background;
-}
-
-.dark .animate-gradient-bg {
-  @apply bg-background;
-}
+/* Gradient background — solid */
+.animate-gradient-bg { @apply bg-background; }
+.dark .animate-gradient-bg { @apply bg-background; }
 
 /* ReactFlow Controls */
 .react-flow__controls {
   @apply flex flex-col bg-card border border-border p-1 gap-1 m-0 rounded-lg top-3 left-3 bottom-auto !important;
-  box-shadow: var(--tw-shadow-popover, 0 4px 12px rgb(0 0 0 / 0.08)) !important;
+  box-shadow: var(--shadow-popover) !important;
 }
 
 .react-flow__controls-button {
@@ -187,18 +313,7 @@
 }
 
 /* Document Viewer & Browser Tabs */
-.active-tabs-container::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.active-tabs-container::-webkit-scrollbar { display: none; }
 
 .docx-viewer {
   scroll-behavior: smooth;
@@ -218,80 +333,112 @@
 }
 
 /* Syntax Highlighter */
-.syntax-highlighter pre {
-  margin: 0 !important;
-}
+.syntax-highlighter pre { margin: 0 !important; }
 
-/* React Grid Layout Resize Handle */
+/* React Grid Layout */
 .react-resizable-handle {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
-.react-resizable:hover .react-resizable-handle {
-  opacity: 1;
+.react-resizable:hover .react-resizable-handle { opacity: 1; }
+.react-resizable-handle::after { @apply border-muted-foreground !important; }
+.react-resizable-handle-se { bottom: 4px !important; right: 4px !important; }
+
+/* ============================================
+   ANIMATIONS & MOTION
+   ============================================ */
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.react-resizable-handle::after {
-  @apply border-muted-foreground !important;
+/* Spinner */
+@keyframes spinner {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.react-resizable-handle-se {
-  bottom: 4px !important;
-  right: 4px !important;
-}
-
-/* Spinner Animation */
+/* Subtle pulse */
 @keyframes pulse-slow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
 
-.animate-pulse-slow {
-  animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
 }
 
-/* Meteor animation stub for backward compatibility */
+.animate-pulse-slow { animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+/* Meteor effect — backward compatibility */
 @keyframes meteor-effect {
   0% { transform: rotate(135deg) translateX(0); opacity: 1; }
   70% { opacity: 1; }
   100% { transform: rotate(135deg) translateX(2000px); opacity: 0; }
 }
+.animate-meteor-effect { animation: meteor-effect linear infinite; }
 
-.animate-meteor-effect {
-  animation: meteor-effect linear infinite;
+/* Progress bar glow */
+@keyframes progress-glow {
+  0% { box-shadow: 0 0 4px hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 12px hsl(var(--primary) / 0.6); }
+  100% { box-shadow: 0 0 4px hsl(var(--primary) / 0.4); }
 }
 
-/* Scrollbar Theming - Subtle, thin */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Content transition — used for tab switches */
+@keyframes content-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.animate-content-in {
+  animation: content-in var(--duration-normal) var(--ease-out) both;
 }
 
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.15);
-  border-radius: 3px;
+/* Panel slide from right */
+@keyframes panel-slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.25);
+.animate-panel-in-right {
+  animation: panel-slide-in-right var(--duration-slow) var(--ease-out) both;
 }
 
-/* Monaco specific scrollbar */
-.monaco-editor .scrollbar .slider {
-  background: hsl(var(--muted-foreground) / 0.1) !important;
+/* Panel slide from left */
+@keyframes panel-slide-in-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.monaco-editor .scrollbar .slider:hover {
-  background: hsl(var(--muted-foreground) / 0.2) !important;
+.animate-panel-in-left {
+  animation: panel-slide-in-left var(--duration-slow) var(--ease-out) both;
 }
+
+/* Staggered list items */
+.stagger-item {
+  animation: content-in var(--duration-normal) var(--ease-out) both;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 30ms; }
+.stagger-item:nth-child(3) { animation-delay: 60ms; }
+.stagger-item:nth-child(4) { animation-delay: 90ms; }
+.stagger-item:nth-child(5) { animation-delay: 120ms; }
+.stagger-item:nth-child(6) { animation-delay: 150ms; }
+.stagger-item:nth-child(7) { animation-delay: 180ms; }
+.stagger-item:nth-child(8) { animation-delay: 210ms; }
+.stagger-item:nth-child(n+9) { animation-delay: 240ms; }
 
 /* ============================================
-   TipTap Task List / Checkbox Styles
+   TIPTAP TASK LIST / CHECKBOX STYLES
    ============================================ */
 
 ul[data-type="taskList"] {

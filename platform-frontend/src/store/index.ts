@@ -86,6 +86,9 @@ interface RagViewerSlice {
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
+    isSidebarExpanded: boolean;
+    setSidebarExpanded: (expanded: boolean) => void;
+    toggleSidebarExpanded: () => void;
 
     // --- RAG Document Management ---
     ragOpenDocuments: RAGDocument[];
@@ -1159,6 +1162,9 @@ export const useAppStore = create<AppState>()(
             isSidebarSubPanelOpen: true,
             setSidebarSubPanelOpen: (open) => set({ isSidebarSubPanelOpen: open }),
             toggleSidebarSubPanel: () => set(state => ({ isSidebarSubPanelOpen: !state.isSidebarSubPanelOpen })),
+            isSidebarExpanded: true,
+            setSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
+            toggleSidebarExpanded: () => set(state => ({ isSidebarExpanded: !state.isSidebarExpanded })),
             settingsActiveTab: 'models',
             setSettingsActiveTab: (tab) => set({ settingsActiveTab: tab }),
             ragSearchQuery: '',

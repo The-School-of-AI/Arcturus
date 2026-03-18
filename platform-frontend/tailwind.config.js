@@ -21,13 +21,16 @@ export default {
         extend: {
             colors: {
                 border: 'hsl(var(--border))',
+                'border-hover': 'hsl(var(--border-hover))',
                 input: 'hsl(var(--input))',
                 ring: 'hsl(var(--ring))',
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
                 primary: {
                     DEFAULT: 'hsl(var(--primary))',
-                    foreground: 'hsl(var(--primary-foreground))'
+                    foreground: 'hsl(var(--primary-foreground))',
+                    hover: 'hsl(var(--primary-hover))',
+                    muted: 'hsl(var(--primary-muted))',
                 },
                 secondary: {
                     DEFAULT: 'hsl(var(--secondary))',
@@ -53,21 +56,32 @@ export default {
                     DEFAULT: 'hsl(var(--card))',
                     foreground: 'hsl(var(--card-foreground))'
                 },
-                success: 'hsl(var(--success))',
-                warning: 'hsl(var(--warning))',
-                info: 'hsl(var(--info))',
+                success: {
+                    DEFAULT: 'hsl(var(--success))',
+                    muted: 'hsl(var(--success-muted))',
+                },
+                warning: {
+                    DEFAULT: 'hsl(var(--warning))',
+                    muted: 'hsl(var(--warning-muted))',
+                },
+                info: {
+                    DEFAULT: 'hsl(var(--info))',
+                    muted: 'hsl(var(--info-muted))',
+                },
                 sidebar: {
                     DEFAULT: 'hsl(var(--sidebar-bg))',
                     border: 'hsl(var(--sidebar-border))',
                     active: 'hsl(var(--sidebar-active))',
+                    hover: 'hsl(var(--sidebar-hover))',
                 },
                 surface: {
                     0: 'hsl(var(--surface-0))',
                     1: 'hsl(var(--surface-1))',
                     2: 'hsl(var(--surface-2))',
                     3: 'hsl(var(--surface-3))',
+                    4: 'hsl(var(--surface-4))',
                 },
-                /* Backward-compatible aliases so existing neon references don't break the build */
+                /* Backward-compatible aliases */
                 neon: {
                     yellow: 'hsl(var(--primary))',
                     lime: 'hsl(var(--success))',
@@ -91,17 +105,33 @@ export default {
             borderRadius: {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
-                sm: 'calc(var(--radius) - 4px)'
+                sm: 'calc(var(--radius) - 4px)',
+                xl: 'var(--radius-lg)',
+                '2xl': 'var(--radius-xl)',
             },
             spacing: {
-                'sidebar': '220px',
-                'sidebar-collapsed': '52px',
-                'header': '44px',
+                'sidebar': '240px',
+                'sidebar-rail': '52px',
+                'header': '40px',
             },
             boxShadow: {
-                'xs': '0 1px 2px 0 rgb(0 0 0 / 0.03)',
-                'popover': '0 4px 12px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.02)',
-                'modal': '0 8px 30px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.02)',
+                'xs': 'var(--shadow-xs)',
+                'sm': 'var(--shadow-sm)',
+                'elevation': 'var(--shadow-md)',
+                'lg': 'var(--shadow-lg)',
+                'xl': 'var(--shadow-xl)',
+                'popover': 'var(--shadow-popover)',
+                'modal': 'var(--shadow-modal)',
+            },
+            transitionDuration: {
+                'fast': 'var(--duration-fast)',
+                'normal': 'var(--duration-normal)',
+                'slow': 'var(--duration-slow)',
+                'slower': 'var(--duration-slower)',
+            },
+            transitionTimingFunction: {
+                'out-expo': 'var(--ease-out)',
+                'spring': 'var(--ease-spring)',
             },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
@@ -112,7 +142,10 @@ export default {
                 'slide-down': 'slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                 'scale-in': 'scale-in 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                 'spinner': 'spinner 0.75s linear infinite',
-                /* Backward-compatible animation names */
+                'content-in': 'content-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+                'panel-in-right': 'panel-slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
+                'panel-in-left': 'panel-slide-in-left 0.25s cubic-bezier(0.16, 1, 0.3, 1) both',
+                /* Backward-compatible */
                 'ticker': 'ticker 10s linear infinite',
                 'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                 'slide-fade-in': 'fade-in 0.2s ease-out',
@@ -158,6 +191,18 @@ export default {
                 'spinner': {
                     from: { transform: 'rotate(0deg)' },
                     to: { transform: 'rotate(360deg)' }
+                },
+                'content-in': {
+                    from: { opacity: '0', transform: 'translateY(4px)' },
+                    to: { opacity: '1', transform: 'translateY(0)' }
+                },
+                'panel-slide-in-right': {
+                    from: { opacity: '0', transform: 'translateX(12px)' },
+                    to: { opacity: '1', transform: 'translateX(0)' }
+                },
+                'panel-slide-in-left': {
+                    from: { opacity: '0', transform: 'translateX(-8px)' },
+                    to: { opacity: '1', transform: 'translateX(0)' }
                 },
                 'ticker': {
                     '0%': { transform: 'translateX(100%)' },
