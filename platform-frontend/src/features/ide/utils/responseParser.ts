@@ -58,7 +58,62 @@ export function parseToolCalls(content: string): ToolCall[] {
         }
     }
 
+    // 4. Fallback: Parse XML-style tool calls (e.g. <list_dir path="." /> or <read_file><path>src/App.tsx</path></read_file>)
+    if (toolCalls.length === 0) {
+        const xmlToolCalls = parseXmlToolCalls(content);
+        toolCalls.push(...xmlToolCalls);
+    }
+
     return toolCalls;
+}
+
+/**
+ * Parse XML-style tool calls that some models emit instead of JSON.
+ * Handles both self-closing (<tool_name arg="val" />) and
+ * wrapped (<tool_name><arg>val</arg></tool_name>) formats.
+ */
+function parseXmlToolCalls(content: string): ToolCall[] {
+    const toolNames = [
+        'read_file', 'write_file', 'replace_in_file', 'multi_replace_file_content',
+        'list_dir', 'run_command', 'search_web', 'find_by_name', 'grep_search',
+        'view_file_outline', 'read_terminal', 'read_url', 'command_status',
+        'run_script', 'apply_diff', 'replace_symbol'
+    ];
+    const results: ToolCall[] = [];
+    const namePattern = toolNames.join('|');
+
+    // Self-closing: <tool_name key="value" key2="value2" />
+    const selfClosingRegex = new RegExp(`<(${namePattern})\\s+([^>]*?)\\s*/>`, 'g');
+    let m;
+    while ((m = selfClosingRegex.exec(content)) !== null) {
+        const name = m[1];
+        const attrsStr = m[2];
+        const args: Record<string, string> = {};
+        const attrRegex = /(\w+)="([^"]*)"/g;
+        let a;
+        while ((a = attrRegex.exec(attrsStr)) !== null) {
+            args[a[1]] = a[2];
+        }
+        results.push({ name, arguments: args });
+    }
+
+    // Wrapped: <tool_name><arg>value</arg></tool_name>
+    const wrappedRegex = new RegExp(`<(${namePattern})>([\\s\\S]*?)<\\/\\1>`, 'g');
+    while ((m = wrappedRegex.exec(content)) !== null) {
+        const name = m[1];
+        const inner = m[2];
+        const args: Record<string, string> = {};
+        const childRegex = /<(\w+)>([\s\S]*?)<\/\1>/g;
+        let c;
+        while ((c = childRegex.exec(inner)) !== null) {
+            args[c[1]] = c[2];
+        }
+        if (Object.keys(args).length > 0) {
+            results.push({ name, arguments: args });
+        }
+    }
+
+    return results;
 }
 
 function substituteArgs(args: any, blockMap: Map<string, string>, lastBlock: string | null): any {

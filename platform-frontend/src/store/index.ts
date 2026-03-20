@@ -1092,9 +1092,11 @@ export const useAppStore = create<AppState>()(
                     );
                     set({ ollamaModels: chatModels });
 
-                    // If current localModel is not in the list, and list is not empty, pick first one
+                    // If current localModel is not in the Ollama list, and list is not empty, pick first one
+                    // But skip if current model is a Gemini model (not an Ollama model)
                     const current = get().localModel;
-                    if (!chatModels.some((m: any) => m.name === current) && chatModels.length > 0) {
+                    const isGeminiModel = current.startsWith('gemini');
+                    if (!isGeminiModel && !chatModels.some((m: any) => m.name === current) && chatModels.length > 0) {
                         set({ localModel: chatModels[0].name });
                     }
                 } catch (e) {

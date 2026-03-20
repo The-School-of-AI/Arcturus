@@ -583,7 +583,8 @@ export const IdeAgentPanel: React.FC = () => {
     // Full Implementation of executeTool needed to work
     // I will overwrite `executeTool` above with the COMPLETE one in the actual file write.
 
-    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[], fileContexts?: { name: string, path: string }[]) => {
+    const MAX_TOOL_DEPTH = 10;
+    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[], fileContexts?: { name: string, path: string }[], depth: number = 0) => {
         if (!explorerRootPath) return;
         setIsThinking(true);
         thinkingRef.current = true;
@@ -626,11 +627,23 @@ export const IdeAgentPanel: React.FC = () => {
             }
 
             if (fileContexts && fileContexts.length > 0) {
-                const fileStr = fileContexts.map(f =>
-                    `\n\n> Active File Context (User Selected): [${f.name}](${f.path})\n` +
-                    `> Note: This is the primary file for the current request. Please read it using read_file if needed (though it should be provided in context if small enough, currently we just point to it).`
-                ).join('');
-                currentContextStr += fileStr;
+                for (const f of fileContexts) {
+                    const fullPath = f.path.startsWith('/') ? f.path : `${explorerRootPath}/${f.path}`;
+                    try {
+                        const res = await window.electronAPI?.invoke('fs:readFile', fullPath);
+                        if (res?.success && res.content) {
+                            const content = res.content.length > 8000
+                                ? res.content.substring(0, 8000) + '\n... (truncated, use read_file for full content)'
+                                : res.content;
+                            const lang = f.name.split('.').pop() || '';
+                            currentContextStr += `\n\n> File Context: ${f.name} (${f.path})\n\`\`\`${lang}\n${content}\n\`\`\``;
+                        } else {
+                            currentContextStr += `\n\n> File Context: [${f.name}](${f.path}) — could not read, use read_file tool.`;
+                        }
+                    } catch {
+                        currentContextStr += `\n\n> File Context: [${f.name}](${f.path}) — could not read, use read_file tool.`;
+                    }
+                }
             }
 
             const payload = {
@@ -688,27 +701,37 @@ export const IdeAgentPanel: React.FC = () => {
             const toolCalls = parseToolCalls(accumulatedContent);
 
             // Check if parsing might have failed (response looks like a tool call but nothing parsed)
-            const looksLikeToolCall = accumulatedContent.includes('```') &&
-                (accumulatedContent.includes('"tool"') || accumulatedContent.includes('"name"'));
+            const looksLikeToolCall = (accumulatedContent.includes('```') &&
+                (accumulatedContent.includes('"tool"') || accumulatedContent.includes('"name"'))) ||
+                /<(?:read_file|write_file|list_dir|run_command|find_by_name|grep_search)[\s>]/.test(accumulatedContent);
 
             if (toolCalls.length > 0 && thinkingRef.current) {
-                let toolOutputs = "";
-                for (const call of toolCalls) {
-                    if (!thinkingRef.current) break;
-                    // We need the FULL executeTool here. I'll ensure I copy the full helper from DocAssistant.
-                    const result = await executeTool(call, explorerRootPath);
-                    toolOutputs += `\n\n> Tool Output (${call.name}):\n\`\`\`\n${result}\n\`\`\`\n`;
-                }
+                if (depth >= MAX_TOOL_DEPTH) {
+                    useAppStore.getState().updateMessageContent(
+                        explorerRootPath, botMsgId,
+                        accumulatedContent + '\n\n---\n⚠️ **Tool limit reached** — stopped after ' + MAX_TOOL_DEPTH + ' iterations to prevent runaway loops.'
+                    );
+                } else {
+                    let toolOutputs = "";
+                    for (const call of toolCalls) {
+                        if (!thinkingRef.current) break;
+                        const result = await executeTool(call, explorerRootPath);
+                        toolOutputs += `\n\n> Tool Output (${call.name}):\n\`\`\`\n${result}\n\`\`\`\n`;
+                    }
 
-                if (thinkingRef.current) {
-                    const toolMsg = {
-                        id: Date.now().toString(),
-                        role: 'user' as const,
-                        content: `[System Tool Output]:${toolOutputs}`,
-                        timestamp: Date.now()
-                    };
-                    addMessageToDocChat(explorerRootPath, toolMsg);
-                    await callAgent([...currentHistory, { role: 'assistant', content: accumulatedContent }, { role: 'user', content: toolMsg.content }], null);
+                    if (thinkingRef.current) {
+                        const toolMsg = {
+                            id: Date.now().toString(),
+                            role: 'user' as const,
+                            content: `[System Tool Output]:${toolOutputs}`,
+                            timestamp: Date.now()
+                        };
+                        addMessageToDocChat(explorerRootPath, toolMsg);
+                        await callAgent(
+                            [...currentHistory, { role: 'assistant', content: accumulatedContent }, { role: 'user', content: toolMsg.content }],
+                            null, images, currentContexts, fileContexts, depth + 1
+                        );
+                    }
                 }
             } else if (looksLikeToolCall && toolCalls.length === 0) {
                 // Parsing failed - notify the user

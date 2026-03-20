@@ -41,6 +41,7 @@ export const executeAgentTool = async (
     }
 
     const validatePath = (path: string) => {
+        if (!path) return { valid: false, error: "Missing required 'path' argument" };
         if (!projectRoot) return { valid: true, path };
         let fullPath = path;
         if (!path.startsWith('/') && !path.startsWith('C:') && !path.startsWith('file://')) {

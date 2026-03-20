@@ -116,12 +116,21 @@ TOOL USAGE RULES:
             tools_desc = json.dumps(tools, indent=2)
             system_prompt += f"""
 ### AGENT TOOLS
-To use a tool, you MUST output a valid JSON block enclosed in markdown code fences:
+To use a tool, you MUST output a valid JSON block enclosed in markdown code fences.
+NEVER use XML syntax like <tool_name arg="val" />. ALWAYS use this exact JSON format:
 
 ```json
 {{
   "tool": "tool_name",
   "args": {{ "arg_name": "value" }}
+}}
+```
+
+Example - to list a directory:
+```json
+{{
+  "tool": "list_dir",
+  "args": {{ "path": "." }}
 }}
 ```
 
@@ -175,26 +184,25 @@ Available Tools:
                 if is_gemini:
                     # Use Gemini via the centralized model manager
                     from core.model_manager import ModelManager
-                    mm = ModelManager(model_key=f"gemini:{model}")
+                    mm = ModelManager(model_name=model, provider="gemini")
 
-                    # Build prompt for Gemini (flatten messages)
-                    gemini_history = []
-                    for msg in messages:
-                        if msg["role"] == "system":
-                            gemini_history.append({"role": "user", "parts": [{"text": f"[System Instructions]\n{msg['content']}"}]})
-                            gemini_history.append({"role": "model", "parts": [{"text": "Understood. I will follow these instructions."}]})
-                        else:
-                            gemini_role = "model" if msg["role"] == "assistant" else "user"
-                            gemini_history.append({"role": gemini_role, "parts": [{"text": msg["content"]}]})
+                    # Build combined prompt with system + history + query
+                    history_text = ""
+                    for msg in history[-10:]:
+                        role = msg.get("role", "user")
+                        content = msg.get("content", "")
+                        if isinstance(content, str):
+                            history_text += f"\n{'User' if role == 'user' else 'Assistant'}: {content}\n"
 
-                    response_text = await mm.generate(
-                        prompt=gemini_history[-1]["parts"][0]["text"],
-                        system_prompt=system_prompt,
-                        history=history[-10:],
-                    )
-                    # Stream as one chunk (Gemini doesn't natively stream through our ModelManager)
+                    full_prompt = f"{system_prompt}\n\n--- Conversation History ---\n{history_text}\n--- Current Request ---\nUser: {query}"
+
+                    response_text = await mm.generate_text(full_prompt)
+
+                    # Simulate streaming by yielding in chunks for progressive rendering
                     if response_text:
-                        yield f"data: {json.dumps({'content': response_text})}\n\n"
+                        chunk_size = 80
+                        for i in range(0, len(response_text), chunk_size):
+                            yield f"data: {json.dumps({'content': response_text[i:i+chunk_size]})}\n\n"
 
                 else:
                     # Ollama streaming

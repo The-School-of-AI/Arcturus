@@ -172,5 +172,42 @@ export const availableTools: ToolDefinition[] = [
             },
             required: ["pid"]
         }
+    },
+    {
+        name: "run_script",
+        description: "Execute a command synchronously (blocking). Use for quick scripts, tests, or build checks that complete in under 60 seconds. For long-running processes, use run_command instead.",
+        parameters: {
+            type: "object",
+            properties: {
+                command: { type: "string", description: "The command to execute synchronously (e.g. 'python3 test.py', 'npm test')." },
+                cwd: { type: "string", description: "Optional working directory relative to project root." }
+            },
+            required: ["command"]
+        }
+    },
+    {
+        name: "apply_diff",
+        description: "Apply a unified diff patch to a file. Useful for precise multi-line edits where replace_in_file is too rigid. The diff should be in standard unified diff format.",
+        parameters: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Relative path to the file to patch." },
+                diff: { type: "string", description: "The unified diff content to apply (with --- +++ @@ headers)." }
+            },
+            required: ["path", "diff"]
+        }
+    },
+    {
+        name: "replace_symbol",
+        description: "Replace an entire function or class definition by its name using AST parsing. Safer than text-based replacement for refactoring. Works with Python files.",
+        parameters: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Relative path to the Python file." },
+                symbol: { type: "string", description: "The function or class name to replace (e.g. 'calculate_total', 'MyClass')." },
+                content: { type: "string", description: "The new function/class definition to insert." }
+            },
+            required: ["path", "symbol", "content"]
+        }
     }
 ];
