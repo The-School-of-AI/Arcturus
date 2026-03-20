@@ -1,0 +1,609 @@
+{
+  "id": "transformers-study-page-v3",
+  "name": "Transformers: Study + Practice (Fixed Layout)",
+  "cards": [
+    {
+      "id": "h1",
+      "type": "header",
+      "label": "Header",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Transformers Study Page: Learn, Visualize, Quiz"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "st1",
+      "type": "stats_01",
+      "label": "Today’s Targets",
+      "config": {},
+      "data": {
+        "metrics": [
+          {
+            "label": "Concepts",
+            "value": "9"
+          },
+          {
+            "label": "Diagrams",
+            "value": "2"
+          },
+          {
+            "label": "Quiz Qs",
+            "value": "3"
+          },
+          {
+            "label": "Time",
+            "value": "45m"
+          }
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "10px"
+      }
+    },
+    {
+      "id": "tg1",
+      "type": "tags_input",
+      "label": "Focus Topics",
+      "config": {},
+      "data": {
+        "tags": [
+          "Self-Attention",
+          "Multi-Head",
+          "RoPE",
+          "Causal Mask",
+          "MLP",
+          "Training"
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "dp1",
+      "type": "date_picker",
+      "label": "Study Window",
+      "config": {},
+      "data": {
+        "startDate": "2025-12-27",
+        "endDate": "2025-12-31"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "in1",
+      "type": "input",
+      "label": "Quick Goal",
+      "config": {},
+      "data": {
+        "label": "What do you want to master today?",
+        "placeholder": "e.g., RoPE intuition, attention math, training objective..."
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "se1",
+      "type": "select",
+      "label": "Difficulty",
+      "config": {},
+      "data": {
+        "label": "Study level",
+        "options": [
+          "Beginner-friendly",
+          "Intermediate",
+          "Research-ish"
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "m1",
+      "type": "metric",
+      "label": "Key Idea",
+      "config": {},
+      "data": {
+        "value": "Attention",
+        "change": 0.0,
+        "trend": "up"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "m2",
+      "type": "metric",
+      "label": "Objective",
+      "config": {},
+      "data": {
+        "value": "Next Token",
+        "change": 0.0,
+        "trend": "up"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "m3",
+      "type": "metric",
+      "label": "Masking",
+      "config": {},
+      "data": {
+        "value": "Causal",
+        "change": 0.0,
+        "trend": "up"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "m4",
+      "type": "metric",
+      "label": "Position",
+      "config": {},
+      "data": {
+        "value": "RoPE/PE",
+        "change": 0.0,
+        "trend": "up"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.08)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "mdA",
+      "type": "markdown",
+      "label": "1) Big Picture",
+      "config": {},
+      "data": {
+        "content": "## 1) Big Picture\nTransformers are sequence models built around **attention**.\n\n**Recipe:** Tokens → embeddings → (repeat N times) { attention + MLP } → logits → next-token probabilities.\n\n### Why they work well\n- **Global mixing**: tokens can directly attend across long distances.\n- **Parallel training**: all tokens processed at once during training.\n- **Scales nicely** with data/compute (with sane optimization).\n"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "14px"
+      }
+    },
+    {
+      "id": "mdB",
+      "type": "markdown",
+      "label": "2) Transformer Block",
+      "config": {},
+      "data": {
+        "content": "## 2) The Transformer Block\nA typical (Pre-LN) block:\n1) **Norm** → **Self-Attention** → **Residual Add**\n2) **Norm** → **MLP** → **Residual Add**\n\n### Residuals matter\nThey help gradients flow and let layers learn refinements instead of rebuilding everything.\n\n### Heads matter\nMultiple heads provide multiple views' of relationships: syntax, long-range reference, formatting patterns.\n"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "14px"
+      }
+    },
+    {
+      "id": "code1",
+      "type": "code",
+      "label": "Attention Pseudocode",
+      "config": {},
+      "data": {
+        "language": "python",
+        "code": "# Scaled Dot-Product Attention (conceptual)\n# Q, K, V: (T, d)\nimport math\n\nscores = (Q @ K.T) / math.sqrt(d)\n# causal mask: scores[t, t+1:] = -inf\nweights = softmax(scores, axis=-1)\nout = weights @ V\n"
+      },
+      "style": {
+        "background": "#070A12",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "14px"
+      }
+    },
+    {
+      "id": "tb1",
+      "type": "table",
+      "label": "Key Concepts Cheat Sheet",
+      "config": {},
+      "data": {
+        "headers": [
+          "Concept",
+          "What it does",
+          "Why it matters"
+        ],
+        "rows": [
+          [
+            "Q/K/V",
+            "Query-Key match to route Values",
+            "Controls what information flows between tokens"
+          ],
+          [
+            "Softmax",
+            "Turns scores into probabilities",
+            "Stable weighted averaging"
+          ],
+          [
+            "Multi-Head",
+            "Parallel attention subspaces",
+            "Specialization + richer interactions"
+          ],
+          [
+            "Causal Mask",
+            "Blocks attention to future tokens",
+            "Enables next-token prediction"
+          ],
+          [
+            "Positional Encoding / RoPE",
+            "Injects order",
+            "Without it, sequences lose order awareness"
+          ],
+          [
+            "MLP",
+            "Per-token nonlinear compute",
+            "Adds capacity beyond mixing"
+          ]
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "10px"
+      }
+    },
+    {
+      "id": "lc1",
+      "type": "line_chart",
+      "label": "Toy Attention Pattern",
+      "config": {},
+      "data": {
+        "title": "Example: Attention Focus vs Position",
+        "points": [
+          {
+            "x": 0,
+            "y": 0.05
+          },
+          {
+            "x": 1,
+            "y": 0.08
+          },
+          {
+            "x": 2,
+            "y": 0.12
+          },
+          {
+            "x": 3,
+            "y": 0.18
+          },
+          {
+            "x": 4,
+            "y": 0.27
+          },
+          {
+            "x": 5,
+            "y": 0.15
+          },
+          {
+            "x": 6,
+            "y": 0.10
+          },
+          {
+            "x": 7,
+            "y": 0.05
+          }
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "10px"
+      }
+    },
+    {
+      "id": "mdC",
+      "type": "markdown",
+      "label": "3) Training + Inference",
+      "config": {},
+      "data": {
+        "content": "## 3) Training vs Inference\n### Training (Next-token objective)\nPredict the next token at every position. Loss is **cross-entropy**.\n\n### Inference (Generation loop)\n1) Compute next-token distribution\n2) Sample (temperature/top-p) or take argmax\n3) Append token and repeat\n\n**Temperature:** lower → more deterministic; higher → more diverse.\n**Top-p:** sample from the smallest set with cumulative probability ≥ p.\n"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "14px"
+      }
+    },
+    {
+      "id": "rg1",
+      "type": "radio_group",
+      "label": "Quiz Q1",
+      "config": {},
+      "data": {
+        "label": "What does the causal mask do in GPT-style Transformers?",
+        "options": [
+          "A) Removes softmax for speed",
+          "B) Prevents tokens from attending to future tokens",
+          "C) Forces each head to attend to different positions"
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "12px"
+      }
+    },
+    {
+      "id": "rg2",
+      "type": "radio_group",
+      "label": "Quiz Q2",
+      "config": {},
+      "data": {
+        "label": "In self-attention, which pair is used to compute similarity scores?",
+        "options": [
+          "A) Q and V",
+          "B) K and V",
+          "C) Q and K"
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "12px"
+      }
+    },
+    {
+      "id": "rg3",
+      "type": "radio_group",
+      "label": "Quiz Q3",
+      "config": {},
+      "data": {
+        "label": "Why use multiple attention heads?",
+        "options": [
+          "A) To reduce vocabulary size",
+          "B) To allow specialization across subspaces/patterns",
+          "C) To remove the need for an MLP"
+        ]
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "12px"
+      }
+    },
+    {
+      "id": "btn1",
+      "type": "button",
+      "label": "Check Answers",
+      "config": {},
+      "data": {
+        "label": "Show Answer Key"
+      },
+      "style": {
+        "background": "#11162A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.14)",
+        "borderRadius": "14px"
+      }
+    },
+    {
+      "id": "mdAns",
+      "type": "markdown",
+      "label": "Answer Key",
+      "config": {},
+      "data": {
+        "content": "## Answer Key\n- **Q1:** B\n- **Q2:** C\n- **Q3:** B\n\n### Tiny self-check\nIf you missed anything, revisit:\n- Causal mask → prevents future leakage\n- Similarity is Q·K\n- Multi-head → specialization and richer representation\n"
+      },
+      "style": {
+        "background": "#0B0F1A",
+        "color": "#EAF0FF",
+        "border": "1px solid rgba(255,255,255,0.10)",
+        "borderRadius": "14px",
+        "padding": "14px"
+      }
+    }
+  ],
+  "layout": [
+    {
+      "i": "h1",
+      "x": 0,
+      "y": 0,
+      "w": 12,
+      "h": 2
+    },
+    {
+      "i": "st1",
+      "x": 0,
+      "y": 2,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "i": "tg1",
+      "x": 8,
+      "y": 2,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "dp1",
+      "x": 0,
+      "y": 6,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "in1",
+      "x": 4,
+      "y": 6,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "se1",
+      "x": 8,
+      "y": 6,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "m1",
+      "x": 0,
+      "y": 8,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "i": "m2",
+      "x": 3,
+      "y": 8,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "i": "m3",
+      "x": 6,
+      "y": 8,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "i": "m4",
+      "x": 9,
+      "y": 8,
+      "w": 3,
+      "h": 3
+    },
+    {
+      "i": "mdA",
+      "x": 0,
+      "y": 11,
+      "w": 6,
+      "h": 6
+    },
+    {
+      "i": "mdB",
+      "x": 6,
+      "y": 11,
+      "w": 6,
+      "h": 6
+    },
+    {
+      "i": "code1",
+      "x": 0,
+      "y": 17,
+      "w": 6,
+      "h": 8
+    },
+    {
+      "i": "tb1",
+      "x": 6,
+      "y": 17,
+      "w": 6,
+      "h": 5
+    },
+    {
+      "i": "lc1",
+      "x": 0,
+      "y": 25,
+      "w": 6,
+      "h": 8
+    },
+    {
+      "i": "mdC",
+      "x": 6,
+      "y": 25,
+      "w": 6,
+      "h": 6
+    },
+    {
+      "i": "rg1",
+      "x": 0,
+      "y": 33,
+      "w": 4,
+      "h": 3
+    },
+    {
+      "i": "rg2",
+      "x": 4,
+      "y": 33,
+      "w": 4,
+      "h": 3
+    },
+    {
+      "i": "rg3",
+      "x": 8,
+      "y": 33,
+      "w": 4,
+      "h": 3
+    },
+    {
+      "i": "btn1",
+      "x": 0,
+      "y": 36,
+      "w": 3,
+      "h": 2
+    },
+    {
+      "i": "mdAns",
+      "x": 3,
+      "y": 36,
+      "w": 9,
+      "h": 4
+    }
+  ]
+}

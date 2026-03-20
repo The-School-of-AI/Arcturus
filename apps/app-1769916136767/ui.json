@@ -1,0 +1,166 @@
+{
+  "name": "Reliance Industries: $3 Billion Private Round Diligence Package",
+  "description": "Generated from report",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Report Header",
+      "config": {
+        "centered": true
+      },
+      "data": {
+        "text": "Reliance Industries: $3 Billion Private Round Diligence Package"
+      },
+      "style": {}
+    },
+    {
+      "id": "exec_summary",
+      "type": "summary",
+      "label": "Executive Summary",
+      "config": {},
+      "data": {
+        "text": "This report consolidates the essential components for conducting comprehensive due diligence on Reliance Industries as they seek to raise a $3 billion private round. It outlines the core financial and operational matrices critical for investor assessment and provides a detailed structure for populating a Virtual Data Room (VDR). While a foundational understanding of key matrices is established, a significant gap exists in the availability of specific VDR documents. This package serves as a roadmap to bridge these information gaps, ensuring a robust and transparent diligence process for potential investors."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_revenue_growth",
+      "type": "markdown",
+      "label": "Revenue Growth",
+      "config": {},
+      "data": {
+        "content": "**Revenue Growth:** This metric is paramount for demonstrating market traction and the company's ability to scale its operations. For a significant funding round like $3 billion, investors will scrutinize revenue growth to understand the company's trajectory and its capacity to capture market opportunities, signaling future revenue potential and return on investment. **Current Data:** Reliance Industries reported a gross revenue of \u20b9293,829 Crore ($32.7 billion) for Q3 FY2026 (October-December 2025), marking a 10% year-on-year (YoY) increase. The company's consolidated revenue also rose quarter-on-quarter to \u20b92.65 lakh crore. Additionally, Reliance's net sales grew at an annual rate of 17.69% as of January 29, 2026. Over the last five years, revenue has grown at a yearly rate of 9.98%."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_profitability",
+      "type": "markdown",
+      "label": "Profitability (EBITDA/Net Profit)",
+      "config": {},
+      "data": {
+        "content": "**Profitability (EBITDA/Net Profit):** Beyond top-line growth, profitability metrics such as Earnings Before Interest, Taxes, Depreciation, and Amortization (EBITDA) and Net Profit are crucial. They highlight the company's operational efficiency and its capacity to generate sustainable returns for investors. Strong profitability assures investors of the underlying financial health and viability of the business model. **Current Data:** For Q3 FY2026, Reliance Industries' consolidated EBITDA stood at \u20b950,932 crore ($5.7 billion), an increase of 6.1% YoY. The net profit attributable to shareholders for the same quarter was \u20b918,645 crore ($2.5 billion), showing a marginal increase of 0.56% YoY. The latest twelve months EBITDA, peaking in December 2025, was \u20b91,684.5 billion. The annual operating profit growth was 17.98% as of January 29, 2026."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_cac_ltv",
+      "type": "markdown",
+      "label": "Customer Acquisition Cost (CAC) & Lifetime Value (LTV)",
+      "config": {},
+      "data": {
+        "content": "**Customer Acquisition Cost (CAC) & Lifetime Value (LTV):** These metrics are vital for assessing the efficiency and sustainability of the company's growth strategies. A low CAC relative to a high LTV indicates that the company is acquiring customers cost-effectively and retaining them over the long term, thereby maximizing customer value and justifying the investment. **Current Data:** Specific consolidated CAC and LTV figures for Reliance Industries are not publicly available. However, for its digital services arm, Jio Platforms, there was a robust subscriber addition of 8.9 million, with an average revenue per user (ARPU) of \u20b9213.7. Jio Platforms currently serves over 506 million subscribers."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_market_share",
+      "type": "markdown",
+      "label": "Market Share",
+      "config": {},
+      "data": {
+        "content": "**Market Share:** Understanding Reliance Industries' market share within its operating sectors is critical for gauging its competitive positioning. This metric indicates the company's dominance, its ability to compete effectively against rivals, and its potential for further expansion and market penetration. **Current Data:** Over the last five years, Reliance Industries' market share has increased from 34.95% to 35.26%."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_burn_rate_runway",
+      "type": "markdown",
+      "label": "Burn Rate & Runway",
+      "config": {},
+      "data": {
+        "content": "**Burn Rate & Runway:** For any company seeking substantial funding, the burn rate (the rate at which it spends its capital) and runway (how long its current funding will last) are essential for assessing financial management. Investors need assurance that the $3 billion will be utilized effectively and strategically to achieve defined milestones. **Current Data:** These metrics are typically relevant for startups or companies in specific growth phases and are not publicly reported for a large, diversified conglomerate like Reliance Industries in the same context."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_user_engagement",
+      "type": "markdown",
+      "label": "User/Customer Engagement Metrics",
+      "config": {},
+      "data": {
+        "content": "**User/Customer Engagement Metrics (e.g., Monthly Active Users/Daily Active Users, Retention Rate):** These metrics are particularly important for businesses with digital or subscription-based models. They demonstrate the stickiness of the product or service, user adoption, and customer loyalty, validating the business model and indicating potential for recurring revenue and sustained growth. **Current Data:** Jio Platforms, Reliance Industries' digital services arm, has over 506 million subscribers. In Q3 FY2026, Jio added 8.9 million subscribers, and its average revenue per user (ARPU) was \u20b9213.7."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_debt_equity",
+      "type": "markdown",
+      "label": "Debt-to-Equity Ratio",
+      "config": {},
+      "data": {
+        "content": "**Debt-to-Equity Ratio:** This ratio reflects the company's financial leverage and associated risk. Investors will analyze this to understand the company's capital structure and its ability to manage its debt obligations, ensuring financial stability and minimizing the risk of financial distress. **Current Data:** As of January 29, 2026, Reliance Industries' Debt to EBITDA ratio was 1.04 times. The Debt/Equity ratio for the last quarter (likely Q3 FY2026) was 42.7%. The median Debt/Equity ratio for fiscal years ending March 2021 to 2025 was 43.6%."
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "exec_summary",
+      "x": 0,
+      "y": 2,
+      "w": 24,
+      "h": 5
+    },
+    {
+      "i": "metric_revenue_growth",
+      "x": 0,
+      "y": 7,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "metric_profitability",
+      "x": 12,
+      "y": 7,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "metric_cac_ltv",
+      "x": 0,
+      "y": 13,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "metric_market_share",
+      "x": 12,
+      "y": 13,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "metric_burn_rate_runway",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "metric_user_engagement",
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "metric_debt_equity",
+      "x": 0,
+      "y": 25,
+      "w": 24,
+      "h": 6
+    }
+  ],
+  "id": "app-1769916136767",
+  "lastModified": 1769916276199,
+  "lastHydrated": 1769916276199
+}

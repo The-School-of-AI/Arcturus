@@ -1,0 +1,289 @@
+{
+    "id": "crm-dashboard",
+    "name": "Sales CRM & Pipeline",
+    "lastModified": 1735276000000,
+    "cards": [
+        {
+            "id": "h1",
+            "type": "header",
+            "label": "Sales Pipeline",
+            "config": {
+                "showTitle": true,
+                "bold": true
+            },
+            "data": {
+                "text": "Sales Overview & Pipeline"
+            },
+            "style": {
+                "showBorder": false
+            }
+        },
+        {
+            "id": "m1",
+            "type": "metric",
+            "label": "Total Revenue",
+            "config": {
+                "showTrend": true
+            },
+            "data": {
+                "value": "$1.2M",
+                "change": 15.2,
+                "trend": "up"
+            },
+            "style": {}
+        },
+        {
+            "id": "m2",
+            "type": "metric",
+            "label": "Deals Won",
+            "config": {
+                "showTrend": true
+            },
+            "data": {
+                "value": "45",
+                "change": 5,
+                "trend": "up"
+            },
+            "style": {}
+        },
+        {
+            "id": "m3",
+            "type": "metric",
+            "label": "Avg Deal Size",
+            "config": {
+                "showTrend": true
+            },
+            "data": {
+                "value": "$26.5K",
+                "change": -2.1,
+                "trend": "down"
+            },
+            "style": {}
+        },
+        {
+            "id": "m4",
+            "type": "metric",
+            "label": "Pipeline Value",
+            "config": {
+                "showTrend": false
+            },
+            "data": {
+                "value": "$3.8M"
+            },
+            "style": {}
+        },
+        {
+            "id": "c1",
+            "type": "bar_chart",
+            "label": "Revenue by Region",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "title": "Regional Performance",
+                "points": [
+                    {
+                        "x": "NA",
+                        "y": 450
+                    },
+                    {
+                        "x": "EU",
+                        "y": 320
+                    },
+                    {
+                        "x": "APAC",
+                        "y": 280
+                    },
+                    {
+                        "x": "LATAM",
+                        "y": 150
+                    }
+                ]
+            },
+            "style": {
+                "borderRadius": 12
+            }
+        },
+        {
+            "id": "c2",
+            "type": "pie_chart",
+            "label": "Deal Stages",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "title": "Pipeline Distribution",
+                "slices": [
+                    {
+                        "name": "Prospecting",
+                        "value": 30
+                    },
+                    {
+                        "name": "Qualification",
+                        "value": 25
+                    },
+                    {
+                        "name": "Proposal",
+                        "value": 20
+                    },
+                    {
+                        "name": "Negotiation",
+                        "value": 15
+                    },
+                    {
+                        "name": "Closed",
+                        "value": 10
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "t1",
+            "type": "table",
+            "label": "Recent Deals",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "headers": [
+                    "Company",
+                    "Stage",
+                    "Value",
+                    "Owner"
+                ],
+                "rows": [
+                    [
+                        "TechCorp",
+                        "Negotiation",
+                        "$120K",
+                        "Sarah J."
+                    ],
+                    [
+                        "BioLife",
+                        "Proposal",
+                        "$85K",
+                        "Mike T."
+                    ],
+                    [
+                        "FinSys",
+                        "Qualification",
+                        "$250K",
+                        "Jessica L."
+                    ],
+                    [
+                        "RetailOne",
+                        "Prospecting",
+                        "$45K",
+                        "David B."
+                    ],
+                    [
+                        "EduGlobal",
+                        "Closed Won",
+                        "$95K",
+                        "Sarah J."
+                    ]
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "todo1",
+            "type": "checkbox",
+            "label": "Key Tasks",
+            "config": {
+                "showLabel": true
+            },
+            "data": {
+                "label": "Q4 Review Prep",
+                "checked": false
+            },
+            "style": {}
+        },
+        {
+            "id": "todo2",
+            "type": "checkbox",
+            "label": "Key Tasks",
+            "config": {
+                "showLabel": false
+            },
+            "data": {
+                "label": "Update CRM Data",
+                "checked": true
+            },
+            "style": {}
+        }
+    ],
+    "layout": [
+        {
+            "i": "h1",
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "m1",
+            "x": 0,
+            "y": 2,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "m2",
+            "x": 6,
+            "y": 2,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "m3",
+            "x": 12,
+            "y": 2,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "m4",
+            "x": 18,
+            "y": 2,
+            "w": 6,
+            "h": 3
+        },
+        {
+            "i": "c1",
+            "x": 0,
+            "y": 5,
+            "w": 12,
+            "h": 8
+        },
+        {
+            "i": "c2",
+            "x": 12,
+            "y": 5,
+            "w": 12,
+            "h": 8
+        },
+        {
+            "i": "t1",
+            "x": 0,
+            "y": 13,
+            "w": 16,
+            "h": 8
+        },
+        {
+            "i": "todo1",
+            "x": 16,
+            "y": 13,
+            "w": 8,
+            "h": 2
+        },
+        {
+            "i": "todo2",
+            "x": 16,
+            "y": 15,
+            "w": 8,
+            "h": 2
+        }
+    ]
+}

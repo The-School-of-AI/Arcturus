@@ -1,0 +1,126 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1767346153",
+    "original_query": "What kind of food do I like? ",
+    "file_manifest": [],
+    "created_at": "2026-01-02T09:29:14.072521",
+    "status": "completed",
+    "globals_schema": {
+      "formatted_food_preferences_T001": "<div class='report'>\n  <h1>User's Food Preferences</h1>\n  <p>Based on available information, the user is a pure vegetarian with a preference for North Indian cuisine.</p>\n</div>"
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Format the user's food preferences from memory.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Based on the provided memory, the user is a pure vegetarian and likes North Indian food. Format this information into a concise and readable sentence.",
+              "reads": [],
+              "writes": [
+                "formatted_food_preferences_T001"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            }
+          ]
+        },
+        "next_step_id": "T002",
+        "cost": 7.640000000000001e-05,
+        "input_tokens": 460,
+        "output_tokens": 76,
+        "total_tokens": 536
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2026-01-02T09:29:16.293325",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Format the user's food preferences from memory.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Based on the provided memory, the user is a pure vegetarian and likes North Indian food. Format this information into a concise and readable sentence.",
+      "reads": [],
+      "writes": [
+        "formatted_food_preferences_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "The user is a pure vegetarian and prefers North Indian cuisine.",
+        "formatted_food_preferences_T001": "<div class='report'>\n  <h1>User's Food Preferences</h1>\n  <p>Based on available information, the user is a pure vegetarian with a preference for North Indian cuisine.</p>\n</div>",
+        "call_self": false,
+        "cost": 7.45e-05,
+        "input_tokens": 513,
+        "output_tokens": 58,
+        "total_tokens": 571
+      },
+      "error": null,
+      "cost": 7.45e-05,
+      "start_time": "2026-01-02T09:29:16.298150",
+      "end_time": "2026-01-02T09:29:20.168831",
+      "execution_time": 3.870681,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "The user is a pure vegetarian and prefers North Indian cuisine.",
+            "formatted_food_preferences_T001": "<div class='report'>\n  <h1>User's Food Preferences</h1>\n  <p>Based on available information, the user is a pure vegetarian with a preference for North Indian cuisine.</p>\n</div>",
+            "call_self": false,
+            "cost": 7.45e-05,
+            "input_tokens": 513,
+            "output_tokens": 58,
+            "total_tokens": 571
+          }
+        }
+      ],
+      "input_tokens": 513,
+      "output_tokens": 58,
+      "total_tokens": 571
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    }
+  ]
+}

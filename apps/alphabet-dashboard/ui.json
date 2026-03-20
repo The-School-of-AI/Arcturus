@@ -1,0 +1,530 @@
+{
+  "id": "alphabet-dashboard",
+  "name": "Alphabet (GOOGL) Deep Dive Analysis",
+  "description": "",
+  "cards": [
+    {
+      "id": "h_main",
+      "type": "header",
+      "label": "Main Header",
+      "config": {
+        "bold": true
+      },
+      "data": {
+        "text": "Alphabet Inc. (GOOGL) - Comprehensive Valuation Dashboard"
+      },
+      "style": {
+        "color": "#ffffff"
+      }
+    },
+    {
+      "id": "m_price",
+      "type": "trend",
+      "label": "Market Price",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "items": [
+          {
+            "label": "Current Price",
+            "value": 145,
+            "change": -16.6
+          },
+          {
+            "label": "Base Case",
+            "value": 245,
+            "change": 40.8
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "chart_rev_seg",
+      "type": "pie_chart",
+      "label": "Revenue Segmentation",
+      "config": {},
+      "data": {
+        "slices": [
+          {
+            "name": "Google Search",
+            "value": 56
+          },
+          {
+            "name": "YouTube Ads",
+            "value": 11
+          },
+          {
+            "name": "Google Network",
+            "value": 10
+          },
+          {
+            "name": "Google Cloud",
+            "value": 11
+          },
+          {
+            "name": "Other Bets/Subs",
+            "value": 12
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "div_2",
+      "type": "divider",
+      "label": "Profile Divider",
+      "config": {},
+      "data": {},
+      "style": {
+        "marginTop": 10,
+        "marginBottom": 10
+      }
+    },
+    {
+      "id": "profile",
+      "type": "profile",
+      "label": "Company Profile",
+      "config": {},
+      "data": {
+        "ticker": "GOOGL",
+        "sector": "Communication Services",
+        "logo": "https://logo.clearbit.com/abc.xyz",
+        "description": "Leader in digital advertising, cloud computing, consumer hardware, and autonomous driving technology."
+      },
+      "style": {}
+    },
+    {
+      "id": "stats_fund",
+      "type": "stats_grid",
+      "label": "Fundamental Highlights",
+      "config": {},
+      "data": {
+        "stats": [
+          {
+            "name": "Market Cap",
+            "value": "2.05T"
+          },
+          {
+            "name": "P/E (TTM)",
+            "value": "23.4x"
+          },
+          {
+            "name": "Fwd P/E",
+            "value": "19.8x"
+          },
+          {
+            "name": "P/S",
+            "value": "6.2x"
+          },
+          {
+            "name": "P/FCF",
+            "value": "28.5x"
+          },
+          {
+            "name": "ROIC",
+            "value": "31.5%"
+          },
+          {
+            "name": "WACC",
+            "value": "9.2%"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "fin_inc",
+      "type": "income_stmt",
+      "label": "Income Statement",
+      "config": {},
+      "data": {
+        "revenue": "328B",
+        "cogs": "140B",
+        "netIncome": "40.2B",
+        "liabilities": "120B",
+        "equity": "282B"
+      },
+      "style": {}
+    },
+    {
+      "id": "risk_log",
+      "type": "log",
+      "label": "Risk Factors",
+      "config": {},
+      "data": {
+        "logs": [
+          {
+            "level": "High",
+            "message": "DOJ antitrust suit regarding ad tech monopoly."
+          },
+          {
+            "level": "Medium",
+            "message": "AI search competition from OpenAI and Perplexity."
+          },
+          {
+            "level": "Low",
+            "message": "EU regulatory fines related to data privacy."
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "news_feed",
+      "type": "feed",
+      "label": "Recent News",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Google Cloud reports 28% YoY growth in Q3",
+            "time": "2h ago"
+          },
+          {
+            "title": "Waymo expands driverless service to Austin",
+            "time": "1d ago"
+          },
+          {
+            "title": "Alphabet announces new share buyback program",
+            "time": "3d ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "exec_sum",
+      "type": "summary",
+      "label": "Investment Thesis",
+      "config": {},
+      "data": {
+        "text": "Alphabet remains a top-tier compounder with a highly defensive balance sheet. While antitrust risks loom, the valuation discounts these heavily.",
+        "bulletPoints": [
+          "Dominant search market share above 90%.",
+          "Cloud business becoming a major profit driver.",
+          "Significant AI investments beginning to yield product improvements."
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "area_chart-1766896371511",
+      "type": "area_chart",
+      "label": "Area Chart",
+      "config": {},
+      "data": {
+        "title": "User Growth",
+        "xLabel": "Quarter",
+        "yLabel": "Users (K)",
+        "points": [
+          {
+            "x": "Q1",
+            "y": 1200
+          },
+          {
+            "x": "Q2",
+            "y": 1850
+          },
+          {
+            "x": "Q3",
+            "y": 2400
+          },
+          {
+            "x": "Q4",
+            "y": 3100
+          }
+        ]
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "line_chart-1766896516874",
+      "type": "line_chart",
+      "label": "Line Chart",
+      "config": {},
+      "data": {
+        "title": "Revenue vs Cost",
+        "xLabel": "Month",
+        "yLabel": "Amount ($K)",
+        "series": [
+          {
+            "name": "Revenue",
+            "color": "#4ade80",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 120
+              },
+              {
+                "x": "Feb",
+                "y": 135
+              },
+              {
+                "x": "Mar",
+                "y": 148
+              },
+              {
+                "x": "Apr",
+                "y": 162
+              },
+              {
+                "x": "May",
+                "y": 175
+              },
+              {
+                "x": "Jun",
+                "y": 190
+              }
+            ]
+          },
+          {
+            "name": "Cost",
+            "color": "#f87171",
+            "data": [
+              {
+                "x": "Jan",
+                "y": 80
+              },
+              {
+                "x": "Feb",
+                "y": 85
+              },
+              {
+                "x": "Mar",
+                "y": 92
+              },
+              {
+                "x": "Apr",
+                "y": 98
+              },
+              {
+                "x": "May",
+                "y": 110
+              },
+              {
+                "x": "Jun",
+                "y": 115
+              }
+            ]
+          }
+        ]
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "sankey-1766896613780",
+      "type": "sankey",
+      "label": "Sankey Chart",
+      "config": {},
+      "data": {
+        "title": "User Flow",
+        "nodes": [
+          {
+            "name": "Landing"
+          },
+          {
+            "name": "Sign Up"
+          },
+          {
+            "name": "Explore"
+          },
+          {
+            "name": "Purchase"
+          },
+          {
+            "name": "Drop"
+          }
+        ],
+        "links": [
+          {
+            "source": 0,
+            "target": 1,
+            "value": 50
+          },
+          {
+            "source": 0,
+            "target": 2,
+            "value": 30
+          },
+          {
+            "source": 0,
+            "target": 4,
+            "value": 20
+          },
+          {
+            "source": 1,
+            "target": 3,
+            "value": 40
+          },
+          {
+            "source": 2,
+            "target": 3,
+            "value": 10
+          },
+          {
+            "source": 2,
+            "target": 4,
+            "value": 20
+          }
+        ]
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    }
+  ],
+  "layout": [
+    {
+      "i": "h_main",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "m_price",
+      "x": 9,
+      "y": 2,
+      "w": 4,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "chart_rev_seg",
+      "x": 13,
+      "y": 2,
+      "w": 11,
+      "h": 4,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "div_2",
+      "x": 0,
+      "y": 22,
+      "w": 24,
+      "h": 1,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "profile",
+      "x": 0,
+      "y": 2,
+      "w": 9,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "stats_fund",
+      "x": 0,
+      "y": 15,
+      "w": 9,
+      "h": 7,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "fin_inc",
+      "x": 17,
+      "y": 6,
+      "w": 7,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "risk_log",
+      "x": 9,
+      "y": 23,
+      "w": 8,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "news_feed",
+      "x": 0,
+      "y": 23,
+      "w": 9,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "exec_sum",
+      "x": 17,
+      "y": 23,
+      "w": 7,
+      "h": 6,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "area_chart-1766896371511",
+      "x": 9,
+      "y": 6,
+      "w": 8,
+      "h": 5,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "line_chart-1766896516874",
+      "x": 9,
+      "y": 11,
+      "w": 15,
+      "h": 11,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "sankey-1766896613780",
+      "x": 0,
+      "y": 8,
+      "w": 9,
+      "h": 7,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1767091264837,
+  "lastHydrated": null
+}

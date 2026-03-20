@@ -1,0 +1,180 @@
+{
+    "id": "crypto-tracker",
+    "name": "Crypto Portfolio",
+    "lastModified": 1735276000000,
+    "cards": [
+        {
+            "id": "h1",
+            "type": "header",
+            "label": "Portfolio",
+            "config": {},
+            "data": {
+                "text": "Crypto Assets"
+            },
+            "style": {}
+        },
+        {
+            "id": "val1",
+            "type": "valuation",
+            "label": "Bitcoin",
+            "config": {
+                "showPrices": true
+            },
+            "data": {
+                "marketPrice": 64250,
+                "fairValue": 68000
+            },
+            "style": {}
+        },
+        {
+            "id": "val2",
+            "type": "valuation",
+            "label": "Ethereum",
+            "config": {
+                "showPrices": true
+            },
+            "data": {
+                "marketPrice": 3450,
+                "fairValue": 3200
+            },
+            "style": {}
+        },
+        {
+            "id": "cand1",
+            "type": "candlestick",
+            "label": "BTC/USD",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "title": "Bitcoin 1H",
+                "data": [
+                    {
+                        "time": "10:00",
+                        "open": 64000,
+                        "high": 64500,
+                        "low": 63800,
+                        "close": 64200
+                    },
+                    {
+                        "time": "11:00",
+                        "open": 64200,
+                        "high": 64800,
+                        "low": 64100,
+                        "close": 64600
+                    },
+                    {
+                        "time": "12:00",
+                        "open": 64600,
+                        "high": 64700,
+                        "low": 63500,
+                        "close": 63900
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "news1",
+            "type": "feed",
+            "label": "Crypto News",
+            "config": {
+                "showTitle": true
+            },
+            "data": {
+                "items": [
+                    {
+                        "title": "BTC hits new resistance",
+                        "time": "2m ago"
+                    },
+                    {
+                        "title": "ETH gas fees drop",
+                        "time": "15m ago"
+                    },
+                    {
+                        "title": "New regulation updates",
+                        "time": "1h ago"
+                    }
+                ]
+            },
+            "style": {}
+        },
+        {
+            "id": "trade1",
+            "type": "number_input",
+            "label": "Amount",
+            "config": {
+                "placeholder": "0.00"
+            },
+            "data": {
+                "label": "Buy Amount (BTC)"
+            },
+            "style": {}
+        },
+        {
+            "id": "btn1",
+            "type": "button",
+            "label": "Buy",
+            "config": {
+                "variant": "default"
+            },
+            "data": {
+                "label": "Execute Buy"
+            },
+            "style": {
+                "backgroundColor": "#22c55e"
+            }
+        }
+    ],
+    "layout": [
+        {
+            "i": "h1",
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 2
+        },
+        {
+            "i": "val1",
+            "x": 0,
+            "y": 2,
+            "w": 8,
+            "h": 6
+        },
+        {
+            "i": "val2",
+            "x": 8,
+            "y": 2,
+            "w": 8,
+            "h": 6
+        },
+        {
+            "i": "cand1",
+            "x": 0,
+            "y": 8,
+            "w": 16,
+            "h": 8
+        },
+        {
+            "i": "news1",
+            "x": 16,
+            "y": 2,
+            "w": 8,
+            "h": 10
+        },
+        {
+            "i": "trade1",
+            "x": 16,
+            "y": 12,
+            "w": 8,
+            "h": 2
+        },
+        {
+            "i": "btn1",
+            "x": 16,
+            "y": 14,
+            "w": 8,
+            "h": 2
+        }
+    ]
+}

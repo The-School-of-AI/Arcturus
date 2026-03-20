@@ -1,0 +1,521 @@
+{
+  "id": "app-1768024923747",
+  "name": "Generated App 11:31:42",
+  "description": "Karah Johar's Dashboard",
+  "cards": [
+    {
+      "id": "header",
+      "type": "header",
+      "label": "Karah Johar's Personalized Dashboard",
+      "context": "Title of the dashboard, indicating it's personalized for Karah Johar.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Karah Johar's Personalized Dashboard"
+      },
+      "style": {}
+    },
+    {
+      "id": "profile",
+      "type": "profile",
+      "label": "Karah Johar Profile",
+      "context": "Summary of Karah Johar's professional profile and key achievements.",
+      "config": {},
+      "data": {
+        "ticker": "KJ",
+        "sector": "Entertainment",
+        "logo": "KJ",
+        "description": "A prominent figure in the Indian entertainment industry."
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_movies",
+      "type": "metric",
+      "label": "Movies Directed",
+      "context": "Total number of movies directed by Karah Johar.",
+      "config": {},
+      "data": {
+        "value": "8",
+        "change": 0,
+        "trend": "flat"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_produced",
+      "type": "metric",
+      "label": "Movies Produced",
+      "context": "Total number of movies produced by Karah Johar's production house.",
+      "config": {},
+      "data": {
+        "value": "50+",
+        "change": 5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_awards",
+      "type": "metric",
+      "label": "Awards Won",
+      "context": "Total number of awards won by Karah Johar.",
+      "config": {},
+      "data": {
+        "value": "100+",
+        "change": 10,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric_followers",
+      "type": "metric",
+      "label": "Social Media Followers",
+      "context": "Total number of followers across all social media platforms.",
+      "config": {},
+      "data": {
+        "value": "25M+",
+        "change": 1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "line_chart_boxoffice",
+      "type": "line_chart",
+      "label": "Box Office Collection Trend",
+      "context": "Trend of box office collections for movies directed by Karah Johar over the last 5 years.",
+      "config": {},
+      "data": {
+        "title": "Box Office Collection Trend",
+        "xLabel": "Year",
+        "yLabel": "Collection (INR Crores)",
+        "series": [
+          {
+            "name": "Collection",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "2021",
+                "y": 150
+              },
+              {
+                "x": "2022",
+                "y": 180
+              },
+              {
+                "x": "2023",
+                "y": 200
+              },
+              {
+                "x": "2024",
+                "y": 220
+              },
+              {
+                "x": "2025",
+                "y": 250
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "bar_chart_ratings",
+      "type": "bar_chart",
+      "label": "Movie Ratings",
+      "context": "Average ratings of movies directed by Karah Johar across different platforms.",
+      "config": {},
+      "data": {
+        "title": "Movie Ratings",
+        "xLabel": "Movie",
+        "yLabel": "Rating",
+        "points": [
+          {
+            "x": "Movie 1",
+            "y": 4.5,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Movie 2",
+            "y": 4.2,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Movie 3",
+            "y": 4.8,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Movie 4",
+            "y": 4.0,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "table_upcoming",
+      "type": "table",
+      "label": "Upcoming Projects",
+      "context": "List of upcoming movie projects by Karah Johar's production house with details.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Title",
+          "Director",
+          "Release Date",
+          "Status"
+        ],
+        "rows": [
+          [
+            "Project A",
+            "Director A",
+            "2026-06-01",
+            "Pre-Production"
+          ],
+          [
+            "Project B",
+            "Director B",
+            "2026-12-01",
+            "Filming"
+          ],
+          [
+            "Project C",
+            "Director C",
+            "2027-03-01",
+            "Post-Production"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "feed_news",
+      "type": "feed",
+      "label": "Latest Entertainment News",
+      "context": "Latest news and updates related to the entertainment industry and Karah Johar.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "News 1",
+            "time": "2h ago"
+          },
+          {
+            "title": "News 2",
+            "time": "5h ago"
+          },
+          {
+            "title": "News 3",
+            "time": "1d ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "text_summary",
+      "type": "text",
+      "label": "Career Summary",
+      "context": "A brief summary of Karah Johar's career and achievements.",
+      "config": {},
+      "data": {
+        "text": "Karah Johar is a highly influential figure in the Indian film industry, known for directing and producing blockbuster movies. He has received numerous awards and accolades for his contributions to cinema."
+      },
+      "style": {}
+    },
+    {
+      "id": "button_contact",
+      "type": "button",
+      "label": "Contact Karah",
+      "context": "Button to initiate contact with Karah Johar's team.",
+      "config": {},
+      "data": {
+        "label": "Contact Karah"
+      },
+      "style": {}
+    },
+    {
+      "id": "tags_input_interests",
+      "type": "tags_input",
+      "label": "Interests",
+      "context": "Tags representing Karah Johar's interests and hobbies.",
+      "config": {},
+      "data": {
+        "tags": [
+          "Bollywood",
+          "Fashion",
+          "Travel",
+          "Food"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "textarea_notes",
+      "type": "textarea",
+      "label": "Notes",
+      "context": "Area for adding personal notes about Karah Johar.",
+      "config": {},
+      "data": {
+        "label": "Notes",
+        "placeholder": "Add your notes here..."
+      },
+      "style": {}
+    },
+    {
+      "id": "grade_card_influence",
+      "type": "grade_card",
+      "label": "Influence",
+      "context": "Grade representing Karah Johar's influence in the entertainment industry.",
+      "config": {},
+      "data": {
+        "grade": "A+",
+        "subtext": "Highly Influential"
+      },
+      "style": {}
+    },
+    {
+      "id": "score_card_success",
+      "type": "score_card",
+      "label": "Success Score",
+      "context": "Score representing Karah Johar's overall success in his career.",
+      "config": {},
+      "data": {
+        "score": 95,
+        "subtext": "Extremely Successful"
+      },
+      "style": {}
+    },
+    {
+      "id": "divider_projects",
+      "type": "divider",
+      "label": "Projects Divider",
+      "context": "Horizontal line separating the projects section.",
+      "config": {},
+      "data": {},
+      "style": {}
+    },
+    {
+      "id": "text_projects",
+      "type": "text",
+      "label": "Projects Overview",
+      "context": "Overview of Karah Johar's projects.",
+      "config": {},
+      "data": {
+        "text": "A detailed overview of Karah Johar's past, present, and future projects."
+      },
+      "style": {}
+    },
+    {
+      "id": "image_kjo",
+      "type": "image",
+      "label": "Karah Johar Image",
+      "context": "Image of Karah Johar.",
+      "config": {},
+      "data": {
+        "url": "https://example.com/karah_johar.jpg"
+      },
+      "style": {}
+    },
+    {
+      "id": "stats_trending_social",
+      "type": "stats_trending",
+      "label": "Social Media Stats",
+      "context": "Trending social media statistics related to Karah Johar.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "label": "Instagram",
+            "value": "15M",
+            "change": "+2%"
+          },
+          {
+            "label": "Twitter",
+            "value": "10M",
+            "change": "+1%"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "stats_links_related",
+      "type": "stats_links",
+      "label": "Related Links",
+      "context": "Links to related websites and resources.",
+      "config": {},
+      "data": {
+        "links": [
+          {
+            "label": "Dharma Productions",
+            "value": "Website"
+          },
+          {
+            "label": "Koffee with Karan",
+            "value": "Show Page"
+          }
+        ]
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "profile",
+      "x": 0,
+      "y": 2,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "i": "metric_movies",
+      "x": 8,
+      "y": 2,
+      "w": 4,
+      "h": 4
+    },
+    {
+      "i": "metric_produced",
+      "x": 12,
+      "y": 2,
+      "w": 4,
+      "h": 4
+    },
+    {
+      "i": "metric_awards",
+      "x": 16,
+      "y": 2,
+      "w": 4,
+      "h": 4
+    },
+    {
+      "i": "metric_followers",
+      "x": 20,
+      "y": 2,
+      "w": 4,
+      "h": 4
+    },
+    {
+      "i": "line_chart_boxoffice",
+      "x": 0,
+      "y": 6,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "bar_chart_ratings",
+      "x": 12,
+      "y": 6,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "table_upcoming",
+      "x": 0,
+      "y": 14,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "feed_news",
+      "x": 12,
+      "y": 14,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "text_summary",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 4
+    },
+    {
+      "i": "button_contact",
+      "x": 12,
+      "y": 20,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "tags_input_interests",
+      "x": 18,
+      "y": 20,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "textarea_notes",
+      "x": 0,
+      "y": 23,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "grade_card_influence",
+      "x": 6,
+      "y": 23,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "score_card_success",
+      "x": 12,
+      "y": 26,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "divider_projects",
+      "x": 0,
+      "y": 29,
+      "w": 24,
+      "h": 1
+    },
+    {
+      "i": "text_projects",
+      "x": 0,
+      "y": 30,
+      "w": 12,
+      "h": 4
+    },
+    {
+      "i": "image_kjo",
+      "x": 12,
+      "y": 30,
+      "w": 8,
+      "h": 6
+    },
+    {
+      "i": "stats_trending_social",
+      "x": 0,
+      "y": 34,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "stats_links_related",
+      "x": 12,
+      "y": 36,
+      "w": 8,
+      "h": 6
+    }
+  ],
+  "lastModified": 1768024923747,
+  "lastHydrated": 1768024923747
+}

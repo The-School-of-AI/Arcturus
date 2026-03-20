@@ -1,0 +1,233 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1768025050",
+    "original_query": "What is the current AQI of my city, ask me questions if any. ",
+    "file_manifest": [],
+    "created_at": "2026-01-10T06:04:11.265974",
+    "status": "stopped",
+    "globals_schema": {
+      "user_city_T001": "Kolkata",
+      "city_confidence_T001": "High. While multiple cities are mentioned in the memory context (Kolkata, Bangalore, Mumbai), Kolkata appears most frequently in relation to previous AQI requests from the user. There's also a location determination entry that suggests a discrepancy between user-provided address and IP address location, with the IP address location being [city, state]. To increase confidence, ClarificationAgent can ask for the user's precise current address to remove all doubts.",
+      "aqi_data_T003": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[error] [Errno 35] write could not complete without blocking",
+            "annotations": null,
+            "_meta": null
+          }
+        ]
+      },
+      "plan_graph": {
+        "nodes": [
+          {
+            "id": "T001",
+            "description": "Determine user's city via ClarificationAgent.",
+            "agent": "ClarificationAgent",
+            "agent_prompt": "Determine the city of the user. Ask the user to specify the city they are interested in getting the AQI for.",
+            "reads": [],
+            "writes": [
+              "user_city_T001"
+            ]
+          },
+          {
+            "id": "T002",
+            "description": "Retrieve current AQI for the specified city.",
+            "agent": "RetrieverAgent",
+            "agent_prompt": "Retrieve the current Air Quality Index (AQI) for the city specified in `user_city_T001`. Use reliable online sources for real-time AQI data. Focus on getting an accurate and up-to-date AQI reading, along with any associated health advisories or recommendations.",
+            "reads": [
+              "user_city_T001"
+            ],
+            "writes": [
+              "aqi_data_T002"
+            ]
+          },
+          {
+            "id": "T003",
+            "description": "Format the AQI data for user presentation.",
+            "agent": "FormatterAgent",
+            "agent_prompt": "Format the AQI data from `aqi_data_T002` into a user-friendly message. Include the city name, AQI value, a brief explanation of what the AQI value means, and any relevant health advisories. If the AQI is in a concerning range, highlight the potential health risks and provide recommendations for minimizing exposure. Create a comprehensive, detailed report suitable for a well-informed user, aiming for a word count of 5000 or more.",
+            "reads": [
+              "aqi_data_T002"
+            ],
+            "writes": [
+              "formatted_aqi_report_T003"
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "source": "ROOT",
+            "target": "T001"
+          },
+          {
+            "source": "T001",
+            "target": "T002"
+          },
+          {
+            "source": "T002",
+            "target": "T003"
+          }
+        ]
+      }
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Determine user's city via ClarificationAgent.",
+              "agent": "ClarificationAgent",
+              "agent_prompt": "Determine the city of the user. Ask the user to specify the city they are interested in getting the AQI for.",
+              "reads": [],
+              "writes": [
+                "user_city_T001"
+              ]
+            },
+            {
+              "id": "T002",
+              "description": "Retrieve current AQI for the specified city.",
+              "agent": "RetrieverAgent",
+              "agent_prompt": "Retrieve the current Air Quality Index (AQI) for the city specified in `user_city_T001`. Use reliable online sources for real-time AQI data. Focus on getting an accurate and up-to-date AQI reading, along with any associated health advisories or recommendations.",
+              "reads": [
+                "user_city_T001"
+              ],
+              "writes": [
+                "aqi_data_T002"
+              ]
+            },
+            {
+              "id": "T003",
+              "description": "Format the AQI data for user presentation.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "Format the AQI data from `aqi_data_T002` into a user-friendly message. Include the city name, AQI value, a brief explanation of what the AQI value means, and any relevant health advisories. If the AQI is in a concerning range, highlight the potential health risks and provide recommendations for minimizing exposure. Create a comprehensive, detailed report suitable for a well-informed user, aiming for a word count of 5000 or more.",
+              "reads": [
+                "aqi_data_T002"
+              ],
+              "writes": [
+                "formatted_aqi_report_T003"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            },
+            {
+              "source": "T001",
+              "target": "T002"
+            },
+            {
+              "source": "T002",
+              "target": "T003"
+            }
+          ]
+        },
+        "next_step_id": "T001",
+        "cost": 0.0001214,
+        "input_tokens": 58,
+        "output_tokens": 289,
+        "total_tokens": 347
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2026-01-10T06:04:18.403190",
+      "execution_time": 0.0,
+      "last_tested": "2026-01-10T11:36:38.771101",
+      "id": "Query"
+    },
+    {
+      "description": "Determine user's city via ClarificationAgent.",
+      "agent": "ClarificationAgent",
+      "agent_prompt": "Determine the city of the user. Ask the user to specify the city they are interested in getting the AQI for.",
+      "reads": [],
+      "writes": [
+        "user_city_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "clarificationMessage": "To provide you with the AQI, could you please specify the city you're interested in?",
+        "options": [],
+        "writes_to": "user_city_T001",
+        "cost": 1.98e-05,
+        "input_tokens": 78,
+        "output_tokens": 30,
+        "total_tokens": 108
+      },
+      "last_tested": "2026-01-10T11:36:48.516564",
+      "id": "T001"
+    },
+    {
+      "description": "Retrieve current AQI for the specified city.",
+      "agent": "RetrieverAgent",
+      "agent_prompt": "Retrieve the current Air Quality Index (AQI) for the city specified in `user_city_T001`. Use reliable online sources for real-time AQI data. Focus on getting an accurate and up-to-date AQI reading, along with any associated health advisories or recommendations.",
+      "reads": [
+        "user_city_T001"
+      ],
+      "writes": [
+        "aqi_data_T002"
+      ],
+      "status": "idle",
+      "id": "T002"
+    },
+    {
+      "description": "Format the AQI data for user presentation.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "Format the AQI data from `aqi_data_T002` into a user-friendly message. Include the city name, AQI value, a brief explanation of what the AQI value means, and any relevant health advisories. If the AQI is in a concerning range, highlight the potential health risks and provide recommendations for minimizing exposure. Create a comprehensive, detailed report suitable for a well-informed user, aiming for a word count of 5000 or more.",
+      "reads": [
+        "aqi_data_T002"
+      ],
+      "writes": [
+        "formatted_aqi_report_T003"
+      ],
+      "status": "idle",
+      "id": "T003"
+    }
+  ],
+  "edges": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    },
+    {
+      "source": "T001",
+      "target": "T002"
+    },
+    {
+      "source": "T002",
+      "target": "T003"
+    }
+  ]
+}

@@ -1,0 +1,450 @@
+{
+  "id": "app-1768635961924",
+  "name": "Generated App 13:15:46",
+  "description": "Agent Tracking Dashboard",
+  "cards": [
+    {
+      "id": "dashboard-header",
+      "type": "header",
+      "label": "Agent Tracking Overview",
+      "context": "Main title for the agent tracking dashboard.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Agent Tracking Overview"
+      },
+      "style": {}
+    },
+    {
+      "id": "total-agents-metric",
+      "type": "metric",
+      "label": "Total Agents",
+      "context": "Total number of agents currently in the system.",
+      "config": {},
+      "data": {
+        "value": "125",
+        "change": 5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "active-agents-metric",
+      "type": "metric",
+      "label": "Active Agents",
+      "context": "Number of agents currently logged in and active.",
+      "config": {},
+      "data": {
+        "value": "98",
+        "change": -2,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "avg-handle-time-trend",
+      "type": "trend",
+      "label": "Avg. Handle Time",
+      "context": "Average call/task handle time for all agents over the last 24 hours.",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "3:45 min",
+        "change": 0.15,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "resolution-rate-trend",
+      "type": "trend",
+      "label": "Resolution Rate",
+      "context": "First contact resolution rate for all agents over the last week.",
+      "config": {
+        "showSparkline": true
+      },
+      "data": {
+        "value": "88.2%",
+        "change": -1.2,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "agent-performance-line-chart",
+      "type": "line_chart",
+      "label": "Agent Performance Trend (Last 7 Days)",
+      "context": "Trend of average tasks completed per agent over the last 7 days.",
+      "config": {},
+      "data": {
+        "title": "Tasks Completed per Agent",
+        "xLabel": "Day",
+        "yLabel": "Tasks",
+        "series": [
+          {
+            "name": "Average Tasks",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Day 1",
+                "y": 25
+              },
+              {
+                "x": "Day 2",
+                "y": 28
+              },
+              {
+                "x": "Day 3",
+                "y": 26
+              },
+              {
+                "x": "Day 4",
+                "y": 30
+              },
+              {
+                "x": "Day 5",
+                "y": 29
+              },
+              {
+                "x": "Day 6",
+                "y": 32
+              },
+              {
+                "x": "Day 7",
+                "y": 31
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "agent-activity-bar-chart",
+      "type": "bar_chart",
+      "label": "Agent Activity by Type",
+      "context": "Distribution of agent activities (e.g., calls, chats, emails) for the current day.",
+      "config": {},
+      "data": {
+        "title": "Daily Activity Breakdown",
+        "xLabel": "Activity Type",
+        "yLabel": "Count",
+        "points": [
+          {
+            "x": "Calls",
+            "y": 150,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Chats",
+            "y": 210,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Emails",
+            "y": 80,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Tickets",
+            "y": 120,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "agent-status-table",
+      "type": "table",
+      "label": "Live Agent Status",
+      "context": "List of all agents with their current status, last activity, and assigned tasks.",
+      "config": {},
+      "data": {
+        "headers": [
+          "Agent Name",
+          "Status",
+          "Last Activity",
+          "Tasks Open"
+        ],
+        "rows": [
+          [
+            "Alice Smith",
+            "Online",
+            "5 min ago",
+            "3"
+          ],
+          [
+            "Bob Johnson",
+            "Busy",
+            "1 min ago",
+            "2"
+          ],
+          [
+            "Charlie Brown",
+            "Offline",
+            "30 min ago",
+            "0"
+          ],
+          [
+            "Diana Prince",
+            "Online",
+            "10 min ago",
+            "4"
+          ],
+          [
+            "Eve Adams",
+            "Busy",
+            "2 min ago",
+            "1"
+          ]
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "agent-status-pie-chart",
+      "type": "pie_chart",
+      "label": "Agent Status Distribution",
+      "context": "Distribution of agents by their current status (Online, Busy, Offline).",
+      "config": {},
+      "data": {
+        "slices": [
+          {
+            "name": "Online",
+            "value": 70,
+            "color": "#4ecdc4"
+          },
+          {
+            "name": "Busy",
+            "value": 20,
+            "color": "#F5C542"
+          },
+          {
+            "name": "Offline",
+            "value": 30,
+            "color": "#ff6b6b"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "recent-activities-feed",
+      "type": "feed",
+      "label": "Recent Agent Activities",
+      "context": "A feed of the most recent activities performed by agents.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Alice Smith completed 'Onboarding Call'",
+            "time": "2 min ago"
+          },
+          {
+            "title": "Bob Johnson updated 'Customer Issue #123'",
+            "time": "5 min ago"
+          },
+          {
+            "title": "Diana Prince started 'Product Demo'",
+            "time": "8 min ago"
+          },
+          {
+            "title": "Alice Smith logged in",
+            "time": "10 min ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "agent-productivity-stats",
+      "type": "stats_grid",
+      "label": "Agent Productivity Stats",
+      "context": "Key productivity statistics for agents, such as average score and tasks per hour.",
+      "config": {},
+      "data": {
+        "stats": [
+          {
+            "label": "Avg. Score",
+            "value": "4.5/5"
+          },
+          {
+            "label": "Tasks/Hour",
+            "value": "7.2"
+          },
+          {
+            "label": "Escalations",
+            "value": "12"
+          },
+          {
+            "label": "Customer Feedback",
+            "value": "92%"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "filter-team-select",
+      "type": "select",
+      "label": "Filter by Team",
+      "context": "Dropdown to filter agent data by team.",
+      "config": {},
+      "data": {
+        "label": "Team",
+        "options": [
+          "All Teams",
+          "Sales",
+          "Support",
+          "Technical"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "date-range-picker",
+      "type": "date_picker",
+      "label": "Select Date Range",
+      "context": "Date range picker for filtering dashboard data.",
+      "config": {},
+      "data": {
+        "startDate": "2026-01-01",
+        "endDate": "2026-01-17"
+      },
+      "style": {}
+    },
+    {
+      "id": "refresh-data-button",
+      "type": "button",
+      "label": "Refresh Data",
+      "context": "Button to manually refresh all data on the dashboard.",
+      "config": {},
+      "data": {
+        "label": "Refresh Data"
+      },
+      "style": {}
+    },
+    {
+      "id": "spacer-bottom-right",
+      "type": "spacer",
+      "label": "Spacer",
+      "context": "Empty space to fill the grid.",
+      "config": {},
+      "data": {},
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "dashboard-header",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "total-agents-metric",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "active-agents-metric",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "avg-handle-time-trend",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "resolution-rate-trend",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "agent-performance-line-chart",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "agent-activity-bar-chart",
+      "x": 12,
+      "y": 5,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "agent-status-table",
+      "x": 0,
+      "y": 13,
+      "w": 16,
+      "h": 7
+    },
+    {
+      "i": "agent-status-pie-chart",
+      "x": 16,
+      "y": 13,
+      "w": 8,
+      "h": 7
+    },
+    {
+      "i": "recent-activities-feed",
+      "x": 0,
+      "y": 20,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "agent-productivity-stats",
+      "x": 12,
+      "y": 20,
+      "w": 12,
+      "h": 6
+    },
+    {
+      "i": "filter-team-select",
+      "x": 0,
+      "y": 26,
+      "w": 6,
+      "h": 2
+    },
+    {
+      "i": "date-range-picker",
+      "x": 6,
+      "y": 26,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "i": "refresh-data-button",
+      "x": 14,
+      "y": 26,
+      "w": 4,
+      "h": 2
+    },
+    {
+      "i": "spacer-bottom-right",
+      "x": 18,
+      "y": 26,
+      "w": 6,
+      "h": 2
+    }
+  ],
+  "lastModified": 1768635961924,
+  "lastHydrated": 1768635961924
+}

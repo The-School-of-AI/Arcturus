@@ -1,0 +1,271 @@
+{
+  "id": "app-1768024374143",
+  "name": "Untitled App",
+  "description": "",
+  "cards": [
+    {
+      "id": "header-1768024294278",
+      "type": "header",
+      "label": "Header",
+      "config": {},
+      "data": {
+        "text": "Chennai Super Kings (CSK) Dashboard"
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "text-1768024298876",
+      "type": "text",
+      "label": "Text Block",
+      "config": {
+        "autoFit": false
+      },
+      "data": {
+        "text": "This dashboard provides a comprehensive overview of the Chennai Super Kings (CSK), including team performance, key players, financial data, and fan engagement metrics. Updated as of January 10, 2026."
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "metric-1768024305061",
+      "type": "metric",
+      "label": "Metric",
+      "config": {},
+      "data": {
+        "value": "\u20b91870 Cr",
+        "change": 15,
+        "trend": "up",
+        "label": "Franchise Valuation (2025)"
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "sankey-1768024311781",
+      "type": "sankey",
+      "label": "Sankey Chart",
+      "config": {
+        "autoFit": false
+      },
+      "data": {
+        "title": "CSK Revenue Streams (2025)",
+        "nodes": [
+          {
+            "name": "Media Rights"
+          },
+          {
+            "name": "Sponsorship"
+          },
+          {
+            "name": "Merchandise"
+          },
+          {
+            "name": "Ticket Sales"
+          },
+          {
+            "name": "Prize Money"
+          },
+          {
+            "name": "Total Revenue"
+          }
+        ],
+        "links": [
+          {
+            "source": 0,
+            "target": 5,
+            "value": 45
+          },
+          {
+            "source": 1,
+            "target": 5,
+            "value": 30
+          },
+          {
+            "source": 2,
+            "target": 5,
+            "value": 15
+          },
+          {
+            "source": 3,
+            "target": 5,
+            "value": 5
+          },
+          {
+            "source": 4,
+            "target": 5,
+            "value": 5
+          }
+        ]
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "stats_row-1768024329359",
+      "type": "stats_row",
+      "label": "Stats Row",
+      "config": {},
+      "data": {
+        "stats": [
+          {
+            "name": "IPL Titles",
+            "value": "5",
+            "change": "0",
+            "changeType": "neutral"
+          },
+          {
+            "name": "Fan Following (Millions)",
+            "value": "44.6",
+            "change": "+5.2",
+            "changeType": "positive"
+          },
+          {
+            "name": "Sponsorship Revenue (USD)",
+            "value": "17M",
+            "change": "+1.5M",
+            "changeType": "positive"
+          },
+          {
+            "name": "2025 Rank",
+            "value": "10th",
+            "change": "-5",
+            "changeType": "negative"
+          }
+        ]
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    },
+    {
+      "id": "score_card-1768024359602",
+      "type": "score_card",
+      "label": "Score Card",
+      "config": {},
+      "data": {
+        "score": 44.6,
+        "subtext": "Million Social Media Followers"
+      },
+      "style": {
+        "showBorder": false,
+        "borderWidth": 2,
+        "borderColor": "hsl(var(--border))",
+        "borderRadius": 12,
+        "opacity": 100,
+        "accentColor": "#F5C542",
+        "backgroundColor": "hsl(var(--card))",
+        "textColor": "hsl(var(--foreground))",
+        "successColor": "#4ade80",
+        "dangerColor": "#f87171"
+      }
+    }
+  ],
+  "layout": [
+    {
+      "i": "header-1768024294278",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "text-1768024298876",
+      "x": 0,
+      "y": 5,
+      "w": 12,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "metric-1768024305061",
+      "x": 12,
+      "y": 5,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "sankey-1768024311781",
+      "x": 0,
+      "y": 8,
+      "w": 10,
+      "h": 8,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "stats_row-1768024329359",
+      "x": 0,
+      "y": 2,
+      "w": 24,
+      "h": 3,
+      "moved": false,
+      "static": false
+    },
+    {
+      "i": "score_card-1768024359602",
+      "x": 18,
+      "y": 5,
+      "w": 6,
+      "h": 3,
+      "moved": false,
+      "static": false
+    }
+  ],
+  "lastModified": 1768024441788,
+  "lastHydrated": 1768024441788
+}

@@ -1,0 +1,126 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "session_id": "1767097844",
+    "original_query": "Where do I teach?",
+    "file_manifest": [],
+    "created_at": "2025-12-30T12:30:45.120849",
+    "status": "completed",
+    "globals_schema": {
+      "formatted_answer_T001": []
+    }
+  },
+  "nodes": [
+    {
+      "description": "Initial Query",
+      "agent": "System",
+      "status": "completed",
+      "output": null,
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": null,
+      "execution_time": 0.0,
+      "id": "ROOT"
+    },
+    {
+      "id": "Query",
+      "description": "Formulate execution plan",
+      "agent": "PlannerAgent",
+      "status": "completed",
+      "reads": [
+        "original_query"
+      ],
+      "writes": [
+        "plan_graph"
+      ],
+      "output": {
+        "plan_graph": {
+          "nodes": [
+            {
+              "id": "T001",
+              "description": "Format the answer from memory.",
+              "agent": "FormatterAgent",
+              "agent_prompt": "The user asked 'Where do I teach?'. Based on the memory context, you teach AI, LLMs and Agentic AI at The School of AI.",
+              "reads": [],
+              "writes": [
+                "formatted_answer_T001"
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "ROOT",
+              "target": "T001"
+            }
+          ]
+        },
+        "next_step_id": "T002",
+        "cost": 8.11e-05,
+        "input_tokens": 523,
+        "output_tokens": 72,
+        "total_tokens": 595
+      },
+      "error": null,
+      "cost": 0.0,
+      "start_time": null,
+      "end_time": "2025-12-30T12:30:47.115835",
+      "execution_time": 0.0
+    },
+    {
+      "id": "T001",
+      "description": "Format the answer from memory.",
+      "agent": "FormatterAgent",
+      "agent_prompt": "The user asked 'Where do I teach?'. Based on the memory context, you teach AI, LLMs and Agentic AI at The School of AI.",
+      "reads": [],
+      "writes": [
+        "formatted_answer_T001"
+      ],
+      "status": "completed",
+      "output": {
+        "final_format": "html",
+        "fallback_markdown": "No Data Available",
+        "formatted_report_T001": "<div class='report'><h1>No Data Available</h1><p>The `all_globals_schema` does not contain data relevant to the user's query.</p></div>",
+        "call_self": false,
+        "cost": 7.1e-05,
+        "input_tokens": 574,
+        "output_tokens": 34,
+        "total_tokens": 608
+      },
+      "error": null,
+      "cost": 7.1e-05,
+      "start_time": "2025-12-30T12:30:47.118098",
+      "end_time": "2025-12-30T12:30:50.980869",
+      "execution_time": 3.862771,
+      "iterations": [
+        {
+          "iteration": 1,
+          "output": {
+            "final_format": "html",
+            "fallback_markdown": "No Data Available",
+            "formatted_report_T001": "<div class='report'><h1>No Data Available</h1><p>The `all_globals_schema` does not contain data relevant to the user's query.</p></div>",
+            "call_self": false,
+            "cost": 7.1e-05,
+            "input_tokens": 574,
+            "output_tokens": 34,
+            "total_tokens": 608
+          }
+        }
+      ],
+      "input_tokens": 574,
+      "output_tokens": 34,
+      "total_tokens": 608
+    }
+  ],
+  "links": [
+    {
+      "source": "ROOT",
+      "target": "Query"
+    },
+    {
+      "source": "Query",
+      "target": "T001"
+    }
+  ]
+}

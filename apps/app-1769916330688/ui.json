@@ -1,0 +1,523 @@
+{
+  "id": "app-1769916330688",
+  "name": "Generated App 08:55:13",
+  "description": "RELIANCE DATAROOM",
+  "cards": [
+    {
+      "id": "header-title",
+      "type": "header",
+      "label": "Reliance Industries Dataroom",
+      "context": "Main title for the Reliance Dataroom dashboard.",
+      "config": {
+        "centered": true,
+        "bold": true
+      },
+      "data": {
+        "text": "Reliance Industries Dataroom"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-market-cap",
+      "type": "metric",
+      "label": "Market Cap",
+      "context": "Current market capitalization of Reliance Industries.",
+      "config": {},
+      "data": {
+        "value": "$240B",
+        "change": 1.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-pe-ratio",
+      "type": "metric",
+      "label": "P/E Ratio",
+      "context": "Current Price-to-Earnings ratio for Reliance Industries.",
+      "config": {},
+      "data": {
+        "value": "28.5x",
+        "change": -0.2,
+        "trend": "down"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-revenue-yoy",
+      "type": "metric",
+      "label": "Revenue (YoY Growth)",
+      "context": "Year-over-year revenue growth percentage for Reliance Industries.",
+      "config": {},
+      "data": {
+        "value": "+18.2%",
+        "change": 0.5,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "metric-net-profit-yoy",
+      "type": "metric",
+      "label": "Net Profit (YoY Growth)",
+      "context": "Year-over-year net profit growth percentage for Reliance Industries.",
+      "config": {},
+      "data": {
+        "value": "+12.1%",
+        "change": -0.1,
+        "trend": "up"
+      },
+      "style": {}
+    },
+    {
+      "id": "company-profile",
+      "type": "profile",
+      "label": "Company Profile",
+      "context": "Key information and description of Reliance Industries.",
+      "config": {},
+      "data": {
+        "ticker": "RELIANCE.NS",
+        "sector": "Conglomerate",
+        "logo": "R",
+        "description": "Reliance Industries Limited is an Indian multinational conglomerate company, headquartered in Mumbai. It has diverse businesses including energy, petrochemicals, natural gas, retail, telecommunications, mass media, and textiles."
+      },
+      "style": {}
+    },
+    {
+      "id": "valuation-gauge",
+      "type": "valuation",
+      "label": "Valuation Overview",
+      "context": "Market price versus fair value assessment for Reliance Industries.",
+      "config": {},
+      "data": {
+        "marketPrice": 2900,
+        "fairValue": 3100
+      },
+      "style": {}
+    },
+    {
+      "id": "financial-health-score",
+      "type": "score_card",
+      "label": "Financial Health Score",
+      "context": "Overall financial health score for Reliance Industries.",
+      "config": {},
+      "data": {
+        "score": 88,
+        "subtext": "Strong"
+      },
+      "style": {}
+    },
+    {
+      "id": "quarterly-revenue-trend",
+      "type": "line_chart",
+      "label": "Quarterly Revenue Trend",
+      "context": "Quarterly revenue trend for Reliance Industries over the last 8 quarters.",
+      "config": {},
+      "data": {
+        "title": "Quarterly Revenue Trend",
+        "xLabel": "Quarter",
+        "yLabel": "Revenue (\u20b9 Billion)",
+        "series": [
+          {
+            "name": "Revenue",
+            "color": "#4ecdc4",
+            "data": [
+              {
+                "x": "Q1'24",
+                "y": 2300
+              },
+              {
+                "x": "Q2'24",
+                "y": 2450
+              },
+              {
+                "x": "Q3'24",
+                "y": 2600
+              },
+              {
+                "x": "Q4'24",
+                "y": 2750
+              },
+              {
+                "x": "Q1'25",
+                "y": 2800
+              },
+              {
+                "x": "Q2'25",
+                "y": 2950
+              },
+              {
+                "x": "Q3'25",
+                "y": 3100
+              },
+              {
+                "x": "Q4'25",
+                "y": 3250
+              }
+            ]
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "quarterly-net-profit",
+      "type": "bar_chart",
+      "label": "Quarterly Net Profit",
+      "context": "Quarterly net profit for Reliance Industries over the last 8 quarters.",
+      "config": {},
+      "data": {
+        "title": "Quarterly Net Profit",
+        "xLabel": "Quarter",
+        "yLabel": "Net Profit (\u20b9 Billion)",
+        "points": [
+          {
+            "x": "Q1'24",
+            "y": 150,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Q2'24",
+            "y": 165,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Q3'24",
+            "y": 170,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Q4'24",
+            "y": 185,
+            "color": "#a29bfe"
+          },
+          {
+            "x": "Q1'25",
+            "y": 190,
+            "color": "#F5C542"
+          },
+          {
+            "x": "Q2'25",
+            "y": 205,
+            "color": "#4ecdc4"
+          },
+          {
+            "x": "Q3'25",
+            "y": 210,
+            "color": "#ff6b6b"
+          },
+          {
+            "x": "Q4'25",
+            "y": 225,
+            "color": "#a29bfe"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "income-statement",
+      "type": "income_stmt",
+      "label": "Latest Income Statement",
+      "context": "Latest available income statement data for Reliance Industries.",
+      "config": {},
+      "data": {
+        "revenue": "\u20b93.25T",
+        "netIncome": "\u20b9225B",
+        "ebitda": "\u20b9450B",
+        "eps": "\u20b933.5"
+      },
+      "style": {}
+    },
+    {
+      "id": "balance-sheet",
+      "type": "balance_sheet",
+      "label": "Latest Balance Sheet",
+      "context": "Latest available balance sheet data for Reliance Industries.",
+      "config": {},
+      "data": {
+        "assets": "\u20b915.5T",
+        "liabilities": "\u20b97.2T",
+        "equity": "\u20b98.3T",
+        "debtToEquity": "0.87"
+      },
+      "style": {}
+    },
+    {
+      "id": "cash-flow-statement",
+      "type": "cash_flow",
+      "label": "Latest Cash Flow",
+      "context": "Latest available cash flow statement data for Reliance Industries.",
+      "config": {},
+      "data": {
+        "operating": "+\u20b9380B",
+        "investing": "-\u20b9250B",
+        "financing": "-\u20b9100B",
+        "netChange": "+\u20b930B"
+      },
+      "style": {}
+    },
+    {
+      "id": "key-financial-ratios",
+      "type": "ratios",
+      "label": "Key Financial Ratios",
+      "context": "Important financial ratios for Reliance Industries.",
+      "config": {},
+      "data": {
+        "ratios": [
+          {
+            "name": "P/E Ratio",
+            "value": "28.5x",
+            "status": "fair"
+          },
+          {
+            "name": "Debt/Equity",
+            "value": "0.87",
+            "status": "moderate"
+          },
+          {
+            "name": "Current Ratio",
+            "value": "1.2",
+            "status": "good"
+          },
+          {
+            "name": "ROE",
+            "value": "15.8%",
+            "status": "strong"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "peer-comparison-table",
+      "type": "peer_table",
+      "label": "Peer Comparison",
+      "context": "Comparison of Reliance Industries with its key peers in the market.",
+      "config": {},
+      "data": {
+        "peers": [
+          {
+            "ticker": "TCS.NS",
+            "mcap": "\u20b914.5T",
+            "pe": 32,
+            "revenueGrowth": "10%"
+          },
+          {
+            "ticker": "HDFC.NS",
+            "mcap": "\u20b912.0T",
+            "pe": 25,
+            "revenueGrowth": "15%"
+          },
+          {
+            "ticker": "INFY.NS",
+            "mcap": "\u20b96.5T",
+            "pe": 26,
+            "revenueGrowth": "9%"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "latest-news-feed",
+      "type": "feed",
+      "label": "Latest News & Updates",
+      "context": "Recent news and press releases related to Reliance Industries.",
+      "config": {},
+      "data": {
+        "items": [
+          {
+            "title": "Reliance Jio Q4 net profit rises 12%",
+            "time": "2 days ago"
+          },
+          {
+            "title": "RIL to invest $10B in green energy",
+            "time": "1 week ago"
+          },
+          {
+            "title": "Jio Financial Services to launch new products",
+            "time": "3 weeks ago"
+          }
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "data-range-picker",
+      "type": "date_picker",
+      "label": "Select Data Range",
+      "context": "Date range selector for filtering dashboard data.",
+      "config": {},
+      "data": {
+        "startDate": "2025-01-01",
+        "endDate": "2025-12-31"
+      },
+      "style": {}
+    },
+    {
+      "id": "report-type-selector",
+      "type": "select",
+      "label": "Report Type",
+      "context": "Dropdown to select the type of financial report.",
+      "config": {},
+      "data": {
+        "label": "Report Type",
+        "options": [
+          "Quarterly",
+          "Annual",
+          "Consolidated"
+        ]
+      },
+      "style": {}
+    },
+    {
+      "id": "generate-report-button",
+      "type": "button",
+      "label": "Generate Report",
+      "context": "Button to trigger report generation based on selected filters.",
+      "config": {},
+      "data": {
+        "label": "Generate Report"
+      },
+      "style": {}
+    }
+  ],
+  "layout": [
+    {
+      "i": "header-title",
+      "x": 0,
+      "y": 0,
+      "w": 24,
+      "h": 2
+    },
+    {
+      "i": "metric-market-cap",
+      "x": 0,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-pe-ratio",
+      "x": 6,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-revenue-yoy",
+      "x": 12,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "metric-net-profit-yoy",
+      "x": 18,
+      "y": 2,
+      "w": 6,
+      "h": 3
+    },
+    {
+      "i": "company-profile",
+      "x": 0,
+      "y": 5,
+      "w": 8,
+      "h": 6
+    },
+    {
+      "i": "valuation-gauge",
+      "x": 8,
+      "y": 5,
+      "w": 8,
+      "h": 6
+    },
+    {
+      "i": "financial-health-score",
+      "x": 16,
+      "y": 5,
+      "w": 8,
+      "h": 6
+    },
+    {
+      "i": "quarterly-revenue-trend",
+      "x": 0,
+      "y": 11,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "quarterly-net-profit",
+      "x": 12,
+      "y": 11,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "income-statement",
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "balance-sheet",
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "cash-flow-statement",
+      "x": 0,
+      "y": 24,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "key-financial-ratios",
+      "x": 12,
+      "y": 24,
+      "w": 12,
+      "h": 5
+    },
+    {
+      "i": "peer-comparison-table",
+      "x": 0,
+      "y": 29,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "latest-news-feed",
+      "x": 12,
+      "y": 29,
+      "w": 12,
+      "h": 8
+    },
+    {
+      "i": "data-range-picker",
+      "x": 0,
+      "y": 37,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "i": "report-type-selector",
+      "x": 8,
+      "y": 37,
+      "w": 8,
+      "h": 2
+    },
+    {
+      "i": "generate-report-button",
+      "x": 16,
+      "y": 37,
+      "w": 8,
+      "h": 2
+    }
+  ],
+  "lastModified": 1769916330689,
+  "lastHydrated": 1769916330689
+}
