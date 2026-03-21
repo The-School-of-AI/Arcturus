@@ -22,17 +22,17 @@ This plan keeps **blob storage** on **local disk by default** (path = Qdrant pay
 ## 2. Target architecture (high level)
 
 ```
-┌─────────────────┐     ┌──────────────────────────────┐     ┌─────────────┐
-│  FastAPI        │     │  Qdrant arcturus_rag_chunks   │     │  Blobs      │
-│  /rag/documents │────▶│  chunks: payload.doc,          │     │  local      │
-│  /rag/upload    │     │  space_id, user_id           │     │  or S3      │
-└────────┬────────┘     └──────────────────────────────┘     └─────────────┘
+┌─────────────────┐     ┌──────────────────────────────────────┐     ┌─────────────┐
+│  FastAPI        │     │  Qdrant                              │     │  Blobs      │
+│  /rag/documents │────▶│  arcturus_rag_chunks (search)         │     │  local      │
+│  /rag/upload    │     │  arcturus_rag_documents (listing)     │     │  or S3      │
+└────────┬────────┘     └──────────────────────────────────────┘     └─────────────┘
          │
-         └── Optional: merge with local FS scan for "unindexed" / orphan files
+         └── Optional: merge with local FS scan for "unindexed" / orphan files (hybrid mode)
 ```
 
-- **Chunk collection** already stores `doc`, `chunk`, `chunk_id`, `page`, `space_id`, `user_id` (tenant).
-- **Document list** will use either **aggregation over chunks** or a **small document-level index** (see §4.2).
+- **Chunk collection** (`arcturus_rag_chunks`) stores `doc`, `chunk`, `chunk_id`, `page`, `space_id`, `user_id` (tenant).
+- **Document registry** (`arcturus_rag_documents`) — one point per doc for **O(1) listing**; see Phase 1.
 
 ---
 
@@ -66,29 +66,27 @@ This plan keeps **blob storage** on **local disk by default** (path = Qdrant pay
 
 ---
 
-### Phase 1 — Qdrant: document-level discovery
+### Phase 1 — Qdrant: document registry (dedicated collection)
 
 **Problem:** Listing requires distinct documents + `chunk_count` (+ optional hash/status) without scanning the whole `data/` tree for “indexed” truth.
 
-**Option A — Aggregate from existing collection (no new collection)**
+**Approach: Dedicated `arcturus_rag_documents` collection**
 
-- Implement `QdrantRAGStore.list_documents(user_id, space_id) -> list[{doc, chunk_count, ...}]`:
-  - **Scroll** points with `scroll_filter` on `user_id` + `space_id` (match tenant config in `qdrant_config.yaml`).
-  - **Aggregate in process:** `defaultdict` by `doc`: count chunks, optional `max(page)`, optional store last-seen payload hash.
-- **Pros:** No new collection. **Cons:** Full scroll can be heavy for huge corpora; cache or pagination later.
-
-**Option B — Document registry collection (recommended at scale)**
-
-- New collection e.g. `arcturus_rag_documents` (config in `qdrant_config.yaml`):
+- New collection `arcturus_rag_documents` (config in `qdrant_config.yaml`):
   - One point per `(user_id, space_id, doc)` with payload: `doc`, `user_id`, `space_id`, `chunk_count`, `content_hash`, `updated_at`, `storage` (`local`|`s3`).
 - **Upsert** on successful index completion in `process_documents` / scheduler (same transaction flow as chunk upsert).
-- **Pros:** Fast list, clear “document row.” **Cons:** Must keep registry in sync with chunks (delete/reindex hooks).
+- **Delete** when `delete_by_doc` is called on the chunk store.
+- **Pros:** O(docs) listing — scales regardless of chunk count; clear schema; no scroll over chunks.
+- **Sync:** Keep registry in sync via hooks in `process_documents` and `delete_by_doc` (cost is negligible).
 
-**Recommendation:** Start with **Option A** for faster delivery; add **Option B** if scroll cost or consistency hurts.
+**Fallback:** Scroll `arcturus_rag_chunks` and aggregate by `doc` — use only for early prototyping; switch to registry before production.
 
 **Deliverables**
 
-- [ ] `list_documents` (or registry CRUD) in `memory/rag_backends/qdrant_rag_store.py` (+ no-op or ledger-based equivalent for FAISS mode if you keep dual provider).
+- [ ] Add `arcturus_rag_documents` to `config/qdrant_config.yaml` (keyword indexes on `user_id`, `space_id`, `doc`).
+- [ ] `RAGDocumentRegistry` (or methods in qdrant store): `upsert_doc`, `delete_doc`, `list_documents(user_id, space_id)`.
+- [ ] Wire registry upsert/delete into `mcp_servers/server_rag.py` (`process_documents`, `delete_by_doc` path).
+- [ ] No-op or ledger-based equivalent for FAISS mode if dual provider retained.
 - [ ] Unit tests with mocked Qdrant client or test container.
 
 **Exit criteria:** Callable from FastAPI without MCP round-trip (use same `get_qdrant_url` / credentials as RAG store).
@@ -167,8 +165,8 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 | Flow | Endpoint | Current | Change |
 |------|----------|---------|--------|
 | **List notes** | `GET /rag/documents` | `fetchNotesFiles` passes `space_id`, extracts Notes subtree | Same; tree shape must support Notes nodes when Qdrant-backed. |
-| **Create folder** | `POST /rag/create_folder` | Path like `Notes/Subfolder` — no space segment | Add `space_id`; backend resolves to `Notes/<space_id>/Subfolder` when in a space. |
-| **Create note** | `POST /rag/create_file` | Path like `Notes/foo.md` or `Notes/Sub/foo.md` — no space segment | Add `space_id`; backend resolves to `Notes/<space_id>/...` when in a space. |
+| **Create folder** | `POST /rag/create_folder` | Path like `Notes/Subfolder` — no space segment | Frontend passes `space_id` + relative path (e.g. `Subfolder`); **backend** resolves to `Notes/<space_id>/Subfolder`. |
+| **Create note** | `POST /rag/create_file` | Path like `Notes/foo.md` — no space segment | Frontend passes `space_id` + relative path (e.g. `MyFolder/foo.md`); **backend** resolves to `Notes/<space_id>/MyFolder/foo.md`. |
 | **Delete** | `POST /rag/delete` | Path from selected item | Path will be correct once create uses space paths; ensure delete triggers Qdrant `delete_by_doc` + blob removal. |
 | **Rename** | `POST /rag/rename` | old_path, new_path | Paths must stay within space convention; consider `space_id` for validation. |
 | **Save (edit)** | `POST /rag/save_file` | Path from open doc | Path already includes space segment if created correctly; add `space_id` for consistency. |
@@ -176,8 +174,8 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 
 **Frontend NotesPanel changes**
 
-- When `currentSpaceId` is set: when building `parentPath` for create_folder / create_note, prepend `Notes/<space_id>/` (or `Notes/__global__/` for Global) so the path matches the convention before calling the API.
-- **OR** pass `space_id` to the API and let the backend resolve the path (cleaner — single source of truth).
+- Pass `space_id` (or `__global__` for Global) and **relative path only** (e.g. `Subfolder`, `MyFolder/note.md`).
+- Backend helper `resolve_rag_path(relative_path, space_id, "notes")` builds the canonical `doc` path. No path convention logic on the frontend.
 
 **Other writers (optional / later)**
 
@@ -190,13 +188,12 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 **Deliverables**
 
 - [ ] Extend `POST /rag/upload`, `POST /rag/create_folder`, `POST /rag/create_file`, `POST /rag/save_file`, `POST /rag/delete`, `POST /rag/rename` with `space_id`.
-- [ ] Central helper: `resolve_rag_data_path(relative_path, space_id, context: "notes"|"rag") -> Path` under `data/`.
-- [ ] Frontend: `RagPanel` and **NotesPanel** pass `space_id` for all create/upload/delete/save flows.
-- [ ] NotesPanel: when creating folder/note in a space, either inject `Notes/<space_id>/` into path or pass `space_id` and let backend resolve.
+- [ ] Backend helper: `resolve_rag_path(relative_path, space_id, context: "notes"|"rag") -> str` — builds canonical `doc` (e.g. `Notes/<space_id>/<relative_path>`). All path logic on backend only.
+- [ ] Frontend: `RagPanel` and **NotesPanel** pass `space_id` + **relative path** for all create/upload/delete/save flows; never construct `Notes/<uuid>/` on the client.
 - [ ] NotesEditor: document decision on autocomplete scope (global vs space-scoped).
 - [ ] E2E: create note in space A → appears in Notes list when space A selected → reindex → visible in search for space A.
 
-**Exit criteria:** New content never “disappears” when switching spaces.
+**Exit criteria:** New RAG and Notes content never "disappears" when switching spaces; delete/rename work correctly within space boundaries.
 
 ---
 
@@ -208,7 +205,7 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 
 1. **Key:** `f"{RAG_S3_PREFIX or ''}{doc}"` with `doc` normalized (no `..`, POSIX).
 2. **Migration script** `scripts/migrate_rag_local_to_s3.py` (or extend existing migrate):
-   - Input: distinct `doc` from Qdrant (scroll or `list_documents`).
+   - Input: distinct `doc` from `arcturus_rag_documents` registry (or `list_documents`).
    - For each `doc`, if local file exists → `put_object` to S3.
    - Optional: `--dry-run`, `--limit`, multipart for large files.
 3. **Runtime reads** (`document_content`, preview, PDF page helpers in `routers/rag.py`):
@@ -232,7 +229,7 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 - [ ] Default `RAG_DOCUMENT_SOURCE=qdrant` in docker/example env after soak.
 - [ ] Deprecation notice for folder-name-only space filtering.
 - [ ] Update [rag_qdrant_unified.md](./rag_qdrant_unified.md) with “implemented” pointers.
-- [ ] Load test: scroll vs registry for your expected corpus size.
+- [ ] Load test: registry listing for your expected doc count.
 
 ---
 
@@ -242,7 +239,7 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 |------|--------|
 | `fetchRagFiles` / `fetchNotesFiles` | No URL change if API shape unchanged; verify tree from virtual paths. |
 | `RagPanel` upload / create folder | Pass `space_id` from `currentSpaceId` (and map Global → `__global__` or omit per API contract). |
-| **NotesPanel** create folder, create note, delete | Pass `space_id`; build path as `Notes/<space_id>/...` or let backend resolve from `space_id`. |
+| **NotesPanel** create folder, create note, delete | Pass `space_id` + relative path only; **backend** resolves to canonical `doc` path. |
 | `NotesEditor` suggestions | If still calling `/rag/documents` without `space_id`, align with Global vs space behavior (see Phase 4 Notes table). |
 | Error UX | Show message if backend requires `user_id` but session missing. |
 
@@ -252,7 +249,7 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 
 | Risk | Mitigation |
 |------|------------|
-| Full scroll too slow | Document registry collection (Phase 1B) or server-side cache with TTL. |
+| Full scroll too slow | N/A — using dedicated `arcturus_rag_documents` registry for O(1) listing. |
 | Registry vs chunks drift | Delete document registry points when `delete_by_doc`; reconcile job. |
 | S3 + ripgrep | Keep local mirror for dev, or restrict rg to text files still on disk; document limitation. |
 | Multi-user `user_id` | Never list without tenant filter in Qdrant. |
@@ -262,8 +259,8 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 ## 7. Suggested order of work
 
 1. Phase 0 (user_id + env flag)  
-2. Phase 1A (`list_documents` via scroll)  
-3. Phase 2 (`GET /documents` from Qdrant + virtual tree)  
+2. Phase 1 (document registry `arcturus_rag_documents` + hooks)  
+3. Phase 2 (`GET /documents` from registry + virtual tree)  
 4. Phase 4 (space-aware upload) — can parallelize with Phase 3  
 5. Phase 3 (MCP metadata / search alignment)  
 6. Phase 5 (S3 blob + migration)  
@@ -276,8 +273,8 @@ Notes **are** RAG documents under `data/Notes/`; they use the same listing API a
 | File | Role |
 |------|------|
 | `routers/rag.py` | `/documents`, upload/save, blob reads for previews |
-| `memory/rag_backends/qdrant_rag_store.py` | `list_documents`, optional registry |
-| `config/qdrant_config.yaml` | New collection if registry |
+| `memory/rag_backends/qdrant_rag_store.py` | `list_documents` from registry |
+| `config/qdrant_config.yaml` | `arcturus_rag_documents` collection |
 | `mcp_servers/server_rag.py` | Indexing hooks, `ensure_rag_ready`, search metadata |
 | `memory/rag_storage.py` (new) | Local vs S3 I/O |
 | `scripts/migrate_rag_local_to_s3.py` (new) | S3 backfill |
