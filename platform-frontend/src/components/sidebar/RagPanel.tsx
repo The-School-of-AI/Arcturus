@@ -328,8 +328,13 @@ export const RagPanel: React.FC = () => {
     const handleCreateFolder = async () => {
         if (!newFolderName.trim()) return;
         const path = selectedFile?.type === 'folder' ? `${selectedFile.path}/${newFolderName}` : newFolderName;
+        const underNotes = selectedFile?.path?.startsWith('Notes/') ?? false;
+        const spaceId = underNotes ? (currentSpaceId || '__global__') : undefined;
         try {
-            await axios.post(`${API_BASE}/rag/create_folder`, null, { params: { folder_path: path } });
+            const formData = new FormData();
+            formData.append('folder_path', path);
+            if (spaceId) formData.append('space_id', spaceId);
+            await axios.post(`${API_BASE}/rag/create_folder`, formData, { headers: { "Content-Type": "multipart/form-data" } });
             setIsNewFolderOpen(false);
             setNewFolderName("");
             fetchFiles();
@@ -341,6 +346,9 @@ export const RagPanel: React.FC = () => {
             const formData = new FormData();
             formData.append("file", e.target.files[0]);
             if (selectedFile?.type === 'folder') formData.append("path", selectedFile.path);
+            const underNotes = selectedFile?.path?.startsWith('Notes/') ?? !selectedFile;
+            const spaceId = underNotes ? (currentSpaceId || '__global__') : undefined;
+            if (spaceId) formData.append("space_id", spaceId);
             try {
                 await axios.post(`${API_BASE}/rag/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
                 fetchFiles();

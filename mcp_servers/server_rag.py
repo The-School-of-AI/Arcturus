@@ -488,14 +488,19 @@ def search_stored_documents_rag(query: str, doc_path: str = None, user_id: str =
     Optionally provide doc_path to search within a specific document only.
     Phase A: user_id and space_id for tenant/space scope."""
     ensure_rag_ready()
-    mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path}, user_id: {user_id or 'all'})")
+    mcp_log("SEARCH", f"Query: {query} (Doc: {doc_path}, user_id: {user_id or 'all'}, space_id: {space_id or 'all'})")
     
     try:
         rag_store = _get_rag_store()
         use_qdrant = os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant"
-        # Metadata: Qdrant tenant uses get_metadata(user_id); else metadata.json
+        # Metadata: Qdrant prefers get_metadata(user_id); fallback to metadata.json only when no user_id or FAISS
         if use_qdrant and hasattr(rag_store, "get_metadata") and user_id:
             metadata = rag_store.get_metadata(user_id=user_id)
+        elif use_qdrant and not user_id:
+            import logging
+            logging.warning("RAG search with Qdrant but no user_id: tenant scope may be incorrect. Pass user_id for proper filtering.")
+            meta_path = ROOT / "faiss_index" / "metadata.json"
+            metadata = json.loads(meta_path.read_text()) if meta_path.exists() else []
         else:
             meta_path = ROOT / "faiss_index" / "metadata.json"
             if not meta_path.exists():
@@ -570,13 +575,21 @@ def search_stored_documents_rag(query: str, doc_path: str = None, user_id: str =
             if doc_path and data.get('doc') != doc_path:
                 continue
             
-            # File existence check
+            # File existence check (local or S3)
             doc_rel_path = data.get('doc', '')
             if not doc_rel_path:
                 continue
-            full_path = ROOT.parent / "data" / doc_rel_path
-            if not full_path.exists():
-                continue
+            if os.environ.get("RAG_S3_BUCKET", "").strip():
+                try:
+                    from memory import rag_storage
+                    if not rag_storage.exists_doc(doc_rel_path):
+                        continue
+                except Exception:
+                    continue
+            else:
+                full_path = ROOT.parent / "data" / doc_rel_path
+                if not full_path.exists():
+                    continue
             
             # Skip empty chunks
             chunk_text = data.get('chunk', '').strip()
@@ -1496,6 +1509,23 @@ def process_documents(target_path: str = None, specific_files: list[Path] = None
                         add_kwargs["space_id"] = effective_space_id
                         rag_store.add_chunks(**add_kwargs)
 
+                        # Update document registry (Qdrant only)
+                        if os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant":
+                            try:
+                                from memory.rag_document_registry import get_rag_document_registry
+                                reg = get_rag_document_registry()
+                                if reg and user_id:
+                                    reg.upsert_doc(
+                                        doc=rel_path,
+                                        user_id=user_id,
+                                        space_id=effective_space_id,
+                                        chunk_count=len(new_embs),
+                                        content_hash=fhash,
+                                        storage="local",
+                                    )
+                            except Exception as reg_err:
+                                mcp_log("WARN", f"Registry upsert failed for {rel_path}: {reg_err}")
+
                         # Update ledger with new format
                         from datetime import datetime
                         ledger_data["files"][rel_path] = {
@@ -1686,14 +1716,25 @@ async def index_images() -> str:
 
 
 def ensure_rag_ready():
-    """Ensure RAG index exists. For FAISS: index.bin + metadata.json. For Qdrant: metadata.json only."""
+    """Ensure RAG index exists. For FAISS: index.bin + metadata.json. For Qdrant: Qdrant reachable (metadata.json optional for BM25)."""
     meta_path = ROOT / "faiss_index" / "metadata.json"
     index_path = ROOT / "faiss_index" / "index.bin"
     use_qdrant = os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant"
+
+    if use_qdrant:
+        try:
+            from memory.rag_store import get_rag_vector_store
+            store = get_rag_vector_store(provider="qdrant")
+            # Qdrant reachable = ready (metadata.json still written for BM25 but not required)
+            mcp_log("INFO", "RAG index ready (Qdrant).")
+        except Exception as e:
+            mcp_log("WARN", f"Qdrant not reachable: {e}. Running process_documents may help.")
+        return
+
     if not meta_path.exists():
         mcp_log("INFO", "RAG index not found — running process_documents()...")
         process_documents()
-    elif not use_qdrant and not index_path.exists():
+    elif not index_path.exists():
         mcp_log("INFO", "FAISS index not found — running process_documents()...")
         process_documents()
     else:

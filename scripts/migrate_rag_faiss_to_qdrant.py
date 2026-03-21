@@ -79,16 +79,22 @@ def _resolve_user_id(user_id_arg: Optional[str]) -> str:
         sys.exit(1)
 
 
-def migrate(user_id: Optional[str], space_id: Optional[str]):
-    """Run the migration."""
+def migrate(user_id: Optional[str], space_id: Optional[str], use_test_collections: bool = False):
+    """Run the migration. When use_test_collections=True, uses test_rag_chunks and test_rag_documents."""
     uid = _resolve_user_id(user_id)
     sid = (space_id or os.environ.get("MIGRATION_SPACE_ID") or "__global__").strip()
 
+    chunk_col = "test_rag_chunks" if use_test_collections else "arcturus_rag_chunks"
+    reg_col = "test_rag_documents" if use_test_collections else "arcturus_rag_documents"
+
     print("=" * 60)
-    print("RAG FAISS → Qdrant Migration")
+    print("RAG FAISS → Qdrant Migration" + (" [TEST COLLECTIONS]" if use_test_collections else ""))
     print("=" * 60)
     print(f"  user_id: {uid}")
     print(f"  space_id: {sid}")
+    if use_test_collections:
+        print(f"  chunk_collection: {chunk_col}")
+        print(f"  registry_collection: {reg_col}")
 
     index_path = RAG_INDEX_DIR / "index.bin"
     meta_path = RAG_INDEX_DIR / "metadata.json"
@@ -116,7 +122,7 @@ def migrate(user_id: Optional[str], space_id: Optional[str]):
 
     # Initialize Qdrant RAG store
     from memory.rag_store import get_rag_vector_store
-    store = get_rag_vector_store(provider="qdrant")
+    store = get_rag_vector_store(provider="qdrant", collection_name=chunk_col)
     print(f"✓ Qdrant RAG store initialized {store}")
     print("=" * 60)
 
@@ -192,7 +198,29 @@ def migrate(user_id: Optional[str], space_id: Optional[str]):
             print(f"  Final batch failed: {e}")
             skipped += len(entries_batch)
 
-    print(f"\n✓ Migration complete: {migrated} migrated, {skipped} skipped")
+    print(f"\n✓ Chunk migration complete: {migrated} migrated, {skipped} skipped")
+
+    # Phase 5: Populate document registry from distinct docs
+    if os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant":
+        try:
+            from memory.rag_document_registry import get_rag_document_registry
+
+            reg = get_rag_document_registry(collection_name=reg_col)
+            if reg:
+                doc_counts: dict[tuple[str, str], int] = {}
+                for m in metadata:
+                    d = m.get("doc", "").strip()
+                    if not d:
+                        continue
+                    key = (d, uid, sid)
+                    doc_counts[key] = doc_counts.get(key, 0) + 1
+
+                for (doc, _u, _s), count in doc_counts.items():
+                    reg.upsert_doc(doc=doc, user_id=uid, space_id=sid, chunk_count=count)
+                print(f"✓ Document registry: {len(doc_counts)} documents upserted")
+        except Exception as e:
+            print(f"⚠ Document registry update failed: {e}")
+
     print("  metadata.json unchanged (used for BM25)")
     print("  Set RAG_VECTOR_STORE_PROVIDER=qdrant to use Qdrant for search")
     print("=" * 60)
@@ -214,5 +242,10 @@ if __name__ == "__main__":
         default=None,
         help="Space ID for scope (default: __global__). Else MIGRATION_SPACE_ID env.",
     )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Use test_rag_chunks and test_rag_documents collections (for CI/tests).",
+    )
     args = parser.parse_args()
-    migrate(user_id=args.user_id, space_id=args.space_id)
+    migrate(user_id=args.user_id, space_id=args.space_id, use_test_collections=args.test)

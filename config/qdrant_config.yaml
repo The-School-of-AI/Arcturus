@@ -44,6 +44,19 @@ collections:
     is_tenant: false
     indexed_payload_fields: [doc]
 
+  arcturus_rag_documents:  # RAG document registry (one point per doc for O(1) listing)
+    dimension: 1           # dummy vector; we query by payload only
+    distance: cosine
+    is_tenant: true
+    tenant_keyword_field: user_id
+    indexed_payload_fields: [doc, space_id]
+
+  test_rag_documents:     # Test collection for unit/integration tests
+    dimension: 1
+    distance: cosine
+    is_tenant: false
+    indexed_payload_fields: [doc, space_id]
+
   arcturus_episodic:       # Phase B: episodic skeletons (session recipes)
     dimension: 768         # same as nomic-embed-text
     distance: cosine

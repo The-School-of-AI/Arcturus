@@ -20,6 +20,73 @@ multi_mcp = get_multi_mcp()
 
 # === Document Management Endpoints ===
 
+
+def _doc_list_to_tree(doc_list: list, data_root: Path) -> list:
+    """Build virtual tree from list of {doc, chunk_count, ...}. Paths are relative to data/."""
+    tree_map = {}  # full_path -> node dict
+
+    for d in doc_list:
+        doc_path = d.get("doc", "")
+        if not doc_path:
+            continue
+        chunk_count = d.get("chunk_count", 0)
+        parts = doc_path.split("/")
+        for i in range(1, len(parts) + 1):
+            p = "/".join(parts[:i])
+            name = parts[i - 1]
+            is_file = i == len(parts)
+            if p in tree_map:
+                if is_file and chunk_count > 0:
+                    tree_map[p]["chunk_count"] = chunk_count
+                    tree_map[p]["indexed"] = True
+                    tree_map[p]["status"] = "complete"
+                continue
+            ext = name.split(".")[-1].lower() if "." in name else ""
+            node_type = ext if is_file and ext else "folder"
+            node = {
+                "name": name,
+                "path": p,
+                "type": node_type,
+                "children": [] if not is_file else None,
+                "indexed": chunk_count > 0 if is_file else None,
+                "status": "complete" if (is_file and chunk_count > 0) else ("unindexed" if is_file else None),
+                "hash": "Indexed" if (is_file and chunk_count > 0) else "Not Indexed",
+                "chunk_count": chunk_count if is_file else 0,
+                "error": None,
+            }
+            if is_file and data_root and (data_root / p).exists():
+                try:
+                    node["size"] = (data_root / p).stat().st_size
+                except OSError:
+                    pass
+            tree_map[p] = node
+            if i > 1:
+                parent_path = "/".join(parts[: i - 1])
+                if parent_path in tree_map:
+                    parent = tree_map[parent_path]
+                    if parent.get("children") is None:
+                        parent["children"] = []
+                    if not any(c["path"] == p for c in parent["children"]):
+                        parent["children"].append(node)
+
+    def sort_children(n):
+        if n.get("children"):
+            for c in n["children"]:
+                sort_children(c)
+            n["children"].sort(key=lambda x: (x["type"] == "folder" and 0 or 1, (x.get("name") or "").lower()))
+
+    root_names = set()
+    for doc_path in (d.get("doc", "") for d in doc_list):
+        if doc_path:
+            root = doc_path.split("/")[0]
+            root_names.add(root)
+    roots = [tree_map[r] for r in sorted(root_names) if r in tree_map]
+    for r in roots:
+        sort_children(r)
+    roots.sort(key=lambda x: (x["type"] != "folder" and 1 or 0, (x.get("name") or "").lower()))
+    return roots
+
+
 def _filter_tree_by_space(items: list, space_id: str | None) -> list:
     """Filter top-level tree by space. Convention: __global__ and {space_id} folders."""
     if not space_id or space_id == "__global__":
@@ -34,25 +101,45 @@ def _filter_tree_by_space(items: list, space_id: str | None) -> list:
 
 @router.get("/documents")
 async def get_rag_documents(space_id: str | None = Query(None, description="Filter by space; __global__ or space uuid")):
-    """List documents in a recursive tree structure with RAG status. Phase B: optional space_id filters by folder convention (__global__ or {space_id})."""
+    """List documents in a recursive tree structure with RAG status.
+    When RAG_DOCUMENT_SOURCE=qdrant, uses document registry. Else ledger/FS."""
     try:
         doc_path = PROJECT_ROOT / "data"
+        doc_source = os.environ.get("RAG_DOCUMENT_SOURCE", "").lower() or (
+            "qdrant" if os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant" else "ledger"
+        )
+
+        if doc_source == "qdrant":
+            # Qdrant-backed: use document registry
+            from shared.rag_helpers import get_rag_user_and_space
+            from memory.rag_document_registry import get_rag_document_registry
+
+            user_id, filter_space_id = get_rag_user_and_space(space_id)
+            reg = get_rag_document_registry()
+            if reg:
+                try:
+                    doc_list = reg.list_documents(user_id=user_id, space_id=filter_space_id)
+                    files = _doc_list_to_tree(doc_list, doc_path)
+                    return {"files": files}
+                except Exception as reg_err:
+                    import traceback
+                    traceback.print_exc()
+                    # Fall through to ledger on registry failure
+                    pass
+
+        # Ledger/FS path
         index_dir = PROJECT_ROOT / "mcp_servers" / "faiss_index"
-        
-        # Try new ledger format first, fall back to legacy cache
         ledger_file = index_dir / "ledger.json"
         cache_file = index_dir / "doc_index_cache.json"
-        
-        file_entries = {}  # {path: {hash, status, indexed_at, ...}}
-        
+        file_entries = {}
+
         if ledger_file.exists():
             try:
                 ledger_data = json.loads(ledger_file.read_text())
                 file_entries = ledger_data.get("files", {})
-            except:
+            except Exception:
                 pass
         elif cache_file.exists():
-            # Legacy format: {"path": "hash"}
             try:
                 legacy_cache = json.loads(cache_file.read_text())
                 for path, file_hash in legacy_cache.items():
@@ -62,43 +149,35 @@ async def get_rag_documents(space_id: str | None = Query(None, description="Filt
                         "indexed_at": None,
                         "chunk_count": 0
                     }
-            except:
+            except Exception:
                 pass
 
         def build_tree(path: Path):
             items = []
-            # Sort: directories first, then files
             try:
                 entries = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
-            except PermissionError:
-                print(f"⚠️ Access denied: {path}")
-                return []
-            except Exception as e:
+            except (PermissionError, OSError) as e:
                 print(f"⚠️ Error listing {path}: {e}")
                 return []
-
             for p in entries:
                 if p.name.startswith('.') or p.name in ["__pycache__", "mcp_repos", "faiss_index"]:
                     continue
-                
                 rel_p = p.relative_to(doc_path).as_posix()
                 item = {
                     "name": p.name,
                     "path": rel_p,
-                    "type": "folder" if p.is_dir() else p.suffix.lower().replace('.', ''),
+                    "type": "folder" if p.is_dir() else (p.suffix.lower().replace('.', '') or "file"),
                 }
-                
                 if p.is_dir():
                     item["children"] = build_tree(p)
                 else:
                     item["size"] = p.stat().st_size
                     entry = file_entries.get(rel_p, {})
                     item["indexed"] = entry.get("status") == "complete" if entry else False
-                    item["status"] = entry.get("status", "unindexed")  # New field
+                    item["status"] = entry.get("status", "unindexed")
                     item["hash"] = entry.get("hash", "Not Indexed")
                     item["chunk_count"] = entry.get("chunk_count", 0)
                     item["error"] = entry.get("error")
-                
                 items.append(item)
             return items
 
@@ -108,7 +187,6 @@ async def get_rag_documents(space_id: str | None = Query(None, description="Filt
             if filtered:
                 files = filtered
             else:
-                # Notes convention: data/Notes/__global__/ and data/Notes/{space_id}/
                 notes_item = next((x for x in files if x.get("name") == "Notes" and x.get("type") == "folder"), None)
                 if notes_item and notes_item.get("children"):
                     filtered_notes = _filter_tree_by_space(notes_item["children"], space_id)
@@ -125,65 +203,103 @@ async def get_rag_documents(space_id: str | None = Query(None, description="Filt
 
 
 @router.post("/create_folder")
-async def create_rag_folder(folder_path: str):
-    """Create a new folder in RAG documents"""
+async def create_rag_folder(
+    folder_path: str = Form(...),
+    space_id: str | None = Form(None),
+):
+    """Create a new folder. Pass space_id + relative path for Notes; backend resolves canonical path."""
     try:
+        from shared.rag_helpers import resolve_rag_path
+
         root = PROJECT_ROOT / "data"
-        # Sanitize path to allow nested folders but prevent traversal
-        clean_path = folder_path.strip("/").replace("..", "")
+        # If space_id and path looks relative (no leading Notes/), resolve
+        if space_id and not folder_path.strip().lower().startswith("notes/"):
+            clean_path = resolve_rag_path(folder_path.strip("/"), space_id, "notes")
+        else:
+            clean_path = folder_path.strip("/").replace("..", "")
         target_path = root / clean_path
-        
+
         if target_path.exists():
-             raise HTTPException(status_code=400, detail="Folder already exists")
-        
+            raise HTTPException(status_code=400, detail="Folder already exists")
+
         target_path.mkdir(parents=True, exist_ok=True)
         return {"status": "success", "path": str(clean_path)}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/delete")
-async def delete_rag_item(path: str = Form(...)):
-    """Delete a file or folder in RAG documents"""
+async def delete_rag_item(
+    path: str = Form(...),
+    space_id: str | None = Form(None),
+):
+    """Delete a file or folder. For Qdrant, also removes from chunks + document registry."""
     try:
+        from shared.rag_helpers import get_rag_user_and_space
+
         root = PROJECT_ROOT / "data"
-        # Sanitize
         clean_path = path.strip("/").replace("..", "")
         target_path = root / clean_path
-        
+
         if not target_path.exists():
             raise HTTPException(status_code=404, detail="Item not found")
-            
-        # Security check: ensure we are deleting something inside data
+
         if not str(target_path.resolve()).startswith(str(root.resolve())):
-             raise HTTPException(status_code=403, detail="Access denied")
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Remove from Qdrant (chunks + registry) when using Qdrant
+        if os.environ.get("RAG_VECTOR_STORE_PROVIDER", "faiss").lower() == "qdrant":
+            try:
+                user_id, _ = get_rag_user_and_space(space_id)
+                from memory.rag_store import get_rag_vector_store
+                from memory.rag_document_registry import get_rag_document_registry
+                store = get_rag_vector_store(provider="qdrant")
+                store.delete_by_doc(clean_path, user_id=user_id)
+                reg = get_rag_document_registry()
+                if reg and user_id:
+                    reg.delete_doc(clean_path, user_id=user_id)
+            except Exception as qe:
+                print(f"Qdrant delete warning: {qe}")
 
         if target_path.is_dir():
             import shutil
             shutil.rmtree(target_path)
         else:
             target_path.unlink()
-            
+
         return {"status": "success"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/create_file")
-async def create_rag_file(path: str = Form(...), content: str = Form("")):
-    """Create a new file in RAG documents"""
+async def create_rag_file(
+    path: str = Form(...),
+    content: str = Form(""),
+    space_id: str | None = Form(None),
+):
+    """Create a new file. Pass space_id + relative path for Notes; backend resolves."""
     try:
+        from shared.rag_helpers import resolve_rag_path
+
         root = PROJECT_ROOT / "data"
-        clean_path = path.strip("/").replace("..", "")
+        if space_id and not path.strip().lower().startswith("notes/"):
+            clean_path = resolve_rag_path(path.strip("/"), space_id, "notes")
+        else:
+            clean_path = path.strip("/").replace("..", "")
         target_path = root / clean_path
-        
+
         if target_path.exists():
             raise HTTPException(status_code=400, detail="File already exists")
-            
-        # Ensure parent dir exists
+
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        
         target_path.write_text(content)
         return {"status": "success", "path": str(clean_path)}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -369,13 +485,22 @@ def process_markdown_images(content: str, note_path: Path):
     return new_content, modified
 
 @router.post("/save_file")
-async def save_rag_file(path: str = Form(...), content: str = Form(...)):
-    """Save/Overwrite file content"""
+async def save_rag_file(
+    path: str = Form(...),
+    content: str = Form(...),
+    space_id: str | None = Form(None),
+):
+    """Save/Overwrite file content. Pass space_id + relative path for Notes; backend resolves."""
     try:
+        from shared.rag_helpers import resolve_rag_path
+
         root = PROJECT_ROOT / "data"
-        clean_path = path.strip("/").replace("..", "")
+        if space_id and not path.strip().lower().startswith("notes/"):
+            clean_path = resolve_rag_path(path.strip("/"), space_id, "notes")
+        else:
+            clean_path = path.strip("/").replace("..", "")
         target_path = root / clean_path
-        
+
         # Security check
         if not str(target_path.resolve()).startswith(str(root.resolve())):
              raise HTTPException(status_code=403, detail="Access denied")
@@ -394,28 +519,37 @@ async def save_rag_file(path: str = Form(...), content: str = Form(...)):
 
 @router.post("/upload")
 async def upload_rag_file(
-    file: UploadFile = File(...), 
-    path: str = Form("")
+    file: UploadFile = File(...),
+    path: str = Form(""),
+    space_id: str | None = Form(None),
 ):
-    """Upload a file to RAG documents"""
+    """Upload a file. Pass space_id + relative path for Notes; backend resolves."""
     try:
+        from shared.rag_helpers import resolve_rag_path
+
         root = PROJECT_ROOT / "data"
-        # Sanitize target directory
-        target_dir = root
         if path:
-            # Prevent directory traversal
-            clean_path = path.strip("/").replace("..", "")
-            target_dir = root / clean_path
-            
+            if space_id and not path.strip().lower().startswith("notes/"):
+                # relative_path is dir; resolve to Notes/<space_id>/relative_path
+                dir_path = resolve_rag_path(path.strip("/"), space_id, "notes")
+                target_dir = root / dir_path
+            else:
+                clean_path = path.strip("/").replace("..", "")
+                target_dir = root / clean_path
+        else:
+            target_dir = root
+
         target_dir.mkdir(parents=True, exist_ok=True)
-        
         file_location = target_dir / file.filename
         content = await file.read()
-        
+
         with open(file_location, "wb") as f:
             f.write(content)
-            
-        return {"status": "success", "filename": file.filename, "path": str(file_location.relative_to(root))}
+
+        rel_path = str(file_location.relative_to(root))
+        return {"status": "success", "filename": file.filename, "path": rel_path}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -767,85 +901,142 @@ async def get_document_chunks(path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _path_to_doc_key(path: str) -> str:
+    """Normalize path to doc key (relative to data/, POSIX, no ..)."""
+    p = path.strip("/").replace("\\", "/").replace("..", "").strip("/")
+    # Strip data/ prefix if present
+    if p.lower().startswith("data/"):
+        p = p[5:].lstrip("/")
+    return p
+
+
 @router.get("/document_content")
 async def get_document_content(path: str):
-    """Get the content of a document (binary or text)"""
+    """Get the content of a document (binary or text). Uses rag_storage when S3 configured."""
     try:
-        # Check if absolute path first
-        if os.path.isabs(path) or path.startswith("/"):
+        from memory import rag_storage
+
+        # Absolute path to local file: use directly if it exists (e.g. temp files)
+        if os.path.isabs(path):
             doc_path = Path(path)
-            if not doc_path.exists():
-                # Fallback to PROJECT_ROOT / data if it doesn't exist as absolute
-                doc_path = PROJECT_ROOT / "data" / path
-        else:
-            root = PROJECT_ROOT / "data"
-            doc_path = root / path
-        
-        # Fallback: Check relative to PROJECT_ROOT 
+            if doc_path.exists() and doc_path.is_file():
+                ext = doc_path.suffix.lower()
+                if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.docx', '.doc']:
+                    media_types = {
+                        '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
+                        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        '.doc': 'application/msword'
+                    }
+                    return FileResponse(doc_path, media_type=media_types.get(ext, 'application/octet-stream'))
+                return {"status": "success", "content": doc_path.read_text(errors='replace')}
+
+        # Resolve doc key (relative to data/)
+        doc_key = _path_to_doc_key(path)
+        if not doc_key:
+            # Try raw path for legacy callers
+            doc_key = path.strip("/").replace("\\", "/").replace("..", "").strip("/")
+
+        # Try rag_storage (handles both local and S3)
+        content_bytes = rag_storage.read_doc(doc_key)
+        if content_bytes is not None:
+            ext = Path(doc_key).suffix.lower()
+            if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.docx', '.doc']:
+                media_types = {
+                    '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
+                    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    '.doc': 'application/msword'
+                }
+                from fastapi.responses import Response
+                return Response(content=content_bytes, media_type=media_types.get(ext, 'application/octet-stream'))
+            return {"status": "success", "content": content_bytes.decode("utf-8", errors="replace")}
+
+        # Fallback: local path resolution (legacy)
+        root = PROJECT_ROOT / "data"
+        doc_path = root / doc_key
         if not doc_path.exists():
-            # Try finding it relative to project root
-            alt_path = PROJECT_ROOT / path
+            alt_path = PROJECT_ROOT / path.strip("/")
             if alt_path.exists() and alt_path.is_file():
                 doc_path = alt_path
-        
-        # Deep Search Fallback: If path is just a filename, search for it
         if not doc_path.exists() and len(Path(path).parts) == 1:
-            # Search in memory and data
             found_files = list(PROJECT_ROOT.rglob(path))
-            # Prioritize memory/ or data/
             for f in found_files:
                 if "memory" in str(f) or "data" in str(f):
                     doc_path = f
                     break
             if not doc_path.exists() and found_files:
                 doc_path = found_files[0]
-            
+
         if not doc_path.exists():
-            raise HTTPException(status_code=404, detail=f"Document not found at {path} or resolved paths")
-        
+            raise HTTPException(status_code=404, detail=f"Document not found at {path}")
+
         ext = doc_path.suffix.lower()
-        
-        # Binary Media
         if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.docx', '.doc']:
             media_types = {
-                '.pdf': 'application/pdf',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.gif': 'image/gif',
-                '.webp': 'image/webp',
+                '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
                 '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 '.doc': 'application/msword'
             }
             return FileResponse(doc_path, media_type=media_types.get(ext, 'application/octet-stream'))
-        
-        # Simple text extraction for fallback
-        content = doc_path.read_text(errors='replace')
-        return {"status": "success", "content": content}
+        return {"status": "success", "content": doc_path.read_text(errors='replace')}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/unified_preview")
 async def get_unified_preview(path: str):
-    """Standardized entry point for all document previews using core/previews.py"""
-    from core.previews import get_preview
-    try:
-        # Resolve path - similar logic to get_document_content
-        if os.path.isabs(path) or path.startswith("/"):
-            doc_path = Path(path)
-            if not doc_path.exists():
-                doc_path = PROJECT_ROOT / "data" / path
-        else:
-            doc_path = PROJECT_ROOT / "data" / path
-            
-        if not doc_path.exists():
-            # Try finding it relative to project root
-            alt_path = PROJECT_ROOT / path
-            if alt_path.exists():
-                doc_path = alt_path
+    """Standardized entry point for all document previews using core/previews.py.
+    When S3 is configured, uses rag_storage; binary URLs point to document_content (which fetches from S3)."""
+    from core.previews import PreviewResponse, PreviewManager
 
-        return get_preview(str(doc_path))
+    try:
+        if os.path.isabs(path):
+            doc_path = Path(path)
+            if doc_path.exists():
+                from core.previews import get_preview
+                return get_preview(str(doc_path))
+
+        doc_key = _path_to_doc_key(path) or path.strip("/").replace("..", "")
+        if not doc_key:
+            raise HTTPException(status_code=404, detail=f"Invalid path: {path}")
+
+        from memory import rag_storage
+
+        content = rag_storage.read_doc(doc_key)
+        if content is not None and os.environ.get("RAG_S3_BUCKET", "").strip():
+            # S3: build preview from content; binary uses document_content URL (fetches from S3 on demand)
+            ext = Path(doc_key).suffix.lower()
+            viewer_map = {
+                '.pdf': 'pdf', '.png': 'image', '.jpg': 'image', '.jpeg': 'image',
+                '.gif': 'image', '.webp': 'image', '.docx': 'docx', '.doc': 'docx',
+            }
+            if ext in viewer_map:
+                return PreviewResponse(
+                    viewer=viewer_map[ext],
+                    url=f"/rag/document_content?path={doc_key}",
+                    title=Path(doc_key).name,
+                    metadata={},
+                )
+            # Text: decode and use PreviewManager-like logic
+            text = content.decode("utf-8", errors="replace")
+            viewer = PreviewManager.EXTENSION_MAP.get(ext, 'code')
+            return PreviewResponse(viewer=viewer, content=text, title=Path(doc_key).name, metadata={})
+
+        # Local path resolution
+        doc_path = PROJECT_ROOT / "data" / doc_key
+        if not doc_path.exists():
+            doc_path = PROJECT_ROOT / path.strip("/")
+        if doc_path.exists():
+            from core.previews import get_preview
+            return get_preview(str(doc_path))
+
+        raise HTTPException(status_code=404, detail=f"Document not found: {path}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

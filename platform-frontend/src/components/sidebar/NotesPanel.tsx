@@ -252,24 +252,27 @@ export const NotesPanel: React.FC = () => {
     const handleCreateFolder = async () => {
         if (!newFolderName.trim()) return;
 
-        // Determine parent path: if selectedItem is folder, put inside, else put in root of Notes
         let parentPath = "Notes";
         if (selectedItem?.type === 'folder') {
-            // Removing "Notes/" prefix might be needed if API expects relative to data root?
-            // API expects path relative to data root.
-            // selectedItem.path is typically "Notes/Subfolder"
             parentPath = selectedItem.path;
         } else if (selectedItem?.type !== 'folder' && selectedItem?.path.includes('/')) {
-            // Sibling
             const parts = selectedItem.path.split('/');
             parts.pop();
             parentPath = parts.join('/');
         }
 
-        const fullPath = `${parentPath}/${newFolderName}`;
+        const parts = parentPath.replace(/^Notes\/?/, '').split('/').filter(Boolean);
+        const userRelative = parts.length >= 1 ? parts.slice(1).join('/') : '';
+        const folderRelative = userRelative ? `${userRelative}/${newFolderName}` : newFolderName;
+        const spaceId = parts[0] || currentSpaceId || '__global__';
 
         try {
-            await axios.post(`${API_BASE}/rag/create_folder`, null, { params: { folder_path: fullPath } });
+            const formData = new FormData();
+            formData.append('folder_path', folderRelative);
+            formData.append('space_id', spaceId);
+            await axios.post(`${API_BASE}/rag/create_folder`, formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
             setIsNewFolderOpen(false);
             setNewFolderName("");
             fetchNotesFiles();
@@ -291,13 +294,17 @@ export const NotesPanel: React.FC = () => {
         let fileName = newNoteName;
         if (!fileName.endsWith('.md')) fileName += '.md';
 
-        const fullPath = `${parentPath}/${fileName}`;
+        const pathParts = parentPath.replace(/^Notes\/?/, '').split('/').filter(Boolean);
+        const userRelative = pathParts.length >= 1 ? pathParts.slice(1).join('/') : '';
+        const pathRelative = userRelative ? `${userRelative}/${fileName}` : fileName;
+        const spaceId = pathParts[0] || currentSpaceId || '__global__';
+        const fullPath = `Notes/${spaceId}/${pathRelative}`;
 
         try {
             const formData = new FormData();
-            formData.append('path', fullPath);
+            formData.append('path', pathRelative);
             formData.append('content', "# " + newNoteName);
-
+            formData.append('space_id', spaceId);
             await axios.post(`${API_BASE}/rag/create_file`, formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
@@ -305,7 +312,6 @@ export const NotesPanel: React.FC = () => {
             setNewNoteName("");
             await fetchNotesFiles();
 
-            // Open it
             openNotesDocument({
                 id: fullPath,
                 title: fileName,
@@ -319,6 +325,7 @@ export const NotesPanel: React.FC = () => {
         try {
             const formData = new FormData();
             formData.append('path', path);
+            formData.append('space_id', currentSpaceId || '__global__');
             await axios.post(`${API_BASE}/rag/delete`, formData);
             fetchNotesFiles();
         } catch (e) { alert("Failed to delete item"); }
